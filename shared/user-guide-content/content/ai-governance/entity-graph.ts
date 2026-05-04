@@ -57,7 +57,7 @@ export const entityGraphContent: ArticleContent = {
         { bold: 'Vendors', text: '(purple): third-party AI service providers' },
         { bold: 'Risks', text: '(red): identified project and vendor risks' },
         { bold: 'Evidence', text: '(orange): supporting documentation and files' },
-        { bold: 'Frameworks', text: '(grey): compliance frameworks (EU AI Act, ISO, etc.)' },
+        { bold: 'Frameworks', text: '(blue grey): compliance frameworks (EU AI Act, ISO, etc.)' },
       ],
     },
     {
@@ -150,7 +150,7 @@ export const entityGraphContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Use case → Model', text: 'The use case uses this model' },
+        { bold: 'Model ← Use case', text: 'Edge labeled "used by"; the model is used by this use case' },
         { bold: 'Use case → Vendor', text: 'The vendor provides services for this use case' },
         { bold: 'Entity → Risk', text: 'A risk is associated with this entity' },
         { bold: 'Model → Framework', text: 'The model complies with this framework' },

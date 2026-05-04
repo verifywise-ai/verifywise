@@ -38,12 +38,7 @@ export const DATASET_VALIDATION_LIMITS = {
 /**
  * Dataset status enum values
  */
-export const DATASET_STATUS_ENUM = [
-  "Draft",
-  "Active",
-  "Deprecated",
-  "Archived",
-] as const;
+export const DATASET_STATUS_ENUM = ["Draft", "Active", "Deprecated", "Archived"] as const;
 
 /**
  * Dataset type enum values
@@ -456,7 +451,7 @@ export const validateUpdateDataset = (data: unknown): ValidationError[] => {
  * They are returned as warnings for logging purposes only.
  */
 export const validateDatasetCreationBusinessRules = (
-  _data: Record<string, unknown>
+  _data: Record<string, unknown>,
 ): ValidationError[] => {
   // Business rules are now non-blocking recommendations
   // They are logged but don't prevent dataset creation
@@ -468,7 +463,7 @@ export const validateDatasetCreationBusinessRules = (
  */
 export const validateDatasetUpdateBusinessRules = (
   data: Record<string, unknown>,
-  existingData?: Record<string, unknown>
+  existingData?: Record<string, unknown>,
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -488,7 +483,7 @@ export const validateDatasetUpdateBusinessRules = (
     ];
 
     const invalidTransition = invalidTransitions.find(
-      (t) => t.from === existingData.status && t.to === data.status
+      (t) => t.from === existingData.status && t.to === data.status,
     );
 
     if (invalidTransition) {
@@ -510,13 +505,9 @@ export const validateDatasetUpdateBusinessRules = (
 /**
  * Complete validation for dataset creation with business rules
  */
-export const validateCompleteDatasetCreation = (
-  data: unknown
-): ValidationError[] => {
+export const validateCompleteDatasetCreation = (data: unknown): ValidationError[] => {
   const validationErrors = validateCompleteDataset(data);
-  const businessErrors = validateDatasetCreationBusinessRules(
-    data as Record<string, unknown>
-  );
+  const businessErrors = validateDatasetCreationBusinessRules(data as Record<string, unknown>);
 
   return [...validationErrors, ...businessErrors];
 };
@@ -526,12 +517,12 @@ export const validateCompleteDatasetCreation = (
  */
 export const validateCompleteDatasetUpdate = (
   data: unknown,
-  existingData?: unknown
+  existingData?: unknown,
 ): ValidationError[] => {
   const validationErrors = validateUpdateDataset(data);
   const businessErrors = validateDatasetUpdateBusinessRules(
     data as Record<string, unknown>,
-    existingData as Record<string, unknown> | undefined
+    existingData as Record<string, unknown> | undefined,
   );
 
   return [...validationErrors, ...businessErrors];

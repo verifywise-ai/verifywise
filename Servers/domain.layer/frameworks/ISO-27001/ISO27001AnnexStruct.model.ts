@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { FrameworkModel } from "../../models/frameworks/frameworks.model";
 import { IISO27001AnnexStruct } from "../../interfaces/i.ISO27001AnnexStruct";
 
@@ -13,7 +7,8 @@ import { IISO27001AnnexStruct } from "../../interfaces/i.ISO27001AnnexStruct";
 })
 export class ISO27001AnnexStructModel
   extends Model<ISO27001AnnexStructModel>
-  implements IISO27001AnnexStruct {
+  implements IISO27001AnnexStruct
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -68,5 +63,4 @@ export class ISO27001AnnexStructModel
       subClauses: dataValues?.subClauses,
     };
   }
-
 }

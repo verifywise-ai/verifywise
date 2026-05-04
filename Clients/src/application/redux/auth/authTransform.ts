@@ -8,7 +8,7 @@ const authTransform = createTransform(
   null,
   {
     whitelist: ["auth"],
-  }
+  },
 );
 
 export default authTransform;

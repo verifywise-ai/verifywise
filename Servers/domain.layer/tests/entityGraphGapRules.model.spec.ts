@@ -52,7 +52,7 @@ class TestEntityGraphGapRulesModel {
   static async createGapRules(
     userId: number,
     organizationId: number,
-    rules: GapRule[]
+    rules: GapRule[],
   ): Promise<TestEntityGraphGapRulesModel> {
     // Validate userId
     if (!userId || userId < 1) {
@@ -85,9 +85,7 @@ class TestEntityGraphGapRulesModel {
       }
 
       if (!rule.entityType || !validEntityTypes.includes(rule.entityType)) {
-        throw new Error(
-          `Rule ${i + 1}: entityType must be one of: ${validEntityTypes.join(", ")}`
-        );
+        throw new Error(`Rule ${i + 1}: entityType must be one of: ${validEntityTypes.join(", ")}`);
       }
 
       if (!rule.requirement || rule.requirement.trim().length === 0) {
@@ -95,15 +93,11 @@ class TestEntityGraphGapRulesModel {
       }
 
       if (rule.requirement.length > 100) {
-        throw new Error(
-          `Rule ${i + 1}: requirement cannot exceed 100 characters`
-        );
+        throw new Error(`Rule ${i + 1}: requirement cannot exceed 100 characters`);
       }
 
       if (!rule.severity || !validSeverities.includes(rule.severity)) {
-        throw new Error(
-          `Rule ${i + 1}: severity must be one of: ${validSeverities.join(", ")}`
-        );
+        throw new Error(`Rule ${i + 1}: severity must be one of: ${validSeverities.join(", ")}`);
       }
 
       if (typeof rule.enabled !== "boolean") {
@@ -160,7 +154,7 @@ describe("EntityGraphGapRulesModel", () => {
       const gapRules = await TestEntityGraphGapRulesModel.createGapRules(
         validGapRulesData.userId,
         validGapRulesData.organizationId,
-        validGapRulesData.rules
+        validGapRulesData.rules,
       );
 
       expect(gapRules).toBeInstanceOf(TestEntityGraphGapRulesModel);
@@ -175,7 +169,7 @@ describe("EntityGraphGapRulesModel", () => {
       const gapRules = await TestEntityGraphGapRulesModel.createGapRules(
         validGapRulesData.userId,
         validGapRulesData.organizationId,
-        []
+        [],
       );
 
       expect(gapRules.rules).toEqual([]);
@@ -191,7 +185,7 @@ describe("EntityGraphGapRulesModel", () => {
       const gapRules = await TestEntityGraphGapRulesModel.createGapRules(
         validGapRulesData.userId,
         validGapRulesData.organizationId,
-        multipleRules
+        multipleRules,
       );
 
       expect(gapRules.rules).toHaveLength(3);
@@ -217,7 +211,7 @@ describe("EntityGraphGapRulesModel", () => {
       const gapRules = await TestEntityGraphGapRulesModel.createGapRules(
         validGapRulesData.userId,
         validGapRulesData.organizationId,
-        rules
+        rules,
       );
 
       expect(gapRules.rules).toHaveLength(5);
@@ -236,7 +230,7 @@ describe("EntityGraphGapRulesModel", () => {
       const gapRules = await TestEntityGraphGapRulesModel.createGapRules(
         validGapRulesData.userId,
         validGapRulesData.organizationId,
-        rules
+        rules,
       );
 
       expect(gapRules.rules).toHaveLength(3);
@@ -247,8 +241,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           0,
           validGapRulesData.organizationId,
-          validGapRulesData.rules
-        )
+          validGapRulesData.rules,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -257,8 +251,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           -1,
           validGapRulesData.organizationId,
-          validGapRulesData.rules
-        )
+          validGapRulesData.rules,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -267,8 +261,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           0,
-          validGapRulesData.rules
-        )
+          validGapRulesData.rules,
+        ),
       ).rejects.toThrow("Valid organization ID is required");
     });
 
@@ -277,8 +271,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          "not-an-array" as any
-        )
+          "not-an-array" as any,
+        ),
       ).rejects.toThrow("Rules must be an array");
     });
 
@@ -296,8 +290,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          tooManyRules
-        )
+          tooManyRules,
+        ),
       ).rejects.toThrow("Maximum of 50 gap rules allowed");
     });
 
@@ -306,8 +300,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [null] as any
-        )
+          [null] as any,
+        ),
       ).rejects.toThrow("Rule 1: must be an object");
     });
 
@@ -321,8 +315,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("entityType must be one of");
     });
 
@@ -337,8 +331,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("entityType must be one of");
     });
 
@@ -352,8 +346,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("requirement is required");
     });
 
@@ -367,8 +361,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("requirement cannot exceed 100 characters");
     });
 
@@ -382,8 +376,8 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("severity must be one of");
     });
 
@@ -397,24 +391,20 @@ describe("EntityGraphGapRulesModel", () => {
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          [invalidRule]
-        )
+          [invalidRule],
+        ),
       ).rejects.toThrow("enabled must be a boolean");
     });
 
     it("should throw error for specific rule index in error message", async () => {
-      const rules = [
-        validRule,
-        validRule,
-        { ...validRule, entityType: "invalid" as any },
-      ];
+      const rules = [validRule, validRule, { ...validRule, entityType: "invalid" as any }];
 
       await expect(
         TestEntityGraphGapRulesModel.createGapRules(
           validGapRulesData.userId,
           validGapRulesData.organizationId,
-          rules
-        )
+          rules,
+        ),
       ).rejects.toThrow("Rule 3:");
     });
   });

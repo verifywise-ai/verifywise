@@ -34,10 +34,7 @@ const parseParamId = (param: string | string[] | undefined): number => {
  * GET /policies/:id/folders
  * Get all folders a policy belongs to
  */
-export const getPolicyFolders = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getPolicyFolders = async (req: Request, res: Response): Promise<Response> => {
   try {
     const policyId = parseParamId(req.params.id);
     if (isNaN(policyId)) {
@@ -56,10 +53,7 @@ export const getPolicyFolders = async (
  * GET /folders/:folderId/policies
  * Get all policy IDs in a folder
  */
-export const getPoliciesInFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getPoliciesInFolder = async (req: Request, res: Response): Promise<Response> => {
   try {
     const folderId = parseParamId(req.params.folderId);
     if (isNaN(folderId)) {
@@ -78,10 +72,7 @@ export const getPoliciesInFolder = async (
  * PATCH /policies/:id/folders
  * Bulk update policy folder assignments
  */
-export const updatePolicyFolders = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const updatePolicyFolders = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     if (!hasManagePermission(req.role)) {
@@ -106,7 +97,7 @@ export const updatePolicyFolders = async (
       policyId,
       folder_ids,
       req.userId!,
-      transaction
+      transaction,
     );
 
     const updatedFolders = await getPolicyFoldersQuery(req.organizationId!, policyId);

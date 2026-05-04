@@ -39,8 +39,7 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
 
       try {
         // Get all policies due soon for this organization
-        const policies: PolicyManagerModel[] =
-          await getAllPoliciesDueSoonQuery(organizationId);
+        const policies: PolicyManagerModel[] = await getAllPoliciesDueSoonQuery(organizationId);
 
         if (policies.length > 0) {
           // Send notification for each policy
@@ -54,14 +53,11 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
 
               // Format the notification message
               const reviewDate = policy.next_review_date
-                ? new Date(policy.next_review_date).toLocaleDateString(
-                  "en-US",
-                  {
+                ? new Date(policy.next_review_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  },
-                )
+                  })
                 : "Not set";
 
               const message = {
@@ -75,8 +71,7 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
                   await sendSlackNotification(
                     {
                       userId: userToNotify,
-                      routingType:
-                        SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
+                      routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
                     },
                     message,
                   );
@@ -101,10 +96,7 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
         }
         return admins[0].id || 0;
       } catch (orgError) {
-        logger.error(
-          `Error processing organization ${organizationId}:`,
-          orgError,
-        );
+        logger.error(`Error processing organization ${organizationId}:`, orgError);
       }
     }
 

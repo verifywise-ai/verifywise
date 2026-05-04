@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Card,
@@ -12,7 +12,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ChevronRight as ChevronRightIcon,
   CheckCircle as CheckIcon,
@@ -23,11 +23,11 @@ import {
   Trash2 as TrashIcon,
   Building2 as OrgIcon,
   FolderKanban as ProjectIcon,
-} from 'lucide-react';
-import { cardStyles } from '../../themes/components';
-import { background } from '../../themes/palette';
-import { Plugin, PluginInstallationStatus } from '../../../domain/types/plugins';
-import ConfirmationModal from '../../components/Dialogs/ConfirmationModal';
+} from "lucide-react";
+import { cardStyles } from "../../themes/components";
+import { background } from "../../themes/palette";
+import { Plugin, PluginInstallationStatus } from "../../../domain/types/plugins";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 
 interface PluginCardProps {
   plugin: Plugin;
@@ -83,17 +83,17 @@ const PluginCard: React.FC<PluginCardProps> = ({
   };
 
   const getStatusColor = (status?: PluginInstallationStatus) => {
-    if (!status) return 'default';
+    if (!status) return "default";
 
     switch (status) {
       case PluginInstallationStatus.INSTALLED:
-        return 'success';
+        return "success";
       case PluginInstallationStatus.INSTALLING:
-        return 'warning';
+        return "warning";
       case PluginInstallationStatus.FAILED:
-        return 'error';
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
   };
 
@@ -112,10 +112,10 @@ const PluginCard: React.FC<PluginCardProps> = ({
 
   const getActionText = () => {
     if (plugin.installationStatus === PluginInstallationStatus.INSTALLING) {
-      return 'Installing...';
+      return "Installing...";
     }
     // Always show "View Details" for consistency
-    return 'View Details';
+    return "View Details";
   };
 
   const handleActionClick = async (event: React.MouseEvent) => {
@@ -133,19 +133,19 @@ const PluginCard: React.FC<PluginCardProps> = ({
   return (
     <Card
       sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
         ...(cardStyles.base(theme) as any),
         margin: 0,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-        '&:hover': {
+        "&:hover": {
           background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
-          borderColor: '#D1D5DB',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+          borderColor: "#D1D5DB",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
         },
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -155,19 +155,19 @@ const PluginCard: React.FC<PluginCardProps> = ({
       <CardContent
         sx={{
           p: 2,
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          backgroundColor: 'transparent',
-          '&:last-child': {
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          position: "relative",
+          backgroundColor: "transparent",
+          "&:last-child": {
             paddingBottom: 2,
           },
         }}
       >
         {/* Header Section */}
-        <Box sx={{ p: 2, m: 3, backgroundColor: 'transparent' }}>
+        <Box sx={{ p: 2, m: 3, backgroundColor: "transparent" }}>
           {/* Plugin Icon */}
           {plugin.iconUrl && (
             <Box
@@ -178,19 +178,19 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 width: 48,
                 height: 48,
                 mb: 3,
-                objectFit: 'contain',
+                objectFit: "contain",
               }}
             />
           )}
 
           {/* Plugin Name and Status */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <Typography
               variant="h6"
               sx={(theme) => ({
                 fontWeight: 600,
                 color: theme.palette.text.primary,
-                fontSize: '15px',
+                fontSize: "15px",
               })}
             >
               {plugin.displayName}
@@ -203,33 +203,33 @@ const PluginCard: React.FC<PluginCardProps> = ({
                   color={getStatusColor(plugin.installationStatus)}
                   icon={getStatusIcon(plugin.installationStatus)}
                   sx={{
-                    fontSize: '11px',
+                    fontSize: "11px",
                     height: 22,
-                    borderRadius: '4px',
+                    borderRadius: "4px",
                     backgroundColor:
-                      getStatusColor(plugin.installationStatus) === 'success'
-                        ? 'rgba(34, 197, 94, 0.1)'
-                        : getStatusColor(plugin.installationStatus) === 'error'
-                        ? 'rgba(239, 68, 68, 0.1)'
-                        : getStatusColor(plugin.installationStatus) === 'warning'
-                        ? 'rgba(245, 158, 11, 0.1)'
-                        : 'rgba(107, 114, 128, 0.1)',
+                      getStatusColor(plugin.installationStatus) === "success"
+                        ? "rgba(34, 197, 94, 0.1)"
+                        : getStatusColor(plugin.installationStatus) === "error"
+                          ? "rgba(239, 68, 68, 0.1)"
+                          : getStatusColor(plugin.installationStatus) === "warning"
+                            ? "rgba(245, 158, 11, 0.1)"
+                            : "rgba(107, 114, 128, 0.1)",
                     color:
-                      getStatusColor(plugin.installationStatus) === 'success'
-                        ? '#16a34a'
-                        : getStatusColor(plugin.installationStatus) === 'error'
-                        ? '#dc2626'
-                        : getStatusColor(plugin.installationStatus) === 'warning'
-                        ? '#d97706'
-                        : 'status.default.text',
+                      getStatusColor(plugin.installationStatus) === "success"
+                        ? "#16a34a"
+                        : getStatusColor(plugin.installationStatus) === "error"
+                          ? "#dc2626"
+                          : getStatusColor(plugin.installationStatus) === "warning"
+                            ? "#d97706"
+                            : "status.default.text",
                     border: `1px solid ${
-                      getStatusColor(plugin.installationStatus) === 'success'
-                        ? 'rgba(34, 197, 94, 0.2)'
-                        : getStatusColor(plugin.installationStatus) === 'error'
-                        ? 'rgba(239, 68, 68, 0.2)'
-                        : getStatusColor(plugin.installationStatus) === 'warning'
-                        ? 'rgba(245, 158, 11, 0.2)'
-                        : 'rgba(107, 114, 128, 0.2)'
+                      getStatusColor(plugin.installationStatus) === "success"
+                        ? "rgba(34, 197, 94, 0.2)"
+                        : getStatusColor(plugin.installationStatus) === "error"
+                          ? "rgba(239, 68, 68, 0.2)"
+                          : getStatusColor(plugin.installationStatus) === "warning"
+                            ? "rgba(245, 158, 11, 0.2)"
+                            : "rgba(107, 114, 128, 0.2)"
                     }`,
                     fontWeight: 500,
                   }}
@@ -240,13 +240,13 @@ const PluginCard: React.FC<PluginCardProps> = ({
         </Box>
 
         {/* Content Section */}
-        <Box sx={{ backgroundColor: 'transparent', mx: 3, mb: 4, px: 2, flexGrow: 1 }}>
+        <Box sx={{ backgroundColor: "transparent", mx: 3, mb: 4, px: 2, flexGrow: 1 }}>
           {/* Plugin Description */}
           <Typography
             variant="body2"
             sx={(theme) => ({
               color: theme.palette.text.secondary,
-              fontSize: '13px',
+              fontSize: "13px",
               mb: "8px",
             })}
           >
@@ -255,36 +255,31 @@ const PluginCard: React.FC<PluginCardProps> = ({
 
           {/* Framework Type Badge */}
           {plugin.frameworkType && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: "8px", mb: "8px" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mb: "8px" }}>
               <Chip
                 size="small"
                 icon={
-                  plugin.frameworkType === 'organizational' ? (
+                  plugin.frameworkType === "organizational" ? (
                     <OrgIcon size={11} />
                   ) : (
                     <ProjectIcon size={11} />
                   )
                 }
-                label={plugin.frameworkType === 'organizational' ? 'Organizational' : 'Project'}
+                label={plugin.frameworkType === "organizational" ? "Organizational" : "Project"}
                 variant="outlined"
                 sx={{
-                  fontSize: '10px',
+                  fontSize: "10px",
                   height: 20,
-                  borderRadius: '10px',
-                  backgroundColor: 'transparent',
-                  color:
-                    plugin.frameworkType === 'organizational'
-                      ? 'brand.primary'
-                      : '#6366f1',
+                  borderRadius: "10px",
+                  backgroundColor: "transparent",
+                  color: plugin.frameworkType === "organizational" ? "brand.primary" : "#6366f1",
                   borderColor:
-                    plugin.frameworkType === 'organizational'
-                      ? 'brand.primary'
-                      : '#6366f1',
+                    plugin.frameworkType === "organizational" ? "brand.primary" : "#6366f1",
                   fontWeight: 500,
-                  '& .MuiChip-icon': {
-                    color: 'inherit',
-                    marginLeft: '4px',
-                    marginRight: '-2px',
+                  "& .MuiChip-icon": {
+                    color: "inherit",
+                    marginLeft: "4px",
+                    marginRight: "-2px",
                   },
                 }}
               />
@@ -292,14 +287,14 @@ const PluginCard: React.FC<PluginCardProps> = ({
           )}
 
           {/* Plugin Features */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: "8px" }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {(plugin.features || []).slice(0, 2).map((feature, index) => (
               <Chip
                 key={index}
                 size="small"
                 label={feature.name}
                 variant="outlined"
-                sx={{ fontSize: '10px', height: 20 }}
+                sx={{ fontSize: "10px", height: 20 }}
               />
             ))}
           </Box>
@@ -308,14 +303,14 @@ const PluginCard: React.FC<PluginCardProps> = ({
         {/* Action Button */}
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 20,
             right: 20,
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             color: theme.palette.primary.main,
-            transition: 'all 0.3s ease',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            transition: "all 0.3s ease",
+            cursor: loading ? "not-allowed" : "pointer",
           }}
         >
           {loading ? (
@@ -326,11 +321,11 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 size="small"
                 onClick={handleMenuOpen}
                 sx={{
-                  color: 'brand.primary',
+                  color: "brand.primary",
                   opacity: isHovered ? 1 : 0.7,
-                  transition: 'opacity 0.3s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(19, 113, 91, 0.1)',
+                  transition: "opacity 0.3s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(19, 113, 91, 0.1)",
                   },
                 }}
               >
@@ -345,9 +340,9 @@ const PluginCard: React.FC<PluginCardProps> = ({
                   sx: {
                     mt: 1,
                     minWidth: 160,
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid #d0d5dd',
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    borderRadius: "8px",
+                    border: "1px solid #d0d5dd",
                   },
                 }}
               >
@@ -356,7 +351,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
                     <ListItemIcon>
                       <SettingsIcon size={16} />
                     </ListItemIcon>
-                    <ListItemText primaryTypographyProps={{ fontSize: '13px' }}>
+                    <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
                       Manage
                     </ListItemText>
                   </MenuItem>
@@ -365,9 +360,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
                   <ListItemIcon>
                     <TrashIcon size={16} color="#dc2626" />
                   </ListItemIcon>
-                  <ListItemText
-                    primaryTypographyProps={{ fontSize: '13px', color: '#dc2626' }}
-                  >
+                  <ListItemText primaryTypographyProps={{ fontSize: "13px", color: "#dc2626" }}>
                     Uninstall
                   </ListItemText>
                 </MenuItem>
@@ -379,11 +372,11 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 variant="body2"
                 sx={{
                   fontWeight: 500,
-                  fontSize: '13px',
+                  fontSize: "13px",
                   opacity: isHovered ? 1 : 0,
-                  transform: isHovered ? 'translateX(0)' : 'translateX(10px)',
-                  transition: 'all 0.3s ease',
-                  whiteSpace: 'nowrap',
+                  transform: isHovered ? "translateX(0)" : "translateX(10px)",
+                  transition: "all 0.3s ease",
+                  whiteSpace: "nowrap",
                   mr: isHovered ? 1 : 0,
                 }}
               >
@@ -392,8 +385,8 @@ const PluginCard: React.FC<PluginCardProps> = ({
               <ChevronRightIcon
                 size={20}
                 style={{
-                  transform: isHovered ? 'translateX(0)' : 'translateX(0)',
-                  transition: 'all 0.3s ease',
+                  transform: isHovered ? "translateX(0)" : "translateX(0)",
+                  transition: "all 0.3s ease",
                 }}
               />
             </>

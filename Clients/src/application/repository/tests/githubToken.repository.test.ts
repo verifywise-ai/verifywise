@@ -207,9 +207,7 @@ describe("Test GitHub Token Repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(saveGitHubToken("ghp_mytoken123")).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(saveGitHubToken("ghp_mytoken123")).rejects.toThrow("Connection refused");
     });
   });
 
@@ -382,9 +380,7 @@ describe("Test GitHub Token Repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(testGitHubToken("ghp_mytoken123")).rejects.toEqual(
-        mockError,
-      );
+      await expect(testGitHubToken("ghp_mytoken123")).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -392,9 +388,7 @@ describe("Test GitHub Token Repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(testGitHubToken("ghp_mytoken123")).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(testGitHubToken("ghp_mytoken123")).rejects.toThrow("Connection refused");
     });
   });
 });

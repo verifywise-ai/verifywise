@@ -7,12 +7,12 @@
 }
 
 .select-wrapper .MuiSelect-icon {
-    top: 50% !important;
-    right: 12px !important;
-    position: absolute !important;
-    transform: translateY(-50%) !important;
-    pointer-events: none !important;
-    z-index: 1 !important;
+  top: 50% !important;
+  right: 12px !important;
+  position: absolute !important;
+  transform: translateY(-50%) !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
 }
 
 .select-wrapper .select-component .MuiOutlinedInput-root {

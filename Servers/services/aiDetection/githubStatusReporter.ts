@@ -37,10 +37,7 @@ interface StatusCheckParams {
  * Report scan results to GitHub after a webhook-triggered scan completes.
  * Posts commit status check and optionally a PR comment.
  */
-export async function reportScanToGitHub(
-  scan: IScan,
-  organizationId: number
-): Promise<void> {
+export async function reportScanToGitHub(scan: IScan, organizationId: number): Promise<void> {
   // Only report for webhook-triggered scans
   if (scan.trigger_type !== "webhook") {
     return;
@@ -106,7 +103,7 @@ export async function reportScanToGitHub(
 
 function evaluateThresholds(
   scan: IScan,
-  repo: IAIDetectionRepository
+  repo: IAIDetectionRepository,
 ): { passed: boolean; description: string } {
   const riskScore = scan.risk_score ?? 0;
   const findingsCount = scan.findings_count ?? 0;
@@ -146,7 +143,7 @@ function evaluateThresholds(
 async function buildPRCommentBody(
   scan: IScan,
   organizationId: number,
-  passed: boolean
+  passed: boolean,
 ): Promise<string> {
   let summaryDetails = "";
   try {
@@ -187,10 +184,7 @@ ${summaryDetails}
 // GitHub API Helpers
 // ============================================================================
 
-function postCommitStatus(
-  token: string,
-  params: StatusCheckParams
-): Promise<void> {
+function postCommitStatus(token: string, params: StatusCheckParams): Promise<void> {
   return githubApiRequest(
     token,
     "POST",
@@ -200,7 +194,7 @@ function postCommitStatus(
       description: params.description.slice(0, 140),
       context: params.context,
       ...(params.targetUrl ? { target_url: params.targetUrl } : {}),
-    }
+    },
   );
 }
 
@@ -209,21 +203,18 @@ function postPRComment(
   owner: string,
   repo: string,
   prNumber: number,
-  body: string
+  body: string,
 ): Promise<void> {
-  return githubApiRequest(
-    token,
-    "POST",
-    `/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-    { body }
-  );
+  return githubApiRequest(token, "POST", `/repos/${owner}/${repo}/issues/${prNumber}/comments`, {
+    body,
+  });
 }
 
 function githubApiRequest(
   token: string,
   method: string,
   path: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
@@ -243,12 +234,16 @@ function githubApiRequest(
 
     const req = https.request(options, (res) => {
       let responseData = "";
-      res.on("data", (chunk) => { responseData += chunk; });
+      res.on("data", (chunk) => {
+        responseData += chunk;
+      });
       res.on("end", () => {
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
           resolve();
         } else {
-          reject(new Error(`GitHub API ${method} ${path} returned ${res.statusCode}: ${responseData}`));
+          reject(
+            new Error(`GitHub API ${method} ${path} returned ${res.statusCode}: ${responseData}`),
+          );
         }
       });
     });

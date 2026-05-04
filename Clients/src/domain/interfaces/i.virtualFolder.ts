@@ -92,54 +92,54 @@ export interface IFileWithFolders {
  * Predefined folder icons that users can choose from
  */
 export const FOLDER_ICONS = [
-  'folder',
-  'folder-open',
-  'archive',
-  'briefcase',
-  'building',
-  'calendar',
-  'clipboard',
-  'clock',
-  'cog',
-  'document',
-  'file-text',
-  'flag',
-  'globe',
-  'heart',
-  'home',
-  'inbox',
-  'layers',
-  'lock',
-  'mail',
-  'shield',
-  'star',
-  'tag',
-  'users',
+  "folder",
+  "folder-open",
+  "archive",
+  "briefcase",
+  "building",
+  "calendar",
+  "clipboard",
+  "clock",
+  "cog",
+  "document",
+  "file-text",
+  "flag",
+  "globe",
+  "heart",
+  "home",
+  "inbox",
+  "layers",
+  "lock",
+  "mail",
+  "shield",
+  "star",
+  "tag",
+  "users",
 ] as const;
 
-export type FolderIcon = typeof FOLDER_ICONS[number];
+export type FolderIcon = (typeof FOLDER_ICONS)[number];
 
 /**
  * Predefined folder colors (matching design system)
  */
 export const FOLDER_COLORS = [
-  '#13715B', // Green (primary)
-  '#3B82F6', // Blue
-  '#EF4444', // Red
-  '#F59E0B', // Amber
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-  '#84CC16', // Lime
-  '#6B7280', // Gray
+  "#13715B", // Green (primary)
+  "#3B82F6", // Blue
+  "#EF4444", // Red
+  "#F59E0B", // Amber
+  "#8B5CF6", // Purple
+  "#EC4899", // Pink
+  "#06B6D4", // Cyan
+  "#84CC16", // Lime
+  "#6B7280", // Gray
 ] as const;
 
-export type FolderColor = typeof FOLDER_COLORS[number];
+export type FolderColor = (typeof FOLDER_COLORS)[number];
 
 /**
  * Special folder view identifiers
  */
-export type SpecialFolderView = 'all' | 'uncategorized';
+export type SpecialFolderView = "all" | "uncategorized";
 
 /**
  * Selected folder state (can be a folder ID or special view)

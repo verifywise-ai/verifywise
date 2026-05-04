@@ -69,11 +69,7 @@ router.post("/annotations", authenticateJWT, saveAnnotation);
 router.get("/annotations", authenticateJWT, getAnnotations);
 
 // GET: Fetch annotation for specific entity
-router.get(
-  "/annotations/:entityType/:entityId",
-  authenticateJWT,
-  getAnnotationByEntity
-);
+router.get("/annotations/:entityType/:entityId", authenticateJWT, getAnnotationByEntity);
 
 // DELETE: Delete annotation by ID
 router.delete("/annotations/:id", authenticateJWT, deleteAnnotation);
@@ -82,7 +78,7 @@ router.delete("/annotations/:id", authenticateJWT, deleteAnnotation);
 router.delete(
   "/annotations/entity/:entityType/:entityId",
   authenticateJWT,
-  deleteAnnotationByEntity
+  deleteAnnotationByEntity,
 );
 
 // ============================================

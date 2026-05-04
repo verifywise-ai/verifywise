@@ -28,24 +28,15 @@ export const useProfilePhotoFetch = () => {
             mimeType = photoData.type || "image/png";
           } else if (photoData.content.data) {
             bufferData = new Uint8Array(photoData.content.data);
-            mimeType =
-              photoData.type ||
-              photoData.mimeType ||
-              photoData.contentType ||
-              "image/png";
+            mimeType = photoData.type || photoData.mimeType || photoData.contentType || "image/png";
           } else {
             return null;
           }
 
           // Auto-detect and fix SVG MIME type
           if (mimeType === "image/png" && bufferData.length > 0) {
-            const svgSignature = new TextDecoder().decode(
-              bufferData.slice(0, 20),
-            );
-            if (
-              svgSignature.includes("<?xml") ||
-              svgSignature.includes("<svg")
-            ) {
+            const svgSignature = new TextDecoder().decode(bufferData.slice(0, 20));
+            if (svgSignature.includes("<?xml") || svgSignature.includes("<svg")) {
               mimeType = "image/svg+xml";
             }
           }

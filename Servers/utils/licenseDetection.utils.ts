@@ -222,7 +222,7 @@ export async function fetchHuggingFaceLicense(modelId: string): Promise<Extracte
       return inferHuggingFaceLicense(modelId);
     }
 
-    const data = await response.json() as { cardData?: { license?: string }; license?: string };
+    const data = (await response.json()) as { cardData?: { license?: string }; license?: string };
     const license = data.cardData?.license || data.license;
 
     if (license) {
@@ -250,10 +250,7 @@ export async function fetchHuggingFaceLicense(modelId: string): Promise<Extracte
 /**
  * Try to extract license from import statements or model loading code
  */
-export function extractLicenseFromCode(
-  content: string,
-  provider: string
-): ExtractedLicense | null {
+export function extractLicenseFromCode(content: string, provider: string): ExtractedLicense | null {
   // Check for Hugging Face model loading with specific model IDs
   const hfModelPatterns = [
     /from_pretrained\s*\(\s*["']([^"']+)["']/g,
@@ -307,7 +304,7 @@ export function extractLicenseFromCode(
  */
 export function detectLicenseFromFile(
   filePath: string,
-  content: string
+  content: string,
 ): Map<string, ExtractedLicense> {
   const fileName = path.basename(filePath).toLowerCase();
 
@@ -332,7 +329,7 @@ export function detectLicenseFromFile(
 export async function getLicenseForFinding(
   name: string,
   provider: string,
-  codeContent?: string
+  codeContent?: string,
 ): Promise<ExtractedLicense | null> {
   // Try to extract from code content first
   if (codeContent) {

@@ -1,9 +1,7 @@
 import { test, expect } from "./fixtures/auth.fixture";
 
 test.describe("Policy Editor", () => {
-  test("navigating to policy creation shows editor", async ({
-    authedPage: page,
-  }) => {
+  test("navigating to policy creation shows editor", async ({ authedPage: page }) => {
     await page.goto("/policies");
 
     // Click add policy to open creation form
@@ -12,7 +10,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -27,7 +30,12 @@ test.describe("Policy Editor", () => {
       .or(page.locator("textarea"))
       .or(page.getByRole("textbox"));
 
-    if (await editor.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await editor
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await expect(editor.first()).toBeVisible();
     }
     await page.keyboard.press("Escape");
@@ -41,7 +49,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -56,7 +69,12 @@ test.describe("Policy Editor", () => {
       .or(page.locator('[class*="Toolbar"]'))
       .or(page.locator(".tiptap-toolbar"));
 
-    if (await toolbar.first().isVisible().catch(() => false)) {
+    if (
+      await toolbar
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(toolbar.first()).toBeVisible();
     }
     await page.keyboard.press("Escape");
@@ -70,7 +88,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -85,13 +108,21 @@ test.describe("Policy Editor", () => {
       .or(page.locator("textarea"))
       .or(page.getByRole("textbox").last());
 
-    if (await editor.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await editor
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await editor.first().click();
       await editor.first().fill("E2E test policy content");
       await page.waitForTimeout(300);
 
       // Verify content was entered
-      const content = await editor.first().textContent().catch(() => "");
+      const content = await editor
+        .first()
+        .textContent()
+        .catch(() => "");
       if (content) {
         expect(content).toContain("E2E test policy content");
       }
@@ -107,7 +138,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -119,7 +155,12 @@ test.describe("Policy Editor", () => {
       .or(page.locator(".ProseMirror"))
       .or(page.locator('[contenteditable="true"]'));
 
-    if (await editor.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await editor
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await editor.first().click();
       // Type text and apply bold via keyboard shortcut
       await page.keyboard.type("Bold text");
@@ -131,7 +172,12 @@ test.describe("Policy Editor", () => {
       const boldElement = page
         .locator(".tiptap strong, .ProseMirror strong, [contenteditable] strong")
         .or(page.locator('.tiptap [style*="bold"], .ProseMirror [style*="bold"]'));
-      if (await boldElement.first().isVisible().catch(() => false)) {
+      if (
+        await boldElement
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(boldElement.first()).toBeVisible();
       }
     }
@@ -140,9 +186,7 @@ test.describe("Policy Editor", () => {
 
   // --- Tier 5: Save/publish workflow ---
 
-  test("save policy with content persists data", async ({
-    authedPage: page,
-  }) => {
+  test("save policy with content persists data", async ({ authedPage: page }) => {
     await page.goto("/policies");
 
     const addBtn = page
@@ -150,7 +194,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -163,7 +212,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByPlaceholder(/title|name/i))
       .or(page.getByRole("textbox").first());
 
-    if (await titleInput.first().isVisible().catch(() => false)) {
+    if (
+      await titleInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await titleInput.first().fill(`E2E Policy ${Date.now()}`);
     }
 
@@ -173,7 +227,12 @@ test.describe("Policy Editor", () => {
       .or(page.locator(".ProseMirror"))
       .or(page.locator('[contenteditable="true"]'));
 
-    if (await editor.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await editor
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await editor.first().click();
       await page.keyboard.type("E2E test policy content for save test");
       await page.waitForTimeout(300);
@@ -183,7 +242,12 @@ test.describe("Policy Editor", () => {
         .getByRole("button", { name: /save/i })
         .or(page.locator('[aria-label*="save" i]'));
 
-      if (await saveBtn.first().isVisible().catch(() => false)) {
+      if (
+        await saveBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await saveBtn.first().click();
         await page.waitForTimeout(2000);
 
@@ -193,7 +257,12 @@ test.describe("Policy Editor", () => {
           .or(page.getByRole("alert"))
           .or(page.locator(".MuiSnackbar-root"));
 
-        if (await feedback.first().isVisible().catch(() => false)) {
+        if (
+          await feedback
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await expect(feedback.first()).toBeVisible();
         }
       }
@@ -210,7 +279,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -222,7 +296,12 @@ test.describe("Policy Editor", () => {
       .or(page.locator(".ProseMirror"))
       .or(page.locator('[contenteditable="true"]'));
 
-    if (!(await editor.first().isVisible({ timeout: 10_000 }).catch(() => false))) {
+    if (
+      !(await editor
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -231,19 +310,28 @@ test.describe("Policy Editor", () => {
     await page.keyboard.type("undo test text");
     await page.waitForTimeout(300);
 
-    const contentBefore = await editor.first().textContent().catch(() => "");
+    const contentBefore = await editor
+      .first()
+      .textContent()
+      .catch(() => "");
 
     // Undo
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(300);
 
-    const contentAfterUndo = await editor.first().textContent().catch(() => "");
+    const contentAfterUndo = await editor
+      .first()
+      .textContent()
+      .catch(() => "");
 
     // Redo
     await page.keyboard.press("Control+Shift+z");
     await page.waitForTimeout(300);
 
-    const contentAfterRedo = await editor.first().textContent().catch(() => "");
+    const contentAfterRedo = await editor
+      .first()
+      .textContent()
+      .catch(() => "");
 
     // Verify undo removed text and redo restored it
     if (contentBefore && contentAfterUndo !== contentBefore) {
@@ -253,9 +341,7 @@ test.describe("Policy Editor", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("toolbar formatting: block type selector", async ({
-    authedPage: page,
-  }) => {
+  test("toolbar formatting: block type selector", async ({ authedPage: page }) => {
     await page.goto("/policies");
 
     const addBtn = page
@@ -263,7 +349,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -276,7 +367,12 @@ test.describe("Policy Editor", () => {
       .or(page.getByRole("combobox", { name: /block|type|format/i }))
       .or(page.locator('[class*="toolbar"]').locator("select"));
 
-    if (await blockTypeSelect.first().isVisible().catch(() => false)) {
+    if (
+      await blockTypeSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await blockTypeSelect.first().click();
       await page.waitForTimeout(300);
 
@@ -286,7 +382,12 @@ test.describe("Policy Editor", () => {
         .or(page.getByText(/header/i))
         .or(page.getByText(/heading/i));
 
-      if (await option.first().isVisible().catch(() => false)) {
+      if (
+        await option
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(option.first()).toBeVisible();
       }
 

@@ -1,10 +1,4 @@
-import {
-  Model,
-  Table,
-  Column,
-  DataType,
-  ForeignKey,
-} from "sequelize-typescript";
+import { Model, Table, Column, DataType, ForeignKey } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IUserPreferences } from "../../interfaces/i.userPreferences";
 import { UserDateFormat } from "../../enums/user-preferences.enum";
@@ -15,10 +9,7 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class UserPreferencesModel
-  extends Model<UserPreferencesModel>
-  implements IUserPreferences
-{
+export class UserPreferencesModel extends Model<UserPreferencesModel> implements IUserPreferences {
   @Column({
     type: DataType.INTEGER,
     primaryKey: true,

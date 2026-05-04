@@ -61,7 +61,8 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
             lineHeight: 1.6,
           }}
         >
-          VerifyWise is your AI governance and compliance platform. In 3 minutes, we'll help you get started with managing AI risks, compliance frameworks, and building trust.
+          VerifyWise is your AI governance and compliance platform. In 3 minutes, we'll help you get
+          started with managing AI risks, compliance frameworks, and building trust.
         </Typography>
         <Typography
           sx={{
@@ -84,9 +85,7 @@ const WelcomeStep: React.FC<OnboardingStepProps> = () => {
                   backgroundColor: `${brand.primary}`,
                 }}
               />
-              <Typography sx={{ fontSize: "14px", color: `${text.icon}` }}>
-                {item}
-              </Typography>
+              <Typography sx={{ fontSize: "14px", color: `${text.icon}` }}>{item}</Typography>
             </Box>
           ))}
         </Stack>

@@ -32,8 +32,7 @@ export const createTaskToolDefinition: AiActionToolDefinition = {
         },
         description: {
           type: "string",
-          description:
-            "Optional free-text description of the task. Max 256 characters.",
+          description: "Optional free-text description of the task. Max 256 characters.",
         },
         priority: {
           type: "string",
@@ -61,8 +60,7 @@ export const createTaskToolDefinition: AiActionToolDefinition = {
         categories: {
           type: "array",
           items: { type: "string" },
-          description:
-            "Optional category tags. Up to 10 items, each 1–50 characters.",
+          description: "Optional category tags. Up to 10 items, each 1–50 characters.",
         },
       },
       required: ["title", "priority", "status", "due_date", "assignees"],

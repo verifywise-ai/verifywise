@@ -83,7 +83,9 @@ describe("postMarketMonitoringService", () => {
   it("addQuestion posts question", async () => {
     mockAxios.post.mockResolvedValue({ data: { data: { id: 10 } } });
     await addQuestion(1, { question_text: "test" } as any);
-    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/config/1/questions", { question_text: "test" });
+    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/config/1/questions", {
+      question_text: "test",
+    });
   });
 
   it("updateQuestion puts question data", async () => {
@@ -101,7 +103,9 @@ describe("postMarketMonitoringService", () => {
   it("reorderQuestions posts orders", async () => {
     mockAxios.post.mockResolvedValue({});
     await reorderQuestions([{ id: 1, display_order: 0 }]);
-    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/questions/reorder", { orders: [{ id: 1, display_order: 0 }] });
+    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/questions/reorder", {
+      orders: [{ id: 1, display_order: 0 }],
+    });
   });
 
   // Cycles
@@ -134,7 +138,9 @@ describe("postMarketMonitoringService", () => {
   it("saveResponses posts responses", async () => {
     mockAxios.post.mockResolvedValue({});
     await saveResponses(5, [{ question_id: 1, response_value: "yes" }] as any);
-    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/cycles/5/responses", { responses: [{ question_id: 1, response_value: "yes" }] });
+    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/cycles/5/responses", {
+      responses: [{ question_id: 1, response_value: "yes" }],
+    });
   });
 
   it("submitCycle posts submission", async () => {
@@ -147,7 +153,10 @@ describe("postMarketMonitoringService", () => {
   it("flagConcern posts flag data", async () => {
     mockAxios.post.mockResolvedValue({});
     await flagConcern(5, 1, true);
-    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/cycles/5/flag", { question_id: 1, response_value: true });
+    expect(mockAxios.post).toHaveBeenCalledWith("/pmm/cycles/5/flag", {
+      question_id: 1,
+      response_value: true,
+    });
   });
 
   // Reports

@@ -39,16 +39,17 @@ interface UseFolderFilesReturn {
   refreshFiles: (folder: SelectedFolder) => Promise<void>;
   handleAssignFilesToFolder: (folderId: number, fileIds: number[]) => Promise<boolean>;
   handleRemoveFileFromFolder: (folderId: number, fileId: number) => Promise<boolean>;
-  handleUpdateFileFolders: (fileId: number, folderIds: number[]) => Promise<IVirtualFolder[] | null>;
+  handleUpdateFileFolders: (
+    fileId: number,
+    folderIds: number[],
+  ) => Promise<IVirtualFolder[] | null>;
   getFileCurrentFolders: (fileId: number) => Promise<IVirtualFolder[]>;
 }
 
 /**
  * Hook for managing files within virtual folders
  */
-export function useFolderFiles(
-  selectedFolder: SelectedFolder
-): UseFolderFilesReturn {
+export function useFolderFiles(selectedFolder: SelectedFolder): UseFolderFilesReturn {
   const [files, setFiles] = useState<IFileWithFolders[]>([]);
   const [allFiles, setAllFiles] = useState<IFileWithFolders[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,131 +59,135 @@ export function useFolderFiles(
   /**
    * Transform regular file data to IFileWithFolders format
    */
-  const transformToFileWithFolders = useCallback((fileData: ReturnType<typeof transformFilesData>): IFileWithFolders[] => {
-    return fileData.map(file => ({
-      id: Number(file.id) || 0,
-      filename: file.fileName || '',
-      size: file.size || 0,
-      mimetype: file.type || 'application/octet-stream',
-      upload_date: file.uploadDate?.toISOString() || new Date().toISOString(),
-      uploaded_by: Number(file.uploader) || 0,
-      uploader_name: file.uploaderName,
-      uploader_surname: undefined,
-      folders: [],
-    }));
-  }, []);
+  const transformToFileWithFolders = useCallback(
+    (fileData: ReturnType<typeof transformFilesData>): IFileWithFolders[] => {
+      return fileData.map((file) => ({
+        id: Number(file.id) || 0,
+        filename: file.fileName || "",
+        size: file.size || 0,
+        mimetype: file.type || "application/octet-stream",
+        upload_date: file.uploadDate?.toISOString() || new Date().toISOString(),
+        uploaded_by: Number(file.uploader) || 0,
+        uploader_name: file.uploaderName,
+        uploader_surname: undefined,
+        folders: [],
+      }));
+    },
+    [],
+  );
 
   /**
    * Fetch files based on selected folder
    */
-  const refreshFiles = useCallback(async (folder: SelectedFolder) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const refreshFiles = useCallback(
+    async (folder: SelectedFolder) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      let filesData: IFileWithFolders[];
+        let filesData: IFileWithFolders[];
 
-      if (folder === "all") {
-        const rawFiles = await getUserFilesMetaData();
-        const transformedFiles = transformFilesData(rawFiles);
-        filesData = transformToFileWithFolders(transformedFiles);
-        setAllFiles(filesData);
-      } else if (folder === "uncategorized") {
-        filesData = await getUncategorizedFiles();
-      } else {
-        filesData = await getFilesInFolder(folder);
+        if (folder === "all") {
+          const rawFiles = await getUserFilesMetaData();
+          const transformedFiles = transformFilesData(rawFiles);
+          filesData = transformToFileWithFolders(transformedFiles);
+          setAllFiles(filesData);
+        } else if (folder === "uncategorized") {
+          filesData = await getUncategorizedFiles();
+        } else {
+          filesData = await getFilesInFolder(folder);
+        }
+
+        setFiles(filesData);
+      } catch (err) {
+        console.error("Error fetching files:", err);
+        setError("Failed to load files");
+      } finally {
+        setLoading(false);
       }
-
-      setFiles(filesData);
-    } catch (err) {
-      console.error("Error fetching files:", err);
-      setError("Failed to load files");
-    } finally {
-      setLoading(false);
-    }
-  }, [transformToFileWithFolders]);
+    },
+    [transformToFileWithFolders],
+  );
 
   /**
    * Assign files to a folder
    */
-  const handleAssignFilesToFolder = useCallback(async (
-    folderId: number,
-    fileIds: number[]
-  ): Promise<boolean> => {
-    try {
-      setLoadingOperation(true);
-      setError(null);
+  const handleAssignFilesToFolder = useCallback(
+    async (folderId: number, fileIds: number[]): Promise<boolean> => {
+      try {
+        setLoadingOperation(true);
+        setError(null);
 
-      await assignFilesToFolder(folderId, fileIds);
-      await refreshFiles(selectedFolder);
+        await assignFilesToFolder(folderId, fileIds);
+        await refreshFiles(selectedFolder);
 
-      return true;
-    } catch (err) {
-      console.error("Error assigning files to folder:", err);
-      const message = err instanceof Error ? err.message : "Failed to assign files";
-      setError(message);
-      return false;
-    } finally {
-      setLoadingOperation(false);
-    }
-  }, [selectedFolder, refreshFiles]);
+        return true;
+      } catch (err) {
+        console.error("Error assigning files to folder:", err);
+        const message = err instanceof Error ? err.message : "Failed to assign files";
+        setError(message);
+        return false;
+      } finally {
+        setLoadingOperation(false);
+      }
+    },
+    [selectedFolder, refreshFiles],
+  );
 
   /**
    * Remove a file from a folder
    */
-  const handleRemoveFileFromFolder = useCallback(async (
-    folderId: number,
-    fileId: number
-  ): Promise<boolean> => {
-    try {
-      setLoadingOperation(true);
-      setError(null);
+  const handleRemoveFileFromFolder = useCallback(
+    async (folderId: number, fileId: number): Promise<boolean> => {
+      try {
+        setLoadingOperation(true);
+        setError(null);
 
-      await removeFileFromFolder(folderId, fileId);
-      await refreshFiles(selectedFolder);
+        await removeFileFromFolder(folderId, fileId);
+        await refreshFiles(selectedFolder);
 
-      return true;
-    } catch (err) {
-      console.error("Error removing file from folder:", err);
-      const message = err instanceof Error ? err.message : "Failed to remove file";
-      setError(message);
-      return false;
-    } finally {
-      setLoadingOperation(false);
-    }
-  }, [selectedFolder, refreshFiles]);
+        return true;
+      } catch (err) {
+        console.error("Error removing file from folder:", err);
+        const message = err instanceof Error ? err.message : "Failed to remove file";
+        setError(message);
+        return false;
+      } finally {
+        setLoadingOperation(false);
+      }
+    },
+    [selectedFolder, refreshFiles],
+  );
 
   /**
    * Update all folder assignments for a file
    */
-  const handleUpdateFileFolders = useCallback(async (
-    fileId: number,
-    folderIds: number[]
-  ): Promise<IVirtualFolder[] | null> => {
-    try {
-      setLoadingOperation(true);
-      setError(null);
+  const handleUpdateFileFolders = useCallback(
+    async (fileId: number, folderIds: number[]): Promise<IVirtualFolder[] | null> => {
+      try {
+        setLoadingOperation(true);
+        setError(null);
 
-      const updatedFolders = await updateFileFolders(fileId, folderIds);
-      await refreshFiles(selectedFolder);
+        const updatedFolders = await updateFileFolders(fileId, folderIds);
+        await refreshFiles(selectedFolder);
 
-      return updatedFolders;
-    } catch (err) {
-      console.error("Error updating file folders:", err);
-      const message = err instanceof Error ? err.message : "Failed to update file folders";
-      setError(message);
-      return null;
-    } finally {
-      setLoadingOperation(false);
-    }
-  }, [selectedFolder, refreshFiles]);
+        return updatedFolders;
+      } catch (err) {
+        console.error("Error updating file folders:", err);
+        const message = err instanceof Error ? err.message : "Failed to update file folders";
+        setError(message);
+        return null;
+      } finally {
+        setLoadingOperation(false);
+      }
+    },
+    [selectedFolder, refreshFiles],
+  );
 
   /**
    * Get current folders for a file
    */
-  const getFileCurrentFolders = useCallback(async (
-    fileId: number
-  ): Promise<IVirtualFolder[]> => {
+  const getFileCurrentFolders = useCallback(async (fileId: number): Promise<IVirtualFolder[]> => {
     try {
       return await getFileFolders(fileId);
     } catch (err) {

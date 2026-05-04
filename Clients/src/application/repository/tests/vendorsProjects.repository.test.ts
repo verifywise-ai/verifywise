@@ -248,7 +248,9 @@ describe("vendorsProjects.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateVendor({ id: 1, body: { name: "Test" } })).rejects.toThrow("Network timeout");
+      await expect(updateVendor({ id: 1, body: { name: "Test" } })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 

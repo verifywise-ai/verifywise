@@ -14,12 +14,7 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import {
-  Box,
-  Stack,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, Stack, Typography, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -41,21 +36,21 @@ import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { EnhancedTooltip } from "../../EnhancedTooltip";
 import allowedRoles from "../../../../application/constants/permissions";
-import {
-  useCreateVendor,
-  useUpdateVendor,
-} from "../../../../application/hooks/useVendors";
+import { useCreateVendor, useUpdateVendor } from "../../../../application/hooks/useVendors";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { User } from "../../../../domain/types/User";
 import { AddNewVendorProps } from "../../../../domain/interfaces/i.vendor";
 import AutoCompleteField from "../../Inputs/Autocomplete";
-import { 
+import {
   DataSensitivity,
   BusinessCriticality,
   PastIssues,
-  RegulatoryExposure
+  RegulatoryExposure,
 } from "../../../../domain/enums/status.enum";
-import { calculateVendorRiskScore, getRiskScoreColor } from "../../../../domain/utils/vendorScorecard.utils";
+import {
+  calculateVendorRiskScore,
+  getRiskScoreColor,
+} from "../../../../domain/utils/vendorScorecard.utils";
 
 const initialState = {
   vendorName: "",
@@ -140,7 +135,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return r.accepted ? "" : r.message;
       },
       projectIds: (v: unknown) => {
-        if (!v || !(Array.isArray(v)) || v.length === 0) {
+        if (!v || !Array.isArray(v) || v.length === 0) {
           return "Please select a use case from the dropdown";
         }
         return "";
@@ -150,14 +145,25 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return r.accepted ? "" : r.message;
       },
       vendorContactPerson: (v: unknown) => {
-        const r = checkStringValidation("Vendor Contact Person", v as string, 1, 64, undefined, undefined, undefined, undefined, "contactPerson");
+        const r = checkStringValidation(
+          "Vendor Contact Person",
+          v as string,
+          1,
+          64,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          "contactPerson",
+        );
         return r.accepted ? "" : r.message;
       },
       assignee: (v: unknown) => (v === null ? "Please select an assignee from the dropdown" : ""),
     }),
-    []
+    [],
   );
-  const { errors, validateAll, clearFieldError, resetErrors } = useFormValidation<typeof initialState>(validators);
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<typeof initialState>(validators);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectsLoaded, setProjectsLoaded] = useState(false); // Track if projects are loaded
   const [alert, setAlert] = useState<{
@@ -165,9 +171,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     title?: string;
     body: string;
   } | null>(null);
-  const [projectOptions, setProjectOptions] = useState<
-    { _id: number; name: string }[]
-  >([]);
+  const [projectOptions, setProjectOptions] = useState<{ _id: number; name: string }[]>([]);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const { userRoleName } = useAuth();
@@ -180,10 +184,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   const updateVendorMutation = useUpdateVendor();
 
   // Prefetch history data when modal opens in edit mode
-  useEntityChangeHistory(
-    "vendor",
-    existingVendor?.id
-  );
+  useEntityChangeHistory("vendor", existingVendor?.id);
 
   const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
 
@@ -228,23 +229,26 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         vendorProvides: existingVendor.vendor_provides,
         vendorContactPerson: existingVendor.vendor_contact_person,
         reviewStatus:
-          REVIEW_STATUS_OPTIONS?.find(
-            (s) => s.name === existingVendor.review_status
-          )?._id || "",
+          REVIEW_STATUS_OPTIONS?.find((s) => s.name === existingVendor.review_status)?._id || "",
         reviewer: existingVendor.reviewer || null,
         reviewResult: existingVendor.review_result,
         assignee: existingVendor.assignee || null,
-        reviewDate: existingVendor.review_date && dayjs(existingVendor.review_date).isValid()
-          ? dayjs(existingVendor.review_date).toISOString()
-          : "",
+        reviewDate:
+          existingVendor.review_date && dayjs(existingVendor.review_date).isValid()
+            ? dayjs(existingVendor.review_date).toISOString()
+            : "",
         dataSensitivity: existingVendor.data_sensitivity || "",
         businessCriticality: existingVendor.business_criticality || "",
         pastIssues: existingVendor.past_issues || "",
         regulatoryExposure: existingVendor.regulatory_exposure || "",
       }));
       // Expand scorecard if any scorecard fields have values
-      if (existingVendor.data_sensitivity || existingVendor.business_criticality || 
-          existingVendor.past_issues || existingVendor.regulatory_exposure) {
+      if (
+        existingVendor.data_sensitivity ||
+        existingVendor.business_criticality ||
+        existingVendor.past_issues ||
+        existingVendor.regulatory_exposure
+      ) {
         setIsScorecardExpanded(true);
       }
     }
@@ -253,7 +257,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   // ESC key handling and focus trapping
   useModalKeyHandling({
     isOpen,
-    onClose: () => setIsOpen(false)
+    onClose: () => setIsOpen(false),
   });
 
   /**
@@ -292,30 +296,29 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     clearFieldError(field);
   };
 
-
-
   /**
    * Handles the final save operation after confirmation
    * Creates new vendor or updates existing one
    */
   const handleOnSave = async () => {
-     // Ensure website starts with http:// or https://
+    // Ensure website starts with http:// or https://
     let formattedWebsite = values.website?.trim() || "";
-    if (
-      formattedWebsite &&
-      !/^https?:\/\//i.test(formattedWebsite)
-    ) {
+    if (formattedWebsite && !/^https?:\/\//i.test(formattedWebsite)) {
       formattedWebsite = `http://${formattedWebsite}`;
     }
     // Calculate risk score if any scorecard fields are provided
-    const riskScore = (values.dataSensitivity || values.businessCriticality || values.pastIssues || values.regulatoryExposure) 
-      ? calculateVendorRiskScore({
-          data_sensitivity: values.dataSensitivity || undefined,
-          business_criticality: values.businessCriticality || undefined,
-          past_issues: values.pastIssues || undefined,
-          regulatory_exposure: values.regulatoryExposure || undefined,
-        })
-      : undefined;
+    const riskScore =
+      values.dataSensitivity ||
+      values.businessCriticality ||
+      values.pastIssues ||
+      values.regulatoryExposure
+        ? calculateVendorRiskScore({
+            data_sensitivity: values.dataSensitivity || undefined,
+            business_criticality: values.businessCriticality || undefined,
+            past_issues: values.pastIssues || undefined,
+            regulatory_exposure: values.regulatoryExposure || undefined,
+          })
+        : undefined;
 
     const _vendorDetails = {
       projects: values.projectIds,
@@ -325,10 +328,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       website: formattedWebsite,
       vendor_contact_person: values.vendorContactPerson,
       review_result: values.reviewResult,
-      review_status:
-        REVIEW_STATUS_OPTIONS?.find(
-          (s) => s._id === values.reviewStatus
-        )?.name || "",
+      review_status: REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name || "",
       reviewer: values.reviewer ?? undefined,
       review_date: values.reviewDate,
       // Scorecard fields
@@ -380,9 +380,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${
-          (error as Error).message || "Please try again."
-        }`,
+        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -397,10 +395,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * @param vendorId - The ID of the vendor to update
    * @param updatedVendorDetails - The new vendor details
    */
-  const updateVendor = async (
-    vendorId: number,
-    updatedVendorDetails: object
-  ) => {
+  const updateVendor = async (vendorId: number, updatedVendorDetails: object) => {
     setIsSubmitting(true);
     try {
       const response = await updateVendorMutation.mutateAsync({
@@ -430,9 +425,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       });
       setAlert({
         variant: "error",
-        body: `An error occurred: ${
-          (error as Error).message || "Please try again."
-        }`,
+        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -443,11 +436,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   };
 
   const vendorDetailsPanel = (
-      <Stack spacing={6}>
-      <Stack
-        direction={"row"}
-        spacing={6}
-      >
+    <Stack spacing={6}>
+      <Stack direction={"row"} spacing={6}>
         <Field // vendorName
           label="Vendor name"
           width={220}
@@ -466,9 +456,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           error={errors.projectIds}
           disabled={isEditingDisabled}
           value={
-            projectOptions?.filter((project) =>
-              values.projectIds?.includes(project._id)
-            ) || []
+            projectOptions?.filter((project) => values.projectIds?.includes(project._id)) || []
           }
           options={projectOptions || []}
           noOptionsText={
@@ -479,19 +467,15 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           onChange={(_event, newValue: { _id: number; name: string }[]) => {
             handleOnChange(
               "projectIds",
-              newValue.map((project) => project._id)
+              newValue.map((project) => project._id),
             );
           }}
-          getOptionLabel={(project: { _id: number; name: string }) =>
-            project.name
-          }
+          getOptionLabel={(project: { _id: number; name: string }) => project.name}
           renderOption={(props, option: { _id: number; name: string }) => {
             const { key, ...optionProps } = props;
             return (
               <Box key={`${option._id}-${key}`} component="li" {...optionProps}>
-                <Typography sx={{ fontSize: "13px" }}>
-                  {option.name}
-                </Typography>
+                <Typography sx={{ fontSize: "13px" }}>{option.name}</Typography>
               </Box>
             );
           }}
@@ -517,10 +501,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
         />
       </Stack>
-      <Stack
-        direction={"row"}
-        spacing={6}
-      >
+      <Stack direction={"row"} spacing={6}>
         <Field // website
           label="Website"
           width={220}
@@ -535,9 +516,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           label="Vendor contact person"
           width={220}
           value={values.vendorContactPerson}
-          onChange={(e) =>
-            handleOnChange("vendorContactPerson", e.target.value)
-          }
+          onChange={(e) => handleOnChange("vendorContactPerson", e.target.value)}
           error={errors.vendorContactPerson}
           isRequired
           disabled={isEditingDisabled}
@@ -570,10 +549,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         placeholder="Describe the products or services this vendor delivers (e.g., cloud hosting, legal advisory, AI APIs)."
         rows={2}
       />
-      <Stack
-        direction={"row"}
-        spacing={6}
-      >
+      <Stack direction={"row"} spacing={6}>
         <Select // reviewStatus
           items={REVIEW_STATUS_OPTIONS}
           label="Review status"
@@ -608,11 +584,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             sx={{
               width: "100%",
             }}
-            date={
-              values.reviewDate
-                ? dayjs(values.reviewDate)
-                : dayjs(new Date())
-            }
+            date={values.reviewDate ? dayjs(values.reviewDate) : dayjs(new Date())}
             handleDateChange={handleDateChange}
             disabled={isEditingDisabled}
           />
@@ -629,7 +601,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         placeholder="Summarize the outcome of the review (e.g., approved, rejected, pending more info, or risk concerns identified)."
         rows={2}
       />
-      
+
       {/* Vendor Scorecard Section */}
       <Stack spacing={2} sx={{ width: 686 }}>
         <Box
@@ -698,7 +670,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       lineHeight: 1.5,
                     }}
                   >
-                    Each factor is normalized to a 0-1 scale before applying weights. The final score ranges from 0% (lowest risk) to 100% (highest risk).
+                    Each factor is normalized to a 0-1 scale before applying weights. The final
+                    score ranges from 0% (lowest risk) to 100% (highest risk).
                   </Typography>
                 </>
               }
@@ -721,42 +694,49 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                 How is this calculated?
               </Typography>
             </EnhancedTooltip>
-            {(values.dataSensitivity || values.businessCriticality || values.pastIssues || values.regulatoryExposure) && (() => {
-              const riskScore = calculateVendorRiskScore({
-                data_sensitivity: values.dataSensitivity || undefined,
-                business_criticality: values.businessCriticality || undefined,
-                past_issues: values.pastIssues || undefined,
-                regulatory_exposure: values.regulatoryExposure || undefined,
-              });
-              const riskColor = getRiskScoreColor(riskScore);
-              
-              return (
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    backgroundColor: `${riskColor}20`,
-                    border: `1px solid ${riskColor}`,
-                    minWidth: "50px",
-                  }}
-                >
+            {(values.dataSensitivity ||
+              values.businessCriticality ||
+              values.pastIssues ||
+              values.regulatoryExposure) &&
+              (() => {
+                const riskScore = calculateVendorRiskScore({
+                  data_sensitivity: values.dataSensitivity || undefined,
+                  business_criticality: values.businessCriticality || undefined,
+                  past_issues: values.pastIssues || undefined,
+                  regulatory_exposure: values.regulatoryExposure || undefined,
+                });
+                const riskColor = getRiskScoreColor(riskScore);
+
+                return (
                   <Box
                     sx={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      backgroundColor: riskColor,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      backgroundColor: `${riskColor}20`,
+                      border: `1px solid ${riskColor}`,
+                      minWidth: "50px",
                     }}
-                  />
-                  <Typography variant="body2" sx={{ fontSize: "11px", fontWeight: 500, color: riskColor }}>
-                    {riskScore}%
-                  </Typography>
-                </Box>
-              );
-            })()}
+                  >
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        backgroundColor: riskColor,
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{ fontSize: "11px", fontWeight: 500, color: riskColor }}
+                    >
+                      {riskScore}%
+                    </Typography>
+                  </Box>
+                );
+              })()}
           </Box>
           {isScorecardExpanded ? (
             <ChevronUp size={16} style={{ color: theme.palette.text.tertiary }} />
@@ -764,7 +744,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             <ChevronDown size={16} style={{ color: theme.palette.text.tertiary }} />
           )}
         </Box>
-        
+
         {isScorecardExpanded && (
           <Stack spacing={6}>
             <Stack direction="row" spacing={6}>
@@ -830,7 +810,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           </Stack>
         )}
       </Stack>
-      </Stack>
+    </Stack>
   );
 
   return (
@@ -846,9 +826,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           />
         </Suspense>
       )}
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <StandardModal
         isOpen={isOpen}
         onClose={() => {
@@ -856,7 +834,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           setActiveTab("details");
           // Invalidate history cache to get fresh data on next open
           if (existingVendor?.id) {
-            queryClient.invalidateQueries({ queryKey: ["changeHistory", "vendor", existingVendor.id] });
+            queryClient.invalidateQueries({
+              queryKey: ["changeHistory", "vendor", existingVendor.id],
+            });
           }
           setIsOpen(false);
         }}

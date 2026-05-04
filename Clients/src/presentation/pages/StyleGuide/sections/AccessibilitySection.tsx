@@ -186,16 +186,16 @@ const AccessibilitySection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Guidelines for building accessible interfaces. Follow WCAG 2.1 AA standards
-          to ensure VerifyWise is usable by everyone.
+          Guidelines for building accessible interfaces. Follow WCAG 2.1 AA standards to ensure
+          VerifyWise is usable by everyone.
         </Typography>
       </Box>
 
       {/* Alt Text */}
       <SpecSection title="Alternative text">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          All meaningful images must have descriptive alt text. Decorative images should
-          have empty alt attributes.
+          All meaningful images must have descriptive alt text. Decorative images should have empty
+          alt attributes.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -212,7 +212,7 @@ const AccessibilitySection: React.FC = () => {
               items={[
                 "Describe the content and function",
                 "Keep it concise (125 chars max)",
-                "Don't start with \"Image of...\"",
+                'Don\'t start with "Image of..."',
                 "Use empty alt for decorative images",
                 "Include text shown in images",
               ]}
@@ -224,8 +224,8 @@ const AccessibilitySection: React.FC = () => {
       {/* ARIA Labels */}
       <SpecSection title="ARIA labels">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Use ARIA attributes to provide context for assistive technologies when
-          HTML semantics alone aren't sufficient.
+          Use ARIA attributes to provide context for assistive technologies when HTML semantics
+          alone aren't sufficient.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -255,8 +255,8 @@ const AccessibilitySection: React.FC = () => {
       {/* Keyboard Navigation */}
       <SpecSection title="Keyboard navigation">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          All interactive elements must be accessible via keyboard. Use native
-          HTML elements when possible as they have built-in keyboard support.
+          All interactive elements must be accessible via keyboard. Use native HTML elements when
+          possible as they have built-in keyboard support.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -286,8 +286,8 @@ const AccessibilitySection: React.FC = () => {
       {/* Focus Management */}
       <SpecSection title="Focus management">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Manage focus programmatically for modals and dynamic content. Trap focus
-          within modals and return focus when closed.
+          Manage focus programmatically for modals and dynamic content. Trap focus within modals and
+          return focus when closed.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -317,8 +317,8 @@ const AccessibilitySection: React.FC = () => {
       {/* Color Contrast */}
       <SpecSection title="Color contrast">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Ensure sufficient contrast between text and backgrounds. WCAG AA requires
-          4.5:1 for normal text, 3:1 for large text.
+          Ensure sufficient contrast between text and backgrounds. WCAG AA requires 4.5:1 for normal
+          text, 3:1 for large text.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -330,7 +330,16 @@ const AccessibilitySection: React.FC = () => {
             />
           </Box>
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               VerifyWise color contrast
             </Typography>
             <SpecTable
@@ -365,10 +374,10 @@ const AccessibilitySection: React.FC = () => {
             <GuidelineBox
               title="Live region types"
               items={[
-                "aria-live=\"polite\": Non-urgent updates",
-                "aria-live=\"assertive\": Urgent/errors",
-                "role=\"status\": Status messages",
-                "role=\"alert\": Error messages",
+                'aria-live="polite": Non-urgent updates',
+                'aria-live="assertive": Urgent/errors',
+                'role="status": Status messages',
+                'role="alert": Error messages',
                 "MUI Snackbar is already accessible",
               ]}
             />
@@ -396,7 +405,9 @@ const AccessibilitySection: React.FC = () => {
         >
           WCAG 2.1 checklist
         </Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "8px" }}>
+        <Box
+          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "8px" }}
+        >
           {wcagChecklist.map((item, index) => (
             <Box
               key={index}
@@ -411,28 +422,33 @@ const AccessibilitySection: React.FC = () => {
                   width: 20,
                   height: 16,
                   borderRadius: "2px",
-                  backgroundColor: item.level === "A" ? theme.palette.status.success.bg :
-                    item.level === "AA" ? theme.palette.status.warning.bg : theme.palette.background.fill,
+                  backgroundColor:
+                    item.level === "A"
+                      ? theme.palette.status.success.bg
+                      : item.level === "AA"
+                        ? theme.palette.status.warning.bg
+                        : theme.palette.background.fill,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Typography sx={{ fontSize: 8, fontWeight: 600, color: theme.palette.text.secondary }}>
+                <Typography
+                  sx={{ fontSize: 8, fontWeight: 600, color: theme.palette.text.secondary }}
+                >
                   {item.level}
                 </Typography>
               </Box>
               <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                 {item.item}
               </Typography>
-              {item.required && (
-                <Check size={12} color={theme.palette.status.success.text} />
-              )}
+              {item.required && <Check size={12} color={theme.palette.status.success.text} />}
             </Box>
           ))}
         </Box>
         <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary, mt: "16px" }}>
-          Items with ✓ are required for VerifyWise. Test with screen readers (VoiceOver, NVDA) regularly.
+          Items with ✓ are required for VerifyWise. Test with screen readers (VoiceOver, NVDA)
+          regularly.
         </Typography>
       </Box>
     </Box>
@@ -467,7 +483,16 @@ const GuidelineBox: React.FC<{ title: string; items: string[] }> = ({ title, ite
   const theme = useTheme();
   return (
     <>
-      <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <Typography
+        sx={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: theme.palette.text.secondary,
+          mb: "16px",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+        }}
+      >
         {title}
       </Typography>
       <Box
@@ -530,9 +555,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -554,9 +577,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -606,9 +627,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      {showCode && (
-        <CodeBlock code={code} language="tsx" onCopy={onCopy} />
-      )}
+      {showCode && <CodeBlock code={code} language="tsx" onCopy={onCopy} />}
     </Box>
   );
 };

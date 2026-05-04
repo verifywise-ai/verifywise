@@ -79,15 +79,14 @@ export const validateStartDate = (value: any): ValidationResult => {
  */
 export const validateAiRiskClassification = (
   value: any,
-  isOrganizational?: boolean
+  isOrganizational?: boolean,
 ): ValidationResult => {
   // For organizational projects, ai_risk_classification should be null
   if (isOrganizational) {
     if (value !== null && value !== undefined) {
       return {
         isValid: false,
-        message:
-          "AI risk classification must be null for organizational projects",
+        message: "AI risk classification must be null for organizational projects",
         code: "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL",
       };
     }
@@ -95,12 +94,7 @@ export const validateAiRiskClassification = (
   }
 
   // For non-organizational projects, validation is required
-  return validateEnum(
-    value,
-    "AI risk classification",
-    AI_RISK_CLASSIFICATION_ENUM,
-    true
-  );
+  return validateEnum(value, "AI risk classification", AI_RISK_CLASSIFICATION_ENUM, true);
 };
 
 /**
@@ -109,15 +103,14 @@ export const validateAiRiskClassification = (
  */
 export const validateTypeOfHighRiskRole = (
   value: any,
-  isOrganizational?: boolean
+  isOrganizational?: boolean,
 ): ValidationResult => {
   // For organizational projects, type_of_high_risk_role should be null
   if (isOrganizational) {
     if (value !== null && value !== undefined) {
       return {
         isValid: false,
-        message:
-          "Type of high risk role must be null for organizational projects",
+        message: "Type of high risk role must be null for organizational projects",
         code: "ORGANIZATIONAL_PROJECT_HIGH_RISK_ROLE_NOT_NULL",
       };
     }
@@ -125,12 +118,7 @@ export const validateTypeOfHighRiskRole = (
   }
 
   // For non-organizational projects, validation is required
-  return validateEnum(
-    value,
-    "Type of high risk role",
-    HIGH_RISK_ROLE_ENUM,
-    true
-  );
+  return validateEnum(value, "Type of high risk role", HIGH_RISK_ROLE_ENUM, true);
 };
 
 /**
@@ -168,15 +156,10 @@ export const validateIsOrganizational = (value: any): ValidationResult => {
  */
 export const validateFramework = (value: any): ValidationResult => {
   // Framework field is required
-  if (
-    value === undefined ||
-    value === null ||
-    (Array.isArray(value) && value.length === 0)
-  ) {
+  if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) {
     return {
       isValid: false,
-      message:
-        "Framework is required and must contain at least one framework ID",
+      message: "Framework is required and must contain at least one framework ID",
       code: "REQUIRED_FIELD",
     };
   }
@@ -277,11 +260,7 @@ export const validateMembers = (value: any): ValidationResult => {
   // Validate each member ID in the array
   for (let i = 0; i < value.length; i++) {
     const memberId = value[i];
-    const validation = validateForeignKey(
-      memberId,
-      `Member ID at index ${i}`,
-      false
-    );
+    const validation = validateForeignKey(memberId, `Member ID at index ${i}`, false);
     if (!validation.isValid) {
       return {
         isValid: false,
@@ -345,18 +324,12 @@ export const createProjectSchema = {
 export const updateProjectSchema = {
   project_title: (value: any) =>
     value !== undefined ? validateProjectTitle(value) : { isValid: true },
-  owner: (value: any) =>
-    value !== undefined ? validateOwner(value) : { isValid: true },
-  start_date: (value: any) =>
-    value !== undefined ? validateStartDate(value) : { isValid: true },
-  goal: (value: any) =>
-    value !== undefined ? validateGoal(value) : { isValid: true },
-  members: (value: any) =>
-    value !== undefined ? validateMembers(value) : { isValid: true },
+  owner: (value: any) => (value !== undefined ? validateOwner(value) : { isValid: true }),
+  start_date: (value: any) => (value !== undefined ? validateStartDate(value) : { isValid: true }),
+  goal: (value: any) => (value !== undefined ? validateGoal(value) : { isValid: true }),
+  members: (value: any) => (value !== undefined ? validateMembers(value) : { isValid: true }),
   status: (value: any) =>
-    value !== undefined
-      ? validateProjectStatus(value, false)
-      : { isValid: true },
+    value !== undefined ? validateProjectStatus(value, false) : { isValid: true },
 };
 
 /**
@@ -372,13 +345,12 @@ export const validateCompleteProject = (data: any): ValidationError[] => {
   // Validate ai_risk_classification conditionally
   const aiRiskValidation = validateAiRiskClassification(
     data.ai_risk_classification,
-    isOrganizational
+    isOrganizational,
   );
   if (!aiRiskValidation.isValid) {
     errors.push({
       field: "ai_risk_classification",
-      message:
-        aiRiskValidation.message || "AI risk classification validation failed",
+      message: aiRiskValidation.message || "AI risk classification validation failed",
       code: aiRiskValidation.code || "VALIDATION_FAILED",
     });
   }
@@ -386,14 +358,12 @@ export const validateCompleteProject = (data: any): ValidationError[] => {
   // Validate type_of_high_risk_role conditionally
   const highRiskRoleValidation = validateTypeOfHighRiskRole(
     data.type_of_high_risk_role,
-    isOrganizational
+    isOrganizational,
   );
   if (!highRiskRoleValidation.isValid) {
     errors.push({
       field: "type_of_high_risk_role",
-      message:
-        highRiskRoleValidation.message ||
-        "Type of high risk role validation failed",
+      message: highRiskRoleValidation.message || "Type of high risk role validation failed",
       code: highRiskRoleValidation.code || "VALIDATION_FAILED",
     });
   }
@@ -420,10 +390,7 @@ export const sanitizeProjectDataForOrganizational = (data: any): any => {
  * Validates a project object for updates
  * Handles conditional validation of AI risk fields based on organizational status
  */
-export const validateUpdateProject = (
-  data: any,
-  currentProject?: any
-): ValidationError[] => {
+export const validateUpdateProject = (data: any, currentProject?: any): ValidationError[] => {
   // Check if at least one field is provided for update
   const updateFields = [
     "project_title",
@@ -436,9 +403,7 @@ export const validateUpdateProject = (
     "enable_ai_data_insertion",
   ];
 
-  const hasUpdateField = updateFields.some(
-    (field) => data[field] !== undefined
-  );
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
     return [
@@ -463,14 +428,12 @@ export const validateUpdateProject = (
   if (data.ai_risk_classification !== undefined) {
     const aiRiskValidation = validateAiRiskClassification(
       data.ai_risk_classification,
-      isOrganizational
+      isOrganizational,
     );
     if (!aiRiskValidation.isValid) {
       errors.push({
         field: "ai_risk_classification",
-        message:
-          aiRiskValidation.message ||
-          "AI risk classification validation failed",
+        message: aiRiskValidation.message || "AI risk classification validation failed",
         code: aiRiskValidation.code || "VALIDATION_FAILED",
       });
     }
@@ -479,14 +442,12 @@ export const validateUpdateProject = (
   if (data.type_of_high_risk_role !== undefined) {
     const highRiskRoleValidation = validateTypeOfHighRiskRole(
       data.type_of_high_risk_role,
-      isOrganizational
+      isOrganizational,
     );
     if (!highRiskRoleValidation.isValid) {
       errors.push({
         field: "type_of_high_risk_role",
-        message:
-          highRiskRoleValidation.message ||
-          "Type of high risk role validation failed",
+        message: highRiskRoleValidation.message || "Type of high risk role validation failed",
         code: highRiskRoleValidation.code || "VALIDATION_FAILED",
       });
     }
@@ -506,10 +467,7 @@ export const validateProjectIdParam = (id: any): ValidationResult => {
  * Validates project status enum field
  * @param required - Whether the status field is required (default: false for optional)
  */
-export const validateProjectStatus = (
-  value: any,
-  required: boolean = false
-): ValidationResult => {
+export const validateProjectStatus = (value: any, required: boolean = false): ValidationResult => {
   // Status is optional during creation (defaults to "Not started" in database)
   if (!required && (value === undefined || value === null)) {
     return { isValid: true };
@@ -566,11 +524,7 @@ export const extractFrameworkIds = (frameworks: any[]): number[] => {
     .map((item) => {
       if (typeof item === "number") {
         return item;
-      } else if (
-        typeof item === "object" &&
-        item !== null &&
-        item.framework_id
-      ) {
+      } else if (typeof item === "object" && item !== null && item.framework_id) {
         return item.framework_id;
       }
       return null;
@@ -581,9 +535,7 @@ export const extractFrameworkIds = (frameworks: any[]): number[] => {
 /**
  * Validates that start date is not in the future beyond reasonable limits
  */
-export const validateStartDateReasonable = (
-  startDate: Date
-): ValidationResult => {
+export const validateStartDateReasonable = (startDate: Date): ValidationResult => {
   const now = new Date();
   const oneYearFromNow = new Date();
   oneYearFromNow.setFullYear(now.getFullYear() + 1);
@@ -605,7 +557,7 @@ export const validateStartDateReasonable = (
  */
 export const validateOrganizationalFrameworkConsistency = (
   isOrganizational: boolean,
-  frameworks: number[]
+  frameworks: number[],
 ): ValidationResult => {
   // Framework validation is mandatory
   if (!frameworks || frameworks.length === 0) {
@@ -623,13 +575,9 @@ export const validateOrganizationalFrameworkConsistency = (
 
   if (isOrganizational) {
     // For organizational projects, only allow frameworks 2 and 3
-    const hasInvalidFramework = frameworks.some(
-      (id) => !organizationalFrameworks.includes(id)
-    );
+    const hasInvalidFramework = frameworks.some((id) => !organizationalFrameworks.includes(id));
     if (hasInvalidFramework) {
-      const invalidFrameworks = frameworks.filter(
-        (id) => !organizationalFrameworks.includes(id)
-      );
+      const invalidFrameworks = frameworks.filter((id) => !organizationalFrameworks.includes(id));
       return {
         isValid: false,
         message: `Organizational projects can only use organizational frameworks: ISO 42001 (2) or ISO 27001 (3). Invalid framework IDs: ${invalidFrameworks.join(", ")}`,
@@ -638,12 +586,10 @@ export const validateOrganizationalFrameworkConsistency = (
     }
   } else {
     // For non-organizational (AI) projects, only allow framework 1
-    const hasInvalidFramework = frameworks.some(
-      (id) => !nonOrganizationalFrameworks.includes(id)
-    );
+    const hasInvalidFramework = frameworks.some((id) => !nonOrganizationalFrameworks.includes(id));
     if (hasInvalidFramework) {
       const invalidFrameworks = frameworks.filter(
-        (id) => !nonOrganizationalFrameworks.includes(id)
+        (id) => !nonOrganizationalFrameworks.includes(id),
       );
       return {
         isValid: false,
@@ -661,7 +607,7 @@ export const validateOrganizationalFrameworkConsistency = (
  */
 export const validateRiskClassificationConsistency = (
   aiRiskClassification: AiRiskClassification,
-  typeOfHighRiskRole: HighRiskRole
+  typeOfHighRiskRole: HighRiskRole,
 ): ValidationResult => {
   // Business rule: High-risk AI systems should have appropriate high-risk roles
   // All defined HighRiskRole enum values are valid for high-risk systems
@@ -671,8 +617,7 @@ export const validateRiskClassificationConsistency = (
     if (!validHighRiskRoles.includes(typeOfHighRiskRole)) {
       return {
         isValid: false,
-        message:
-          "High-risk AI classification requires a valid high-risk role designation",
+        message: "High-risk AI classification requires a valid high-risk role designation",
         code: "INCONSISTENT_RISK_CLASSIFICATION",
       };
     }
@@ -686,9 +631,7 @@ export const validateRiskClassificationConsistency = (
 /**
  * Validates that owner exists (placeholder for database check)
  */
-export const validateOwnerExists = async (
-  ownerId: number
-): Promise<ValidationResult> => {
+export const validateOwnerExists = async (ownerId: number): Promise<ValidationResult> => {
   // This would be implemented to check if owner exists in database
   // For now, just validate the ID format
   return validateOwner(ownerId);
@@ -698,7 +641,7 @@ export const validateOwnerExists = async (
  * Validates that framework IDs exist (placeholder for database check)
  */
 export const validateFrameworksExist = async (
-  frameworkIds: number[]
+  frameworkIds: number[],
 ): Promise<ValidationResult> => {
   // This would be implemented to check if frameworks exist in database
   // For now, just validate the array format
@@ -708,9 +651,7 @@ export const validateFrameworksExist = async (
 /**
  * Validates that member IDs exist (placeholder for database check)
  */
-export const validateMembersExist = async (
-  memberIds: number[]
-): Promise<ValidationResult> => {
+export const validateMembersExist = async (memberIds: number[]): Promise<ValidationResult> => {
   // This would be implemented to check if members exist in database
   // For now, just validate the array format
   return validateMembers(memberIds);
@@ -719,18 +660,14 @@ export const validateMembersExist = async (
 /**
  * Complete validation for project creation with business rules
  */
-export const validateCompleteProjectWithBusinessRules = (
-  data: any
-): ValidationError[] => {
+export const validateCompleteProjectWithBusinessRules = (data: any): ValidationError[] => {
   const errors = validateCompleteProject(data);
 
   // Add business rule validations if basic validation passes
   if (errors.length === 0) {
     // Check start date reasonableness
     if (data.start_date) {
-      const startDateCheck = validateStartDateReasonable(
-        new Date(data.start_date)
-      );
+      const startDateCheck = validateStartDateReasonable(new Date(data.start_date));
       if (!startDateCheck.isValid) {
         errors.push({
           field: "start_date",
@@ -742,15 +679,13 @@ export const validateCompleteProjectWithBusinessRules = (
 
     // Check organizational framework consistency
     // This validation is mandatory for all projects
-    const isOrganizational =
-      data.is_organizational !== undefined ? data.is_organizational : false;
+    const isOrganizational = data.is_organizational !== undefined ? data.is_organizational : false;
     const frameworks = data.framework || [];
     const frameworkIds = extractFrameworkIds(frameworks);
-    const frameworkConsistencyCheck =
-      validateOrganizationalFrameworkConsistency(
-        isOrganizational,
-        frameworkIds
-      );
+    const frameworkConsistencyCheck = validateOrganizationalFrameworkConsistency(
+      isOrganizational,
+      frameworkIds,
+    );
     if (!frameworkConsistencyCheck.isValid) {
       errors.push({
         field: "framework",
@@ -762,20 +697,15 @@ export const validateCompleteProjectWithBusinessRules = (
     }
 
     // Check risk classification consistency (only for non-organizational projects)
-    if (
-      !data.is_organizational &&
-      data.ai_risk_classification &&
-      data.type_of_high_risk_role
-    ) {
+    if (!data.is_organizational && data.ai_risk_classification && data.type_of_high_risk_role) {
       const consistencyCheck = validateRiskClassificationConsistency(
         data.ai_risk_classification,
-        data.type_of_high_risk_role
+        data.type_of_high_risk_role,
       );
       if (!consistencyCheck.isValid) {
         errors.push({
           field: "type_of_high_risk_role",
-          message:
-            consistencyCheck.message || "Risk classification is inconsistent",
+          message: consistencyCheck.message || "Risk classification is inconsistent",
           code: consistencyCheck.code || "BUSINESS_RULE_VIOLATION",
         });
       }
@@ -790,7 +720,7 @@ export const validateCompleteProjectWithBusinessRules = (
  */
 export const validateUpdateProjectWithBusinessRules = (
   data: any,
-  currentProject?: any
+  currentProject?: any,
 ): ValidationError[] => {
   const errors = validateUpdateProject(data, currentProject);
 
@@ -798,13 +728,9 @@ export const validateUpdateProjectWithBusinessRules = (
   if (errors.length === 0 && currentProject) {
     // Check start date reasonableness if being updated
     const newStartDate =
-      data.start_date !== undefined
-        ? data.start_date
-        : currentProject.start_date;
+      data.start_date !== undefined ? data.start_date : currentProject.start_date;
     if (newStartDate) {
-      const startDateCheck = validateStartDateReasonable(
-        new Date(newStartDate)
-      );
+      const startDateCheck = validateStartDateReasonable(new Date(newStartDate));
       if (!startDateCheck.isValid) {
         errors.push({
           field: "start_date",
@@ -819,20 +745,17 @@ export const validateUpdateProjectWithBusinessRules = (
       data.is_organizational !== undefined
         ? data.is_organizational
         : currentProject.is_organizational;
-    const newFramework =
-      data.framework !== undefined ? data.framework : currentProject.framework;
+    const newFramework = data.framework !== undefined ? data.framework : currentProject.framework;
 
     if (newFramework && newFramework.length > 0) {
       const newFrameworkIds = extractFrameworkIds(newFramework);
-      const frameworkConsistencyCheck =
-        validateOrganizationalFrameworkConsistency(
-          newIsOrganizational,
-          newFrameworkIds
-        );
+      const frameworkConsistencyCheck = validateOrganizationalFrameworkConsistency(
+        newIsOrganizational,
+        newFrameworkIds,
+      );
       if (!frameworkConsistencyCheck.isValid) {
         errors.push({
-          field:
-            data.framework !== undefined ? "framework" : "is_organizational",
+          field: data.framework !== undefined ? "framework" : "is_organizational",
           message:
             frameworkConsistencyCheck.message ||
             "Framework is inconsistent with organizational status",
@@ -852,14 +775,10 @@ export const validateUpdateProjectWithBusinessRules = (
         : currentProject.type_of_high_risk_role;
 
     // Only check risk classification consistency for non-organizational projects
-    if (
-      !newIsOrganizational &&
-      newAiRiskClassification &&
-      newTypeOfHighRiskRole
-    ) {
+    if (!newIsOrganizational && newAiRiskClassification && newTypeOfHighRiskRole) {
       const consistencyCheck = validateRiskClassificationConsistency(
         newAiRiskClassification,
-        newTypeOfHighRiskRole
+        newTypeOfHighRiskRole,
       );
       if (!consistencyCheck.isValid) {
         errors.push({
@@ -867,8 +786,7 @@ export const validateUpdateProjectWithBusinessRules = (
             data.type_of_high_risk_role !== undefined
               ? "type_of_high_risk_role"
               : "ai_risk_classification",
-          message:
-            consistencyCheck.message || "Risk classification is inconsistent",
+          message: consistencyCheck.message || "Risk classification is inconsistent",
           code: consistencyCheck.code || "BUSINESS_RULE_VIOLATION",
         });
       }

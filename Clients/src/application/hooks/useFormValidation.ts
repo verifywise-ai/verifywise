@@ -5,10 +5,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
  * Receives the field value and the full form values (for cross-field checks).
  * Returns an error string, or "" if valid.
  */
-export type FieldValidator<TValues> = (
-  value: unknown,
-  values: TValues
-) => string;
+export type FieldValidator<TValues> = (value: unknown, values: TValues) => string;
 
 /**
  * Map of field keys to their validator functions.
@@ -30,11 +27,7 @@ export interface UseFormValidationReturn<TValues extends object> {
    * Pass the full current form values so cross-field validators can compare fields.
    * Returns the error string (empty string if valid).
    */
-  validateField: (
-    field: keyof TValues,
-    value: unknown,
-    values: TValues
-  ) => string;
+  validateField: (field: keyof TValues, value: unknown, values: TValues) => string;
   /**
    * Clears the error for a single field.
    * Call this when the user starts editing a field.
@@ -66,11 +59,9 @@ export interface UseFormValidationReturn<TValues extends object> {
  *     });
  */
 export function useFormValidation<TValues extends object>(
-  validators: FieldValidators<TValues>
+  validators: FieldValidators<TValues>,
 ): UseFormValidationReturn<TValues> {
-  const [errors, setErrors] = useState<Partial<Record<keyof TValues, string>>>(
-    {}
-  );
+  const [errors, setErrors] = useState<Partial<Record<keyof TValues, string>>>({});
 
   // Keep a stable ref to the latest validators so callbacks never need to be
   // recreated when the caller passes an inline object literal (new ref each render).
@@ -86,7 +77,7 @@ export function useFormValidation<TValues extends object>(
       setErrors((prev) => ({ ...prev, [field]: error }));
       return error;
     },
-    []
+    [],
   );
 
   const clearFieldError = useCallback((field: keyof TValues) => {
@@ -106,10 +97,7 @@ export function useFormValidation<TValues extends object>(
     return valid;
   }, []);
 
-  const hasErrors = useMemo(
-    () => Object.values(errors).some(Boolean),
-    [errors]
-  );
+  const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors]);
 
   const canSubmit = useMemo(() => !hasErrors, [hasErrors]);
 

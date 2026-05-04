@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import logger from "../../utils/logger/fileLogger";
-import { REDIS_URL } from "../../database/redis"
+import { REDIS_URL } from "../../database/redis";
 
 // Create a new queue (connected to Redis using environment variable)
 export const notificationQueue = new Queue("slack-notifications", {

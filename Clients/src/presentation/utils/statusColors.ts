@@ -57,7 +57,7 @@ export const statusColorSchemes = {
 // Helper function to get color for a status
 export const getStatusColor = (
   entityType: keyof typeof statusColorSchemes,
-  statusName: string
+  statusName: string,
 ): string => {
   const scheme = statusColorSchemes[entityType];
   const normalizedStatus = statusName.toLowerCase().trim();
@@ -67,7 +67,7 @@ export const getStatusColor = (
 // Helper function to create StatusData array from status counts
 export const createStatusData = (
   entityType: keyof typeof statusColorSchemes,
-  statusCounts: Record<string, number>
+  statusCounts: Record<string, number>,
 ): IStatusData[] => {
   return Object.entries(statusCounts).map(([statusName, count]) => ({
     label: statusName,
@@ -79,7 +79,7 @@ export const createStatusData = (
 // Default status distributions (when API doesn't provide breakdown)
 export const getDefaultStatusDistribution = (
   entityType: keyof typeof statusColorSchemes,
-  total: number
+  total: number,
 ): IStatusData[] => {
   if (total === 0) return [];
 

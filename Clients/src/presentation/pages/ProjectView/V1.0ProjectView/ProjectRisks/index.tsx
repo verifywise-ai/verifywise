@@ -27,16 +27,10 @@ const VWProjectRisks = ({ project }: { project?: Project }) => {
         throw error;
       }
     },
-    [projectId]
+    [projectId],
   );
 
-  return (
-    <RisksView
-      fetchRisks={fetchProjectRisks}
-      title="Use case risks"
-      readOnly
-    />
-  );
+  return <RisksView fetchRisks={fetchProjectRisks} title="Use case risks" readOnly />;
 };
 
 export default VWProjectRisks;

@@ -134,8 +134,7 @@ export default function BulkUploadModal({
     (activeStep === 1 && analyses.filter((a) => !a.skipped).length === 0) ||
     analyzing;
 
-  const isUploadComplete =
-    activeStep === 2 && !isUploading && uploadResults.length > 0;
+  const isUploadComplete = activeStep === 2 && !isUploading && uploadResults.length > 0;
 
   const renderStepContent = () => {
     if (activeStep === 0) {
@@ -161,11 +160,7 @@ export default function BulkUploadModal({
     }
 
     if (activeStep === 1 && !analyzing && analysisError) {
-      return (
-        <Typography sx={{ fontSize: 13, color: "#F04438" }}>
-          {analysisError}
-        </Typography>
-      );
+      return <Typography sx={{ fontSize: 13, color: "#F04438" }}>{analysisError}</Typography>;
     }
 
     if (activeStep === 1 && !analyzing && analyses.length > 0) {

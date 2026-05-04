@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   async up(queryInterface) {
@@ -41,5 +41,5 @@ module.exports = {
         DROP COLUMN IF EXISTS ci_enabled,
         DROP COLUMN IF EXISTS webhook_secret;
     `);
-  }
+  },
 };

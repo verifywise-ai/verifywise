@@ -52,13 +52,16 @@ const TagsSection: React.FC = () => {
   };
 
   // Group tags by category
-  const tagsByCategory = officialTags.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item.tag);
-    return acc;
-  }, {} as Record<string, string[]>);
+  const tagsByCategory = officialTags.reduce(
+    (acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item.tag);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
 
   return (
     <Box sx={{ p: "32px 40px" }}>
@@ -89,7 +92,8 @@ const TagsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          TagChip component for displaying categorized labels. Each official tag has a predefined color scheme.
+          TagChip component for displaying categorized labels. Each official tag has a predefined
+          color scheme.
         </Typography>
       </Box>
 
@@ -131,11 +135,7 @@ const TagsSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Single tag"
-                code={tagSnippets.basic}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Single tag" code={tagSnippets.basic} onCopy={handleCopy}>
                 <TagChip tag="AI Ethics" />
               </ExampleWithCode>
 
@@ -166,7 +166,16 @@ const TagsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -250,11 +259,15 @@ const TagsSection: React.FC = () => {
                 {item.tag}
               </Box>
               <Box sx={{ display: "flex", gap: "8px" }}>
-                <Typography sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.accent }}>
+                <Typography
+                  sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.accent }}
+                >
                   bg: {item.bg}
                 </Typography>
               </Box>
-              <Typography sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.accent }}>
+              <Typography
+                sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.accent }}
+              >
                 color: {item.color}
               </Typography>
             </Box>
@@ -373,9 +386,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -397,9 +408,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -450,9 +459,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

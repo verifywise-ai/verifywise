@@ -50,10 +50,11 @@ export const commonStyles = {
     flexDirection: "row-reverse",
   } as SxProps<Theme>,
 
-  expandIcon: (expanded: boolean) => ({
-    transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-    transition: "transform 0.5s ease-in",
-  }) as SxProps<Theme>,
+  expandIcon: (expanded: boolean) =>
+    ({
+      transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+      transition: "transform 0.5s ease-in",
+    }) as SxProps<Theme>,
 };
 
 /**
@@ -63,10 +64,7 @@ export const commonStyles = {
  */
 export function getStatusColor(status: string): string {
   const normalizedStatus = status?.trim() || "Not Started";
-  switch (
-    normalizedStatus.charAt(0).toUpperCase() +
-    normalizedStatus.slice(1).toLowerCase()
-  ) {
+  switch (normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()) {
     case "Not Started":
       return "#4B5563";
     case "Draft":

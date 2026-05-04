@@ -19,7 +19,9 @@ import IconButton from "../../components/IconButton";
 import TablePaginationActions from "../../components/TablePagination";
 import { ChevronsUpDown, ChevronUp, ChevronDown, ShieldAlert } from "lucide-react";
 
-const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => <ChevronsUpDown size={16} {...props} />;
+const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
+  <ChevronsUpDown size={16} {...props} />
+);
 import Chip from "../../components/Chip";
 import { displayFormattedDate } from "../../tools/isoDateToString";
 import { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
@@ -74,7 +76,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       if (!visibleColumns || visibleColumns.size === 0) return true;
       return visibleColumns.has(columnId);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   // Initialize sorting state from localStorage or default to no sorting
@@ -95,12 +97,15 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     localStorage.setItem(MODEL_RISKS_SORTING_KEY, JSON.stringify(sortConfig));
   }, [sortConfig]);
 
-  const getCellStyle = useCallback((row: IModelRisk) => ({
-    ...cellStyle,
-    ...(row.is_deleted && {
-      textDecoration: 'line-through',
-    })
-  }), [cellStyle]);
+  const getCellStyle = useCallback(
+    (row: IModelRisk) => ({
+      ...cellStyle,
+      ...(row.is_deleted && {
+        textDecoration: "line-through",
+      }),
+    }),
+    [cellStyle],
+  );
 
   const formattedUsers = useMemo(() => {
     return users.map((user: User) => ({
@@ -113,22 +118,16 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   const dataLength = data?.length ?? 0;
 
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
-    const end = Math.min(
-      page * rowsPerPage + rowsPerPage,
-      dataLength
-    );
+    const end = Math.min(page * rowsPerPage + rowsPerPage, dataLength);
     return `${start} - ${end}`;
   }, [page, rowsPerPage, dataLength]);
 
@@ -140,16 +139,22 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     }
   };
 
-  const getOwnerName = useCallback((ownerId: string | number) => {
-    const owner = formattedUsers.find((user) => user._id == ownerId);
-    return owner?.name || "Unknown";
-  }, [formattedUsers]);
+  const getOwnerName = useCallback(
+    (ownerId: string | number) => {
+      const owner = formattedUsers.find((user) => user._id == ownerId);
+      return owner?.name || "Unknown";
+    },
+    [formattedUsers],
+  );
 
-  const getModelName = useCallback((modelId: number | null | undefined) => {
-    if (!modelId) return "N/A";
-    const model = models.find((m) => m.id == modelId);
-    return model?.model || "Unknown";
-  }, [models]);
+  const getModelName = useCallback(
+    (modelId: number | null | undefined) => {
+      if (!modelId) return "N/A";
+      const model = models.find((m) => m.id == modelId);
+      return model?.model || "Unknown";
+    },
+    [models],
+  );
 
   // Sorting handler
   const handleSort = useCallback((columnId: string) => {
@@ -257,8 +262,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     () => (
       <TableHead
         sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
+          backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
         }}
       >
         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -313,7 +317,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
         </TableRow>
       </TableHead>
     ),
-    [sortConfig, handleSort, theme, visibleTableColumns]
+    [sortConfig, handleSort, theme, visibleTableColumns],
   );
 
   const tableBody = useMemo(
@@ -323,7 +327,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
           sortedData
             .slice(
               hidePagination ? 0 : page * rowsPerPage,
-              hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage
+              hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage,
             )
             .map((row: IModelRisk) => (
               <TableRow
@@ -333,41 +337,51 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                   ...(row.is_deleted && {
                     opacity: 0.7,
                     backgroundColor: palette.background.accent,
-                  })
+                  }),
                 }}
                 onClick={() => onEdit(row.id!)}
               >
                 {isColVisible("risk_name") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "risk_name" ? palette.background.hover : "inherit",
-                  }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      {row.risk_name}
-                    </Typography>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "risk_name" ? palette.background.hover : "inherit",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{row.risk_name}</Typography>
                   </TableCell>
                 )}
                 {isColVisible("model_name") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "model_name" ? palette.background.hover : "inherit",
-                  }}>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "model_name" ? palette.background.hover : "inherit",
+                    }}
+                  >
                     {getModelName(row.model_id)}
                   </TableCell>
                 )}
                 {isColVisible("risk_level") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "risk_level" ? palette.background.hover : "inherit",
-                  }}>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "risk_level" ? palette.background.hover : "inherit",
+                    }}
+                  >
                     <Chip label={row.risk_level} />
                   </TableCell>
                 )}
                 {isColVisible("status") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "status" ? palette.background.hover : "inherit",
-                  }}>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "status" ? palette.background.hover : "inherit",
+                    }}
+                  >
                     <Box
                       sx={{
                         display: "inline-flex",
@@ -381,31 +395,38 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                           height: 8,
                           borderRadius: "50%",
                           backgroundColor:
-                            row.status === "Open" ? palette.status.error.text :
-                            row.status === "In Progress" ? palette.risk.medium.text :
-                            row.status === "Resolved" ? palette.status.success.text :
-                            palette.status.default.text,
+                            row.status === "Open"
+                              ? palette.status.error.text
+                              : row.status === "In Progress"
+                                ? palette.risk.medium.text
+                                : row.status === "Resolved"
+                                  ? palette.status.success.text
+                                  : palette.status.default.text,
                         }}
                       />
-                      <Typography sx={{ fontSize: 13 }}>
-                        {row.status}
-                      </Typography>
+                      <Typography sx={{ fontSize: 13 }}>{row.status}</Typography>
                     </Box>
                   </TableCell>
                 )}
                 {isColVisible("owner") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "owner" ? palette.background.hover : "inherit",
-                  }}>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "owner" ? palette.background.hover : "inherit",
+                    }}
+                  >
                     {getOwnerName(row.owner)}
                   </TableCell>
                 )}
                 {isColVisible("target_date") && (
-                  <TableCell sx={{
-                    ...getCellStyle(row),
-                    backgroundColor: sortConfig.key === "target_date" ? palette.background.hover : "inherit",
-                  }}>
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "target_date" ? palette.background.hover : "inherit",
+                    }}
+                  >
                     {formatDate(row.target_date)}
                   </TableCell>
                 )}
@@ -443,7 +464,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       theme,
       isColVisible,
       visibleTableColumns,
-    ]
+    ],
   );
 
   // Show loading state
@@ -472,7 +493,10 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     <>
       {/* Empty state outside the table */}
       {!data || data.length === 0 ? (
-        <EmptyState icon={ShieldAlert} message="There are currently no model risks in this table." />
+        <EmptyState
+          icon={ShieldAlert}
+          message="There are currently no model risks in this table."
+        />
       ) : (
         <TableContainer>
           <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
@@ -504,15 +528,10 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => (
-                      <TablePaginationActions {...props} />
-                    )}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(
-                        0,
-                        Math.ceil(count / rowsPerPage)
-                      )}`
+                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                     }
                     slotProps={{
                       select: {

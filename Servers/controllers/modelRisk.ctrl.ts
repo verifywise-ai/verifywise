@@ -9,11 +9,7 @@ import {
   deleteModelRiskByIdQuery,
 } from "../utils/modelRisk.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
   recordEntityCreation,
   trackEntityChanges,
@@ -45,11 +41,7 @@ export async function getAllModelRisks(req: Request, res: Response) {
       });
       return res
         .status(200)
-        .json(
-          STATUS_CODE[200](
-            modelRisks.map((modelRisk) => modelRisk.toSafeJSON())
-          )
-        );
+        .json(STATUS_CODE[200](modelRisks.map((modelRisk) => modelRisk.toSafeJSON())));
     }
 
     await logSuccess({
@@ -76,8 +68,8 @@ export async function getAllModelRisks(req: Request, res: Response) {
 }
 
 export async function getModelRiskById(req: Request, res: Response) {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const modelRiskId = parseInt(id, 10);
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const modelRiskId = parseInt(id, 10);
 
   logProcessing({
     description: `fetching model risk by ID: ${id}`,
@@ -147,7 +139,7 @@ export async function createNewModelRisk(req: Request, res: Response) {
         req.userId,
         req.organizationId!,
         req.body,
-        transaction
+        transaction,
       );
     }
 
@@ -178,15 +170,17 @@ export async function createNewModelRisk(req: Request, res: Response) {
 }
 
 export async function updateModelRiskById(req: Request, res: Response) {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const modelRiskId = parseInt(id, 10);
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const modelRiskId = parseInt(id, 10);
 
   // Get existing model risk for change tracking
   let existingModelRiskData: Record<string, unknown> | null = null;
   try {
     const existingModelRisk = await getModelRiskByIdQuery(modelRiskId, req.organizationId!);
     if (existingModelRisk) {
-      existingModelRiskData = existingModelRisk.toSafeJSON ? existingModelRisk.toSafeJSON() : existingModelRisk;
+      existingModelRiskData = existingModelRisk.toSafeJSON
+        ? existingModelRisk.toSafeJSON()
+        : existingModelRisk;
     }
   } catch (error) {
     // Continue without existing data if query fails
@@ -207,7 +201,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
       modelRiskId,
       req.body,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (!modelRisk) {
@@ -226,11 +220,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
 
     // Record changes in change history
     if (existingModelRiskData && req.userId) {
-      const changes = await trackEntityChanges(
-        "model_risk",
-        existingModelRiskData,
-        req.body
-      );
+      const changes = await trackEntityChanges("model_risk", existingModelRiskData, req.body);
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
           "model_risk",
@@ -238,7 +228,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
           req.userId,
           req.organizationId!,
           changes,
-          transaction
+          transaction,
         );
       }
     }
@@ -284,7 +274,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
   try {
     const success = await deleteModelRiskByIdQuery(
       parseInt(Array.isArray(id) ? id[0] : id, 10),
-      req.organizationId!
+      req.organizationId!,
     );
 
     if (!success) {
@@ -304,7 +294,13 @@ export async function deleteModelRiskById(req: Request, res: Response) {
     // Record deletion in change history
     const modelRiskId = parseInt(Array.isArray(id) ? id[0] : id, 10);
     if (req.userId) {
-      await recordEntityDeletion("model_risk", modelRiskId, req.userId, req.organizationId!, transaction);
+      await recordEntityDeletion(
+        "model_risk",
+        modelRiskId,
+        req.userId,
+        req.organizationId!,
+        transaction,
+      );
     }
 
     await transaction.commit();
@@ -316,9 +312,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("Model risk deleted successfully."));
+    return res.status(200).json(STATUS_CODE[200]("Model risk deleted successfully."));
   } catch (error) {
     await transaction.rollback();
     await logFailure({

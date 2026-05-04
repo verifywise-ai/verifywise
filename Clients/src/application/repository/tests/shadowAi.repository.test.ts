@@ -92,10 +92,7 @@ describe("shadowAi.repository", () => {
       const result = await createApiKey("Test Key");
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/shadow-ai/api-keys",
-        { label: "Test Key" },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/shadow-ai/api-keys", { label: "Test Key" });
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -230,9 +227,7 @@ describe("shadowAi.repository", () => {
       await deleteApiKey(1);
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/shadow-ai/api-keys/1/permanent",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/shadow-ai/api-keys/1/permanent");
     });
 
     it("should throw error with status and data if API call fails", async () => {
@@ -282,9 +277,7 @@ describe("shadowAi.repository", () => {
       const result = await getInsightsSummary();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/summary",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/summary");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -308,9 +301,7 @@ describe("shadowAi.repository", () => {
       const result = await getInsightsSummary("7d");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/summary?period=7d",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/summary?period=7d");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -354,9 +345,7 @@ describe("shadowAi.repository", () => {
       const result = await getToolsByEvents();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/tools-by-events",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/tools-by-events");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -374,9 +363,7 @@ describe("shadowAi.repository", () => {
       const result = await getToolsByEvents("7d");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/tools-by-events?period=7d",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/tools-by-events?period=7d");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -440,9 +427,7 @@ describe("shadowAi.repository", () => {
       const result = await getToolsByUsers();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/tools-by-users",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/tools-by-users");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -460,9 +445,7 @@ describe("shadowAi.repository", () => {
       const result = await getToolsByUsers("30d");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/tools-by-users?period=30d",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/tools-by-users?period=30d");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -526,9 +509,7 @@ describe("shadowAi.repository", () => {
       const result = await getUsersByDepartment();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/users-by-department",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/users-by-department");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -570,9 +551,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getUsersByDepartment()).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getUsersByDepartment()).rejects.toThrow("Connection refused");
     });
   });
 
@@ -614,9 +593,7 @@ describe("shadowAi.repository", () => {
       const result = await getTrend("7d");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/insights/trend?period=7d",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/insights/trend?period=7d");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -725,9 +702,7 @@ describe("shadowAi.repository", () => {
       const result = await getUsers({ page: 2, limit: 20 });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/users?page=2&limit=20",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/users?page=2&limit=20");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -799,9 +774,7 @@ describe("shadowAi.repository", () => {
           data: {
             email: "user@test.com",
             department: "Engineering",
-            tools: [
-              { tool_name: "ChatGPT", event_count: 50, last_used: "2024-01-01" },
-            ],
+            tools: [{ tool_name: "ChatGPT", event_count: 50, last_used: "2024-01-01" }],
             total_prompts: 100,
           },
         },
@@ -814,9 +787,7 @@ describe("shadowAi.repository", () => {
       const result = await getUserDetail("user@test.com");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/users/user%40test.com/activity",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/users/user%40test.com/activity");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -826,9 +797,7 @@ describe("shadowAi.repository", () => {
           data: {
             email: "user@test.com",
             department: "Engineering",
-            tools: [
-              { tool_name: "ChatGPT", event_count: 25, last_used: "2024-01-01" },
-            ],
+            tools: [{ tool_name: "ChatGPT", event_count: 25, last_used: "2024-01-01" }],
             total_prompts: 50,
           },
         },
@@ -890,9 +859,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getUserDetail("user@test.com")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getUserDetail("user@test.com")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -945,9 +912,7 @@ describe("shadowAi.repository", () => {
       const result = await getDepartmentActivity("7d");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/departments?period=7d",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/departments?period=7d");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -969,9 +934,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getDepartmentActivity()).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getDepartmentActivity()).rejects.toThrow("Connection refused");
     });
   });
 
@@ -1040,9 +1003,7 @@ describe("shadowAi.repository", () => {
       const result = await getTools({ page: 2, limit: 20 });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/tools?page=2&limit=20",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/tools?page=2&limit=20");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1183,10 +1144,9 @@ describe("shadowAi.repository", () => {
       const result = await updateToolStatus(1, "blocked");
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/shadow-ai/tools/1/status",
-        { status: "blocked" },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/shadow-ai/tools/1/status", {
+        status: "blocked",
+      });
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1208,9 +1168,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateToolStatus(1, "blocked")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(updateToolStatus(1, "blocked")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -1289,9 +1247,7 @@ describe("shadowAi.repository", () => {
         governance_owner_id: 1,
       };
 
-      await expect(startGovernance(1, governanceRequest)).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(startGovernance(1, governanceRequest)).rejects.toThrow("Connection refused");
     });
   });
 
@@ -1457,10 +1413,7 @@ describe("shadowAi.repository", () => {
       const result = await updateRule(1, updates);
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/shadow-ai/rules/1",
-        updates,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/shadow-ai/rules/1", updates);
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1482,9 +1435,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateRule(1, { name: "Test" })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(updateRule(1, { name: "Test" })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -1554,9 +1505,7 @@ describe("shadowAi.repository", () => {
       const result = await getAlertHistory();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/rules/alert-history",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/rules/alert-history");
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1695,10 +1644,7 @@ describe("shadowAi.repository", () => {
       const result = await createSyslogConfig(configData);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/shadow-ai/config/syslog",
-        configData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/shadow-ai/config/syslog", configData);
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1763,10 +1709,7 @@ describe("shadowAi.repository", () => {
       const result = await updateSyslogConfig(1, updates);
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/shadow-ai/config/syslog/1",
-        updates,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/shadow-ai/config/syslog/1", updates);
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1780,9 +1723,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(
-        updateSyslogConfig(999, { is_active: true }),
-      ).rejects.toThrow();
+      await expect(updateSyslogConfig(999, { is_active: true })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -1790,9 +1731,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(
-        updateSyslogConfig(1, { is_active: true }),
-      ).rejects.toThrow("Network timeout");
+      await expect(updateSyslogConfig(1, { is_active: true })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -1809,9 +1748,7 @@ describe("shadowAi.repository", () => {
       await deleteSyslogConfig(1);
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/shadow-ai/config/syslog/1",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/shadow-ai/config/syslog/1");
     });
 
     it("should throw error with status and data if API call fails", async () => {
@@ -1917,10 +1854,7 @@ describe("shadowAi.repository", () => {
       const result = await updateSettingsConfig(updates);
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/shadow-ai/settings",
-        updates,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/shadow-ai/settings", updates);
       expect(result).toEqual(mockResponse.data.data);
     });
 
@@ -1934,9 +1868,7 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(
-        updateSettingsConfig({ retention_events_days: -1 }),
-      ).rejects.toThrow();
+      await expect(updateSettingsConfig({ retention_events_days: -1 })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -1944,9 +1876,9 @@ describe("shadowAi.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(
-        updateSettingsConfig({ retention_events_days: 180 }),
-      ).rejects.toThrow("Network timeout");
+      await expect(updateSettingsConfig({ retention_events_days: 180 })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 });

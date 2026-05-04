@@ -13,8 +13,7 @@ export const TransparencyObligationsForProviders = {
       subControls: [
         {
           id: 1,
-          title:
-            "We design AI systems to clearly indicate user interaction with AI.",
+          title: "We design AI systems to clearly indicate user interaction with AI.",
           description:
             "Clear indicators help users understand when they are interacting with AI, promoting transparency and trust.",
         },
@@ -52,13 +51,11 @@ export const TransparencyObligationsForProviders = {
       id: 3,
       icon: Checked,
       title: "AI System Scope and Impact Definition",
-      description:
-        "Define and document AI system scope, goals, methods, and potential impacts.",
+      description: "Define and document AI system scope, goals, methods, and potential impacts.",
       subControls: [
         {
           id: 1,
-          title:
-            "We define and document AI system scope, goals, methods, and potential impacts.",
+          title: "We define and document AI system scope, goals, methods, and potential impacts.",
           description:
             "Comprehensive documentation helps align AI deployment with intended goals and prepares for potential risks.",
         },

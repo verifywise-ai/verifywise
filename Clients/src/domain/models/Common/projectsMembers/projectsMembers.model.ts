@@ -9,9 +9,7 @@ export class ProjectsMembersModel {
     this.is_demo = data.is_demo;
   }
 
-  static createNewProjectsMembers(
-    data: ProjectsMembersModel
-  ): ProjectsMembersModel {
+  static createNewProjectsMembers(data: ProjectsMembersModel): ProjectsMembersModel {
     return new ProjectsMembersModel(data);
   }
 }

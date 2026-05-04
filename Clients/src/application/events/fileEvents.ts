@@ -4,7 +4,7 @@
  */
 
 export const FILE_EVENTS = {
-  APPROVAL_STATUS_CHANGED: 'file:approvalStatusChanged',
+  APPROVAL_STATUS_CHANGED: "file:approvalStatusChanged",
 } as const;
 
 /**
@@ -19,7 +19,9 @@ export function dispatchFileApprovalChanged(detail?: { fileId?: number; status?:
  * Subscribe to file approval status changed events.
  * Returns a cleanup function to remove the listener.
  */
-export function onFileApprovalChanged(callback: (detail?: { fileId?: number; status?: string }) => void): () => void {
+export function onFileApprovalChanged(
+  callback: (detail?: { fileId?: number; status?: string }) => void,
+): () => void {
   const handler = (event: Event) => {
     const customEvent = event as CustomEvent<{ fileId?: number; status?: string }>;
     callback(customEvent.detail);

@@ -13,10 +13,7 @@
  * @module services/notesService
  */
 
-import {
-  NotesModel,
-  NotesAttachedToEnum,
-} from "../domain.layer/models/notes/notes.model";
+import { NotesModel, NotesAttachedToEnum } from "../domain.layer/models/notes/notes.model";
 import {
   createNewNoteQuery,
   getNotesByEntityQuery,
@@ -30,11 +27,7 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-  logSuccess,
-} from "../utils/logger/logHelper";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 
 export class NotesService {
   /**
@@ -65,7 +58,7 @@ export class NotesService {
     authorId: number,
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<NotesModel> {
     logProcessing({
       description: "Starting NotesService.createNote",
@@ -78,46 +71,27 @@ export class NotesService {
     try {
       // Validate input
       if (!content || content.trim().length === 0) {
-        throw new ValidationException(
-          "Note content cannot be empty",
-          "content",
-          content
-        );
+        throw new ValidationException("Note content cannot be empty", "content", content);
       }
 
       if (content.length > 5000) {
         throw new ValidationException(
           "Note content cannot exceed 5000 characters",
           "content",
-          content
+          content,
         );
       }
 
       if (!authorId || authorId < 1) {
-        throw new ValidationException(
-          "Valid author ID is required",
-          "authorId",
-          authorId
-        );
+        throw new ValidationException("Valid author ID is required", "authorId", authorId);
       }
 
-      if (
-        !attachedTo ||
-        !Object.values(NotesAttachedToEnum).includes(attachedTo)
-      ) {
-        throw new ValidationException(
-          "Valid entity type is required",
-          "attachedTo",
-          attachedTo
-        );
+      if (!attachedTo || !Object.values(NotesAttachedToEnum).includes(attachedTo)) {
+        throw new ValidationException("Valid entity type is required", "attachedTo", attachedTo);
       }
 
       if (!attachedToId || attachedToId.trim().length === 0) {
-        throw new ValidationException(
-          "Valid entity ID is required",
-          "attachedToId",
-          attachedToId
-        );
+        throw new ValidationException("Valid entity ID is required", "attachedToId", attachedToId);
       }
 
       // Sanitize content to prevent XSS by removing common HTML tags
@@ -128,7 +102,7 @@ export class NotesService {
         throw new ValidationException(
           "Note content cannot be empty after processing",
           "content",
-          content
+          content,
         );
       }
 
@@ -138,7 +112,7 @@ export class NotesService {
         authorId,
         attachedTo,
         attachedToId,
-        organizationId
+        organizationId,
       );
 
       // Validate before saving
@@ -193,7 +167,7 @@ export class NotesService {
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
     organizationId: number,
-    userId: number
+    userId: number,
   ): Promise<NotesModel[]> {
     logProcessing({
       description: "Starting NotesService.getNotes",
@@ -205,30 +179,15 @@ export class NotesService {
 
     try {
       // Validate input
-      if (
-        !attachedTo ||
-        !Object.values(NotesAttachedToEnum).includes(attachedTo)
-      ) {
-        throw new ValidationException(
-          "Valid entity type is required",
-          "attachedTo",
-          attachedTo
-        );
+      if (!attachedTo || !Object.values(NotesAttachedToEnum).includes(attachedTo)) {
+        throw new ValidationException("Valid entity type is required", "attachedTo", attachedTo);
       }
 
       if (!attachedToId || attachedToId.trim().length === 0) {
-        throw new ValidationException(
-          "Valid entity ID is required",
-          "attachedToId",
-          attachedToId
-        );
+        throw new ValidationException("Valid entity ID is required", "attachedToId", attachedToId);
       }
 
-      const notes = await getNotesByEntityQuery(
-        attachedTo,
-        attachedToId,
-        organizationId
-      );
+      const notes = await getNotesByEntityQuery(attachedTo, attachedToId, organizationId);
 
       await logSuccess({
         eventType: "Read",
@@ -283,7 +242,7 @@ export class NotesService {
     content: string,
     userId: number,
     userRole: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<NotesModel> {
     logProcessing({
       description: `Starting NotesService.updateNote for ID ${noteId}`,
@@ -296,18 +255,14 @@ export class NotesService {
     try {
       // Validate input
       if (!content || content.trim().length === 0) {
-        throw new ValidationException(
-          "Note content cannot be empty",
-          "content",
-          content
-        );
+        throw new ValidationException("Note content cannot be empty", "content", content);
       }
 
       if (content.length > 5000) {
         throw new ValidationException(
           "Note content cannot exceed 5000 characters",
           "content",
-          content
+          content,
         );
       }
 
@@ -326,7 +281,7 @@ export class NotesService {
         throw new BusinessLogicException(
           "Only the note author or admins can update this note",
           "NOTE_UPDATE_FORBIDDEN",
-          { noteId, userId, role: userRole }
+          { noteId, userId, role: userRole },
         );
       }
 
@@ -337,7 +292,7 @@ export class NotesService {
         throw new ValidationException(
           "Note content cannot be empty after processing",
           "content",
-          content
+          content,
         );
       }
 
@@ -392,7 +347,7 @@ export class NotesService {
     noteId: number,
     userId: number,
     userRole: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<boolean> {
     logProcessing({
       description: `Starting NotesService.deleteNote for ID ${noteId}`,
@@ -413,11 +368,9 @@ export class NotesService {
           description: `Note ${noteId} not found in organization ${organizationId}`,
           functionName: "deleteNote",
           fileName: "notesService.ts",
-          error: new Error(
-            `Note with ID ${noteId} not found in organization ${organizationId}`,
-          ),
+          error: new Error(`Note with ID ${noteId} not found in organization ${organizationId}`),
           userId: userId,
-          organizationId: organizationId
+          organizationId: organizationId,
         });
         throw new Error(`Note with ID ${noteId} not found`);
       }
@@ -430,7 +383,7 @@ export class NotesService {
         throw new BusinessLogicException(
           "Only the note author or admins can delete this note",
           "NOTE_DELETE_FORBIDDEN",
-          { noteId, userId, role: userRole }
+          { noteId, userId, role: userRole },
         );
       }
 
@@ -485,14 +438,10 @@ export class NotesService {
   static async getNoteCount(
     attachedTo: NotesAttachedToEnum,
     attachedToId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<number> {
     try {
-      return await getNoteCountByEntityQuery(
-        attachedTo,
-        attachedToId,
-        organizationId
-      );
+      return await getNoteCountByEntityQuery(attachedTo, attachedToId, organizationId);
     } catch (error) {
       throw new Error(`Failed to get note count: ${(error as Error).message}`);
     }
@@ -510,16 +459,11 @@ export class NotesService {
    * @example
    * const userNotes = await NotesService.getNotesByAuthor(123, 456);
    */
-  static async getNotesByAuthor(
-    authorId: number,
-    organizationId: number
-  ): Promise<NotesModel[]> {
+  static async getNotesByAuthor(authorId: number, organizationId: number): Promise<NotesModel[]> {
     try {
       return await getNotesByAuthorQuery(authorId, organizationId);
     } catch (error) {
-      throw new Error(
-        `Failed to get author notes: ${(error as Error).message}`
-      );
+      throw new Error(`Failed to get author notes: ${(error as Error).message}`);
     }
   }
 }

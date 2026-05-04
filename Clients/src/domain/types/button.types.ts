@@ -1,7 +1,7 @@
 /**
  * Props interface for the CustomizableButton component
  * Pure domain type with no framework dependencies
- * 
+ *
  * Note: Icon and content types use 'unknown' to avoid React dependencies.
  * Presentation layer will handle React-specific type casting.
  */

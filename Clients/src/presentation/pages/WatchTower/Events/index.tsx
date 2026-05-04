@@ -46,12 +46,7 @@ const WatchTowerEvents = () => {
         </Typography>
       )}
 
-      <EventsTable
-        data={events}
-        users={users}
-        isLoading={isLoading}
-        paginated={true}
-      />
+      <EventsTable data={events} users={users} isLoading={isLoading} paginated={true} />
     </Stack>
   );
 };

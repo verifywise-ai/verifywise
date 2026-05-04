@@ -4,14 +4,7 @@
  */
 
 import React from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  CircularProgress,
-  useTheme,
-  Avatar,
-} from "@mui/material";
+import { Box, Typography, Stack, CircularProgress, useTheme, Avatar } from "@mui/material";
 import { Clock } from "lucide-react";
 import {
   useEntityChangeHistory,
@@ -19,10 +12,7 @@ import {
 } from "../../../../application/hooks/useEntityChangeHistory";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
-import {
-  EntityType,
-  getEntityHistoryConfig,
-} from "../../../../config/changeHistory.config";
+import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { brand } from "../../../themes/palette";
@@ -71,14 +61,8 @@ const formatRelativeTime = (date: string | Date): string => {
 const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
   const theme = useTheme();
   const { userId: currentUserId } = useAuth();
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useEntityChangeHistory(entityType, entityId);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useEntityChangeHistory(entityType, entityId);
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
 
   const history = React.useMemo(() => {
@@ -93,9 +77,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
 
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(
-        new Set(history.map((entry) => entry.changed_by_user_id))
-      );
+      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
 
       const newAvatarUrls: { [userId: number]: string | null } = {};
 
@@ -131,10 +113,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
     });
 
     return Object.values(groups).sort((a, b) => {
-      return (
-        new Date(b[0].changed_at).getTime() -
-        new Date(a[0].changed_at).getTime()
-      );
+      return new Date(b[0].changed_at).getTime() - new Date(a[0].changed_at).getTime();
     });
   }, [history]);
 
@@ -150,10 +129,10 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
     const creatorName = !creationEntry.changed_by_user_id
       ? "a deleted user"
       : isCurrentUser
-      ? "you"
-      : creationEntry.user_name && creationEntry.user_surname
-      ? `${creationEntry.user_name} ${creationEntry.user_surname}`
-      : creationEntry.user_email || "an unknown user";
+        ? "you"
+        : creationEntry.user_name && creationEntry.user_surname
+          ? `${creationEntry.user_name} ${creationEntry.user_surname}`
+          : creationEntry.user_email || "an unknown user";
 
     const creationDate = dayjs(creationEntry.changed_at).format("MMMM D, YYYY");
     const creationTime = dayjs(creationEntry.changed_at).format("h:mm A");
@@ -161,18 +140,13 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
     return { creatorName, creationDate, creationTime };
   }, [creationEntry, currentUserId]);
 
-  const renderTruncatedValue = (
-    entryId: number,
-    value: string,
-    type: "old" | "new"
-  ) => {
+  const renderTruncatedValue = (entryId: number, value: string, type: "old" | "new") => {
     const key = `${entryId}-${type}`;
     const isExpanded = expandedValues.has(key);
     const shouldTruncate = value && value.length > MAX_VALUE_LENGTH;
 
-    const displayValue = shouldTruncate && !isExpanded
-      ? `${value.slice(0, MAX_VALUE_LENGTH)}...`
-      : value;
+    const displayValue =
+      shouldTruncate && !isExpanded ? `${value.slice(0, MAX_VALUE_LENGTH)}...` : value;
 
     const isOldValue = type === "old";
 
@@ -225,10 +199,10 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
     const userName = !firstEntry.changed_by_user_id
       ? "Deleted User"
       : isCurrentUser
-      ? "You"
-      : firstEntry.user_name && firstEntry.user_surname
-      ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-      : firstEntry.user_email || "Unknown User";
+        ? "You"
+        : firstEntry.user_name && firstEntry.user_surname
+          ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+          : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -268,14 +242,10 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 color: theme.palette.text.primary,
               }}
             >
-              {firstEntry.action === "created" &&
-                `${userName} created this ${config.entityName}`}
+              {firstEntry.action === "created" && `${userName} created this ${config.entityName}`}
               {firstEntry.action === "updated" &&
-                `${userName} updated ${group.length} field${
-                  group.length > 1 ? "s" : ""
-                }`}
-              {firstEntry.action === "deleted" &&
-                `${userName} deleted this ${config.entityName}`}
+                `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
+              {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
             <Stack direction="row" gap="8px" alignItems="center">
               <Clock size={12} color={theme.palette.text.secondary} />
@@ -316,9 +286,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 {entry.field_name}
               </Typography>
 
-              {entry.action === "created" &&
-              entry.new_value &&
-              entry.new_value !== "-" ? (
+              {entry.action === "created" && entry.new_value && entry.new_value !== "-" ? (
                 <Box
                   sx={{
                     padding: "8px 12px",
@@ -410,7 +378,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             lineHeight: 1.6,
           }}
         >
-          This {config.entityName.toLowerCase()} may have been deleted, or there was an error loading the activity history.
+          This {config.entityName.toLowerCase()} may have been deleted, or there was an error
+          loading the activity history.
         </Typography>
       </Box>
     );
@@ -487,10 +456,18 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
               color: theme.palette.text.secondary,
             }}
           >
-            <Box component="span" sx={{ fontWeight: 400 }}>Created by</Box>{" "}
-            <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creatorName}</Box>{" "}
-            <Box component="span" sx={{ fontWeight: 400 }}>on</Box>{" "}
-            <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creationDate} at {creationInfo.creationTime}</Box>
+            <Box component="span" sx={{ fontWeight: 400 }}>
+              Created by
+            </Box>{" "}
+            <Box component="span" sx={{ fontWeight: 600 }}>
+              {creationInfo.creatorName}
+            </Box>{" "}
+            <Box component="span" sx={{ fontWeight: 400 }}>
+              on
+            </Box>{" "}
+            <Box component="span" sx={{ fontWeight: 600 }}>
+              {creationInfo.creationDate} at {creationInfo.creationTime}
+            </Box>
           </Typography>
         </Box>
       )}
@@ -510,9 +487,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             sx={{
               fontSize: 14,
               fontWeight: 500,
-              color: isFetchingNextPage
-                ? theme.palette.text.disabled
-                : theme.palette.primary.main,
+              color: isFetchingNextPage ? theme.palette.text.disabled : theme.palette.primary.main,
               cursor: isFetchingNextPage ? "default" : "pointer",
               "&:hover": {
                 textDecoration: isFetchingNextPage ? "none" : "underline",

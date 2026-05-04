@@ -30,10 +30,7 @@ const fetchModelInventories = async (
       const result = await getModelByProjectIdQuery(params.projectId, organizationId);
       models = result || [];
     } else if (params.frameworkId) {
-      const result = await getModelByFrameworkIdQuery(
-        params.frameworkId,
-        organizationId,
-      );
+      const result = await getModelByFrameworkIdQuery(params.frameworkId, organizationId);
       models = result || [];
     } else {
       models = await getAllModelInventoriesQuery(organizationId);
@@ -44,31 +41,23 @@ const fetchModelInventories = async (
       models = models.filter((m) => m.status === params.status);
     }
     if (params.security_assessment !== undefined) {
-      models = models.filter(
-        (m) => m.security_assessment === params.security_assessment,
-      );
+      models = models.filter((m) => m.security_assessment === params.security_assessment);
     }
     if (params.provider) {
       models = models.filter(
-        (m) =>
-          m.provider &&
-          m.provider.toLowerCase().includes(params.provider!.toLowerCase()),
+        (m) => m.provider && m.provider.toLowerCase().includes(params.provider!.toLowerCase()),
       );
     }
     if (params.hosting_provider) {
       models = models.filter(
         (m) =>
           m.hosting_provider &&
-          m.hosting_provider
-            .toLowerCase()
-            .includes(params.hosting_provider!.toLowerCase()),
+          m.hosting_provider.toLowerCase().includes(params.hosting_provider!.toLowerCase()),
       );
     }
     if (params.model) {
       models = models.filter(
-        (m) =>
-          m.model &&
-          m.model.toLowerCase().includes(params.model!.toLowerCase()),
+        (m) => m.model && m.model.toLowerCase().includes(params.model!.toLowerCase()),
       );
     }
 
@@ -145,8 +134,7 @@ const getModelInventoryAnalytics = async (
 
     models.forEach((model) => {
       if (model.status) {
-        statusDistribution[model.status] =
-          (statusDistribution[model.status] || 0) + 1;
+        statusDistribution[model.status] = (statusDistribution[model.status] || 0) + 1;
       }
     });
 
@@ -154,10 +142,7 @@ const getModelInventoryAnalytics = async (
     const providerMap = new Map<string, number>();
     models.forEach((model) => {
       if (model.provider) {
-        providerMap.set(
-          model.provider,
-          (providerMap.get(model.provider) || 0) + 1,
-        );
+        providerMap.set(model.provider, (providerMap.get(model.provider) || 0) + 1);
       }
     });
 
@@ -165,8 +150,7 @@ const getModelInventoryAnalytics = async (
       .map(([provider, count]) => ({
         provider,
         count,
-        percentage:
-          totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
+        percentage: totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -191,8 +175,7 @@ const getModelInventoryAnalytics = async (
       .map(([hostingProvider, count]) => ({
         hostingProvider,
         count,
-        percentage:
-          totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
+        percentage: totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -203,10 +186,7 @@ const getModelInventoryAnalytics = async (
         const caps = model.capabilities.split(", ").filter((cap) => cap.trim());
         caps.forEach((cap) => {
           const normalizedCap = cap.trim();
-          capabilitiesMap.set(
-            normalizedCap,
-            (capabilitiesMap.get(normalizedCap) || 0) + 1,
-          );
+          capabilitiesMap.set(normalizedCap, (capabilitiesMap.get(normalizedCap) || 0) + 1);
         });
       }
     });
@@ -215,8 +195,7 @@ const getModelInventoryAnalytics = async (
       .map(([capability, count]) => ({
         capability,
         count,
-        percentage:
-          totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
+        percentage: totalModels > 0 ? Math.round((count / totalModels) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -275,30 +254,21 @@ const getModelInventoryExecutiveSummary = async (
     const totalActiveModels = models.length;
 
     // Count models by status
-    const approvedModels = models.filter(
-      (m) => m.status === ModelInventoryStatus.APPROVED,
-    ).length;
+    const approvedModels = models.filter((m) => m.status === ModelInventoryStatus.APPROVED).length;
 
     const restrictedModels = models.filter(
       (m) => m.status === ModelInventoryStatus.RESTRICTED,
     ).length;
 
-    const blockedModels = models.filter(
-      (m) => m.status === ModelInventoryStatus.BLOCKED,
-    ).length;
+    const blockedModels = models.filter((m) => m.status === ModelInventoryStatus.BLOCKED).length;
 
-    const pendingModels = models.filter(
-      (m) => m.status === ModelInventoryStatus.PENDING,
-    ).length;
+    const pendingModels = models.filter((m) => m.status === ModelInventoryStatus.PENDING).length;
 
     // Top providers (top 3)
     const providerMap = new Map<string, number>();
     models.forEach((model) => {
       if (model.provider) {
-        providerMap.set(
-          model.provider,
-          (providerMap.get(model.provider) || 0) + 1,
-        );
+        providerMap.set(model.provider, (providerMap.get(model.provider) || 0) + 1);
       }
     });
 
@@ -308,16 +278,9 @@ const getModelInventoryExecutiveSummary = async (
       .map(([provider]) => provider);
 
     // Security assessment progress
-    const assessed = models.filter(
-      (m) => m.security_assessment === true,
-    ).length;
-    const notAssessed = models.filter(
-      (m) => m.security_assessment === false,
-    ).length;
-    const percentage =
-      totalActiveModels > 0
-        ? Math.round((assessed / totalActiveModels) * 100)
-        : 0;
+    const assessed = models.filter((m) => m.security_assessment === true).length;
+    const notAssessed = models.filter((m) => m.security_assessment === false).length;
+    const percentage = totalActiveModels > 0 ? Math.round((assessed / totalActiveModels) * 100) : 0;
 
     const securityAssessmentProgress = {
       assessed,
@@ -334,9 +297,7 @@ const getModelInventoryExecutiveSummary = async (
       .filter((m) => m.created_at && new Date(m.created_at) > sevenDaysAgo)
       .map((m) => {
         const createdAt = m.created_at ? new Date(m.created_at) : now;
-        const daysOld = Math.floor(
-          (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
-        );
+        const daysOld = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
         return {
           id: m.id || 0,

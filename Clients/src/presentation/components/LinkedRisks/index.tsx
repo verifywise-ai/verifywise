@@ -26,8 +26,7 @@ export function LinkedRisksPopup({
 
   const [frameworkRisks, setFrameworkRisks] = useState<RiskModel[]>([]);
 
-  const shouldUseProjectRisks =
-    !isOrganizational && projectId > 0 && frameworkId !== 1;
+  const shouldUseProjectRisks = !isOrganizational && projectId > 0 && frameworkId !== 1;
   const { projectRisks } = useProjectRisks({
     projectId: shouldUseProjectRisks ? projectId : 0,
   });
@@ -55,9 +54,7 @@ export function LinkedRisksPopup({
   // If organizational, EU AI Act (frameworkId=1), OR projectId is 0/invalid, use frameworkRisks
   // Otherwise, use projectRisks (project-specific risks)
   const risks =
-    isOrganizational || frameworkId === 1 || projectId === 0
-      ? frameworkRisks
-      : projectRisks;
+    isOrganizational || frameworkId === 1 || projectId === 0 ? frameworkRisks : projectRisks;
   const [searchInput, setSearchInput] = useState<string>("");
   const [checkedRows, setCheckedRows] = useState<number[]>(currentRisks);
   const [deletedRisks, setDeletedRisks] = useState<number[]>([]);
@@ -68,14 +65,12 @@ export function LinkedRisksPopup({
     onClose();
   };
 
-  const handleOnTextFieldChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleOnTextFieldChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(event.target.value);
   };
 
   const filteredRisks = risks.filter((risk) =>
-    risk.risk_name.toLowerCase().includes(searchInput.toLowerCase())
+    risk.risk_name.toLowerCase().includes(searchInput.toLowerCase()),
   );
 
   return (
@@ -109,5 +104,4 @@ export function LinkedRisksPopup({
       </Stack>
     </StandardModal>
   );
-};
-
+}

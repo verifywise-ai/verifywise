@@ -1,5 +1,5 @@
 import { keyframes } from "@mui/system";
-import { SxProps, Theme } from '@mui/material';
+import { SxProps, Theme } from "@mui/material";
 
 // Flash animation
 export const flashAnimation = keyframes`
@@ -62,12 +62,12 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   resourcesHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 3,
     mb: 2,
-    padding: '10px 0',
+    padding: "10px 0",
   },
 
   title: {
@@ -77,8 +77,8 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   toggleRow: {
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: 2,
   },
 
@@ -86,17 +86,17 @@ export const useStyles = (theme: Theme): StylesType => ({
     fontSize: theme.typography.body2.fontSize,
     color: theme.palette.text.primary,
     fontWeight: 600,
-    ml:5,
+    ml: 5,
   },
 
   tableWrapper: {
-    position: 'relative',
+    position: "relative",
     mb: 3,
   },
 
   tableContainer: {
     borderRadius: theme.shape.borderRadius,
-    boxShadow: 'none',
+    boxShadow: "none",
     border: `1px solid ${theme.palette.divider}`,
   },
 
@@ -108,11 +108,11 @@ export const useStyles = (theme: Theme): StylesType => ({
     borderBottom: `1px solid ${theme.palette.divider}`,
   },
   tableRow: (isFlashing: boolean) => ({
-    '&:hover': {
+    "&:hover": {
       backgroundColor: theme.palette.grey[50],
     },
-    '& .MuiTableCell-root': {
-      padding: '8px 10px !important',
+    "& .MuiTableCell-root": {
+      padding: "8px 10px !important",
     },
     ...(isFlashing && {
       animation: `${flashAnimation} 2s ease-in-out`,
@@ -143,29 +143,29 @@ export const useStyles = (theme: Theme): StylesType => ({
   emptyStateText: {
     fontSize: theme.typography.body2.fontSize,
     color: theme.palette.text.secondary,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
     zIndex: 1,
   },
 
   buttonContainer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
+    display: "flex",
+    justifyContent: "flex-end",
   },
 
   addButton: {
     alignSelf: "flex-end",
     width: "fit-content",
     gap: 2,
-    backgroundColor: 'brand.primary',
+    backgroundColor: "brand.primary",
     border: `1px solid #13715B`,
   },
 
@@ -180,14 +180,14 @@ export const useStyles = (theme: Theme): StylesType => ({
     fontSize: theme.typography.h6.fontSize,
     fontWeight: 600,
     color: theme.palette.text.primary,
-    padding: '16px 24px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    padding: "16px 24px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
   modalContent: {
-    padding: '24px',
+    padding: "24px",
   },
 
   modalLabel: {
@@ -200,24 +200,24 @@ export const useStyles = (theme: Theme): StylesType => ({
   closeButton: {
     color: theme.palette.text.secondary,
     padding: 0,
-    '&:hover': {
-      backgroundColor: 'transparent',
+    "&:hover": {
+      backgroundColor: "transparent",
       opacity: 0.8,
     },
   },
 
   fieldStyle: {
     backgroundColor: theme.palette.background.paper,
-    '& input': {
-      padding: '0 14px',
+    "& input": {
+      padding: "0 14px",
     },
   },
 
   fileUploadButton: {
     mt: 10,
-    backgroundColor: 'brand.primary',
+    backgroundColor: "brand.primary",
     border: `1px solid #13715B`,
-    color: 'background.main',
+    color: "background.main",
   },
 
   fileName: {
@@ -234,7 +234,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     fontWeight: 400,
     mt: 1,
     ml: 1,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 
   fileErrorText: {
@@ -242,17 +242,17 @@ export const useStyles = (theme: Theme): StylesType => ({
     fontSize: theme.typography.caption.fontSize,
     color: theme.palette.error.main,
     mt: 1,
-    display: 'block',
+    display: "block",
   },
 
   modalActionButton: {
-    backgroundColor: 'brand.primary',
+    backgroundColor: "brand.primary",
     border: `1px solid #13715B`,
     gap: 1,
-    '&:hover': {
-      backgroundColor: 'brand.primary',
+    "&:hover": {
+      backgroundColor: "brand.primary",
     },
-    '&:disabled': {
+    "&:disabled": {
       backgroundColor: theme.palette.grey[300],
       border: `1px solid ${theme.palette.grey[300]}`,
       color: `${theme.palette.text.secondary} !important`,
@@ -263,7 +263,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     border: `1px solid ${theme.palette.divider}`,
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.paper,
-    '&:hover': {
+    "&:hover": {
       backgroundColor: theme.palette.grey[50],
       border: `1px solid ${theme.palette.text.secondary}`,
     },
@@ -280,4 +280,4 @@ export const useStyles = (theme: Theme): StylesType => ({
     color: theme.palette.error.dark,
     border: `1px solid ${theme.palette.error.main}`,
   },
-}); 
+});

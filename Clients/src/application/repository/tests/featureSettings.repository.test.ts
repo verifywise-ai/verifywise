@@ -1,8 +1,5 @@
 import CustomAxios from "../../../infrastructure/api/customAxios";
-import {
-  getFeatureSettings,
-  updateFeatureSettings,
-} from "../featureSettings.repository";
+import { getFeatureSettings, updateFeatureSettings } from "../featureSettings.repository";
 
 vi.mock("../../../infrastructure/api/customAxios", () => {
   return {
@@ -56,10 +53,7 @@ describe("Test FeatureSettings Repository", () => {
 
       const response = await updateFeatureSettings(settings);
 
-      expect(CustomAxios.patch).toHaveBeenCalledWith(
-        "/feature-settings",
-        settings,
-      );
+      expect(CustomAxios.patch).toHaveBeenCalledWith("/feature-settings", settings);
       expect(response).toEqual(mockData);
     });
 
@@ -79,10 +73,7 @@ describe("Test FeatureSettings Repository", () => {
 
       const response = await updateFeatureSettings(settings);
 
-      expect(CustomAxios.patch).toHaveBeenCalledWith(
-        "/feature-settings",
-        settings,
-      );
+      expect(CustomAxios.patch).toHaveBeenCalledWith("/feature-settings", settings);
       expect(response).toEqual(mockData);
     });
 
@@ -102,10 +93,7 @@ describe("Test FeatureSettings Repository", () => {
 
       const response = await updateFeatureSettings(settings);
 
-      expect(CustomAxios.patch).toHaveBeenCalledWith(
-        "/feature-settings",
-        settings,
-      );
+      expect(CustomAxios.patch).toHaveBeenCalledWith("/feature-settings", settings);
       expect(response).toEqual(mockData);
     });
   });

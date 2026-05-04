@@ -136,11 +136,7 @@ function ReviewerMultiSelect({
                 margin: theme.spacing(2),
               }}
             >
-              <Checkbox
-                checked={selected.includes(idStr)}
-                disableFocusRipple
-                disableRipple
-              />
+              <Checkbox checked={selected.includes(idStr)} disableFocusRipple disableRipple />
               <ListItemText
                 primary={`${user.name} ${user.surname ?? ""}`}
                 secondary={user.email}

@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  getPaginationRowCount,
-  setPaginationRowCount,
-} from "../utils/paginationStorage";
+import { getPaginationRowCount, setPaginationRowCount } from "../utils/paginationStorage";
 import type { SortConfig, SortDirection } from "../../domain/types/standardTable";
 
 export type { SortConfig, SortDirection };
@@ -33,7 +30,7 @@ const SORTING_KEY_PREFIX = "verifywise_";
 const SORTING_KEY_SUFFIX = "_sorting";
 
 export function useStandardTable<T>(
-  options: UseStandardTableOptions<T>
+  options: UseStandardTableOptions<T>,
 ): UseStandardTableReturn<T> {
   const {
     rows,
@@ -49,7 +46,7 @@ export function useStandardTable<T>(
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount(storageKey, defaultRowsPerPage)
+    getPaginationRowCount(storageKey, defaultRowsPerPage),
   );
 
   // Sorting state from localStorage or defaults
@@ -97,19 +94,14 @@ export function useStandardTable<T>(
     const sortableRows = [...rows];
     const direction = sortConfig.direction === "asc" ? 1 : -1;
 
-    return sortableRows.sort(
-      (a: T, b: T) => direction * sortComparator(a, b, sortConfig.key)
-    );
+    return sortableRows.sort((a: T, b: T) => direction * sortComparator(a, b, sortConfig.key));
   }, [rows, sortConfig, sortComparator]);
 
   // Ensure page is valid when rows change
   const validPage =
     sortedRows.length === 0
       ? 0
-      : Math.min(
-          page,
-          Math.max(0, Math.ceil(sortedRows.length / rowsPerPage) - 1)
-        );
+      : Math.min(page, Math.max(0, Math.ceil(sortedRows.length / rowsPerPage) - 1));
 
   useEffect(() => {
     if (page !== validPage) {
@@ -120,10 +112,7 @@ export function useStandardTable<T>(
   // "Showing X - Y" range string
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
-    const end = Math.min(
-      page * rowsPerPage + rowsPerPage,
-      sortedRows?.length ?? 0
-    );
+    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedRows?.length ?? 0);
     return `${start} - ${end}`;
   }, [page, rowsPerPage, sortedRows?.length]);
 
@@ -138,7 +127,7 @@ export function useStandardTable<T>(
       setPaginationRowCount(storageKey, newRowsPerPage);
       setPage(0);
     },
-    [storageKey]
+    [storageKey],
   );
 
   return {

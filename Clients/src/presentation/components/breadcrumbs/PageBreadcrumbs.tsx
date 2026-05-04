@@ -20,77 +20,77 @@ import { DashboardActionButtons } from "../Layout/DashboardActionButtons";
  * @returns {JSX.Element} A styled breadcrumbs component
  */
 const PageBreadcrumbs = memo(function PageBreadcrumbs({
-    items,
-    autoGenerate = true,
-    showCurrentPage = true,
-    homeLabel = "Dashboard",
-    homePath = "/",
-    truncateLabels = true,
-    maxLabelLength = 25,
-    onItemClick,
-    sx,
-    className,
-    testId,
-    showDivider = true,
-  }: PageBreadcrumbsProps) {
-    const theme = useTheme();
+  items,
+  autoGenerate = true,
+  showCurrentPage = true,
+  homeLabel = "Dashboard",
+  homePath = "/",
+  truncateLabels = true,
+  maxLabelLength = 25,
+  onItemClick,
+  sx,
+  className,
+  testId,
+  showDivider = true,
+}: PageBreadcrumbsProps) {
+  const theme = useTheme();
 
-    // Note: Custom route mapping is now handled centrally in the main Breadcrumbs component
-    // through the getRouteMapping utility function
+  // Note: Custom route mapping is now handled centrally in the main Breadcrumbs component
+  // through the getRouteMapping utility function
 
-    return (
+  return (
+    <Stack
+      className={className}
+      data-testid={testId}
+      component="nav"
+      role="navigation"
+      aria-label="Page breadcrumb navigation"
+      sx={{
+        mt: "-16px",
+        mb: 3,
+        width: "100%",
+        position: "relative",
+        ...sx,
+      }}
+    >
       <Stack
-        className={className}
-        data-testid={testId}
-        component="nav"
-        role="navigation"
-        aria-label="Page breadcrumb navigation"
+        direction="row"
         sx={{
-          mt: "-16px",
-          mb: 3,
           width: "100%",
-          position: "relative",
-          ...sx,
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          mb: 3,
+          pt: 0,
         }}
       >
-        <Stack
-          direction="row"
+        <Breadcrumbs
+          items={items}
+          autoGenerate={autoGenerate}
+          showCurrentPage={showCurrentPage}
+          homeLabel={homeLabel}
+          homePath={homePath}
+          truncateLabels={truncateLabels}
+          maxLabelLength={maxLabelLength}
+          onItemClick={onItemClick}
           sx={{
-            width: "100%",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 3,
-            pt: 0,
+            py: 0.5,
+            px: 0,
+            "& .MuiBreadcrumbs-separator": {
+              color: theme.palette.text.disabled,
+              mx: 0.5,
+              fontSize: "14px",
+            },
+            "& .MuiBreadcrumbs-ol": {
+              flexWrap: "wrap",
+            },
           }}
-        >
-          <Breadcrumbs
-            items={items}
-            autoGenerate={autoGenerate}
-            showCurrentPage={showCurrentPage}
-            homeLabel={homeLabel}
-            homePath={homePath}
-            truncateLabels={truncateLabels}
-            maxLabelLength={maxLabelLength}
-            onItemClick={onItemClick}
-            sx={{
-              py: 0.5,
-              px: 0,
-              "& .MuiBreadcrumbs-separator": {
-                color: theme.palette.text.disabled,
-                mx: 0.5,
-                fontSize: "14px",
-              },
-              "& .MuiBreadcrumbs-ol": {
-                flexWrap: "wrap",
-              },
-            }}
-          />
-          <DashboardActionButtons hideOnMainDashboard={false} />
-        </Stack>
-        {showDivider && <Divider sx={{ mb: 2 }} />}
+        />
+        <DashboardActionButtons hideOnMainDashboard={false} />
       </Stack>
-    );
-  });
+      {showDivider && <Divider sx={{ mb: 2 }} />}
+    </Stack>
+  );
+});
 
 PageBreadcrumbs.displayName = "PageBreadcrumbs";
 

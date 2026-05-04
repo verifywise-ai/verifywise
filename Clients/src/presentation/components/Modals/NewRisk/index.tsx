@@ -13,14 +13,7 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import {
-  Autocomplete,
-  Box,
-  Stack,
-  TextField,
-  Typography,
-  Divider,
-} from "@mui/material";
+import { Autocomplete, Box, Stack, TextField, Typography, Divider } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import { Suspense, useEffect, useState, useMemo, lazy, useCallback } from "react";
@@ -136,16 +129,16 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   const [activeTab, setActiveTab] = useState("details");
   const [selectedFrameworks, setSelectedFrameworks] = useState<number[]>([]);
 
-  const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
+  const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({
+    listOfFrameworks: [],
+  });
   const organizationalFrameworks = useMemo(
     () => (frameworks || []).filter((fw: Framework) => fw.is_organizational),
-    [frameworks]
+    [frameworks],
   );
 
   // Prefetch history data when modal opens in edit mode
-  useVendorRiskChangeHistory(
-    isOpen && existingRisk?.id ? existingRisk.id : undefined
-  );
+  useVendorRiskChangeHistory(isOpen && existingRisk?.id ? existingRisk.id : undefined);
 
   const { users } = useUsers();
   const formattedUsers = users?.map((user) => ({
@@ -175,23 +168,19 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         impact_description: existingRisk.impact_description,
         action_owner: String(existingRisk.action_owner) || "",
         risk_severity: Number(
-          RISK_SEVERITY_OPTIONS.find(
-            (r) => r.name === existingRisk.risk_severity
-          )?._id ?? 1
+          RISK_SEVERITY_OPTIONS.find((r) => r.name === existingRisk.risk_severity)?._id ?? 1,
         ).toString(),
         likelihood: Number(
-          LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)
-            ?._id ?? 1
+          LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)?._id ?? 1,
         ).toString(),
         risk_level: String(
-          RISK_LEVEL_OPTIONS.find((r) => r.name === existingRisk.risk_level)
-            ?._id ?? ""
+          RISK_LEVEL_OPTIONS.find((r) => r.name === existingRisk.risk_level)?._id ?? "",
         ),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
       }));
       setSelectedFrameworks(
-        Array.isArray(existingRisk.frameworks) ? existingRisk.frameworks.map(Number) : []
+        Array.isArray(existingRisk.frameworks) ? existingRisk.frameworks.map(Number) : [],
       );
     }
   }, [existingRisk, isOpen]);
@@ -227,7 +216,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       "Risk description",
       values.risk_description,
       1,
-      256 // updated from 64
+      256, // updated from 64
     );
     if (!risk_description.accepted) {
       newErrors.risk_description = risk_description.message;
@@ -236,7 +225,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       "Impact description",
       values.impact_description,
       1,
-      256 // updated from 64
+      256, // updated from 64
     );
     if (!impact_description.accepted) {
       newErrors.impact_description = impact_description.message;
@@ -245,7 +234,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       "Action plan",
       values.action_plan,
       1,
-      256 // updated from 64
+      256, // updated from 64
     );
     if (!action_plan.accepted) {
       newErrors.action_plan = action_plan.message;
@@ -254,16 +243,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       newErrors.vendor_id = "Please select a vendor from the dropdown";
     }
     if (!values.action_owner || values.action_owner === "") {
-      newErrors.action_owner =
-        "Please select an action owner from the dropdown";
+      newErrors.action_owner = "Please select an action owner from the dropdown";
     }
     if (!values.risk_severity || Number(values.risk_severity) < 1) {
-      newErrors.risk_severity =
-        "Please select a risk severity from the dropdown";
+      newErrors.risk_severity = "Please select a risk severity from the dropdown";
     }
     if (!values.likelihood || Number(values.likelihood) < 1) {
-      newErrors.likelihood =
-        "Please select a risk likelihood from the dropdown";
+      newErrors.likelihood = "Please select a risk likelihood from the dropdown";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -275,11 +261,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
    */
 
   const handleOnSave = async () => {
-    const selectedLikelihood = LIKELIHOOD_OPTIONS.find(
-      (r) => r._id === Number(values.likelihood)
-    );
+    const selectedLikelihood = LIKELIHOOD_OPTIONS.find((r) => r._id === Number(values.likelihood));
     const selectedSeverity = RISK_SEVERITY_OPTIONS.find(
-      (r) => r._id === Number(values.risk_severity)
+      (r) => r._id === Number(values.risk_severity),
     );
 
     // Only call if both are valid (not the "Select ..." option)
@@ -295,15 +279,14 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
     const risk_risklevel = RiskCalculator.getRiskLevel(
       selectedLikelihood.name as RiskLikelihood,
-      selectedSeverity.name as RiskSeverity
+      selectedSeverity.name as RiskSeverity,
     );
     const _riskDetails = {
       vendor_id: values.vendor_id,
       risk_description: values.risk_description,
       impact_description: values.impact_description,
-      action_owner: formattedUsers?.find(
-        (user) => String(user._id) === String(values.action_owner)
-      )?._id,
+      action_owner: formattedUsers?.find((user) => String(user._id) === String(values.action_owner))
+        ?._id,
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
@@ -352,9 +335,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${
-          (error as Error).message || "Please try again."
-        }`,
+        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -403,9 +384,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${
-          (error as Error).message || "Please try again."
-        }`,
+        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -417,196 +396,184 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
   // Add this function to handle RiskLevel select changes, clearing errors as well
   const handleOnSelectChange = useCallback(
-    (prop: "likelihood" | "riskSeverity") =>
-      (event: SelectChangeEvent<string | number>) => {
-        const key = prop === "riskSeverity" ? "risk_severity" : prop;
-        setValues((prev) => ({
-          ...prev,
-          [key]: event.target.value,
-        }));
-        setErrors((prev) => ({ ...prev, [key]: "" }));
-      },
-    []
+    (prop: "likelihood" | "riskSeverity") => (event: SelectChangeEvent<string | number>) => {
+      const key = prop === "riskSeverity" ? "risk_severity" : prop;
+      setValues((prev) => ({
+        ...prev,
+        [key]: event.target.value,
+      }));
+      setErrors((prev) => ({ ...prev, [key]: "" }));
+    },
+    [],
   );
 
   const risksPanel = (
-      <Stack spacing={6}>
-        <Stack direction="row" spacing={6}>
-          <Stack flex={1} spacing={6}>
-            <Stack direction="row" spacing={6}>
-              <Box flex={1}>
-                <Select
-                  items={VENDOR_OPTIONS}
-                  label="Vendor"
-                  placeholder="Select vendor"
-                  isHidden={false}
-                  id="vendor_id"
-                  onChange={(e) => handleOnChange("vendor_id", e.target.value)}
-                  value={values.vendor_id}
-                  error={errors.vendor_id}
-                  sx={{ width: "100%" }}
-                  isRequired
-                  disabled={isEditingDisabled}
-                />
-              </Box>
-              <Box flex={1}>
-                <Select
-                  items={formattedUsers}
-                  label="Action owner"
-                  placeholder="Select owner"
-                  isHidden={false}
-                  id="action_owner"
-                  onChange={(e) =>
-                    handleOnChange("action_owner", e.target.value)
-                  }
-                  value={values.action_owner || ""}
-                  error={errors.action_owner}
-                  sx={{ width: "100%" }}
-                  isRequired
-                  disabled={isEditingDisabled}
-                />
-              </Box>
-            </Stack>
-            <Box>
-              <Field
-                label="Risk description"
-                width="100%"
-                value={values.risk_description}
-                onChange={(e) =>
-                  handleOnChange("risk_description", e.target.value)
-                }
-                error={errors.risk_description}
+    <Stack spacing={6}>
+      <Stack direction="row" spacing={6}>
+        <Stack flex={1} spacing={6}>
+          <Stack direction="row" spacing={6}>
+            <Box flex={1}>
+              <Select
+                items={VENDOR_OPTIONS}
+                label="Vendor"
+                placeholder="Select vendor"
+                isHidden={false}
+                id="vendor_id"
+                onChange={(e) => handleOnChange("vendor_id", e.target.value)}
+                value={values.vendor_id}
+                error={errors.vendor_id}
+                sx={{ width: "100%" }}
                 isRequired
                 disabled={isEditingDisabled}
-                type="description"
-                rows={7}
-                placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
+              />
+            </Box>
+            <Box flex={1}>
+              <Select
+                items={formattedUsers}
+                label="Action owner"
+                placeholder="Select owner"
+                isHidden={false}
+                id="action_owner"
+                onChange={(e) => handleOnChange("action_owner", e.target.value)}
+                value={values.action_owner || ""}
+                error={errors.action_owner}
+                sx={{ width: "100%" }}
+                isRequired
+                disabled={isEditingDisabled}
               />
             </Box>
           </Stack>
-          <Stack flex={1} spacing={6}>
-            <Box>
-              <Field
-                label="Action plan"
-                width="100%"
-                type="description"
-                value={values.action_plan}
-                error={errors.action_plan}
-                onChange={(e) => handleOnChange("action_plan", e.target.value)}
-                isRequired
-                disabled={isEditingDisabled}
-                rows={4}
-                placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
-              />
-            </Box>
-            <Box>
-              <Field
-                label="Impact description"
-                width="100%"
-                value={values.impact_description}
-                onChange={(e) =>
-                  handleOnChange("impact_description", e.target.value)
-                }
-                error={errors.impact_description}
-                isRequired
-                disabled={isEditingDisabled}
-                type="description"
-                rows={4}
-                placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
-              />
-            </Box>
-          </Stack>
-        </Stack>
-
-        {/* Applicable Frameworks */}
-        <Stack>
-          <Typography fontWeight={600} fontSize={16} mb={2}>
-            Applicable frameworks
-          </Typography>
-          <Typography fontSize={13} color="text.secondary" mb={2}>
-            Select the compliance frameworks this vendor risk applies to.
-          </Typography>
-          <Autocomplete
-            multiple
-            id="vendor-risk-frameworks-input"
-            size="small"
-            value={
-              frameworksLoading || !organizationalFrameworks.length
-                ? []
-                : organizationalFrameworks.filter((fw) =>
-                    selectedFrameworks.includes(Number(fw.id))
-                  )
-            }
-            options={organizationalFrameworks}
-            getOptionLabel={(fw) => fw.name}
-            renderOption={(props, option) => {
-              const { key, ...optionProps } = props;
-              return (
-                <Box key={key} component="li" {...optionProps}>
-                  <Typography fontSize={13}>
-                    {option.name}
-                  </Typography>
-                </Box>
-              );
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={
-                  frameworksLoading
-                    ? "Loading frameworks..."
-                    : selectedFrameworks.length > 0
-                    ? ""
-                    : "Select applicable frameworks"
-                }
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    paddingTop: "4px !important",
-                    paddingBottom: "4px !important",
-                  },
-                  "& ::placeholder": {
-                    fontSize: 13,
-                  },
-                }}
-              />
-            )}
-            onChange={(_event, newValue) => {
-              setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
-            }}
-            sx={{
-              width: "100%",
-              "& .MuiChip-root": {
-                borderRadius: "4px",
-              },
-            }}
-            disabled={frameworksLoading || isEditingDisabled}
-          />
-        </Stack>
-
-        <Stack>
-          <Divider sx={{ mb: 4 }} />
           <Box>
-            <Typography fontWeight={600} fontSize={16} mb={2}>
-              Calculate risk level
-            </Typography>
-            <Typography fontSize={13} color="text.secondary" mb={4}>
-              The Risk Level is calculated by multiplying the Likelihood and
-              Severity scores. By assigning these scores, the risk level will be
-              determined based on your inputs.
-            </Typography>
-            <Stack direction="row" spacing={6}>
-              <Suspense fallback={<div>Loading...</div>}>
-                <RiskLevel
-                  likelihood={Number(values.likelihood) || 1}
-                  riskSeverity={Number(values.risk_severity) || 1}
-                  handleOnSelectChange={handleOnSelectChange}
-                  disabled={isEditingDisabled}
-                />
-              </Suspense>
-            </Stack>
+            <Field
+              label="Risk description"
+              width="100%"
+              value={values.risk_description}
+              onChange={(e) => handleOnChange("risk_description", e.target.value)}
+              error={errors.risk_description}
+              isRequired
+              disabled={isEditingDisabled}
+              type="description"
+              rows={7}
+              placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
+            />
+          </Box>
+        </Stack>
+        <Stack flex={1} spacing={6}>
+          <Box>
+            <Field
+              label="Action plan"
+              width="100%"
+              type="description"
+              value={values.action_plan}
+              error={errors.action_plan}
+              onChange={(e) => handleOnChange("action_plan", e.target.value)}
+              isRequired
+              disabled={isEditingDisabled}
+              rows={4}
+              placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
+            />
+          </Box>
+          <Box>
+            <Field
+              label="Impact description"
+              width="100%"
+              value={values.impact_description}
+              onChange={(e) => handleOnChange("impact_description", e.target.value)}
+              error={errors.impact_description}
+              isRequired
+              disabled={isEditingDisabled}
+              type="description"
+              rows={4}
+              placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
+            />
           </Box>
         </Stack>
       </Stack>
+
+      {/* Applicable Frameworks */}
+      <Stack>
+        <Typography fontWeight={600} fontSize={16} mb={2}>
+          Applicable frameworks
+        </Typography>
+        <Typography fontSize={13} color="text.secondary" mb={2}>
+          Select the compliance frameworks this vendor risk applies to.
+        </Typography>
+        <Autocomplete
+          multiple
+          id="vendor-risk-frameworks-input"
+          size="small"
+          value={
+            frameworksLoading || !organizationalFrameworks.length
+              ? []
+              : organizationalFrameworks.filter((fw) => selectedFrameworks.includes(Number(fw.id)))
+          }
+          options={organizationalFrameworks}
+          getOptionLabel={(fw) => fw.name}
+          renderOption={(props, option) => {
+            const { key, ...optionProps } = props;
+            return (
+              <Box key={key} component="li" {...optionProps}>
+                <Typography fontSize={13}>{option.name}</Typography>
+              </Box>
+            );
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={
+                frameworksLoading
+                  ? "Loading frameworks..."
+                  : selectedFrameworks.length > 0
+                    ? ""
+                    : "Select applicable frameworks"
+              }
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  paddingTop: "4px !important",
+                  paddingBottom: "4px !important",
+                },
+                "& ::placeholder": {
+                  fontSize: 13,
+                },
+              }}
+            />
+          )}
+          onChange={(_event, newValue) => {
+            setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
+          }}
+          sx={{
+            width: "100%",
+            "& .MuiChip-root": {
+              borderRadius: "4px",
+            },
+          }}
+          disabled={frameworksLoading || isEditingDisabled}
+        />
+      </Stack>
+
+      <Stack>
+        <Divider sx={{ mb: 4 }} />
+        <Box>
+          <Typography fontWeight={600} fontSize={16} mb={2}>
+            Calculate risk level
+          </Typography>
+          <Typography fontSize={13} color="text.secondary" mb={4}>
+            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
+            assigning these scores, the risk level will be determined based on your inputs.
+          </Typography>
+          <Stack direction="row" spacing={6}>
+            <Suspense fallback={<div>Loading...</div>}>
+              <RiskLevel
+                likelihood={Number(values.likelihood) || 1}
+                riskSeverity={Number(values.risk_severity) || 1}
+                handleOnSelectChange={handleOnSelectChange}
+                disabled={isEditingDisabled}
+              />
+            </Suspense>
+          </Stack>
+        </Box>
+      </Stack>
+    </Stack>
   );
 
   return (
@@ -622,9 +589,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           />
         </Suspense>
       )}
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <StandardModal
         isOpen={isOpen}
         onClose={() => {

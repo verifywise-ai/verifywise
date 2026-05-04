@@ -43,22 +43,19 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
   const [, setSuperAdminHasNoOrgs] = useState(false);
 
   // Demo data state
-  const [showToastNotification, setShowToastNotification] =
-    useState<boolean>(false);
+  const [showToastNotification, setShowToastNotification] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>(
-    "Generating demo data. Please wait, this process may take some time..."
+    "Generating demo data. Please wait, this process may take some time...",
   );
   const [openDemoDataModal, setOpenDemoDataModal] = useState<boolean>(false);
-  const [openDeleteDemoDataModal, setOpenDeleteDemoDataModal] =
-    useState<boolean>(false);
+  const [openDeleteDemoDataModal, setOpenDeleteDemoDataModal] = useState<boolean>(false);
   const [hasDemoData, setHasDemoData] = useState<boolean>(false);
   const [showDemoDataButton, setShowDemoDataButton] = useState<boolean>(() => {
     // Check localStorage on initial load
     return localStorage.getItem("hideDemoDataButton") !== "true";
   });
   const [alertState, setAlertState] = useState<AlertState>();
-  const [refreshProjectsFlag, setRefreshProjectsFlag] =
-    useState<boolean>(false);
+  const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
 
   const { dashboard, fetchDashboard } = useDashboard();
 
@@ -95,7 +92,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         "Information Security & AI Governance Framework",
       ];
       const hasDemoProjects = dashboard.projects_list.some((project) =>
-        demoProjectTitles.includes(project.project_title)
+        demoProjectTitles.includes(project.project_title),
       );
       setHasDemoData(hasDemoProjects);
     }
@@ -118,19 +115,12 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     };
 
     fetchProjects();
-  }, [
-    setDashboardValues,
-    reloadTrigger,
-    location.pathname,
-    refreshProjectsFlag,
-  ]);
+  }, [setDashboardValues, reloadTrigger, location.pathname, refreshProjectsFlag]);
 
   // Handle create demo data
   const handleCreateDemoData = async () => {
     setOpenDemoDataModal(false);
-    setToastMessage(
-      "Generating demo data. Please wait, this process may take some time..."
-    );
+    setToastMessage("Generating demo data. Please wait, this process may take some time...");
     setShowToastNotification(true);
 
     const startTime = Date.now();
@@ -307,106 +297,106 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     <EvalsSidebarProvider>
       <AIDetectionSidebarProvider>
         <ShadowAISidebarProvider>
-        <AIGatewaySidebarProvider>
-        <Stack
-          maxWidth="100%"
-          className="home-layout"
-          flexDirection="row"
-          gap={0}
-          sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
-        >
-          <AppSwitcher
-            activeModule={activeModule}
-            onModuleChange={setActiveModule}
-            isSuperAdmin={isSuperAdmin}
-          />
-          <ContextSidebar
-            activeModule={activeModule}
-            onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
-            onOpenDeleteDemoData={() => setOpenDeleteDemoDataModal(true)}
-            onDismissDemoDataButton={() => {
-              localStorage.setItem("hideDemoDataButton", "true");
-              setShowDemoDataButton(false);
-            }}
-            showDemoDataButton={showDemoDataButton}
-            hasDemoData={hasDemoData}
-            isAdmin={isAdmin}
-          />
-          <Stack
-            className="main-content-area"
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              position: "relative",
-            }}
-          >
-            <ReadOnlyBanner />
-            <>
-              <DemoAppBanner />
-              {alertState && (
-                <Alert
-                  variant={alertState.variant}
-                  title={alertState.title}
-                  body={alertState.body}
-                  isToast={true}
-                  onClick={() => setAlertState(undefined)}
-                />
-              )}
-              {showToastNotification && <CustomizableToast title={toastMessage} />}
-              <Box
-                className="scrollable-content"
+          <AIGatewaySidebarProvider>
+            <Stack
+              maxWidth="100%"
+              className="home-layout"
+              flexDirection="row"
+              gap={0}
+              sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
+            >
+              <AppSwitcher
+                activeModule={activeModule}
+                onModuleChange={setActiveModule}
+                isSuperAdmin={isSuperAdmin}
+              />
+              <ContextSidebar
+                activeModule={activeModule}
+                onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
+                onOpenDeleteDemoData={() => setOpenDeleteDemoDataModal(true)}
+                onDismissDemoDataButton={() => {
+                  localStorage.setItem("hideDemoDataButton", "true");
+                  setShowDemoDataButton(false);
+                }}
+                showDemoDataButton={showDemoDataButton}
+                hasDemoData={hasDemoData}
+                isAdmin={isAdmin}
+              />
+              <Stack
+                className="main-content-area"
                 sx={{
                   flex: 1,
-                  minHeight: 0,
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                  padding: "24px 8px 24px 24px"
+                  minWidth: 0,
+                  height: "100vh",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  position: "relative",
                 }}
               >
-                <Outlet />
-              </Box>
-            </>
-          </Stack>
+                <ReadOnlyBanner />
+                <>
+                  <DemoAppBanner />
+                  {alertState && (
+                    <Alert
+                      variant={alertState.variant}
+                      title={alertState.title}
+                      body={alertState.body}
+                      isToast={true}
+                      onClick={() => setAlertState(undefined)}
+                    />
+                  )}
+                  {showToastNotification && <CustomizableToast title={toastMessage} />}
+                  <Box
+                    className="scrollable-content"
+                    sx={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      padding: "24px 8px 24px 24px",
+                    }}
+                  >
+                    <Outlet />
+                  </Box>
+                </>
+              </Stack>
 
-          {/* Demo Data Modals */}
-          <StandardModal
-            isOpen={openDemoDataModal}
-            onClose={() => setOpenDemoDataModal(false)}
-            title="Create demo data"
-            description="Generate sample data to explore VerifyWise features"
-            submitButtonText="Create demo data"
-            onSubmit={handleCreateDemoData}
-            isSubmitting={showToastNotification}
-            maxWidth="480px"
-          >
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              This will generate sample projects, risks, vendors, and policies to help you
-              explore VerifyWise. You can remove this demo data at any time.
-            </Typography>
-          </StandardModal>
+              {/* Demo Data Modals */}
+              <StandardModal
+                isOpen={openDemoDataModal}
+                onClose={() => setOpenDemoDataModal(false)}
+                title="Create demo data"
+                description="Generate sample data to explore VerifyWise features"
+                submitButtonText="Create demo data"
+                onSubmit={handleCreateDemoData}
+                isSubmitting={showToastNotification}
+                maxWidth="480px"
+              >
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  This will generate sample projects, risks, vendors, and policies to help you
+                  explore VerifyWise. You can remove this demo data at any time.
+                </Typography>
+              </StandardModal>
 
-          <StandardModal
-            isOpen={openDeleteDemoDataModal}
-            onClose={() => setOpenDeleteDemoDataModal(false)}
-            title="Delete demo data"
-            description="Remove all demo data from your workspace"
-            submitButtonText="Delete demo data"
-            onSubmit={handleDeleteDemoData}
-            isSubmitting={showToastNotification}
-            submitButtonColor={status.error.text}
-            maxWidth="480px"
-          >
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              This will remove all sample projects, risks, vendors, and policies that
-              were generated as demo data. Your real data will remain untouched.
-            </Typography>
-          </StandardModal>
-        </Stack>
-        </AIGatewaySidebarProvider>
+              <StandardModal
+                isOpen={openDeleteDemoDataModal}
+                onClose={() => setOpenDeleteDemoDataModal(false)}
+                title="Delete demo data"
+                description="Remove all demo data from your workspace"
+                submitButtonText="Delete demo data"
+                onSubmit={handleDeleteDemoData}
+                isSubmitting={showToastNotification}
+                submitButtonColor={status.error.text}
+                maxWidth="480px"
+              >
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  This will remove all sample projects, risks, vendors, and policies that were
+                  generated as demo data. Your real data will remain untouched.
+                </Typography>
+              </StandardModal>
+            </Stack>
+          </AIGatewaySidebarProvider>
         </ShadowAISidebarProvider>
       </AIDetectionSidebarProvider>
     </EvalsSidebarProvider>

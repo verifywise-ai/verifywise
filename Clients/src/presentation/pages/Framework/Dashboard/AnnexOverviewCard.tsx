@@ -14,7 +14,7 @@ import {
   Zap,
   FileText,
   Laptop,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { GetAnnexesByProjectFrameworkId } from "../../../../application/repository/annex_struct_iso.repository";
@@ -23,7 +23,7 @@ import { isISO42001, isISO27001 } from "../../../../application/constants/framew
 import {
   processAnnexNumber,
   calculateItemPercentages,
-  clampValue
+  clampValue,
 } from "../../../../application/utils/frameworkDataUtils";
 
 interface FrameworkData {
@@ -74,7 +74,7 @@ const ISO27001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "human resource security": { icon: Users },
   "asset management": { icon: Database },
   "access control": { icon: Lock },
-  "cryptography": { icon: Shield },
+  cryptography: { icon: Shield },
   "physical and environmental security": { icon: Building },
   "operations security": { icon: Settings },
   "communications security": { icon: Network },
@@ -82,7 +82,7 @@ const ISO27001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "supplier relationships": { icon: UserCheck },
   "information security incident management": { icon: AlertTriangle },
   "business continuity": { icon: Zap },
-  "compliance": { icon: Eye }
+  compliance: { icon: Eye },
 };
 
 // Icon mappings for ISO 42001 annex categories
@@ -92,8 +92,8 @@ const ISO42001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "resources for ai systems": { icon: Database },
   "ai system lifecycle": { icon: Settings },
   "data for ai systems": { icon: Database },
-  "ict": { icon: Network },
-  "third-party relationships": { icon: UserCheck }
+  ict: { icon: Network },
+  "third-party relationships": { icon: UserCheck },
 };
 
 // Default icon for unmapped categories
@@ -115,8 +115,10 @@ const getAnnexIcon = (title: string, frameworkName: string) => {
   if (lowercaseTitle.includes("data") || lowercaseTitle.includes("information")) return Database;
   if (lowercaseTitle.includes("human") || lowercaseTitle.includes("people")) return Users;
   if (lowercaseTitle.includes("system") || lowercaseTitle.includes("technical")) return Settings;
-  if (lowercaseTitle.includes("network") || lowercaseTitle.includes("communication")) return Network;
-  if (lowercaseTitle.includes("physical") || lowercaseTitle.includes("environmental")) return Building;
+  if (lowercaseTitle.includes("network") || lowercaseTitle.includes("communication"))
+    return Network;
+  if (lowercaseTitle.includes("physical") || lowercaseTitle.includes("environmental"))
+    return Building;
   if (lowercaseTitle.includes("incident") || lowercaseTitle.includes("risk")) return AlertTriangle;
   if (lowercaseTitle.includes("compliance") || lowercaseTitle.includes("audit")) return Eye;
 
@@ -139,11 +141,11 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
 
         // Find both frameworks
         const iso42001Framework = frameworksData.find((framework) =>
-          isISO42001(framework.frameworkId, framework.frameworkName)
+          isISO42001(framework.frameworkId, framework.frameworkName),
         );
 
         const iso27001Framework = frameworksData.find((framework) =>
-          isISO27001(framework.frameworkId, framework.frameworkName)
+          isISO27001(framework.frameworkId, framework.frameworkName),
         );
 
         // Fetch ISO 42001 annexes data if framework is present
@@ -160,8 +162,12 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
               const annexItems: AnnexItemData[] = annex.annexCategories || [];
 
               // Use shared utility functions for calculations and processing
-              const { completionPercentage, assignmentPercentage } = calculateItemPercentages(annexItems);
-              const { displayNumber, cleanTitle } = processAnnexNumber(annex, iso42001Framework.frameworkName);
+              const { completionPercentage, assignmentPercentage } =
+                calculateItemPercentages(annexItems);
+              const { displayNumber, cleanTitle } = processAnnexNumber(
+                annex,
+                iso42001Framework.frameworkName,
+              );
 
               return {
                 id: annex.id,
@@ -189,7 +195,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
             });
 
             // Handle different response structure for ISO 27001
-            const annexes: AnnexData[] = annexesResponse.data?.data || annexesResponse.data || annexesResponse;
+            const annexes: AnnexData[] =
+              annexesResponse.data?.data || annexesResponse.data || annexesResponse;
 
             // Process ISO 27001 annexes
             const iso27001Categories = annexes.map((annex) => {
@@ -197,8 +204,12 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
               const annexItems: AnnexItemData[] = annex.annexControls || annex.annexcontrols || [];
 
               // Use shared utility functions for calculations and processing
-              const { completionPercentage, assignmentPercentage } = calculateItemPercentages(annexItems);
-              const { displayNumber, cleanTitle } = processAnnexNumber(annex, iso27001Framework.frameworkName);
+              const { completionPercentage, assignmentPercentage } =
+                calculateItemPercentages(annexItems);
+              const { displayNumber, cleanTitle } = processAnnexNumber(
+                annex,
+                iso27001Framework.frameworkName,
+              );
 
               return {
                 id: annex.id,
@@ -259,7 +270,11 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
     ));
   };
 
-  const renderFrameworkSection = (categoriesData: CategoryData[], title: string, frameworkName: string) => {
+  const renderFrameworkSection = (
+    categoriesData: CategoryData[],
+    title: string,
+    frameworkName: string,
+  ) => {
     if (categoriesData.length === 0) return null;
 
     const handleCardClick = () => {
@@ -368,7 +383,9 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                   </Box>
 
                   {/* Statistics */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
@@ -377,7 +394,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                           fontWeight: 600,
                         }}
                       >
-                        {category.items.filter(item => item.status === "Implemented").length}/
+                        {category.items.filter((item) => item.status === "Implemented").length}/
                         {category.items.length}
                       </Typography>
                       <Typography
@@ -397,8 +414,12 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                           fontWeight: 600,
                         }}
                       >
-                        {category.items.filter(item => item.owner !== null && item.owner !== undefined).length}/
-                        {category.items.length}
+                        {
+                          category.items.filter(
+                            (item) => item.owner !== null && item.owner !== undefined,
+                          ).length
+                        }
+                        /{category.items.length}
                       </Typography>
                       <Typography
                         sx={{

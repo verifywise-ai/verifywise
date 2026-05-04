@@ -36,13 +36,12 @@ export const modelsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'OpenAI', text: 'GPT-4, GPT-4 Turbo, GPT-3.5 Turbo and newer models.' },
-        { bold: 'Anthropic', text: 'Claude 3 Opus, Sonnet and Haiku.' },
+        { bold: 'Anthropic', text: 'Claude 3 and 3.5 family models (Opus, Sonnet, Haiku).' },
         { bold: 'Google Gemini', text: 'Gemini Pro and Ultra.' },
         { bold: 'xAI', text: 'Grok models.' },
         { bold: 'Mistral', text: 'Mistral Large and Medium.' },
-        { bold: 'HuggingFace', text: 'Open-source models. No API key required for some models.' },
-        { bold: 'Ollama', text: 'Locally-hosted models running on your own hardware.' },
-        { bold: 'Local / Custom API', text: 'Any endpoint with an OpenAI-compatible API.' },
+        { bold: 'OpenRouter', text: 'Aggregated access to 600+ models from many providers via a single API.' },
+        { bold: 'Ollama (self-hosted)', text: 'Locally-hosted models running on your own hardware.' },
       ],
     },
     {

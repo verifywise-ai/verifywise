@@ -185,9 +185,9 @@ const FormInputsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Text fields, selects, and search boxes used throughout VerifyWise.
-          All inputs share consistent sizing, spacing, and interaction states.
-          Click any value to copy it to clipboard.
+          Text fields, selects, and search boxes used throughout VerifyWise. All inputs share
+          consistent sizing, spacing, and interaction states. Click any value to copy it to
+          clipboard.
         </Typography>
       </Box>
 
@@ -195,17 +195,67 @@ const FormInputsSection: React.FC = () => {
       <SpecSection title="Shared specifications">
         <SpecGrid>
           <SpecCard title="Height" value="34px" note="Standard input height" onCopy={handleCopy} />
-          <SpecCard title="Font size" value="13px" note="Input text and labels" onCopy={handleCopy} />
-          <SpecCard title="Border radius" value="2px" note="theme.shape.borderRadius" onCopy={handleCopy} />
-          <SpecCard title="Label gap" value="4px" note="Space between label and input" onCopy={handleCopy} />
-          <SpecCard title="Border color" value={borderPalette.dark} note="Default border" onCopy={handleCopy} />
-          <SpecCard title="Hover border" value="#5FA896" note="On mouse hover" onCopy={handleCopy} />
-          <SpecCard title="Focus border" value={brand.primary} note="Primary color" onCopy={handleCopy} />
-          <SpecCard title="Focus ring" value="0 0 0 3px rgba(19,113,91,0.1)" note="Box shadow on focus" onCopy={handleCopy} />
+          <SpecCard
+            title="Font size"
+            value="13px"
+            note="Input text and labels"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Border radius"
+            value="2px"
+            note="theme.shape.borderRadius"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Label gap"
+            value="4px"
+            note="Space between label and input"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Border color"
+            value={borderPalette.dark}
+            note="Default border"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Hover border"
+            value="#5FA896"
+            note="On mouse hover"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Focus border"
+            value={brand.primary}
+            note="Primary color"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Focus ring"
+            value="0 0 0 3px rgba(19,113,91,0.1)"
+            note="Box shadow on focus"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Error border" value="#FDA29B" note="Error state" onCopy={handleCopy} />
-          <SpecCard title="Background" value={background.main} note="Default background" onCopy={handleCopy} />
-          <SpecCard title="Disabled bg" value={background.accent} note="Disabled state" onCopy={handleCopy} />
-          <SpecCard title="Label color" value={text.secondary} note="text.secondary" onCopy={handleCopy} />
+          <SpecCard
+            title="Background"
+            value={background.main}
+            note="Default background"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Disabled bg"
+            value={background.accent}
+            note="Disabled state"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Label color"
+            value={text.secondary}
+            note="text.secondary"
+            onCopy={handleCopy}
+          />
         </SpecGrid>
       </SpecSection>
 
@@ -214,21 +264,27 @@ const FormInputsSection: React.FC = () => {
       {/* Field Component */}
       <SpecSection title="Field (Text input)">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Used for single-line and multi-line text input. Supports types: text, password, url, description.
+          Used for single-line and multi-line text input. Supports types: text, password, url,
+          description.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples with Code */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Live examples
             </Typography>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Default"
-                code={fieldCodeSnippets.default}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Default" code={fieldCodeSnippets.default} onCopy={handleCopy}>
                 <Field
                   id="demo-field-default"
                   label="Default"
@@ -266,11 +322,7 @@ const FormInputsSection: React.FC = () => {
                 />
               </ExampleWithCode>
 
-              <ExampleWithCode
-                label="Error"
-                code={fieldCodeSnippets.error}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Error" code={fieldCodeSnippets.error} onCopy={handleCopy}>
                 <Field
                   id="demo-field-error"
                   label="With error"
@@ -312,7 +364,16 @@ const FormInputsSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -348,7 +409,16 @@ const FormInputsSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples with Code */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Live examples
             </Typography>
             <Stack spacing="24px">
@@ -385,11 +455,7 @@ const FormInputsSection: React.FC = () => {
                 />
               </ExampleWithCode>
 
-              <ExampleWithCode
-                label="Error"
-                code={selectCodeSnippets.error}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Error" code={selectCodeSnippets.error} onCopy={handleCopy}>
                 <Select
                   id="demo-select-error"
                   label="With error"
@@ -439,7 +505,16 @@ const FormInputsSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -476,7 +551,16 @@ const FormInputsSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples with Code */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Live examples
             </Typography>
             <Stack spacing="24px">
@@ -485,11 +569,7 @@ const FormInputsSection: React.FC = () => {
                 code={searchBoxCodeSnippets.default}
                 onCopy={handleCopy}
               >
-                <SearchBox
-                  placeholder="Search..."
-                  value={searchValue}
-                  onChange={setSearchValue}
-                />
+                <SearchBox placeholder="Search..." value={searchValue} onChange={setSearchValue} />
               </ExampleWithCode>
 
               <ExampleWithCode
@@ -511,19 +591,23 @@ const FormInputsSection: React.FC = () => {
                 code={searchBoxCodeSnippets.disabled}
                 onCopy={handleCopy}
               >
-                <SearchBox
-                  placeholder="Disabled search"
-                  value=""
-                  onChange={() => {}}
-                  disabled
-                />
+                <SearchBox placeholder="Disabled search" value="" onChange={() => {}} disabled />
               </ExampleWithCode>
             </Stack>
           </Box>
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -811,9 +895,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -840,9 +922,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -1002,9 +1082,7 @@ const ExampleWithCode: React.FC<{
       </Box>
 
       {/* Live Example */}
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {/* Code Panel with Syntax Highlighting */}
       {showCode && (

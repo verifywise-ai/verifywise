@@ -48,7 +48,10 @@ describe("RiskCalculator.getRiskLevel", () => {
 
   it("(AlmostCertain, Catastrophic) → score 20 → Very high risk", () => {
     // 5*1 + 5*3 = 20
-    const result = RiskCalculator.getRiskLevel(RiskLikelihood.AlmostCertain, RiskSeverity.Catastrophic);
+    const result = RiskCalculator.getRiskLevel(
+      RiskLikelihood.AlmostCertain,
+      RiskSeverity.Catastrophic,
+    );
     expect(result.level).toBe("Very high risk");
     expect(result.color).toBe(RISK_LABELS.critical.color);
   });

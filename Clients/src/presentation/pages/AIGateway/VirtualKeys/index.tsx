@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
 import { Link } from "react-router-dom";
-import { CirclePlus, KeyRound, Trash2, Ban, Copy, Check, Server, TriangleAlert } from "lucide-react";
+import {
+  CirclePlus,
+  KeyRound,
+  Trash2,
+  Ban,
+  Copy,
+  Check,
+  Server,
+  TriangleAlert,
+} from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -127,16 +136,33 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       if (createForm.rate_limit_rpm) payload.rate_limit_rpm = Number(createForm.rate_limit_rpm);
       if (createForm.expires_at) payload.expires_at = new Date(createForm.expires_at).toISOString();
 
-      const parseList = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
-      if (createForm.allowed_models.trim()) payload.allowed_models = parseList(createForm.allowed_models);
-      if (createForm.blocked_models.trim()) payload.blocked_models = parseList(createForm.blocked_models);
-      if (createForm.allowed_providers.trim()) payload.allowed_providers = parseList(createForm.allowed_providers);
-      if (createForm.blocked_providers.trim()) payload.blocked_providers = parseList(createForm.blocked_providers);
+      const parseList = (v: string) =>
+        v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      if (createForm.allowed_models.trim())
+        payload.allowed_models = parseList(createForm.allowed_models);
+      if (createForm.blocked_models.trim())
+        payload.blocked_models = parseList(createForm.blocked_models);
+      if (createForm.allowed_providers.trim())
+        payload.allowed_providers = parseList(createForm.allowed_providers);
+      if (createForm.blocked_providers.trim())
+        payload.blocked_providers = parseList(createForm.blocked_providers);
 
       const res = await apiServices.post<Record<string, any>>("/ai-gateway/virtual-keys", payload);
       const created = res?.data?.data;
       setIsCreateOpen(false);
-      setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "", allowed_models: "", blocked_models: "", allowed_providers: "", blocked_providers: "" });
+      setCreateForm({
+        name: "",
+        max_budget_usd: "",
+        rate_limit_rpm: "",
+        expires_at: "",
+        allowed_models: "",
+        blocked_models: "",
+        allowed_providers: "",
+        blocked_providers: "",
+      });
 
       if (created?.plain_key) {
         setNewKey(created.plain_key);
@@ -145,7 +171,8 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
 
       await loadData();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
       setCreateError(errData?.detail || errData?.message || "Failed to create virtual key");
     } finally {
       setCreateSubmitting(false);
@@ -191,7 +218,16 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       text="Create key"
       icon={<CirclePlus size={14} strokeWidth={1.5} />}
       onClick={() => {
-        setCreateForm({ name: "", max_budget_usd: "", rate_limit_rpm: "", expires_at: "", allowed_models: "", blocked_models: "", allowed_providers: "", blocked_providers: "" });
+        setCreateForm({
+          name: "",
+          max_budget_usd: "",
+          rate_limit_rpm: "",
+          expires_at: "",
+          allowed_models: "",
+          blocked_models: "",
+          allowed_providers: "",
+          blocked_providers: "",
+        });
         setCreateError("");
         setIsCreateOpen(true);
       }}
@@ -208,24 +244,35 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
           showBorder
         >
           {endpointCount === 0 && (
-            <Box sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "8px",
-              p: "12px 16px",
-              borderRadius: "4px",
-              border: "1px solid #FEDF89",
-              bgcolor: "#FFFAEB",
-              mb: "8px",
-            }}>
-              <TriangleAlert size={16} strokeWidth={1.5} color="#B54708" style={{ flexShrink: 0, marginTop: 1 }} />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px",
+                p: "12px 16px",
+                borderRadius: "4px",
+                border: "1px solid #FEDF89",
+                bgcolor: "#FFFAEB",
+                mb: "8px",
+              }}
+            >
+              <TriangleAlert
+                size={16}
+                strokeWidth={1.5}
+                color="#B54708"
+                style={{ flexShrink: 0, marginTop: 1 }}
+              />
               <Box>
                 <Typography fontSize={13} fontWeight={500} color="#B54708">
                   No endpoints configured
                 </Typography>
                 <Typography fontSize={12} color="#93370D" mt="2px">
-                  Virtual keys route requests through endpoints. You need at least one active endpoint before creating a virtual key.{" "}
-                  <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>Go to Endpoints</Link> to set one up.
+                  Virtual keys route requests through endpoints. You need at least one active
+                  endpoint before creating a virtual key.{" "}
+                  <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>
+                    Go to Endpoints
+                  </Link>{" "}
+                  to set one up.
                 </Typography>
               </Box>
             </Box>
@@ -244,127 +291,142 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       )}
 
       {!loading && keys.length > 0 && (
-          <Stack gap="8px">
-            {keys.map((key) => {
-                const status = getStatusLabel(key);
-                const budgetPct =
-                  key.max_budget_usd && Number(key.max_budget_usd) > 0
-                    ? (Number(key.current_spend_usd) / Number(key.max_budget_usd)) * 100
-                    : null;
+        <Stack gap="8px">
+          {keys.map((key) => {
+            const status = getStatusLabel(key);
+            const budgetPct =
+              key.max_budget_usd && Number(key.max_budget_usd) > 0
+                ? (Number(key.current_spend_usd) / Number(key.max_budget_usd)) * 100
+                : null;
 
-                return (
-                  <Stack
-                    key={key.id}
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{
-                      p: "12px 16px",
-                      border: `1px solid ${palette.border.dark}`,
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" gap="12px" flex={1}>
-                      <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-                      <Box flex={1}>
-                        <Stack direction="row" alignItems="center" gap="8px">
-                          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                            {key.name}
-                          </Typography>
-                          <Chip label={status} size="small" uppercase={false} />
-                        </Stack>
-                        <Stack direction="row" gap="12px" alignItems="center" mt="2px">
-                          <Typography
-                            sx={{
-                              fontSize: 12,
-                              color: palette.text.tertiary,
-                              fontFamily: "monospace",
-                            }}
-                          >
-                            {key.key_prefix}
-                          </Typography>
-                          {key.max_budget_usd !== null && (
-                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              ${Number(key.current_spend_usd).toFixed(4)} / ${Number(key.max_budget_usd).toFixed(2)}
-                            </Typography>
-                          )}
-                          {key.rate_limit_rpm && (
-                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              {key.rate_limit_rpm} RPM
-                            </Typography>
-                          )}
-                          {key.allowed_models?.length > 0 && (
-                            <Chip label={`models: ${key.allowed_models.join(", ")}`} size="small" uppercase={false} />
-                          )}
-                          {key.blocked_models?.length > 0 && (
-                            <Chip label={`blocked: ${key.blocked_models.join(", ")}`} size="small" uppercase={false} />
-                          )}
-                          {key.allowed_providers?.length > 0 && (
-                            <Chip label={`providers: ${key.allowed_providers.join(", ")}`} size="small" uppercase={false} />
-                          )}
-                          {key.blocked_providers?.length > 0 && (
-                            <Chip label={`blocked providers: ${key.blocked_providers.join(", ")}`} size="small" uppercase={false} />
-                          )}
-                          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                            by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
-                          </Typography>
-                        </Stack>
-                        {budgetPct !== null && (
-                          <Box
-                            sx={{
-                              mt: "6px",
-                              height: 4,
-                              borderRadius: 2,
-                              backgroundColor: palette.border.light,
-                              overflow: "hidden",
-                              maxWidth: 200,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                height: "100%",
-                                width: `${Math.min(100, budgetPct)}%`,
-                                backgroundColor:
-                                  budgetPct >= 100
-                                    ? palette.status.error.text
-                                    : budgetPct >= 80
-                                      ? palette.status.warning?.text || "#F79009"
-                                      : palette.brand.primary,
-                                borderRadius: 2,
-                                transition: "width 0.3s",
-                              }}
-                            />
-                          </Box>
-                        )}
+            return (
+              <Stack
+                key={key.id}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{
+                  p: "12px 16px",
+                  border: `1px solid ${palette.border.dark}`,
+                  borderRadius: "4px",
+                }}
+              >
+                <Stack direction="row" alignItems="center" gap="12px" flex={1}>
+                  <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
+                  <Box flex={1}>
+                    <Stack direction="row" alignItems="center" gap="8px">
+                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
+                      <Chip label={status} size="small" uppercase={false} />
+                    </Stack>
+                    <Stack direction="row" gap="12px" alignItems="center" mt="2px">
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          color: palette.text.tertiary,
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {key.key_prefix}
+                      </Typography>
+                      {key.max_budget_usd !== null && (
+                        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                          ${Number(key.current_spend_usd).toFixed(4)} / $
+                          {Number(key.max_budget_usd).toFixed(2)}
+                        </Typography>
+                      )}
+                      {key.rate_limit_rpm && (
+                        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                          {key.rate_limit_rpm} RPM
+                        </Typography>
+                      )}
+                      {key.allowed_models?.length > 0 && (
+                        <Chip
+                          label={`models: ${key.allowed_models.join(", ")}`}
+                          size="small"
+                          uppercase={false}
+                        />
+                      )}
+                      {key.blocked_models?.length > 0 && (
+                        <Chip
+                          label={`blocked: ${key.blocked_models.join(", ")}`}
+                          size="small"
+                          uppercase={false}
+                        />
+                      )}
+                      {key.allowed_providers?.length > 0 && (
+                        <Chip
+                          label={`providers: ${key.allowed_providers.join(", ")}`}
+                          size="small"
+                          uppercase={false}
+                        />
+                      )}
+                      {key.blocked_providers?.length > 0 && (
+                        <Chip
+                          label={`blocked providers: ${key.blocked_providers.join(", ")}`}
+                          size="small"
+                          uppercase={false}
+                        />
+                      )}
+                      <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                        by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
+                      </Typography>
+                    </Stack>
+                    {budgetPct !== null && (
+                      <Box
+                        sx={{
+                          mt: "6px",
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: palette.border.light,
+                          overflow: "hidden",
+                          maxWidth: 200,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            height: "100%",
+                            width: `${Math.min(100, budgetPct)}%`,
+                            backgroundColor:
+                              budgetPct >= 100
+                                ? palette.status.error.text
+                                : budgetPct >= 80
+                                  ? palette.status.warning?.text || "#F79009"
+                                  : palette.brand.primary,
+                            borderRadius: 2,
+                            transition: "width 0.3s",
+                          }}
+                        />
                       </Box>
-                    </Stack>
+                    )}
+                  </Box>
+                </Stack>
 
-                    <Stack direction="row" alignItems="center" gap="4px">
-                      {key.is_active && !key.revoked_at && (
-                        <IconButton
-                          size="small"
-                          onClick={() => setRevokeTarget(key)}
-                          sx={{ p: 0.5 }}
-                          aria-label="Revoke key"
-                        >
-                          <Ban size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                        </IconButton>
-                      )}
-                      {!key.is_active && (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(key.id)}
-                          sx={{ p: 0.5 }}
-                          aria-label="Delete key"
-                        >
-                          <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                        </IconButton>
-                      )}
-                    </Stack>
-                  </Stack>
-                );
-              })}
-          </Stack>
+                <Stack direction="row" alignItems="center" gap="4px">
+                  {key.is_active && !key.revoked_at && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setRevokeTarget(key)}
+                      sx={{ p: 0.5 }}
+                      aria-label="Revoke key"
+                    >
+                      <Ban size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                    </IconButton>
+                  )}
+                  {!key.is_active && (
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(key.id)}
+                      sx={{ p: 0.5 }}
+                      aria-label="Delete key"
+                    >
+                      <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                    </IconButton>
+                  )}
+                </Stack>
+              </Stack>
+            );
+          })}
+        </Stack>
       )}
 
       {/* Create Virtual Key Modal */}
@@ -507,7 +569,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                 overflow: "auto",
               }}
             >
-{`from openai import OpenAI
+              {`from openai import OpenAI
 
 client = OpenAI(
     base_url="${GATEWAY_URL}/v1",

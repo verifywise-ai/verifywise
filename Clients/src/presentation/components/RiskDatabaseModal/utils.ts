@@ -14,16 +14,14 @@ export const mapRiskCategories = (riskCategories: string): number[] => {
 
   categories.forEach((category) => {
     const matchedCategory = riskCategoryItems.find(
-      (item) => item.name.toLowerCase() === category.toLowerCase()
+      (item) => item.name.toLowerCase() === category.toLowerCase(),
     );
     if (matchedCategory) {
       mappedCategories.push(matchedCategory._id);
     }
   });
 
-  return mappedCategories.length > 0
-    ? mappedCategories
-    : [DEFAULT_VALUES.DEFAULT_CATEGORY_ID];
+  return mappedCategories.length > 0 ? mappedCategories : [DEFAULT_VALUES.DEFAULT_CATEGORY_ID];
 };
 
 /**
@@ -42,6 +40,6 @@ export const filterRisks = (risks: RiskData[], searchTerm: string): RiskData[] =
     (risk) =>
       risk.Summary.toLowerCase().includes(lowercaseSearch) ||
       risk["Risk Category"].toLowerCase().includes(lowercaseSearch) ||
-      risk.Description.toLowerCase().includes(lowercaseSearch)
+      risk.Description.toLowerCase().includes(lowercaseSearch),
   );
 };

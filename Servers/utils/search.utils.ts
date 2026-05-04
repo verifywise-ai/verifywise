@@ -72,10 +72,7 @@ function validateTableName(tableName: string): string {
  * Escapes %, _, and \ which have special meaning in ILIKE
  */
 function escapeILikePattern(query: string): string {
-  return query
-    .replace(/\\/g, "\\\\")
-    .replace(/%/g, "\\%")
-    .replace(/_/g, "\\_");
+  return query.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
 /**
@@ -155,7 +152,13 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   },
   vendors: {
     tableName: "vendors",
-    searchColumns: ["vendor_name", "vendor_provides", "website", "vendor_contact_person", "review_result"],
+    searchColumns: [
+      "vendor_name",
+      "vendor_provides",
+      "website",
+      "vendor_contact_person",
+      "review_result",
+    ],
     titleColumn: "vendor_name",
     subtitleColumn: "vendor_provides",
     icon: "Building2",
@@ -174,7 +177,16 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   },
   model_inventories: {
     tableName: "model_inventories",
-    searchColumns: ["provider", "model", "version", "approver", "capabilities", "biases", "limitations", "hosting_provider"],
+    searchColumns: [
+      "provider",
+      "model",
+      "version",
+      "approver",
+      "capabilities",
+      "biases",
+      "limitations",
+      "hosting_provider",
+    ],
     titleColumn: "model",
     subtitleColumn: "provider",
     icon: "GitBranch",
@@ -206,7 +218,14 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     // metadata fields (description, review_status, expiry_date, tags)
     // so that files can be discovered by more than just their name.
     // Also include content_text so Wise Search can match on extracted file contents.
-    searchColumns: ["filename", "description", "review_status", "expiry_date", "tags", "content_text"],
+    searchColumns: [
+      "filename",
+      "description",
+      "review_status",
+      "expiry_date",
+      "tags",
+      "content_text",
+    ],
     titleColumn: "filename",
     icon: "Folder",
     route: (id) => `/file-manager?fileId=${id}`,
@@ -275,7 +294,11 @@ function buildILikeConditions(columns: string[], paramName: string): string {
 /**
  * Get the first matching column and its value for highlighting
  */
-function getMatchedField(row: any, columns: string[], query: string): { field: string; value: string } {
+function getMatchedField(
+  row: any,
+  columns: string[],
+  query: string,
+): { field: string; value: string } {
   const lowerQuery = query.toLowerCase();
   for (const col of columns) {
     const value = row[col];
@@ -297,7 +320,7 @@ async function getUserProjectIds(organizationId: number, userId: number): Promis
       {
         replacements: { userId, organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
     return result.map((r) => r.project_id);
   } catch (error) {
@@ -319,7 +342,7 @@ async function getUserVendorIds(organizationId: number, projectIds: number[]): P
       {
         replacements: { projectIds, organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
     return result.map((r) => r.vendor_id);
   } catch (error) {
@@ -336,7 +359,7 @@ async function searchEntity(
   entityType: string,
   options: SearchOptions,
   projectIds: number[],
-  vendorIds: number[]
+  vendorIds: number[],
 ): Promise<SearchResult[]> {
   const { query, organizationId, limit = 20, reviewStatus } = options;
 

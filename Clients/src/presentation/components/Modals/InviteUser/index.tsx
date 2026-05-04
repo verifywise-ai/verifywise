@@ -13,11 +13,7 @@
  * <InviteUserModal isOpen={isOpen} setIsOpen={setIsOpen} onSendInvite={handleSendInvite} />
  */
 
-import {
-  Stack,
-  SelectChangeEvent,
-  Typography,
-} from "@mui/material";
+import { Stack, SelectChangeEvent, Typography } from "@mui/material";
 import React, { useState, useMemo, useEffect } from "react";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
@@ -55,11 +51,7 @@ const initialState: FormValues = {
   roleId: "1",
 };
 
-const InviteUserModal: React.FC<InviteUserModalProps> = ({
-  isOpen,
-  setIsOpen,
-  onSendInvite,
-}) => {
+const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, onSendInvite }) => {
   const { roles } = useRoles();
   const { organizationId } = useAuth();
 
@@ -69,7 +61,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({
         _id: role.id.toString(),
         name: role.name,
       })),
-    [roles]
+    [roles],
   );
 
   const [values, setValues] = useState<FormValues>(initialState);
@@ -87,8 +79,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({
   }, [isOpen, roles]);
 
   const handleFormFieldChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues({ ...values, [prop]: event.target.value });
       setErrors({ ...errors, [prop]: "" });
     };

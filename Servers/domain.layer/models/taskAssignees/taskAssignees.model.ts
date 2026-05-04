@@ -1,13 +1,11 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { TasksModel } from "../tasks/tasks.model";
-import { ITaskAssignee, ITaskAssigneeSafeJSON, ITaskAssigneeJSON } from "../../interfaces/i.taskAssignee";
+import {
+  ITaskAssignee,
+  ITaskAssigneeSafeJSON,
+  ITaskAssigneeJSON,
+} from "../../interfaces/i.taskAssignee";
 import { numberValidation } from "../../validations/number.valid";
 import {
   ValidationException,
@@ -20,10 +18,7 @@ import {
   timestamps: true,
   underscored: true,
 })
-export class TaskAssigneesModel
-  extends Model<TaskAssigneesModel>
-  implements ITaskAssignee
-{
+export class TaskAssigneesModel extends Model<TaskAssigneesModel> implements ITaskAssignee {
   @ForeignKey(() => TasksModel)
   @Column({
     type: DataType.INTEGER,
@@ -63,24 +58,16 @@ export class TaskAssigneesModel
   static async createNewTaskAssignee(
     taskId: number,
     userId: number,
-    assigned_at: Date = new Date()
+    assigned_at: Date = new Date(),
   ): Promise<TaskAssigneesModel> {
     // Validate task_id
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     // Validate user_id
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     // Check if the task-user combination already exists
@@ -95,7 +82,7 @@ export class TaskAssigneesModel
       throw new ConflictException(
         "User is already assigned to this task",
         "TaskAssignee",
-        "task_id,user_id"
+        "task_id,user_id",
       );
     }
 
@@ -103,7 +90,7 @@ export class TaskAssigneesModel
     return new TaskAssigneesModel({
       task_id: taskId,
       user_id: userId,
-      assigned_at: assigned_at
+      assigned_at: assigned_at,
     });
   }
 
@@ -125,7 +112,7 @@ export class TaskAssigneesModel
       throw new ValidationException(
         "Valid task_id is required (must be >= 1)",
         "task_id",
-        this.task_id
+        this.task_id,
       );
     }
 
@@ -133,13 +120,13 @@ export class TaskAssigneesModel
       throw new ValidationException(
         "Valid user_id is required (must be >= 1)",
         "user_id",
-        this.user_id
+        this.user_id,
       );
     }
   }
 
   /**
-   * Get task assignee summary 
+   * Get task assignee summary
    */
   getSummary(): {
     taskId: number;
@@ -175,28 +162,19 @@ export class TaskAssigneesModel
     };
   }
 
-
   /**
    * Static method to find task assignee by task and user IDs with validation
    */
   static async findByTaskAndUser(
     taskId: number,
-    userId: number
+    userId: number,
   ): Promise<TaskAssigneesModel | null> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await TaskAssigneesModel.findOne({
@@ -212,12 +190,9 @@ export class TaskAssigneesModel
    */
   static async findByTaskAndUserWithValidation(
     taskId: number,
-    userId: number
+    userId: number,
   ): Promise<TaskAssigneesModel> {
-    const taskAssignee = await TaskAssigneesModel.findByTaskAndUser(
-      taskId,
-      userId
-    );
+    const taskAssignee = await TaskAssigneesModel.findByTaskAndUser(taskId, userId);
 
     if (!taskAssignee) {
       throw new NotFoundException("Task assignee not found", "TaskAssignee", {
@@ -234,11 +209,7 @@ export class TaskAssigneesModel
    */
   static async findByTaskId(taskId: number): Promise<TaskAssigneesModel[]> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     return await TaskAssigneesModel.findAll({
@@ -251,11 +222,7 @@ export class TaskAssigneesModel
    */
   static async findByUserId(userId: number): Promise<TaskAssigneesModel[]> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await TaskAssigneesModel.findAll({
@@ -269,22 +236,14 @@ export class TaskAssigneesModel
   static async updateTaskAssigneeByTaskAndUser(
     taskId: number,
     userId: number,
-    updateData: Partial<ITaskAssignee>
+    updateData: Partial<ITaskAssignee>,
   ): Promise<[number, TaskAssigneesModel[]]> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await TaskAssigneesModel.update(updateData, {
@@ -299,24 +258,13 @@ export class TaskAssigneesModel
   /**
    * Static method to delete task assignee by task and user IDs
    */
-  static async deleteTaskAssigneeByTaskAndUser(
-    taskId: number,
-    userId: number
-  ): Promise<number> {
+  static async deleteTaskAssigneeByTaskAndUser(taskId: number, userId: number): Promise<number> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await TaskAssigneesModel.destroy({
@@ -330,24 +278,13 @@ export class TaskAssigneesModel
   /**
    * Static method to check if user is assigned to a task
    */
-  static async isUserAssignedToTask(
-    taskId: number,
-    userId: number
-  ): Promise<boolean> {
+  static async isUserAssignedToTask(taskId: number, userId: number): Promise<boolean> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     const assignee = await TaskAssigneesModel.findOne({
@@ -365,11 +302,7 @@ export class TaskAssigneesModel
    */
   static async getTaskAssigneeCount(taskId: number): Promise<number> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     return await TaskAssigneesModel.count({
@@ -382,11 +315,7 @@ export class TaskAssigneesModel
    */
   static async getUserAssignedTaskCount(userId: number): Promise<number> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await TaskAssigneesModel.count({
@@ -397,20 +326,13 @@ export class TaskAssigneesModel
   /**
    * Static method to assign multiple users to a task
    */
-  static async assignUsersToTask(
-    taskId: number,
-    userIds: number[]
-  ): Promise<TaskAssigneesModel[]> {
+  static async assignUsersToTask(taskId: number, userIds: number[]): Promise<TaskAssigneesModel[]> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     const assignees: TaskAssigneesModel[] = [];
-    
+
     for (const userId of userIds) {
       try {
         const assignee = await TaskAssigneesModel.createNewTaskAssignee(taskId, userId);
@@ -431,16 +353,9 @@ export class TaskAssigneesModel
   /**
    * Static method to remove users from task
    */
-  static async removeUsersFromTask(
-    taskId: number,
-    userIds: number[]
-  ): Promise<number> {
+  static async removeUsersFromTask(taskId: number, userIds: number[]): Promise<number> {
     if (!numberValidation(taskId, 1)) {
-      throw new ValidationException(
-        "Valid task_id is required (must be >= 1)",
-        "task_id",
-        taskId
-      );
+      throw new ValidationException("Valid task_id is required (must be >= 1)", "task_id", taskId);
     }
 
     return await TaskAssigneesModel.destroy({
@@ -456,7 +371,7 @@ export class TaskAssigneesModel
    */
   static async getTaskAssignees(taskId: number): Promise<number[]> {
     const assignees = await TaskAssigneesModel.findByTaskId(taskId);
-    return assignees.map(assignee => assignee.user_id);
+    return assignees.map((assignee) => assignee.user_id);
   }
 
   /**
@@ -464,7 +379,7 @@ export class TaskAssigneesModel
    */
   static async getUserAssignedTasks(userId: number): Promise<number[]> {
     const assignments = await TaskAssigneesModel.findByUserId(userId);
-    return assignments.map(assignment => assignment.task_id);
+    return assignments.map((assignment) => assignment.task_id);
   }
 
   constructor(init?: Partial<ITaskAssignee>) {

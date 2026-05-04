@@ -9,16 +9,12 @@ test.describe("Authentication", () => {
     await page.goto("/login");
 
     await expect(page.getByText("Log in to your account")).toBeVisible();
-    await expect(
-      page.getByPlaceholder("name.surname@companyname.com")
-    ).toBeVisible();
+    await expect(page.getByPlaceholder("name.surname@companyname.com")).toBeVisible();
     await expect(page.getByPlaceholder("Enter your password")).toBeVisible();
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
   });
 
-  test("redirects to /login when accessing protected route without auth", async ({
-    page,
-  }) => {
+  test("redirects to /login when accessing protected route without auth", async ({ page }) => {
     await page.goto("/vendors");
     await expect(page).toHaveURL(/\/login/);
   });
@@ -26,9 +22,7 @@ test.describe("Authentication", () => {
   test("successful login redirects to dashboard", async ({ page }) => {
     await page.goto("/login");
 
-    await page
-      .getByPlaceholder("name.surname@companyname.com")
-      .fill(TEST_EMAIL);
+    await page.getByPlaceholder("name.surname@companyname.com").fill(TEST_EMAIL);
     await page.getByPlaceholder("Enter your password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
 
@@ -39,9 +33,7 @@ test.describe("Authentication", () => {
   test("shows error on invalid credentials", async ({ page }) => {
     await page.goto("/login");
 
-    await page
-      .getByPlaceholder("name.surname@companyname.com")
-      .fill("bad@email.com");
+    await page.getByPlaceholder("name.surname@companyname.com").fill("bad@email.com");
     await page.getByPlaceholder("Enter your password").fill("wrongpassword");
     await page.getByRole("button", { name: /sign in/i }).click();
 
@@ -76,9 +68,7 @@ test.describe("Authentication", () => {
   test("logout redirects to login page", async ({ page }) => {
     // Login first via UI
     await page.goto("/login");
-    await page
-      .getByPlaceholder("name.surname@companyname.com")
-      .fill(TEST_EMAIL);
+    await page.getByPlaceholder("name.surname@companyname.com").fill(TEST_EMAIL);
     await page.getByPlaceholder("Enter your password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
     await expect(page).toHaveURL("/", { timeout: 15_000 });
@@ -100,9 +90,7 @@ test.describe("Authentication", () => {
     const adminLabel = page.getByText("Admin", { exact: true });
     await expect(adminLabel.first()).toBeVisible({ timeout: 10_000 });
     // Walk up to the sidebar footer row and find the sibling button.
-    const moreBtn = adminLabel
-      .first()
-      .locator("xpath=ancestor::*[.//button][1]//button");
+    const moreBtn = adminLabel.first().locator("xpath=ancestor::*[.//button][1]//button");
     await expect(moreBtn.first()).toBeVisible({ timeout: 5_000 });
     await moreBtn.first().click();
     await page.waitForTimeout(1000);
@@ -137,9 +125,7 @@ test.describe("Authentication", () => {
     await expect(confirmField).toBeVisible({ timeout: 10_000 });
   });
 
-  test("registration form shows validation on empty submit", async ({
-    page,
-  }) => {
+  test("registration form shows validation on empty submit", async ({ page }) => {
     await page.goto("/user-reg");
     await page.waitForLoadState("domcontentloaded");
 
@@ -172,16 +158,13 @@ test.describe("Authentication", () => {
       .getByPlaceholder(/email/i)
       .or(page.getByRole("textbox", { name: /email/i }))
       .or(page.getByRole("textbox").first());
-    const submitBtn = page
-      .getByRole("button", { name: /send|reset|submit/i });
+    const submitBtn = page.getByRole("button", { name: /send|reset|submit/i });
 
     await expect(emailField.first()).toBeVisible({ timeout: 10_000 });
     await expect(submitBtn.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("forgot password button is disabled when email is empty", async ({
-    page,
-  }) => {
+  test("forgot password button is disabled when email is empty", async ({ page }) => {
     await page.goto("/forgot-password");
     await page.waitForLoadState("domcontentloaded");
 

@@ -2,7 +2,15 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 import axios from "axios";
-import { createInstallation, findByIdWithValidation, getInstalledPlugins, toJSON, updateConfiguration, deleteInstallation, findByPlugin } from "../../utils/pluginInstallation.utils";
+import {
+  createInstallation,
+  findByIdWithValidation,
+  getInstalledPlugins,
+  toJSON,
+  updateConfiguration,
+  deleteInstallation,
+  findByPlugin,
+} from "../../utils/pluginInstallation.utils";
 import { PluginInstallationStatus } from "../../domain.layer/enums/plugin.enum";
 import {
   ValidationException,
@@ -13,7 +21,8 @@ import { getBuiltinPlugins, isBuiltinPlugin } from "./builtinPlugins";
 import { sanitizeForLog } from "../../utils/validations/validation.utils";
 
 // Environment configuration
-export const PLUGIN_MARKETPLACE_URL = "https://raw.githubusercontent.com/verifywise-ai/plugin-marketplace/main/plugins.json";
+export const PLUGIN_MARKETPLACE_URL =
+  "https://raw.githubusercontent.com/verifywise-ai/plugin-marketplace/main/plugins.json";
 export const PLUGIN_MARKETPLACE_BASE_URL = PLUGIN_MARKETPLACE_URL.replace("/plugins.json", "");
 
 interface Plugin {
@@ -68,11 +77,11 @@ export interface PluginRouteContext {
   tenantId?: string;
 
   // Request details
-  method: string;           // HTTP method (GET, POST, PUT, PATCH, DELETE)
-  path: string;             // Route path after /api/plugins/:key (e.g., /models, /sync)
-  params: Record<string, string>;  // URL params (e.g., { modelId: "123" })
-  query: Record<string, any>;      // Query string params
-  body: any;                       // Request body
+  method: string; // HTTP method (GET, POST, PUT, PATCH, DELETE)
+  path: string; // Route path after /api/plugins/:key (e.g., /models, /sync)
+  params: Record<string, string>; // URL params (e.g., { modelId: "123" })
+  query: Record<string, any>; // Query string params
+  body: any; // Request body
 
   // Services
   sequelize: any;
@@ -85,12 +94,12 @@ export interface PluginRouteContext {
  * Response from plugin route handlers
  */
 export interface PluginRouteResponse {
-  status?: number;                    // HTTP status code (default 200)
-  data?: any;                         // JSON response data
-  buffer?: Buffer;                    // Binary data for file downloads
-  filename?: string;                  // Filename for Content-Disposition header
-  contentType?: string;               // Custom content type
-  headers?: Record<string, string>;   // Additional response headers
+  status?: number; // HTTP status code (default 200)
+  data?: any; // JSON response data
+  buffer?: Buffer; // Binary data for file downloads
+  filename?: string; // Filename for Content-Disposition header
+  contentType?: string; // Custom content type
+  headers?: Record<string, string>; // Additional response headers
 }
 
 /**
@@ -100,7 +109,10 @@ export interface PluginRouteResponse {
  * Example: "POST /sync" -> syncModels
  * Example: "GET /models/:modelId" -> getModelById
  */
-export type PluginRouter = Record<string, (context: PluginRouteContext) => Promise<PluginRouteResponse>>;
+export type PluginRouter = Record<
+  string,
+  (context: PluginRouteContext) => Promise<PluginRouteResponse>
+>;
 
 interface PluginMarketplace {
   version: string;
@@ -129,13 +141,15 @@ export class PluginService {
       let remotePlugins = marketplaceData.plugins.filter((p) => p.isPublished);
 
       // Merge built-in plugins (built-ins take precedence by key)
-      const builtinPlugins = getBuiltinPlugins().filter((p) => p.isPublished).map((plugin) => {
-        // Transform relative iconUrl paths to full URLs for built-in plugins too
-        if (plugin.iconUrl && !plugin.iconUrl.startsWith("http")) {
-          return { ...plugin, iconUrl: `${PLUGIN_MARKETPLACE_BASE_URL}/${plugin.iconUrl}` };
-        }
-        return plugin;
-      }) as Plugin[];
+      const builtinPlugins = getBuiltinPlugins()
+        .filter((p) => p.isPublished)
+        .map((plugin) => {
+          // Transform relative iconUrl paths to full URLs for built-in plugins too
+          if (plugin.iconUrl && !plugin.iconUrl.startsWith("http")) {
+            return { ...plugin, iconUrl: `${PLUGIN_MARKETPLACE_BASE_URL}/${plugin.iconUrl}` };
+          }
+          return plugin;
+        }) as Plugin[];
       const builtinKeys = new Set(builtinPlugins.map((p) => p.key));
       const nonOverlapping = remotePlugins.filter((p) => !builtinKeys.has(p.key));
       let plugins = [...builtinPlugins, ...nonOverlapping];
@@ -158,29 +172,25 @@ export class PluginService {
   static async getPluginByKey(pluginKey: string): Promise<Plugin | null> {
     try {
       // Check built-in plugins first
-      const builtinPlugin = getBuiltinPlugins().find(
-        (p) => p.key === pluginKey && p.isPublished
-      );
+      const builtinPlugin = getBuiltinPlugins().find((p) => p.key === pluginKey && p.isPublished);
       if (builtinPlugin) {
         // Transform relative iconUrl to full URL
         if (builtinPlugin.iconUrl && !builtinPlugin.iconUrl.startsWith("http")) {
-          return { ...builtinPlugin, iconUrl: `${PLUGIN_MARKETPLACE_BASE_URL}/${builtinPlugin.iconUrl}` } as Plugin;
+          return {
+            ...builtinPlugin,
+            iconUrl: `${PLUGIN_MARKETPLACE_BASE_URL}/${builtinPlugin.iconUrl}`,
+          } as Plugin;
         }
         return builtinPlugin as Plugin;
       }
 
       const marketplaceData = await this.fetchRemoteMarketplace();
 
-      const plugin = marketplaceData.plugins.find(
-        (p) => p.key === pluginKey && p.isPublished
-      );
+      const plugin = marketplaceData.plugins.find((p) => p.key === pluginKey && p.isPublished);
 
       return plugin || null;
     } catch (error: any) {
-      console.error(
-        `[PluginService] Error fetching plugin ${sanitizeForLog(pluginKey)}:`,
-        error
-      );
+      console.error(`[PluginService] Error fetching plugin ${sanitizeForLog(pluginKey)}:`, error);
       throw new Error(`Failed to fetch plugin: ${error.message}`);
     }
   }
@@ -222,17 +232,13 @@ export class PluginService {
   static async installPlugin(
     pluginKey: string,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<any> {
     try {
       // Verify plugin exists in marketplace or built-in registry
       const plugin = await this.getPluginByKey(pluginKey);
       if (!plugin) {
-        throw new NotFoundException(
-          "Plugin not found in marketplace",
-          "plugin",
-          pluginKey
-        );
+        throw new NotFoundException("Plugin not found in marketplace", "plugin", pluginKey);
       }
 
       // Skip remote code download for built-in plugins
@@ -244,27 +250,20 @@ export class PluginService {
             sequelize,
           };
           const result = await pluginCode.install(userId, organizationId, {}, context);
-          console.log(
-            `[PluginService] Plugin ${sanitizeForLog(pluginKey)} installed:`,
-            result
-          );
+          console.log(`[PluginService] Plugin ${sanitizeForLog(pluginKey)} installed:`, result);
         }
       } else {
-        console.log(`[PluginService] Built-in plugin ${sanitizeForLog(pluginKey)} installed (no remote download)`);
+        console.log(
+          `[PluginService] Built-in plugin ${sanitizeForLog(pluginKey)} installed (no remote download)`,
+        );
       }
 
       // Create installation record (only after successful plugin installation)
-      const installation = await createInstallation(
-        pluginKey,
-        organizationId
-      );
+      const installation = await createInstallation(pluginKey, organizationId);
 
       return toJSON(installation);
     } catch (error: any) {
-      console.error(
-        `[PluginService] Error installing plugin ${sanitizeForLog(pluginKey)}:`,
-        error
-      );
+      console.error(`[PluginService] Error installing plugin ${sanitizeForLog(pluginKey)}:`, error);
       throw error;
     }
   }
@@ -275,14 +274,10 @@ export class PluginService {
   static async uninstallPlugin(
     installationId: number,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<void> {
     try {
-      const installation =
-        await findByIdWithValidation(
-          installationId,
-          organizationId
-        );
+      const installation = await findByIdWithValidation(installationId, organizationId);
 
       // Skip remote code for built-in plugins
       if (!isBuiltinPlugin(installation.plugin_key)) {
@@ -294,28 +289,23 @@ export class PluginService {
             const context = {
               sequelize,
             };
-            const result = await pluginCode.uninstall(
-              userId,
-              organizationId,
-              context
-            );
+            const result = await pluginCode.uninstall(userId, organizationId, context);
             console.log(
               `[PluginService] Plugin ${sanitizeForLog(installation.plugin_key)} uninstalled:`,
-              result
+              result,
             );
           }
         }
       } else {
-        console.log(`[PluginService] Built-in plugin ${sanitizeForLog(installation.plugin_key)} uninstalled (no remote code)`);
+        console.log(
+          `[PluginService] Built-in plugin ${sanitizeForLog(installation.plugin_key)} uninstalled (no remote code)`,
+        );
       }
 
       // Delete installation record
       await deleteInstallation(installationId, organizationId);
     } catch (error: any) {
-      console.error(
-        `[PluginService] Error uninstalling plugin ${installationId}:`,
-        error
-      );
+      console.error(`[PluginService] Error uninstalling plugin ${installationId}:`, error);
       throw error;
     }
   }
@@ -323,13 +313,9 @@ export class PluginService {
   /**
    * Get installed plugins for an organization
    */
-  static async getInstalledPlugins(
-    organizationId: number
-  ): Promise<any[]> {
+  static async getInstalledPlugins(organizationId: number): Promise<any[]> {
     try {
-      const installations = await getInstalledPlugins(
-        organizationId
-      );
+      const installations = await getInstalledPlugins(organizationId);
 
       // Fetch plugin metadata from built-in registry or marketplace for each installation
       const pluginsWithMetadata = await Promise.all(
@@ -344,7 +330,7 @@ export class PluginService {
               description: "Plugin not found in marketplace",
             },
           };
-        })
+        }),
       );
 
       return pluginsWithMetadata;
@@ -364,7 +350,7 @@ export class PluginService {
   static async getDataFromProviders(
     providerType: string,
     organizationId: number,
-    sequelize: any
+    sequelize: any,
   ): Promise<any[]> {
     try {
       // Get all installed plugins for this organization
@@ -396,14 +382,19 @@ export class PluginService {
           if (!provider.enabled) continue;
 
           // Call the provider's getData function
-          console.log(`[PluginService] Fetching ${providerType} data from plugin: ${installation.plugin_key}`);
+          console.log(
+            `[PluginService] Fetching ${providerType} data from plugin: ${installation.plugin_key}`,
+          );
           const data = await provider.getData({ sequelize, organizationId });
 
           if (Array.isArray(data)) {
             results.push(...data);
           }
         } catch (pluginError: any) {
-          console.error(`[PluginService] Error fetching data from plugin ${installation.plugin_key}:`, pluginError.message);
+          console.error(
+            `[PluginService] Error fetching data from plugin ${installation.plugin_key}:`,
+            pluginError.message,
+          );
           // Continue with other plugins even if one fails
         }
       }
@@ -425,9 +416,7 @@ export class PluginService {
       const categories = marketplaceData.categories || [];
 
       // Merge categories from built-in plugins
-      const builtinCategories = new Set(
-        getBuiltinPlugins().map((p) => p.category)
-      );
+      const builtinCategories = new Set(getBuiltinPlugins().map((p) => p.category));
       const existingCategoryIds = new Set(categories.map((c: any) => c.id));
 
       for (const cat of builtinCategories) {
@@ -454,31 +443,23 @@ export class PluginService {
     installationId: number,
     userId: number,
     organizationId: number,
-    configuration: Record<string, any>
+    configuration: Record<string, any>,
   ): Promise<any> {
     try {
       // Verify installation exists
-      const installation =
-        await findByIdWithValidation(
-          installationId,
-          organizationId
-        );
+      const installation = await findByIdWithValidation(installationId, organizationId);
 
       // Validate that plugin is installed
       if (installation.status !== PluginInstallationStatus.INSTALLED) {
         throw new ValidationException(
           "Plugin must be installed before configuring",
           "installation_id",
-          installationId
+          installationId,
         );
       }
 
       // Update configuration
-      const updated = await updateConfiguration(
-        installationId,
-        organizationId,
-        configuration
-      );
+      const updated = await updateConfiguration(installationId, organizationId, configuration);
 
       // Load plugin and execute configure method if it exists (skip for built-in)
       if (!isBuiltinPlugin(installation.plugin_key)) {
@@ -493,11 +474,11 @@ export class PluginService {
               userId,
               organizationId,
               configuration,
-              context
+              context,
             );
             console.log(
               `[PluginService] Plugin ${sanitizeForLog(installation.plugin_key)} configured:`,
-              result
+              result,
             );
           }
         }
@@ -505,10 +486,7 @@ export class PluginService {
 
       return toJSON(updated);
     } catch (error: any) {
-      console.error(
-        `[PluginService] Error updating plugin configuration:`,
-        error
-      );
+      console.error(`[PluginService] Error updating plugin configuration:`, error);
       throw error;
     }
   }
@@ -519,17 +497,13 @@ export class PluginService {
   static async testConnection(
     pluginKey: string,
     configuration: Record<string, any>,
-    context?: { userId: number; organizationId: number }
+    context?: { userId: number; organizationId: number },
   ): Promise<any> {
     try {
       // Verify plugin exists in marketplace
       const plugin = await this.getPluginByKey(pluginKey);
       if (!plugin) {
-        throw new NotFoundException(
-          "Plugin not found in marketplace",
-          "plugin",
-          pluginKey
-        );
+        throw new NotFoundException("Plugin not found in marketplace", "plugin", pluginKey);
       }
 
       // Load plugin and execute testConnection method if it exists
@@ -537,10 +511,7 @@ export class PluginService {
       if (pluginCode && typeof pluginCode.testConnection === "function") {
         const pluginContext = context ? { sequelize, ...context } : undefined;
         const result = await pluginCode.testConnection(configuration, pluginContext);
-        console.log(
-          `[PluginService] Plugin ${sanitizeForLog(pluginKey)} connection test:`,
-          result
-        );
+        console.log(`[PluginService] Plugin ${sanitizeForLog(pluginKey)} connection test:`, result);
         return result;
       }
 
@@ -550,10 +521,7 @@ export class PluginService {
         message: "Plugin does not support connection testing",
       };
     } catch (error: any) {
-      console.error(
-        `[PluginService] Error testing plugin connection:`,
-        error
-      );
+      console.error(`[PluginService] Error testing plugin connection:`, error);
       throw error;
     }
   }
@@ -564,19 +532,24 @@ export class PluginService {
    * Download plugin's package.json from repository
    * Returns null if package.json doesn't exist (e.g., for pre-bundled framework plugins)
    */
-  private static async downloadPluginPackageJson(plugin: Plugin, tempPath: string): Promise<any | null> {
+  private static async downloadPluginPackageJson(
+    plugin: Plugin,
+    tempPath: string,
+  ): Promise<any | null> {
     try {
       const baseUrl = PLUGIN_MARKETPLACE_URL.replace("/plugins.json", "");
       const packageJsonUrl = `${baseUrl}/${plugin.pluginPath}/package.json`;
 
-      console.log(`[PluginService] Downloading package.json for ${sanitizeForLog(plugin.key)} from ${packageJsonUrl}`);
+      console.log(
+        `[PluginService] Downloading package.json for ${sanitizeForLog(plugin.key)} from ${packageJsonUrl}`,
+      );
 
       const response = await axios.get(packageJsonUrl, {
         timeout: 10000,
-        responseType: 'json',
+        responseType: "json",
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
         },
       });
 
@@ -589,13 +562,17 @@ export class PluginService {
       // If package.json doesn't exist (404), return null instead of throwing
       // This is expected for pre-bundled framework plugins that don't have dependencies
       if (error.response?.status === 404) {
-        console.log(`[PluginService] No package.json found for plugin ${sanitizeForLog(plugin.key)} (pre-bundled plugin)`);
+        console.log(
+          `[PluginService] No package.json found for plugin ${sanitizeForLog(plugin.key)} (pre-bundled plugin)`,
+        );
         return null;
       }
       const errMsg = error.isAxiosError
-        ? `${error.message} (status: ${error.response?.status || 'N/A'}, url: ${error.config?.url || 'N/A'})`
+        ? `${error.message} (status: ${error.response?.status || "N/A"}, url: ${error.config?.url || "N/A"})`
         : error.message;
-      console.error(`[PluginService] Error downloading package.json for ${sanitizeForLog(plugin.key)}: ${errMsg}`);
+      console.error(
+        `[PluginService] Error downloading package.json for ${sanitizeForLog(plugin.key)}: ${errMsg}`,
+      );
       throw new Error(`Failed to download package.json: ${error.message}`);
     }
   }
@@ -603,15 +580,23 @@ export class PluginService {
   /**
    * Install plugin dependencies using npm
    */
-  private static async installPluginDependencies(plugin: Plugin, tempPath: string, packageJson: any): Promise<void> {
+  private static async installPluginDependencies(
+    plugin: Plugin,
+    tempPath: string,
+    packageJson: any,
+  ): Promise<void> {
     try {
       if (!packageJson.dependencies || Object.keys(packageJson.dependencies).length === 0) {
-        console.log(`[PluginService] No dependencies to install for plugin ${sanitizeForLog(plugin.key)}`);
+        console.log(
+          `[PluginService] No dependencies to install for plugin ${sanitizeForLog(plugin.key)}`,
+        );
         return;
       }
 
       const dependenciesCount = Object.keys(packageJson.dependencies).length;
-      console.log(`[PluginService] Installing ${dependenciesCount} dependencies for plugin ${sanitizeForLog(plugin.key)}...`);
+      console.log(
+        `[PluginService] Installing ${dependenciesCount} dependencies for plugin ${sanitizeForLog(plugin.key)}...`,
+      );
 
       // Check if node_modules already exists and dependencies are installed
       const nodeModulesPath = path.join(tempPath, "node_modules");
@@ -619,7 +604,9 @@ export class PluginService {
 
       // If dependencies are already installed and package-lock exists, skip installation
       if (fs.existsSync(nodeModulesPath) && fs.existsSync(packageLockPath)) {
-        console.log(`[PluginService] Dependencies already installed for plugin ${sanitizeForLog(plugin.key)}`);
+        console.log(
+          `[PluginService] Dependencies already installed for plugin ${sanitizeForLog(plugin.key)}`,
+        );
         return;
       }
 
@@ -632,13 +619,18 @@ export class PluginService {
 
       execSync(npmCommand, {
         cwd: tempPath,
-        stdio: 'pipe', // Suppress output unless there's an error
+        stdio: "pipe", // Suppress output unless there's an error
         timeout: 60000, // 60 second timeout
       });
 
-      console.log(`[PluginService] Successfully installed dependencies for plugin ${sanitizeForLog(plugin.key)}`);
+      console.log(
+        `[PluginService] Successfully installed dependencies for plugin ${sanitizeForLog(plugin.key)}`,
+      );
     } catch (error: any) {
-      console.error(`[PluginService] Error installing dependencies for ${sanitizeForLog(plugin.key)}:`, error);
+      console.error(
+        `[PluginService] Error installing dependencies for ${sanitizeForLog(plugin.key)}:`,
+        error,
+      );
       throw new Error(`Failed to install plugin dependencies: ${error.message}`);
     }
   }
@@ -658,14 +650,16 @@ export class PluginService {
       const repoPath = plugin.ui.bundleUrl.replace(/^\/api/, "");
       const bundleUrl = `${baseUrl}${repoPath}`;
 
-      console.log(`[PluginService] Downloading UI bundle for ${sanitizeForLog(plugin.key)} from ${bundleUrl}`);
+      console.log(
+        `[PluginService] Downloading UI bundle for ${sanitizeForLog(plugin.key)} from ${bundleUrl}`,
+      );
 
       const response = await axios.get(bundleUrl, {
         timeout: 30000,
-        responseType: 'text',
+        responseType: "text",
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
         },
       });
 
@@ -678,10 +672,15 @@ export class PluginService {
       const bundlePath = path.join(uiDistPath, bundleFileName);
       fs.writeFileSync(bundlePath, response.data);
 
-      console.log(`[PluginService] UI bundle for ${sanitizeForLog(plugin.key)} downloaded to ${bundlePath}`);
+      console.log(
+        `[PluginService] UI bundle for ${sanitizeForLog(plugin.key)} downloaded to ${bundlePath}`,
+      );
     } catch (error: any) {
       // UI bundle download failure should not block plugin installation
-      console.warn(`[PluginService] Failed to download UI bundle for ${sanitizeForLog(plugin.key)}:`, error.message);
+      console.warn(
+        `[PluginService] Failed to download UI bundle for ${sanitizeForLog(plugin.key)}:`,
+        error.message,
+      );
     }
   }
 
@@ -693,9 +692,9 @@ export class PluginService {
       const response = await axios.get(PLUGIN_MARKETPLACE_URL, {
         timeout: 10000,
         headers: {
-          "Accept": "application/json",
+          Accept: "application/json",
           "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
+          Pragma: "no-cache",
         },
       });
 
@@ -728,7 +727,7 @@ export class PluginService {
       return pluginCode;
     } catch (error: any) {
       console.error(
-        `[PluginService] Error loading plugin ${sanitizeForLog(plugin.key)}: ${error.message}`
+        `[PluginService] Error loading plugin ${sanitizeForLog(plugin.key)}: ${error.message}`,
       );
       throw new Error(`Failed to load plugin code: ${error.message}`);
     }
@@ -744,7 +743,7 @@ export class PluginService {
       if (plugin.pluginPath === "__builtin__" || plugin.entryPoint === "__builtin__") {
         throw new Error(
           `Built-in plugin '${sanitizeForLog(plugin.key)}' cannot be downloaded. ` +
-          `Ensure callers check isBuiltinPlugin() before calling loadPluginCode().`
+            `Ensure callers check isBuiltinPlugin() before calling loadPluginCode().`,
         );
       }
 
@@ -763,9 +762,13 @@ export class PluginService {
 
         if (fileAge < CACHE_DURATION_MS) {
           shouldDownload = false;
-          console.log(`[PluginService] Using cached plugin ${sanitizeForLog(plugin.key)} (age: ${Math.round(fileAge / (1000 * 60 * 60))} hours)`);
+          console.log(
+            `[PluginService] Using cached plugin ${sanitizeForLog(plugin.key)} (age: ${Math.round(fileAge / (1000 * 60 * 60))} hours)`,
+          );
         } else {
-          console.log(`[PluginService] Cache expired for plugin ${sanitizeForLog(plugin.key)} (age: ${Math.round(fileAge / (1000 * 60 * 60 * 24))} days)`);
+          console.log(
+            `[PluginService] Cache expired for plugin ${sanitizeForLog(plugin.key)} (age: ${Math.round(fileAge / (1000 * 60 * 60 * 24))} days)`,
+          );
         }
       }
 
@@ -781,14 +784,16 @@ export class PluginService {
         const baseUrl = PLUGIN_MARKETPLACE_URL.replace("/plugins.json", "");
         const pluginUrl = `${baseUrl}/${plugin.pluginPath}/${plugin.entryPoint}`;
 
-        console.log(`[PluginService] Downloading plugin ${sanitizeForLog(plugin.key)} from ${pluginUrl}`);
+        console.log(
+          `[PluginService] Downloading plugin ${sanitizeForLog(plugin.key)} from ${pluginUrl}`,
+        );
 
         const response = await axios.get(pluginUrl, {
           timeout: 10000,
-          responseType: 'text',
+          responseType: "text",
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
           },
         });
 
@@ -817,7 +822,7 @@ export class PluginService {
           require("ts-node/register");
         } catch (error) {
           console.warn(
-            "[PluginService] ts-node not available, attempting to load TypeScript file directly"
+            "[PluginService] ts-node not available, attempting to load TypeScript file directly",
           );
         }
       }
@@ -826,10 +831,10 @@ export class PluginService {
       const pluginNodeModulesPath = path.join(tempPath, "node_modules");
       if (fs.existsSync(pluginNodeModulesPath)) {
         // Add to module paths for this specific require
-        const Module = require('module');
+        const Module = require("module");
         const originalResolveLookupPaths = Module._resolveLookupPaths;
 
-        Module._resolveLookupPaths = function(request: string, parent: any) {
+        Module._resolveLookupPaths = function (request: string, parent: any) {
           const paths = originalResolveLookupPaths.call(this, request, parent);
           if (paths && !paths.includes(pluginNodeModulesPath)) {
             paths.push(pluginNodeModulesPath);
@@ -846,9 +851,11 @@ export class PluginService {
       return pluginCode;
     } catch (error: any) {
       const errMsg = error.isAxiosError
-        ? `${error.message} (status: ${error.response?.status || 'N/A'}, url: ${error.config?.url || 'N/A'})`
+        ? `${error.message} (status: ${error.response?.status || "N/A"}, url: ${error.config?.url || "N/A"})`
         : error.message;
-      console.error(`[PluginService] Error downloading plugin ${sanitizeForLog(plugin.key)}: ${errMsg}`);
+      console.error(
+        `[PluginService] Error downloading plugin ${sanitizeForLog(plugin.key)}: ${errMsg}`,
+      );
       throw new Error(`Failed to download plugin: ${error.message}`);
     }
   }
@@ -863,7 +870,7 @@ export class PluginService {
    */
   static async forwardToPlugin(
     pluginKey: string,
-    context: PluginRouteContext
+    context: PluginRouteContext,
   ): Promise<PluginRouteResponse> {
     try {
       // Check if plugin is installed for this organization
@@ -893,7 +900,7 @@ export class PluginService {
       if (!pluginCode.router || typeof pluginCode.router !== "object") {
         throw new NotFoundException(
           `Plugin '${pluginKey}' does not export a router. ` +
-          `Ensure the plugin exports: export const router: PluginRouter = { ... }`
+            `Ensure the plugin exports: export const router: PluginRouter = { ... }`,
         );
       }
 
@@ -911,29 +918,32 @@ export class PluginService {
         const availableRoutes = Object.keys(router).join(", ");
         throw new NotFoundException(
           `Route '${context.method} ${context.path}' not found in plugin '${pluginKey}'. ` +
-          `Available routes: ${availableRoutes || "none"}`
+            `Available routes: ${availableRoutes || "none"}`,
         );
       }
 
       // Execute the handler
-      console.log(
-        `[PluginService] Forwarding request to plugin: ${sanitizeForLog(pluginKey)}`,
-        { method: context.method, path: context.path }
-      );
+      console.log(`[PluginService] Forwarding request to plugin: ${sanitizeForLog(pluginKey)}`, {
+        method: context.method,
+        path: context.path,
+      });
 
       const response = await handler(context);
 
-      console.log(
-        `[PluginService] Plugin '${sanitizeForLog(pluginKey)}' responded:`,
-        { status: response.status || 200, hasData: !!response.data, hasBuffer: !!response.buffer }
-      );
+      console.log(`[PluginService] Plugin '${sanitizeForLog(pluginKey)}' responded:`, {
+        status: response.status || 200,
+        hasData: !!response.data,
+        hasBuffer: !!response.buffer,
+      });
 
       return response;
     } catch (error: any) {
-      console.error(
-        "[PluginService] Error forwarding to plugin:",
-        { pluginKey: sanitizeForLog(pluginKey), method: context.method, path: context.path, error: error.message }
-      );
+      console.error("[PluginService] Error forwarding to plugin:", {
+        pluginKey: sanitizeForLog(pluginKey),
+        method: context.method,
+        path: context.path,
+        error: error.message,
+      });
       throw error;
     }
   }
@@ -952,7 +962,7 @@ export class PluginService {
     router: PluginRouter,
     method: string,
     path: string,
-    params: Record<string, string>
+    params: Record<string, string>,
   ): ((context: PluginRouteContext) => Promise<PluginRouteResponse>) | null {
     const normalizedMethod = method.toUpperCase();
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;

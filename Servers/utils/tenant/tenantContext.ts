@@ -1,9 +1,9 @@
-import { asyncLocalStorage } from '../context/context';
-import path from 'path';
-import fs from 'fs';
+import { asyncLocalStorage } from "../context/context";
+import path from "path";
+import fs from "fs";
 
 export interface TenantContext {
-  tenantId?: number;  // Now stores organizationId (number) instead of tenant hash (string)
+  tenantId?: number; // Now stores organizationId (number) instead of tenant hash (string)
   organizationId?: number;
   userId?: number;
 }
@@ -13,12 +13,12 @@ export interface TenantContext {
  * This function should be called within the context of an authenticated request
  */
 export function getCurrentTenantContext(): TenantContext {
-    const store = asyncLocalStorage.getStore();
-    return {
-        tenantId: store?.tenantId,
-        organizationId: store?.organizationId,
-        userId: store?.userId
-    };
+  const store = asyncLocalStorage.getStore();
+  return {
+    tenantId: store?.tenantId,
+    organizationId: store?.organizationId,
+    userId: store?.userId,
+  };
 }
 
 /**
@@ -26,24 +26,22 @@ export function getCurrentTenantContext(): TenantContext {
  * Falls back to 'default' if no tenant context is available
  */
 export function getTenantIdForLogging(): string {
-    try {
-        const context = getCurrentTenantContext();
-        // Convert organizationId to string for logging directory
-        return context.organizationId?.toString() || context.tenantId?.toString() || 'default';
-    } catch (error) {
-        // If we're outside of a request context, use 'default'
-        return 'default';
-    }
+  try {
+    const context = getCurrentTenantContext();
+    // Convert organizationId to string for logging directory
+    return context.organizationId?.toString() || context.tenantId?.toString() || "default";
+  } catch (error) {
+    // If we're outside of a request context, use 'default'
+    return "default";
+  }
 }
 
 /**
  * Get the base log directory path based on environment
  */
 export function getLogBaseDirectory(): string {
-    const isDev = process.env.NODE_ENV !== 'production';
-    return isDev
-        ? path.join(process.cwd(), 'logs')
-        : path.join('/app/logs');
+  const isDev = process.env.NODE_ENV !== "production";
+  return isDev ? path.join(process.cwd(), "logs") : path.join("/app/logs");
 }
 
 /**
@@ -51,9 +49,9 @@ export function getLogBaseDirectory(): string {
  * @param tenantId - The tenant ID, if not provided will use current context
  */
 export function getTenantLogDirectory(tenantId?: string): string {
-    const tenant = tenantId || getTenantIdForLogging();
-    const logBaseDir = getLogBaseDirectory();
-    return path.join(logBaseDir, tenant);
+  const tenant = tenantId || getTenantIdForLogging();
+  const logBaseDir = getLogBaseDirectory();
+  return path.join(logBaseDir, tenant);
 }
 
 /**
@@ -61,13 +59,13 @@ export function getTenantLogDirectory(tenantId?: string): string {
  * @param tenantId - The tenant ID, if not provided will use current context
  */
 export function ensureTenantLogDirectory(tenantId?: string): string {
-    const tenantLogDir = getTenantLogDirectory(tenantId);
+  const tenantLogDir = getTenantLogDirectory(tenantId);
 
-    if (!fs.existsSync(tenantLogDir)) {
-        fs.mkdirSync(tenantLogDir, { recursive: true });
-    }
+  if (!fs.existsSync(tenantLogDir)) {
+    fs.mkdirSync(tenantLogDir, { recursive: true });
+  }
 
-    return tenantLogDir;
+  return tenantLogDir;
 }
 
 /**
@@ -75,6 +73,6 @@ export function ensureTenantLogDirectory(tenantId?: string): string {
  * This ensures consistency with winston-daily-rotate-file when utc: true
  */
 export function getCurrentDateStringUTC(): string {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
+  const now = new Date();
+  return now.toISOString().split("T")[0];
 }

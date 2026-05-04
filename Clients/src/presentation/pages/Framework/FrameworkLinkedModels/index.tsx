@@ -63,7 +63,7 @@ const FrameworkLinkedModels = ({
           <Stack sx={{ pt: "8px" }}></Stack>
         </>
       ) : null,
-    [organizationalProject, filteredFrameworks, selectedFramework, onFrameworkSelect]
+    [organizationalProject, filteredFrameworks, selectedFramework, onFrameworkSelect],
   );
 
   return (

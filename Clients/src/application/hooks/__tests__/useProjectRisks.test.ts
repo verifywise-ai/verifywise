@@ -31,7 +31,9 @@ describe("useProjectRisks", () => {
       ],
     });
 
-    const { result } = renderHook(() => useProjectRisks({ projectId: 1 }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useProjectRisks({ projectId: 1 }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.loadingProjectRisks).toBe(false));
     expect(result.current.projectRisks).toHaveLength(2);
@@ -39,14 +41,18 @@ describe("useProjectRisks", () => {
   });
 
   it("does not fetch when projectId is falsy", () => {
-    const { result } = renderHook(() => useProjectRisks({ projectId: 0 }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useProjectRisks({ projectId: 0 }), {
+      wrapper: createWrapper(),
+    });
     expect(result.current.loadingProjectRisks).toBe(false);
   });
 
   it("handles error", async () => {
     mockGetRisks.mockRejectedValue(new Error("Timeout"));
 
-    const { result } = renderHook(() => useProjectRisks({ projectId: 1 }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useProjectRisks({ projectId: 1 }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.error).toBe("Timeout"));
   });

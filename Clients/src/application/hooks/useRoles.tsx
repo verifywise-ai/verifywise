@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getEntityById } from '../repository/entity.repository';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getEntityById } from "../repository/entity.repository";
 
 interface Role {
   id: number;
@@ -7,16 +7,20 @@ interface Role {
   description: string;
 }
 
-const ROLES_QUERY_KEY = ['roles'] as const;
+const ROLES_QUERY_KEY = ["roles"] as const;
 
 export const useRoles = () => {
   const queryClient = useQueryClient();
 
-  const { data: roles = [], isLoading: loading, error } = useQuery({
+  const {
+    data: roles = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
     queryKey: ROLES_QUERY_KEY,
     queryFn: async () => {
       const response = await getEntityById({
-        routeUrl: '/roles',
+        routeUrl: "/roles",
       });
       return response.data as Role[];
     },

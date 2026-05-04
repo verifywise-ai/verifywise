@@ -68,8 +68,6 @@ describe("useActiveModule", () => {
   it("detects evals module from URL", () => {
     mockPathname = "/evals/experiments";
     renderHook(() => useActiveModule());
-    expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ payload: "evals" })
-    );
+    expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: "evals" }));
   });
 });

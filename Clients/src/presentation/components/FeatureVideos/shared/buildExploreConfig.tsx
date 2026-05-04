@@ -26,9 +26,7 @@ export function buildExploreConfig(data: ExploreVideoData): VideoConfig {
   scenes.push({
     key: "intro",
     durationInFrames: INTRO_FRAMES,
-    render: (f) => (
-      <TitleScene frame={f} title={data.introTitle} subtitle={data.introSubtitle} />
-    ),
+    render: (f) => <TitleScene frame={f} title={data.introTitle} subtitle={data.introSubtitle} />,
   });
 
   data.features.forEach((feat, i) => {

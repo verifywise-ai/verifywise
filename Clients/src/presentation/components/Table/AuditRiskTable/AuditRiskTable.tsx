@@ -6,19 +6,9 @@ import { AuditRiskTableBody } from "./AuditRiskTableBody";
 import { useEffect, useState } from "react";
 import { getProjectRiskById } from "../../../../application/repository/projectRisk.repository";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
-import {
-  IAuditRiskTableProps,
-  ITypeRisk,
-} from "../../../types/interfaces/i.table";
+import { IAuditRiskTableProps, ITypeRisk } from "../../../types/interfaces/i.table";
 
-const TITLE_OF_COLUMNS = [
-  "Unlink",
-  "ID",
-  "Risk Title",
-  "Status",
-  "Severity",
-  "",
-];
+const TITLE_OF_COLUMNS = ["Unlink", "ID", "Risk Title", "Status", "Severity", ""];
 
 export const AuditRiskTable: React.FC<IAuditRiskTableProps> = ({
   risks,
@@ -53,7 +43,7 @@ export const AuditRiskTable: React.FC<IAuditRiskTableProps> = ({
           } catch (error) {
             console.error(`Failed to fetch risk ${riskId}:`, error);
           }
-        })
+        }),
       );
     };
     fetchRiskDetails();

@@ -30,7 +30,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "status", operator: "is", value: "active" }],
-        "and"
+        "and",
       );
     });
 
@@ -45,7 +45,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "status", operator: "is_not", value: "active" }],
-        "and"
+        "and",
       );
     });
 
@@ -59,7 +59,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "name", operator: "contains", value: "al" }],
-        "and"
+        "and",
       );
     });
 
@@ -74,7 +74,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "name", operator: "does_not_contain", value: "a" }],
-        "and"
+        "and",
       );
     });
 
@@ -88,7 +88,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "date", operator: "is_empty", value: "" }],
-        "and"
+        "and",
       );
     });
 
@@ -102,7 +102,7 @@ describe("useFilterBy", () => {
     act(() => {
       result.current.handleFilterChange(
         [{ id: "1", columnId: "date", operator: "is_not_empty", value: "" }],
-        "and"
+        "and",
       );
     });
 
@@ -120,7 +120,7 @@ describe("useFilterBy", () => {
           { id: "1", columnId: "status", operator: "is", value: "active" },
           { id: "2", columnId: "name", operator: "contains", value: "pha" },
         ],
-        "and"
+        "and",
       );
     });
 
@@ -138,7 +138,7 @@ describe("useFilterBy", () => {
           { id: "1", columnId: "name", operator: "is", value: "alpha" },
           { id: "2", columnId: "name", operator: "is", value: "beta" },
         ],
-        "or"
+        "or",
       );
     });
 
@@ -155,7 +155,7 @@ describe("useFilterBy", () => {
           { id: "1", columnId: "status", operator: "is", value: "active" },
           { id: "2", columnId: "name", operator: "contains", value: "" }, // inactive - no value
         ],
-        "and"
+        "and",
       );
     });
 

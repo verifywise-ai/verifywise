@@ -88,7 +88,8 @@ async function sendVendorReviewDateNotification() {
   for (let org of organizations) {
     const organizationId = org.id!;
     const vendors = await getAllVendorsQuery(organizationId);
-    const automations = (await sequelize.query(`SELECT
+    const automations = (await sequelize.query(
+      `SELECT
         pat.key AS trigger_key,
         paa.key AS action_key,
         a.id AS automation_id,
@@ -100,7 +101,7 @@ async function sendVendorReviewDateNotification() {
       JOIN automation_actions paa ON aa.action_type_id = paa.id
       WHERE pat.key = 'vendor_review_date_approaching' AND a.is_active
       ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId } }
+      { replacements: { organizationId } },
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -118,9 +119,7 @@ async function sendVendorReviewDateNotification() {
       const automationParams = automation.automation_params || {};
 
       const notificationDate = new Date(vendor.review_date!);
-      notificationDate.setDate(
-        notificationDate.getDate() - (automationParams.daysBefore || 0)
-      );
+      notificationDate.setDate(notificationDate.getDate() - (automationParams.daysBefore || 0));
       notificationDate.setHours(0, 0, 0, 0);
 
       const today = new Date();
@@ -235,7 +234,7 @@ async function generateAndUploadReport(
   frameworkId: number,
   projectFrameworkId: number,
   organizationId: number,
-  organizationName: string
+  organizationName: string,
 ) {
   try {
     // Use the new v2 reporting system
@@ -251,7 +250,7 @@ async function generateAndUploadReport(
         },
       },
       userId,
-      organizationId
+      organizationId,
     );
 
     if (!result.success) {
@@ -271,7 +270,7 @@ async function generateAndUploadReport(
       userId,
       projectId,
       mapReportTypeToFileSource(reportType),
-      organizationId
+      organizationId,
     );
     return uploadedFile;
   } catch (error) {
@@ -284,7 +283,8 @@ async function sendReportNotification() {
   const organizations = await getAllOrganizationsQuery();
   for (let org of organizations) {
     const organizationId = org.id!;
-    const automations = (await sequelize.query(`SELECT
+    const automations = (await sequelize.query(
+      `SELECT
         pat.key AS trigger_key,
         paa.key AS action_key,
         a.id AS automation_id,
@@ -297,7 +297,7 @@ async function sendReportNotification() {
       JOIN automation_actions paa ON aa.action_type_id = paa.id
       WHERE pat.key = 'scheduled_report' AND a.is_active
       ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId } }
+      { replacements: { organizationId } },
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -335,7 +335,7 @@ async function sendReportNotification() {
         WHERE p.organization_id = :organizationId AND p.id = :projectId;`,
         {
           replacements: { organizationId, projectId: parseInt(params.projectId) },
-        }
+        },
       )) as [
         {
           project_title: string;
@@ -349,13 +349,13 @@ async function sendReportNotification() {
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :userId;`,
         {
           replacements: { userId: projectDetails[0][0].owner },
-        }
+        },
       )) as [{ full_name: string }[], number];
       const [[{ organization_name }]] = (await sequelize.query(
         `SELECT name FROM organizations WHERE id = :orgId;`,
         {
           replacements: { orgId: org.id },
-        }
+        },
       )) as [{ organization_name: string }[], number];
 
       if (frequency === "daily") {
@@ -376,11 +376,11 @@ async function sendReportNotification() {
               params.hour || 0,
               params.minute || 0,
               0,
-              0
+              0,
             ),
             removeOnComplete: true,
             removeOnFail: false,
-          }
+          },
         );
         continue;
       } else if (frequency === "monthly") {
@@ -406,23 +406,15 @@ async function sendReportNotification() {
 }
 
 async function sendReportNotificationEmail(jobData: any) {
-  const {
-    automation,
-    organizationId,
-    projectDetails,
-    full_name,
-    organization_name,
-  } = jobData;
+  const { automation, organizationId, projectDetails, full_name, organization_name } = jobData;
   const [[{ exists }]] = (await sequelize.query(
     `SELECT EXISTS(SELECT 1 FROM automation_actions_data WHERE organization_id = :organizationId AND id = :actionId) AS exists;`,
     {
       replacements: { organizationId, actionId: parseInt(automation.id) },
-    }
+    },
   )) as [{ exists: boolean }[], number];
   if (!exists) {
-    console.log(
-      `Automation action with ID ${automation.id} does not exist. Skipping job.`
-    );
+    console.log(`Automation action with ID ${automation.id} does not exist. Skipping job.`);
     return;
   }
   const automation_params = automation.automation_params || {};
@@ -441,7 +433,7 @@ async function sendReportNotificationEmail(jobData: any) {
       projectDetails.framework_id,
       projectDetails.project_framework_id,
       organizationId,
-      organization_name
+      organization_name,
     );
 
     // Add report file as email attachment
@@ -531,7 +523,9 @@ export const createAutomationWorker = () => {
               callAIGateway("POST", "/internal/mcp/audit/cleanup-approvals"),
             ]);
             console.log(`MCP audit cleanup: ${auditResult.deleted ?? 0} expired logs purged`);
-            console.log(`MCP approval cleanup: ${approvalResult.deleted ?? 0} expired requests purged`);
+            console.log(
+              `MCP approval cleanup: ${approvalResult.deleted ?? 0} expired requests purged`,
+            );
           } catch (err) {
             console.error(`MCP Gateway cleanup failed: ${err}`);
           }
@@ -616,7 +610,7 @@ export const createAutomationWorker = () => {
                 },
               ],
               job.data.organizationId,
-              startTime
+              startTime,
             );
           }
         }
@@ -630,26 +624,23 @@ export const createAutomationWorker = () => {
               {
                 action_type: name,
                 status: "failure",
-                error_message:
-                  error instanceof Error ? error.message : "Unknown error",
+                error_message: error instanceof Error ? error.message : "Unknown error",
               },
             ],
             job.data.organizationId,
-            startTime
+            startTime,
           );
         }
         throw error;
       }
     },
-    { connection: { url: REDIS_URL }, concurrency: 10 }
+    { connection: { url: REDIS_URL }, concurrency: 10 },
   );
   automationWorker.on("completed", (job) => {
     console.log(`Job ${job.id} of type ${job.name} has been completed`);
   });
   automationWorker.on("failed", (job, err) => {
-    console.error(
-      `Job ${job?.id} of type ${job?.name} has failed with error: ${err.message}`
-    );
+    console.error(`Job ${job?.id} of type ${job?.name} has failed with error: ${err.message}`);
   });
   return automationWorker;
 };

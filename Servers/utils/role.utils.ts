@@ -4,19 +4,14 @@ import { QueryTypes, Transaction } from "sequelize";
 import { IRoleAttributes } from "../domain.layer/interfaces/i.role";
 
 export const getAllRolesQuery = async (): Promise<RoleModel[]> => {
-  const roles = await sequelize.query(
-    "SELECT * FROM roles ORDER BY created_at DESC, id ASC",
-    {
-      mapToModel: true,
-      model: RoleModel,
-    }
-  );
+  const roles = await sequelize.query("SELECT * FROM roles ORDER BY created_at DESC, id ASC", {
+    mapToModel: true,
+    model: RoleModel,
+  });
   return roles;
 };
 
-export const getRoleByIdQuery = async (
-  id: number
-): Promise<RoleModel | null> => {
+export const getRoleByIdQuery = async (id: number): Promise<RoleModel | null> => {
   const result = await sequelize.query("SELECT * FROM roles WHERE id = :id", {
     replacements: { id },
     mapToModel: true,
@@ -27,7 +22,7 @@ export const getRoleByIdQuery = async (
 
 export const createNewRoleQuery = async (
   role: Partial<IRoleAttributes>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<RoleModel> => {
   const result = await sequelize.query(
     `INSERT INTO roles(name, description) VALUES (:name, :description) RETURNING *`,
@@ -40,7 +35,7 @@ export const createNewRoleQuery = async (
       model: RoleModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -48,17 +43,13 @@ export const createNewRoleQuery = async (
 export const updateRoleByIdQuery = async (
   id: number,
   role: Partial<RoleModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<RoleModel | null> => {
   const updateRole: Partial<Record<keyof IRoleAttributes, any>> = {};
   const setClause = ["name", "description"]
     .filter((f) => {
-      if (
-        role[f as keyof IRoleAttributes] !== undefined &&
-        role[f as keyof IRoleAttributes]
-      ) {
-        updateRole[f as keyof IRoleAttributes] =
-          role[f as keyof IRoleAttributes];
+      if (role[f as keyof IRoleAttributes] !== undefined && role[f as keyof IRoleAttributes]) {
+        updateRole[f as keyof IRoleAttributes] = role[f as keyof IRoleAttributes];
         return true;
       }
       return false;
@@ -83,17 +74,14 @@ export const updateRoleByIdQuery = async (
 
 export const deleteRoleByIdQuery = async (
   id: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM roles WHERE id = :id RETURNING *`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: RoleModel,
-      type: QueryTypes.DELETE,
-      transaction,
-    }
-  );
+  const result = await sequelize.query(`DELETE FROM roles WHERE id = :id RETURNING *`, {
+    replacements: { id },
+    mapToModel: true,
+    model: RoleModel,
+    type: QueryTypes.DELETE,
+    transaction,
+  });
   return result.length > 0;
 };

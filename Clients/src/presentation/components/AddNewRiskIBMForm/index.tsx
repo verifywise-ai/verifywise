@@ -47,11 +47,7 @@ const mapLikelihoodIBM = (likelihood: string): Likelihood => {
  * Modal for adding a new risk from the IBM AI Risk Database.
  * Uses the shared RiskDatabaseModal component with IBM-specific mappers.
  */
-const AddNewRiskIBMModal = ({
-  isOpen,
-  setIsOpen,
-  onRiskSelected,
-}: AddNewRiskIBMModalProps) => {
+const AddNewRiskIBMModal = ({ isOpen, setIsOpen, onRiskSelected }: AddNewRiskIBMModalProps) => {
   return (
     <RiskDatabaseModal
       isOpen={isOpen}

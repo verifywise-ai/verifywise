@@ -17,12 +17,6 @@ const App = () => {
   const [isDialogOpen, setDialogOpen] = useState(false);
   const handleClose = () => setDialogOpen(false);
 
-  return (
-    <ErrorModal
-      open={isDialogOpen}
-      errorMessage="An error occurred."
-      onClose={handleClose}
-    />
-  );
+  return <ErrorModal open={isDialogOpen} errorMessage="An error occurred." onClose={handleClose} />;
 };
 ```

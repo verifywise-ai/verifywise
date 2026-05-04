@@ -46,7 +46,7 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
   gemini: "Google",
   google: "Google",
   mistral: "Mistral",
-  xai: "Groq",  // xAI uses Groq icon as closest match
+  xai: "Groq", // xAI uses Groq icon as closest match
   openrouter: "OpenRouter",
   bedrock: "Aws",
   azure: "Microsoft",
@@ -73,7 +73,9 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
  * Get the provider icon component for a gateway provider ID.
  * Returns null if no icon is available.
  */
-export function getProviderIcon(provider: string): React.ComponentType<React.SVGProps<SVGSVGElement>> | null {
+export function getProviderIcon(
+  provider: string,
+): React.ComponentType<React.SVGProps<SVGSVGElement>> | null {
   const key = GATEWAY_PROVIDER_MAP[provider.toLowerCase()];
   return key ? PROVIDER_ICONS[key] || null : null;
 }
@@ -112,7 +114,9 @@ export const TOP_PROVIDERS = [
  */
 export function useGatewayModels() {
   const [providers, setProviders] = useState<string[]>([]);
-  const [modelsByProvider, setModelsByProvider] = useState<Record<string, { id: string; mode: string }[]>>({});
+  const [modelsByProvider, setModelsByProvider] = useState<
+    Record<string, { id: string; mode: string }[]>
+  >({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -124,7 +128,8 @@ export function useGatewayModels() {
         if (!cancelled && data) {
           // Filter to chat-capable providers, sort alphabetically
           const allProviders: string[] = (data.providers || []).sort();
-          const allModels: Record<string, { id: string; provider: string; mode: string }[]> = data.models || {};
+          const allModels: Record<string, { id: string; provider: string; mode: string }[]> =
+            data.models || {};
 
           // Only keep providers that have chat models
           const filtered: Record<string, { id: string; mode: string }[]> = {};
@@ -144,7 +149,9 @@ export function useGatewayModels() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /** Get Select-compatible items for a given provider (memoized) */
@@ -154,7 +161,7 @@ export function useGatewayModels() {
         _id: `${provider}/${m.id}`,
         name: m.id,
       })),
-    [modelsByProvider]
+    [modelsByProvider],
   );
 
   /** Get Select-compatible provider items (memoized) */
@@ -165,7 +172,10 @@ export function useGatewayModels() {
 
 /** Convert a display name to a URL-safe slug */
 export function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 /** Gateway base URL for code examples */
@@ -216,12 +226,12 @@ export function extractPromptRefs(messages: Array<{ content: string }>): string[
 /** Replace {{varName}} placeholders in messages with provided values. */
 export function resolveMessageVariables(
   messages: Array<{ role: string; content: string }>,
-  values: Record<string, string>
+  values: Record<string, string>,
 ): Array<{ role: string; content: string }> {
   return messages.map((m) => ({
     ...m,
     content: m.content.replace(VARIABLE_PATTERN, (_, name) =>
-      values[name] !== undefined ? values[name] : `{{${name}}}`
+      values[name] !== undefined ? values[name] : `{{${name}}}`,
     ),
   }));
 }
@@ -255,7 +265,7 @@ export interface StreamPromptTestResult {
 import { getAuthToken } from "../../../application/redux/auth/getAuthToken";
 
 export async function streamPromptTest(
-  opts: StreamPromptTestOptions
+  opts: StreamPromptTestOptions,
 ): Promise<StreamPromptTestResult> {
   const startTime = Date.now();
 
@@ -310,7 +320,9 @@ export async function streamPromptTest(
             }
             if (chunk.usage) tokens = chunk.usage.total_tokens || tokens;
             if (chunk.cost_usd) cost = chunk.cost_usd;
-          } catch { /* skip unparseable chunk */ }
+          } catch {
+            /* skip unparseable chunk */
+          }
         }
       }
     }
@@ -322,7 +334,8 @@ export async function streamPromptTest(
     content = `Error: ${streamError}`;
     opts.onDelta(content);
   } else if (!content) {
-    content = "No response received from the model. Check that the endpoint has a valid API key configured.";
+    content =
+      "No response received from the model. Check that the endpoint has a valid API key configured.";
     opts.onDelta(content);
   }
 

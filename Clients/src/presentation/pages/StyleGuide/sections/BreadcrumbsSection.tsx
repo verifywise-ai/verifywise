@@ -80,7 +80,8 @@ const BreadcrumbsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Navigation breadcrumbs for showing page hierarchy. Supports manual items or auto-generation from routes.
+          Navigation breadcrumbs for showing page hierarchy. Supports manual items or
+          auto-generation from routes.
         </Typography>
       </Box>
 
@@ -120,17 +121,22 @@ const BreadcrumbsSection: React.FC = () => {
                 code={breadcrumbSnippets.truncated}
                 onCopy={handleCopy}
               >
-                <Breadcrumbs
-                  items={longItems}
-                  truncateLabels={true}
-                  maxLabelLength={15}
-                />
+                <Breadcrumbs items={longItems} truncateLabels={true} maxLabelLength={15} />
               </ExampleWithCode>
             </Stack>
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -159,8 +165,8 @@ const BreadcrumbsSection: React.FC = () => {
       {/* Auto-generate */}
       <SpecSection title="Auto-generated breadcrumbs">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Set autoGenerate=true to automatically create breadcrumbs from the current URL path.
-          Uses routeMapping.ts for label conversion.
+          Set autoGenerate=true to automatically create breadcrumbs from the current URL path. Uses
+          routeMapping.ts for label conversion.
         </Typography>
 
         <ExampleWithCode
@@ -168,7 +174,9 @@ const BreadcrumbsSection: React.FC = () => {
           code={breadcrumbSnippets.autoGenerate}
           onCopy={handleCopy}
         >
-          <Box sx={{ p: "8px", backgroundColor: theme.palette.background.fill, borderRadius: "4px" }}>
+          <Box
+            sx={{ p: "8px", backgroundColor: theme.palette.background.fill, borderRadius: "4px" }}
+          >
             <Typography sx={{ fontSize: 12, color: theme.palette.text.accent, mb: "8px" }}>
               Example for path: /settings/profile
             </Typography>
@@ -196,16 +204,51 @@ const BreadcrumbsSection: React.FC = () => {
           }}
         >
           {[
-            { prop: "items", type: "IBreadcrumbItem[]", default: "[]", desc: "Manual breadcrumb items" },
-            { prop: "autoGenerate", type: "boolean", default: "false", desc: "Auto-generate from URL" },
+            {
+              prop: "items",
+              type: "IBreadcrumbItem[]",
+              default: "[]",
+              desc: "Manual breadcrumb items",
+            },
+            {
+              prop: "autoGenerate",
+              type: "boolean",
+              default: "false",
+              desc: "Auto-generate from URL",
+            },
             { prop: "homeLabel", type: "string", default: '"Home"', desc: "Label for home item" },
             { prop: "homePath", type: "string", default: '"/"', desc: "Path for home item" },
-            { prop: "separator", type: "ReactNode", default: "<ChevronRight />", desc: "Custom separator" },
+            {
+              prop: "separator",
+              type: "ReactNode",
+              default: "<ChevronRight />",
+              desc: "Custom separator",
+            },
             { prop: "maxItems", type: "number", default: "8", desc: "Max items before collapse" },
-            { prop: "truncateLabels", type: "boolean", default: "true", desc: "Truncate long labels" },
-            { prop: "maxLabelLength", type: "number", default: "20", desc: "Max chars before truncate" },
-            { prop: "showCurrentPage", type: "boolean", default: "true", desc: "Show current page in trail" },
-            { prop: "onItemClick", type: "function", default: "undefined", desc: "Custom click handler" },
+            {
+              prop: "truncateLabels",
+              type: "boolean",
+              default: "true",
+              desc: "Truncate long labels",
+            },
+            {
+              prop: "maxLabelLength",
+              type: "number",
+              default: "20",
+              desc: "Max chars before truncate",
+            },
+            {
+              prop: "showCurrentPage",
+              type: "boolean",
+              default: "true",
+              desc: "Show current page in trail",
+            },
+            {
+              prop: "onItemClick",
+              type: "function",
+              default: "undefined",
+              desc: "Custom click handler",
+            },
           ].map((item, index, arr) => (
             <Box
               key={item.prop}
@@ -214,17 +257,24 @@ const BreadcrumbsSection: React.FC = () => {
                 gridTemplateColumns: "140px 120px 100px 1fr",
                 gap: "12px",
                 p: "10px 14px",
-                borderBottom: index < arr.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
+                borderBottom:
+                  index < arr.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
                 alignItems: "center",
               }}
             >
-              <Typography sx={{ fontSize: 12, fontFamily: "monospace", color: theme.palette.primary.main }}>
+              <Typography
+                sx={{ fontSize: 12, fontFamily: "monospace", color: theme.palette.primary.main }}
+              >
                 {item.prop}
               </Typography>
-              <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.tertiary }}>
+              <Typography
+                sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.tertiary }}
+              >
                 {item.type}
               </Typography>
-              <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.accent }}>
+              <Typography
+                sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.accent }}
+              >
                 {item.default}
               </Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
@@ -346,9 +396,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -370,9 +418,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -423,9 +469,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

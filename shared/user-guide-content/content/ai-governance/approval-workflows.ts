@@ -58,7 +58,6 @@ export const approvalWorkflowsContent: ArticleContent = {
         { status: 'Approved', meaning: 'All required approvers have approved' },
         { status: 'Rejected', meaning: 'One or more approvers rejected the request' },
         { status: 'Withdrawn', meaning: 'The requestor cancelled the request' },
-        { status: 'Expired', meaning: 'The request passed its deadline without a decision' },
       ],
     },
     {

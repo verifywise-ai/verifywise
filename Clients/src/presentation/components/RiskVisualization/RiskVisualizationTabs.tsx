@@ -41,18 +41,10 @@ const RiskVisualizationTabs: React.FC<IRiskVisualizationTabsProps> = ({
           }}
         >
           <TabPanel value="0" sx={{ p: 3 }}>
-            <RiskHeatMap
-              risks={risks}
-              selectedRisk={selectedRisk}
-              onRiskSelect={onRiskSelect}
-            />
+            <RiskHeatMap risks={risks} selectedRisk={selectedRisk} onRiskSelect={onRiskSelect} />
           </TabPanel>
           <TabPanel value="1" sx={{ p: 3 }}>
-            <RiskCategories
-              risks={risks}
-              selectedRisk={selectedRisk}
-              onRiskSelect={onRiskSelect}
-            />
+            <RiskCategories risks={risks} selectedRisk={selectedRisk} onRiskSelect={onRiskSelect} />
           </TabPanel>
         </Box>
       </TabContext>

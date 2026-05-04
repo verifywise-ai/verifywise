@@ -41,8 +41,8 @@ const ColorsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          The VerifyWise color palette. All colors are defined in the theme and should be
-          accessed via theme.palette. Click any color to copy its hex value.
+          The VerifyWise color palette. All colors are defined in the theme and should be accessed
+          via theme.palette. Click any color to copy its hex value.
         </Typography>
       </Box>
 
@@ -216,7 +216,16 @@ const ColorsSection: React.FC = () => {
         </Typography>
 
         {/* Success */}
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: theme.palette.text.secondary,
+            mb: "12px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
           Success
         </Typography>
         <ColorGrid columns={5} sx={{ mb: "24px" }}>
@@ -260,7 +269,16 @@ const ColorsSection: React.FC = () => {
         </ColorGrid>
 
         {/* Error */}
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: theme.palette.text.secondary,
+            mb: "12px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
           Error
         </Typography>
         <ColorGrid columns={5} sx={{ mb: "24px" }}>
@@ -304,7 +322,16 @@ const ColorsSection: React.FC = () => {
         </ColorGrid>
 
         {/* Warning */}
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: theme.palette.text.secondary,
+            mb: "12px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
           Warning
         </Typography>
         <ColorGrid columns={5} sx={{ mb: "24px" }}>
@@ -348,7 +375,16 @@ const ColorsSection: React.FC = () => {
         </ColorGrid>
 
         {/* Info */}
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: theme.palette.text.secondary,
+            mb: "12px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
           Info / Default
         </Typography>
         <ColorGrid columns={5}>

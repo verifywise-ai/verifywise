@@ -127,10 +127,7 @@ export const automationsService = {
   /**
    * Update an existing automation
    */
-  async update(
-    id: string | number,
-    payload: UpdateAutomationPayload
-  ): Promise<AutomationRecord> {
+  async update(id: string | number, payload: UpdateAutomationPayload): Promise<AutomationRecord> {
     const response = await CustomAxios.put(`/automations/${id}`, payload);
     return response.data.data;
   },
@@ -158,9 +155,7 @@ export const automationsService = {
    * Get actions available for a specific trigger
    */
   async getActionsByTriggerId(triggerId: number): Promise<AutomationAction[]> {
-    const response = await CustomAxios.get(
-      `/automations/actions/by-triggerId/${triggerId}`
-    );
+    const response = await CustomAxios.get(`/automations/actions/by-triggerId/${triggerId}`);
     return response.data.data;
   },
 
@@ -171,24 +166,17 @@ export const automationsService = {
    */
   async getHistory(
     automationId: string | number,
-    params?: { limit?: number; offset?: number }
+    params?: { limit?: number; offset?: number },
   ): Promise<HistoryResponse> {
-    const response = await CustomAxios.get(
-      `/automations/${automationId}/history`,
-      { params }
-    );
+    const response = await CustomAxios.get(`/automations/${automationId}/history`, { params });
     return response.data.data;
   },
 
   /**
    * Get execution stats for an automation
    */
-  async getStats(
-    automationId: string | number
-  ): Promise<AutomationExecutionStats> {
-    const response = await CustomAxios.get(
-      `/automations/${automationId}/stats`
-    );
+  async getStats(automationId: string | number): Promise<AutomationExecutionStats> {
+    const response = await CustomAxios.get(`/automations/${automationId}/stats`);
     return response.data.data;
   },
 };

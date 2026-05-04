@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Subcontrols**
-
   - Route: `/`
   - Handler: `getAllSubcontrols`
   - Authentication: JWT (currently commented out)

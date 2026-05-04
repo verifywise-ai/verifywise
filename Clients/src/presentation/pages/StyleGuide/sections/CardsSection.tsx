@@ -76,20 +76,35 @@ const CardsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Container components for grouping content. Includes cards, panels, alert boxes, and
-          other container elements.
+          Container components for grouping content. Includes cards, panels, alert boxes, and other
+          container elements.
         </Typography>
       </Box>
 
       {/* Card Specifications */}
       <SpecSection title="Card specifications">
         <SpecGrid>
-          <SpecCard title="Background" value={background.main} note="theme.palette.background.main" onCopy={handleCopy} />
-          <SpecCard title="Border" value="1px solid #eaecf0" note="theme.palette.border.light" onCopy={handleCopy} />
+          <SpecCard
+            title="Background"
+            value={background.main}
+            note="theme.palette.background.main"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Border"
+            value="1px solid #eaecf0"
+            note="theme.palette.border.light"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Border radius" value="4px" note="Standard radius" onCopy={handleCopy} />
           <SpecCard title="Padding" value="16px" note="Standard card padding" onCopy={handleCopy} />
           <SpecCard title="Shadow" value="none" note="Default no shadow" onCopy={handleCopy} />
-          <SpecCard title="Hover shadow" value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)" note="On interactive cards" onCopy={handleCopy} />
+          <SpecCard
+            title="Hover shadow"
+            value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)"
+            note="On interactive cards"
+            onCopy={handleCopy}
+          />
         </SpecGrid>
       </SpecSection>
 
@@ -101,11 +116,7 @@ const CardsSection: React.FC = () => {
           Standard card container with border and padding.
         </Typography>
 
-        <ExampleWithCode
-          label="Standard card"
-          code={cardCodeSnippet}
-          onCopy={handleCopy}
-        >
+        <ExampleWithCode label="Standard card" code={cardCodeSnippet} onCopy={handleCopy}>
           <Box
             sx={{
               backgroundColor: theme.palette.background.main,
@@ -130,8 +141,8 @@ const CardsSection: React.FC = () => {
                 color: theme.palette.text.tertiary,
               }}
             >
-              This is the card content. Cards are used to group related information together
-              in a visually distinct container.
+              This is the card content. Cards are used to group related information together in a
+              visually distinct container.
             </Typography>
           </Box>
         </ExampleWithCode>
@@ -166,10 +177,13 @@ const CardsSection: React.FC = () => {
                 border: `1px solid ${theme.palette.border.light}`,
                 borderRadius: "4px",
                 p: "16px",
-                boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
+                boxShadow:
+                  "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
               }}
             >
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+              <Typography
+                sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}
+              >
                 Elevated card with shadow
               </Typography>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary }}>
@@ -206,7 +220,9 @@ const CardsSection: React.FC = () => {
                 },
               }}
             >
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+              <Typography
+                sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}
+              >
                 Clickable card
               </Typography>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary }}>
@@ -237,7 +253,9 @@ const CardsSection: React.FC = () => {
                 p: "16px",
               }}
             >
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+              <Typography
+                sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}
+              >
                 Alternate background
               </Typography>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary }}>
@@ -268,11 +286,14 @@ const CardsSection: React.FC = () => {
                 p: "16px",
               }}
             >
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+              <Typography
+                sx={{ fontSize: 14, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}
+              >
                 Accent background
               </Typography>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary }}>
-                Uses background.accent (background.accent) for checklists, tips, and secondary content.
+                Uses background.accent (background.accent) for checklists, tips, and secondary
+                content.
               </Typography>
             </Box>
           </Box>
@@ -361,7 +382,13 @@ const CardsSection: React.FC = () => {
           </Box>
         </Stack>
 
-        <Box sx={{ borderRadius: "4px", overflow: "hidden", border: `1px solid ${theme.palette.border.light}` }}>
+        <Box
+          sx={{
+            borderRadius: "4px",
+            overflow: "hidden",
+            border: `1px solid ${theme.palette.border.light}`,
+          }}
+        >
           <CodeBlock code={alertCodeSnippet} language="tsx" onCopy={handleCopy} />
         </Box>
       </SpecSection>
@@ -424,12 +451,42 @@ const CardsSection: React.FC = () => {
         </Typography>
 
         <SpecGrid>
-          <SpecCard title="Modal bg" value="#FCFCFD" note="theme.palette.background.modal" onCopy={handleCopy} />
-          <SpecCard title="Modal shadow" value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)" note="theme.boxShadow" onCopy={handleCopy} />
-          <SpecCard title="Modal border" value="1px solid #eaecf0" note="Light border" onCopy={handleCopy} />
-          <SpecCard title="Section padding" value="24px" note="Large section padding" onCopy={handleCopy} />
-          <SpecCard title="Drawer width" value="400px" note="Side drawer default" onCopy={handleCopy} />
-          <SpecCard title="Dialog max-width" value="600px" note="Standard dialog" onCopy={handleCopy} />
+          <SpecCard
+            title="Modal bg"
+            value="#FCFCFD"
+            note="theme.palette.background.modal"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Modal shadow"
+            value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)"
+            note="theme.boxShadow"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Modal border"
+            value="1px solid #eaecf0"
+            note="Light border"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Section padding"
+            value="24px"
+            note="Large section padding"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Drawer width"
+            value="400px"
+            note="Side drawer default"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Dialog max-width"
+            value="600px"
+            note="Standard dialog"
+            onCopy={handleCopy}
+          />
         </SpecGrid>
       </SpecSection>
 
@@ -684,11 +741,11 @@ const CopyableValue: React.FC<{
         backgroundColor: isHovered ? theme.palette.background.fill : "transparent",
       }}
     >
-      <Typography sx={{ fontSize: 10, color: theme.palette.text.accent }}>
-        {label}:
-      </Typography>
+      <Typography sx={{ fontSize: 10, color: theme.palette.text.accent }}>{label}:</Typography>
       <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-        <Typography sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.secondary }}>
+        <Typography
+          sx={{ fontSize: 10, fontFamily: "monospace", color: theme.palette.text.secondary }}
+        >
           {value}
         </Typography>
         {isHovered && <Copy size={10} color={theme.palette.primary.main} />}
@@ -748,9 +805,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

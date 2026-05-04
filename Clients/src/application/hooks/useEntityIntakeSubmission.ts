@@ -10,12 +10,11 @@ import {
  */
 export function useEntityIntakeSubmission(
   entityType: "use_case" | "model",
-  entityId: number | null
+  entityId: number | null,
 ) {
   return useQuery<EntityIntakeSubmission | null>({
     queryKey: ["entity-intake-submission", entityType, entityId],
-    queryFn: ({ signal }) =>
-      getEntityIntakeSubmission(entityType, entityId!, signal),
+    queryFn: ({ signal }) => getEntityIntakeSubmission(entityType, entityId!, signal),
     enabled: !!entityId && entityId > 0,
     staleTime: 5 * 60 * 1000,
     retry: false,

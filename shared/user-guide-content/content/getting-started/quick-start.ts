@@ -105,10 +105,6 @@ export const quickStartContent: ArticleContent = {
       ],
     },
     {
-      type: 'paragraph',
-      text: 'You can also see controls across all use cases from the sidebar: Assurance → Controls hub. This gives you a cross-cutting view of your entire control landscape.',
-    },
-    {
       type: 'heading',
       id: 'step-4',
       level: 2,

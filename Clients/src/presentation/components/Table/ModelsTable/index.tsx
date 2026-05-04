@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Typography } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useCallback } from "react";
 import { Cpu, Zap, RefreshCw, Key } from "lucide-react";
@@ -94,11 +87,7 @@ const ModelsTable: React.FC<ModelsTableProps> = ({
   return (
     <TableContainer>
       <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-        <StandardTableHead
-          columns={columns}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
+        <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>
             <TableRow>
@@ -119,7 +108,10 @@ const ModelsTable: React.FC<ModelsTableProps> = ({
           <TableBody>
             <TableRow>
               <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                <EmptyState icon={Cpu} message="No models found. Model preferences are automatically saved when you run an experiment.">
+                <EmptyState
+                  icon={Cpu}
+                  message="No models found. Model preferences are automatically saved when you run an experiment."
+                >
                   <EmptyStateTip
                     icon={Zap}
                     title="How models get added"

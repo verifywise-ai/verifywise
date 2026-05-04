@@ -70,12 +70,7 @@ export const validateLikelihood = (value: any): ValidationResult => {
  * Validates risk severity enum field
  */
 export const validateRiskSeverity = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "Risk severity",
-    VENDOR_RISK_ENUMS.RISK_SEVERITY,
-    true
-  );
+  return validateEnum(value, "Risk severity", VENDOR_RISK_ENUMS.RISK_SEVERITY, true);
 };
 
 /**
@@ -137,18 +132,15 @@ export const createVendorRiskSchema = {
  * All fields are optional for updates
  */
 export const updateVendorRiskSchema = {
-  vendor_id: (value: any) =>
-    value !== undefined ? validateVendorId(value) : { isValid: true },
+  vendor_id: (value: any) => (value !== undefined ? validateVendorId(value) : { isValid: true }),
   risk_description: (value: any) =>
     value !== undefined ? validateRiskDescription(value) : { isValid: true },
   impact_description: (value: any) =>
     value !== undefined ? validateImpactDescription(value) : { isValid: true },
-  likelihood: (value: any) =>
-    value !== undefined ? validateLikelihood(value) : { isValid: true },
+  likelihood: (value: any) => (value !== undefined ? validateLikelihood(value) : { isValid: true }),
   risk_severity: (value: any) =>
     value !== undefined ? validateRiskSeverity(value) : { isValid: true },
-  risk_level: (value: any) =>
-    value !== undefined ? validateRiskLevel(value) : { isValid: true },
+  risk_level: (value: any) => (value !== undefined ? validateRiskLevel(value) : { isValid: true }),
   action_plan: (value: any) =>
     value !== undefined ? validateActionPlan(value) : { isValid: true },
   action_owner: (value: any) =>
@@ -178,9 +170,7 @@ export const validateUpdateVendorRisk = (data: any): ValidationError[] => {
     "action_owner",
   ];
 
-  const hasUpdateField = updateFields.some(
-    (field) => data[field] !== undefined
-  );
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
     return [
@@ -264,10 +254,7 @@ const RISK_CALCULATION_MATRIX: Record<string, Record<string, string>> = {
 /**
  * Calculates the correct risk level based on risk_severity and likelihood
  */
-export const calculateRiskLevel = (
-  riskSeverity: string,
-  likelihood: string
-): string | null => {
+export const calculateRiskLevel = (riskSeverity: string, likelihood: string): string | null => {
   return RISK_CALCULATION_MATRIX[riskSeverity]?.[likelihood] || null;
 };
 
@@ -278,7 +265,7 @@ export const calculateRiskLevel = (
 export const validateRiskLevelCalculation = (
   riskSeverity: string,
   likelihood: string,
-  providedRiskLevel: string
+  providedRiskLevel: string,
 ): ValidationResult => {
   const calculatedRiskLevel = calculateRiskLevel(riskSeverity, likelihood);
 
@@ -294,10 +281,7 @@ export const validateRiskLevelCalculation = (
   const normalizeRiskLevel = (riskLevel: string): string =>
     riskLevel.replace(/risk/i, "").trim().toLowerCase();
 
-  if (
-    normalizeRiskLevel(providedRiskLevel) !==
-    normalizeRiskLevel(calculatedRiskLevel)
-  ) {
+  if (normalizeRiskLevel(providedRiskLevel) !== normalizeRiskLevel(calculatedRiskLevel)) {
     return {
       isValid: false,
       message: `Risk level "${providedRiskLevel}" is incorrect. Expected "${calculatedRiskLevel}" for risk severity "${riskSeverity}" and likelihood "${likelihood}"`,
@@ -312,9 +296,7 @@ export const validateRiskLevelCalculation = (
  * Validates that vendor exists (placeholder for database check)
  * In real implementation, this would query the database
  */
-export const validateVendorExists = async (
-  vendorId: number
-): Promise<ValidationResult> => {
+export const validateVendorExists = async (vendorId: number): Promise<ValidationResult> => {
   // This would be implemented to check if vendor exists in database
   // For now, just validate the ID format
   return validateVendorId(vendorId);
@@ -324,9 +306,7 @@ export const validateVendorExists = async (
  * Validates that user exists (placeholder for database check)
  * In real implementation, this would query the database
  */
-export const validateUserExists = async (
-  userId: number
-): Promise<ValidationResult> => {
+export const validateUserExists = async (userId: number): Promise<ValidationResult> => {
   // This would be implemented to check if user exists in database
   // For now, just validate the ID format
   return validateActionOwner(userId);
@@ -339,23 +319,17 @@ export const validateCompleteVendorRisk = (data: any): ValidationError[] => {
   const errors = validateCreateVendorRisk(data);
 
   // Add business rule validations if basic validation passes
-  if (
-    errors.length === 0 &&
-    data.risk_severity &&
-    data.likelihood &&
-    data.risk_level
-  ) {
+  if (errors.length === 0 && data.risk_severity && data.likelihood && data.risk_level) {
     const calculationResult = validateRiskLevelCalculation(
       data.risk_severity,
       data.likelihood,
-      data.risk_level
+      data.risk_level,
     );
 
     if (!calculationResult.isValid) {
       errors.push({
         field: "risk_level",
-        message:
-          calculationResult.message || "Risk level calculation is incorrect",
+        message: calculationResult.message || "Risk level calculation is incorrect",
         code: calculationResult.code || "INCORRECT_CALCULATION",
       });
     }

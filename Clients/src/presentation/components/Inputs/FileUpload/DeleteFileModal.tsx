@@ -8,21 +8,14 @@ interface DeleteFileModalProps {
   onDelete: () => void;
 }
 
-function DeleteFileModal({
-  isOpen,
-  fileName,
-  onClose,
-  onDelete,
-}: DeleteFileModalProps) {
+function DeleteFileModal({ isOpen, fileName, onClose, onDelete }: DeleteFileModalProps) {
   if (!isOpen) return null;
 
   return (
     <ConfirmationModal
       title="Confirm delete"
       body={
-        <Typography fontSize={13}>
-          Are you sure you want to delete the file {fileName}?
-        </Typography>
+        <Typography fontSize={13}>Are you sure you want to delete the file {fileName}?</Typography>
       }
       cancelText="Cancel"
       proceedText="Delete"

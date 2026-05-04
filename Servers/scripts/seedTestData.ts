@@ -30,15 +30,17 @@ async function seedTestData() {
        VALUES ('Test Organization', NOW(), NOW())
        ON CONFLICT DO NOTHING
        RETURNING id`,
-      { transaction }
+      { transaction },
     );
     const orgId =
       (orgRows as { id: number }[])[0]?.id ??
-      ((
-        await sequelize.query(`SELECT id FROM organizations LIMIT 1`, {
-          transaction,
-        })
-      )[0] as { id: number }[])[0]?.id;
+      (
+        (
+          await sequelize.query(`SELECT id FROM organizations LIMIT 1`, {
+            transaction,
+          })
+        )[0] as { id: number }[]
+      )[0]?.id;
 
     console.log(`  Organization ID: ${orgId}`);
 
@@ -51,7 +53,7 @@ async function seedTestData() {
       {
         replacements: { password: hashedPassword, orgId },
         transaction,
-      }
+      },
     );
     console.log("  Test user created: verifywise@email.com");
 

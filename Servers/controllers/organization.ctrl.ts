@@ -72,15 +72,12 @@ import { generateUserTokens } from "../utils/auth.utils";
  *   ]
  * }
  */
-export async function getAllOrganizations(
-  _req: Request,
-  res: Response
-): Promise<any> {
+export async function getAllOrganizations(_req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "starting getAllOrganizations",
     "getAllOrganizations",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
   logger.debug("🔍 Fetching all organizations");
   try {
@@ -91,7 +88,7 @@ export async function getAllOrganizations(
         "successful",
         "organizations found",
         "getAllOrganizations",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       return res.status(200).json(STATUS_CODE[200](organizations));
     }
@@ -99,7 +96,7 @@ export async function getAllOrganizations(
       "successful",
       "no organizations found",
       "getAllOrganizations",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     return res.status(204).json(STATUS_CODE[204]([]));
   } catch (error) {
@@ -107,13 +104,13 @@ export async function getAllOrganizations(
       "error",
       "failed to retrieve organizations",
       "getAllOrganizations",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
       `Failed to retrieve organizations: ${(error as Error).message}`,
       _req.userId!,
-      _req.organizationId!
+      _req.organizationId!,
     );
     logger.error("❌ Error in getAllOrganizations:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -140,10 +137,7 @@ export async function getAllOrganizations(
  *   "data": true
  * }
  */
-export async function getOrganizationsExists(
-  _req: Request,
-  res: Response
-): Promise<any> {
+export async function getOrganizationsExists(_req: Request, res: Response): Promise<any> {
   try {
     const organizationsExists = await getOrganizationsExistsQuery();
     return res.status(200).json(STATUS_CODE[200](organizationsExists));
@@ -177,17 +171,14 @@ export async function getOrganizationsExists(
  *   }
  * }
  */
-export async function getOrganizationById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getOrganizationById(req: Request, res: Response): Promise<any> {
   const organizationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logStructured(
     "processing",
     `fetching organization by ID: ${organizationId}`,
     "getOrganizationById",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
   logger.debug(`🔍 Looking up organization with ID: ${organizationId}`);
   try {
@@ -197,7 +188,7 @@ export async function getOrganizationById(
         "successful",
         `organization found: ID ${organizationId}`,
         "getOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       return res.status(200).json(STATUS_CODE[200](organization));
     }
@@ -205,7 +196,7 @@ export async function getOrganizationById(
       "successful",
       `no organization found: ID ${organizationId}`,
       "getOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     return res.status(404).json(STATUS_CODE[404](null));
   } catch (error) {
@@ -213,13 +204,13 @@ export async function getOrganizationById(
       "error",
       `failed to fetch organization: ID ${organizationId}`,
       "getOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
       `Failed to retrieve organization by ID: ${organizationId}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in getOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -274,16 +265,13 @@ export async function getOrganizationById(
  *   }
  * }
  */
-export async function createOrganization(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function createOrganization(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   logStructured(
     "processing",
     "starting createOrganization",
     "createOrganization",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
   logger.debug("🛠️ Creating new organization");
   try {
@@ -297,19 +285,13 @@ export async function createOrganization(
     };
 
     // Use the OrganizationModel's createNewOrganization method with validation
-    const organizationModel = await OrganizationModel.createNewOrganization(
-      body.name,
-      body.logo
-    );
+    const organizationModel = await OrganizationModel.createNewOrganization(body.name, body.logo);
 
     // Validate the organization data before saving
     await organizationModel.validateOrganizationData();
 
     // Use the utility query function for database operation
-    const createdOrganization = await createOrganizationQuery(
-      organizationModel,
-      transaction
-    );
+    const createdOrganization = await createOrganizationQuery(organizationModel, transaction);
 
     if (createdOrganization) {
       const organization_id = createdOrganization.id!;
@@ -324,7 +306,7 @@ export async function createOrganization(
           roleId: 1, // Assuming 1 is the default role ID for Admin
           organizationId: organization_id,
         },
-        transaction
+        transaction,
       );
 
       // Generate tokens for the newly created user
@@ -335,7 +317,7 @@ export async function createOrganization(
           roleName: "Admin", // roleId 1 corresponds to Admin
           organizationId: organization_id,
         },
-        res
+        res,
       );
 
       await transaction.commit();
@@ -343,13 +325,13 @@ export async function createOrganization(
         "successful",
         `organization created: ${createdOrganization.name}`,
         "createOrganization",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Create",
         `Organization created: ${createdOrganization.name}`,
         user.id!,
-        organization_id
+        organization_id,
       );
       return res.status(201).json(
         STATUS_CODE[201]({
@@ -359,7 +341,7 @@ export async function createOrganization(
             name: createdOrganization.name,
           },
           token: accessToken,
-        })
+        }),
       );
     }
 
@@ -367,13 +349,11 @@ export async function createOrganization(
       "error",
       "failed to create organization",
       "createOrganization",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent("Error", "Organization creation failed", req.userId!, req.organizationId!);
     await transaction.rollback();
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]("Unable to create organization"));
+    return res.status(400).json(STATUS_CODE[400]("Unable to create organization"));
   } catch (error) {
     await transaction.rollback();
 
@@ -383,13 +363,13 @@ export async function createOrganization(
         "error",
         `validation failed: ${error.message}`,
         "createOrganization",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
         `Validation error during organization creation: ${error.message}`,
         req.userId!,
-        req.organizationId!
+        req.organizationId!,
       );
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -399,13 +379,13 @@ export async function createOrganization(
         "error",
         `business logic error: ${error.message}`,
         "createOrganization",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
         `Business logic error during organization creation: ${error.message}`,
         req.userId!,
-        req.organizationId!
+        req.organizationId!,
       );
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -414,14 +394,13 @@ export async function createOrganization(
       "error",
       "unexpected error during organization creation",
       "createOrganization",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
-      `Unexpected error during organization creation: ${(error as Error).message
-      }`,
+      `Unexpected error during organization creation: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in createOrganization:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -468,25 +447,21 @@ export async function createOrganization(
  *   }
  * }
  */
-export async function updateOrganizationById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateOrganizationById(req: Request, res: Response): Promise<any> {
   const organizationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const transaction = await sequelize.transaction();
   logStructured(
     "processing",
     `updating organization ID: ${organizationId}`,
     "updateOrganizationById",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
   logger.debug(`✏️ Update requested for organization ID: ${organizationId}`);
   try {
     const updateData = req.body;
 
     // Find the organization by ID with validation
-    const organization =
-      await OrganizationModel.findByIdWithValidation(organizationId);
+    const organization = await OrganizationModel.findByIdWithValidation(organizationId);
 
     // Update the organization using the model's update method
     await organization.updateOrganization(updateData);
@@ -498,7 +473,7 @@ export async function updateOrganizationById(
     const updatedOrganization = await updateOrganizationByIdQuery(
       organizationId,
       organization,
-      transaction
+      transaction,
     );
 
     if (updatedOrganization) {
@@ -507,9 +482,14 @@ export async function updateOrganizationById(
         "successful",
         `organization updated: ID ${organizationId}`,
         "updateOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
-      await logEvent("Update", `Organization updated: ID ${organizationId}`, req.userId!, req.organizationId!);
+      await logEvent(
+        "Update",
+        `Organization updated: ID ${organizationId}`,
+        req.userId!,
+        req.organizationId!,
+      );
       return res.status(200).json(STATUS_CODE[200](updatedOrganization));
     }
 
@@ -517,13 +497,13 @@ export async function updateOrganizationById(
       "error",
       "organization not found for update",
       "updateOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
       "Organization not found for updateOrganizationById",
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await transaction.rollback();
     return res.status(404).json(STATUS_CODE[404]("Organization not found"));
@@ -536,13 +516,13 @@ export async function updateOrganizationById(
         "error",
         `validation error: ${error.message}`,
         "updateOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
         `Validation error during organization update: ${error.message}`,
         req.userId!,
-        req.organizationId!
+        req.organizationId!,
       );
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
@@ -552,13 +532,13 @@ export async function updateOrganizationById(
         "error",
         `business logic error: ${error.message}`,
         "updateOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
         `Business logic error during organization update: ${error.message}`,
         req.userId!,
-        req.organizationId!
+        req.organizationId!,
       );
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -567,14 +547,15 @@ export async function updateOrganizationById(
       "error",
       `unexpected error for organization ID ${organizationId}`,
       "updateOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
-      `Unexpected error during update for organization ID ${organizationId}: ${(error as Error).message
+      `Unexpected error during update for organization ID ${organizationId}: ${
+        (error as Error).message
       }`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in updateOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -616,17 +597,14 @@ export async function updateOrganizationById(
  *   }
  * }
  */
-export async function deleteOrganizationById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function deleteOrganizationById(req: Request, res: Response): Promise<any> {
   const organizationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const transaction = await sequelize.transaction();
   logStructured(
     "processing",
     `attempting to delete organization ID ${organizationId}`,
     "deleteOrganizationById",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
   logger.debug(`🗑️ Delete request for organization ID ${organizationId}`);
   try {
@@ -637,22 +615,19 @@ export async function deleteOrganizationById(
         "error",
         `organization not found: ID ${organizationId}`,
         "deleteOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
         `Delete failed — organization not found: ID ${organizationId}`,
         req.userId!,
-        req.organizationId!
+        req.organizationId!,
       );
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Organization not found"));
     }
 
-    const isDeleted = await deleteOrganizationByIdQuery(
-      organizationId,
-      transaction
-    );
+    const isDeleted = await deleteOrganizationByIdQuery(organizationId, transaction);
 
     if (isDeleted) {
       await transaction.commit();
@@ -660,9 +635,14 @@ export async function deleteOrganizationById(
         "successful",
         `organization deleted: ID ${organizationId}`,
         "deleteOrganizationById",
-        "organization.ctrl.ts"
+        "organization.ctrl.ts",
       );
-      await logEvent("Delete", `Organization deleted: ID ${organizationId}`, req.userId!, req.organizationId!);
+      await logEvent(
+        "Delete",
+        `Organization deleted: ID ${organizationId}`,
+        req.userId!,
+        req.organizationId!,
+      );
       return res.status(200).json(STATUS_CODE[200](organization));
     }
 
@@ -670,27 +650,26 @@ export async function deleteOrganizationById(
       "error",
       "unable to delete organization",
       "deleteOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent("Error", "Unable to delete organization", req.userId!, req.organizationId!);
     await transaction.rollback();
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]("Unable to delete organization"));
+    return res.status(400).json(STATUS_CODE[400]("Unable to delete organization"));
   } catch (error) {
     await transaction.rollback();
     logStructured(
       "error",
       `unexpected error deleting organization ID ${organizationId}`,
       "deleteOrganizationById",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     await logEvent(
       "Error",
-      `Unexpected error during delete for organization ID ${organizationId}: ${(error as Error).message
+      `Unexpected error during delete for organization ID ${organizationId}: ${
+        (error as Error).message
       }`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in deleteOrganizationById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -724,10 +703,7 @@ export async function deleteOrganizationById(
  *   "data": { "onboarding_status": "completed" }
  * }
  */
-export async function updateOnboardingStatus(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateOnboardingStatus(req: Request, res: Response): Promise<any> {
   const organizationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const transaction = await sequelize.transaction();
 
@@ -735,7 +711,7 @@ export async function updateOnboardingStatus(
     "processing",
     `updating onboarding status for organization ID: ${organizationId}`,
     "updateOnboardingStatus",
-    "organization.ctrl.ts"
+    "organization.ctrl.ts",
   );
 
   try {
@@ -758,7 +734,7 @@ export async function updateOnboardingStatus(
       {
         replacements: { organizationId },
         transaction,
-      }
+      },
     );
 
     await transaction.commit();
@@ -767,7 +743,7 @@ export async function updateOnboardingStatus(
       "successful",
       `onboarding status updated for organization ID: ${organizationId}`,
       "updateOnboardingStatus",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200]({ onboarding_status: "completed" }));
@@ -777,7 +753,7 @@ export async function updateOnboardingStatus(
       "error",
       `failed to update onboarding status for organization ID: ${organizationId}`,
       "updateOnboardingStatus",
-      "organization.ctrl.ts"
+      "organization.ctrl.ts",
     );
     logger.error("❌ Error in updateOnboardingStatus:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

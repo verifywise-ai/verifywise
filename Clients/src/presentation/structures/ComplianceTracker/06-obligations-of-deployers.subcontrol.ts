@@ -78,20 +78,17 @@ export const ObligationsOfDeployersAIsystems = {
       id: 4,
       icon: Checked,
       title: "System Risk Controls Documentation",
-      description:
-        "Document system risk controls, including those for third-party components.",
+      description: "Document system risk controls, including those for third-party components.",
       subControls: [
         {
           id: 1,
-          title:
-            "We conduct thorough legal reviews relevant to AI system deployment.",
+          title: "We conduct thorough legal reviews relevant to AI system deployment.",
           description:
             "Legal reviews ensure AI systems comply with all applicable laws, minimizing regulatory and legal risks.",
         },
         {
           id: 2,
-          title:
-            "We prioritize risk responses based on impact, likelihood, and resources.",
+          title: "We prioritize risk responses based on impact, likelihood, and resources.",
           description:
             "Prioritizing risks helps allocate resources effectively and address the most critical threats first.",
         },
@@ -103,8 +100,7 @@ export const ObligationsOfDeployersAIsystems = {
         },
         {
           id: 4,
-          title:
-            "We evaluate if AI systems meet objectives and decide on deployment continuation.",
+          title: "We evaluate if AI systems meet objectives and decide on deployment continuation.",
           description:
             "Regular evaluations verify that systems are achieving their goals and remain suitable for continued use.",
         },
@@ -116,8 +112,7 @@ export const ObligationsOfDeployersAIsystems = {
         },
         {
           id: 6,
-          title:
-            "We document system risk controls, including third-party components.",
+          title: "We document system risk controls, including third-party components.",
           description:
             "Comprehensive documentation of risk controls ensures accountability and supports audits or compliance checks.",
         },
@@ -130,13 +125,11 @@ export const ObligationsOfDeployersAIsystems = {
       id: 5,
       icon: Checked,
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Regularly update compliance measures based on system or regulatory changes.",
+      description: "Regularly update compliance measures based on system or regulatory changes.",
       subControls: [
         {
           id: 1,
-          title:
-            "We regularly update compliance measures based on system or regulatory changes.",
+          title: "We regularly update compliance measures based on system or regulatory changes.",
           description:
             "Ongoing updates ensure compliance measures remain aligned with evolving technologies and legal requirements.",
         },
@@ -168,13 +161,11 @@ export const ObligationsOfDeployersAIsystems = {
       id: 7,
       icon: Checked,
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Maintain and update technical documentation reflecting AI system changes.",
+      description: "Maintain and update technical documentation reflecting AI system changes.",
       subControls: [
         {
           id: 1,
-          title:
-            "We maintain and update technical documentation reflecting system changes.",
+          title: "We maintain and update technical documentation reflecting system changes.",
           description:
             "Up-to-date documentation ensures accurate representation of system functionalities and compliance status.",
         },

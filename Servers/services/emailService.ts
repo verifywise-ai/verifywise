@@ -1,10 +1,6 @@
 import { compileMjmlToHtml } from "../tools/mjmlCompiler";
 import { EmailProviderFactory } from "./email/providers/EmailProviderFactory";
-import {
-  EmailProvider,
-  validateEmailOptions,
-  RefreshableCredentials,
-} from "./email/types";
+import { EmailProvider, validateEmailOptions, RefreshableCredentials } from "./email/types";
 
 // Initialize email provider based on configuration
 let emailProvider: EmailProvider;
@@ -13,9 +9,7 @@ const initializeEmailProvider = () => {
   if (!emailProvider) {
     const providerType = EmailProviderFactory.getProviderType();
     emailProvider = EmailProviderFactory.createProvider(providerType);
-    console.log(
-      `Email service initialized with ${emailProvider.getProviderName()} provider`
-    );
+    console.log(`Email service initialized with ${emailProvider.getProviderName()} provider`);
   }
   return emailProvider;
 };
@@ -23,20 +17,12 @@ const initializeEmailProvider = () => {
 /**
  * Check if the current provider supports credential rotation and refresh if needed
  */
-const refreshCredentialsIfNeeded = async (
-  provider: EmailProvider
-): Promise<void> => {
-  if (
-    "refreshCredentials" in provider &&
-    "needsCredentialRefresh" in provider
-  ) {
-    const refreshableProvider = provider as EmailProvider &
-      RefreshableCredentials;
+const refreshCredentialsIfNeeded = async (provider: EmailProvider): Promise<void> => {
+  if ("refreshCredentials" in provider && "needsCredentialRefresh" in provider) {
+    const refreshableProvider = provider as EmailProvider & RefreshableCredentials;
 
     if (refreshableProvider.needsCredentialRefresh()) {
-      console.log(
-        `Refreshing credentials for provider: ${provider.getProviderName()}`
-      );
+      console.log(`Refreshing credentials for provider: ${provider.getProviderName()}`);
       await refreshableProvider.refreshCredentials();
     }
   }
@@ -47,7 +33,7 @@ export const sendEmail = async (
   to: string,
   subject: string,
   template: string,
-  data: Record<string, string>
+  data: Record<string, string>,
 ) => {
   // Initialize provider if not already done
   const provider = initializeEmailProvider();
@@ -85,7 +71,7 @@ export const sendAutomationEmail = async (
     content: Buffer | string;
     contentType?: string;
     path?: string;
-  }[]
+  }[],
 ) => {
   // Initialize provider if not already done
   const provider = initializeEmailProvider();
@@ -123,17 +109,12 @@ export const refreshEmailProviderCredentials = async (): Promise<boolean> => {
     const provider = initializeEmailProvider();
 
     if ("refreshCredentials" in provider) {
-      const refreshableProvider = provider as EmailProvider &
-        RefreshableCredentials;
+      const refreshableProvider = provider as EmailProvider & RefreshableCredentials;
       await refreshableProvider.refreshCredentials();
-      console.log(
-        `Credentials refreshed successfully for ${provider.getProviderName()}`
-      );
+      console.log(`Credentials refreshed successfully for ${provider.getProviderName()}`);
       return true;
     } else {
-      console.log(
-        `Provider ${provider.getProviderName()} does not support credential rotation`
-      );
+      console.log(`Provider ${provider.getProviderName()} does not support credential rotation`);
       return false;
     }
   } catch (error) {
@@ -153,12 +134,8 @@ export const getCredentialRefreshStatus = (): {
 } => {
   const provider = initializeEmailProvider();
 
-  if (
-    "needsCredentialRefresh" in provider &&
-    "getTimeSinceLastRefresh" in provider
-  ) {
-    const refreshableProvider = provider as EmailProvider &
-      RefreshableCredentials;
+  if ("needsCredentialRefresh" in provider && "getTimeSinceLastRefresh" in provider) {
+    const refreshableProvider = provider as EmailProvider & RefreshableCredentials;
     return {
       supportsRefresh: true,
       needsRefresh: refreshableProvider.needsCredentialRefresh(),

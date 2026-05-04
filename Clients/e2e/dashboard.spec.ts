@@ -2,9 +2,7 @@ import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("Dashboard", () => {
-  test("renders the dashboard with key widgets", async ({
-    authedPage: page,
-  }) => {
+  test("renders the dashboard with key widgets", async ({ authedPage: page }) => {
     // authedPage already navigates to "/" and waits for auth
     await expect(page).toHaveURL("/");
 
@@ -19,9 +17,7 @@ test.describe("Dashboard", () => {
     await expect(heading.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.waitForLoadState("domcontentloaded");
 
     // Disable pre-existing app-wide WCAG violations (tracked for future fix).
@@ -54,9 +50,7 @@ test.describe("Dashboard", () => {
 
   // --- Tier 1: Dashboard metrics ---
 
-  test("dashboard displays content or welcome dialog", async ({
-    authedPage: page,
-  }) => {
+  test("dashboard displays content or welcome dialog", async ({ authedPage: page }) => {
     // authedPage already navigates to "/"
     await page.waitForTimeout(2000);
 
@@ -75,9 +69,7 @@ test.describe("Dashboard", () => {
 
   // --- Tier 5: Dashboard widgets & views ---
 
-  test("dashboard shows charts or metric cards", async ({
-    authedPage: page,
-  }) => {
+  test("dashboard shows charts or metric cards", async ({ authedPage: page }) => {
     // Dismiss welcome dialog if present
     const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
     if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -114,7 +106,12 @@ test.describe("Dashboard", () => {
       .getByRole("button", { name: /operations/i })
       .or(page.getByText(/operations/i));
 
-    if (await executiveBtn.first().isVisible().catch(() => false)) {
+    if (
+      await executiveBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await executiveBtn.first().click();
       await page.waitForTimeout(1000);
 
@@ -125,12 +122,22 @@ test.describe("Dashboard", () => {
         .or(page.getByText(/score/i))
         .or(page.locator(".MuiCard-root"));
 
-      if (await executiveContent.first().isVisible().catch(() => false)) {
+      if (
+        await executiveContent
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(executiveContent.first()).toBeVisible();
       }
 
       // Switch to operations
-      if (await operationsBtn.first().isVisible().catch(() => false)) {
+      if (
+        await operationsBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await operationsBtn.first().click();
         await page.waitForTimeout(1000);
 
@@ -140,16 +147,19 @@ test.describe("Dashboard", () => {
           .or(page.getByText(/training/i))
           .or(page.locator(".MuiCard-root"));
 
-        if (await operationsContent.first().isVisible().catch(() => false)) {
+        if (
+          await operationsContent
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await expect(operationsContent.first()).toBeVisible();
         }
       }
     }
   });
 
-  test("project selector filters dashboard content", async ({
-    authedPage: page,
-  }) => {
+  test("project selector filters dashboard content", async ({ authedPage: page }) => {
     const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
     if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await welcomeSkip.click();
@@ -162,12 +172,22 @@ test.describe("Dashboard", () => {
       .or(page.getByRole("combobox", { name: /use case/i }))
       .or(page.locator('[data-testid*="project-select"]'));
 
-    if (await projectSelect.first().isVisible().catch(() => false)) {
+    if (
+      await projectSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await projectSelect.first().click();
       await page.waitForTimeout(500);
 
       const option = page.getByRole("option");
-      if (await option.first().isVisible().catch(() => false)) {
+      if (
+        await option
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(option.first()).toBeVisible();
         await option.first().click();
         await page.waitForTimeout(1000);

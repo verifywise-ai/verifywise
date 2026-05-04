@@ -1,6 +1,12 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import { NodeHttpHandler } from '@smithy/node-http-handler';
-import { EmailProvider, EmailOptions, EmailResult, AmazonSESConfig, RefreshableCredentials } from '../types';
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
+import {
+  EmailProvider,
+  EmailOptions,
+  EmailResult,
+  AmazonSESConfig,
+  RefreshableCredentials,
+} from "../types";
 
 /**
  * Amazon Simple Email Service (SES) Provider
@@ -18,7 +24,9 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
   constructor(config: AmazonSESConfig) {
     this.config = config;
     this.lastCredentialRefresh = new Date();
-    this.credentialRefreshInterval = parseInt(process.env.AWS_CREDENTIAL_REFRESH_INTERVAL_MS || '3600000'); // 1 hour default
+    this.credentialRefreshInterval = parseInt(
+      process.env.AWS_CREDENTIAL_REFRESH_INTERVAL_MS || "3600000",
+    ); // 1 hour default
 
     this.initializeSESClient();
   }
@@ -30,13 +38,13 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
         accessKeyId: this.config.accessKeyId,
         secretAccessKey: this.config.secretAccessKey,
       },
-      apiVersion: this.config.apiVersion || '2010-12-01',
+      apiVersion: this.config.apiVersion || "2010-12-01",
       maxAttempts: 3, // Retry failed requests up to 3 times
       // Add timeout and retry configurations for reliability
       requestHandler: new NodeHttpHandler({
-        requestTimeout: 30000,    // 30 seconds for API calls
-        connectionTimeout: 5000,  // 5 seconds to establish connection
-        socketTimeout: 30000,     // 30 seconds for socket inactivity
+        requestTimeout: 30000, // 30 seconds for API calls
+        connectionTimeout: 5000, // 5 seconds to establish connection
+        socketTimeout: 30000, // 30 seconds for socket inactivity
       }),
     });
   }
@@ -57,8 +65,8 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
 
       console.log(`AWS SES credentials refreshed at ${this.lastCredentialRefresh.toISOString()}`);
     } catch (error) {
-      console.error('Failed to refresh AWS SES credentials:', error);
-      throw new Error('Credential refresh failed');
+      console.error("Failed to refresh AWS SES credentials:", error);
+      throw new Error("Credential refresh failed");
     }
   }
 
@@ -71,18 +79,18 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
   }
 
   private loadConfigFromEnvironment(): AmazonSESConfig {
-    const requiredVars = ['AWS_SES_ACCESS_KEY_ID', 'AWS_SES_SECRET_ACCESS_KEY', 'AWS_SES_REGION'];
-    const missing = requiredVars.filter(varName => !process.env[varName]);
+    const requiredVars = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY", "AWS_SES_REGION"];
+    const missing = requiredVars.filter((varName) => !process.env[varName]);
 
     if (missing.length > 0) {
-      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+      throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
     }
 
     return {
       region: process.env.AWS_SES_REGION!,
       accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
       secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
-      apiVersion: process.env.AWS_SES_API_VERSION || '2010-12-01',
+      apiVersion: process.env.AWS_SES_API_VERSION || "2010-12-01",
     };
   }
 
@@ -93,11 +101,11 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
   async validateConfig(): Promise<boolean> {
     try {
       // Test configuration by checking send quota
-      const { GetSendQuotaCommand } = await import('@aws-sdk/client-ses');
+      const { GetSendQuotaCommand } = await import("@aws-sdk/client-ses");
       await this.sesClient.send(new GetSendQuotaCommand({}));
       return true;
     } catch (error) {
-      console.error('Amazon SES configuration validation failed:', error);
+      console.error("Amazon SES configuration validation failed:", error);
       return false;
     }
   }
@@ -106,7 +114,7 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
     try {
       // Check if credentials need refresh before sending
       if (this.needsCredentialRefresh()) {
-        console.log('AWS SES credentials expired, refreshing...');
+        console.log("AWS SES credentials expired, refreshing...");
         await this.refreshCredentials();
       }
 
@@ -114,8 +122,10 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
       // For simplicity, we'll log a warning if attachments are provided
       // In production, consider using nodemailer with SES transport for attachment support
       if (options.attachments && options.attachments.length > 0) {
-        console.warn('Amazon SES provider currently does not support attachments with SendEmailCommand. ' +
-                    'Consider using nodemailer with SES transport or implement SendRawEmailCommand.');
+        console.warn(
+          "Amazon SES provider currently does not support attachments with SendEmailCommand. " +
+            "Consider using nodemailer with SES transport or implement SendRawEmailCommand.",
+        );
       }
 
       const command = new SendEmailCommand({
@@ -126,12 +136,12 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
         Message: {
           Subject: {
             Data: options.subject,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           Body: {
             Html: {
               Data: options.html,
-              Charset: 'UTF-8',
+              Charset: "UTF-8",
             },
           },
         },
@@ -149,22 +159,24 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
       };
     } catch (error: any) {
       // If authentication error, try credential refresh once
-      if (error.name === 'InvalidClientTokenId' || error.name === 'SignatureDoesNotMatch') {
-        console.log('AWS SES authentication error, attempting credential refresh...');
+      if (error.name === "InvalidClientTokenId" || error.name === "SignatureDoesNotMatch") {
+        console.log("AWS SES authentication error, attempting credential refresh...");
         try {
           await this.refreshCredentials();
           // Retry the operation once
-          const result = await this.sesClient.send(new SendEmailCommand({
-            Source: options.from || process.env.EMAIL_ID!,
-            Destination: { ToAddresses: [options.to] },
-            Message: {
-              Subject: { Data: options.subject, Charset: 'UTF-8' },
-              Body: { Html: { Data: options.html, Charset: 'UTF-8' } },
-            },
-            ...(process.env.SES_CONFIGURATION_SET && {
-              ConfigurationSetName: process.env.SES_CONFIGURATION_SET,
+          const result = await this.sesClient.send(
+            new SendEmailCommand({
+              Source: options.from || process.env.EMAIL_ID!,
+              Destination: { ToAddresses: [options.to] },
+              Message: {
+                Subject: { Data: options.subject, Charset: "UTF-8" },
+                Body: { Html: { Data: options.html, Charset: "UTF-8" } },
+              },
+              ...(process.env.SES_CONFIGURATION_SET && {
+                ConfigurationSetName: process.env.SES_CONFIGURATION_SET,
+              }),
             }),
-          }));
+          );
 
           return {
             success: true,
@@ -174,8 +186,8 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
           return {
             success: false,
             error: {
-              name: retryError.name || 'AmazonSESError',
-              message: 'Email delivery failed after credential refresh',
+              name: retryError.name || "AmazonSESError",
+              message: "Email delivery failed after credential refresh",
             },
           };
         }
@@ -184,8 +196,8 @@ export class AmazonSESProvider implements EmailProvider, RefreshableCredentials 
       return {
         success: false,
         error: {
-          name: error.name || 'AmazonSESError',
-          message: error.message || 'Unknown Amazon SES error',
+          name: error.name || "AmazonSESError",
+          message: error.message || "Unknown Amazon SES error",
         },
       };
     }

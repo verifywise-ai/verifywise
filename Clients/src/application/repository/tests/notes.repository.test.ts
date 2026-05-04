@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import { APIError } from "../../tools/error";
-import {
-  createNote,
-  deleteNote,
-  getNoteById,
-  getNotes,
-  updateNote,
-} from "../notes.repository";
+import { createNote, deleteNote, getNoteById, getNotes, updateNote } from "../notes.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {
@@ -97,9 +91,7 @@ describe("Test Notes Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getNotes("NIST_SUBCATEGORY", "42")).rejects.toThrow(
-        APIError,
-      );
+      await expect(getNotes("NIST_SUBCATEGORY", "42")).rejects.toThrow(APIError);
     });
 
     it("should include the correct status in the thrown APIError", async () => {
@@ -214,9 +206,7 @@ describe("Test Notes Repository", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(APIError);
         expect((error as APIError).status).toBe(404);
-        expect((error as APIError).message).toBe(
-          "Failed to fetch note with ID 99",
-        );
+        expect((error as APIError).message).toBe("Failed to fetch note with ID 99");
       }
     });
   });
@@ -344,9 +334,7 @@ describe("Test Notes Repository", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(APIError);
         expect((error as APIError).status).toBe(404);
-        expect((error as APIError).message).toBe(
-          "Failed to update note with ID 99",
-        );
+        expect((error as APIError).message).toBe("Failed to update note with ID 99");
       }
     });
   });
@@ -361,7 +349,7 @@ describe("Test Notes Repository", () => {
       vi.mocked(apiServices.delete).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: {}
+        data: {},
       });
 
       await deleteNote(1);
@@ -374,7 +362,7 @@ describe("Test Notes Repository", () => {
       vi.mocked(apiServices.delete).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: {}
+        data: {},
       });
 
       const result = await deleteNote(1);
@@ -400,9 +388,7 @@ describe("Test Notes Repository", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(APIError);
         expect((error as APIError).status).toBe(404);
-        expect((error as APIError).message).toBe(
-          "Failed to delete note with ID 99",
-        );
+        expect((error as APIError).message).toBe("Failed to delete note with ID 99");
       }
     });
   });

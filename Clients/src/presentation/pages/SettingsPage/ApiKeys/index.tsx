@@ -12,11 +12,7 @@ import {
 } from "@mui/material";
 import { useState, useCallback, useEffect } from "react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import {
-  Plus as PlusIcon,
-  Trash2 as DeleteIcon,
-  Copy as CopyIcon,
-} from "lucide-react";
+import { Plus as PlusIcon, Trash2 as DeleteIcon, Copy as CopyIcon } from "lucide-react";
 import Alert from "../../../components/Alert";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import Field from "../../../components/Inputs/Field";
@@ -58,28 +54,19 @@ const ApiKeys = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [tokenToDelete, setTokenToDelete] = useState<ApiTokenModel | null>(
-    null,
-  );
+  const [tokenToDelete, setTokenToDelete] = useState<ApiTokenModel | null>(null);
   const [newTokenName, setNewTokenName] = useState("");
-  const [newTokenNameError, setNewTokenNameError] = useState<string | null>(
-    null,
-  );
+  const [newTokenNameError, setNewTokenNameError] = useState<string | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState<number>(30);
-  const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(
-    null,
-  );
+  const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(null);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [copiedTokenId, setCopiedTokenId] = useState<number | null>(null);
   const [hoveredTokenId, setHoveredTokenId] = useState<number | null>(null);
   const [deletingTokenId, setDeletingTokenId] = useState<number | null>(null);
 
-  const showAlert = useCallback(
-    (variant: AlertState["variant"], title: string, body: string) => {
-      setAlert({ variant, title, body, isToast: false });
-    },
-    [],
-  );
+  const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
+    setAlert({ variant, title, body, isToast: false });
+  }, []);
 
   const fetchTokens = useCallback(async () => {
     setIsLoading(true);
@@ -110,23 +97,13 @@ const ApiKeys = () => {
     return undefined;
   }, [alert]);
 
-  const handleTokenNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setNewTokenName(value);
+  const handleTokenNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewTokenName(value);
 
-      const validation = checkStringValidation(
-        "Token name",
-        value,
-        3,
-        50,
-        false,
-        false,
-      );
-      setNewTokenNameError(validation.accepted ? null : validation.message);
-    },
-    [],
-  );
+    const validation = checkStringValidation("Token name", value, 3, 50, false, false);
+    setNewTokenNameError(validation.accepted ? null : validation.message);
+  }, []);
 
   const handleCreateToken = useCallback(async () => {
     if (!newTokenName.trim() || newTokenNameError || isLoading) {
@@ -135,8 +112,7 @@ const ApiKeys = () => {
 
     setIsLoading(true);
     try {
-      const tokenCreationData =
-        ApiTokenModel.createApiTokenForCreation(newTokenName);
+      const tokenCreationData = ApiTokenModel.createApiTokenForCreation(newTokenName);
 
       const response = await createApiToken({
         routeUrl: "/tokens",
@@ -177,17 +153,13 @@ const ApiKeys = () => {
           // Sometimes the data field itself is a string
           errorMessage = response.data;
         } else if (response?.status === 409) {
-          errorMessage =
-            "A token with this name already exists. Please use a different name.";
+          errorMessage = "A token with this name already exists. Please use a different name.";
         } else if (response?.status === 400) {
-          errorMessage =
-            "Invalid token name. Please check your input and try again.";
+          errorMessage = "Invalid token name. Please check your input and try again.";
         } else if (response?.status === 429) {
-          errorMessage =
-            "You have reached the maximum number of API tokens allowed.";
+          errorMessage = "You have reached the maximum number of API tokens allowed.";
         } else if (response?.status >= 500) {
-          errorMessage =
-            "Server error occurred while creating API token. Please try again later.";
+          errorMessage = "Server error occurred while creating API token. Please try again later.";
         }
       }
 
@@ -197,8 +169,7 @@ const ApiKeys = () => {
     }
   }, [newTokenName, newTokenNameError, isLoading, fetchTokens, showAlert]);
 
-  const isCreateButtonDisabled =
-    !newTokenName.trim() || !!newTokenNameError || isLoading;
+  const isCreateButtonDisabled = !newTokenName.trim() || !!newTokenNameError || isLoading;
 
   const handleDeleteToken = useCallback(async () => {
     if (!tokenToDelete) return;
@@ -264,14 +235,11 @@ const ApiKeys = () => {
           }}
         >
           <Box>
-            <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
               API Keys
             </Typography>
             <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5, mb: 3 }}>
-              Manage your API keys for programmatic access to VerifyWise
-              features
+              Manage your API keys for programmatic access to VerifyWise features
             </Typography>
           </Box>
           {tokens.length > 0 && (
@@ -319,14 +287,11 @@ const ApiKeys = () => {
             >
               <PlusIcon size={24} color={brand.primary} />
             </Box>
-            <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: "text.black", mb: 1 }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black", mb: 1 }}>
               No API keys yet
             </Typography>
             <Typography sx={{ fontSize: 13, color: "#666666", mb: 3 }}>
-              Create your first API key to enable programmatic access to your
-              account
+              Create your first API key to enable programmatic access to your account
             </Typography>
             <CustomizableButton
               variant="contained"
@@ -344,11 +309,7 @@ const ApiKeys = () => {
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {tokens.map((token) => (
-              <Collapse
-                key={token.id}
-                in={deletingTokenId !== token.id}
-                timeout={300}
-              >
+              <Collapse key={token.id} in={deletingTokenId !== token.id} timeout={300}>
                 <Box
                   onMouseEnter={() => setHoveredTokenId(token.id)}
                   onMouseLeave={() => setHoveredTokenId(null)}
@@ -356,22 +317,16 @@ const ApiKeys = () => {
                     border: "1.5px solid #eaecf0",
                     borderRadius: "4px",
                     p: 4,
-                    backgroundColor:
-                      hoveredTokenId === token.id ? "#f8fffe" : "background.main",
+                    backgroundColor: hoveredTokenId === token.id ? "#f8fffe" : "background.main",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     transition: "all 0.3s ease-in-out",
                     cursor: "default",
                     boxShadow:
-                      hoveredTokenId === token.id
-                        ? "0 2px 8px rgba(19, 113, 91, 0.08)"
-                        : "none",
+                      hoveredTokenId === token.id ? "0 2px 8px rgba(19, 113, 91, 0.08)" : "none",
                     opacity: deletingTokenId === token.id ? 0 : 1,
-                    transform:
-                      deletingTokenId === token.id
-                        ? "translateY(-20px)"
-                        : "translateY(0)",
+                    transform: deletingTokenId === token.id ? "translateY(-20px)" : "translateY(0)",
                   }}
                 >
                   <Box sx={{ flex: 1 }}>
@@ -403,9 +358,7 @@ const ApiKeys = () => {
                           },
                         }}
                       />
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
-                        •
-                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
                       <Typography sx={{ fontSize: 12, color: "#999999" }}>
                         Created{" "}
                         <Typography
@@ -419,9 +372,7 @@ const ApiKeys = () => {
                           {token.getFormattedCreatedDate()}
                         </Typography>
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
-                        •
-                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
                       <Typography sx={{ fontSize: 12, color: "#999999" }}>
                         {token.isExpired() ? "Expired" : "Expires"}{" "}
                         <Typography
@@ -566,12 +517,10 @@ const ApiKeys = () => {
             }}
           >
             <Stack sx={{ mb: 3 }}>
-              <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 2 }}>
-                API key created
-              </Typography>
+              <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 2 }}>API key created</Typography>
               <Typography sx={{ fontSize: 13, color: "text.black", mb: 3 }}>
-                Your API key has been created successfully. Make sure to copy it
-                now as it won't be shown again.
+                Your API key has been created successfully. Make sure to copy it now as it won't be
+                shown again.
               </Typography>
               <Box>
                 <Box
@@ -603,8 +552,7 @@ const ApiKeys = () => {
                     disableRipple
                     sx={{
                       color: copiedTokenId === -1 ? "brand.primary" : "#666666",
-                      backgroundColor:
-                        copiedTokenId === -1 ? "#f0fdf4" : "transparent",
+                      backgroundColor: copiedTokenId === -1 ? "#f0fdf4" : "transparent",
                       transition: "all 0.2s ease-in-out",
                       "&:hover": {
                         backgroundColor: "#f0fdf4",
@@ -668,8 +616,7 @@ const ApiKeys = () => {
           body={
             <Typography fontSize={13}>
               Are you sure you want to delete the API key "{tokenToDelete.name}
-              "? This action cannot be undone and any applications using this
-              key will lose access.
+              "? This action cannot be undone and any applications using this key will lose access.
             </Typography>
           }
           cancelText="Cancel"

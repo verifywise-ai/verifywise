@@ -106,9 +106,7 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getSlackIntegrations({ id: 1 })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getSlackIntegrations({ id: 1 })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -157,9 +155,7 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getSlackIntegrationById({ id: 1 })).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getSlackIntegrationById({ id: 1 })).rejects.toThrow("Connection refused");
     });
   });
 
@@ -219,9 +215,7 @@ describe("slack.integration.repository", () => {
         webhook_url: "https://hooks.slack.com/test",
       };
 
-      await expect(createSlackIntegration({ body })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createSlackIntegration({ body })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -280,9 +274,7 @@ describe("slack.integration.repository", () => {
         is_active: true,
       };
 
-      await expect(updateSlackIntegration({ id: 1, body })).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(updateSlackIntegration({ id: 1, body })).rejects.toThrow("Connection refused");
     });
   });
 
@@ -303,13 +295,10 @@ describe("slack.integration.repository", () => {
       const result = await sendSlackMessage({ id: 1 });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/slackWebhooks/1/send",
-        {
-          title: "Welcome to Verifywise",
-          message: "This is a test message from VerifyWise.",
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/slackWebhooks/1/send", {
+        title: "Welcome to Verifywise",
+        message: "This is a test message from VerifyWise.",
+      });
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -331,9 +320,7 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(sendSlackMessage({ id: 1 })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(sendSlackMessage({ id: 1 })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -374,9 +361,7 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.delete).mockRejectedValue(networkError);
 
-      await expect(deleteSlackIntegration({ id: 1 })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(deleteSlackIntegration({ id: 1 })).rejects.toThrow("Network timeout");
     });
   });
 });

@@ -2,14 +2,12 @@ export const TransparencyProvision = [
   {
     order_no: 1,
     title: "Intended Use Description",
-    description:
-      "Review and verify technical documentation from AI system providers.",
+    description: "Review and verify technical documentation from AI system providers.",
     implementation_details: "Documentation review process initiated with key stakeholders",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We provide detailed descriptions of the AI system''s intended use.",
+        title: "We provide detailed descriptions of the AI system''s intended use.",
         description:
           "Describing intended use prevents misuse, aligning AI deployment with specified legal and ethical boundaries.",
         implementation_details: "Drafting intended use documentation",
@@ -19,8 +17,7 @@ export const TransparencyProvision = [
   {
     order_no: 2,
     title: "Technical Documentation Review",
-    description:
-      "Review and verify technical documentation from AI system providers.",
+    description: "Review and verify technical documentation from AI system providers.",
     implementation_details: "Setting up documentation review workflow",
     subControls: [
       {
@@ -66,8 +63,7 @@ export const TransparencyProvision = [
       },
       {
         order_no: 2,
-        title:
-          "We define and document forbidden uses and foresee potential misuse.",
+        title: "We define and document forbidden uses and foresee potential misuse.",
         description:
           "Defining forbidden uses helps anticipate misuse and mitigate risks proactively for safe AI applications.",
         implementation_details: "Preparing forbidden use cases",
@@ -77,8 +73,7 @@ export const TransparencyProvision = [
   {
     order_no: 5,
     title: "Dataset Description",
-    description:
-      "Describe training, validation, and testing datasets used in AI systems.",
+    description: "Describe training, validation, and testing datasets used in AI systems.",
     implementation_details: "Documenting datasets used for training and validation.",
     subControls: [
       {
@@ -93,8 +88,7 @@ export const TransparencyProvision = [
   {
     order_no: 6,
     title: "Mitigation Strategies and Bias Testing",
-    description:
-      "Explain mitigation strategies and document bias testing results.",
+    description: "Explain mitigation strategies and document bias testing results.",
     implementation_details: "Developing documentation for bias testing and mitigation strategies.",
     subControls: [
       {
@@ -115,8 +109,7 @@ export const TransparencyProvision = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We provide accuracy metrics, robustness, and cybersecurity information.",
+        title: "We provide accuracy metrics, robustness, and cybersecurity information.",
         description:
           "Providing metrics ensures systems meet robustness and security criteria while fostering trust through transparency.",
         implementation_details: "Gathering performance metrics",

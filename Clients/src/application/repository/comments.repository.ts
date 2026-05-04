@@ -18,7 +18,7 @@ export async function getCommentsByTableRow({
 }): Promise<any> {
   const response = await apiServices.get(
     `/comments/${tableId}/${rowId}?page=${page}&limit=${limit}`,
-    { signal }
+    { signal },
   );
   return response.data;
 }
@@ -62,11 +62,7 @@ export async function updateComment({
 /**
  * Delete a comment
  */
-export async function deleteComment({
-  commentId,
-}: {
-  commentId: number;
-}): Promise<any> {
+export async function deleteComment({ commentId }: { commentId: number }): Promise<any> {
   const response = await apiServices.delete(`/comments/${commentId}`);
   return response.data;
 }
@@ -119,9 +115,7 @@ export async function uploadFile({
     },
     onUploadProgress: (progressEvent: any) => {
       if (onProgress && progressEvent.total) {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(percentCompleted);
       }
     },
@@ -132,11 +126,7 @@ export async function uploadFile({
 /**
  * Download a file
  */
-export async function downloadFile({
-  fileId,
-}: {
-  fileId: string;
-}): Promise<Blob> {
+export async function downloadFile({ fileId }: { fileId: string }): Promise<Blob> {
   const response = await apiServices.get(`/comments/files/${fileId}/download`, {
     responseType: "blob",
   });
@@ -146,11 +136,7 @@ export async function downloadFile({
 /**
  * Delete a file
  */
-export async function deleteFile({
-  fileId,
-}: {
-  fileId: string;
-}): Promise<any> {
+export async function deleteFile({ fileId }: { fileId: string }): Promise<any> {
   const response = await apiServices.delete(`/comments/files/${fileId}`);
   return response.data;
 }
@@ -182,7 +168,7 @@ export async function removeReaction({
   emoji: string;
 }): Promise<any> {
   const response = await apiServices.delete(
-    `/comments/${commentId}/reactions/${encodeURIComponent(emoji)}`
+    `/comments/${commentId}/reactions/${encodeURIComponent(emoji)}`,
   );
   return response.data;
 }
@@ -201,8 +187,12 @@ export async function getTableCounts({
     signal,
   });
   // Backend returns { message: "OK", data: counts }, so we need response.data.data
-  const data = response.data as { data?: Record<string, { unreadCount: number; fileCount: number }> };
-  return data.data || data as unknown as Record<string, { unreadCount: number; fileCount: number }>;
+  const data = response.data as {
+    data?: Record<string, { unreadCount: number; fileCount: number }>;
+  };
+  return (
+    data.data || (data as unknown as Record<string, { unreadCount: number; fileCount: number }>)
+  );
 }
 
 /**

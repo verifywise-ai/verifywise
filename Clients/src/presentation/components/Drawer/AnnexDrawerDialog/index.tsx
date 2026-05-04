@@ -30,7 +30,7 @@ import DatePicker from "../../Inputs/Datepicker";
 import Select from "../../Inputs/Select";
 import TabBar from "../../TabBar";
 import StandardModal from "../../Modals/StandardModal";
-import { useState, useEffect, lazy, Suspense, useRef } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense, useRef } from "react";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -47,13 +47,19 @@ import { AlertProps } from "../../../types/alert.types";
 import allowedRoles from "../../../../application/constants/permissions";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import { getFileById, attachFilesToEntity, getEntityFiles } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+  getEntityFiles,
+} from "../../../../application/repository/file.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { FilePickerModal } from "../../FilePickerModal";
 import { RiskFormValues } from "../../../../domain/types/riskForm.types";
 
 const AuditRiskPopup = lazy(() => import("../../RiskPopup/AuditRiskPopup"));
-const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
+const LinkedRisksPopup = lazy(() =>
+  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
+);
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 
@@ -102,8 +108,19 @@ const VWISO42001AnnexDrawerDialog = ({
   const [fetchedAnnex, setFetchedAnnex] = useState<AnnexCategoryISO>();
   const [isLoading, setIsLoading] = useState(false);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
-  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] =
-    useState<boolean>(false);
+  const memberOptions = useMemo(
+    () => [
+      { _id: "" as string | number, name: "(none)" },
+      ...projectMembers.map((user) => ({
+        _id: user.id as string | number,
+        name: `${user.name}`,
+        email: user.email,
+        surname: user.surname,
+      })),
+    ],
+    [projectMembers],
+  );
+  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] = useState<boolean>(false);
   const [evidenceFiles, setEvidenceFiles] = useState<FileData[]>([]);
   const theme = useTheme();
   const [alert, setAlert] = useState<AlertProps | null>(null);
@@ -113,8 +130,7 @@ const VWISO42001AnnexDrawerDialog = ({
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [selectedRisks, setSelectedRisks] = useState<number[]>([]);
   const [deletedRisks, setDeletedRisks] = useState<number[]>([]);
-  const [auditedStatusModalOpen, setAuditedStatusModalOpen] =
-    useState<boolean>(false);
+  const [auditedStatusModalOpen, setAuditedStatusModalOpen] = useState<boolean>(false);
 
   // Tab management state
   const [activeTab, setActiveTab] = useState("details");
@@ -128,10 +144,8 @@ const VWISO42001AnnexDrawerDialog = ({
   const { userId, userRoleName } = useAuth();
   const { users } = useUsers();
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled =
-    !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
 
   // Tab configuration
   const tabs = [
@@ -207,7 +221,6 @@ const VWISO42001AnnexDrawerDialog = ({
       setAlert,
     });
   };
-
 
   const handleDeleteFile = (fileId: number | string) => {
     const fileIdNumber = typeof fileId === "number" ? fileId : parseInt(fileId);
@@ -334,7 +347,10 @@ const VWISO42001AnnexDrawerDialog = ({
    * 2. file_entity_links table (new framework-agnostic approach)
    * Merges and deduplicates by file ID
    */
-  const loadEvidenceFiles = async (evidenceLinks: FileData[] | null | undefined, categoryId: number) => {
+  const loadEvidenceFiles = async (
+    evidenceLinks: FileData[] | null | undefined,
+    categoryId: number,
+  ) => {
     // Normalize evidence_links files
     const normalizedLinks: FileData[] = Array.isArray(evidenceLinks)
       ? evidenceLinks.map((file: any) => ({
@@ -352,11 +368,7 @@ const VWISO42001AnnexDrawerDialog = ({
     let linkedFiles: FileData[] = [];
     if (categoryId) {
       try {
-        const response = await getEntityFiles(
-          "iso_42001",
-          "annex_category",
-          categoryId
-        );
+        const response = await getEntityFiles("iso_42001", "annex_category", categoryId);
         if (response && Array.isArray(response)) {
           linkedFiles = response.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
@@ -400,9 +412,15 @@ const VWISO42001AnnexDrawerDialog = ({
       if (open && annex?.id) {
         setIsLoading(true);
         try {
-          const response = await GetAnnexCategoriesById({
+          const response = (await GetAnnexCategoriesById({
             routeUrl: `/iso-42001/annexCategory/byId/${control.id}?projectFrameworkId=${projectFrameworkId}`,
-          }) as { data: AnnexCategoryISO & { evidence_links?: FileData[]; guidance?: string; risks?: number[] } };
+          })) as {
+            data: AnnexCategoryISO & {
+              evidence_links?: FileData[];
+              guidance?: string;
+              risks?: number[];
+            };
+          };
           setFetchedAnnex(response.data);
 
           // Initialize form data with fetched values
@@ -410,10 +428,8 @@ const VWISO42001AnnexDrawerDialog = ({
             setFormData({
               guidance: response.data.guidance || "",
               is_applicable: response.data.is_applicable ?? false,
-              justification_for_exclusion:
-                response.data.justification_for_exclusion || "",
-              implementation_description:
-                response.data.implementation_description || "",
+              justification_for_exclusion: response.data.justification_for_exclusion || "",
+              implementation_description: response.data.implementation_description || "",
               status: response.data.status || "",
               owner: response.data.owner?.toString() || "",
               reviewer: response.data.reviewer?.toString() || "",
@@ -430,7 +446,7 @@ const VWISO42001AnnexDrawerDialog = ({
           // On annex category fetch, set evidence files from both sources
           const allEvidenceFiles = await loadEvidenceFiles(
             response.data.evidence_links,
-            control.id
+            control.id,
           );
           setEvidenceFiles(allEvidenceFiles);
         } catch (error) {
@@ -467,8 +483,7 @@ const VWISO42001AnnexDrawerDialog = ({
       value === "Implemented" &&
       (selectedRisks.length > 0 ||
         formData.risks.length > 0 ||
-        (formData.risks.length > 0 &&
-          deletedRisks.length === formData.risks.length))
+        (formData.risks.length > 0 && deletedRisks.length === formData.risks.length))
     ) {
       setAuditedStatusModalOpen(true);
     }
@@ -481,14 +496,8 @@ const VWISO42001AnnexDrawerDialog = ({
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("is_applicable", formData.is_applicable.toString());
-      formDataToSend.append(
-        "justification_for_exclusion",
-        formData.justification_for_exclusion
-      );
-      formDataToSend.append(
-        "implementation_description",
-        formData.implementation_description
-      );
+      formDataToSend.append("justification_for_exclusion", formData.justification_for_exclusion);
+      formDataToSend.append("implementation_description", formData.implementation_description);
       formDataToSend.append("status", formData.status);
       formDataToSend.append("owner", formData.owner);
       formDataToSend.append("reviewer", formData.reviewer);
@@ -577,9 +586,7 @@ const VWISO42001AnnexDrawerDialog = ({
         console.error("Error saving annex category:", error);
       }
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "An error occurred while saving changes";
+        error instanceof Error ? error.message : "An error occurred while saving changes";
       handleAlert({
         variant: "error",
         body: errorMessage,
@@ -662,11 +669,7 @@ const VWISO42001AnnexDrawerDialog = ({
         <Divider />
         <TabContext value={activeTab}>
           <Box sx={{ padding: "0 20px" }}>
-            <TabBar
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={handleTabChange}
-            />
+            <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
           </Box>
 
           {/* Tab 1: Details */}
@@ -741,16 +744,13 @@ const VWISO42001AnnexDrawerDialog = ({
                 <Field
                   type="description"
                   value={formData.justification_for_exclusion}
-                  onChange={(e) =>
-                    handleFieldChange("justification_for_exclusion", e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange("justification_for_exclusion", e.target.value)}
                   disabled={formData.is_applicable || isEditingDisabled}
                   sx={{
                     cursor: formData.is_applicable ? "not-allowed" : "text",
-                    "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-                      {
-                        height: "73px",
-                      },
+                    "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
+                      height: "73px",
+                    },
                   }}
                   placeholder="Required if control is not applicable..."
                 />
@@ -805,12 +805,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   label="Owner:"
                   value={formData.owner ? parseInt(formData.owner) : ""}
                   onChange={handleSelectChange("owner")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   disabled={!formData.is_applicable || isEditingDisabled}
                   sx={inputStyles}
                   placeholder={"Select owner"}
@@ -821,12 +816,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   label="Reviewer:"
                   value={formData.reviewer ? parseInt(formData.reviewer) : ""}
                   onChange={handleSelectChange("reviewer")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   disabled={!formData.is_applicable || isEditingDisabled}
                   sx={inputStyles}
                   placeholder={"Select reviewer"}
@@ -837,12 +827,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   label="Approver:"
                   value={formData.approver ? parseInt(formData.approver) : ""}
                   onChange={handleSelectChange("approver")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   disabled={!formData.is_applicable || isEditingDisabled}
                   sx={inputStyles}
                   placeholder={"Select approver"}
@@ -865,9 +850,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   <Field
                     type="description"
                     value={formData.auditor_feedback}
-                    onChange={(e) =>
-                      handleFieldChange("auditor_feedback", e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                     disabled={!formData.is_applicable || isAuditingDisabled}
                     sx={{
                       cursor: !formData.is_applicable ? "not-allowed" : "text",
@@ -929,9 +912,7 @@ const VWISO42001AnnexDrawerDialog = ({
                         border: `1px solid ${theme.palette.border.dark}`,
                       },
                     }}
-                    disableRipple={
-                      theme.components?.MuiButton?.defaultProps?.disableRipple
-                    }
+                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                   >
                     Upload new files
                   </Button>
@@ -952,9 +933,7 @@ const VWISO42001AnnexDrawerDialog = ({
                         border: "1px solid #3D62C3",
                       },
                     }}
-                    disableRipple={
-                      theme.components?.MuiButton?.defaultProps?.disableRipple
-                    }
+                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                   >
                     Attach existing files
                   </Button>
@@ -1016,8 +995,10 @@ const VWISO42001AnnexDrawerDialog = ({
                             size="small"
                             onClick={() =>
                               handleDownloadFile(
-                                typeof file.id === "number" ? file.id : parseInt(file.id.toString()),
-                                file.fileName
+                                typeof file.id === "number"
+                                  ? file.id
+                                  : parseInt(file.id.toString()),
+                                file.fileName,
                               )
                             }
                           >
@@ -1025,10 +1006,7 @@ const VWISO42001AnnexDrawerDialog = ({
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete file">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteFile(file.id)}
-                          >
+                          <IconButton size="small" onClick={() => handleDeleteFile(file.id)}>
                             <DeleteIcon size={16} />
                           </IconButton>
                         </Tooltip>
@@ -1119,21 +1097,23 @@ const VWISO42001AnnexDrawerDialog = ({
               )}
 
               {/* Empty State */}
-              {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
-                <Box
-                  sx={{
-                    border: `2px dashed ${theme.palette.border.dark}`,
-                    borderRadius: "4px",
-                    padding: "20px",
-                    textAlign: "center",
-                    backgroundColor: "background.accent",
-                  }}
-                >
-                  <Typography sx={{ color: "text.tertiary" }}>
-                    No evidence files uploaded yet
-                  </Typography>
-                </Box>
-              )}
+              {evidenceFiles.length === 0 &&
+                uploadFiles.length === 0 &&
+                pendingAttachFiles.length === 0 && (
+                  <Box
+                    sx={{
+                      border: `2px dashed ${theme.palette.border.dark}`,
+                      borderRadius: "4px",
+                      padding: "20px",
+                      textAlign: "center",
+                      backgroundColor: "background.accent",
+                    }}
+                  >
+                    <Typography sx={{ color: "text.tertiary" }}>
+                      No evidence files uploaded yet
+                    </Typography>
+                  </Box>
+                )}
             </Stack>
           </TabPanel>
 
@@ -1144,7 +1124,8 @@ const VWISO42001AnnexDrawerDialog = ({
                 Linked risks
               </Typography>
               <Typography variant="body2" color="text.tertiary">
-                Link risks from your risk database to track which risks are addressed by this annex category.
+                Link risks from your risk database to track which risks are addressed by this annex
+                category.
               </Typography>
 
               {/* Add/Remove Button */}
@@ -1166,9 +1147,7 @@ const VWISO42001AnnexDrawerDialog = ({
                       border: `1px solid ${theme.palette.border.dark}`,
                     },
                   }}
-                  disableRipple={
-                    theme.components?.MuiButton?.defaultProps?.disableRipple
-                  }
+                  disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                 >
                   Add/remove risks
                 </Button>
@@ -1218,18 +1197,12 @@ const VWISO42001AnnexDrawerDialog = ({
                         </Box>
                         <Box sx={{ display: "flex", gap: 0.5 }}>
                           <Tooltip title="View details">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleViewRiskDetails(risk)}
-                            >
+                            <IconButton size="small" onClick={() => handleViewRiskDetails(risk)}>
                               <ViewIcon size={16} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Unlink risk">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleUnlinkRisk(risk.id)}
-                            >
+                            <IconButton size="small" onClick={() => handleUnlinkRisk(risk.id)}>
                               <DeleteIcon size={16} />
                             </IconButton>
                           </Tooltip>
@@ -1250,9 +1223,7 @@ const VWISO42001AnnexDrawerDialog = ({
                     backgroundColor: "background.accent",
                   }}
                 >
-                  <Typography sx={{ color: "text.tertiary" }}>
-                    No risks linked yet
-                  </Typography>
+                  <Typography sx={{ color: "text.tertiary" }}>No risks linked yet</Typography>
                 </Box>
               )}
 
@@ -1338,9 +1309,7 @@ const VWISO42001AnnexDrawerDialog = ({
         </TabContext>
 
         {/* Alert */}
-        {alert && (
-          <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-        )}
+        {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
         <Stack
           className="vw-iso-42001-annex-drawer-dialog-footer"

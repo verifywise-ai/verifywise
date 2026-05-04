@@ -14,7 +14,11 @@ export default function SuperAdminSettings() {
   const [activeTab, setActiveTab] = useState(tab || "profile");
 
   const breadcrumbItems = [
-    { label: "Settings", icon: <Settings size={14} />, ...(tab ? { path: "/super-admin/settings" } : {}) },
+    {
+      label: "Settings",
+      icon: <Settings size={14} />,
+      ...(tab ? { path: "/super-admin/settings" } : {}),
+    },
     ...(tab ? [{ label: tab.charAt(0).toUpperCase() + tab.slice(1) }] : []),
   ];
 

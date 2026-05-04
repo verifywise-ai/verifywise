@@ -41,14 +41,20 @@ describe("deepEvalOrgsService", () => {
   it("createOrg posts name and member_ids", async () => {
     mockAxios.post.mockResolvedValue({ data: { org: { id: "new", name: "New Org" } } });
     const result = await deepEvalOrgsService.createOrg("New Org", [1, 2]);
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/orgs", { name: "New Org", member_ids: [1, 2] });
+    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/orgs", {
+      name: "New Org",
+      member_ids: [1, 2],
+    });
     expect(result.org.name).toBe("New Org");
   });
 
   it("updateOrg puts updated data", async () => {
     mockAxios.put.mockResolvedValue({ data: { org: { id: "1", name: "Updated" } } });
     const result = await deepEvalOrgsService.updateOrg("1", "Updated", [3]);
-    expect(mockAxios.put).toHaveBeenCalledWith("/deepeval/orgs/1", { name: "Updated", member_ids: [3] });
+    expect(mockAxios.put).toHaveBeenCalledWith("/deepeval/orgs/1", {
+      name: "Updated",
+      member_ids: [3],
+    });
     expect(result.org.name).toBe("Updated");
   });
 

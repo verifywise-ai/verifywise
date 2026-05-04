@@ -129,11 +129,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
         />
       </Box>
 
-      {error && (
-        <Typography sx={{ color: "#ef4444", fontSize: "12px", mt: 1 }}>
-          {error}
-        </Typography>
-      )}
+      {error && <Typography sx={{ color: "#ef4444", fontSize: "12px", mt: 1 }}>{error}</Typography>}
 
       <Typography sx={{ color: `${text.disabled}`, fontSize: "11px", mt: 1.5 }}>
         Please solve this simple math problem to verify you are human

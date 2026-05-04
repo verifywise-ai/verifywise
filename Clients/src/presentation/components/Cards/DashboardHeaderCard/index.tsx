@@ -13,7 +13,13 @@ interface HeaderCardProps {
   navigateTo?: string;
 }
 
-export function DashboardHeaderCard({ title, count, disableNavigation = false, icon, navigateTo }: HeaderCardProps) {
+export function DashboardHeaderCard({
+  title,
+  count,
+  disableNavigation = false,
+  icon,
+  navigateTo,
+}: HeaderCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -56,9 +62,9 @@ export function DashboardHeaderCard({ title, count, disableNavigation = false, i
         transition: "all 0.2s ease",
         "&:hover": isClickable
           ? {
-            background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
-            borderColor: `${borderPalette.dark}`,
-          }
+              background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
+              borderColor: `${borderPalette.dark}`,
+            }
           : {},
       }}
       onMouseEnter={() => setIsHovered(true)}

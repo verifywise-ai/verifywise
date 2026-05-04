@@ -65,8 +65,7 @@ function createTestStore(preloadedAuth?: PreloadedAuthState) {
     preloadedState: {
       auth: { ...defaultAuth, ...preloadedAuth } as ReturnType<typeof authReducer>,
     },
-    middleware: (getDefault) =>
-      getDefault({ serializableCheck: false }),
+    middleware: (getDefault) => getDefault({ serializableCheck: false }),
   });
 }
 
@@ -83,11 +82,7 @@ function createTestQueryClient() {
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  {
-    route = "/",
-    preloadedAuth,
-    ...renderOptions
-  }: ExtendedRenderOptions = {}
+  { route = "/", preloadedAuth, ...renderOptions }: ExtendedRenderOptions = {},
 ) {
   const store = createTestStore(preloadedAuth);
   const queryClient = createTestQueryClient();
@@ -97,9 +92,7 @@ export function renderWithProviders(
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={light}>
-            <MemoryRouter initialEntries={[route]}>
-              {children}
-            </MemoryRouter>
+            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
           </ThemeProvider>
         </QueryClientProvider>
       </Provider>

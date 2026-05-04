@@ -90,8 +90,7 @@ export const subtopics = (topics: number[]): ISubtopic[] => {
     },
     {
       topic_id: topics[12],
-      title:
-        "Transparency obligations for providers and users of certain AI systems",
+      title: "Transparency obligations for providers and users of certain AI systems",
       order_no: 1,
     },
     {
@@ -188,8 +187,7 @@ export const subtopics = (topics: number[]): ISubtopic[] => {
     },
     {
       topic_id: topics[26],
-      title:
-        "Transparency obligations for providers and users of certain AI systems",
+      title: "Transparency obligations for providers and users of certain AI systems",
       order_no: 1,
     },
     {

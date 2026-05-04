@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../../models/project/project.model";
 import { ProjectFrameworksModel } from "../../models/projectFrameworks/projectFrameworks.model";
 

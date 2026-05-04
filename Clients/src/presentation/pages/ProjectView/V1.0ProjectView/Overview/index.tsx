@@ -21,19 +21,15 @@ import {
   UserCheck as UserCheckIcon,
   Target as TargetIcon,
   Users as UsersIcon,
-  Clock as ClockIcon
+  Clock as ClockIcon,
 } from "lucide-react";
 import { PluginSlot } from "../../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../../domain/constants/pluginSlots";
 import { brand } from "../../../../themes/palette";
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
-  const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(
-    null
-  );
-  const [projectFrameworkId2, setProjectFrameworkId2] = useState<number | null>(
-    null
-  );
+  const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(null);
+  const [projectFrameworkId2, setProjectFrameworkId2] = useState<number | null>(null);
   const { users } = useUsers();
 
   const projectId = project?.id;
@@ -47,10 +43,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     if (project?.framework) {
       // Only set framework ID 1 if the project has EU AI Act framework
       const framework1 = project.framework.find((p) => p.framework_id === 1);
-      if (
-        framework1?.project_framework_id &&
-        !isNaN(Number(framework1.project_framework_id))
-      ) {
+      if (framework1?.project_framework_id && !isNaN(Number(framework1.project_framework_id))) {
         setProjectFrameworkId(Number(framework1.project_framework_id));
       } else {
         setProjectFrameworkId(null);
@@ -58,10 +51,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
 
       // Only set framework ID 2 if the project has ISO 42001 framework
       const framework2 = project.framework.find((p) => p.framework_id === 2);
-      if (
-        framework2?.project_framework_id &&
-        !isNaN(Number(framework2.project_framework_id))
-      ) {
+      if (framework2?.project_framework_id && !isNaN(Number(framework2.project_framework_id))) {
         setProjectFrameworkId2(Number(framework2.project_framework_id));
       } else {
         setProjectFrameworkId2(null);
@@ -100,14 +90,8 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
 
       try {
         // Only fetch EU AI Act data if the project has framework ID 1
-        const hasEuAiActFramework = project.framework.some(
-          (f) => f.framework_id === 1
-        );
-        if (
-          hasEuAiActFramework &&
-          projectFrameworkId &&
-          !isNaN(projectFrameworkId)
-        ) {
+        const hasEuAiActFramework = project.framework.some((f) => f.framework_id === 1);
+        if (hasEuAiActFramework && projectFrameworkId && !isNaN(projectFrameworkId)) {
           try {
             const complianceData = await getEntityById({
               routeUrl: `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
@@ -134,14 +118,8 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
         }
 
         // Only fetch ISO 42001 data if the project has framework ID 2
-        const hasIso42001Framework = project.framework.some(
-          (f) => f.framework_id === 2
-        );
-        if (
-          hasIso42001Framework &&
-          projectFrameworkId2 &&
-          !isNaN(projectFrameworkId2)
-        ) {
+        const hasIso42001Framework = project.framework.some((f) => f.framework_id === 2);
+        if (hasIso42001Framework && projectFrameworkId2 && !isNaN(projectFrameworkId2)) {
           try {
             const annexesData = await getEntityById({
               routeUrl: `/iso-42001/annexes/progress/${projectFrameworkId2}`,
@@ -178,9 +156,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     return <div>No project selected</div>;
   }
 
-  const user: User =
-    users.find((u: User) => u.id === project.last_updated_by) ??
-    ({} as User);
+  const user: User = users.find((u: User) => u.id === project.last_updated_by) ?? ({} as User);
 
   const projectMembers: string[] = users
     .filter((user: { id: any }) => project.members.includes(user.id || ""))
@@ -196,7 +172,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     assessmentProgress?.totalQuestions ?? 0,
   ];
 
-  const titleEuAct = ["Requirements", "Controls"];
+  const titleEuAct = ["Requirements", "Assessments"];
 
   const completedIso42001Numbers = [
     clausesProgress?.doneSubclauses ?? 0,
@@ -217,11 +193,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
         <Stack className="vw-project-overview-row" sx={rowStyle}>
           {project ? (
             <>
-              <InfoCard
-                title="Owner"
-                body={projectOwner || "N/A"}
-                icon={<UserIcon size={16} />}
-              />
+              <InfoCard title="Owner" body={projectOwner || "N/A"} icon={<UserIcon size={16} />} />
               <InfoCard
                 title="Use case status"
                 body={project.status || "Not started"}
@@ -239,11 +211,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                   icon={<UserCheckIcon size={16} />}
                 />
               ) : (
-                <InfoCard
-                  title="Last updated by"
-                  body="N/A"
-                  icon={<UserCheckIcon size={16} />}
-                />
+                <InfoCard title="Last updated by" body="N/A" icon={<UserCheckIcon size={16} />} />
               )}
             </>
           ) : (
@@ -270,16 +238,8 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             </>
           ) : (
             <>
-              <CustomizableSkeleton
-                variant="rectangular"
-                width="60%"
-                height={100}
-              />
-              <CustomizableSkeleton
-                variant="rectangular"
-                width="60%"
-                height={100}
-              />
+              <CustomizableSkeleton variant="rectangular" width="60%" height={100} />
+              <CustomizableSkeleton variant="rectangular" width="60%" height={100} />
             </>
           )}
         </Stack>
@@ -288,9 +248,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             <>
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>
-                    EU AI Act Completion Status
-                  </Typography>
+                  <Typography sx={projectRiskSection}>EU AI Act Completion Status</Typography>
                   <GroupStatsCard
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
@@ -301,9 +259,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {projectFrameworkId2 && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>
-                    ISO 42001 Completion Status
-                  </Typography>
+                  <Typography sx={projectRiskSection}>ISO 42001 Completion Status</Typography>
                   <GroupStatsCard
                     completed={completedIso42001Numbers}
                     total={totalIso42001Numbers}
@@ -324,16 +280,8 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             </>
           ) : (
             <>
-              <CustomizableSkeleton
-                variant="rectangular"
-                width="100%"
-                height={100}
-              />
-              <CustomizableSkeleton
-                variant="rectangular"
-                width="100%"
-                height={100}
-              />
+              <CustomizableSkeleton variant="rectangular" width="100%" height={100} />
+              <CustomizableSkeleton variant="rectangular" width="100%" height={100} />
             </>
           )}
         </Stack>
@@ -343,14 +291,46 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             <>
               <Typography sx={projectRiskSection}>Use case risks</Typography>
               <StatusTileCards
-                items={[
-                  { key: "Total", label: "Total", count: projectRisksSummary.total, color: "#4B5563" },
-                  { key: "Very high", label: "Very high", count: projectRisksSummary.veryHighRisks, color: "#C63622" },
-                  { key: "High", label: "High", count: projectRisksSummary.highRisks, color: "#D68B61" },
-                  { key: "Medium", label: "Medium", count: projectRisksSummary.mediumRisks, color: "#D6B971" },
-                  { key: "Low", label: "Low", count: projectRisksSummary.lowRisks, color: "#52AB43" },
-                  { key: "Very low", label: "Very low", count: projectRisksSummary.veryLowRisks, color: "#B8D39C" },
-                ] satisfies StatusTileItem[]}
+                items={
+                  [
+                    {
+                      key: "Total",
+                      label: "Total",
+                      count: projectRisksSummary.total,
+                      color: "#4B5563",
+                    },
+                    {
+                      key: "Very high",
+                      label: "Very high",
+                      count: projectRisksSummary.veryHighRisks,
+                      color: "#C63622",
+                    },
+                    {
+                      key: "High",
+                      label: "High",
+                      count: projectRisksSummary.highRisks,
+                      color: "#D68B61",
+                    },
+                    {
+                      key: "Medium",
+                      label: "Medium",
+                      count: projectRisksSummary.mediumRisks,
+                      color: "#D6B971",
+                    },
+                    {
+                      key: "Low",
+                      label: "Low",
+                      count: projectRisksSummary.lowRisks,
+                      color: "#52AB43",
+                    },
+                    {
+                      key: "Very low",
+                      label: "Very low",
+                      count: projectRisksSummary.veryLowRisks,
+                      color: "#B8D39C",
+                    },
+                  ] satisfies StatusTileItem[]
+                }
                 entityName="risk"
                 size="small"
               />
@@ -358,11 +338,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
           ) : (
             <>
               <CustomizableSkeleton variant="text" width="20%" height={32} />
-              <CustomizableSkeleton
-                variant="rectangular"
-                width="100%"
-                height={200}
-              />
+              <CustomizableSkeleton variant="rectangular" width="100%" height={200} />
             </>
           )}
         </Stack>

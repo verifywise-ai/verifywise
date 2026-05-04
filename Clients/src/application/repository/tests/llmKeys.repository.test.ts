@@ -79,19 +79,13 @@ describe("Test LLM Keys Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(createLLMKey({ body: mockLLMKey })).rejects.toEqual(
-        mockError,
-      );
+      await expect(createLLMKey({ body: mockLLMKey })).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(createLLMKey({ body: mockLLMKey })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createLLMKey({ body: mockLLMKey })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -136,19 +130,13 @@ describe("Test LLM Keys Repository", () => {
       };
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(editLLMKey({ id: "99", body: updateBody })).rejects.toEqual(
-        mockError,
-      );
+      await expect(editLLMKey({ id: "99", body: updateBody })).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.patch).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.patch).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(editLLMKey({ id: "1", body: updateBody })).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(editLLMKey({ id: "1", body: updateBody })).rejects.toThrow("Connection refused");
     });
   });
 
@@ -195,9 +183,7 @@ describe("Test LLM Keys Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getLLMKeys()).rejects.toThrow("Network timeout");
     });
@@ -246,9 +232,7 @@ describe("Test LLM Keys Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Connection refused"));
 
       await expect(getLLMKey("OpenAI")).rejects.toThrow("Connection refused");
     });
@@ -289,9 +273,7 @@ describe("Test LLM Keys Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.delete).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.delete).mockRejectedValue(new Error("Network timeout"));
 
       await expect(deleteLLMKey("1")).rejects.toThrow("Network timeout");
     });
@@ -366,9 +348,7 @@ describe("Test LLM Keys Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Connection refused"));
 
       await expect(getLLMKeyStatus()).rejects.toThrow("Connection refused");
     });

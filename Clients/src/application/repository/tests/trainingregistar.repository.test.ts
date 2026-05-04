@@ -55,9 +55,7 @@ describe("trainingregistar.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        createTraining("/training", { name: "" }),
-      ).rejects.toThrow();
+      await expect(createTraining("/training", { name: "" })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -65,9 +63,9 @@ describe("trainingregistar.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(
-        createTraining("/training", { name: "Test Training" }),
-      ).rejects.toThrow("Network timeout");
+      await expect(createTraining("/training", { name: "Test Training" })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 });

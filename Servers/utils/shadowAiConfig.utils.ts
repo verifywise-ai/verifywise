@@ -14,13 +14,13 @@ import { IShadowAiSyslogConfig, IShadowAiSettings } from "../domain.layer/interf
  * Get all syslog configurations for an organization.
  */
 export async function getSyslogConfigsQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<IShadowAiSyslogConfig[]> {
   const [rows] = await sequelize.query(
     `SELECT * FROM shadow_ai_syslog_config
      WHERE organization_id = :organizationId
      ORDER BY created_at DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   return rows as IShadowAiSyslogConfig[];
@@ -36,7 +36,7 @@ export async function createSyslogConfigQuery(
     parser_type: string;
     is_active: boolean;
   },
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiSyslogConfig> {
   const [result] = await sequelize.query(
     `INSERT INTO shadow_ai_syslog_config
@@ -52,7 +52,7 @@ export async function createSyslogConfigQuery(
         is_active: config.is_active,
       },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (result as IShadowAiSyslogConfig[])[0];
@@ -69,7 +69,7 @@ export async function updateSyslogConfigQuery(
     parser_type?: string;
     is_active?: boolean;
   },
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiSyslogConfig | null> {
   const setClauses: string[] = [];
   const replacements: Record<string, unknown> = { organizationId, configId };
@@ -97,7 +97,7 @@ export async function updateSyslogConfigQuery(
     {
       replacements,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   const rows = result as IShadowAiSyslogConfig[];
@@ -110,7 +110,7 @@ export async function updateSyslogConfigQuery(
 export async function deleteSyslogConfigQuery(
   organizationId: number,
   configId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
     `DELETE FROM shadow_ai_syslog_config WHERE organization_id = :organizationId AND id = :configId
@@ -118,7 +118,7 @@ export async function deleteSyslogConfigQuery(
     {
       replacements: { organizationId, configId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (rows as any[]).length > 0;
@@ -129,12 +129,10 @@ export async function deleteSyslogConfigQuery(
 /**
  * Get organization settings (always returns a row — created by migration).
  */
-export async function getSettingsQuery(
-  organizationId: number
-): Promise<IShadowAiSettings> {
+export async function getSettingsQuery(organizationId: number): Promise<IShadowAiSettings> {
   const [rows] = await sequelize.query(
     `SELECT * FROM shadow_ai_settings WHERE organization_id = :organizationId`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   // Return defaults if no row exists yet
@@ -156,7 +154,7 @@ export async function getSettingsQuery(
 export async function updateSettingsQuery(
   organizationId: number,
   updates: Partial<Omit<IShadowAiSettings, "id" | "updated_at">>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiSettings> {
   const setClauses: string[] = ["updated_at = NOW()"];
   const replacements: Record<string, unknown> = { organizationId };
@@ -190,7 +188,7 @@ export async function updateSettingsQuery(
     {
       replacements,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (result as IShadowAiSettings[])[0];

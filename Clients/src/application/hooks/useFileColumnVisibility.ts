@@ -51,9 +51,7 @@ const STORAGE_KEY = "verifywise:file-column-visibility";
 const VERSION_KEY = "verifywise:file-column-visibility-version";
 
 // Always-visible column keys that must be included
-const ALWAYS_VISIBLE_KEYS = DEFAULT_COLUMNS
-  .filter((c) => c.alwaysVisible)
-  .map((c) => c.key);
+const ALWAYS_VISIBLE_KEYS = DEFAULT_COLUMNS.filter((c) => c.alwaysVisible).map((c) => c.key);
 
 // Valid column keys for validation
 const VALID_COLUMN_KEYS = new Set(DEFAULT_COLUMNS.map((c) => c.key));
@@ -107,9 +105,9 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
         if (storedVersion < SCHEMA_VERSION) {
           // Add any new defaultVisible columns that weren't in the stored set
           const storedSet = new Set(validKeys);
-          const newDefaults = DEFAULT_COLUMNS
-            .filter((c) => c.defaultVisible && !storedSet.has(c.key))
-            .map((c) => c.key);
+          const newDefaults = DEFAULT_COLUMNS.filter(
+            (c) => c.defaultVisible && !storedSet.has(c.key),
+          ).map((c) => c.key);
           localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
           return new Set([...validKeys, ...newDefaults, ...ALWAYS_VISIBLE_KEYS]);
         }
@@ -123,9 +121,7 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
 
     // First visit — save current version
     localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
-    return new Set(
-      DEFAULT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key)
-    );
+    return new Set(DEFAULT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
   });
 
   // Persist to localStorage when visibility changes
@@ -178,9 +174,7 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
    * Reset to default visibility
    */
   const resetToDefaults = useCallback(() => {
-    setVisibleColumns(
-      new Set(DEFAULT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
-    );
+    setVisibleColumns(new Set(DEFAULT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key)));
   }, []);
 
   /**
@@ -188,7 +182,7 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
    */
   const isColumnVisible = useCallback(
     (column: FileColumn) => visibleColumns.has(column),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   // Get column configs with current visibility
@@ -198,13 +192,13 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
         ...config,
         visible: visibleColumns.has(config.key),
       })),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   // Get visible column keys in order (for conditional cell rendering)
   const visibleColumnKeys = useMemo(
     () => DEFAULT_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((c) => c.key),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   /**
@@ -212,17 +206,15 @@ export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
    * Only returns visible columns with proper IDs and styling
    */
   const getTableColumns = useCallback((): TableColumn[] => {
-    return DEFAULT_COLUMNS.filter((col) => visibleColumns.has(col.key)).map(
-      (col, index) => ({
-        id: index + 1,
-        name: col.label,
-        sx: {
-          minWidth: "fit-content",
-          width: "fit-content",
-          maxWidth: "50%",
-        },
-      })
-    );
+    return DEFAULT_COLUMNS.filter((col) => visibleColumns.has(col.key)).map((col, index) => ({
+      id: index + 1,
+      name: col.label,
+      sx: {
+        minWidth: "fit-content",
+        width: "fit-content",
+        maxWidth: "50%",
+      },
+    }));
   }, [visibleColumns]);
 
   return {

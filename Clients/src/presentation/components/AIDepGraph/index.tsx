@@ -102,12 +102,7 @@ interface AIDepGraphProps {
 /**
  * Simple force-directed layout algorithm
  */
-function applyForceLayout(
-  nodes: Node[],
-  edges: Edge[],
-  width: number,
-  height: number
-): Node[] {
+function applyForceLayout(nodes: Node[], edges: Edge[], width: number, height: number): Node[] {
   const positions = new Map<string, { x: number; y: number; vx: number; vy: number }>();
 
   // Initialize positions randomly
@@ -191,7 +186,7 @@ function transformToReactFlow(
   data: DependencyGraphResponse,
   visibleTypes: DependencyNodeType[],
   edgeLabelColor: string,
-  edgeLabelBgColor: string
+  edgeLabelBgColor: string,
 ): { nodes: Node[]; edges: Edge[] } {
   // Filter nodes by visible types
   const filteredNodes = data.nodes.filter((n) => visibleTypes.includes(n.type));
@@ -301,7 +296,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
       graphData,
       visibleTypes,
       theme.palette.text.secondary,
-      theme.palette.common.white
+      theme.palette.common.white,
     );
 
     if (rawNodes.length === 0) {
@@ -317,7 +312,15 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
 
     // Fit view after layout
     setTimeout(() => fitView({ padding: 0.2 }), 100);
-  }, [graphData, visibleTypes, setNodes, setEdges, fitView, theme.palette.text.secondary, theme.palette.common.white]);
+  }, [
+    graphData,
+    visibleTypes,
+    setNodes,
+    setEdges,
+    fitView,
+    theme.palette.text.secondary,
+    theme.palette.common.white,
+  ]);
 
   // Handle node click
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -343,7 +346,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
         setVisibleTypes(newTypes);
       }
     },
-    []
+    [],
   );
 
   // Get visible node types from data
@@ -362,7 +365,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
       const url = `${baseUrl}/blob/main/${filePath.path}${lineParam}`;
       window.open(url, "_blank");
     },
-    [repositoryUrl]
+    [repositoryUrl],
   );
 
   if (loading) {
@@ -415,7 +418,12 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
           nodeColor={(n) => (n.data as AIDepNodeData)?.color || theme.palette.text.secondary}
           maskColor="rgba(0,0,0,0.1)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={theme.palette.divider} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color={theme.palette.divider}
+        />
 
         {/* Control Panel */}
         <Panel position="top-left">
@@ -473,7 +481,11 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
         <Box sx={sidebarContainerSx}>
           <Box sx={sidebarHeaderSx}>
             <Typography sx={sidebarTitleSx}>{selectedNode.label}</Typography>
-            <IconButton size="small" onClick={() => setSelectedNode(null)} aria-label="Close details panel">
+            <IconButton
+              size="small"
+              onClick={() => setSelectedNode(null)}
+              aria-label="Close details panel"
+            >
               <X size={16} />
             </IconButton>
           </Box>
@@ -500,9 +512,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
               {/* Confidence */}
               <Box sx={sidebarTableCellSx}>
                 <Typography sx={sidebarTableLabelSx}>Confidence</Typography>
-                <Typography
-                  sx={{ ...sidebarTableValueSx, textTransform: "capitalize" }}
-                >
+                <Typography sx={{ ...sidebarTableValueSx, textTransform: "capitalize" }}>
                   {selectedNode.confidence}
                 </Typography>
               </Box>
@@ -525,31 +535,29 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
             {selectedNode.governanceStatus && (
               <Box sx={sidebarSectionSx}>
                 <Typography sx={sidebarLabelSx}>Governance status</Typography>
-                <Typography
-                  sx={{ ...sidebarValueSx, textTransform: "capitalize" }}
-                >
+                <Typography sx={{ ...sidebarValueSx, textTransform: "capitalize" }}>
                   {selectedNode.governanceStatus}
                 </Typography>
               </Box>
             )}
 
             <Box sx={sidebarSectionSx}>
-              <Typography sx={sidebarLabelSx}>
-                Files ({selectedNode.fileCount})
-              </Typography>
+              <Typography sx={sidebarLabelSx}>Files ({selectedNode.fileCount})</Typography>
               <Box sx={{ maxHeight: 200, overflow: "auto" }}>
                 {selectedNode.filePaths.slice(0, 10).map((fp, idx) => (
-                  <Typography
-                    key={idx}
-                    sx={filePathSx}
-                    onClick={() => openFileInGitHub(fp)}
-                  >
+                  <Typography key={idx} sx={filePathSx} onClick={() => openFileInGitHub(fp)}>
                     {fp.path}
                     {fp.line_number && `:${fp.line_number}`}
                   </Typography>
                 ))}
                 {selectedNode.fileCount > 10 && (
-                  <Typography sx={{ fontSize: theme.typography.caption.fontSize, color: theme.palette.text.secondary, mt: 0.5 }}>
+                  <Typography
+                    sx={{
+                      fontSize: theme.typography.caption.fontSize,
+                      color: theme.palette.text.secondary,
+                      mt: 0.5,
+                    }}
+                  >
                     +{selectedNode.fileCount - 10} more files
                   </Typography>
                 )}

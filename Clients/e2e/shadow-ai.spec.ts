@@ -2,9 +2,7 @@ import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("Shadow AI", () => {
-  test("renders the shadow AI insights page", async ({
-    authedPage: page,
-  }) => {
+  test("renders the shadow AI insights page", async ({ authedPage: page }) => {
     await page.goto("/shadow-ai/insights");
     await expect(page).toHaveURL(/\/shadow-ai/);
 
@@ -13,13 +11,11 @@ test.describe("Shadow AI", () => {
       page
         .getByText(/shadow/i)
         .or(page.getByText(/insight/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/shadow-ai/insights");
     await page.waitForLoadState("domcontentloaded");
 
@@ -42,9 +38,7 @@ test.describe("Shadow AI", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("dashboard metrics or empty state is visible", async ({
-    authedPage: page,
-  }) => {
+  test("dashboard metrics or empty state is visible", async ({ authedPage: page }) => {
     await page.goto("/shadow-ai/insights");
 
     const content = page
@@ -57,9 +51,7 @@ test.describe("Shadow AI", () => {
 
   // --- Tier 5: Rules & alerts ---
 
-  test("rules tab shows create rule button or rules list", async ({
-    authedPage: page,
-  }) => {
+  test("rules tab shows create rule button or rules list", async ({ authedPage: page }) => {
     await page.goto("/shadow-ai/rules");
     await page.waitForTimeout(2000);
 
@@ -86,9 +78,7 @@ test.describe("Shadow AI", () => {
     await expect(content.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("create rule modal opens with form fields", async ({
-    authedPage: page,
-  }) => {
+  test("create rule modal opens with form fields", async ({ authedPage: page }) => {
     await page.goto("/shadow-ai/rules");
     await page.waitForTimeout(2000);
 
@@ -97,7 +87,12 @@ test.describe("Shadow AI", () => {
       .or(page.getByRole("button", { name: /add.*rule/i }))
       .or(page.getByRole("button", { name: /new.*rule/i }));
 
-    if (!(await createBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await createBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -112,7 +107,12 @@ test.describe("Shadow AI", () => {
       .or(page.getByRole("textbox", { name: /name/i }))
       .or(page.getByRole("textbox").first());
 
-    if (await nameField.first().isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (
+      await nameField
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false)
+    ) {
       await expect(nameField.first()).toBeVisible();
     }
 
@@ -122,13 +122,23 @@ test.describe("Shadow AI", () => {
       .or(page.getByRole("combobox"))
       .or(page.getByText(/new_tool_detected/i));
 
-    if (await triggerSelect.first().isVisible().catch(() => false)) {
+    if (
+      await triggerSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(triggerSelect.first()).toBeVisible();
     }
 
     // Close modal
     const cancelBtn = page.getByRole("button", { name: /cancel|close/i });
-    if (await cancelBtn.first().isVisible().catch(() => false)) {
+    if (
+      await cancelBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await cancelBtn.first().click();
     } else {
       await page.keyboard.press("Escape");

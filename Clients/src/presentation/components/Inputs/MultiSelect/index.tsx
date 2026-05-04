@@ -44,7 +44,7 @@ function MultiSelect({
 
   // Extract width, flexGrow, minWidth, maxWidth from sx prop to apply to wrapper Stack
   const extractedLayoutProps = (() => {
-    if (!sx || typeof sx !== 'object' || Array.isArray(sx)) return {};
+    if (!sx || typeof sx !== "object" || Array.isArray(sx)) return {};
     const s = sx as Record<string, unknown>;
     return {
       width: s.width as string | number | undefined,
@@ -56,9 +56,13 @@ function MultiSelect({
 
   // Create a copy of sx without layout props to pass to MuiSelect
   const sxWithoutLayoutProps = (() => {
-    if (!sx || typeof sx !== 'object' || Array.isArray(sx)) return sx;
+    if (!sx || typeof sx !== "object" || Array.isArray(sx)) return sx;
     const s = sx as Record<string, unknown>;
-    return Object.fromEntries(Object.entries(s).filter(([key]) => !['width', 'flexGrow', 'minWidth', 'maxWidth'].includes(key)));
+    return Object.fromEntries(
+      Object.entries(s).filter(
+        ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key),
+      ),
+    );
   })();
 
   const renderValue = (selected: number[]) => {
@@ -67,9 +71,9 @@ function MultiSelect({
     }
 
     return (
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
         {selected.map((selectedId) => {
-          const item = items.find(i => i._id === selectedId);
+          const item = items.find((i) => i._id === selectedId);
           if (!item) return null;
           const displayName = item.name + (item.surname ? " " + item.surname : "");
           return (
@@ -78,8 +82,8 @@ function MultiSelect({
               label={displayName}
               size="small"
               sx={{
-                height: '24px',
-                fontSize: '13px',
+                height: "24px",
+                fontSize: "13px",
               }}
             />
           );
@@ -100,9 +104,7 @@ function MultiSelect({
           }}
         >
           {label}
-          {isRequired && (
-            <span style={{ color: theme.palette.error.main }}> *</span>
-          )}
+          {isRequired && <span style={{ color: theme.palette.error.main }}> *</span>}
         </Typography>
       )}
       <MuiSelect

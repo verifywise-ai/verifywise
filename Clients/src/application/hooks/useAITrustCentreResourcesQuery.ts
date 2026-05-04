@@ -1,10 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getAITrustCentreResources, 
-  createAITrustCentreResource, 
-  deleteAITrustCentreResource, 
-  updateAITrustCentreResource 
-} from '../repository/aiTrustCentre.repository';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getAITrustCentreResources,
+  createAITrustCentreResource,
+  deleteAITrustCentreResource,
+  updateAITrustCentreResource,
+} from "../repository/aiTrustCentre.repository";
 
 export interface AITrustCentreResource {
   id: number;
@@ -17,7 +17,7 @@ export interface AITrustCentreResource {
 }
 
 // Query key for resources data
-export const resourcesQueryKey = ['aiTrustCentre', 'resources'] as const;
+export const resourcesQueryKey = ["aiTrustCentre", "resources"] as const;
 
 // Hook for fetching resources data
 export const useAITrustCentreResourcesQuery = () => {
@@ -26,10 +26,8 @@ export const useAITrustCentreResourcesQuery = () => {
     queryFn: async () => {
       const response = await getAITrustCentreResources();
       // Handle nested response structure
-      const resources = response?.data?.data?.resources || 
-                       response?.data?.resources || 
-                       response?.resources || 
-                       [];
+      const resources =
+        response?.data?.data?.resources || response?.data?.resources || response?.resources || [];
       return resources as AITrustCentreResource[];
     },
     // Uses default options from QueryClient
@@ -41,11 +39,16 @@ export const useCreateAITrustCentreResourceMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, name, description, visible }: { 
-      file: File; 
-      name: string; 
-      description: string; 
-      visible?: boolean; 
+    mutationFn: async ({
+      file,
+      name,
+      description,
+      visible,
+    }: {
+      file: File;
+      name: string;
+      description: string;
+      visible?: boolean;
     }) => {
       return await createAITrustCentreResource(file, name, description, visible);
     },
@@ -54,7 +57,7 @@ export const useCreateAITrustCentreResourceMutation = () => {
       queryClient.invalidateQueries({ queryKey: resourcesQueryKey });
     },
     onError: (error: any) => {
-      console.error('Error creating AI Trust Centre resource:', error);
+      console.error("Error creating AI Trust Centre resource:", error);
     },
   });
 };
@@ -64,29 +67,36 @@ export const useUpdateAITrustCentreResourceMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      resourceId, 
-      name, 
-      description, 
-      visible, 
-      file, 
-      oldFileId 
-    }: { 
-      resourceId: number; 
-      name: string; 
-      description: string; 
-      visible: boolean; 
-      file?: File; 
-      oldFileId?: number; 
+    mutationFn: async ({
+      resourceId,
+      name,
+      description,
+      visible,
+      file,
+      oldFileId,
+    }: {
+      resourceId: number;
+      name: string;
+      description: string;
+      visible: boolean;
+      file?: File;
+      oldFileId?: number;
     }) => {
-      return await updateAITrustCentreResource(resourceId, name, description, visible, file, oldFileId);
+      return await updateAITrustCentreResource(
+        resourceId,
+        name,
+        description,
+        visible,
+        file,
+        oldFileId,
+      );
     },
     onSuccess: () => {
       // Invalidate and refetch resources data
       queryClient.invalidateQueries({ queryKey: resourcesQueryKey });
     },
     onError: (error: any) => {
-      console.error('Error updating AI Trust Centre resource:', error);
+      console.error("Error updating AI Trust Centre resource:", error);
     },
   });
 };
@@ -104,7 +114,7 @@ export const useDeleteAITrustCentreResourceMutation = () => {
       queryClient.invalidateQueries({ queryKey: resourcesQueryKey });
     },
     onError: (error: any) => {
-      console.error('Error deleting AI Trust Centre resource:', error);
+      console.error("Error deleting AI Trust Centre resource:", error);
     },
   });
 };

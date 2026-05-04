@@ -10,10 +10,7 @@ import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
-import {
-  ReportData,
-  AISummaries,
-} from "../../domain.layer/interfaces/i.reportGeneration";
+import { ReportData, AISummaries } from "../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../utils/logger/fileLogger";
 
 // ============================================================================
@@ -36,9 +33,7 @@ async function getModelFromKey(llmKeyId: number | undefined, organizationId: num
   if (llmKeyId !== undefined) {
     llmKey = keys.find((k: any) => k.id === llmKeyId);
     if (!llmKey) {
-      logger.warn(
-        `AI Summarizer: LLM key ID ${llmKeyId} not found, falling back to first key`
-      );
+      logger.warn(`AI Summarizer: LLM key ID ${llmKeyId} not found, falling back to first key`);
     }
   }
   if (!llmKey) {
@@ -55,12 +50,16 @@ async function getModelFromKey(llmKeyId: number | undefined, organizationId: num
     return anthropic((llmKey as any).model || "claude-sonnet-4-20250514");
   }
 
+  const customBaseURL = (llmKey as any).url || undefined;
   const openai = createOpenAI({
     apiKey: (llmKey as any).key,
-    baseURL: (llmKey as any).url || undefined,
+    baseURL: customBaseURL,
     headers: (llmKey as any).custom_headers || undefined,
   });
-  return openai((llmKey as any).model || "gpt-4o-mini");
+  const modelId = (llmKey as any).model || "gpt-4o-mini";
+  // Only native OpenAI implements the Responses API. Any custom baseURL
+  // (OpenRouter, vLLM, Together, etc.) must use Chat Completions.
+  return customBaseURL ? openai.chat(modelId) : openai(modelId);
 }
 
 // ============================================================================
@@ -150,7 +149,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
-  concurrency: number
+  concurrency: number,
 ): Promise<T[]> {
   const results: T[] = new Array(tasks.length);
   let index = 0;
@@ -162,10 +161,7 @@ async function runWithConcurrency<T>(
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, tasks.length) },
-    () => worker()
-  );
+  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker());
   await Promise.all(workers);
   return results;
 }
@@ -179,7 +175,7 @@ async function generateSectionSummary(
   sectionData: any,
   frameworkName: string,
   projectTitle: string,
-  model: any
+  model: any,
 ): Promise<string> {
   try {
     const sectionLabel = SECTION_LABELS[sectionKey] || sectionKey;
@@ -207,10 +203,7 @@ ${dataStr}`;
 
     return result.text.trim();
   } catch (error) {
-    logger.warn(
-      `AI Summarizer: Failed to generate summary for section "${sectionKey}":`,
-      error
-    );
+    logger.warn(`AI Summarizer: Failed to generate summary for section "${sectionKey}":`, error);
     return "";
   }
 }
@@ -223,15 +216,12 @@ async function generateExecutiveSummary(
   sectionSummaries: Record<string, string>,
   frameworkName: string,
   projectTitle: string,
-  model: any
+  model: any,
 ): Promise<string> {
   try {
     const summariesText = Object.entries(sectionSummaries)
       .filter(([, v]) => v.length > 0)
-      .map(
-        ([key, summary]) =>
-          `[${SECTION_LABELS[key] || key}]\n${summary}`
-      )
+      .map(([key, summary]) => `[${SECTION_LABELS[key] || key}]\n${summary}`)
       .join("\n\n");
 
     if (!summariesText) return "";
@@ -271,15 +261,12 @@ async function generateFindingsAndRecommendations(
   sectionSummaries: Record<string, string>,
   frameworkName: string,
   projectTitle: string,
-  model: any
+  model: any,
 ): Promise<{ keyFindings: string[]; recommendations: string[] }> {
   try {
     const summariesText = Object.entries(sectionSummaries)
       .filter(([, v]) => v.length > 0)
-      .map(
-        ([key, summary]) =>
-          `[${SECTION_LABELS[key] || key}]\n${summary}`
-      )
+      .map(([key, summary]) => `[${SECTION_LABELS[key] || key}]\n${summary}`)
       .join("\n\n");
 
     if (!summariesText) return { keyFindings: [], recommendations: [] };
@@ -311,18 +298,11 @@ ${summariesText}`;
 
     const parsed = JSON.parse(jsonMatch[0]);
     return {
-      keyFindings: Array.isArray(parsed.keyFindings)
-        ? parsed.keyFindings
-        : [],
-      recommendations: Array.isArray(parsed.recommendations)
-        ? parsed.recommendations
-        : [],
+      keyFindings: Array.isArray(parsed.keyFindings) ? parsed.keyFindings : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
     };
   } catch (error) {
-    logger.warn(
-      "AI Summarizer: Failed to generate findings and recommendations:",
-      error
-    );
+    logger.warn("AI Summarizer: Failed to generate findings and recommendations:", error);
     return { keyFindings: [], recommendations: [] };
   }
 }
@@ -334,24 +314,24 @@ ${summariesText}`;
 async function generateRiskHighlights(
   reportData: ReportData,
   frameworkName: string,
-  model: any
+  model: any,
 ): Promise<string> {
   try {
     const riskSections: string[] = [];
 
     if (reportData.sections.projectRisks) {
       riskSections.push(
-        `Use Case Risks (${reportData.sections.projectRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.projectRisks.risks, 20))}`
+        `Use Case Risks (${reportData.sections.projectRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.projectRisks.risks, 20))}`,
       );
     }
     if (reportData.sections.vendorRisks) {
       riskSections.push(
-        `Vendor Risks (${reportData.sections.vendorRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.vendorRisks.risks, 20))}`
+        `Vendor Risks (${reportData.sections.vendorRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.vendorRisks.risks, 20))}`,
       );
     }
     if (reportData.sections.modelRisks) {
       riskSections.push(
-        `Model Risks (${reportData.sections.modelRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.modelRisks.risks, 20))}`
+        `Model Risks (${reportData.sections.modelRisks.totalRisks} total): ${JSON.stringify(truncateArray(reportData.sections.modelRisks.risks, 20))}`,
       );
     }
 
@@ -390,7 +370,7 @@ ${riskSections.join("\n\n")}`;
 export async function generateAISummaries(
   reportData: ReportData,
   organizationId: number,
-  llmKeyId?: number
+  llmKeyId?: number,
 ): Promise<AISummaries> {
   const result: AISummaries = {
     sectionSummaries: {},
@@ -400,9 +380,7 @@ export async function generateAISummaries(
     // 1. Resolve LLM model
     const model = await getModelFromKey(llmKeyId, organizationId);
     if (!model) {
-      logger.warn(
-        "AI Summarizer: No LLM keys configured, skipping AI summaries"
-      );
+      logger.warn("AI Summarizer: No LLM keys configured, skipping AI summaries");
       return result;
     }
 
@@ -411,18 +389,16 @@ export async function generateAISummaries(
 
     // 2. Generate section summaries in parallel (concurrency limited)
     const sectionEntries = Object.entries(reportData.sections).filter(
-      ([, data]) => data !== undefined && data !== null
+      ([, data]) => data !== undefined && data !== null,
     );
 
     const sectionTasks = sectionEntries.map(
-      ([key, data]) => () =>
-        generateSectionSummary(key, data, frameworkName, projectTitle, model)
+      ([key, data]) =>
+        () =>
+          generateSectionSummary(key, data, frameworkName, projectTitle, model),
     );
 
-    const sectionResults = await runWithConcurrency(
-      sectionTasks,
-      MAX_CONCURRENT
-    );
+    const sectionResults = await runWithConcurrency(sectionTasks, MAX_CONCURRENT);
 
     sectionEntries.forEach(([key], index) => {
       const summary = sectionResults[index];
@@ -436,7 +412,7 @@ export async function generateAISummaries(
       result.sectionSummaries,
       frameworkName,
       projectTitle,
-      model
+      model,
     );
 
     // 4. Generate key findings and recommendations (parallel with risk highlights)
@@ -445,7 +421,7 @@ export async function generateAISummaries(
         result.sectionSummaries,
         frameworkName,
         projectTitle,
-        model
+        model,
       ),
       generateRiskHighlights(reportData, frameworkName, model),
     ]);
@@ -455,7 +431,7 @@ export async function generateAISummaries(
     result.riskHighlights = riskHighlights;
 
     logger.info(
-      `AI Summarizer: Generated summaries for ${Object.keys(result.sectionSummaries).length} sections`
+      `AI Summarizer: Generated summaries for ${Object.keys(result.sectionSummaries).length} sections`,
     );
 
     return result;

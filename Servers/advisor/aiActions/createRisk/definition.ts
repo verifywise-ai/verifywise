@@ -83,8 +83,7 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         ai_lifecycle_phase: {
           type: "string",
           enum: AI_LIFECYCLE_PHASES,
-          description:
-            "Which phase of the AI lifecycle the risk sits in. Required.",
+          description: "Which phase of the AI lifecycle the risk sits in. Required.",
         },
         risk_category: {
           type: "array",
@@ -121,27 +120,23 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         project_ids: {
           type: "array",
           items: { type: "number" },
-          description:
-            "Optional ids of projects this risk should be associated with.",
+          description: "Optional ids of projects this risk should be associated with.",
         },
         framework_ids: {
           type: "array",
           items: { type: "number" },
-          description:
-            "Optional ids of compliance frameworks this risk maps to.",
+          description: "Optional ids of compliance frameworks this risk maps to.",
         },
 
         // Tab 2 — Mitigation
         mitigation_status: {
           type: "string",
           enum: MITIGATION_STATUSES,
-          description:
-            "Current state of any mitigation work for this risk. Required.",
+          description: "Current state of any mitigation work for this risk. Required.",
         },
         mitigation_plan: {
           type: "string",
-          description:
-            "How the risk will be mitigated. Required. 1–1024 characters.",
+          description: "How the risk will be mitigated. Required. 1–1024 characters.",
         },
         current_risk_level: {
           type: "string",
@@ -167,13 +162,11 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         approval_status: {
           type: "string",
           enum: MITIGATION_STATUSES,
-          description:
-            "Status of the approval workflow for this risk's mitigation. Required.",
+          description: "Status of the approval workflow for this risk's mitigation. Required.",
         },
         date_of_assessment: {
           type: "string",
-          description:
-            "When the risk was assessed. Required. ISO date string (YYYY-MM-DD).",
+          description: "When the risk was assessed. Required. ISO date string (YYYY-MM-DD).",
         },
       },
       required: [

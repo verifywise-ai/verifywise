@@ -55,13 +55,43 @@ const ZIndexSection: React.FC = () => {
   };
 
   const zIndexScale = [
-    { name: "Background", value: -1, usage: "Decorative backgrounds, patterns", color: theme.palette.grey[300] },
+    {
+      name: "Background",
+      value: -1,
+      usage: "Decorative backgrounds, patterns",
+      color: theme.palette.grey[300],
+    },
     { name: "Base", value: 0, usage: "Default document flow", color: theme.palette.grey[400] },
-    { name: "Raised", value: 1, usage: "Slightly elevated elements, overlapping items", color: theme.palette.grey[500] },
-    { name: "Dropdown", value: 10, usage: "Dropdown menus, sticky table headers", color: theme.palette.info.main },
-    { name: "Sticky", value: 100, usage: "Sticky headers, fixed sidebars", color: theme.palette.warning.main },
-    { name: "Modal", value: 1000, usage: "Modals, dialogs, overlays", color: theme.palette.error.main },
-    { name: "Toast", value: 9999, usage: "Toasts, alerts, top-priority notifications", color: theme.palette.primary.main },
+    {
+      name: "Raised",
+      value: 1,
+      usage: "Slightly elevated elements, overlapping items",
+      color: theme.palette.grey[500],
+    },
+    {
+      name: "Dropdown",
+      value: 10,
+      usage: "Dropdown menus, sticky table headers",
+      color: theme.palette.info.main,
+    },
+    {
+      name: "Sticky",
+      value: 100,
+      usage: "Sticky headers, fixed sidebars",
+      color: theme.palette.warning.main,
+    },
+    {
+      name: "Modal",
+      value: 1000,
+      usage: "Modals, dialogs, overlays",
+      color: theme.palette.error.main,
+    },
+    {
+      name: "Toast",
+      value: 9999,
+      usage: "Toasts, alerts, top-priority notifications",
+      color: theme.palette.primary.main,
+    },
   ];
 
   const componentZIndex = [
@@ -104,8 +134,8 @@ const ZIndexSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Layering system for managing stacking order of overlapping elements.
-          Use consistent z-index values to ensure predictable layering.
+          Layering system for managing stacking order of overlapping elements. Use consistent
+          z-index values to ensure predictable layering.
         </Typography>
       </Box>
 
@@ -117,11 +147,7 @@ const ZIndexSection: React.FC = () => {
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
-            <ExampleWithCode
-              label="Z-Index scale"
-              code={zIndexSnippets.scale}
-              onCopy={handleCopy}
-            >
+            <ExampleWithCode label="Z-Index scale" code={zIndexSnippets.scale} onCopy={handleCopy}>
               <Box
                 sx={{
                   p: "24px",
@@ -171,9 +197,7 @@ const ZIndexSection: React.FC = () => {
                             backgroundColor: item.color,
                           }}
                         />
-                        <Typography sx={{ fontSize: 12, fontWeight: 500 }}>
-                          {item.name}
-                        </Typography>
+                        <Typography sx={{ fontSize: 12, fontWeight: 500 }}>{item.name}</Typography>
                       </Box>
                       <Typography
                         sx={{
@@ -225,7 +249,16 @@ const ZIndexSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Quick reference
             </Typography>
             <SpecTable
@@ -241,7 +274,17 @@ const ZIndexSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component z-index
             </Typography>
             <SpecTable
@@ -341,7 +384,16 @@ const ZIndexSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               MUI default z-index
             </Typography>
             <SpecTable
@@ -366,12 +418,19 @@ const ZIndexSection: React.FC = () => {
                 borderRadius: "4px",
               }}
             >
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.status.warning.text, mb: "8px" }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: theme.palette.status.warning.text,
+                  mb: "8px",
+                }}
+              >
                 Note
               </Typography>
               <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary }}>
-                VerifyWise uses z-index: 9999 for toasts to ensure they appear above
-                all MUI components including tooltips (1500).
+                VerifyWise uses z-index: 9999 for toasts to ensure they appear above all MUI
+                components including tooltips (1500).
               </Typography>
             </Box>
           </Box>
@@ -490,9 +549,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -514,9 +571,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -567,9 +622,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

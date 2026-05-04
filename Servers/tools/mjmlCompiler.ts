@@ -1,16 +1,10 @@
 import mjml2html from "mjml";
 
-export const compileMjmlToHtml = (
-  mjmlTemplate: string,
-  data: Record<string, string>
-): string => {
+export const compileMjmlToHtml = (mjmlTemplate: string, data: Record<string, string>): string => {
   // Replace placeholders with actual data
   let compiledTemplate = mjmlTemplate;
   Object.keys(data).forEach((key) => {
-    compiledTemplate = compiledTemplate.replace(
-      new RegExp(`{{${key}}}`, "g"),
-      data[key]
-    );
+    compiledTemplate = compiledTemplate.replace(new RegExp(`{{${key}}}`, "g"), data[key]);
   });
 
   // Convert MJML to HTML. `mjml@4.x` runtime is synchronous; newer

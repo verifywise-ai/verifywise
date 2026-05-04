@@ -16,7 +16,7 @@
  * Principles: KISS, Defensive Programming, GDPR/Compliance-Safe
  */
 
-type LogLevel = 'info' | 'warn' | 'error';
+type LogLevel = "info" | "warn" | "error";
 
 interface SecureLogOptions {
   level: LogLevel;
@@ -40,29 +40,27 @@ export const secureLog = ({
   level,
   message,
   context,
-  isDevelopment = process.env.NODE_ENV === 'development'
+  isDevelopment = process.env.NODE_ENV === "development",
 }: SecureLogOptions): void => {
   // Defensive: Validate inputs
-  if (!message || typeof message !== 'string') {
-    console.warn('[SecureLogger] Invalid log message provided');
+  if (!message || typeof message !== "string") {
+    console.warn("[SecureLogger] Invalid log message provided");
     return;
   }
 
   // Format: [Context] Message
-  const formattedMessage = context
-    ? `[${context}] ${message}`
-    : message;
+  const formattedMessage = context ? `[${context}] ${message}` : message;
 
   // Development mode: Show detailed logs
   if (isDevelopment) {
     switch (level) {
-      case 'error':
+      case "error":
         console.error(formattedMessage);
         break;
-      case 'warn':
+      case "warn":
         console.warn(formattedMessage);
         break;
-      case 'info':
+      case "info":
       default:
         console.info(formattedMessage);
     }
@@ -72,12 +70,12 @@ export const secureLog = ({
   // Production mode: Silent or minimal logging
   // In production, you might want to send errors to a monitoring service
   // without exposing them in browser console
-  if (level === 'error') {
+  if (level === "error") {
     // TODO: Send to monitoring service (Sentry, DataDog, etc.)
     // Example: Sentry.captureMessage(formattedMessage, 'error');
 
     // For now, silent in production (or show generic message)
-    console.error('[Error] An error occurred. Please contact support if the issue persists.');
+    console.error("[Error] An error occurred. Please contact support if the issue persists.");
   }
 };
 
@@ -85,15 +83,15 @@ export const secureLog = ({
  * Convenience functions for common log levels
  */
 export const secureLogError = (message: string, context?: string): void => {
-  secureLog({ level: 'error', message, context });
+  secureLog({ level: "error", message, context });
 };
 
 export const secureLogWarn = (message: string, context?: string): void => {
-  secureLog({ level: 'warn', message, context });
+  secureLog({ level: "warn", message, context });
 };
 
 export const secureLogInfo = (message: string, context?: string): void => {
-  secureLog({ level: 'info', message, context });
+  secureLog({ level: "info", message, context });
 };
 
 /**
@@ -106,21 +104,21 @@ export const secureLogInfo = (message: string, context?: string): void => {
  */
 export const sanitizeErrorMessage = (error: unknown): string => {
   // Defensive: Handle various error types
-  if (!error) return 'Unknown error occurred';
+  if (!error) return "Unknown error occurred";
 
   if (error instanceof Error) {
     // Remove potential PII patterns (emails, IDs, file names)
     const sanitized = error.message
-      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]')
-      .replace(/\b\d{3,}\b/g, '[ID]')
-      .replace(/\b[\w-]+\.(pdf|docx?|xlsx?|pptx?|txt|csv)\b/gi, '[FILE]');
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, "[EMAIL]")
+      .replace(/\b\d{3,}\b/g, "[ID]")
+      .replace(/\b[\w-]+\.(pdf|docx?|xlsx?|pptx?|txt|csv)\b/gi, "[FILE]");
 
-    return sanitized || 'Operation failed';
+    return sanitized || "Operation failed";
   }
 
-  if (typeof error === 'string') {
-    return error.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]');
+  if (typeof error === "string") {
+    return error.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, "[EMAIL]");
   }
 
-  return 'An error occurred';
+  return "An error occurred";
 };

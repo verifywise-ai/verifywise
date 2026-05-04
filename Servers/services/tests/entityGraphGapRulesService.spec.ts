@@ -52,9 +52,7 @@ const mockUpsertGapRulesQuery = upsertGapRulesQuery as jest.MockedFunction<
 const mockDeleteGapRulesQuery = deleteGapRulesQuery as jest.MockedFunction<
   typeof deleteGapRulesQuery
 >;
-const mockGetDefaultGapRules = getDefaultGapRules as jest.MockedFunction<
-  typeof getDefaultGapRules
->;
+const mockGetDefaultGapRules = getDefaultGapRules as jest.MockedFunction<typeof getDefaultGapRules>;
 const mockCreateGapRules = EntityGraphGapRulesModel.createGapRules as jest.MockedFunction<
   typeof EntityGraphGapRulesModel.createGapRules
 >;
@@ -74,8 +72,18 @@ describe("EntityGraphGapRulesService", () => {
   };
 
   const defaultRules = [
-    { entityType: "model" as const, requirement: "has_risk", severity: "warning" as const, enabled: true },
-    { entityType: "risk" as const, requirement: "has_control", severity: "critical" as const, enabled: true },
+    {
+      entityType: "model" as const,
+      requirement: "has_risk",
+      severity: "warning" as const,
+      enabled: true,
+    },
+    {
+      entityType: "risk" as const,
+      requirement: "has_control",
+      severity: "critical" as const,
+      enabled: true,
+    },
   ];
 
   const mockGapRules = {
@@ -93,7 +101,6 @@ describe("EntityGraphGapRulesService", () => {
 
   describe("saveGapRules", () => {
     beforeEach(() => {
-
       mockCreateGapRules.mockResolvedValue(mockGapRules);
       mockUpsertGapRulesQuery.mockResolvedValue(mockGapRules);
     });
@@ -102,7 +109,7 @@ describe("EntityGraphGapRulesService", () => {
       const result = await EntityGraphGapRulesService.saveGapRules(
         validGapRulesData.rules,
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(result).toBe(mockGapRules);
@@ -115,8 +122,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           "not-an-array" as any,
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -127,8 +134,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           tooManyRules,
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -139,8 +146,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -151,8 +158,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -163,8 +170,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -175,8 +182,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -187,8 +194,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -199,8 +206,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           [invalidRule],
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -209,8 +216,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.saveGapRules(
           validGapRulesData.rules,
           0,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -218,7 +225,7 @@ describe("EntityGraphGapRulesService", () => {
       await EntityGraphGapRulesService.saveGapRules(
         [],
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(mockCreateGapRules).toHaveBeenCalled();
@@ -234,7 +241,7 @@ describe("EntityGraphGapRulesService", () => {
       await EntityGraphGapRulesService.saveGapRules(
         rules,
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(mockCreateGapRules).toHaveBeenCalled();
@@ -250,7 +257,7 @@ describe("EntityGraphGapRulesService", () => {
       await EntityGraphGapRulesService.saveGapRules(
         rules,
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(mockCreateGapRules).toHaveBeenCalled();
@@ -258,16 +265,14 @@ describe("EntityGraphGapRulesService", () => {
   });
 
   describe("getGapRules", () => {
-    beforeEach(() => {
-
-    });
+    beforeEach(() => {});
 
     it("should return user's custom rules when they exist", async () => {
       mockGetGapRulesByUserQuery.mockResolvedValue(mockGapRules);
 
       const result = await EntityGraphGapRulesService.getGapRules(
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(result).toEqual({
@@ -282,7 +287,7 @@ describe("EntityGraphGapRulesService", () => {
 
       const result = await EntityGraphGapRulesService.getGapRules(
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(result).toEqual({
@@ -296,15 +301,13 @@ describe("EntityGraphGapRulesService", () => {
 
       await EntityGraphGapRulesService.getGapRules(
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
-
     });
   });
 
   describe("resetToDefaults", () => {
     beforeEach(() => {
-
       mockDeleteGapRulesQuery.mockResolvedValue(1);
     });
 
@@ -313,12 +316,12 @@ describe("EntityGraphGapRulesService", () => {
 
       const result = await EntityGraphGapRulesService.resetToDefaults(
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(mockDeleteGapRulesQuery).toHaveBeenCalledWith(
         mockGapRules.id,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
       expect(result).toEqual({
         rules: defaultRules,
@@ -331,7 +334,7 @@ describe("EntityGraphGapRulesService", () => {
 
       const result = await EntityGraphGapRulesService.resetToDefaults(
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(mockDeleteGapRulesQuery).not.toHaveBeenCalled();
@@ -344,7 +347,6 @@ describe("EntityGraphGapRulesService", () => {
 
   describe("deleteGapRules", () => {
     beforeEach(() => {
-
       mockGetGapRulesByIdQuery.mockResolvedValue(mockGapRules);
       mockDeleteGapRulesQuery.mockResolvedValue(1);
       mockGapRules.isOwnedBy.mockReturnValue(true);
@@ -354,14 +356,11 @@ describe("EntityGraphGapRulesService", () => {
       const result = await EntityGraphGapRulesService.deleteGapRules(
         1,
         validGapRulesData.userId,
-        validGapRulesData.organizationId
+        validGapRulesData.organizationId,
       );
 
       expect(result).toBe(true);
-      expect(mockDeleteGapRulesQuery).toHaveBeenCalledWith(
-        1,
-        validGapRulesData.organizationId
-      );
+      expect(mockDeleteGapRulesQuery).toHaveBeenCalledWith(1, validGapRulesData.organizationId);
     });
 
     it("should throw error when gap rules not found", async () => {
@@ -371,8 +370,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.deleteGapRules(
           999,
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow("Gap rules with ID 999 not found");
     });
 
@@ -380,11 +379,7 @@ describe("EntityGraphGapRulesService", () => {
       mockGapRules.isOwnedBy.mockReturnValue(false);
 
       await expect(
-        EntityGraphGapRulesService.deleteGapRules(
-          1,
-          999,
-          validGapRulesData.organizationId
-        )
+        EntityGraphGapRulesService.deleteGapRules(1, 999, validGapRulesData.organizationId),
       ).rejects.toThrow(BusinessLogicException);
     });
 
@@ -395,8 +390,8 @@ describe("EntityGraphGapRulesService", () => {
         EntityGraphGapRulesService.deleteGapRules(
           1,
           validGapRulesData.userId,
-          validGapRulesData.organizationId
-        )
+          validGapRulesData.organizationId,
+        ),
       ).rejects.toThrow("Failed to delete gap rules with ID 1");
     });
   });

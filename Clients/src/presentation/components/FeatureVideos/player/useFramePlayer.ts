@@ -20,7 +20,7 @@ export interface FramePlayerState {
 export function useFramePlayer(
   totalFrames: number,
   fps: number = 30,
-  autoPlay: boolean = false
+  autoPlay: boolean = false,
 ): FramePlayerState {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(autoPlay);
@@ -57,7 +57,7 @@ export function useFramePlayer(
 
       rafRef.current = requestAnimationFrame(tick);
     },
-    [totalFrames, msPerFrame]
+    [totalFrames, msPerFrame],
   );
 
   const play = useCallback(() => {
@@ -92,14 +92,14 @@ export function useFramePlayer(
       setFinished(false);
       lastTimeRef.current = 0;
     },
-    [totalFrames]
+    [totalFrames],
   );
 
   const seekProgress = useCallback(
     (pct: number) => {
       seek(Math.round(pct * (totalFrames - 1)));
     },
-    [seek, totalFrames]
+    [seek, totalFrames],
   );
 
   // Auto-play on mount

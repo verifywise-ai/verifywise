@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { SubtopicModel } from "../subtopic/subtopic.model";
 import { numberValidation } from "../../validations/number.valid";
 import {
@@ -135,15 +129,11 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     order_no?: number,
     dropdown_options?: any[],
     evidence_files?: any[],
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<QuestionModel> {
     // Validate required fields
     if (!question || question.trim().length === 0) {
-      throw new ValidationException(
-        "Question text is required",
-        "question",
-        question
-      );
+      throw new ValidationException("Question text is required", "question", question);
     }
 
     if (!hint || hint.trim().length === 0) {
@@ -151,33 +141,17 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     }
 
     if (!answer_type || answer_type.trim().length === 0) {
-      throw new ValidationException(
-        "Answer type is required",
-        "answer_type",
-        answer_type
-      );
+      throw new ValidationException("Answer type is required", "answer_type", answer_type);
     }
 
     if (!input_type || input_type.trim().length === 0) {
-      throw new ValidationException(
-        "Input type is required",
-        "input_type",
-        input_type
-      );
+      throw new ValidationException("Input type is required", "input_type", input_type);
     }
 
     // Validate priority_level
-    const validPriorities = [
-      "high priority",
-      "medium priority",
-      "low priority",
-    ];
+    const validPriorities = ["high priority", "medium priority", "low priority"];
     if (!validPriorities.includes(priority_level)) {
-      throw new ValidationException(
-        "Invalid priority level",
-        "priority_level",
-        priority_level
-      );
+      throw new ValidationException("Invalid priority level", "priority_level", priority_level);
     }
 
     // Validate subtopic_id
@@ -185,7 +159,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
       throw new ValidationException(
         "Valid subtopic_id is required (must be >= 1)",
         "subtopic_id",
-        subtopic_id
+        subtopic_id,
       );
     }
 
@@ -194,7 +168,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -238,11 +212,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     // Validate question if provided
     if (updateData.question !== undefined) {
       if (!updateData.question || updateData.question.trim().length === 0) {
-        throw new ValidationException(
-          "Question text is required",
-          "question",
-          updateData.question
-        );
+        throw new ValidationException("Question text is required", "question", updateData.question);
       }
       this.question = updateData.question.trim();
     }
@@ -250,27 +220,19 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     // Validate hint if provided
     if (updateData.hint !== undefined) {
       if (!updateData.hint || updateData.hint.trim().length === 0) {
-        throw new ValidationException(
-          "Hint is required",
-          "hint",
-          updateData.hint
-        );
+        throw new ValidationException("Hint is required", "hint", updateData.hint);
       }
       this.hint = updateData.hint.trim();
     }
 
     // Validate priority_level if provided
     if (updateData.priority_level !== undefined) {
-      const validPriorities = [
-        "high priority",
-        "medium priority",
-        "low priority",
-      ];
+      const validPriorities = ["high priority", "medium priority", "low priority"];
       if (!validPriorities.includes(updateData.priority_level)) {
         throw new ValidationException(
           "Invalid priority level",
           "priority_level",
-          updateData.priority_level
+          updateData.priority_level,
         );
       }
       this.priority_level = updateData.priority_level;
@@ -278,14 +240,11 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
 
     // Validate answer_type if provided
     if (updateData.answer_type !== undefined) {
-      if (
-        !updateData.answer_type ||
-        updateData.answer_type.trim().length === 0
-      ) {
+      if (!updateData.answer_type || updateData.answer_type.trim().length === 0) {
         throw new ValidationException(
           "Answer type is required",
           "answer_type",
-          updateData.answer_type
+          updateData.answer_type,
         );
       }
       this.answer_type = updateData.answer_type.trim();
@@ -297,7 +256,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
         throw new ValidationException(
           "Input type is required",
           "input_type",
-          updateData.input_type
+          updateData.input_type,
         );
       }
       this.input_type = updateData.input_type.trim();
@@ -309,7 +268,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -319,11 +278,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     if (updateData.status !== undefined) {
       const validStatuses = ["Not started", "In progress", "Done"];
       if (!validStatuses.includes(updateData.status)) {
-        throw new ValidationException(
-          "Invalid status value",
-          "status",
-          updateData.status
-        );
+        throw new ValidationException("Invalid status value", "status", updateData.status);
       }
       this.status = updateData.status;
     }
@@ -357,11 +312,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
    */
   async validateQuestionData(): Promise<void> {
     if (!this.question || this.question.trim().length === 0) {
-      throw new ValidationException(
-        "Question text is required",
-        "question",
-        this.question
-      );
+      throw new ValidationException("Question text is required", "question", this.question);
     }
 
     if (!this.hint || this.hint.trim().length === 0) {
@@ -369,26 +320,18 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
     }
 
     if (!this.answer_type || this.answer_type.trim().length === 0) {
-      throw new ValidationException(
-        "Answer type is required",
-        "answer_type",
-        this.answer_type
-      );
+      throw new ValidationException("Answer type is required", "answer_type", this.answer_type);
     }
 
     if (!this.input_type || this.input_type.trim().length === 0) {
-      throw new ValidationException(
-        "Input type is required",
-        "input_type",
-        this.input_type
-      );
+      throw new ValidationException("Input type is required", "input_type", this.input_type);
     }
 
     if (!this.subtopic_id || !numberValidation(this.subtopic_id, 1)) {
       throw new ValidationException(
         "Valid subtopic_id is required",
         "subtopic_id",
-        this.subtopic_id
+        this.subtopic_id,
       );
     }
 
@@ -396,7 +339,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -416,7 +359,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
       throw new BusinessLogicException(
         "Demo questions cannot be modified",
         "DEMO_QUESTION_RESTRICTION",
-        { questionId: this.id, subtopicId: this.subtopic_id }
+        { questionId: this.id, subtopicId: this.subtopic_id },
       );
     }
     return true;
@@ -536,11 +479,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
    */
   static async findByIdWithValidation(id: number): Promise<QuestionModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const question = await QuestionModel.findByPk(id);
@@ -559,7 +498,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
       throw new ValidationException(
         "Valid subtopic_id is required (must be >= 1)",
         "subtopic_id",
-        subtopicId
+        subtopicId,
       );
     }
 
@@ -574,14 +513,10 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
    */
   static async updateQuestionById(
     id: number,
-    updateData: Partial<IQuestion>
+    updateData: Partial<IQuestion>,
   ): Promise<[number, QuestionModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await QuestionModel.update(updateData, {
@@ -595,11 +530,7 @@ export class QuestionModel extends Model<QuestionModel> implements IQuestion {
    */
   static async deleteQuestionById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await QuestionModel.destroy({

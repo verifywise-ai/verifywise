@@ -55,10 +55,7 @@ export async function closeBrowser(): Promise<void> {
  * Render EJS template to HTML string
  */
 async function renderTemplate(reportData: IPMMReportData): Promise<string> {
-  const templatePath = path.join(
-    __dirname,
-    "../../templates/reports/pmm-report.ejs"
-  );
+  const templatePath = path.join(__dirname, "../../templates/reports/pmm-report.ejs");
 
   const templateContent = fs.readFileSync(templatePath, "utf-8");
 
@@ -72,7 +69,7 @@ async function renderTemplate(reportData: IPMMReportData): Promise<string> {
  * Generate PDF buffer from report data
  */
 export async function generatePMMPdfBuffer(
-  reportData: IPMMReportData
+  reportData: IPMMReportData,
 ): Promise<{ success: boolean; buffer?: Buffer; error?: string }> {
   let page: Page | null = null;
 
@@ -125,10 +122,7 @@ export async function generatePMMPdfBuffer(
 /**
  * Generate filename for PMM report
  */
-function generateFilename(
-  useCaseTitle: string,
-  cycleNumber: number
-): string {
+function generateFilename(useCaseTitle: string, cycleNumber: number): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const sanitizedTitle = useCaseTitle.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 30);
   return `PMM_Report_${sanitizedTitle}_Cycle${cycleNumber}_${timestamp}.pdf`;
@@ -147,7 +141,7 @@ export function buildPMMReportData(
   completedBy: string,
   context: IPMMContextSnapshot,
   responses: IPMMResponseWithQuestion[],
-  primaryColor?: string
+  primaryColor?: string,
 ): IPMMReportData {
   // Extract unique EU AI Act articles from responses
   const articles = new Set<string>();
@@ -190,7 +184,7 @@ export async function generateAndUploadPMMReport(
   reportData: IPMMReportData,
   userId: number,
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{ success: boolean; fileId?: number; filename?: string; error?: string }> {
   try {
     // Generate PDF buffer
@@ -206,7 +200,7 @@ export async function generateAndUploadPMMReport(
     // Generate filename
     const filename = generateFilename(
       reportData.metadata.use_case_title,
-      reportData.metadata.cycle_number
+      reportData.metadata.cycle_number,
     );
 
     // Create file object for upload
@@ -223,7 +217,7 @@ export async function generateAndUploadPMMReport(
       userId,
       projectId,
       "Post-Market Monitoring report",
-      organizationId
+      organizationId,
     );
 
     return {
@@ -243,9 +237,7 @@ export async function generateAndUploadPMMReport(
 /**
  * Generate PMM report as downloadable buffer (without uploading)
  */
-export async function generatePMMReportForDownload(
-  reportData: IPMMReportData
-): Promise<{
+export async function generatePMMReportForDownload(reportData: IPMMReportData): Promise<{
   success: boolean;
   buffer?: Buffer;
   filename?: string;
@@ -264,7 +256,7 @@ export async function generatePMMReportForDownload(
 
     const filename = generateFilename(
       reportData.metadata.use_case_title,
-      reportData.metadata.cycle_number
+      reportData.metadata.cycle_number,
     );
 
     return {

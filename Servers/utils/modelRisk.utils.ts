@@ -8,7 +8,7 @@ import { QueryTypes } from "sequelize";
  */
 export async function getAllModelRisksQuery(
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<ModelRiskModel[]> {
   let whereClause = "WHERE organization_id = :organizationId";
   switch (filter) {
@@ -29,7 +29,7 @@ export async function getAllModelRisksQuery(
       replacements: { organizationId },
       mapToModel: true,
       model: ModelRiskModel,
-    }
+    },
   );
   return modelRisks;
 }
@@ -40,19 +40,16 @@ export async function getAllModelRisksQuery(
 export async function getModelRiskByIdQuery(
   id: number,
   organizationId: number,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
 ): Promise<ModelRiskModel | null> {
   const whereClause = includeDeleted
     ? "WHERE organization_id = :organizationId AND id = :id"
     : "WHERE organization_id = :organizationId AND id = :id AND is_deleted = false";
-  const modelRisk = await sequelize.query(
-    `SELECT * FROM model_risks ${whereClause}`,
-    {
-      replacements: { organizationId, id },
-      mapToModel: true,
-      model: ModelRiskModel,
-    }
-  );
+  const modelRisk = await sequelize.query(`SELECT * FROM model_risks ${whereClause}`, {
+    replacements: { organizationId, id },
+    mapToModel: true,
+    model: ModelRiskModel,
+  });
 
   if (!modelRisk.length) return null;
 
@@ -65,7 +62,7 @@ export async function getModelRiskByIdQuery(
 export async function createNewModelRiskQuery(
   data: Partial<IModelRisk>,
   organizationId: number,
-  transaction?: import("sequelize").Transaction
+  transaction?: import("sequelize").Transaction,
 ): Promise<ModelRiskModel> {
   const created_at = new Date();
   const result = await sequelize.query(
@@ -95,7 +92,7 @@ export async function createNewModelRiskQuery(
       mapToModel: true,
       model: ModelRiskModel,
       transaction,
-    }
+    },
   );
 
   return result[0];
@@ -108,7 +105,7 @@ export async function updateModelRiskByIdQuery(
   id: number,
   updatedModelRisk: Partial<IModelRisk>,
   organizationId: number,
-  transaction?: import("sequelize").Transaction
+  transaction?: import("sequelize").Transaction,
 ): Promise<ModelRiskModel | null> {
   const updated_at = new Date();
   const updateModelRisk: Partial<IModelRisk> & { organization_id?: number } = { updated_at };
@@ -130,8 +127,7 @@ export async function updateModelRiskByIdQuery(
   ]
     .filter((field) => {
       if (updatedModelRisk[field as keyof IModelRisk] !== undefined) {
-        (updateModelRisk as any)[field] =
-          updatedModelRisk[field as keyof IModelRisk];
+        (updateModelRisk as any)[field] = updatedModelRisk[field as keyof IModelRisk];
         return true;
       }
       return false;
@@ -162,7 +158,7 @@ export async function updateModelRiskByIdQuery(
  */
 export async function deleteModelRiskByIdQuery(
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
@@ -171,7 +167,7 @@ export async function deleteModelRiskByIdQuery(
       mapToModel: true,
       model: ModelRiskModel,
       type: QueryTypes.UPDATE,
-    }
+    },
   );
   return result.length > 0; // Returns true if a row was updated
 }

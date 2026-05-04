@@ -1,14 +1,7 @@
 import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { keyframes } from "@emotion/react";
-import {
-  Stack,
-  Box,
-  Typography,
-  useTheme,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Stack, Box, Typography, useTheme, IconButton, Tooltip } from "@mui/material";
 import {
   AlertTriangle,
   FileText,
@@ -105,41 +98,178 @@ const GS_CARDS = [
 ] as const;
 
 const EXPLORE_CARDS = [
-  { title: "AI governance", desc: "Manage models, track lifecycle, maintain documentation.", color: brand.primary, path: "/overview" },
-  { title: "Compliance", desc: "EU AI Act, ISO 42001, NIST AI RMF frameworks and controls.", color: "#1E88E5", path: "/framework" },
-  { title: "Risk management", desc: "Identify, assess, and mitigate risks across AI systems.", color: "#F4511E", path: "/risk-management" },
-  { title: "LLM Evals", desc: "Evaluate and benchmark your LLM apps for quality and safety.", color: "#7B1FA2", path: "/evals" },
-  { title: "AI detection", desc: "Scan repos for AI/ML libraries, containers, and shadow AI.", color: "#00796B", path: "/ai-detection" },
-  { title: "Shadow AI", desc: "Monitor unauthorized AI tool usage across your organization.", color: "#D84315", path: "/shadow-ai" },
-  { title: "Policies", desc: "Create, manage, and track AI governance policies.", color: "#283593", path: "/policies" },
-  { title: "Reporting", desc: "Generate compliance reports with optional AI enhancement.", color: "#558B2F", path: "/reporting" },
-  { title: "Training", desc: "Track employee AI training and compliance certifications.", color: "#C2185B", path: "/training" },
-  { title: "Plugins", desc: "Extend with SOC 2, GDPR, HIPAA, Jira, Slack, and more.", color: "#1565C0", path: "/plugins" },
+  {
+    title: "AI governance",
+    desc: "Manage models, track lifecycle, maintain documentation.",
+    color: brand.primary,
+    path: "/overview",
+  },
+  {
+    title: "Compliance",
+    desc: "EU AI Act, ISO 42001, NIST AI RMF frameworks and controls.",
+    color: "#1E88E5",
+    path: "/framework",
+  },
+  {
+    title: "Risk management",
+    desc: "Identify, assess, and mitigate risks across AI systems.",
+    color: "#F4511E",
+    path: "/risk-management",
+  },
+  {
+    title: "LLM Evals",
+    desc: "Evaluate and benchmark your LLM apps for quality and safety.",
+    color: "#7B1FA2",
+    path: "/evals",
+  },
+  {
+    title: "AI detection",
+    desc: "Scan repos for AI/ML libraries, containers, and shadow AI.",
+    color: "#00796B",
+    path: "/ai-detection",
+  },
+  {
+    title: "Shadow AI",
+    desc: "Monitor unauthorized AI tool usage across your organization.",
+    color: "#D84315",
+    path: "/shadow-ai",
+  },
+  {
+    title: "Policies",
+    desc: "Create, manage, and track AI governance policies.",
+    color: "#283593",
+    path: "/policies",
+  },
+  {
+    title: "Reporting",
+    desc: "Generate compliance reports with optional AI enhancement.",
+    color: "#558B2F",
+    path: "/reporting",
+  },
+  {
+    title: "Training",
+    desc: "Track employee AI training and compliance certifications.",
+    color: "#C2185B",
+    path: "/training",
+  },
+  {
+    title: "Plugins",
+    desc: "Extend with SOC 2, GDPR, HIPAA, Jira, Slack, and more.",
+    color: "#1565C0",
+    path: "/plugins",
+  },
 ] as const;
 
 const SHORTCUTS = [
-  { label: "Use cases", tooltip: "Manage AI use cases, projects, and their lifecycle stages.", icon: LayoutGrid, path: "/overview", color: brand.primaryHover, bg: `linear-gradient(135deg, ${brand.primaryLight}, #C8E6D0)` },
-  { label: "Risks", tooltip: "Identify, assess, and track risks across all AI systems.", icon: AlertTriangle, path: "/risk-management", color: "#1565C0", bg: "linear-gradient(135deg, #E3F2FD, #BBDEFB)" },
-  { label: "Models", tooltip: "Track AI/ML models, their versions, and deployment status.", icon: Brain, path: "/model-inventory", color: "#E65100", bg: "linear-gradient(135deg, #FFF8E1, #FFECB3)" },
-  { label: "Vendors", tooltip: "Manage third-party AI vendors and their risk profiles.", icon: Building, path: "/vendors", color: "#C2185B", bg: "linear-gradient(135deg, #FCE4EC, #F8BBD0)" },
-  { label: "Tasks", tooltip: "View and manage compliance tasks assigned to your team.", icon: Calendar, path: "/tasks", color: "#7B1FA2", bg: "linear-gradient(135deg, #F3E5F5, #E1BEE7)" },
-  { label: "Reporting", tooltip: "Generate compliance and governance reports for stakeholders.", icon: BarChart3, path: "/reporting", color: "#283593", bg: "linear-gradient(135deg, #E8EAF6, #C5CAE9)" },
-  { label: "Policies", tooltip: "Create and manage AI governance policies for your organization.", icon: FileText, path: "/policies", color: "#00796B", bg: "linear-gradient(135deg, #E0F2F1, #B2DFDB)" },
-  { label: "Settings", tooltip: "Configure organization settings, users, and preferences.", icon: Settings, path: "/settings", color: "#E65100", bg: "linear-gradient(135deg, #FFF3E0, #FFE0B2)" },
+  {
+    label: "Use cases",
+    tooltip: "Manage AI use cases, projects, and their lifecycle stages.",
+    icon: LayoutGrid,
+    path: "/overview",
+    color: brand.primaryHover,
+    bg: `linear-gradient(135deg, ${brand.primaryLight}, #C8E6D0)`,
+  },
+  {
+    label: "Risks",
+    tooltip: "Identify, assess, and track risks across all AI systems.",
+    icon: AlertTriangle,
+    path: "/risk-management",
+    color: "#1565C0",
+    bg: "linear-gradient(135deg, #E3F2FD, #BBDEFB)",
+  },
+  {
+    label: "Models",
+    tooltip: "Track AI/ML models, their versions, and deployment status.",
+    icon: Brain,
+    path: "/model-inventory",
+    color: "#E65100",
+    bg: "linear-gradient(135deg, #FFF8E1, #FFECB3)",
+  },
+  {
+    label: "Vendors",
+    tooltip: "Manage third-party AI vendors and their risk profiles.",
+    icon: Building,
+    path: "/vendors",
+    color: "#C2185B",
+    bg: "linear-gradient(135deg, #FCE4EC, #F8BBD0)",
+  },
+  {
+    label: "Tasks",
+    tooltip: "View and manage compliance tasks assigned to your team.",
+    icon: Calendar,
+    path: "/tasks",
+    color: "#7B1FA2",
+    bg: "linear-gradient(135deg, #F3E5F5, #E1BEE7)",
+  },
+  {
+    label: "Reporting",
+    tooltip: "Generate compliance and governance reports for stakeholders.",
+    icon: BarChart3,
+    path: "/reporting",
+    color: "#283593",
+    bg: "linear-gradient(135deg, #E8EAF6, #C5CAE9)",
+  },
+  {
+    label: "Policies",
+    tooltip: "Create and manage AI governance policies for your organization.",
+    icon: FileText,
+    path: "/policies",
+    color: "#00796B",
+    bg: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
+  },
+  {
+    label: "Settings",
+    tooltip: "Configure organization settings, users, and preferences.",
+    icon: Settings,
+    path: "/settings",
+    color: "#E65100",
+    bg: "linear-gradient(135deg, #FFF3E0, #FFE0B2)",
+  },
 ] as const;
 
 const RESOURCES = [
-  { label: "User guide", sub: "verifywise.ai/user-guide", icon: BookOpen, url: "https://verifywise.ai/user-guide" },
+  {
+    label: "User guide",
+    sub: "verifywise.ai/user-guide",
+    icon: BookOpen,
+    url: "https://verifywise.ai/user-guide",
+  },
   { label: "Blog", sub: "verifywise.ai/blog", icon: Newspaper, url: "https://verifywise.ai/blog" },
-  { label: "API documentation", sub: "verifywise.ai/api-docs", icon: Plug, url: "https://verifywise.ai/api-docs" },
-  { label: "Community", sub: "github.com/bluewave-labs/verifywise", icon: MessageCircle, url: "https://github.com/bluewave-labs/verifywise" },
+  {
+    label: "API documentation",
+    sub: "verifywise.ai/api-docs",
+    icon: Plug,
+    url: "https://verifywise.ai/api-docs",
+  },
+  {
+    label: "Community",
+    sub: "github.com/bluewave-labs/verifywise",
+    icon: MessageCircle,
+    url: "https://github.com/bluewave-labs/verifywise",
+  },
 ] as const;
 
 const WHATS_NEW = [
-  { label: "AI regulation in the Middle East", sub: "Mar 17, 2026", url: "https://verifywise.ai/blog/ai-regulation-middle-east" },
-  { label: "AI governance directory", sub: "Feb 22, 2026", url: "https://verifywise.ai/blog/list-your-ai-governance-company-on-verifywise-directory" },
-  { label: "Shadow AI detection", sub: "Feb 13, 2026", url: "https://verifywise.ai/blog/shadow-ai-detection-visibility-risk-scoring-governance" },
-  { label: "EU AI Act deployer policy pack", sub: "Dec 23, 2025", url: "https://verifywise.ai/blog/eu-ai-act-deployer-policy-pack" },
+  {
+    label: "AI regulation in the Middle East",
+    sub: "Mar 17, 2026",
+    url: "https://verifywise.ai/blog/ai-regulation-middle-east",
+  },
+  {
+    label: "AI governance directory",
+    sub: "Feb 22, 2026",
+    url: "https://verifywise.ai/blog/list-your-ai-governance-company-on-verifywise-directory",
+  },
+  {
+    label: "Shadow AI detection",
+    sub: "Feb 13, 2026",
+    url: "https://verifywise.ai/blog/shadow-ai-detection-visibility-risk-scoring-governance",
+  },
+  {
+    label: "EU AI Act deployer policy pack",
+    sub: "Dec 23, 2025",
+    url: "https://verifywise.ai/blog/eu-ai-act-deployer-policy-pack",
+  },
 ] as const;
 
 // Progress step definitions with check functions
@@ -169,7 +299,9 @@ const getCachedProgress = (): boolean[] => {
         return parsed;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [true, true, false, false, false]; // defaults: account + org always done
 };
 
@@ -182,19 +314,20 @@ const StartHere = () => {
   const { data: projects } = useProjects();
   const [hasRisks, setHasRisks] = useState(() => getCachedProgress()[4]);
   const [progressDismissed, setProgressDismissed] = useState(
-    () => localStorage.getItem("verifywise_start_here_progress_dismissed") === "true"
+    () => localStorage.getItem("verifywise_start_here_progress_dismissed") === "true",
   );
   const [welcomeVideoOpen, setWelcomeVideoOpen] = useState(false);
   const [expertsDismissed, setExpertsDismissed] = useState(
-    () => localStorage.getItem("verifywise_start_here_experts_dismissed") === "true"
+    () => localStorage.getItem("verifywise_start_here_experts_dismissed") === "true",
   );
   const [exploreVideoTitle, setExploreVideoTitle] = useState<string | null>(null);
 
   const exploreVideoConfig = useMemo(
-    () => exploreVideoTitle && EXPLORE_VIDEO_DATA[exploreVideoTitle]
-      ? buildExploreConfig(EXPLORE_VIDEO_DATA[exploreVideoTitle])
-      : null,
-    [exploreVideoTitle]
+    () =>
+      exploreVideoTitle && EXPLORE_VIDEO_DATA[exploreVideoTitle]
+        ? buildExploreConfig(EXPLORE_VIDEO_DATA[exploreVideoTitle])
+        : null,
+    [exploreVideoTitle],
   );
 
   const closeWelcomeVideo = useCallback(() => setWelcomeVideoOpen(false), []);
@@ -213,7 +346,9 @@ const StartHere = () => {
       .catch(() => {
         if (!cancelled) setHasRisks(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [userName, setUserName] = useState(userToken?.name || "");
@@ -226,10 +361,7 @@ const StartHere = () => {
       })
       .catch(() => setUserName(userToken?.name || ""));
   }, [userId, userToken?.name]);
-  const greeting = useMemo(
-    () => getTimeBasedGreeting(userName, userToken),
-    [userName, userToken]
-  );
+  const greeting = useMemo(() => getTimeBasedGreeting(userName, userToken), [userName, userToken]);
 
   // Compute progress dynamically
   const progressDone = useMemo(() => {
@@ -267,16 +399,32 @@ const StartHere = () => {
 
     const interval = setInterval(() => {
       const timeLeft = animationEnd - Date.now();
-      if (timeLeft <= 0) { clearInterval(interval); return; }
+      if (timeLeft <= 0) {
+        clearInterval(interval);
+        return;
+      }
       const particleCount = 50 * (timeLeft / duration);
-      confetti({ ...defaults, particleCount, origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 }, colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"] });
-      confetti({ ...defaults, particleCount, origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 }, colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"] });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+      });
     }, 250);
 
     // Auto-dismiss card after confetti + a short pause
     const dismissTimer = setTimeout(() => dismissProgress(), 5000);
 
-    return () => { clearInterval(interval); clearTimeout(dismissTimer); };
+    return () => {
+      clearInterval(interval);
+      clearTimeout(dismissTimer);
+    };
   }, [progressPct, progressDismissed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissProgress = useCallback(() => {
@@ -325,7 +473,9 @@ const StartHere = () => {
 
         {/* Row 1: Getting started */}
         <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.1s both` }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>Getting started</Typography>
+          <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>
+            Getting started
+          </Typography>
           <Box
             sx={{
               display: "grid",
@@ -401,7 +551,8 @@ const StartHere = () => {
                   sx={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 55%, transparent 60%)",
+                    background:
+                      "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 55%, transparent 60%)",
                     backgroundSize: "200% 100%",
                     animation: `${shimmer} 8s ease-in-out infinite`,
                     animationDelay: `${i * 1.5}s`,
@@ -463,11 +614,27 @@ const StartHere = () => {
                 )}
 
                 <Box sx={{ position: "relative", zIndex: 1 }}>
-                  <Typography sx={{ fontSize: 14, fontWeight: 600, color: "background.main", mb: "4px", textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>
+                  <Typography
+                    sx={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "background.main",
+                      mb: "4px",
+                      textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                    }}
+                  >
                     {card.title}
                   </Typography>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
-                    <Typography sx={{ fontSize: 12, color: "rgba(255,255,255,0.9)", lineHeight: 1.4, flex: 1, textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: "rgba(255,255,255,0.9)",
+                        lineHeight: 1.4,
+                        flex: 1,
+                        textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      }}
+                    >
                       {card.desc}
                     </Typography>
                     <ArrowRight
@@ -529,38 +696,116 @@ const StartHere = () => {
               }}
             >
               {EXPLORE_CARDS.map((card, i) => (
-                  <Box
-                    key={card.title}
-                    onClick={() => setExploreVideoTitle(card.title)}
-                    sx={{
-                      minWidth: 196, maxWidth: 196, borderRadius: "8px", overflow: "hidden",
-                      background: theme.palette.background.main,
-                      border: `1px solid ${theme.palette.border.light}`,
-                      cursor: "pointer", flexShrink: 0,
-                      animation: `${fadeInUp} 0.4s ease-out ${0.3 + i * 0.05}s both`,
-                      transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        borderColor: `${card.color}55`,
-                        "& .explore-play": { opacity: 1, transform: "translate(-50%, -50%) scale(1)" },
+                <Box
+                  key={card.title}
+                  onClick={() => setExploreVideoTitle(card.title)}
+                  sx={{
+                    minWidth: 196,
+                    maxWidth: 196,
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    background: theme.palette.background.main,
+                    border: `1px solid ${theme.palette.border.light}`,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    animation: `${fadeInUp} 0.4s ease-out ${0.3 + i * 0.05}s both`,
+                    transition:
+                      "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      borderColor: `${card.color}55`,
+                      "& .explore-play": {
+                        opacity: 1,
+                        transform: "translate(-50%, -50%) scale(1)",
                       },
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      height: 97,
+                      background: `${card.color}15`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position: "relative",
+                      overflow: "hidden",
                     }}
                   >
-                    <Box sx={{ height: 97, background: `${card.color}15`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                      <Box sx={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 30% 50%, ${card.color}25, transparent 70%)` }} />
-                      <Box className="explore-play" sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) scale(0.8)", opacity: 0, transition: "all 0.25s ease", width: 36, height: 36, borderRadius: "50%", background: `${card.color}30`, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                        <Play size={16} color={card.color} fill={card.color} style={{ marginLeft: 2 }} />
-                      </Box>
-                      <Box sx={{ position: "absolute", top: 6, left: 6, zIndex: 2, display: "flex", alignItems: "center", gap: "3px", backgroundColor: `${card.color}20`, borderRadius: "3px", padding: "2px 6px" }}>
-                        <Play size={8} color={card.color} fill={card.color} />
-                        <Typography sx={{ fontSize: 9, color: card.color, fontWeight: 500, lineHeight: 1 }}>Video</Typography>
-                      </Box>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        background: `radial-gradient(circle at 30% 50%, ${card.color}25, transparent 70%)`,
+                      }}
+                    />
+                    <Box
+                      className="explore-play"
+                      sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%) scale(0.8)",
+                        opacity: 0,
+                        transition: "all 0.25s ease",
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: `${card.color}30`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      <Play
+                        size={16}
+                        color={card.color}
+                        fill={card.color}
+                        style={{ marginLeft: 2 }}
+                      />
                     </Box>
-                    <Box sx={{ p: "12px" }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "4px" }}>{card.title}</Typography>
-                      <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{card.desc}</Typography>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 6,
+                        left: 6,
+                        zIndex: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px",
+                        backgroundColor: `${card.color}20`,
+                        borderRadius: "3px",
+                        padding: "2px 6px",
+                      }}
+                    >
+                      <Play size={8} color={card.color} fill={card.color} />
+                      <Typography
+                        sx={{ fontSize: 9, color: card.color, fontWeight: 500, lineHeight: 1 }}
+                      >
+                        Video
+                      </Typography>
                     </Box>
                   </Box>
+                  <Box sx={{ p: "12px" }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "4px" }}>
+                      {card.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.4,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {card.desc}
+                    </Typography>
+                  </Box>
+                </Box>
               ))}
             </Box>
             <IconButton
@@ -589,9 +834,7 @@ const StartHere = () => {
 
         {/* Row 3: Shortcuts */}
         <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.35s both` }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>
-            Shortcuts
-          </Typography>
+          <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>Shortcuts</Typography>
           <Stack direction="row" sx={{ gap: "16px", flexWrap: "wrap" }}>
             {SHORTCUTS.map((s, i) => {
               const Icon = s.icon;
@@ -665,78 +908,88 @@ const StartHere = () => {
 
         {/* Row 4: Your experts */}
         {!expertsDismissed && (
-        <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.4s both` }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>
-            Your experts
-          </Typography>
-          <Stack direction="row" alignItems="flex-start" sx={{ gap: "12px", position: "relative", width: "fit-content" }}>
-            {[
-              { name: "Ulas Ozguven", photo: "https://verifywise.ai/images/team/ulas.jpeg" },
-              { name: "David Pinkney", photo: "https://verifywise.ai/images/avatars/DavidPinkney.jpg" },
-            ].map((expert) => (
-              <Stack
-                key={expert.name}
-                onClick={() => window.open("https://verifywise.ai/contact", "_blank", "noopener,noreferrer")}
-                alignItems="center"
+          <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.4s both` }}>
+            <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>Your experts</Typography>
+            <Stack
+              direction="row"
+              alignItems="flex-start"
+              sx={{ gap: "12px", position: "relative", width: "fit-content" }}
+            >
+              {[
+                { name: "Ulas Ozguven", photo: "https://verifywise.ai/images/team/ulas.jpeg" },
+                {
+                  name: "David Pinkney",
+                  photo: "https://verifywise.ai/images/avatars/DavidPinkney.jpg",
+                },
+              ].map((expert) => (
+                <Stack
+                  key={expert.name}
+                  onClick={() =>
+                    window.open("https://verifywise.ai/contact", "_blank", "noopener,noreferrer")
+                  }
+                  alignItems="center"
+                  sx={{
+                    gap: "8px",
+                    p: "16px",
+                    borderRadius: "8px",
+                    border: `1px solid ${theme.palette.border.light}`,
+                    minWidth: 160,
+                    cursor: "pointer",
+                    transition:
+                      "border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    "&:hover": {
+                      borderColor: theme.palette.border.dark,
+                      transform: "translateY(-2px)",
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={expert.photo}
+                    alt={expert.name}
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, textAlign: "center" }}>
+                    {expert.name}
+                  </Typography>
+                  <Typography
+                    sx={{ fontSize: 11, color: theme.palette.text.secondary, textAlign: "center" }}
+                  >
+                    AI governance expert
+                  </Typography>
+                  <Box
+                    component="img"
+                    src="/verifywise-logo.png"
+                    alt="VerifyWise"
+                    sx={{ height: 16, mt: "2px", opacity: 0.7 }}
+                  />
+                </Stack>
+              ))}
+              <Typography
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpertsDismissed(true);
+                  localStorage.setItem("verifywise_start_here_experts_dismissed", "true");
+                }}
                 sx={{
-                  gap: "8px",
-                  p: "16px",
-                  borderRadius: "8px",
-                  border: `1px solid ${theme.palette.border.light}`,
-                  minWidth: 160,
+                  position: "absolute",
+                  top: -24,
+                  right: 0,
+                  fontSize: 11,
+                  color: theme.palette.text.accent,
                   cursor: "pointer",
-                  transition: "border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                  "&:hover": {
-                    borderColor: theme.palette.border.dark,
-                    transform: "translateY(-2px)",
-                  },
+                  "&:hover": { color: theme.palette.text.secondary },
                 }}
               >
-                <Box
-                  component="img"
-                  src={expert.photo}
-                  alt={expert.name}
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
-                />
-                <Typography sx={{ fontSize: 13, fontWeight: 600, textAlign: "center" }}>
-                  {expert.name}
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, textAlign: "center" }}>
-                  AI governance expert
-                </Typography>
-                <Box
-                  component="img"
-                  src="/verifywise-logo.png"
-                  alt="VerifyWise"
-                  sx={{ height: 16, mt: "2px", opacity: 0.7 }}
-                />
-              </Stack>
-            ))}
-            <Typography
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpertsDismissed(true);
-                localStorage.setItem("verifywise_start_here_experts_dismissed", "true");
-              }}
-              sx={{
-                position: "absolute",
-                top: -24,
-                right: 0,
-                fontSize: 11,
-                color: theme.palette.text.accent,
-                cursor: "pointer",
-                "&:hover": { color: theme.palette.text.secondary },
-              }}
-            >
-              Dismiss
-            </Typography>
-          </Stack>
-        </Box>
+                Dismiss
+              </Typography>
+            </Stack>
+          </Box>
         )}
       </Stack>
 
@@ -756,18 +1009,41 @@ const StartHere = () => {
                 content: '""',
                 position: "absolute",
                 inset: 0,
-                background: "radial-gradient(circle at 90% 10%, rgba(255,255,255,0.08) 0%, transparent 50%)",
+                background:
+                  "radial-gradient(circle at 90% 10%, rgba(255,255,255,0.08) 0%, transparent 50%)",
                 pointerEvents: "none",
               },
             }}
           >
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "background.main", mb: "12px", position: "relative" }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "background.main",
+                mb: "12px",
+                position: "relative",
+              }}
+            >
               Your progress
             </Typography>
-            <Stack direction="row" alignItems="center" sx={{ gap: "16px", mb: "12px", position: "relative" }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              sx={{ gap: "16px", mb: "12px", position: "relative" }}
+            >
               <Box sx={{ width: 56, height: 56, position: "relative", flexShrink: 0 }}>
-                <svg viewBox="0 0 56 56" style={{ transform: "rotate(-90deg)", width: 56, height: 56 }}>
-                  <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="5" />
+                <svg
+                  viewBox="0 0 56 56"
+                  style={{ transform: "rotate(-90deg)", width: 56, height: 56 }}
+                >
+                  <circle
+                    cx="28"
+                    cy="28"
+                    r="22"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="5"
+                  />
                   <circle
                     cx="28"
                     cy="28"
@@ -818,7 +1094,8 @@ const StartHere = () => {
                     direction="row"
                     alignItems="center"
                     onClick={() => {
-                      if (!done && step.path) navigate(step.path, step.state ? { state: step.state } : undefined);
+                      if (!done && step.path)
+                        navigate(step.path, step.state ? { state: step.state } : undefined);
                     }}
                     sx={{
                       gap: "8px",
@@ -834,7 +1111,13 @@ const StartHere = () => {
                     {done ? (
                       <CheckCircle2 size={16} color="rgba(255,255,255,0.8)" strokeWidth={2} />
                     ) : (
-                      <Box sx={{ animation: `${pulseGlow} 2.5s ease-in-out infinite`, borderRadius: "50%", display: "flex" }}>
+                      <Box
+                        sx={{
+                          animation: `${pulseGlow} 2.5s ease-in-out infinite`,
+                          borderRadius: "50%",
+                          display: "flex",
+                        }}
+                      >
                         <Circle size={16} color="rgba(255,255,255,0.5)" strokeWidth={1.5} />
                       </Box>
                     )}
@@ -864,9 +1147,7 @@ const StartHere = () => {
             p: "16px",
           }}
         >
-          <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "12px" }}>
-            Resources
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "12px" }}>Resources</Typography>
           <Stack sx={{ gap: "4px" }}>
             {RESOURCES.map((r) => {
               const Icon = r.icon;
@@ -931,9 +1212,7 @@ const StartHere = () => {
             p: "16px",
           }}
         >
-          <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "12px" }}>
-            What's new
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "12px" }}>What's new</Typography>
           <Stack sx={{ gap: "4px" }}>
             {WHATS_NEW.map((item) => (
               <Stack
@@ -969,7 +1248,9 @@ const StartHere = () => {
                   <Sparkles size={14} color={theme.palette.text.secondary} strokeWidth={1.5} />
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}>
+                  <Typography
+                    sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}
+                  >
                     {item.label}
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: theme.palette.text.accent }}>
@@ -982,10 +1263,7 @@ const StartHere = () => {
         </Box>
       </Stack>
 
-      <WelcomeVideoPlayer
-        open={welcomeVideoOpen}
-        onClose={closeWelcomeVideo}
-      />
+      <WelcomeVideoPlayer open={welcomeVideoOpen} onClose={closeWelcomeVideo} />
       {exploreVideoConfig && (
         <VideoPlayerModal
           open={!!exploreVideoTitle}

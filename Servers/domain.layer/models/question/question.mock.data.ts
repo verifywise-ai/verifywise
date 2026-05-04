@@ -65,8 +65,7 @@ export const questions = (subTopics: number[]): IQuestion[] => {
     {
       order_no: 1,
       subtopic_id: subTopics[1],
-      question:
-        "What type of AI technology are you using? Explain AI and ML technologies used.",
+      question: "What type of AI technology are you using? Explain AI and ML technologies used.",
       hint: "What type of AI technology are you using? Explain AI and ML technologies used.",
       priority_level: "high priority",
       answer_type: "Long text",
@@ -481,8 +480,7 @@ export const questions = (subTopics: number[]): IQuestion[] => {
     {
       order_no: 8,
       subtopic_id: subTopics[5],
-      question:
-        "Can the user delete their data from the system? If so, how, and if not, why not?",
+      question: "Can the user delete their data from the system? If so, how, and if not, why not?",
       hint: "Explain how the right to deletion is exercised by end users interacting with the AI system across your organization’s systems, the AI provider’s systems, and other lifecycle actors.",
       priority_level: "medium priority",
       answer_type: "Long text",
@@ -1182,8 +1180,7 @@ export const questions = (subTopics: number[]): IQuestion[] => {
     {
       order_no: 1,
       subtopic_id: subTopics[20],
-      question:
-        "What type of AI technology are you using? Explain AI and ML technologies used.",
+      question: "What type of AI technology are you using? Explain AI and ML technologies used.",
       hint: "What type of AI technology are you using? Explain AI and ML technologies used.",
       priority_level: "high priority",
       answer_type: "Long text",
@@ -1598,8 +1595,7 @@ export const questions = (subTopics: number[]): IQuestion[] => {
     {
       order_no: 8,
       subtopic_id: subTopics[24],
-      question:
-        "Can the user delete their data from the system? If so, how, and if not, why not?",
+      question: "Can the user delete their data from the system? If so, how, and if not, why not?",
       hint: "Explain how the right to deletion is exercised by end users interacting with the AI system across your organization’s systems, the AI provider’s systems, and other lifecycle actors.",
       priority_level: "medium priority",
       answer_type: "Long text",

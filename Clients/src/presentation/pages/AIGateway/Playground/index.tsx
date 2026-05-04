@@ -18,8 +18,8 @@ import { PlaygroundComposer } from "./PlaygroundComposer";
 
 export default function PlaygroundPage() {
   const [endpoints, setEndpoints] = useState<any[]>([]);
-  const [selectedEndpoint, setSelectedEndpoint] = useState(() =>
-    localStorage.getItem("vw_playground_endpoint") || ""
+  const [selectedEndpoint, setSelectedEndpoint] = useState(
+    () => localStorage.getItem("vw_playground_endpoint") || "",
   );
   const [temperature, setTemperature] = useState(() => {
     const saved = localStorage.getItem("vw_playground_temperature");
@@ -103,7 +103,11 @@ export default function PlaygroundPage() {
               "&:hover": { backgroundColor: palette.background.fill },
             }}
           >
-            <Settings size={16} strokeWidth={1.5} color={showSettings ? palette.brand.primary : palette.text.tertiary} />
+            <Settings
+              size={16}
+              strokeWidth={1.5}
+              color={showSettings ? palette.brand.primary : palette.text.tertiary}
+            />
           </IconButton>
         </Stack>
 
@@ -167,47 +171,77 @@ export default function PlaygroundPage() {
           {!selectedEndpoint ? (
             <EmptyState
               icon={endpoints.length === 0 ? Router : MessageSquare}
-              message={endpoints.length === 0
-                ? "No endpoints available. Configure an endpoint before using the playground."
-                : "Select an endpoint to start chatting"}
+              message={
+                endpoints.length === 0
+                  ? "No endpoints available. Configure an endpoint before using the playground."
+                  : "Select an endpoint to start chatting"
+              }
             >
               {endpoints.length === 0 && (
-                <Box sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "8px",
-                  p: "12px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #FEDF89",
-                  bgcolor: "#FFFAEB",
-                  mb: "8px",
-                }}>
-                  <TriangleAlert size={16} strokeWidth={1.5} color="#B54708" style={{ flexShrink: 0, marginTop: 1 }} />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    p: "12px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #FEDF89",
+                    bgcolor: "#FFFAEB",
+                    mb: "8px",
+                  }}
+                >
+                  <TriangleAlert
+                    size={16}
+                    strokeWidth={1.5}
+                    color="#B54708"
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
                   <Box>
                     <Typography fontSize={13} fontWeight={500} color="#B54708">
                       Setup required
                     </Typography>
                     <Typography fontSize={12} color="#93370D" mt="2px">
                       The playground needs at least one active endpoint.{" "}
-                      <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>Add an API key</Link> in Settings, then{" "}
-                      <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>create an endpoint</Link> to get started.
+                      <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
+                        Add an API key
+                      </Link>{" "}
+                      in Settings, then{" "}
+                      <Link
+                        to="/ai-gateway/endpoints"
+                        style={{ color: "#B54708", fontWeight: 500 }}
+                      >
+                        create an endpoint
+                      </Link>{" "}
+                      to get started.
                     </Typography>
                   </Box>
                 </Box>
               )}
               <EmptyStateTip
                 icon={endpoints.length === 0 ? KeyRound : Zap}
-                title={endpoints.length === 0 ? "Step 1: Add an API key" : "Test endpoints before production"}
-                description={endpoints.length === 0
-                  ? "Go to Settings and add your provider API key (OpenAI, Anthropic, etc.)."
-                  : "Send test messages to any configured endpoint and verify model behavior, system prompts, and response quality before routing production traffic."}
+                title={
+                  endpoints.length === 0
+                    ? "Step 1: Add an API key"
+                    : "Test endpoints before production"
+                }
+                description={
+                  endpoints.length === 0
+                    ? "Go to Settings and add your provider API key (OpenAI, Anthropic, etc.)."
+                    : "Send test messages to any configured endpoint and verify model behavior, system prompts, and response quality before routing production traffic."
+                }
               />
               <EmptyStateTip
                 icon={endpoints.length === 0 ? Router : Coins}
-                title={endpoints.length === 0 ? "Step 2: Create an endpoint" : "Estimate cost per message"}
-                description={endpoints.length === 0
-                  ? "Go to Endpoints and create one that pairs a model with your API key."
-                  : "Every playground message shows its cost and token usage. Multiply by your expected daily volume to forecast monthly spend before going live."}
+                title={
+                  endpoints.length === 0
+                    ? "Step 2: Create an endpoint"
+                    : "Estimate cost per message"
+                }
+                description={
+                  endpoints.length === 0
+                    ? "Go to Endpoints and create one that pairs a model with your API key."
+                    : "Every playground message shows its cost and token usage. Multiply by your expected daily volume to forecast monthly spend before going live."
+                }
               />
             </EmptyState>
           ) : (
@@ -224,7 +258,10 @@ export default function PlaygroundPage() {
                     }}
                   >
                     <ThreadPrimitive.Messages
-                      components={{ UserMessage: PlaygroundMessage, AssistantMessage: PlaygroundMessage }}
+                      components={{
+                        UserMessage: PlaygroundMessage,
+                        AssistantMessage: PlaygroundMessage,
+                      }}
                     />
                   </ThreadPrimitive.Viewport>
                   <PlaygroundComposer disabled={!selectedEndpoint} />

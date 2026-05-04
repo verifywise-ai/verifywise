@@ -59,16 +59,11 @@ const handleNewProject = ({ isNewProject, project }) => {
   console.log("Project created successfully!", project);
   // Update project list or navigate to project page
   if (isNewProject) {
-    setProjects(prev => [...prev, project]);
+    setProjects((prev) => [...prev, project]);
   }
 };
 
-return (
-  <CreateProjectForm
-    closePopup={handleClosePopup}
-    onNewProject={handleNewProject}
-  />
-);
+return <CreateProjectForm closePopup={handleClosePopup} onNewProject={handleNewProject} />;
 ```
 
 ## Form Fields
@@ -88,7 +83,7 @@ return (
 3. **AI Risk Classification** (Required)
    - Dropdown with predefined risk levels:
      - High Risk
-     - Limited Risk  
+     - Limited Risk
      - Minimal Risk
 
 4. **Type of High Risk Role** (Required)
@@ -163,11 +158,13 @@ const initialState: CreateProjectFormValues = {
 ## Validation Rules
 
 ### String Validation
+
 - **Project Title**: 1-64 characters, required
 - **Goal**: 1-256 characters, required
 - **Start Date**: Valid date string, required
 
 ### Selection Validation
+
 - **Team Members**: At least one member required
 - **Owner**: Valid user selection required
 - **AI Risk Classification**: Valid option selection required
@@ -194,12 +191,14 @@ const response = await createProject({
 ```
 
 ### Success Handling
+
 - Form reset to initial state
 - Error state clearing
 - Popup closure
 - Success callback execution with project data
 
 ### Error Handling
+
 - Network error catching
 - User feedback through console logging
 - Graceful degradation
@@ -249,41 +248,50 @@ fieldStyle: (theme: Theme) => ({
 ## Dependencies
 
 ### Core React
+
 - `react` - FC, useState, useMemo, useCallback, Suspense, lazy
 - React hooks for state management and performance optimization
 
 ### Material-UI Components
+
 - `@mui/material` - Button, Stack, useTheme, Autocomplete, TextField, Typography, Box
 - `@mui/icons-material/KeyboardArrowDown` - Dropdown indicator icon
 
 ### State Management
+
 - `react-redux` - useSelector for auth state access
 - Redux integration for global state management
 
 ### Date Management
+
 - `dayjs` - Date manipulation and ISO string formatting
 - TypeScript integration with Dayjs type definitions
 
 ### Form Components (Lazy Loaded)
+
 - `Select` - Custom dropdown component
-- `DatePicker` - Custom date selection component  
+- `DatePicker` - Custom date selection component
 - `Field` - Custom input field component
 
 ### Validation & Utilities
+
 - `checkStringValidation` - String field validation utility
 - `selectValidation` - Dropdown selection validation utility
 - `extractUserToken` - JWT token parsing utility
 
 ### Data Sources
+
 - `useUsers` - Hook for fetching user data
 - `useAuth` - Authentication and user role management
 - Risk classification and role enumerations from domain layer
 
 ### API Services
+
 - `createProject` - Project creation API endpoint
 - Repository pattern for data access
 
 ### Type Definitions
+
 - Domain interfaces for form values and error states
 - TypeScript integration for type safety
 
@@ -313,14 +321,14 @@ fieldStyle: (theme: Theme) => ({
 ### Testing Utilities
 
 ```jsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import CreateProjectForm from './CreateProjectForm';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import CreateProjectForm from "./CreateProjectForm";
 
-test('validates required fields', async () => {
+test("validates required fields", async () => {
   render(<CreateProjectForm closePopup={jest.fn()} onNewProject={jest.fn()} />);
-  
-  fireEvent.click(screen.getByText('Create project'));
-  
+
+  fireEvent.click(screen.getByText("Create project"));
+
   await waitFor(() => {
     expect(screen.getByText(/project title is required/i)).toBeInTheDocument();
   });

@@ -19,11 +19,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logEvent } from "../utils/logger/dbLogger";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
-import {
-  logFailure,
-  logProcessing,
-  logSuccess,
-} from "../utils/logger/logHelper";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import { uploadFile } from "../utils/fileUpload.utils";
 import { UploadedFile, RequestWithFile } from "../utils/question.utils";
 import { getUserProjects } from "../utils/user.utils";
@@ -35,7 +31,7 @@ import { getUserProjects } from "../utils/user.utils";
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
     `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT }
+    { replacements: { userId }, type: QueryTypes.SELECT },
   );
   if (result[0]) {
     return `${result[0].name} ${result[0].surname}`.trim();
@@ -50,7 +46,7 @@ async function notifyNistAiRmfAssignment(
   entityName: string,
   roleType: AssignmentRoleType,
   newUserId: number,
-  oldUserId: number | null | undefined
+  oldUserId: number | null | undefined,
 ): Promise<void> {
   // Only notify if assigned to a new user
   if (newUserId && newUserId !== oldUserId) {
@@ -59,13 +55,19 @@ async function notifyNistAiRmfAssignment(
 
     // Query for function type, category info, subcategory index and description
     // Uses struct tables for hierarchy data
-    const result = await sequelize.query<{ func_type: string; category_struct_id: number; category_id: number; subcategory_id: number; subcategory_description: string }>(
+    const result = await sequelize.query<{
+      func_type: string;
+      category_struct_id: number;
+      category_id: number;
+      subcategory_id: number;
+      subcategory_description: string;
+    }>(
       `SELECT ss.function as func_type, cs.id as category_struct_id, cs.category_id, ss.subcategory_id, ss.description as subcategory_description
        FROM nist_ai_rmf_subcategories s
        JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
        JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
        WHERE s.organization_id = :organizationId AND s.id = :entityId`,
-      { replacements: { organizationId: req.organizationId!, entityId }, type: QueryTypes.SELECT }
+      { replacements: { organizationId: req.organizationId!, entityId }, type: QueryTypes.SELECT },
     );
 
     let urlPath: string;
@@ -104,35 +106,34 @@ async function notifyNistAiRmfAssignment(
         parentType: functionName ? "Function / Category" : undefined,
         parentName: functionName && categoryName ? `${functionName} → ${categoryName}` : undefined,
         description,
-      }
+      },
     ).catch((err) => console.error(`Failed to send ${roleType} notification:`, err));
   }
 }
 
 export async function getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<any> {
   logStructured(
     "processing",
     "starting to get all NIST AI RMF subcategories by title",
     "getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle",
-    "nist_ai_rmf.subcategory.ctrl.ts"
+    "nist_ai_rmf.subcategory.ctrl.ts",
   );
   logger.debug("🔍 Fetching all NIST AI RMF subcategories by title");
   try {
-    const subcategories =
-      await getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery(
-        Number(req.params.categoryId),
-        Array.isArray(req.params.title) ? req.params.title[0] : req.params.title,
-        req.organizationId!
-      );
+    const subcategories = await getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery(
+      Number(req.params.categoryId),
+      Array.isArray(req.params.title) ? req.params.title[0] : req.params.title,
+      req.organizationId!,
+    );
     if (subcategories && subcategories.length > 0) {
       logStructured(
         "successful",
         `retrieved ${subcategories.length} NIST AI RMF subcategories by title`,
         "getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle",
-        "nist_ai_rmf.subcategory.ctrl.ts:"
+        "nist_ai_rmf.subcategory.ctrl.ts:",
       );
       return res.status(200).json(STATUS_CODE[200](subcategories));
     }
@@ -140,7 +141,7 @@ export async function getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle(
       "error",
       "no NIST AI RMF subcategories found by title",
       "getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle:",
-      "nist_ai_rmf.subcategory.ctrl.ts"
+      "nist_ai_rmf.subcategory.ctrl.ts",
     );
     return res.status(404).json(STATUS_CODE[404](subcategories));
   } catch (error) {
@@ -148,38 +149,32 @@ export async function getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle(
       "Error",
       `Failed to retrieve NIST AI RMF subcategories by category id and title: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
-    logger.error(
-      "❌ Error in getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle:",
-      error
-    );
+    logger.error("❌ Error in getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function getNISTAIRMFSubcategoryById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFSubcategoryById(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "starting to get NIST AI RMF subcategory by id",
     "getNISTAIRMFSubcategoryByIdQuery",
-    "nist_ai_rmf.subcategory.ctrl.ts"
+    "nist_ai_rmf.subcategory.ctrl.ts",
   );
   logger.debug("🔍 Fetching NIST AI RMF subcategory by id");
   try {
     const subcategory = await getNISTAIRMFSubcategoryByIdQuery(
       Number(req.params.id),
-      req.organizationId!
+      req.organizationId!,
     );
     if (subcategory) {
       logStructured(
         "successful",
         "NIST AI RMF subcategory found by id",
         "getNISTAIRMFSubcategoryByIdQuery",
-        "nist_ai_rmf.subcategory.ctrl.ts"
+        "nist_ai_rmf.subcategory.ctrl.ts",
       );
       return res.status(200).json(STATUS_CODE[200](subcategory));
     }
@@ -187,7 +182,7 @@ export async function getNISTAIRMFSubcategoryById(
       "error",
       "NIST AI RMF subcategory not found by id",
       "getNISTAIRMFSubcategoryByIdQuery",
-      "nist_ai_rmf.subcategory.ctrl.ts"
+      "nist_ai_rmf.subcategory.ctrl.ts",
     );
     return res.status(404).json(STATUS_CODE[404](subcategory));
   } catch (error) {
@@ -195,7 +190,7 @@ export async function getNISTAIRMFSubcategoryById(
       "Error",
       `Failed to retrieve NIST AI RMF subcategory by id: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
   }
 }
@@ -203,10 +198,7 @@ export async function getNISTAIRMFSubcategoryById(
 /**
  * Get all risks linked to a NIST AI RMF subcategory
  */
-export async function getNISTAIRMFSubcategoryRisks(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFSubcategoryRisks(req: Request, res: Response): Promise<any> {
   const subcategoryId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -216,15 +208,10 @@ export async function getNISTAIRMFSubcategoryRisks(
     userId: req.userId!,
     tenantId: req.organizationId!,
   });
-  logger.debug(
-    `🔍 Fetching risks for NIST AI RMF subcategory ${subcategoryId}`
-  );
+  logger.debug(`🔍 Fetching risks for NIST AI RMF subcategory ${subcategoryId}`);
 
   try {
-    const risks = await getNISTAIRMFSubcategoryRisksQuery(
-      subcategoryId,
-      req.organizationId!
-    );
+    const risks = await getNISTAIRMFSubcategoryRisksQuery(subcategoryId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -244,7 +231,7 @@ export async function getNISTAIRMFSubcategoryRisks(
       "Error",
       `Failed to get NIST AI RMF subcategory risks: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -261,7 +248,7 @@ export async function getNISTAIRMFSubcategoryRisks(
 
 export async function updateNISTAIRMFSubcategoryById(
   req: RequestWithFile,
-  res: Response
+  res: Response,
 ): Promise<any> {
   const transaction = await sequelize.transaction();
   const subcategoryId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
@@ -296,10 +283,20 @@ export async function updateNISTAIRMFSubcategoryById(
         replacements: { organizationId: req.organizationId!, id: subcategoryId },
         transaction,
         type: QueryTypes.SELECT,
-      }
-    )) as { owner: number | null; reviewer: number | null; approver: number | null; title: string }[];
+      },
+    )) as {
+      owner: number | null;
+      reviewer: number | null;
+      approver: number | null;
+      title: string;
+    }[];
 
-    const currentData = currentSubcategoryResult[0] || { owner: null, reviewer: null, approver: null, title: '' };
+    const currentData = currentSubcategoryResult[0] || {
+      owner: null,
+      reviewer: null,
+      approver: null,
+      title: "",
+    };
 
     // Parse tags from JSON string if present
     if (subcategory.tags && typeof subcategory.tags === "string") {
@@ -315,17 +312,14 @@ export async function updateNISTAIRMFSubcategoryById(
     // Files to unlink (not delete) - the actual file stays in file manager
     const filesToUnlink = subcategory.delete
       ? ((JSON.parse(subcategory.delete || "[]") as (string | number)[])
-        .map((id) => (typeof id === "string" ? parseInt(id, 10) : id))
-        .filter((id) => !isNaN(id)) as number[])
+          .map((id) => (typeof id === "string" ? parseInt(id, 10) : id))
+          .filter((id) => !isNaN(id)) as number[])
       : [];
 
     // Get user's project ID for file uploads
     let userProjectId = 1; // Default fallback
     try {
-      const userProjects = await getUserProjects(
-        Number(req.userId),
-        req.organizationId!
-      );
+      const userProjects = await getUserProjects(Number(req.userId), req.organizationId!);
       if (userProjects && userProjects.length > 0) {
         userProjectId = userProjects[0].id!; // Use first project user has access to
       }
@@ -348,15 +342,11 @@ export async function updateNISTAIRMFSubcategoryById(
       for (const file of req.files as UploadedFile[]) {
         const uploadedFile = await uploadFile(
           file,
-          subcategory.user_id
-            ? parseInt(subcategory.user_id)
-            : Number(req.userId),
-          subcategory.project_id
-            ? parseInt(subcategory.project_id)
-            : userProjectId,
+          subcategory.user_id ? parseInt(subcategory.user_id) : Number(req.userId),
+          subcategory.project_id ? parseInt(subcategory.project_id) : userProjectId,
           "Main clauses group",
           req.organizationId!,
-          transaction
+          transaction,
         );
 
         uploadedFiles.push({
@@ -384,7 +374,7 @@ export async function updateNISTAIRMFSubcategoryById(
       uploadedFiles,
       filesToUnlinkAsStrings,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -396,26 +386,47 @@ export async function updateNISTAIRMFSubcategoryById(
     const newApprover = subcategory.approver ? parseInt(String(subcategory.approver)) : null;
 
     if (newOwner) {
-      notifyNistAiRmfAssignment(req, subcategoryId, entityName, "Owner", newOwner, currentData.owner);
+      notifyNistAiRmfAssignment(
+        req,
+        subcategoryId,
+        entityName,
+        "Owner",
+        newOwner,
+        currentData.owner,
+      );
     }
     if (newReviewer) {
-      notifyNistAiRmfAssignment(req, subcategoryId, entityName, "Reviewer", newReviewer, currentData.reviewer);
+      notifyNistAiRmfAssignment(
+        req,
+        subcategoryId,
+        entityName,
+        "Reviewer",
+        newReviewer,
+        currentData.reviewer,
+      );
     }
     if (newApprover) {
-      notifyNistAiRmfAssignment(req, subcategoryId, entityName, "Approver", newApprover, currentData.approver);
+      notifyNistAiRmfAssignment(
+        req,
+        subcategoryId,
+        entityName,
+        "Approver",
+        newApprover,
+        currentData.approver,
+      );
     }
 
     await logEvent(
       "Update",
       `NIST AI RMF subcategory updated: ID ${subcategoryId}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logStructured(
       "successful",
       `NIST AI RMF subcategory updated: ID ${subcategoryId}`,
       "updateNISTAIRMFSubcategoryById",
-      "nist_ai_rmf.subcategory.ctrl.ts"
+      "nist_ai_rmf.subcategory.ctrl.ts",
     );
     await logSuccess({
       eventType: "Update",
@@ -432,7 +443,7 @@ export async function updateNISTAIRMFSubcategoryById(
       "Error",
       `Failed to update NIST AI RMF subcategory by id: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Update",
@@ -447,10 +458,7 @@ export async function updateNISTAIRMFSubcategoryById(
   }
 }
 
-export async function updateNISTAIRMFSubcategoryStatus(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateNISTAIRMFSubcategoryStatus(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const subcategoryId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { status } = req.body;
@@ -463,7 +471,7 @@ export async function updateNISTAIRMFSubcategoryStatus(
     tenantId: req.organizationId!,
   });
   logger.debug(
-    `🔄 Updating NIST AI RMF subcategory status: ID ${subcategoryId}, status: ${status}`
+    `🔄 Updating NIST AI RMF subcategory status: ID ${subcategoryId}, status: ${status}`,
   );
 
   try {
@@ -486,7 +494,7 @@ export async function updateNISTAIRMFSubcategoryStatus(
       subcategoryId,
       status,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -494,13 +502,13 @@ export async function updateNISTAIRMFSubcategoryStatus(
       "Update",
       `NIST AI RMF subcategory status updated: ID ${subcategoryId}, status: ${status}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logStructured(
       "successful",
       `NIST AI RMF subcategory status updated: ID ${subcategoryId}, status: ${status}`,
       "updateNISTAIRMFSubcategoryStatus",
-      "nist_ai_rmf.subcategory.ctrl.ts"
+      "nist_ai_rmf.subcategory.ctrl.ts",
     );
     await logSuccess({
       eventType: "Update",
@@ -517,7 +525,7 @@ export async function updateNISTAIRMFSubcategoryStatus(
       "Error",
       `Failed to update NIST AI RMF subcategory status: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Update",
@@ -530,10 +538,7 @@ export async function updateNISTAIRMFSubcategoryStatus(
     });
 
     // Handle validation errors differently
-    if (
-      error instanceof Error &&
-      error.message.includes("Invalid status value")
-    ) {
+    if (error instanceof Error && error.message.includes("Invalid status value")) {
       return res.status(400).json(STATUS_CODE[400](error.message));
     }
 
@@ -544,10 +549,7 @@ export async function updateNISTAIRMFSubcategoryStatus(
 /**
  * Get NIST AI RMF subcategories progress (total and completed)
  */
-export async function getNISTAIRMFProgress(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFProgress(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFProgress",
     functionName: "getNISTAIRMFProgress",
@@ -575,7 +577,7 @@ export async function getNISTAIRMFProgress(
       "Error",
       `Failed to get NIST AI RMF progress: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -593,10 +595,7 @@ export async function getNISTAIRMFProgress(
 /**
  * Get NIST AI RMF subcategories assignments (total and assigned)
  */
-export async function getNISTAIRMFAssignments(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFAssignments(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFAssignments",
     functionName: "getNISTAIRMFAssignments",
@@ -607,9 +606,7 @@ export async function getNISTAIRMFAssignments(
   logger.debug("📊 Calculating NIST AI RMF assignments");
 
   try {
-    const assignments = await countNISTAIRMFSubcategoriesAssignments(
-      req.organizationId!
-    );
+    const assignments = await countNISTAIRMFSubcategoriesAssignments(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -626,7 +623,7 @@ export async function getNISTAIRMFAssignments(
       "Error",
       `Failed to get NIST AI RMF assignments: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -644,10 +641,7 @@ export async function getNISTAIRMFAssignments(
 /**
  * Get NIST AI RMF subcategories assignments grouped by function (Govern, Map, Measure, Manage)
  */
-export async function getNISTAIRMFAssignmentsByFunction(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFAssignmentsByFunction(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFAssignmentsByFunction",
     functionName: "getNISTAIRMFAssignmentsByFunction",
@@ -658,9 +652,7 @@ export async function getNISTAIRMFAssignmentsByFunction(
   logger.debug("📊 Calculating NIST AI RMF assignments by function");
 
   try {
-    const assignments = await countNISTAIRMFSubcategoriesAssignmentsByFunction(
-      req.organizationId!
-    );
+    const assignments = await countNISTAIRMFSubcategoriesAssignmentsByFunction(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -677,7 +669,7 @@ export async function getNISTAIRMFAssignmentsByFunction(
       "Error",
       `Failed to get NIST AI RMF assignments by function: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -695,10 +687,7 @@ export async function getNISTAIRMFAssignmentsByFunction(
 /**
  * Get NIST AI RMF subcategories progress grouped by function (Govern, Map, Measure, Manage)
  */
-export async function getNISTAIRMFProgressByFunction(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFProgressByFunction(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFProgressByFunction",
     functionName: "getNISTAIRMFProgressByFunction",
@@ -709,9 +698,7 @@ export async function getNISTAIRMFProgressByFunction(
   logger.debug("📊 Calculating NIST AI RMF progress by function");
 
   try {
-    const progress = await countNISTAIRMFSubcategoriesProgressByFunction(
-      req.organizationId!
-    );
+    const progress = await countNISTAIRMFSubcategoriesProgressByFunction(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -728,7 +715,7 @@ export async function getNISTAIRMFProgressByFunction(
       "Error",
       `Failed to get NIST AI RMF progress by function: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -746,10 +733,7 @@ export async function getNISTAIRMFProgressByFunction(
 /**
  * Get NIST AI RMF subcategories status breakdown
  */
-export async function getNISTAIRMFStatusBreakdown(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFStatusBreakdown(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFStatusBreakdown",
     functionName: "getNISTAIRMFStatusBreakdown",
@@ -760,9 +744,7 @@ export async function getNISTAIRMFStatusBreakdown(
   logger.debug("📊 Calculating NIST AI RMF status breakdown");
 
   try {
-    const statusBreakdown = await getNISTAIRMFSubcategoriesStatusBreakdown(
-      req.organizationId!
-    );
+    const statusBreakdown = await getNISTAIRMFSubcategoriesStatusBreakdown(req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -779,7 +761,7 @@ export async function getNISTAIRMFStatusBreakdown(
       "Error",
       `Failed to get NIST AI RMF status breakdown: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",
@@ -797,10 +779,7 @@ export async function getNISTAIRMFStatusBreakdown(
 /**
  * Get NIST AI RMF dashboard overview with all functions, categories, and subcategories
  */
-export async function getNISTAIRMFOverview(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getNISTAIRMFOverview(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getNISTAIRMFOverview",
     functionName: "getNISTAIRMFOverview",
@@ -828,7 +807,7 @@ export async function getNISTAIRMFOverview(
       "Error",
       `Failed to get NIST AI RMF overview: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     await logFailure({
       eventType: "Read",

@@ -23,7 +23,9 @@ describe("evalModelsService", () => {
     it("fetches models with orgId param", async () => {
       mockAxios.get.mockResolvedValue({ data: { models: [{ id: "m1", name: "GPT-4" }] } });
       const result = await evalModelsService.listModels("org-1");
-      expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/models", { params: { org_id: "org-1" } });
+      expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/models", {
+        params: { org_id: "org-1" },
+      });
       expect(result).toEqual([{ id: "m1", name: "GPT-4" }]);
     });
 
@@ -38,7 +40,10 @@ describe("evalModelsService", () => {
     it("posts model and returns it", async () => {
       mockAxios.post.mockResolvedValue({ data: { model: { id: "m1", name: "Claude" } } });
       const result = await evalModelsService.createModel({ name: "Claude", provider: "anthropic" });
-      expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/models", { name: "Claude", provider: "anthropic" });
+      expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/models", {
+        name: "Claude",
+        provider: "anthropic",
+      });
       expect(result?.name).toBe("Claude");
     });
 

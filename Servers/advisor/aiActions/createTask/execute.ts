@@ -20,10 +20,7 @@
 import { createNewTaskQuery } from "../../../utils/task.utils";
 import { TaskPriority } from "../../../domain.layer/enums/task-priority.enum";
 import { TaskStatus } from "../../../domain.layer/enums/task-status.enum";
-import type {
-  AiActionExecuteContext,
-  AiActionExecuteResult,
-} from "../types";
+import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentCreateTaskInput } from "./schema";
 
 export async function executeCreateTask(

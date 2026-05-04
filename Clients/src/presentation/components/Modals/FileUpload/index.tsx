@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import {
-  StyledDialog,
-  StyledDialogContent,
-} from "../../FileUpload/FileUpload.styles";
+import { StyledDialog, StyledDialogContent } from "../../FileUpload/FileUpload.styles";
 import { FileUploadProps } from "../../FileUpload/types";
 import { X as CloseGreyIcon } from "lucide-react";
 import { IconButton } from "@mui/material";
@@ -34,10 +31,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ uploadProps }) => {
           <CloseGreyIcon size={16} />
         </IconButton>
 
-        <FileUploadComponent
-          onHeightChange={handleHeightChange}
-          {...uploadProps}
-        />
+        <FileUploadComponent onHeightChange={handleHeightChange} {...uploadProps} />
       </StyledDialogContent>
     </StyledDialog>
   );

@@ -1,10 +1,6 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 
-export async function createApprovalRequest({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createApprovalRequest({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/approval-requests", body);
   return response;
 }
@@ -77,11 +73,7 @@ export async function rejectRequest({
   return response;
 }
 
-export async function withdrawRequest({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function withdrawRequest({ id }: { id: number }): Promise<any> {
   const response = await apiServices.post(`/approval-requests/${id}/withdraw`, {});
   return response;
 }

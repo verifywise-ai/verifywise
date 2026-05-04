@@ -1,17 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  FC,
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-  Suspense,
-} from "react";
-import {
-  Stack,
-  Box,
-  useTheme,
-} from "@mui/material";
+import React, { FC, useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import { Stack, Box, useTheme } from "@mui/material";
 import { lazy } from "react";
 const Field = lazy(() => import("../../Inputs/Field"));
 const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
@@ -24,7 +13,7 @@ import {
   ModelRiskCategory,
   ModelRiskLevel,
   ModelRiskStatus,
-  IModelRiskFormData
+  IModelRiskFormData,
 } from "../../../../domain/interfaces/i.modelRisk";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { getAllUsers } from "../../../../application/repository/user.repository";
@@ -96,9 +85,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   entityId,
 }) => {
   const theme = useTheme();
-  const [values, setValues] = useState<IModelRiskFormData>(
-    initialData || initialState
-  );
+  const [values, setValues] = useState<IModelRiskFormData>(initialData || initialState);
   const [errors, setErrors] = useState<NewModelRiskFormErrors>({});
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -135,7 +122,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     if (initialData && users && users.length > 0 && isEdit) {
       const ownerUser = users.find((user) => String(user.id) === String(initialData.owner));
       if (ownerUser) {
-        setValues(prev => ({
+        setValues((prev) => ({
           ...prev,
           owner: String(ownerUser.id),
         }));
@@ -192,18 +179,17 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       ...models.map((model) => ({
         _id: model.id,
         name: `${model.provider} ${model.model} ${model.version || ""}`.trim(),
-      }))
+      })),
     ];
   }, [models]);
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof IModelRiskFormData) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
-        setValues((prev) => ({ ...prev, [prop]: value }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
-      },
-    []
+    (prop: keyof IModelRiskFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setValues((prev) => ({ ...prev, [prop]: value }));
+      setErrors((prev) => ({ ...prev, [prop]: "" }));
+    },
+    [],
   );
 
   const handleOnSelectChange = useCallback(
@@ -217,7 +203,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       setValues((prev) => ({ ...prev, [prop]: value }));
       setErrors((prev) => ({ ...prev, [prop]: "" }));
     },
-    []
+    [],
   );
 
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -288,7 +274,6 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       padding: "0 14px",
     },
   };
-
 
   const formContent = (
     <Stack spacing={6}>
@@ -370,11 +355,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
           <Suspense fallback={<div>Loading...</div>}>
             <DatePicker
               label="Next review date"
-              date={
-                values.target_date
-                  ? dayjs(values.target_date)
-                  : dayjs(new Date())
-              }
+              date={values.target_date ? dayjs(values.target_date) : dayjs(new Date())}
               handleDateChange={handleDateChange}
               sx={{
                 width: "100%",
@@ -478,12 +459,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
           </Box>
           {activeTab === "details" && formContent}
           {activeTab === "activity" && (
-            <HistorySidebar
-              inline
-              isOpen={true}
-              entityType="model_risk"
-              entityId={entityId}
-            />
+            <HistorySidebar inline isOpen={true} entityType="model_risk" entityId={entityId} />
           )}
         </TabContext>
       ) : (

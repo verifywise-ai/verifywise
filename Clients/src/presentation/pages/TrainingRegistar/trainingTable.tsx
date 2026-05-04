@@ -72,16 +72,15 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
 
   const isVisible = useCallback(
     (id: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(id),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const visibleTableColumns = useMemo(
     () => TABLE_COLUMNS.filter((col) => isVisible(col.id)),
-    [isVisible]
+    [isVisible],
   );
 
-  const isDeletingAllowed =
-    allowedRoles.training?.delete?.includes(userRoleName);
+  const isDeletingAllowed = allowedRoles.training?.delete?.includes(userRoleName);
 
   const sortComparator = useCallback(
     (a: TrainingRegistarModel, b: TrainingRegistarModel, key: string): number => {
@@ -124,7 +123,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       if (aValue > bValue) return 1;
       return 0;
     },
-    []
+    [],
   );
 
   const {
@@ -154,16 +153,13 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
               hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
                 ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage
+                : validPage * rowsPerPage + rowsPerPage,
             )
             // Defensive: Filter out invalid records early (fail fast)
             .filter((training) => {
               const isValid = training.id !== undefined && training.id !== null;
               if (!isValid) {
-                console.error(
-                  "[TrainingTable] Invalid training record without ID:",
-                  training
-                );
+                console.error("[TrainingTable] Invalid training record without ID:", training);
               }
               return isValid;
             })
@@ -192,10 +188,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         cursor: "pointer",
                         textTransform: "none !important",
-                        backgroundColor:
-                          sortConfig.key === "training_name"
-                            ? "#e8e8e8"
-                            : "#fafafa",
+                        backgroundColor: sortConfig.key === "training_name" ? "#e8e8e8" : "#fafafa",
                       }}
                     >
                       {training.training_name}
@@ -260,9 +253,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                         cursor: "pointer",
                         textTransform: "none !important",
                         backgroundColor:
-                          sortConfig.key === "numberOfPeople"
-                            ? "background.surface"
-                            : "inherit",
+                          sortConfig.key === "numberOfPeople" ? "background.surface" : "inherit",
                       }}
                     >
                       {training.numberOfPeople}
@@ -286,9 +277,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                             e?.stopPropagation();
                             onEdit?.(trainingIdStr);
                           }}
-                          onMouseEvent={(e: React.SyntheticEvent) =>
-                            e.stopPropagation()
-                          }
+                          onMouseEvent={(e: React.SyntheticEvent) => e.stopPropagation()}
                           warningTitle="Delete this training?"
                           warningMessage="When you delete this training, all data related to this training will be removed. This action is non-recoverable."
                           type="Training"
@@ -301,18 +290,25 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
             })
         ) : (
           <TableRow>
-            <TableCell
-              colSpan={visibleTableColumns.length}
-              align="center"
-              sx={{ py: 4 }}
-            >
+            <TableCell colSpan={visibleTableColumns.length} align="center" sx={{ py: 4 }}>
               No training data available.
             </TableCell>
           </TableRow>
         )}
       </TableBody>
     ),
-    [sortedRows, validPage, rowsPerPage, isDeletingAllowed, onEdit, onDelete, isVisible, visibleTableColumns, sortConfig.key, hidePagination]
+    [
+      sortedRows,
+      validPage,
+      rowsPerPage,
+      isDeletingAllowed,
+      onEdit,
+      onDelete,
+      isVisible,
+      visibleTableColumns,
+      sortConfig.key,
+      hidePagination,
+    ],
   );
 
   if (isLoading) {
@@ -334,7 +330,10 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState icon={GraduationCap} message="No training records yet. Track AI governance training for your team.">
+      <EmptyState
+        icon={GraduationCap}
+        message="No training records yet. Track AI governance training for your team."
+      >
         <EmptyStateTip
           icon={Users}
           title="Assign training to team members"

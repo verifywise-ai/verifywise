@@ -10,8 +10,18 @@ vi.mock("../../repository/vendorRisk.repository", () => ({
   getVendorRiskById: vi.fn(),
 }));
 
-import { useCreateVendorRisk, useUpdateVendorRisk, useDeleteVendorRisk, useVendorRisk } from "../useVendorRiskMutations";
-import { createVendorRisk, updateVendorRisk, deleteVendorRisk, getVendorRiskById } from "../../repository/vendorRisk.repository";
+import {
+  useCreateVendorRisk,
+  useUpdateVendorRisk,
+  useDeleteVendorRisk,
+  useVendorRisk,
+} from "../useVendorRiskMutations";
+import {
+  createVendorRisk,
+  updateVendorRisk,
+  deleteVendorRisk,
+  getVendorRiskById,
+} from "../../repository/vendorRisk.repository";
 
 const mockCreate = vi.mocked(createVendorRisk);
 const mockUpdate = vi.mocked(updateVendorRisk);

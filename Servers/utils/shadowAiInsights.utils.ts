@@ -21,7 +21,7 @@ import {
  */
 export async function getInsightsSummaryQuery(
   organizationId: number,
-  periodDays: number = 30
+  periodDays: number = 30,
 ): Promise<ShadowAiInsightsSummary> {
   const [rows] = await sequelize.query(
     `SELECT
@@ -35,7 +35,7 @@ export async function getInsightsSummaryQuery(
         WHERE organization_id = :organizationId
           AND department IS NOT NULL
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as departments_using_ai`,
-    { replacements: { organizationId, periodDays } }
+    { replacements: { organizationId, periodDays } },
   );
 
   const stats = (rows as any[])[0];
@@ -47,7 +47,7 @@ export async function getInsightsSummaryQuery(
      WHERE organization_id = :organizationId AND risk_score IS NOT NULL
      ORDER BY risk_score DESC
      LIMIT 1`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   // Most active department (uses composite index dept+timestamp)
@@ -60,7 +60,7 @@ export async function getInsightsSummaryQuery(
      GROUP BY department
      ORDER BY COUNT(*) DESC
      LIMIT 1`,
-    { replacements: { organizationId, periodDays } }
+    { replacements: { organizationId, periodDays } },
   );
 
   return {
@@ -74,9 +74,7 @@ export async function getInsightsSummaryQuery(
           }
         : null,
     most_active_department:
-      (deptResult as any[]).length > 0
-        ? (deptResult as any[])[0].department
-        : null,
+      (deptResult as any[]).length > 0 ? (deptResult as any[])[0].department : null,
     departments_using_ai: parseInt(stats.departments_using_ai, 10),
   };
 }
@@ -87,7 +85,7 @@ export async function getInsightsSummaryQuery(
 export async function getToolsByEventsQuery(
   organizationId: number,
   periodDays: number = 30,
-  limit: number = 6
+  limit: number = 6,
 ): Promise<ShadowAiToolByEvents[]> {
   const [rows] = await sequelize.query(
     `SELECT t.name as tool_name, COUNT(e.id) as event_count
@@ -98,7 +96,7 @@ export async function getToolsByEventsQuery(
      GROUP BY t.name
      ORDER BY event_count DESC
      LIMIT :limit`,
-    { replacements: { organizationId, periodDays, limit } }
+    { replacements: { organizationId, periodDays, limit } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -113,7 +111,7 @@ export async function getToolsByEventsQuery(
 export async function getToolsByUsersQuery(
   organizationId: number,
   periodDays: number = 30,
-  limit: number = 6
+  limit: number = 6,
 ): Promise<ShadowAiToolByUsers[]> {
   const [rows] = await sequelize.query(
     `SELECT t.name as tool_name, COUNT(DISTINCT e.user_email) as user_count
@@ -124,7 +122,7 @@ export async function getToolsByUsersQuery(
      GROUP BY t.name
      ORDER BY user_count DESC
      LIMIT :limit`,
-    { replacements: { organizationId, periodDays, limit } }
+    { replacements: { organizationId, periodDays, limit } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -138,7 +136,7 @@ export async function getToolsByUsersQuery(
  */
 export async function getUsersByDepartmentQuery(
   organizationId: number,
-  periodDays: number = 30
+  periodDays: number = 30,
 ): Promise<ShadowAiUsersByDepartment[]> {
   const [rows] = await sequelize.query(
     `SELECT
@@ -149,7 +147,7 @@ export async function getUsersByDepartmentQuery(
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
      ORDER BY user_count DESC`,
-    { replacements: { organizationId, periodDays } }
+    { replacements: { organizationId, periodDays } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -164,7 +162,7 @@ export async function getUsersByDepartmentQuery(
 export async function getTrendQuery(
   organizationId: number,
   periodDays: number = 90,
-  granularity: "daily" | "weekly" | "monthly" = "daily"
+  granularity: "daily" | "weekly" | "monthly" = "daily",
 ): Promise<ShadowAiTrendPoint[]> {
   const DATE_FORMAT_MAP: Record<string, string> = {
     monthly: "YYYY-MM-01",
@@ -199,7 +197,7 @@ export async function getTrendQuery(
        AND ntd.detected_date = DATE(pe.event_timestamp)
      GROUP BY TO_CHAR(pe.event_timestamp, :dateFormat)
      ORDER BY date ASC`,
-    { replacements: { organizationId, periodDays, dateFormat } }
+    { replacements: { organizationId, periodDays, dateFormat } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -220,7 +218,7 @@ export async function getUserActivityQuery(
     limit?: number;
     sort?: string;
     department?: string;
-  }
+  },
 ): Promise<{ users: ShadowAiUserActivity[]; total: number }> {
   const page = options?.page || 1;
   const limit = options?.limit || 20;
@@ -253,14 +251,14 @@ export async function getUserActivityQuery(
      GROUP BY e.user_email
      ORDER BY ${sortColumn}
      LIMIT :limit OFFSET :offset`,
-    { replacements }
+    { replacements },
   );
 
   const [countResult] = await sequelize.query(
     `SELECT COUNT(DISTINCT user_email) as total
      FROM shadow_ai_events e
      ${whereClause}`,
-    { replacements }
+    { replacements },
   );
 
   return {
@@ -278,7 +276,7 @@ export async function getUserActivityQuery(
  * Get department activity breakdown.
  */
 export async function getDepartmentActivityQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<ShadowAiDepartmentActivity[]> {
   const [rows] = await sequelize.query(
     `WITH top_tools AS (
@@ -307,7 +305,7 @@ export async function getDepartmentActivityQuery(
        AND e.event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY COALESCE(e.department, 'Unknown'), t2.name
      ORDER BY total_prompts DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -325,7 +323,7 @@ export async function getDepartmentActivityQuery(
 export async function getUserDetailQuery(
   organizationId: number,
   userEmail: string,
-  periodDays: number = 30
+  periodDays: number = 30,
 ): Promise<
   Array<{
     tool_name: string;
@@ -345,7 +343,7 @@ export async function getUserDetailQuery(
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY t.name
      ORDER BY event_count DESC`,
-    { replacements: { organizationId, userEmail, periodDays } }
+    { replacements: { organizationId, userEmail, periodDays } },
   );
 
   return rows as any[];

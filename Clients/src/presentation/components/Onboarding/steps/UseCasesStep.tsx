@@ -51,7 +51,8 @@ const UseCasesStep: React.FC<OnboardingStepProps> = () => {
             lineHeight: 1.6,
           }}
         >
-          Create and track AI projects, assign teams, and monitor compliance status across all your initiatives.
+          Create and track AI projects, assign teams, and monitor compliance status across all your
+          initiatives.
         </Typography>
       </Box>
 
@@ -66,25 +67,29 @@ const UseCasesStep: React.FC<OnboardingStepProps> = () => {
           {
             icon: <FolderPlus size={20} />,
             title: "Create use cases",
-            description: "Document your AI projects with detailed information about goals, teams, and timelines.",
+            description:
+              "Document your AI projects with detailed information about goals, teams, and timelines.",
             color: "#3B82F6",
           },
           {
             icon: <Users size={20} />,
             title: "Assign teams",
-            description: "Collaborate with team members by assigning owners and stakeholders to each project.",
+            description:
+              "Collaborate with team members by assigning owners and stakeholders to each project.",
             color: "#F59E0B",
           },
           {
             icon: <TrendingUp size={20} />,
             title: "Track status",
-            description: "Monitor progress from initiation to completion with real-time status updates.",
+            description:
+              "Monitor progress from initiation to completion with real-time status updates.",
             color: "#8B5CF6",
           },
           {
             icon: <Shield size={20} />,
             title: "Ensure compliance",
-            description: "Link projects to relevant frameworks and ensure regulatory requirements are met.",
+            description:
+              "Link projects to relevant frameworks and ensure regulatory requirements are met.",
             color: "#10B981",
           },
         ].map((feature, index) => (

@@ -11,7 +11,8 @@ const TaskWorkflowStep: React.FC<OnboardingStepProps> = () => {
     {
       icon: <Bell size={20} />,
       title: "Receive notifications",
-      description: "Get alerted when tasks are assigned to you or when updates are made to your projects.",
+      description:
+        "Get alerted when tasks are assigned to you or when updates are made to your projects.",
     },
     {
       icon: <CheckSquare size={20} />,

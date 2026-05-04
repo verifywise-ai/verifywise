@@ -74,7 +74,7 @@ export const repositoriesContent: ArticleContent = {
         { bold: 'Repository', text: 'Owner and name of the repository, or the display name if set' },
         { bold: 'Schedule', text: 'Frequency and time, or "Disabled" if scheduling is off' },
         { bold: 'Last scan', text: 'When the most recent scan ran and its status' },
-        { bold: 'Next scan', text: 'When the next scheduled scan will run (blank if disabled)' },
+        { bold: 'Next scan', text: 'When the next scheduled scan will run, or an em dash (—) if scheduling is disabled' },
         { bold: 'Actions', text: 'Scan now, edit and delete buttons' },
       ],
     },

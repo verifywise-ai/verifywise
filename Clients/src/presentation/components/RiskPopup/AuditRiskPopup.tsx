@@ -72,8 +72,7 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
               color: `${text.tertiary}`,
             }}
           >
-            This section has been been marked as done, but there's still a risk
-            linked to it:
+            This section has been been marked as done, but there's still a risk linked to it:
           </Typography>
         </Stack>
         <Stack
@@ -100,8 +99,7 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
               color: `${text.tertiary}`,
             }}
           >
-            Marking it as done doesn't automatically resolve this risk. What
-            would you like to do?
+            Marking it as done doesn't automatically resolve this risk. What would you like to do?
           </Typography>
         </Stack>
       </Stack>

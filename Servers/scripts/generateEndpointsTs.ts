@@ -143,7 +143,7 @@ function tagToVarName(tag: string): string {
     .replace(/[^a-zA-Z0-9 ]/g, "")
     .split(" ")
     .map((w, i) =>
-      i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
     )
     .join("");
 }
@@ -162,15 +162,11 @@ function schemaTypeString(schema: Record<string, unknown> | undefined): string {
   return (schema.type as string) || "string";
 }
 
-function buildRequestBodyMap(
-  op: SwaggerOperation
-): Record<string, string> | undefined {
+function buildRequestBodyMap(op: SwaggerOperation): Record<string, string> | undefined {
   const content = op.requestBody?.content;
   if (!content) return undefined;
 
-  const jsonSchema =
-    content["application/json"]?.schema ||
-    content["multipart/form-data"]?.schema;
+  const jsonSchema = content["application/json"]?.schema || content["multipart/form-data"]?.schema;
   if (!jsonSchema) return undefined;
 
   if (jsonSchema.$ref) {
@@ -201,14 +197,16 @@ function buildRequestBodyMap(
 
 function buildParameters(
   op: SwaggerOperation,
-  pathParams: SwaggerParameter[] | undefined
-): Array<{
-  name: string;
-  in: string;
-  type: string;
-  required: boolean;
-  description: string;
-}> | undefined {
+  pathParams: SwaggerParameter[] | undefined,
+):
+  | Array<{
+      name: string;
+      in: string;
+      type: string;
+      required: boolean;
+      description: string;
+    }>
+  | undefined {
   const merged = [...(pathParams || []), ...(op.parameters || [])];
   const seen = new Set<string>();
   const validIn = new Set(["path", "query", "header"]);
@@ -231,9 +229,7 @@ function buildParameters(
   }));
 }
 
-function buildResponses(
-  op: SwaggerOperation
-): Array<{ status: number; description: string }> {
+function buildResponses(op: SwaggerOperation): Array<{ status: number; description: string }> {
   if (!op.responses) return [{ status: 200, description: "Success" }];
   return Object.entries(op.responses)
     .filter(([code]) => !isNaN(Number(code)))
@@ -256,7 +252,7 @@ function main(): void {
     "api-docs",
     "src",
     "config",
-    "endpoints.ts"
+    "endpoints.ts",
   );
 
   console.log(`Reading ${swaggerPath}`);

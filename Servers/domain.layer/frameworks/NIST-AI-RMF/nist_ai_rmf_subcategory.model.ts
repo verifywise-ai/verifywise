@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { Status, STATUSES } from "../../../types/status.type";
 import { UserModel } from "../../models/user/user.model";
 
@@ -103,20 +97,20 @@ export class NISTAIMRFSubcategoryModel extends Model<NISTAIMRFSubcategoryModel> 
   @Column({
     type: DataType.VIRTUAL,
   })
-  index?: string;  // subcategory_id from struct (e.g., "GV.1.1")
+  index?: string; // subcategory_id from struct (e.g., "GV.1.1")
 
   @Column({
     type: DataType.VIRTUAL,
   })
-  title?: string;  // description from struct
+  title?: string; // description from struct
 
   @Column({
     type: DataType.VIRTUAL,
   })
-  description?: string;  // description from struct (for frontend compatibility)
+  description?: string; // description from struct (for frontend compatibility)
 
   @Column({
     type: DataType.VIRTUAL,
   })
-  category_id?: number;  // category_struct_id from struct
+  category_id?: number; // category_struct_id from struct
 }

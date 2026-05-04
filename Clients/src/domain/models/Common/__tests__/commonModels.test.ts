@@ -49,7 +49,12 @@ describe("RoleModel", () => {
 });
 
 describe("OrganizationModel", () => {
-  const data = { id: 1, name: "Acme Corp", logo: "logo.png", created_at: new Date() } as OrganizationModel;
+  const data = {
+    id: 1,
+    name: "Acme Corp",
+    logo: "logo.png",
+    created_at: new Date(),
+  } as OrganizationModel;
 
   it("constructor copies fields", () => {
     const model = new OrganizationModel(data);
@@ -61,7 +66,12 @@ describe("OrganizationModel", () => {
   });
 
   it("fromApiData converts string date", () => {
-    const model = OrganizationModel.fromApiData({ id: 1, name: "X", logo: "l.png", created_at: "2024-01-01" });
+    const model = OrganizationModel.fromApiData({
+      id: 1,
+      name: "X",
+      logo: "l.png",
+      created_at: "2024-01-01",
+    });
     expect(model.created_at).toBeInstanceOf(Date);
   });
 
@@ -138,7 +148,9 @@ describe("ProjectFrameworksModel", () => {
   });
 
   it("static factory returns instance", () => {
-    expect(ProjectFrameworksModel.createNewProjectFrameworks(data)).toBeInstanceOf(ProjectFrameworksModel);
+    expect(ProjectFrameworksModel.createNewProjectFrameworks(data)).toBeInstanceOf(
+      ProjectFrameworksModel,
+    );
   });
 });
 
@@ -151,7 +163,9 @@ describe("ProjectsMembersModel", () => {
   });
 
   it("static factory returns instance", () => {
-    expect(ProjectsMembersModel.createNewProjectsMembers(data)).toBeInstanceOf(ProjectsMembersModel);
+    expect(ProjectsMembersModel.createNewProjectsMembers(data)).toBeInstanceOf(
+      ProjectsMembersModel,
+    );
   });
 });
 
@@ -302,7 +316,9 @@ describe("UserPreferencesModel", () => {
   });
 
   it("static factory returns instance", () => {
-    expect(UserPreferencesModel.createNewUserPreferences(data)).toBeInstanceOf(UserPreferencesModel);
+    expect(UserPreferencesModel.createNewUserPreferences(data)).toBeInstanceOf(
+      UserPreferencesModel,
+    );
   });
 });
 

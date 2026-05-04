@@ -11,9 +11,7 @@ import { Transaction } from "sequelize";
 import { createRiskQuery } from "../utils/risk.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { recordProjectRiskCreation } from "../utils/projectRiskChangeHistory.utils";
-import {
-  computeDerivedFields,
-} from "../utils/quantitativeRisk.utils";
+import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
@@ -57,13 +55,8 @@ export async function createRiskService(
   };
 
   // 2. FAIR validation + derived field computation (only if present)
-  if (
-    projectRiskData.event_frequency_min != null ||
-    projectRiskData.ale_estimate != null
-  ) {
-    const fairErrors = validateQuantitativeRiskFields(
-      projectRiskData as Record<string, unknown>,
-    );
+  if (projectRiskData.event_frequency_min != null || projectRiskData.ale_estimate != null) {
+    const fairErrors = validateQuantitativeRiskFields(projectRiskData as Record<string, unknown>);
     if (fairErrors.length > 0) {
       throw new ValidationException(
         `Quantitative risk validation failed: ${fairErrors.join("; ")}`,

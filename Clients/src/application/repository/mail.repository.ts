@@ -26,9 +26,7 @@ interface ApiResponse<T = unknown> {
  * @param {InviteEmailData} data - The invitation data
  * @returns {Promise<ApiResponse>} The API response
  */
-export async function sendInviteEmail(
-  data: InviteEmailData
-): Promise<ApiResponse> {
+export async function sendInviteEmail(data: InviteEmailData): Promise<ApiResponse> {
   const response = await apiServices.post("/mail/invite", data);
   return response;
 }

@@ -45,9 +45,7 @@ const THUMBNAIL_PATHS = [
  * @param blob - The file blob to extract thumbnail from
  * @returns Preview result with thumbnail URL or error
  */
-export async function getOfficeThumbnail(
-  blob: Blob
-): Promise<OfficePreviewResult> {
+export async function getOfficeThumbnail(blob: Blob): Promise<OfficePreviewResult> {
   try {
     const zip = await JSZip.loadAsync(blob);
 
@@ -68,9 +66,7 @@ export async function getOfficeThumbnail(
         }
 
         // Create object URL for the thumbnail
-        const thumbnailUrl = URL.createObjectURL(
-          new Blob([thumbnailBlob], { type: mimeType })
-        );
+        const thumbnailUrl = URL.createObjectURL(new Blob([thumbnailBlob], { type: mimeType }));
 
         return {
           success: true,

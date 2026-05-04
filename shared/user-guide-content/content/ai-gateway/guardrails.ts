@@ -10,7 +10,7 @@ export const guardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Guardrails scan every AI request before it reaches the LLM provider. They catch personal data (PII detection) and prohibited content (content filter). Rules apply globally to all endpoints. Scanning runs within your gateway infrastructure (the AI Gateway FastAPI service); no data leaves your network for scanning.',
+      text: 'Guardrails scan every AI request before it reaches the LLM provider. They catch personal data (PII detection) and prohibited content (content filter). Rules apply globally to all endpoints. Scanning runs within your gateway infrastructure (the AI Gateway FastAPI service) using a local Presidio install; the gateway code makes no external API calls to scan request content.',
     },
     {
       type: 'heading',
@@ -35,7 +35,7 @@ export const guardrailsContent: ArticleContent = {
         { entity: 'Credit card', example: '4111-1111-1111-1111', coverage: 'Visa, Mastercard, Amex' },
         { entity: 'Person name', example: 'John Smith', coverage: 'English names (NLP-based)' },
         { entity: 'IBAN', example: 'DE89370400440532013000', coverage: 'All countries' },
-        { entity: 'Turkish TCKN', example: '12345678901', coverage: '11-digit national ID' },
+        { entity: 'Turkish TCKN', example: '10000000146', coverage: '11-digit national ID' },
         { entity: 'EU phone', example: '+33 1 42 68 53 00', coverage: 'FR, DE, UK, TR and more' },
         { entity: 'US SSN', example: '123-45-6789', coverage: 'Standard format' },
         { entity: 'IP address', example: '192.168.1.1', coverage: 'IPv4' },
@@ -121,7 +121,7 @@ export const guardrailsContent: ArticleContent = {
         { key: 'use_case', label: 'Best for', width: '40%' },
       ],
       rows: [
-        { action: 'Block', behavior: 'Rejects the request immediately with HTTP 422. The LLM never sees the message.', use_case: 'Sensitive data that must never leave your network (credit cards, SSNs, confidential terms)' },
+        { action: 'Block', behavior: 'Rejects the request immediately with HTTP 400. The LLM never sees the message.', use_case: 'Sensitive data that must never leave your network (credit cards, SSNs, confidential terms)' },
         { action: 'Mask', behavior: 'Replaces matched text with a placeholder and forwards the modified message to the LLM.', use_case: 'Data that can be redacted without breaking the request (names, emails in output)' },
       ],
     },

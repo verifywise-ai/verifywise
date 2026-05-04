@@ -1,22 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  useState,
-  useEffect,
-  Suspense,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-import {
-  Box,
-  Stack,
-  Fade,
-  Modal,
-  Typography,
-  useTheme,
-  IconButton,
-} from "@mui/material";
+import React, { useState, useEffect, Suspense, useMemo, useCallback, useRef } from "react";
+import { Box, Stack, Fade, Modal, Typography, useTheme, IconButton } from "@mui/material";
 import { CirclePlus as AddCircleOutlineIcon, BarChart3 } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -73,18 +58,10 @@ import { createEvidenceHub } from "../../../application/repository/evidenceHub.r
 import EvidenceHubTable from "./evidenceHubTable";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
-import ShareViewDropdown, {
-  ShareViewSettings,
-} from "../../components/ShareViewDropdown";
-import {
-  useCreateShareLink,
-  useUpdateShareLink,
-} from "../../../application/hooks/useShare";
+import ShareViewDropdown, { ShareViewSettings } from "../../components/ShareViewDropdown";
+import { useCreateShareLink, useUpdateShareLink } from "../../../application/hooks/useShare";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
@@ -167,49 +144,36 @@ const ModelInventory: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
-  const [modelInventoryData, setModelInventoryData] = useState<
-    IModelInventory[]
-  >([]);
+  const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] =
-    useState(false);
+  const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is now provided by the model-lifecycle plugin via plugin slots
 
-  const [selectedModelInventory, setSelectedModelInventory] =
-    useState<IModelInventory | null>(null);
+  const [selectedModelInventory, setSelectedModelInventory] = useState<IModelInventory | null>(
+    null,
+  );
 
   // Model Risks state
   const [modelRisksData, setModelRisksData] = useState<IModelRisk[]>([]);
   const [isModelRisksLoading, setIsModelRisksLoading] = useState(false);
   const [isNewModelRiskModalOpen, setIsNewModelRiskModalOpen] = useState(false);
-  const [selectedModelRiskId, setSelectedModelRiskId] = useState<number | null>(
-    null
+  const [selectedModelRiskId, setSelectedModelRiskId] = useState<number | null>(null);
+  const [selectedModelRisk, setSelectedModelRisk] = useState<IModelRisk | null>(null);
+  const [modelRiskStatusFilter, setModelRiskStatusFilter] = useState<"active" | "deleted" | "all">(
+    "active",
   );
-  const [selectedModelRisk, setSelectedModelRisk] = useState<IModelRisk | null>(
-    null
-  );
-  const [modelRiskStatusFilter, setModelRiskStatusFilter] = useState<
-    "active" | "deleted" | "all"
-  >("active");
-  const [deletingModelRiskId, setDeletingModelRiskId] = useState<number | null>(
-    null
-  );
+  const [deletingModelRiskId, setDeletingModelRiskId] = useState<number | null>(null);
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
 
-
   const { userRoleName } = useAuth();
-  const isCreatingDisabled =
-    !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
   const theme = useTheme();
 
   // Get plugin tabs dynamically from the plugin registry
   const { getPluginTabs } = usePluginRegistry();
-  const pluginTabs = useMemo(
-    () => getPluginTabs(PLUGIN_SLOTS.MODELS_TABS),
-    [getPluginTabs]
-  );
+  const pluginTabs = useMemo(() => getPluginTabs(PLUGIN_SLOTS.MODELS_TABS), [getPluginTabs]);
 
   // Share link mutations
   const createShareMutation = useCreateShareLink();
@@ -277,9 +241,7 @@ const ModelInventory: React.FC = () => {
   } = useGroupByState();
 
   // Preselected model ID for evidence creation (used by change history feature)
-  const [preselectedModelId, setPreselectedModelId] = useState<
-    number | undefined
-  >(undefined);
+  const [preselectedModelId, setPreselectedModelId] = useState<number | undefined>(undefined);
 
   // FilterBy - Dynamic options generators for Models tab
   const getUniqueProviders = useCallback(() => {
@@ -305,9 +267,7 @@ const ModelInventory: React.FC = () => {
       .sort()
       .map((approverId) => {
         const user = users.find((u: any) => u.id.toString() === approverId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${approverId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${approverId}`;
         return { value: approverId, label: userName };
       });
   }, [modelInventoryData, users]);
@@ -353,15 +313,12 @@ const ModelInventory: React.FC = () => {
         ],
       },
     ],
-    [getUniqueProviders, getUniqueApprovers]
+    [getUniqueProviders, getUniqueApprovers],
   );
 
   // FilterBy - Field value getter for Models tab
   const getModelFieldValue = useCallback(
-    (
-      item: IModelInventory,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: IModelInventory, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "status":
           return item.status;
@@ -377,14 +334,12 @@ const ModelInventory: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook for Models tab
-  const {
-    filterData: filterModelData,
-    handleFilterChange: handleModelFilterChange,
-  } = useFilterBy<IModelInventory>(getModelFieldValue);
+  const { filterData: filterModelData, handleFilterChange: handleModelFilterChange } =
+    useFilterBy<IModelInventory>(getModelFieldValue);
 
   // FilterBy - Dynamic options generators for Model Risks tab
   const getUniqueRiskOwners = useCallback(() => {
@@ -398,9 +353,7 @@ const ModelInventory: React.FC = () => {
       .sort()
       .map((ownerId) => {
         const user = users.find((u: any) => u.id.toString() === ownerId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${ownerId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${ownerId}`;
         return { value: ownerId, label: userName };
       });
   }, [modelRisksData, users]);
@@ -415,9 +368,7 @@ const ModelInventory: React.FC = () => {
     return Array.from(modelIds)
       .sort()
       .map((modelId) => {
-        const model = modelInventoryData.find(
-          (m: any) => m.id.toString() === modelId
-        );
+        const model = modelInventoryData.find((m: any) => m.id.toString() === modelId);
         const modelName = model ? model.model : `Model ${modelId}`;
         return { value: modelId, label: modelName };
       });
@@ -471,15 +422,12 @@ const ModelInventory: React.FC = () => {
         type: "date" as const,
       },
     ],
-    [getUniqueRiskModels, getUniqueRiskOwners]
+    [getUniqueRiskModels, getUniqueRiskOwners],
   );
 
   // FilterBy - Field value getter for Model Risks tab
   const getModelRiskFieldValue = useCallback(
-    (
-      item: IModelRisk,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: IModelRisk, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "risk_name":
           return item.risk_name;
@@ -497,22 +445,17 @@ const ModelInventory: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook for Model Risks tab
-  const {
-    filterData: filterModelRiskData,
-    handleFilterChange: handleModelRiskFilterChange,
-  } = useFilterBy<IModelRisk>(getModelRiskFieldValue);
+  const { filterData: filterModelRiskData, handleFilterChange: handleModelRiskFilterChange } =
+    useFilterBy<IModelRisk>(getModelRiskFieldValue);
 
-  const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>(
-    []
-  );
+  const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
 
   // Selected row for View/Edit modal
-  const [selectedEvidenceHub, setSelectedEvidenceHub] =
-    useState<EvidenceHubModel | null>(null);
+  const [selectedEvidenceHub, setSelectedEvidenceHub] = useState<EvidenceHubModel | null>(null);
 
   // Modal open/close flag
   const [isEvidenceHubModalOpen, setIsEvidenceHubModalOpen] = useState(false);
@@ -533,9 +476,7 @@ const ModelInventory: React.FC = () => {
       .sort()
       .map((uploaderId) => {
         const user = users.find((u: any) => u.id.toString() === uploaderId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${uploaderId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${uploaderId}`;
         return { value: uploaderId, label: userName };
       });
   }, [evidenceHubData, users]);
@@ -552,12 +493,8 @@ const ModelInventory: React.FC = () => {
     return Array.from(modelIds)
       .sort()
       .map((modelId) => {
-        const model = modelInventoryData.find(
-          (m: any) => m.id.toString() === modelId
-        );
-        const modelName = model
-          ? `${model.provider} - ${model.model}`
-          : `Model ${modelId}`;
+        const model = modelInventoryData.find((m: any) => m.id.toString() === modelId);
+        const modelName = model ? `${model.provider} - ${model.model}` : `Model ${modelId}`;
         return { value: modelId, label: modelName };
       });
   }, [evidenceHubData, modelInventoryData]);
@@ -643,15 +580,12 @@ const ModelInventory: React.FC = () => {
         type: "date" as const,
       },
     ],
-    [getUniqueEvidenceModels, getUniqueEvidenceUploaders]
+    [getUniqueEvidenceModels, getUniqueEvidenceUploaders],
   );
 
   // FilterBy - Field value getter for Evidence Hub tab
   const getEvidenceFieldValue = useCallback(
-    (
-      item: EvidenceHubModel,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: EvidenceHubModel, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "evidence_name":
           return item.evidence_name;
@@ -668,20 +602,16 @@ const ModelInventory: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook for Evidence Hub tab
-  const {
-    filterData: filterEvidenceData,
-    handleFilterChange: handleEvidenceFilterChange,
-  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
+    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   const [isEvidenceLoading, setEvidenceLoading] = useState(false);
 
-  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(
-    null
-  );
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(null);
 
   // Share view state
   const [shareAnchorEl, setShareAnchorEl] = useState<HTMLElement | null>(null);
@@ -709,9 +639,7 @@ const ModelInventory: React.FC = () => {
     return "models";
   }, []);
 
-  const [activeTab, setActiveTab] = useState(() =>
-    getTabFromPath(location.pathname, pluginTabs)
-  );
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname, pluginTabs));
 
   // Sync activeTab with URL changes (for browser back/forward navigation)
   useEffect(() => {
@@ -730,21 +658,16 @@ const ModelInventory: React.FC = () => {
 
   // Calculate summary from data
   const summary: Summary = {
-    approved: modelInventoryData.filter(
-      (item) => item.status === ModelInventoryStatus.APPROVED
-    ).length,
-    restricted: modelInventoryData.filter(
-      (item) => item.status === ModelInventoryStatus.RESTRICTED
-    ).length,
-    pending: modelInventoryData.filter(
-      (item) => item.status === ModelInventoryStatus.PENDING
-    ).length,
-    blocked: modelInventoryData.filter(
-      (item) => item.status === ModelInventoryStatus.BLOCKED
-    ).length,
+    approved: modelInventoryData.filter((item) => item.status === ModelInventoryStatus.APPROVED)
+      .length,
+    restricted: modelInventoryData.filter((item) => item.status === ModelInventoryStatus.RESTRICTED)
+      .length,
+    pending: modelInventoryData.filter((item) => item.status === ModelInventoryStatus.PENDING)
+      .length,
+    blocked: modelInventoryData.filter((item) => item.status === ModelInventoryStatus.BLOCKED)
+      .length,
     total: modelInventoryData.length,
   };
-
 
   // Filter data using FilterBy, card filter, and search
   const filteredData = useMemo(() => {
@@ -771,7 +694,7 @@ const ModelInventory: React.FC = () => {
         (item) =>
           item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           item.provider?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.version?.toLowerCase().includes(searchTerm.toLowerCase())
+          item.version?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -779,10 +702,7 @@ const ModelInventory: React.FC = () => {
   }, [filterModelData, modelInventoryData, selectedStatus, searchTerm]);
 
   // Define how to get the group key for each model
-  const getModelInventoryGroupKey = (
-    model: IModelInventory,
-    field: string
-  ): string | string[] => {
+  const getModelInventoryGroupKey = (model: IModelInventory, field: string): string | string[] => {
     switch (field) {
       case "provider":
         return model.provider || "Unknown Provider";
@@ -827,12 +747,8 @@ const ModelInventory: React.FC = () => {
   // Prepare export data - format the data for export
   const exportData = useMemo(() => {
     return filteredData.map((model: IModelInventory) => {
-      const approverUser = users.find(
-        (user: any) => user.id === model.approver
-      );
-      const approverName = approverUser
-        ? `${approverUser.name} ${approverUser.surname}`
-        : "-";
+      const approverUser = users.find((user: any) => user.id === model.approver);
+      const approverName = approverUser ? `${approverUser.name} ${approverUser.surname}` : "-";
 
       return {
         provider: model.provider || "-",
@@ -910,10 +826,7 @@ const ModelInventory: React.FC = () => {
   };
 
   // Function to fetch model risks data
-  const fetchModelRisksData = async (
-    showLoading = true,
-    filter = modelRiskStatusFilter
-  ) => {
+  const fetchModelRisksData = async (showLoading = true, filter = modelRiskStatusFilter) => {
     if (showLoading) {
       setIsModelRisksLoading(true);
     }
@@ -973,7 +886,6 @@ const ModelInventory: React.FC = () => {
       console.error("Error fetching users data:", error);
     }
   };
-
 
   useEffect(() => {
     fetchModelInventoryData();
@@ -1090,7 +1002,6 @@ const ModelInventory: React.FC = () => {
     setIsNewModelInventoryModalOpen(true);
   };
 
-
   const handleNewUploadEvidenceClick = () => {
     setIsEvidenceHubModalOpen(true);
     setSelectedEvidenceHub(null);
@@ -1126,7 +1037,7 @@ const ModelInventory: React.FC = () => {
     (id: string) => {
       handleEditModelInventory(id);
     },
-    [handleEditModelInventory]
+    [handleEditModelInventory],
   );
 
   const handleEditEvidence = async (id: number) => {
@@ -1183,7 +1094,6 @@ const ModelInventory: React.FC = () => {
     setPreselectedModelId(undefined);
   };
 
-
   // Share view handlers
   const handleShareClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setShareAnchorEl(event.currentTarget);
@@ -1193,9 +1103,7 @@ const ModelInventory: React.FC = () => {
     setShareAnchorEl(null);
   };
 
-  const generateShareableLink = async (
-    settings: ShareViewSettings
-  ): Promise<string> => {
+  const generateShareableLink = async (settings: ShareViewSettings): Promise<string> => {
     // Prevent concurrent link creation
     if (isCreatingLink) {
       return shareableLink;
@@ -1312,10 +1220,7 @@ const ModelInventory: React.FC = () => {
 
     try {
       // Fetch ALL existing share links for this resource and disable them
-      const existingLinksResponse: any = await getShareLinksForResource(
-        "model",
-        0
-      );
+      const existingLinksResponse: any = await getShareLinksForResource("model", 0);
       const existingLinks = existingLinksResponse?.data?.data || [];
 
       // Disable all existing links
@@ -1366,8 +1271,7 @@ const ModelInventory: React.FC = () => {
       const newFrameworks = formData.frameworks || [];
 
       const deleteProjects = oldProjects.length > 0 && newProjects.length === 0;
-      const deleteFrameworks =
-        oldFrameworks.length > 0 && newFrameworks.length === 0;
+      const deleteFrameworks = oldFrameworks.length > 0 && newFrameworks.length === 0;
 
       await updateEntityById({
         routeUrl: `/modelInventory/${selectedModelInventory.id}`,
@@ -1425,11 +1329,7 @@ const ModelInventory: React.FC = () => {
 
     if (errorData) {
       // Handle validation errors with specific field messages
-      if (
-        errorData.status === "error" &&
-        errorData.errors &&
-        Array.isArray(errorData.errors)
-      ) {
+      if (errorData.status === "error" && errorData.errors && Array.isArray(errorData.errors)) {
         const validationMessages = errorData.errors
           .map((err: any) => {
             return err.message || "Validation error";
@@ -1484,10 +1384,7 @@ const ModelInventory: React.FC = () => {
     });
   };
 
-  const handleDeleteModelInventory = async (
-    id: string,
-    deleteRisks: boolean = false
-  ) => {
+  const handleDeleteModelInventory = async (id: string, deleteRisks: boolean = false) => {
     try {
       setDeletingId(id);
 
@@ -1500,14 +1397,12 @@ const ModelInventory: React.FC = () => {
       // If deleting risks, also optimistically remove related risks from the risks table
       if (deleteRisks) {
         setModelRisksData((prevData) =>
-          prevData.filter((risk) => risk.model_id?.toString() !== id)
+          prevData.filter((risk) => risk.model_id?.toString() !== id),
         );
       }
 
       await deleteEntityById({
-        routeUrl: `/modelInventory/${id}${
-          deleteRisks ? "?deleteRisks=true" : ""
-        }`,
+        routeUrl: `/modelInventory/${id}${deleteRisks ? "?deleteRisks=true" : ""}`,
       });
 
       // Fetch fresh data to ensure consistency with server (without loading state)
@@ -1550,9 +1445,7 @@ const ModelInventory: React.FC = () => {
       setDeletingEvidenceId(id);
 
       // Optimistically remove the item from the local state
-      setEvidenceHubData((prevData) =>
-        prevData.filter((item) => item.id !== id)
-      );
+      setEvidenceHubData((prevData) => prevData.filter((item) => item.id !== id));
 
       // Perform the actual delete operation
       await deleteEntityById({ routeUrl: `/evidenceHub/${id}` });
@@ -1583,9 +1476,7 @@ const ModelInventory: React.FC = () => {
     try {
       // First check local data for immediate response
       const numericId = parseInt(id);
-      const hasLocalRisks = modelRisksData.some(
-        (risk) => risk.model_id === numericId
-      );
+      const hasLocalRisks = modelRisksData.some((risk) => risk.model_id === numericId);
 
       // If local data shows risks, return true immediately
       if (hasLocalRisks) {
@@ -1612,10 +1503,7 @@ const ModelInventory: React.FC = () => {
   }, [filterModelRiskData, modelRisksData, selectedRiskLevel]);
 
   // Define how to get the group key for each model risk
-  const getModelRiskGroupKey = (
-    risk: any,
-    field: string
-  ): string | string[] => {
+  const getModelRiskGroupKey = (risk: any, field: string): string | string[] => {
     switch (field) {
       case "risk_level":
         return risk.risk_level || "Unknown";
@@ -1654,19 +1542,14 @@ const ModelInventory: React.FC = () => {
     // Then apply search filter
     if (searchTypeTerm?.trim()) {
       const lower = searchTypeTerm.toLowerCase();
-      filtered = filtered.filter((e) =>
-        e.evidence_name?.toLowerCase().includes(lower)
-      );
+      filtered = filtered.filter((e) => e.evidence_name?.toLowerCase().includes(lower));
     }
 
     return filtered;
   }, [filterEvidenceData, evidenceHubData, searchTypeTerm]);
 
   // Define how to get the group key for each evidence
-  const getEvidenceGroupKey = (
-    evidence: any,
-    field: string
-  ): string | string[] => {
+  const getEvidenceGroupKey = (evidence: any, field: string): string | string[] => {
     switch (field) {
       case "evidence_type":
         return evidence.evidence_type || "Unknown";
@@ -1678,9 +1561,7 @@ const ModelInventory: React.FC = () => {
         return "Unknown";
       case "model":
         if (evidence.model_id) {
-          const model = modelInventoryData.find(
-            (m) => m.id == evidence.model_id
-          );
+          const model = modelInventoryData.find((m) => m.id == evidence.model_id);
           return model?.model || "Unknown Model";
         }
         return "No Model";
@@ -1713,9 +1594,7 @@ const ModelInventory: React.FC = () => {
   const modelRisksExportData = useMemo(() => {
     return filteredModelRisks.map((risk: IModelRisk) => {
       const ownerUser = users.find((user: any) => user.id == risk.owner);
-      const ownerName = ownerUser
-        ? `${ownerUser.name} ${ownerUser.surname}`
-        : "-";
+      const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
       const model = modelInventoryData.find((m) => m.id === risk.model_id);
       const modelName = model ? model.model : "-";
@@ -1749,9 +1628,7 @@ const ModelInventory: React.FC = () => {
       // Get uploader from first evidence file
       const uploadedById = evidence.evidence_files?.[0]?.uploaded_by;
       const uploaderUser = users.find((user: any) => user.id === uploadedById);
-      const uploaderName = uploaderUser
-        ? `${uploaderUser.name} ${uploaderUser.surname}`
-        : "-";
+      const uploaderName = uploaderUser ? `${uploaderUser.name} ${uploaderUser.surname}` : "-";
 
       // Get upload date from first evidence file
       const uploadDate = evidence.evidence_files?.[0]?.upload_date;
@@ -1801,9 +1678,7 @@ const ModelInventory: React.FC = () => {
     setSelectedModelRiskId(null);
   };
 
-  const handleEvidenceUploadModalSuccess = async (
-    formData: EvidenceHubModel
-  ) => {
+  const handleEvidenceUploadModalSuccess = async (formData: EvidenceHubModel) => {
     try {
       if (selectedEvidenceHub) {
         // Update existing Evidence
@@ -1813,9 +1688,7 @@ const ModelInventory: React.FC = () => {
         });
 
         setEvidenceHubData((prev) =>
-          prev.map((item) =>
-            item.id === selectedEvidenceHub.id ? formData : item
-          )
+          prev.map((item) => (item.id === selectedEvidenceHub.id ? formData : item)),
         );
 
         setAlert({
@@ -1893,9 +1766,7 @@ const ModelInventory: React.FC = () => {
       setDeletingModelRiskId(id);
 
       // Optimistically remove the item from the local state
-      setModelRisksData((prevData) =>
-        prevData.filter((item) => item.id !== id)
-      );
+      setModelRisksData((prevData) => prevData.filter((item) => item.id !== id));
 
       // Perform the actual delete operation
       await deleteEntityById({ routeUrl: `/modelRisks/${id}` });
@@ -1940,57 +1811,63 @@ const ModelInventory: React.FC = () => {
     }
   };
 
-  const handleStatusCardClick = useCallback((statusKey: string) => {
-    if (statusKey === 'total' || selectedStatus === statusKey) {
-      setSelectedStatus(null);
-      setAlert(null);
-      setShowAlert(false);
-    } else {
-      setSelectedStatus(statusKey);
-      const labelMap: Record<string, string> = {
-        approved: 'Approved',
-        restricted: 'Restricted',
-        pending: 'Pending',
-        blocked: 'Blocked',
-      };
-      setAlert({
-        variant: 'info',
-        title: `Filtering by ${labelMap[statusKey]} models`,
-        body: 'Click the card again or click Total to see all models.',
-      });
-      setShowAlert(true);
-      setTimeout(() => {
+  const handleStatusCardClick = useCallback(
+    (statusKey: string) => {
+      if (statusKey === "total" || selectedStatus === statusKey) {
+        setSelectedStatus(null);
+        setAlert(null);
         setShowAlert(false);
-        setTimeout(() => setAlert(null), 300);
-      }, 5000);
-    }
-  }, [selectedStatus]);
+      } else {
+        setSelectedStatus(statusKey);
+        const labelMap: Record<string, string> = {
+          approved: "Approved",
+          restricted: "Restricted",
+          pending: "Pending",
+          blocked: "Blocked",
+        };
+        setAlert({
+          variant: "info",
+          title: `Filtering by ${labelMap[statusKey]} models`,
+          body: "Click the card again or click Total to see all models.",
+        });
+        setShowAlert(true);
+        setTimeout(() => {
+          setShowAlert(false);
+          setTimeout(() => setAlert(null), 300);
+        }, 5000);
+      }
+    },
+    [selectedStatus],
+  );
 
-  const handleRiskLevelCardClick = useCallback((riskLevelKey: string) => {
-    if (riskLevelKey === 'total' || selectedRiskLevel === riskLevelKey) {
-      setSelectedRiskLevel(null);
-      setAlert(null);
-      setShowAlert(false);
-    } else {
-      setSelectedRiskLevel(riskLevelKey);
-      const labelMap: Record<string, string> = {
-        [ModelRiskLevel.LOW]: 'Low',
-        [ModelRiskLevel.MEDIUM]: 'Medium',
-        [ModelRiskLevel.HIGH]: 'High',
-        [ModelRiskLevel.CRITICAL]: 'Critical',
-      };
-      setAlert({
-        variant: 'info',
-        title: `Filtering by ${labelMap[riskLevelKey]} risk level`,
-        body: 'Click the card again or click Total to see all risks.',
-      });
-      setShowAlert(true);
-      setTimeout(() => {
+  const handleRiskLevelCardClick = useCallback(
+    (riskLevelKey: string) => {
+      if (riskLevelKey === "total" || selectedRiskLevel === riskLevelKey) {
+        setSelectedRiskLevel(null);
+        setAlert(null);
         setShowAlert(false);
-        setTimeout(() => setAlert(null), 300);
-      }, 5000);
-    }
-  }, [selectedRiskLevel]);
+      } else {
+        setSelectedRiskLevel(riskLevelKey);
+        const labelMap: Record<string, string> = {
+          [ModelRiskLevel.LOW]: "Low",
+          [ModelRiskLevel.MEDIUM]: "Medium",
+          [ModelRiskLevel.HIGH]: "High",
+          [ModelRiskLevel.CRITICAL]: "Critical",
+        };
+        setAlert({
+          variant: "info",
+          title: `Filtering by ${labelMap[riskLevelKey]} risk level`,
+          body: "Click the card again or click Total to see all risks.",
+        });
+        setShowAlert(true);
+        setTimeout(() => {
+          setShowAlert(false);
+          setTimeout(() => setAlert(null), 300);
+        }, 5000);
+      }
+    },
+    [selectedRiskLevel],
+  );
 
   return (
     <Stack className="vwhome" sx={mainStackStyle}>
@@ -2031,9 +1908,8 @@ const ModelInventory: React.FC = () => {
             Replace Share Link?
           </Typography>
           <Typography fontSize={13} textAlign={"left"}>
-            This will invalidate the current share link and generate a new one.
-            Anyone with the old link will no longer be able to access the shared
-            view.
+            This will invalidate the current share link and generate a new one. Anyone with the old
+            link will no longer be able to access the shared view.
           </Typography>
           <Typography fontSize={13} textAlign={"left"} mt={theme.spacing(4)}>
             Do you want to continue?
@@ -2090,9 +1966,7 @@ const ModelInventory: React.FC = () => {
             />
           ) : null
         }
-        summaryCardsJoyrideId={
-          activeTab === "models" ? "model-summary-cards" : undefined
-        }
+        summaryCardsJoyrideId={activeTab === "models" ? "model-summary-cards" : undefined}
         alert={
           alert && (
             <Suspense fallback={<div>Loading...</div>}>
@@ -2139,8 +2013,7 @@ const ModelInventory: React.FC = () => {
                   label: "Evaluations",
                   value: "evaluations",
                   icon: "Database" as const,
-                  tooltip:
-                    "LLM evaluations and bias audits linked to models in your inventory",
+                  tooltip: "LLM evaluations and bias audits linked to models in your inventory",
                 },
                 // Dynamically add plugin tabs
                 ...pluginTabs.map((tab) => ({
@@ -2175,10 +2048,7 @@ const ModelInventory: React.FC = () => {
               {/* Left side: FilterBy + Search + GroupBy */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="model-status-filter">
-                  <FilterBy
-                    columns={modelFilterColumns}
-                    onFilterChange={handleModelFilterChange}
-                  />
+                  <FilterBy columns={modelFilterColumns} onFilterChange={handleModelFilterChange} />
                 </div>
 
                 <GroupBy
@@ -2215,11 +2085,7 @@ const ModelInventory: React.FC = () => {
 
               {/* Right side: Share, Export, Analytics & Add Model buttons */}
               <Stack direction="row" gap="8px" alignItems="center">
-                <ShareButton
-                  onClick={handleShareClick}
-                  size="medium"
-                  tooltip="Share view"
-                />
+                <ShareButton onClick={handleShareClick} size="medium" tooltip="Share view" />
                 <ExportMenu
                   data={exportData}
                   columns={exportColumns}
@@ -2470,121 +2336,112 @@ const ModelInventory: React.FC = () => {
           </Box>
         )}
 
-      {/* Analytics Drawer */}
-      <AnalyticsDrawer
-        open={isAnalyticsDrawerOpen}
-        onClose={() => setIsAnalyticsDrawerOpen(false)}
-        title="Analytics & Trends"
-        description="Track your model inventory history over time"
-        entityName="Model"
-        availableParameters={[
-          { value: "status", label: "Status" },
-          // Add more parameters here as needed
-        ]}
-        defaultParameter="status"
-      />
+        {/* Analytics Drawer */}
+        <AnalyticsDrawer
+          open={isAnalyticsDrawerOpen}
+          onClose={() => setIsAnalyticsDrawerOpen(false)}
+          title="Analytics & Trends"
+          description="Track your model inventory history over time"
+          entityName="Model"
+          availableParameters={[
+            { value: "status", label: "Status" },
+            // Add more parameters here as needed
+          ]}
+          defaultParameter="status"
+        />
 
-      <NewModelInventory
-        isOpen={isNewModelInventoryModalOpen}
-        setIsOpen={handleCloseModal}
-        onSuccess={handleModelInventorySuccess}
-        onError={handleModelInventoryError}
-        selectedModelInventoryId={selectedModelInventory?.id}
-        evidenceData={evidenceHubData}
-        handleEditEvidence={handleEditEvidence}
-        handleDeleteEvidence={handleDeleteEvidence}
-        handleAddEvidence={handleAddEvidence}
-        modelInventoryData={modelInventoryData}
-        initialData={
-          selectedModelInventory
-            ? {
-                provider_model: selectedModelInventory.provider_model || "",
-                provider: selectedModelInventory.provider || "",
-                model: selectedModelInventory.model || "",
-                version: selectedModelInventory.version || "",
-                approver: selectedModelInventory.approver,
-                capabilities: selectedModelInventory.capabilities,
-                security_assessment: selectedModelInventory.security_assessment,
-                status: selectedModelInventory.status,
-                status_date: selectedModelInventory.status_date
-                  ? new Date(selectedModelInventory.status_date)
-                      .toISOString()
-                      .split("T")[0]
-                  : new Date().toISOString().split("T")[0],
-                reference_link: selectedModelInventory.reference_link || "",
-                biases: selectedModelInventory.biases || "",
-                limitations: selectedModelInventory.limitations || "",
-                hosting_provider: selectedModelInventory.hosting_provider || "",
-                projects: selectedModelInventory.projects || [],
-                frameworks: selectedModelInventory.frameworks || [],
-                security_assessment_data:
-                  selectedModelInventory.security_assessment_data || [],
-              }
-            : undefined
-        }
-        isEdit={!!selectedModelInventory}
-      />
+        <NewModelInventory
+          isOpen={isNewModelInventoryModalOpen}
+          setIsOpen={handleCloseModal}
+          onSuccess={handleModelInventorySuccess}
+          onError={handleModelInventoryError}
+          selectedModelInventoryId={selectedModelInventory?.id}
+          evidenceData={evidenceHubData}
+          handleEditEvidence={handleEditEvidence}
+          handleDeleteEvidence={handleDeleteEvidence}
+          handleAddEvidence={handleAddEvidence}
+          modelInventoryData={modelInventoryData}
+          initialData={
+            selectedModelInventory
+              ? {
+                  provider_model: selectedModelInventory.provider_model || "",
+                  provider: selectedModelInventory.provider || "",
+                  model: selectedModelInventory.model || "",
+                  version: selectedModelInventory.version || "",
+                  approver: selectedModelInventory.approver,
+                  capabilities: selectedModelInventory.capabilities,
+                  security_assessment: selectedModelInventory.security_assessment,
+                  status: selectedModelInventory.status,
+                  status_date: selectedModelInventory.status_date
+                    ? new Date(selectedModelInventory.status_date).toISOString().split("T")[0]
+                    : new Date().toISOString().split("T")[0],
+                  reference_link: selectedModelInventory.reference_link || "",
+                  biases: selectedModelInventory.biases || "",
+                  limitations: selectedModelInventory.limitations || "",
+                  hosting_provider: selectedModelInventory.hosting_provider || "",
+                  projects: selectedModelInventory.projects || [],
+                  frameworks: selectedModelInventory.frameworks || [],
+                  security_assessment_data: selectedModelInventory.security_assessment_data || [],
+                }
+              : undefined
+          }
+          isEdit={!!selectedModelInventory}
+        />
 
-      <NewModelRisk
-        isOpen={isNewModelRiskModalOpen}
-        setIsOpen={handleCloseModelRiskModal}
-        onSuccess={handleModelRiskSuccess}
-        initialData={
-          selectedModelRisk
-            ? {
-                risk_name: selectedModelRisk.risk_name || "",
-                risk_category: selectedModelRisk.risk_category,
-                risk_level: selectedModelRisk.risk_level,
-                status: selectedModelRisk.status,
-                owner: selectedModelRisk.owner,
-                target_date: selectedModelRisk.target_date
-                  ? new Date(selectedModelRisk.target_date)
-                      .toISOString()
-                      .split("T")[0]
-                  : new Date().toISOString().split("T")[0],
-                description: selectedModelRisk.description || "",
-                mitigation_plan: selectedModelRisk.mitigation_plan || "",
-                impact: selectedModelRisk.impact || "",
-                model_id: selectedModelRisk.model_id,
-              }
-            : undefined
-        }
-        isEdit={!!selectedModelRisk}
-        entityId={selectedModelRisk?.id}
-      />
+        <NewModelRisk
+          isOpen={isNewModelRiskModalOpen}
+          setIsOpen={handleCloseModelRiskModal}
+          onSuccess={handleModelRiskSuccess}
+          initialData={
+            selectedModelRisk
+              ? {
+                  risk_name: selectedModelRisk.risk_name || "",
+                  risk_category: selectedModelRisk.risk_category,
+                  risk_level: selectedModelRisk.risk_level,
+                  status: selectedModelRisk.status,
+                  owner: selectedModelRisk.owner,
+                  target_date: selectedModelRisk.target_date
+                    ? new Date(selectedModelRisk.target_date).toISOString().split("T")[0]
+                    : new Date().toISOString().split("T")[0],
+                  description: selectedModelRisk.description || "",
+                  mitigation_plan: selectedModelRisk.mitigation_plan || "",
+                  impact: selectedModelRisk.impact || "",
+                  model_id: selectedModelRisk.model_id,
+                }
+              : undefined
+          }
+          isEdit={!!selectedModelRisk}
+          entityId={selectedModelRisk?.id}
+        />
 
-      <NewEvidenceHub
-        isOpen={isEvidenceHubModalOpen}
-        setIsOpen={handleClosEvidenceModal}
-        onSuccess={handleEvidenceUploadModalSuccess}
-        onError={handleEvidenceUploadModalError}
-        isEdit={!!selectedEvidenceHub}
-        initialData={selectedEvidenceHub || undefined}
-        preselectedModelId={preselectedModelId}
-      />
+        <NewEvidenceHub
+          isOpen={isEvidenceHubModalOpen}
+          setIsOpen={handleClosEvidenceModal}
+          onSuccess={handleEvidenceUploadModalSuccess}
+          onError={handleEvidenceUploadModalError}
+          isEdit={!!selectedEvidenceHub}
+          initialData={selectedEvidenceHub || undefined}
+          preselectedModelId={preselectedModelId}
+        />
 
-      <PageTour
-        steps={ModelInventorySteps}
-        run={true}
-        tourKey="model-inventory-tour"
-      />
+        <PageTour steps={ModelInventorySteps} run={true} tourKey="model-inventory-tour" />
 
-      {/* Share View Dropdown */}
-      <ShareViewDropdown
-        anchorEl={shareAnchorEl}
-        onClose={handleShareClose}
-        enabled={isShareEnabled}
-        shareableLink={shareableLink}
-        initialSettings={shareSettings}
-        onEnabledChange={handleShareEnabledChange}
-        onGenerateLink={generateShareableLink}
-        onSettingsChange={handleShareSettingsChange}
-        onCopyLink={handleCopyLink}
-        onRefreshLink={handleRefreshLink}
-        onOpenLink={handleOpenLink}
-      />
+        {/* Share View Dropdown */}
+        <ShareViewDropdown
+          anchorEl={shareAnchorEl}
+          onClose={handleShareClose}
+          enabled={isShareEnabled}
+          shareableLink={shareableLink}
+          initialSettings={shareSettings}
+          onEnabledChange={handleShareEnabledChange}
+          onGenerateLink={generateShareableLink}
+          onSettingsChange={handleShareSettingsChange}
+          onCopyLink={handleCopyLink}
+          onRefreshLink={handleRefreshLink}
+          onOpenLink={handleOpenLink}
+        />
 
-      {/* Lifecycle Config is now provided by the model-lifecycle plugin */}
+        {/* Lifecycle Config is now provided by the model-lifecycle plugin */}
       </PageHeaderExtended>
     </Stack>
   );

@@ -1,11 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { IPMMResponse } from "../../interfaces/i.postMarketMonitoring";
 import { PMMCycleModel } from "./pmmCycle.model";
 import { PMMQuestionModel } from "./pmmQuestion.model";
@@ -22,10 +15,7 @@ import { PMMQuestionModel } from "./pmmQuestion.model";
     },
   ],
 })
-export class PMMResponseModel
-  extends Model<PMMResponseModel>
-  implements IPMMResponse
-{
+export class PMMResponseModel extends Model<PMMResponseModel> implements IPMMResponse {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

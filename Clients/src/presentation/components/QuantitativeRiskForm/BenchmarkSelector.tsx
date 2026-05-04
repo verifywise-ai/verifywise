@@ -1,12 +1,5 @@
 import { FC, useCallback } from "react";
-import {
-  Stack,
-  Typography,
-  useTheme,
-  Autocomplete,
-  TextField,
-  Box,
-} from "@mui/material";
+import { Stack, Typography, useTheme, Autocomplete, TextField, Box } from "@mui/material";
 import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
 import { useBenchmarks } from "../../../application/hooks/useQuantitativeRisk";
 import { IRiskBenchmark } from "../../../domain/interfaces/i.quantitativeRisk";
@@ -21,10 +14,7 @@ interface BenchmarkSelectorProps {
  * Dropdown to select and apply an industry benchmark as a starting point
  * for FAIR quantitative fields.
  */
-const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({
-  onApply,
-  disabled = false,
-}) => {
+const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({ onApply, disabled = false }) => {
   const theme = useTheme();
   const { benchmarks, isLoading } = useBenchmarks();
 
@@ -34,7 +24,7 @@ const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({
         onApply(value);
       }
     },
-    [onApply]
+    [onApply],
   );
 
   return (
@@ -55,8 +45,8 @@ const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({
           lineHeight: 1.5,
         }}
       >
-        Optionally select an industry benchmark to pre-fill frequency and loss
-        values. You can adjust them after applying.
+        Optionally select an industry benchmark to pre-fill frequency and loss values. You can
+        adjust them after applying.
       </Typography>
 
       {/* Benchmark selector */}
@@ -67,20 +57,14 @@ const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({
         loading={isLoading}
         disabled={disabled}
         groupBy={(option) => option.industry}
-        getOptionLabel={(option) =>
-          `${option.category} (${option.ai_risk_type})`
-        }
+        getOptionLabel={(option) => `${option.category} (${option.ai_risk_type})`}
         renderOption={(props, option) => {
           const { key, ...optionProps } = props;
           return (
             <Box key={key} component="li" {...optionProps}>
               <Stack>
-                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                  {option.category}
-                </Typography>
-                <Typography
-                  sx={{ fontSize: 11, color: theme.palette.text.tertiary }}
-                >
+                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{option.category}</Typography>
+                <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
                   {option.ai_risk_type}
                   {option.regulation ? ` \u00B7 ${option.regulation}` : ""}
                 </Typography>
@@ -114,9 +98,7 @@ const BenchmarkSelector: FC<BenchmarkSelectorProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder={
-              isLoading ? "Loading benchmarks..." : "Search benchmarks..."
-            }
+            placeholder={isLoading ? "Loading benchmarks..." : "Search benchmarks..."}
             sx={{
               "& .MuiInputBase-input": { fontSize: 13 },
               "& ::placeholder": { fontSize: 13 },

@@ -2,11 +2,7 @@ import { notificationService } from "../notificationService";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { frontEndUrl } from "../../config/constants";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../../utils/logger/logHelper";
 
 // ============================================================================
 // TYPES
@@ -14,10 +10,7 @@ import {
 
 export type ProjectRole = "admin" | "auditor" | "editor" | "reviewer";
 
-export type ProjectNotificationType =
-  | "user_added"
-  | "role_changed_to_admin"
-  | "project_created";
+export type ProjectNotificationType = "user_added" | "role_changed_to_admin" | "project_created";
 
 export interface BaseProjectNotificationData {
   projectId: number;
@@ -60,24 +53,18 @@ interface NotificationConfig {
 const NOTIFICATION_CONFIGS: Record<ProjectNotificationType, NotificationConfig> = {
   user_added: {
     template: EMAIL_TEMPLATES.USER_ADDED_PROJECT_ADMIN, // Will be overridden by role
-    getSubject: (projectName, role) =>
-      `You are now a project ${role} for ${projectName}`,
-    getLogMessage: (email, role) =>
-      `Added as a project ${role} notification sent to ${email}`,
+    getSubject: (projectName, role) => `You are now a project ${role} for ${projectName}`,
+    getLogMessage: (email, role) => `Added as a project ${role} notification sent to ${email}`,
   },
   role_changed_to_admin: {
     template: EMAIL_TEMPLATES.MEMBER_ROLE_CHANGED_EDITOR_TO_ADMIN,
-    getSubject: (projectName) =>
-      `Your role changed to project admin on ${projectName}`,
-    getLogMessage: (email) =>
-      `Role changed to admin notification sent to ${email}`,
+    getSubject: (projectName) => `Your role changed to project admin on ${projectName}`,
+    getLogMessage: (email) => `Role changed to admin notification sent to ${email}`,
   },
   project_created: {
     template: EMAIL_TEMPLATES.PROJECT_CREATED_ADMIN,
-    getSubject: (projectName) =>
-      `${projectName} is created in VerifyWise`,
-    getLogMessage: (email) =>
-      `Project creation notification sent to ${email}`,
+    getSubject: (projectName) => `${projectName} is created in VerifyWise`,
+    getLogMessage: (email) => `Project creation notification sent to ${email}`,
   },
 };
 
@@ -97,7 +84,7 @@ async function sendProjectNotification(
   functionName: string,
   fileName: string,
   organizationId: number,
-  userId: number
+  userId: number,
 ): Promise<void> {
   logProcessing({
     description: `Sending ${data.type} notification for project: ${data.projectName}`,
@@ -177,7 +164,7 @@ async function sendProjectNotification(
       recipientEmail,
       subject,
       template,
-      templateData
+      templateData,
     );
 
     await logSuccess({
@@ -219,26 +206,24 @@ async function sendProjectNotification(
  *   role: "admin"
  * });
  */
-export const sendUserAddedToProjectNotification = async (
-  data: {
-    projectId: number;
-    projectName: string;
-    adminId: number;
-    userId: number;
-    role: ProjectRole;
-    organizationId: number;
-  }
-): Promise<void> => {
+export const sendUserAddedToProjectNotification = async (data: {
+  projectId: number;
+  projectName: string;
+  adminId: number;
+  userId: number;
+  role: ProjectRole;
+  organizationId: number;
+}): Promise<void> => {
   return sendProjectNotification(
     {
       ...data,
       actorId: data.adminId, // Map adminId to actorId for consistency
-      type: "user_added"
+      type: "user_added",
     },
     "sendUserAddedToProjectNotification",
     "projectNotifications.ts",
     data.organizationId,
-    data.userId
+    data.userId,
   );
 };
 
@@ -254,21 +239,19 @@ export const sendUserAddedToProjectNotification = async (
  *   userId: 6
  * });
  */
-export const sendMemberRoleChangedEditorToAdminNotification = async (
-  data: {
-    projectId: number;
-    projectName: string;
-    actorId: number;
-    userId: number;
-    organizationId: number;
-  }
-): Promise<void> => {
+export const sendMemberRoleChangedEditorToAdminNotification = async (data: {
+  projectId: number;
+  projectName: string;
+  actorId: number;
+  userId: number;
+  organizationId: number;
+}): Promise<void> => {
   return sendProjectNotification(
     { ...data, type: "role_changed_to_admin" },
     "sendMemberRoleChangedEditorToAdminNotification",
     "projectNotifications.ts",
     data.organizationId,
-    data.userId
+    data.userId,
   );
 };
 
@@ -283,20 +266,18 @@ export const sendMemberRoleChangedEditorToAdminNotification = async (
  *   adminId: 1
  * });
  */
-export const sendProjectCreatedNotification = async (
-  data: {
-    projectId: number;
-    projectName: string;
-    adminId: number;
-    organizationId: number;
-    userId: number;
-  }
-): Promise<void> => {
+export const sendProjectCreatedNotification = async (data: {
+  projectId: number;
+  projectName: string;
+  adminId: number;
+  organizationId: number;
+  userId: number;
+}): Promise<void> => {
   return sendProjectNotification(
     { ...data, type: "project_created" },
     "sendProjectCreatedNotification",
     "projectNotifications.ts",
     data.organizationId,
-    data.userId
+    data.userId,
   );
 };

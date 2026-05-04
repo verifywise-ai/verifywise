@@ -36,15 +36,13 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
   const isVisible = useCallback(
     (key: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(key),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const visibleTableHeaders = useMemo(
     () =>
-      tableHeaders.filter(
-        (col) => col.id === "title" || col.id === "actions" || isVisible(col.id)
-      ),
-    [isVisible]
+      tableHeaders.filter((col) => col.id === "title" || col.id === "actions" || isVisible(col.id)),
+    [isVisible],
   );
 
   // Helper function to get user name by ID
@@ -133,11 +131,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   };
 
   if (error) {
-    return (
-      <div className="error-message">
-        Error loading policies: {error.message}
-      </div>
-    );
+    return <div className="error-message">Error loading policies: {error.message}</div>;
   }
 
   if (isLoading) {
@@ -199,18 +193,22 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
             <TableCell
               sx={{
                 ...cellStyle,
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("title") ? singleTheme.tableColors.sortedColumnFirst : undefined,
+                backgroundColor:
+                  sortConfig?.key && sortConfig.key.toLowerCase().includes("title")
+                    ? singleTheme.tableColors.sortedColumnFirst
+                    : undefined,
               }}
             >
-              {policy.title.length > 30
-                ? `${policy.title.slice(0, 30)}...`
-                : policy.title}
+              {policy.title.length > 30 ? `${policy.title.slice(0, 30)}...` : policy.title}
             </TableCell>
             {isVisible("status") && (
               <TableCell
                 sx={{
                   ...cellStyle,
-                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("status") ? singleTheme.tableColors.sortedColumn : undefined,
+                  backgroundColor:
+                    sortConfig?.key && sortConfig.key.toLowerCase().includes("status")
+                      ? singleTheme.tableColors.sortedColumn
+                      : undefined,
                 }}
               >
                 <Chip label={policy.status} />
@@ -220,7 +218,12 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               <TableCell
                 sx={{
                   ...cellStyle,
-                  backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("next") || sortConfig.key.toLowerCase().includes("review")) ? singleTheme.tableColors.sortedColumn : undefined,
+                  backgroundColor:
+                    sortConfig?.key &&
+                    (sortConfig.key.toLowerCase().includes("next") ||
+                      sortConfig.key.toLowerCase().includes("review"))
+                      ? singleTheme.tableColors.sortedColumn
+                      : undefined,
                 }}
               >
                 {policy.next_review_date
@@ -232,7 +235,10 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               <TableCell
                 sx={{
                   ...cellStyle,
-                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("author") ? singleTheme.tableColors.sortedColumn : undefined,
+                  backgroundColor:
+                    sortConfig?.key && sortConfig.key.toLowerCase().includes("author")
+                      ? singleTheme.tableColors.sortedColumn
+                      : undefined,
                 }}
               >
                 {getUserNameById(policy.author_id)}
@@ -247,19 +253,28 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               <TableCell
                 sx={{
                   ...cellStyle,
-                  backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("last") || sortConfig.key.toLowerCase().includes("updated")) && !sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
+                  backgroundColor:
+                    sortConfig?.key &&
+                    (sortConfig.key.toLowerCase().includes("last") ||
+                      sortConfig.key.toLowerCase().includes("updated")) &&
+                    !sortConfig.key.toLowerCase().includes("by")
+                      ? singleTheme.tableColors.sortedColumn
+                      : undefined,
                 }}
               >
-                {policy.last_updated_at
-                  ? new Date(policy.last_updated_at).toLocaleString()
-                  : "-"}
+                {policy.last_updated_at ? new Date(policy.last_updated_at).toLocaleString() : "-"}
               </TableCell>
             )}
             {isVisible("updated_by") && (
               <TableCell
                 sx={{
                   ...cellStyle,
-                  backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("updated") && sortConfig.key.toLowerCase().includes("by") ? singleTheme.tableColors.sortedColumn : undefined,
+                  backgroundColor:
+                    sortConfig?.key &&
+                    sortConfig.key.toLowerCase().includes("updated") &&
+                    sortConfig.key.toLowerCase().includes("by")
+                      ? singleTheme.tableColors.sortedColumn
+                      : undefined,
                 }}
               >
                 {getUserNameById(policy.last_updated_by)}
@@ -267,7 +282,10 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
             )}
             <TableCell
               sx={{
-                backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("actions") ? singleTheme.tableColors.sortedColumn : undefined,
+                backgroundColor:
+                  sortConfig?.key && sortConfig.key.toLowerCase().includes("actions")
+                    ? singleTheme.tableColors.sortedColumn
+                    : undefined,
               }}
             >
               <div onClick={(e) => e.stopPropagation()}>
@@ -283,7 +301,9 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                   onLinkedObjects={() => {
                     onLinkedObjects(policy.id);
                   }}
-                  onAssignToFolder={onAssignToFolder ? () => onAssignToFolder(policy.id) : undefined}
+                  onAssignToFolder={
+                    onAssignToFolder ? () => onAssignToFolder(policy.id) : undefined
+                  }
                   onDownloadPDF={() => handleDownloadPDF(policy.id, policy.title)}
                   onDownloadDOCX={() => handleDownloadDOCX(policy.id, policy.title)}
                   onMouseEvent={() => {}}

@@ -1,17 +1,8 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ISlackWebhook } from "../../interfaces/i.slackWebhook";
 import { UserModel } from "../user/user.model";
 import { numberValidation } from "../../validations/number.valid";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 import { decryptText, encryptText } from "../../../tools/createSecureValue";
 import { SlackNotificationRoutingType } from "../../enums/slack.enum";
 
@@ -20,10 +11,7 @@ import { SlackNotificationRoutingType } from "../../enums/slack.enum";
   timestamps: true,
   underscored: true, // This makes Sequelize use snake_case for timestamp fields
 })
-export class SlackWebhookModel
-  extends Model<SlackWebhookModel>
-  implements ISlackWebhook
-{
+export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlackWebhook {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -105,9 +93,7 @@ export class SlackWebhookModel
   is_active?: boolean;
 
   @Column({
-    type: DataType.ARRAY(
-      DataType.ENUM(...Object.values(SlackNotificationRoutingType)),
-    ),
+    type: DataType.ARRAY(DataType.ENUM(...Object.values(SlackNotificationRoutingType))),
   })
   routing_type?: SlackNotificationRoutingType[];
 
@@ -128,11 +114,7 @@ export class SlackWebhookModel
   ): Promise<SlackWebhookModel> {
     // Validate required fields
     if (!access_token || access_token.trim().length === 0) {
-      throw new ValidationException(
-        "Access Token is required",
-        "access_token",
-        access_token,
-      );
+      throw new ValidationException("Access Token is required", "access_token", access_token);
     }
 
     if (!scope || scope.trim().length === 0) {
@@ -144,36 +126,20 @@ export class SlackWebhookModel
     }
 
     if (!team_name || team_name.trim().length === 0) {
-      throw new ValidationException(
-        "Team Name is required",
-        "team_name",
-        team_name,
-      );
+      throw new ValidationException("Team Name is required", "team_name", team_name);
     }
 
     if (!channel || channel.trim().length === 0) {
-      throw new ValidationException(
-        "Slack Channel is required",
-        "channel",
-        channel,
-      );
+      throw new ValidationException("Slack Channel is required", "channel", channel);
     }
 
     // Validate user if provided
     if (user_id !== undefined && !numberValidation(user_id, 1)) {
-      throw new ValidationException(
-        "Valid User ID is required (must be >= 1)",
-        "user_id",
-        user_id,
-      );
+      throw new ValidationException("Valid User ID is required (must be >= 1)", "user_id", user_id);
     }
 
     if (!channel_id || channel_id.trim().length === 0) {
-      throw new ValidationException(
-        "Slack Channel ID is required",
-        "channel_id",
-        channel_id,
-      );
+      throw new ValidationException("Slack Channel ID is required", "channel_id", channel_id);
     }
 
     if (!configuration_url || configuration_url.trim().length === 0) {
@@ -188,9 +154,7 @@ export class SlackWebhookModel
       throw new ValidationException("Slack URL is required", "url", url);
     }
 
-    const { iv: accessTokeniv, value: accessToken } = encryptText(
-      access_token.trim(),
-    );
+    const { iv: accessTokeniv, value: accessToken } = encryptText(access_token.trim());
     const { iv: ivUrl, value: encryptedUrl } = encryptText(url.trim());
 
     // Create and return the slackwebhook model instance
@@ -233,43 +197,23 @@ export class SlackWebhookModel
    */
   async validateSlackWebhookData(): Promise<void> {
     if (!this.access_token || this.access_token.trim().length === 0) {
-      throw new ValidationException(
-        "Access Token is required",
-        "access_token",
-        this.access_token,
-      );
+      throw new ValidationException("Access Token is required", "access_token", this.access_token);
     }
 
     if (!this.scope || this.scope.trim().length === 0) {
-      throw new ValidationException(
-        "Slack scope is required",
-        "scope",
-        this.scope,
-      );
+      throw new ValidationException("Slack scope is required", "scope", this.scope);
     }
 
     if (!this.team_id || this.team_id.trim().length === 0) {
-      throw new ValidationException(
-        "Team ID is required",
-        "team_id",
-        this.team_id,
-      );
+      throw new ValidationException("Team ID is required", "team_id", this.team_id);
     }
 
     if (!this.team_name || this.team_name.trim().length === 0) {
-      throw new ValidationException(
-        "Team Name is required",
-        "team_name",
-        this.team_name,
-      );
+      throw new ValidationException("Team Name is required", "team_name", this.team_name);
     }
 
     if (!this.channel || this.channel.trim().length === 0) {
-      throw new ValidationException(
-        "Slack Channel is required",
-        "channel",
-        this.channel,
-      );
+      throw new ValidationException("Slack Channel is required", "channel", this.channel);
     }
 
     // Validate user if provided
@@ -282,11 +226,7 @@ export class SlackWebhookModel
     }
 
     if (!this.channel_id || this.channel_id.trim().length === 0) {
-      throw new ValidationException(
-        "Slack Channel ID is required",
-        "channel_id",
-        this.channel_id,
-      );
+      throw new ValidationException("Slack Channel ID is required", "channel_id", this.channel_id);
     }
 
     if (!this.configuration_url || this.configuration_url.trim().length === 0) {
@@ -339,20 +279,12 @@ export class SlackWebhookModel
    */
   static async findByIdWithValidation(id: number): Promise<SlackWebhookModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id,
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const slackWebhook = await SlackWebhookModel.findByPk(id);
     if (!slackWebhook) {
-      throw new NotFoundException(
-        "Slack Webhook not found",
-        "slackWebhook",
-        id,
-      );
+      throw new NotFoundException("Slack Webhook not found", "slackWebhook", id);
     }
 
     return slackWebhook;
@@ -366,11 +298,7 @@ export class SlackWebhookModel
     updateData: Partial<ISlackWebhook>,
   ): Promise<[number, SlackWebhookModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id,
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await SlackWebhookModel.update(updateData, {

@@ -36,10 +36,7 @@ describe("Test Change History Repository", () => {
 
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const response = await getEntityChangeHistory(
-        "model_inventory" as any,
-        42,
-      );
+      const response = await getEntityChangeHistory("model_inventory" as any, 42);
 
       expect(apiServices.get).toHaveBeenCalledWith(
         "/model-inventory-change-history/42?limit=100&offset=0",
@@ -64,12 +61,7 @@ describe("Test Change History Repository", () => {
 
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const response = await getEntityChangeHistory(
-        "project_risk" as any,
-        99,
-        20,
-        40,
-      );
+      const response = await getEntityChangeHistory("project_risk" as any, 99, 20, 40);
 
       expect(apiServices.get).toHaveBeenCalledWith(
         "/project-risk-change-history/99?limit=20&offset=40",
@@ -79,15 +71,11 @@ describe("Test Change History Repository", () => {
 
     it("should throw and log when request fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
-      await expect(
-        getEntityChangeHistory("project_risk" as any, 99),
-      ).rejects.toThrow("API Error");
+      await expect(getEntityChangeHistory("project_risk" as any, 99)).rejects.toThrow("API Error");
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Error getting project_risk change history:",

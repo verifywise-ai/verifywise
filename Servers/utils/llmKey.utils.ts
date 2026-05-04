@@ -131,8 +131,6 @@ export const getLLMProviderUrl = (provider: LLMProvider): string => {
   return standardProviderUrls[provider] || "";
 };
 
-export const isValidLLMProvider = (
-  provider: string,
-): provider is LLMProvider => {
+export const isValidLLMProvider = (provider: string): provider is LLMProvider => {
   return ["Anthropic", "OpenAI", "OpenRouter", "Custom"].includes(provider);
 };

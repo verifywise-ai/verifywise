@@ -1,9 +1,7 @@
 import { test, expect } from "./fixtures/auth.fixture";
 
 test.describe("Onboarding Wizard", () => {
-  test("welcome dialog appears on fresh session", async ({
-    authedPage: page,
-  }) => {
+  test("welcome dialog appears on fresh session", async ({ authedPage: page }) => {
     // Clear onboarding-related localStorage keys to simulate fresh session
     await page.evaluate(() => {
       const keys = Object.keys(localStorage);
@@ -31,7 +29,12 @@ test.describe("Onboarding Wizard", () => {
       .or(page.getByRole("button", { name: /skip for now/i }))
       .or(page.getByRole("button", { name: /next/i }));
 
-    if (await welcomeDialog.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await welcomeDialog
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await expect(welcomeDialog.first()).toBeVisible();
     }
   });
@@ -62,7 +65,12 @@ test.describe("Onboarding Wizard", () => {
       .getByRole("button", { name: /skip/i })
       .or(page.getByRole("button", { name: /dismiss/i }));
 
-    if (await nextBtn.first().isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (
+      await nextBtn
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false)
+    ) {
       // Step through
       await nextBtn.first().click();
       await page.waitForTimeout(1000);
@@ -78,19 +86,27 @@ test.describe("Onboarding Wizard", () => {
         .or(page.getByRole("button", { name: /done/i }))
         .or(page.getByRole("button", { name: /finish/i }));
 
-      if (await closeBtn.first().isVisible().catch(() => false)) {
+      if (
+        await closeBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await closeBtn.first().click();
         await page.waitForTimeout(500);
       }
-    } else if (await skipBtn.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
+    } else if (
+      await skipBtn
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false)
+    ) {
       await skipBtn.first().click();
       await page.waitForTimeout(500);
     }
   });
 
-  test("completing wizard persists dismissal", async ({
-    authedPage: page,
-  }) => {
+  test("completing wizard persists dismissal", async ({ authedPage: page }) => {
     // First dismiss the wizard
     const skipBtn = page
       .getByRole("button", { name: /skip for now/i })
@@ -98,7 +114,12 @@ test.describe("Onboarding Wizard", () => {
       .or(page.getByRole("button", { name: /close/i }))
       .or(page.getByRole("button", { name: /get started/i }));
 
-    if (await skipBtn.first().isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (
+      await skipBtn
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false)
+    ) {
       await skipBtn.first().click();
       await page.waitForTimeout(1000);
     }

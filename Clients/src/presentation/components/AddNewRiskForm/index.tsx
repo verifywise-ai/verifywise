@@ -16,10 +16,7 @@ import dayjs from "dayjs";
 
 import { Likelihood, Severity } from "../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
-import {
-  RiskFormValues,
-  MitigationFormValues,
-} from "./interface";
+import { RiskFormValues, MitigationFormValues } from "./interface";
 import {
   aiLifecyclePhase,
   riskCategoryItems,
@@ -31,7 +28,10 @@ import {
 } from "./projectRiskValue";
 import { AddNewRiskFormProps } from "../../types/riskForm.types";
 import { ApiResponse } from "../../../domain/interfaces/i.response";
-import { createProjectRisk, updateProjectRisk } from "../../../application/repository/projectRisk.repository";
+import {
+  createProjectRisk,
+  updateProjectRisk,
+} from "../../../application/repository/projectRisk.repository";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -105,7 +105,7 @@ const mitigationInitialState: MitigationFormValues = {
  */
 const parseDateValue = (value: unknown): string => {
   if (!value) return "";
-  if (typeof value === 'string' || value instanceof Date) {
+  if (typeof value === "string" || value instanceof Date) {
     return dayjs(value).toISOString();
   }
   return "";
@@ -141,17 +141,14 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   entityId,
 }) => {
   const theme = useTheme();
-  const disableRipple =
-    theme.components?.MuiButton?.defaultProps?.disableRipple ?? false;
+  const disableRipple = theme.components?.MuiButton?.defaultProps?.disableRipple ?? false;
 
   const riskValidateRef = useRef<((values: RiskFormValues) => boolean) | null>(null);
   const mitigateValidateRef = useRef<((values: MitigationFormValues) => boolean) | null>(null);
-  const [riskValues, setRiskValues] =
-    useState<RiskFormValues>(initialRiskValues); // Use initialValues
+  const [riskValues, setRiskValues] = useState<RiskFormValues>(initialRiskValues); // Use initialValues
   const [mitigationValues, setMitigationValues] =
     useState<MitigationFormValues>(initialMitigationValues);
-  const [originalRiskValues, setOriginalRiskValues] =
-    useState<RiskFormValues>(initialRiskValues); // Track original values for diff
+  const [originalRiskValues, setOriginalRiskValues] = useState<RiskFormValues>(initialRiskValues); // Track original values for diff
   const [originalMitigationValues, setOriginalMitigationValues] =
     useState<MitigationFormValues>(initialMitigationValues); // Track original values for diff
   const [quantitativeValues, setQuantitativeValues] =
@@ -159,12 +156,9 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   const [originalQuantitativeValues, setOriginalQuantitativeValues] =
     useState<QuantitativeRiskFormValues>(quantitativeInitialState);
   const [value, setValue] = useState("risks");
-  const handleChange = useCallback(
-    (_: React.SyntheticEvent, newValue: string) => {
-      setValue(newValue);
-    },
-    []
-  );
+  const handleChange = useCallback((_: React.SyntheticEvent, newValue: string) => {
+    setValue(newValue);
+  }, []);
 
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId");
@@ -180,10 +174,8 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
   // Get inputValues from context
   const { inputValues } = useContext(VerifyWiseContext);
 
-  const isEditingDisabled =
-    !allowedRoles.projectRisks.edit.includes(userRoleName);
-  const isCreatingDisabled =
-    !allowedRoles.projectRisks.create.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const isCreatingDisabled = !allowedRoles.projectRisks.create.includes(userRoleName);
 
   // Expose submit function via ref for StandardModal pattern
   useEffect(() => {
@@ -203,28 +195,26 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       const currentRiskData: RiskFormValues = {
         ...riskInitialState,
         riskName: inputValues.risk_name ?? "",
-        actionOwner: typeof inputValues.risk_owner === 'number' ? inputValues.risk_owner : parseInt(String(inputValues.risk_owner)) || 0,
+        actionOwner:
+          typeof inputValues.risk_owner === "number"
+            ? inputValues.risk_owner
+            : parseInt(String(inputValues.risk_owner)) || 0,
         riskDescription: inputValues.risk_description ?? "",
         aiLifecyclePhase:
-          aiLifecyclePhase.find(
-            (item) => item.name === inputValues.ai_lifecycle_phase
-          )?._id ?? 1,
+          aiLifecyclePhase.find((item) => item.name === inputValues.ai_lifecycle_phase)?._id ?? 1,
         riskCategory: Array.isArray(inputValues.risk_category)
           ? inputValues.risk_category.map(
               (category: string) =>
-                riskCategoryItems.find((item) => item.name === category)?._id ?? 1
+                riskCategoryItems.find((item) => item.name === category)?._id ?? 1,
             )
           : [1],
         potentialImpact: inputValues.impact ?? "",
         assessmentMapping: inputValues.assessment_mapping ?? 0,
         controlsMapping: inputValues.controlsMapping ?? 0,
-        likelihood:
-          likelihoodItems.find((item) => item.name === inputValues.likelihood)
-            ?._id ?? 1,
+        likelihood: likelihoodItems.find((item) => item.name === inputValues.likelihood)?._id ?? 1,
         riskSeverity:
-          riskSeverityItems.find((item) => item.name === inputValues.severity)
-            ?._id ?? 1,
-        riskLevel: typeof inputValues.riskLevel === 'number' ? inputValues.riskLevel : 0,
+          riskSeverityItems.find((item) => item.name === inputValues.severity)?._id ?? 1,
+        riskLevel: typeof inputValues.riskLevel === "number" ? inputValues.riskLevel : 0,
         reviewNotes: inputValues.review_notes ?? "",
         applicableProjects: Array.isArray(inputValues.projects) ? inputValues.projects : [],
         applicableFrameworks: Array.isArray(inputValues.frameworks) ? inputValues.frameworks : [],
@@ -233,30 +223,21 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       const currentMitigationData: MitigationFormValues = {
         ...mitigationInitialState,
         mitigationStatus:
-          mitigationStatusItems.find(
-            (item) => item.name === inputValues.mitigation_status
-          )?._id ?? 1,
+          mitigationStatusItems.find((item) => item.name === inputValues.mitigation_status)?._id ??
+          1,
         mitigationPlan: inputValues.mitigation_plan ?? "",
         currentRiskLevel:
-          riskLevelItems.find(
-            (item) => item.name === inputValues.current_risk_level
-          )?._id ?? 1,
+          riskLevelItems.find((item) => item.name === inputValues.current_risk_level)?._id ?? 1,
         implementationStrategy: inputValues.implementation_strategy ?? "",
         deadline: parseDateValue(inputValues.deadline),
         doc: inputValues.mitigation_evidence_document ?? "",
         likelihood:
-          likelihoodItems.find(
-            (item) => item.name === inputValues.likelihood_mitigation
-          )?._id ?? 1,
+          likelihoodItems.find((item) => item.name === inputValues.likelihood_mitigation)?._id ?? 1,
         riskSeverity:
-          riskSeverityItems.find(
-            (item) => item.name === inputValues.risk_severity
-          )?._id ?? 1,
+          riskSeverityItems.find((item) => item.name === inputValues.risk_severity)?._id ?? 1,
         approver: inputValues.risk_approval ?? 0,
         approvalStatus:
-          approvalStatusItems.find(
-            (item) => item.name === inputValues.approval_status
-          )?._id ?? 1,
+          approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ?? 1,
         dateOfAssessment: parseDateValue(inputValues.date_of_assessment),
       };
       setRiskValues(currentRiskData);
@@ -289,7 +270,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         control_effectiveness: toNum(inputValues.control_effectiveness),
         mitigation_cost_annual: toNum(inputValues.mitigation_cost_annual),
         benchmark_id: toNum(inputValues.benchmark_id),
-        currency: (typeof inputValues.currency === 'string' ? inputValues.currency : null) ?? "USD",
+        currency: (typeof inputValues.currency === "string" ? inputValues.currency : null) ?? "USD",
       };
       setQuantitativeValues(currentQuantitativeData);
       setOriginalQuantitativeValues(currentQuantitativeData);
@@ -298,41 +279,43 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
 
   const validateForm = useCallback((): { isValid: boolean; riskValid: boolean } => {
     const riskValid = riskValidateRef.current ? riskValidateRef.current(riskValues) : false;
-    const mitigationValid = mitigateValidateRef.current ? mitigateValidateRef.current(mitigationValues) : false;
+    const mitigationValid = mitigateValidateRef.current
+      ? mitigateValidateRef.current(mitigationValues)
+      : false;
     return {
       isValid: riskValid && mitigationValid,
       riskValid,
     };
-  }, [
-    riskValues,
-    mitigationValues,
-  ]);
+  }, [riskValues, mitigationValues]);
 
   // Helper function to get only changed fields for UPDATE requests
-  const getChangedFields = useCallback(<T extends object>(original: T, current: T): Record<string, unknown> => {
-    const changedFields: Record<string, unknown> = {};
+  const getChangedFields = useCallback(
+    <T extends object>(original: T, current: T): Record<string, unknown> => {
+      const changedFields: Record<string, unknown> = {};
 
-    // Check each field for changes
-    (Object.keys(current) as Array<keyof T>).forEach((key) => {
-      const originalValue = original[key];
-      const currentValue = current[key];
+      // Check each field for changes
+      (Object.keys(current) as Array<keyof T>).forEach((key) => {
+        const originalValue = original[key];
+        const currentValue = current[key];
 
-      // For arrays, do deep comparison (use copies to avoid mutating originals)
-      if (Array.isArray(originalValue) && Array.isArray(currentValue)) {
-        const originalArr = [...originalValue].sort();
-        const currentArr = [...currentValue].sort();
-        if (JSON.stringify(originalArr) !== JSON.stringify(currentArr)) {
+        // For arrays, do deep comparison (use copies to avoid mutating originals)
+        if (Array.isArray(originalValue) && Array.isArray(currentValue)) {
+          const originalArr = [...originalValue].sort();
+          const currentArr = [...currentValue].sort();
+          if (JSON.stringify(originalArr) !== JSON.stringify(currentArr)) {
+            changedFields[key as string] = currentValue;
+          }
+        }
+        // For other values, do simple comparison
+        else if (originalValue !== currentValue) {
           changedFields[key as string] = currentValue;
         }
-      }
-      // For other values, do simple comparison
-      else if (originalValue !== currentValue) {
-        changedFields[key as string] = currentValue;
-      }
-    });
+      });
 
-    return changedFields;
-  }, []);
+      return changedFields;
+    },
+    [],
+  );
 
   // Helper function to build form data for API submission
   const buildFormData = useCallback(
@@ -342,80 +325,68 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         risk_name: riskValues.riskName,
         risk_owner: riskValues.actionOwner,
         ai_lifecycle_phase:
-          aiLifecyclePhase.find(
-            (item) => item._id === riskValues.aiLifecyclePhase
-          )?.name || "",
+          aiLifecyclePhase.find((item) => item._id === riskValues.aiLifecyclePhase)?.name || "",
         risk_description: riskValues.riskDescription,
         risk_category: riskValues.riskCategory.map(
-          (category) =>
-            riskCategoryItems.find((item) => item._id === category)?.name
+          (category) => riskCategoryItems.find((item) => item._id === category)?.name,
         ),
         impact: riskValues.potentialImpact,
         assessment_mapping: riskValues.assessmentMapping,
         controls_mapping: riskValues.controlsMapping,
-        likelihood:
-          likelihoodItems.find((item) => item._id === riskValues.likelihood)
-            ?.name || "",
+        likelihood: likelihoodItems.find((item) => item._id === riskValues.likelihood)?.name || "",
         severity:
-          riskSeverityItems.find((item) => item._id === riskValues.riskSeverity)
-            ?.name || "",
+          riskSeverityItems.find((item) => item._id === riskValues.riskSeverity)?.name || "",
         risk_level_autocalculated: riskLevel,
         review_notes: riskValues.reviewNotes,
         mitigation_status:
-          mitigationStatusItems.find(
-            (item) => item._id === mitigationValues.mitigationStatus
-          )?.name || "",
+          mitigationStatusItems.find((item) => item._id === mitigationValues.mitigationStatus)
+            ?.name || "",
         current_risk_level:
-          riskLevelItems.find(
-            (item) => item._id === mitigationValues.currentRiskLevel
-          )?.name || "",
+          riskLevelItems.find((item) => item._id === mitigationValues.currentRiskLevel)?.name || "",
         deadline: mitigationValues.deadline,
         mitigation_plan: mitigationValues.mitigationPlan,
         implementation_strategy: mitigationValues.implementationStrategy,
         mitigation_evidence_document: mitigationValues.doc,
         likelihood_mitigation:
-          likelihoodItems.find(
-            (item) => item._id === mitigationValues.likelihood
-          )?.name || "",
+          likelihoodItems.find((item) => item._id === mitigationValues.likelihood)?.name || "",
         risk_severity:
-          riskSeverityItems.find(
-            (item) => item._id === mitigationValues.riskSeverity
-          )?.name === "Catastrophic"
+          riskSeverityItems.find((item) => item._id === mitigationValues.riskSeverity)?.name ===
+          "Catastrophic"
             ? "Critical"
-            : riskSeverityItems.find(
-                (item) => item._id === mitigationValues.riskSeverity
-              )?.name || "",
+            : riskSeverityItems.find((item) => item._id === mitigationValues.riskSeverity)?.name ||
+              "",
         final_risk_level: mitigationRiskLevel,
         risk_approval: mitigationValues.approver,
         approval_status:
-          approvalStatusItems.find(
-            (item) => item._id === mitigationValues.approvalStatus
-          )?.name || "",
+          approvalStatusItems.find((item) => item._id === mitigationValues.approvalStatus)?.name ||
+          "",
         date_of_assessment: mitigationValues.dateOfAssessment,
         projects: riskValues.applicableProjects,
         frameworks: riskValues.applicableFrameworks,
         // Quantitative FAIR fields (included when quantitative mode is active)
-        ...(isQuantitative ? {
-          event_frequency_min: quantitativeValues.event_frequency_min,
-          event_frequency_likely: quantitativeValues.event_frequency_likely,
-          event_frequency_max: quantitativeValues.event_frequency_max,
-          loss_regulatory_min: quantitativeValues.loss_regulatory_min,
-          loss_regulatory_likely: quantitativeValues.loss_regulatory_likely,
-          loss_regulatory_max: quantitativeValues.loss_regulatory_max,
-          loss_operational_min: quantitativeValues.loss_operational_min,
-          loss_operational_likely: quantitativeValues.loss_operational_likely,
-          loss_operational_max: quantitativeValues.loss_operational_max,
-          loss_litigation_min: quantitativeValues.loss_litigation_min,
-          loss_litigation_likely: quantitativeValues.loss_litigation_likely,
-          loss_litigation_max: quantitativeValues.loss_litigation_max,
-          loss_reputational_min: quantitativeValues.loss_reputational_min,
-          loss_reputational_likely: quantitativeValues.loss_reputational_likely,
-          loss_reputational_max: quantitativeValues.loss_reputational_max,
-          control_effectiveness: quantitativeValues.control_effectiveness,
-          mitigation_cost_annual: quantitativeValues.mitigation_cost_annual,
-          benchmark_id: quantitativeValues.benchmark_id,
-          currency: quantitativeValues.currency,
-        } : {}),
+        ...(isQuantitative
+          ? {
+              event_frequency_min: quantitativeValues.event_frequency_min,
+              event_frequency_likely: quantitativeValues.event_frequency_likely,
+              event_frequency_max: quantitativeValues.event_frequency_max,
+              loss_regulatory_min: quantitativeValues.loss_regulatory_min,
+              loss_regulatory_likely: quantitativeValues.loss_regulatory_likely,
+              loss_regulatory_max: quantitativeValues.loss_regulatory_max,
+              loss_operational_min: quantitativeValues.loss_operational_min,
+              loss_operational_likely: quantitativeValues.loss_operational_likely,
+              loss_operational_max: quantitativeValues.loss_operational_max,
+              loss_litigation_min: quantitativeValues.loss_litigation_min,
+              loss_litigation_likely: quantitativeValues.loss_litigation_likely,
+              loss_litigation_max: quantitativeValues.loss_litigation_max,
+              loss_reputational_min: quantitativeValues.loss_reputational_min,
+              loss_reputational_likely: quantitativeValues.loss_reputational_likely,
+              loss_reputational_max: quantitativeValues.loss_reputational_max,
+              control_effectiveness: quantitativeValues.control_effectiveness,
+              mitigation_cost_annual: quantitativeValues.mitigation_cost_annual,
+              benchmark_id: quantitativeValues.benchmark_id,
+              currency: quantitativeValues.currency,
+            }
+          : {}),
       };
 
       // If changedFields is provided (for updates), only return the changed fields
@@ -426,36 +397,36 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         // Note: Fields are now prefixed with 'risk_' or 'mitigation_' to distinguish their source
         const fieldMapping: Record<string, string> = {
           // Risk tab fields
-          risk_riskName: 'risk_name',
-          risk_actionOwner: 'risk_owner',
-          risk_aiLifecyclePhase: 'ai_lifecycle_phase',
-          risk_riskDescription: 'risk_description',
-          risk_riskCategory: 'risk_category',
-          risk_potentialImpact: 'impact',
-          risk_assessmentMapping: 'assessment_mapping',
-          risk_controlsMapping: 'controls_mapping',
-          risk_likelihood: 'likelihood',
-          risk_riskSeverity: 'severity',
-          risk_riskLevel: 'risk_level_autocalculated',
-          risk_reviewNotes: 'review_notes',
-          risk_applicableProjects: 'projects',
-          risk_applicableFrameworks: 'frameworks',
+          risk_riskName: "risk_name",
+          risk_actionOwner: "risk_owner",
+          risk_aiLifecyclePhase: "ai_lifecycle_phase",
+          risk_riskDescription: "risk_description",
+          risk_riskCategory: "risk_category",
+          risk_potentialImpact: "impact",
+          risk_assessmentMapping: "assessment_mapping",
+          risk_controlsMapping: "controls_mapping",
+          risk_likelihood: "likelihood",
+          risk_riskSeverity: "severity",
+          risk_riskLevel: "risk_level_autocalculated",
+          risk_reviewNotes: "review_notes",
+          risk_applicableProjects: "projects",
+          risk_applicableFrameworks: "frameworks",
 
           // Mitigation tab fields
-          mitigation_mitigationStatus: 'mitigation_status',
-          mitigation_currentRiskLevel: 'current_risk_level',
-          mitigation_deadline: 'deadline',
-          mitigation_mitigationPlan: 'mitigation_plan',
-          mitigation_implementationStrategy: 'implementation_strategy',
-          mitigation_doc: 'mitigation_evidence_document',
-          mitigation_likelihood: 'likelihood_mitigation',
-          mitigation_riskSeverity: 'risk_severity',
-          mitigation_approver: 'risk_approval',
-          mitigation_approvalStatus: 'approval_status',
-          mitigation_dateOfAssessment: 'date_of_assessment',
+          mitigation_mitigationStatus: "mitigation_status",
+          mitigation_currentRiskLevel: "current_risk_level",
+          mitigation_deadline: "deadline",
+          mitigation_mitigationPlan: "mitigation_plan",
+          mitigation_implementationStrategy: "implementation_strategy",
+          mitigation_doc: "mitigation_evidence_document",
+          mitigation_likelihood: "likelihood_mitigation",
+          mitigation_riskSeverity: "risk_severity",
+          mitigation_approver: "risk_approval",
+          mitigation_approvalStatus: "approval_status",
+          mitigation_dateOfAssessment: "date_of_assessment",
         };
 
-        Object.keys(changedFields).forEach(frontendField => {
+        Object.keys(changedFields).forEach((frontendField) => {
           const backendField = fieldMapping[frontendField];
           if (backendField && Object.prototype.hasOwnProperty.call(fullData, backendField)) {
             updateData[backendField] = fullData[backendField as keyof typeof fullData];
@@ -463,16 +434,33 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         });
 
         // Always include calculated risk levels if any risk-related field changed
-        if (Object.keys(changedFields).some(field =>
-          ['risk_likelihood', 'risk_riskSeverity', 'risk_riskName', 'risk_riskDescription', 'risk_potentialImpact'].includes(field)
-        )) {
+        if (
+          Object.keys(changedFields).some((field) =>
+            [
+              "risk_likelihood",
+              "risk_riskSeverity",
+              "risk_riskName",
+              "risk_riskDescription",
+              "risk_potentialImpact",
+            ].includes(field),
+          )
+        ) {
           updateData.risk_level_autocalculated = riskLevel;
         }
 
         // Always include mitigation risk level if any mitigation-related field changed
-        if (Object.keys(changedFields).some(field =>
-          ['mitigation_likelihood', 'mitigation_riskSeverity', 'mitigation_mitigationStatus', 'mitigation_currentRiskLevel', 'mitigation_mitigationPlan', 'mitigation_implementationStrategy'].includes(field)
-        )) {
+        if (
+          Object.keys(changedFields).some((field) =>
+            [
+              "mitigation_likelihood",
+              "mitigation_riskSeverity",
+              "mitigation_mitigationStatus",
+              "mitigation_currentRiskLevel",
+              "mitigation_mitigationPlan",
+              "mitigation_implementationStrategy",
+            ].includes(field),
+          )
+        ) {
           updateData.final_risk_level = mitigationRiskLevel;
         }
 
@@ -485,17 +473,13 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       // Return full data for create operations
       return fullData;
     },
-    [projectId, riskValues, mitigationValues, isQuantitative, quantitativeValues]
+    [projectId, riskValues, mitigationValues, isQuantitative, quantitativeValues],
   );
 
   const riskFormSubmitHandler = async () => {
     const { isValid, riskValid } = validateForm();
-    const selectedRiskLikelihood = likelihoodItems.find(
-      (r) => r._id === riskValues.likelihood
-    );
-    const selectedRiskSeverity = riskSeverityItems.find(
-      (r) => r._id === riskValues.riskSeverity
-    );
+    const selectedRiskLikelihood = likelihoodItems.find((r) => r._id === riskValues.likelihood);
+    const selectedRiskSeverity = riskSeverityItems.find((r) => r._id === riskValues.riskSeverity);
     if (!selectedRiskLikelihood || !selectedRiskSeverity) {
       console.error("Could not find selected likelihood or severity");
       return;
@@ -503,14 +487,14 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
 
     const risk_risklevel = RiskCalculator.getRiskLevel(
       selectedRiskLikelihood.name as RiskLikelihood,
-      selectedRiskSeverity.name as RiskSeverity
+      selectedRiskSeverity.name as RiskSeverity,
     );
 
     const selectedMitigationLikelihood = likelihoodItems.find(
-      (r) => r._id === mitigationValues.likelihood
+      (r) => r._id === mitigationValues.likelihood,
     );
     const selectedMitigationSeverity = riskSeverityItems.find(
-      (r) => r._id === mitigationValues.riskSeverity
+      (r) => r._id === mitigationValues.riskSeverity,
     );
     if (!selectedMitigationLikelihood || !selectedMitigationSeverity) {
       console.error("Could not find selected likelihood or severity");
@@ -519,7 +503,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
 
     const mitigation_risklevel = RiskCalculator.getRiskLevel(
       selectedMitigationLikelihood.name as RiskLikelihood,
-      selectedMitigationSeverity.name as RiskSeverity
+      selectedMitigationSeverity.name as RiskSeverity,
     );
 
     // Check forms validation
@@ -527,7 +511,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       onLoading(
         popupStatus !== "new"
           ? "Updating the risk. Please wait..."
-          : "Creating the risk. Please wait..."
+          : "Creating the risk. Please wait...",
       );
 
       let formData: Record<string, unknown>;
@@ -535,21 +519,27 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
       if (popupStatus !== "new") {
         // For updates, get only changed fields separately for risk and mitigation
         const changedRiskFields = getChangedFields(originalRiskValues, riskValues);
-        const changedMitigationFields = getChangedFields(originalMitigationValues, mitigationValues);
+        const changedMitigationFields = getChangedFields(
+          originalMitigationValues,
+          mitigationValues,
+        );
 
         // Combine with prefixes to distinguish risk vs mitigation fields
         const changedFields: Record<string, unknown> = {};
-        Object.keys(changedRiskFields).forEach(key => {
+        Object.keys(changedRiskFields).forEach((key) => {
           changedFields[`risk_${key}`] = changedRiskFields[key];
         });
-        Object.keys(changedMitigationFields).forEach(key => {
+        Object.keys(changedMitigationFields).forEach((key) => {
           changedFields[`mitigation_${key}`] = changedMitigationFields[key];
         });
 
         // Include quantitative field changes if in quantitative mode
         if (isQuantitative) {
-          const changedQuantitativeFields = getChangedFields(originalQuantitativeValues, quantitativeValues);
-          Object.keys(changedQuantitativeFields).forEach(key => {
+          const changedQuantitativeFields = getChangedFields(
+            originalQuantitativeValues,
+            quantitativeValues,
+          );
+          Object.keys(changedQuantitativeFields).forEach((key) => {
             changedFields[`quantitative_${key}`] = changedQuantitativeFields[key];
           });
         }
@@ -557,36 +547,40 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         formData = buildFormData(
           risk_risklevel.level,
           mitigation_risklevel.level,
-          changedFields
+          changedFields,
         ) as Record<string, unknown>;
 
         // For quantitative updates, directly include FAIR fields that changed
         if (isQuantitative) {
-          const changedQuantitativeFields = getChangedFields(originalQuantitativeValues, quantitativeValues);
-          Object.keys(changedQuantitativeFields).forEach(key => {
+          const changedQuantitativeFields = getChangedFields(
+            originalQuantitativeValues,
+            quantitativeValues,
+          );
+          Object.keys(changedQuantitativeFields).forEach((key) => {
             formData[key] = changedQuantitativeFields[key];
           });
         }
 
         // Add boolean flags for deleted/emptied linked projects and frameworks
-        if (Object.prototype.hasOwnProperty.call(changedFields, 'risk_applicableProjects')) {
+        if (Object.prototype.hasOwnProperty.call(changedFields, "risk_applicableProjects")) {
           const originalProjects = originalRiskValues?.applicableProjects || [];
           const currentProjects = riskValues.applicableProjects || [];
-          formData.deletedLinkedProject = originalProjects.length > 0 && currentProjects.length === 0;
+          formData.deletedLinkedProject =
+            originalProjects.length > 0 && currentProjects.length === 0;
         }
 
-        if (Object.prototype.hasOwnProperty.call(changedFields, 'risk_applicableFrameworks')) {
+        if (Object.prototype.hasOwnProperty.call(changedFields, "risk_applicableFrameworks")) {
           const originalFrameworks = originalRiskValues?.applicableFrameworks || [];
           const currentFrameworks = riskValues.applicableFrameworks || [];
-          formData.deletedLinkedFrameworks = originalFrameworks.length > 0 && currentFrameworks.length === 0;
+          formData.deletedLinkedFrameworks =
+            originalFrameworks.length > 0 && currentFrameworks.length === 0;
         }
-
       } else {
         // For creates, send all fields
-        formData = buildFormData(
-          risk_risklevel.level,
-          mitigation_risklevel.level
-        ) as Record<string, unknown>;
+        formData = buildFormData(risk_risklevel.level, mitigation_risklevel.level) as Record<
+          string,
+          unknown
+        >;
       }
 
       try {
@@ -606,15 +600,15 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         } else {
           const responseData = response?.data as ApiResponse;
           let errorMessage = responseData?.message || "Unknown error occurred";
-          
+
           // Handle validation errors with detailed field information
           if (responseData?.errors && Array.isArray(responseData.errors)) {
-            const fieldErrors = responseData.errors.map((err: { message?: string }) =>
-              `• ${err.message ?? 'Unknown error'}`
-            ).join('\n');
+            const fieldErrors = responseData.errors
+              .map((err: { message?: string }) => `• ${err.message ?? "Unknown error"}`)
+              .join("\n");
             errorMessage = `${errorMessage}:\n${fieldErrors}`;
           }
-          
+
           console.error(responseData?.error);
           onError(errorMessage);
         }
@@ -624,15 +618,17 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
         // Handle CustomException from networkServices
         if (error instanceof Error && error.name === "CustomException") {
           // CustomException has a response property with errors array
-          const customError = error as Error & { response?: { errors?: Array<{ message?: string }> } };
+          const customError = error as Error & {
+            response?: { errors?: Array<{ message?: string }> };
+          };
 
           let errorMessage = error.message || "Unknown error occurred";
 
           // Handle validation errors from CustomException response
           if (customError.response?.errors && Array.isArray(customError.response.errors)) {
-            const fieldErrors = customError.response.errors.map((err: { message?: string }) =>
-              `• ${err.message ?? 'Unknown error'}`
-            ).join('\n');
+            const fieldErrors = customError.response.errors
+              .map((err: { message?: string }) => `• ${err.message ?? "Unknown error"}`)
+              .join("\n");
             errorMessage = `${errorMessage}:\n${fieldErrors}`;
           }
 
@@ -694,12 +690,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               },
             }}
           >
-            <Tab
-              label="Risks"
-              value="risks"
-              sx={tabStyle}
-              disableRipple={disableRipple}
-            />
+            <Tab label="Risks" value="risks" sx={tabStyle} disableRipple={disableRipple} />
             <Tab
               label="Mitigation"
               value="mitigation"
@@ -715,12 +706,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               />
             )}
             {popupStatus === "edit" && entityId && (
-              <Tab
-                label="Activity"
-                value="activity"
-                sx={tabStyle}
-                disableRipple={disableRipple}
-              />
+              <Tab label="Activity" value="activity" sx={tabStyle} disableRipple={disableRipple} />
             )}
           </TabList>
         </Box>
@@ -773,20 +759,13 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               <QuantitativeRiskForm
                 values={quantitativeValues}
                 onChange={setQuantitativeValues}
-                disabled={
-                  popupStatus === "new" ? isCreatingDisabled : isEditingDisabled
-                }
+                disabled={popupStatus === "new" ? isCreatingDisabled : isEditingDisabled}
               />
             </TabPanel>
           )}
           {popupStatus === "edit" && entityId && (
             <TabPanel value="activity" sx={{ p: 0 }}>
-              <HistorySidebar
-                inline
-                isOpen={true}
-                entityType="risk"
-                entityId={entityId}
-              />
+              <HistorySidebar inline isOpen={true} entityType="risk" entityId={entityId} />
             </TabPanel>
           )}
         </Suspense>
@@ -810,18 +789,12 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
                 "&:hover": { boxShadow: "none" },
               }}
               icon={
-                popupStatus === "new" ? (
-                  <SaveIcon size={16} />
-                ) : (
-                  <UpdateIconSVGWhite size={16} />
-                )
+                popupStatus === "new" ? <SaveIcon size={16} /> : <UpdateIconSVGWhite size={16} />
               }
               variant="contained"
               onClick={riskFormSubmitHandler}
               text={popupStatus === "new" ? "Save" : "Update"}
-              isDisabled={
-                popupStatus === "new" ? isCreatingDisabled : isEditingDisabled
-              }
+              isDisabled={popupStatus === "new" ? isCreatingDisabled : isEditingDisabled}
               aria-label={popupStatus === "new" ? "Save new risk" : "Update risk"}
             />
           </Box>

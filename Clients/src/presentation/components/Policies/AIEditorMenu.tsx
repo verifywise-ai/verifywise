@@ -1,11 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  useTheme,
-  CircularProgress,
-  Popover,
-} from "@mui/material";
+import { Box, Typography, useTheme, CircularProgress, Popover } from "@mui/material";
 import {
   Sparkles,
   WandSparkles,
@@ -44,49 +38,57 @@ const AI_ACTIONS: AIAction[] = [
   {
     label: "Improve writing",
     icon: <WandSparkles size={14} strokeWidth={1.5} />,
-    prompt: "Improve the following text. Make it clearer, more concise, and more professional. Return only the improved text:\n\n",
+    prompt:
+      "Improve the following text. Make it clearer, more concise, and more professional. Return only the improved text:\n\n",
     mode: "replace",
   },
   {
     label: "Fix grammar",
     icon: <CheckCircle size={14} strokeWidth={1.5} />,
-    prompt: "Fix any grammar, spelling, and punctuation errors in the following text. Return only the corrected text:\n\n",
+    prompt:
+      "Fix any grammar, spelling, and punctuation errors in the following text. Return only the corrected text:\n\n",
     mode: "replace",
   },
   {
     label: "Make shorter",
     icon: <Minimize2 size={14} strokeWidth={1.5} />,
-    prompt: "Make the following text shorter and more concise while keeping the key points. Return only the shortened text:\n\n",
+    prompt:
+      "Make the following text shorter and more concise while keeping the key points. Return only the shortened text:\n\n",
     mode: "replace",
   },
   {
     label: "Make longer",
     icon: <Maximize2 size={14} strokeWidth={1.5} />,
-    prompt: "Expand the following text with more detail and explanation while maintaining the same tone. Return only the expanded text:\n\n",
+    prompt:
+      "Expand the following text with more detail and explanation while maintaining the same tone. Return only the expanded text:\n\n",
     mode: "replace",
   },
   {
     label: "Simplify language",
     icon: <Languages size={14} strokeWidth={1.5} />,
-    prompt: "Simplify the following text to make it easier to understand. Use shorter sentences and simpler words. Return only the simplified text:\n\n",
+    prompt:
+      "Simplify the following text to make it easier to understand. Use shorter sentences and simpler words. Return only the simplified text:\n\n",
     mode: "replace",
   },
   {
     label: "Summarize",
     icon: <BookOpen size={14} strokeWidth={1.5} />,
-    prompt: "Summarize the following text into a brief, clear summary. Return only the summary:\n\n",
+    prompt:
+      "Summarize the following text into a brief, clear summary. Return only the summary:\n\n",
     mode: "replace",
   },
   {
     label: "Generate action items",
     icon: <ListChecks size={14} strokeWidth={1.5} />,
-    prompt: "Extract action items from the following text. Format as a bulleted list. Return only the action items:\n\n",
+    prompt:
+      "Extract action items from the following text. Format as a bulleted list. Return only the action items:\n\n",
     mode: "insert",
   },
   {
     label: "Continue writing",
     icon: <PenLine size={14} strokeWidth={1.5} />,
-    prompt: "Continue writing from where the following text left off. Match the same tone and style. Return only the continuation:\n\n",
+    prompt:
+      "Continue writing from where the following text left off. Match the same tone and style. Return only the continuation:\n\n",
     mode: "insert",
   },
 ];
@@ -281,7 +283,10 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
             >
               {completion}
               {isLoading && (
-                <Box component="span" sx={{ display: "inline-flex", ml: 0.5, verticalAlign: "middle" }}>
+                <Box
+                  component="span"
+                  sx={{ display: "inline-flex", ml: 0.5, verticalAlign: "middle" }}
+                >
                   <CircularProgress size={10} sx={{ color: theme.palette.primary.main }} />
                 </Box>
               )}
@@ -374,9 +379,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                 "&:hover": { backgroundColor: theme.palette.background.accent },
               }}
             >
-              <Box sx={{ color: theme.palette.text.tertiary, display: "flex" }}>
-                {action.icon}
-              </Box>
+              <Box sx={{ color: theme.palette.text.tertiary, display: "flex" }}>{action.icon}</Box>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                 {action.label}
               </Typography>

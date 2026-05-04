@@ -1,9 +1,7 @@
 import { SubClauseISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseISO.model";
 import { SubClauseStructISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseStructISO.model";
 
-export const ContextOfOrganization: Partial<
-  SubClauseStructISO & SubClauseISO
->[] = [
+export const ContextOfOrganization: Partial<SubClauseStructISO & SubClauseISO>[] = [
   {
     title: "Understanding the organization and its context",
     order_no: 1,
@@ -50,8 +48,7 @@ export const ContextOfOrganization: Partial<
   {
     title: "Determining the scope of the AI Management System",
     order_no: 3,
-    summary:
-      "Define the boundaries and applicability of the AIMS within the organization.",
+    summary: "Define the boundaries and applicability of the AIMS within the organization.",
     questions: [
       "What organizational units, processes, locations are included in the AIMS?",
       "Which specific AI systems or applications are covered by the AIMS?",

@@ -3,7 +3,7 @@ export {
   generateNodesAndEdges,
   getConnectedEntities,
   type NodeGeneratorOptions,
-  type NodeGeneratorResult
-} from './nodeGenerator';
+  type NodeGeneratorResult,
+} from "./nodeGenerator";
 
-export { getConnectedEntityTypes } from './connectedEntityTypes';
+export { getConnectedEntityTypes } from "./connectedEntityTypes";

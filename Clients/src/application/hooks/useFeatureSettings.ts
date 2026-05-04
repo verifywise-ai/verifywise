@@ -27,9 +27,7 @@ export function useFeatureSettings() {
 
   const update = useCallback(
     async (
-      updates: Partial<
-        Pick<FeatureSettings, "lifecycle_enabled" | "audit_ledger_enabled">
-      >
+      updates: Partial<Pick<FeatureSettings, "lifecycle_enabled" | "audit_ledger_enabled">>,
     ) => {
       try {
         const updated = await updateFeatureSettings(updates);
@@ -40,7 +38,7 @@ export function useFeatureSettings() {
         throw error;
       }
     },
-    []
+    [],
   );
 
   return { settings, isLoading, update, refetch: fetchSettings };

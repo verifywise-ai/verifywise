@@ -28,23 +28,24 @@ export interface ComplianceInfo {
  */
 export function getComplianceInfo(threatType: string): ComplianceInfo {
   const mapping = THREAT_TYPES[threatType];
-  
+
   if (!mapping) {
     // Default to deserialization if unknown
     return getComplianceInfo("deserialization");
   }
 
   const compliance = mapping.compliance;
-  
+
   return {
     cweId: compliance.cweId,
     cweName: compliance.cweName,
-    cweUrl: "https://cwe.mitre.org/data/definitions/" + compliance.cweId.replace("CWE-", "") + ".html",
+    cweUrl:
+      "https://cwe.mitre.org/data/definitions/" + compliance.cweId.replace("CWE-", "") + ".html",
     owaspMlId: compliance.owaspMlId,
     owaspMlName: compliance.owaspMlName,
     owaspMlUrl: "https://owasp.org/www-project-machine-learning-security-top-10/",
     nistAiRmf: compliance.nistAiRmf,
-    nistAiRmfUrl: compliance.nistAiRmf 
+    nistAiRmfUrl: compliance.nistAiRmf
       ? "https://www.nist.gov/itl/ai-risk-management-framework"
       : undefined,
   };
@@ -81,7 +82,7 @@ export function getThreatCategory(threatType: string): string {
     polyglot_attack: "File Validation",
     unknown_operator: "Unknown Risk",
   };
-  
+
   return categories[threatType] || "Security Risk";
 }
 
@@ -103,7 +104,7 @@ export function getProviderFromExtension(extension: string): string {
     ".gguf": "GGUF",
     ".ggml": "GGML",
   };
-  
+
   return providers[extension.toLowerCase()] || "Unknown Format";
 }
 
@@ -136,20 +137,29 @@ export function formatFindingName(moduleName: string, operatorName: string): str
 export function generateFindingDescription(
   threatType: string,
   moduleName: string,
-  operatorName: string
+  operatorName: string,
 ): string {
   const threatInfo = THREAT_TYPES[threatType];
-  
+
   if (!threatInfo) {
     return "Potentially dangerous operator detected: " + moduleName + "." + operatorName;
   }
 
   const descriptions: Record<string, string> = {
-    deserialization: "Dangerous module '" + moduleName + "' with operator '" + operatorName + "' can execute arbitrary code during deserialization",
-    lambda_injection: "Lambda layer can contain arbitrary Python code that executes during model loading",
-    code_execution: "Module '" + moduleName + "' operator '" + operatorName + "' can execute system commands",
-    network_access: "Module '" + moduleName + "' can establish network connections for data exfiltration",
-    file_manipulation: "Module '" + moduleName + "' operator '" + operatorName + "' can read/write/delete files",
+    deserialization:
+      "Dangerous module '" +
+      moduleName +
+      "' with operator '" +
+      operatorName +
+      "' can execute arbitrary code during deserialization",
+    lambda_injection:
+      "Lambda layer can contain arbitrary Python code that executes during model loading",
+    code_execution:
+      "Module '" + moduleName + "' operator '" + operatorName + "' can execute system commands",
+    network_access:
+      "Module '" + moduleName + "' can establish network connections for data exfiltration",
+    file_manipulation:
+      "Module '" + moduleName + "' operator '" + operatorName + "' can read/write/delete files",
     dos_attack: "Malformed data that could cause resource exhaustion or crashes",
     polyglot_attack: "File may be valid in multiple formats, potentially hiding malicious content",
     unknown_operator: "Unrecognized operator that may pose security risks",

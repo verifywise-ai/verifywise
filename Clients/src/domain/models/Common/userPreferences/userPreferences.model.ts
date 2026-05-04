@@ -11,9 +11,7 @@ export class UserPreferencesModel {
     this.date_format = data.date_format;
   }
 
-  static createNewUserPreferences(
-    data: UserPreferencesModel,
-  ): UserPreferencesModel {
+  static createNewUserPreferences(data: UserPreferencesModel): UserPreferencesModel {
     return new UserPreferencesModel(data);
   }
 }

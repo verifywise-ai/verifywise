@@ -62,9 +62,7 @@ describe("userPreferences.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getUserPreferencesByUserId(1)).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getUserPreferencesByUserId(1)).rejects.toThrow("Connection refused");
     });
   });
 
@@ -90,10 +88,7 @@ describe("userPreferences.repository", () => {
       const result = await createNewUserPreferences(data);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/user-preferences/",
-        data,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/user-preferences/", data);
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -107,7 +102,9 @@ describe("userPreferences.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(createNewUserPreferences({ user_id: 1, date_format: UserDateFormat.DD_MM_YYYY_DASH })).rejects.toThrow();
+      await expect(
+        createNewUserPreferences({ user_id: 1, date_format: UserDateFormat.DD_MM_YYYY_DASH }),
+      ).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -140,10 +137,7 @@ describe("userPreferences.repository", () => {
       const result = await updateUserPreferencesById({ userId: 1, data });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/user-preferences/1",
-        data,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/user-preferences/1", data);
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -158,7 +152,10 @@ describe("userPreferences.repository", () => {
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
       await expect(
-        updateUserPreferencesById({ userId: 999, data: { date_format: UserDateFormat.DD_MM_YYYY_DASH } }),
+        updateUserPreferencesById({
+          userId: 999,
+          data: { date_format: UserDateFormat.DD_MM_YYYY_DASH },
+        }),
       ).rejects.toThrow();
     });
 
@@ -168,7 +165,10 @@ describe("userPreferences.repository", () => {
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
       await expect(
-        updateUserPreferencesById({ userId: 1, data: { date_format: UserDateFormat.MM_DD_YYYY_DASH } }),
+        updateUserPreferencesById({
+          userId: 1,
+          data: { date_format: UserDateFormat.MM_DD_YYYY_DASH },
+        }),
       ).rejects.toThrow("Connection refused");
     });
   });

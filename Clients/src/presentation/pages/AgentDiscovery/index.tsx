@@ -7,24 +7,13 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import ReviewAgentModal from "../../components/Modals/AgentDiscovery/ReviewAgentModal";
 import ManualAgentModal from "../../components/Modals/AgentDiscovery/ManualAgentModal";
-import {
-  agentToastContainer,
-  addAgentButton,
-  syncButton,
-} from "./style";
+import { agentToastContainer, addAgentButton, syncButton } from "./style";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import {
-  FilterBy,
-  FilterColumn,
-  FilterCondition,
-} from "../../components/Table/FilterBy";
+import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
@@ -61,25 +50,33 @@ const AgentDiscovery: React.FC = () => {
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
-  type AgentColumn = 'display_name' | 'source_system' | 'primitive_type' | 'permissions' | 'last_activity' | 'review_status' | 'stale' | 'actions';
+  type AgentColumn =
+    | "display_name"
+    | "source_system"
+    | "primitive_type"
+    | "permissions"
+    | "last_activity"
+    | "review_status"
+    | "stale"
+    | "actions";
 
   const AGENT_COLUMNS: ColumnConfig<AgentColumn>[] = useMemo(
     () => [
-      { key: 'display_name', label: 'Name', defaultVisible: true, alwaysVisible: true },
-      { key: 'source_system', label: 'Source', defaultVisible: true },
-      { key: 'primitive_type', label: 'Type', defaultVisible: true },
-      { key: 'permissions', label: 'Permissions', defaultVisible: true },
-      { key: 'last_activity', label: 'Last activity', defaultVisible: true },
-      { key: 'review_status', label: 'Status', defaultVisible: true },
-      { key: 'stale', label: 'Stale', defaultVisible: true },
-      { key: 'actions', label: 'Actions', defaultVisible: true, alwaysVisible: true },
+      { key: "display_name", label: "Name", defaultVisible: true, alwaysVisible: true },
+      { key: "source_system", label: "Source", defaultVisible: true },
+      { key: "primitive_type", label: "Type", defaultVisible: true },
+      { key: "permissions", label: "Permissions", defaultVisible: true },
+      { key: "last_activity", label: "Last activity", defaultVisible: true },
+      { key: "review_status", label: "Status", defaultVisible: true },
+      { key: "stale", label: "Stale", defaultVisible: true },
+      { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
     ],
-    []
+    [],
   );
 
   const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
     useColumnVisibility<AgentColumn>({
-      tableId: 'agent-discovery-table',
+      tableId: "agent-discovery-table",
       columns: AGENT_COLUMNS,
     });
 
@@ -97,10 +94,7 @@ const AgentDiscovery: React.FC = () => {
   } | null>(null);
   const [showAlert, setShowAlert] = useState(false);
 
-  const showAlertMessage = (
-    variant: "success" | "error",
-    body: string
-  ) => {
+  const showAlertMessage = (variant: "success" | "error", body: string) => {
     setAlert({ variant, body });
     setShowAlert(true);
     setTimeout(() => setShowAlert(false), 4000);
@@ -144,7 +138,9 @@ const AgentDiscovery: React.FC = () => {
     agents.forEach((agent) => {
       if (agent.source_system) sources.add(agent.source_system);
     });
-    return Array.from(sources).sort().map((s) => ({ value: s, label: s }));
+    return Array.from(sources)
+      .sort()
+      .map((s) => ({ value: s, label: s }));
   }, [agents]);
 
   const getUniqueTypes = useCallback(() => {
@@ -152,7 +148,9 @@ const AgentDiscovery: React.FC = () => {
     agents.forEach((agent) => {
       if (agent.primitive_type) types.add(agent.primitive_type);
     });
-    return Array.from(types).sort().map((t) => ({ value: t, label: t }));
+    return Array.from(types)
+      .sort()
+      .map((t) => ({ value: t, label: t }));
   }, [agents]);
 
   // FilterBy - Column configuration
@@ -195,7 +193,7 @@ const AgentDiscovery: React.FC = () => {
         ],
       },
     ],
-    [getUniqueSources, getUniqueTypes]
+    [getUniqueSources, getUniqueTypes],
   );
 
   // FilterBy - Field value getter
@@ -218,7 +216,7 @@ const AgentDiscovery: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy hook
@@ -229,7 +227,7 @@ const AgentDiscovery: React.FC = () => {
     (conditions: FilterCondition[], logic: "and" | "or") => {
       handleFilterChangeBase(conditions, logic);
     },
-    [handleFilterChangeBase]
+    [handleFilterChangeBase],
   );
 
   // Apply filters + search
@@ -244,7 +242,7 @@ const AgentDiscovery: React.FC = () => {
           agent.source_system?.toLowerCase().includes(query) ||
           agent.primitive_type?.toLowerCase().includes(query) ||
           agent.owner_id?.toLowerCase().includes(query) ||
-          agent.external_id?.toLowerCase().includes(query)
+          agent.external_id?.toLowerCase().includes(query),
       );
     }
 
@@ -283,14 +281,23 @@ const AgentDiscovery: React.FC = () => {
       const syncedCount = result?.synced?.length || 0;
 
       if (syncedCount > 0) {
-        showAlertMessage("success", `Sync completed. Found agents from ${syncedCount} source${syncedCount > 1 ? "s" : ""}.`);
+        showAlertMessage(
+          "success",
+          `Sync completed. Found agents from ${syncedCount} source${syncedCount > 1 ? "s" : ""}.`,
+        );
       } else {
-        showAlertMessage("success", "No agents found. Make sure you have a plugin like Azure AI Foundry installed and configured.");
+        showAlertMessage(
+          "success",
+          "No agents found. Make sure you have a plugin like Azure AI Foundry installed and configured.",
+        );
       }
       fetchAgents();
       fetchStats();
     } catch (error) {
-      showAlertMessage("error", "Sync failed. Check that a discovery-capable plugin is installed and configured.");
+      showAlertMessage(
+        "error",
+        "Sync failed. Check that a discovery-capable plugin is installed and configured.",
+      );
     } finally {
       setIsSyncing(false);
     }
@@ -314,7 +321,10 @@ const AgentDiscovery: React.FC = () => {
     setEditAgent(null);
     fetchAgents();
     fetchStats();
-    showAlertMessage("success", editAgent ? "Agent updated successfully." : "Agent added successfully.");
+    showAlertMessage(
+      "success",
+      editAgent ? "Agent updated successfully." : "Agent added successfully.",
+    );
   };
 
   const handleEditAgent = (agent: AgentPrimitiveRow) => {
@@ -379,16 +389,9 @@ const AgentDiscovery: React.FC = () => {
       {/* Controls row - only show when agents exist */}
       {hasAgents && (
         <Stack spacing={2}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" gap={2} alignItems="center">
-              <FilterBy
-                columns={filterColumns}
-                onFilterChange={handleFilterChange}
-              />
+              <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
               <GroupBy
                 options={[
                   { id: "review_status", label: "Status" },

@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
-import {
-  createRole,
-  deleteRole,
-  getAllRoles,
-  getRoleById,
-  updateRole,
-} from "../role.repository";
+import { createRole, deleteRole, getAllRoles, getRoleById, updateRole } from "../role.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {
@@ -161,9 +155,7 @@ describe("Test Role Repository", () => {
 
       vi.mocked(apiServices.put).mockRejectedValue(mockError);
 
-      await expect(
-        updateRole({ id: 3, body: { name: "Admin" } }),
-      ).rejects.toThrow("Conflict");
+      await expect(updateRole({ id: 3, body: { name: "Admin" } })).rejects.toThrow("Conflict");
     });
   });
 

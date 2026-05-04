@@ -48,7 +48,7 @@ export interface IComplianceMetadata {
     models: Date;
     policies: Date;
   };
-  calculationMethod: 'balanced_weighted_average';
+  calculationMethod: "balanced_weighted_average";
   version: string;
 }
 
@@ -84,7 +84,7 @@ export interface IProjectGovernanceData {
 // Dashboard Widget Interface
 export interface IComplianceDashboardWidget {
   score: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   trendValue: number; // Percentage change
   lastCalculated: Date;
   moduleBreakdown: {
@@ -127,9 +127,9 @@ export interface IComplianceWeights {
 }
 
 export const DEFAULT_COMPLIANCE_WEIGHTS: IComplianceWeights = {
-  riskManagement: 0.30,
-  vendorManagement: 0.30,
+  riskManagement: 0.3,
+  vendorManagement: 0.3,
   projectGovernance: 0.25,
-  modelLifecycle: 0.10,
-  policyDocumentation: 0.05
+  modelLifecycle: 0.1,
+  policyDocumentation: 0.05,
 };

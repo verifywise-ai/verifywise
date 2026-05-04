@@ -7,7 +7,11 @@ import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import type { IFilterState } from "../../../domain/interfaces/i.filterState";
 
 // Re-export domain types for convenience
-export type { IRisk, IRiskLoadingStatus, IFrameworkRisksProps } from "../../../domain/interfaces/i.risk";
+export type {
+  IRisk,
+  IRiskLoadingStatus,
+  IFrameworkRisksProps,
+} from "../../../domain/interfaces/i.risk";
 
 /**
  * Props for risk categories component
@@ -23,10 +27,7 @@ export interface IRiskCategoriesProps {
  */
 export interface IRiskFiltersProps {
   risks: RiskModel[];
-  onFilterChange: (
-    filteredRisks: RiskModel[],
-    activeFilters: IFilterState
-  ) => void;
+  onFilterChange: (filteredRisks: RiskModel[], activeFilters: IFilterState) => void;
 }
 
 /**

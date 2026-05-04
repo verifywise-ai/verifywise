@@ -15,5 +15,5 @@ export interface NISTAIMRFFunctionModel {
 /**
  * NIST AI RMF Function Types
  */
-export const NIST_AI_RMF_FUNCTIONS = ['GOVERN', 'MAP', 'MEASURE', 'MANAGE'] as const;
-export type NISTAIMRFFunctionType = typeof NIST_AI_RMF_FUNCTIONS[number];
+export const NIST_AI_RMF_FUNCTIONS = ["GOVERN", "MAP", "MEASURE", "MANAGE"] as const;
+export type NISTAIMRFFunctionType = (typeof NIST_AI_RMF_FUNCTIONS)[number];

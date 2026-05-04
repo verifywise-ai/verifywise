@@ -17,12 +17,24 @@ import {
   ClickAwayListener,
   InputAdornment,
 } from "@mui/material";
-import { Plus, Trash2, Settings, Search, Check, ChevronRight, ChevronDown, Key } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Settings,
+  Search,
+  Check,
+  ChevronRight,
+  ChevronDown,
+  Key,
+} from "lucide-react";
 import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PROVIDERS, getModelsForProvider } from "../../utils/providers";
-import { getAllLlmApiKeys, type LLMApiKey } from "../../../application/repository/deepEval.repository";
+import {
+  getAllLlmApiKeys,
+  type LLMApiKey,
+} from "../../../application/repository/deepEval.repository";
 import { palette } from "../../themes/palette";
 
 // Provider icons
@@ -181,7 +193,7 @@ function ModelSelector({
   const providerList = Object.values(PROVIDERS);
   const models = getModelsForProvider(provider);
   const selectedModel = models.find((m) => m.id === model);
-  
+
   // OpenRouter allows custom model names
   const isOpenRouter = provider === "openrouter";
   const isSelfHosted = provider === "self-hosted";
@@ -201,7 +213,7 @@ function ModelSelector({
   const filteredModels = models.filter(
     (m) =>
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.id.toLowerCase().includes(searchQuery.toLowerCase())
+      m.id.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleProviderSelect = (newProvider: string) => {
@@ -270,8 +282,18 @@ function ModelSelector({
       >
         <Stack direction="row" alignItems="center" spacing={1.5}>
           {renderProviderIcon(provider, 20)}
-          <Typography sx={{ fontSize: 13, color: (selectedModel || ((isOpenRouter || isSelfHosted) && model)) ? palette.text.primary : palette.text.disabled }}>
-            {(isOpenRouter || isSelfHosted) && model ? model : (selectedModel?.name || "Select a model")}
+          <Typography
+            sx={{
+              fontSize: 13,
+              color:
+                selectedModel || ((isOpenRouter || isSelfHosted) && model)
+                  ? palette.text.primary
+                  : palette.text.disabled,
+            }}
+          >
+            {(isOpenRouter || isSelfHosted) && model
+              ? model
+              : selectedModel?.name || "Select a model"}
           </Typography>
         </Stack>
         <ChevronDown
@@ -287,10 +309,17 @@ function ModelSelector({
         placement="bottom-start"
         style={{
           zIndex: 1400,
-          width: anchorRef.current?.offsetWidth ? Math.max(anchorRef.current.offsetWidth, 520) : 520,
+          width: anchorRef.current?.offsetWidth
+            ? Math.max(anchorRef.current.offsetWidth, 520)
+            : 520,
         }}
       >
-        <ClickAwayListener onClickAway={() => { setOpen(false); setSearchQuery(""); }}>
+        <ClickAwayListener
+          onClickAway={() => {
+            setOpen(false);
+            setSearchQuery("");
+          }}
+        >
           <Paper
             elevation={8}
             sx={{
@@ -360,11 +389,18 @@ function ModelSelector({
                           cursor: "pointer",
                           backgroundColor: isSelected ? palette.brand.primaryLight : "transparent",
                           "&:hover": {
-                            backgroundColor: isSelected ? palette.brand.primaryLight : palette.background.accent,
+                            backgroundColor: isSelected
+                              ? palette.brand.primaryLight
+                              : palette.background.accent,
                           },
                         }}
                       >
-                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={1.5}
+                          sx={{ minWidth: 0, flex: 1 }}
+                        >
                           {renderProviderIcon(p.provider, 20)}
                           <Stack spacing={0} sx={{ minWidth: 0 }}>
                             <Typography
@@ -378,7 +414,13 @@ function ModelSelector({
                               {p.displayName}
                             </Typography>
                             {!providerHasKey && p.provider !== "self-hosted" && (
-                              <Typography sx={{ fontSize: 10, color: palette.status.warning.text, lineHeight: 1.2 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: 10,
+                                  color: palette.status.warning.text,
+                                  lineHeight: 1.2,
+                                }}
+                              >
                                 No API key
                               </Typography>
                             )}
@@ -417,7 +459,9 @@ function ModelSelector({
                     }}
                   >
                     <Plus size={16} color={palette.brand.primary} />
-                    <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.brand.primary }}>
+                    <Typography
+                      sx={{ fontSize: 13, fontWeight: 500, color: palette.brand.primary }}
+                    >
                       Add API key
                     </Typography>
                   </Box>
@@ -437,7 +481,9 @@ function ModelSelector({
                 {isSelfHosted ? (
                   /* Self-hosted model configuration */
                   <Box sx={{ p: 2 }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
+                    <Typography
+                      sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: 1 }}
+                    >
                       Self-Hosted Model Configuration
                     </Typography>
                     <Typography sx={{ fontSize: 11, color: palette.text.tertiary, mb: 1.5 }}>
@@ -445,7 +491,9 @@ function ModelSelector({
                     </Typography>
 
                     {/* Endpoint URL */}
-                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
+                    >
                       Endpoint URL *
                     </Typography>
                     <TextField
@@ -467,7 +515,9 @@ function ModelSelector({
                     />
 
                     {/* Model Name */}
-                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
+                    >
                       Model Name *
                     </Typography>
                     <TextField
@@ -495,7 +545,9 @@ function ModelSelector({
                     />
 
                     {/* API Key (optional) */}
-                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
+                    >
                       API Key (optional)
                     </Typography>
                     <TextField
@@ -532,13 +584,25 @@ function ModelSelector({
                         px: 2,
                         py: 1,
                         borderRadius: "6px",
-                        cursor: customModel.trim() && (endpointUrl || "").trim() ? "pointer" : "not-allowed",
-                        backgroundColor: customModel.trim() && (endpointUrl || "").trim() ? palette.brand.primary : palette.border.dark,
-                        color: customModel.trim() && (endpointUrl || "").trim() ? palette.background.main : palette.text.disabled,
+                        cursor:
+                          customModel.trim() && (endpointUrl || "").trim()
+                            ? "pointer"
+                            : "not-allowed",
+                        backgroundColor:
+                          customModel.trim() && (endpointUrl || "").trim()
+                            ? palette.brand.primary
+                            : palette.border.dark,
+                        color:
+                          customModel.trim() && (endpointUrl || "").trim()
+                            ? palette.background.main
+                            : palette.text.disabled,
                         fontSize: 12,
                         fontWeight: 500,
                         "&:hover": {
-                          backgroundColor: customModel.trim() && (endpointUrl || "").trim() ? palette.brand.primaryHover : palette.border.dark,
+                          backgroundColor:
+                            customModel.trim() && (endpointUrl || "").trim()
+                              ? palette.brand.primaryHover
+                              : palette.border.dark,
                         },
                       }}
                     >
@@ -548,7 +612,15 @@ function ModelSelector({
                   </Box>
                 ) : !currentProviderHasKey ? (
                   /* No API key message - centered vertically */
-                  <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 4 }}>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      p: 4,
+                    }}
+                  >
                     <Box sx={{ textAlign: "center" }}>
                       <Box
                         sx={{
@@ -565,11 +637,14 @@ function ModelSelector({
                       >
                         <Key size={24} color={palette.status.warning.text} />
                       </Box>
-                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary, mb: 0.5 }}>
+                      <Typography
+                        sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary, mb: 0.5 }}
+                      >
                         API key required
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mb: 2 }}>
-                        Add an API key for {PROVIDERS[provider]?.displayName || provider} to use its models
+                        Add an API key for {PROVIDERS[provider]?.displayName || provider} to use its
+                        models
                       </Typography>
                       <Box
                         onClick={(e) => {
@@ -602,11 +677,14 @@ function ModelSelector({
                 ) : isOpenRouter ? (
                   /* Custom model input for OpenRouter */
                   <Box sx={{ p: 2 }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
+                    <Typography
+                      sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: 1 }}
+                    >
                       Enter Model Name
                     </Typography>
                     <Typography sx={{ fontSize: 11, color: palette.text.tertiary, mb: 1.5 }}>
-                      OpenRouter supports any model. Enter the model ID (e.g., anthropic/claude-3-opus)
+                      OpenRouter supports any model. Enter the model ID (e.g.,
+                      anthropic/claude-3-opus)
                     </Typography>
                     <TextField
                       size="small"
@@ -646,21 +724,34 @@ function ModelSelector({
                         py: 1,
                         borderRadius: "6px",
                         cursor: customModel.trim() ? "pointer" : "not-allowed",
-                        backgroundColor: customModel.trim() ? palette.brand.primary : palette.border.dark,
+                        backgroundColor: customModel.trim()
+                          ? palette.brand.primary
+                          : palette.border.dark,
                         color: customModel.trim() ? palette.background.main : palette.text.disabled,
                         fontSize: 12,
                         fontWeight: 500,
                         "&:hover": {
-                          backgroundColor: customModel.trim() ? palette.brand.primaryHover : palette.border.dark,
+                          backgroundColor: customModel.trim()
+                            ? palette.brand.primaryHover
+                            : palette.border.dark,
                         },
                       }}
                     >
                       <Check size={14} />
                       Use this model
                     </Box>
-                    
+
                     {/* Popular OpenRouter models */}
-                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: palette.text.disabled, mt: 2, mb: 1, textTransform: "uppercase" }}>
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: palette.text.disabled,
+                        mt: 2,
+                        mb: 1,
+                        textTransform: "uppercase",
+                      }}
+                    >
                       Popular Models
                     </Typography>
                     {[
@@ -685,13 +776,23 @@ function ModelSelector({
                           py: 0.75,
                           borderRadius: "6px",
                           cursor: "pointer",
-                          backgroundColor: model === m.id ? palette.brand.primaryLight : "transparent",
+                          backgroundColor:
+                            model === m.id ? palette.brand.primaryLight : "transparent",
                           "&:hover": {
-                            backgroundColor: model === m.id ? palette.brand.primaryLight : palette.background.accent,
+                            backgroundColor:
+                              model === m.id
+                                ? palette.brand.primaryLight
+                                : palette.background.accent,
                           },
                         }}
                       >
-                        <Typography sx={{ fontSize: 12, fontWeight: model === m.id ? 600 : 400, color: model === m.id ? palette.brand.primary : palette.text.secondary }}>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            fontWeight: model === m.id ? 600 : 400,
+                            color: model === m.id ? palette.brand.primary : palette.text.secondary,
+                          }}
+                        >
                           {m.name}
                         </Typography>
                         <Typography sx={{ fontSize: 10, color: palette.text.disabled }}>
@@ -701,8 +802,18 @@ function ModelSelector({
                     ))}
                   </Box>
                 ) : filteredModels.length === 0 ? (
-                  <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 3 }}>
-                    <Typography sx={{ fontSize: 13, color: palette.text.disabled }}>No models found</Typography>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      p: 3,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 13, color: palette.text.disabled }}>
+                      No models found
+                    </Typography>
                   </Box>
                 ) : (
                   filteredModels.map((m) => {
@@ -721,7 +832,9 @@ function ModelSelector({
                           cursor: "pointer",
                           backgroundColor: isSelected ? palette.brand.primaryLight : "transparent",
                           "&:hover": {
-                            backgroundColor: isSelected ? palette.brand.primaryLight : palette.background.accent,
+                            backgroundColor: isSelected
+                              ? palette.brand.primaryLight
+                              : palette.background.accent,
                           },
                         }}
                       >
@@ -775,11 +888,13 @@ export default function CreateScorerModal({
     messages: initialConfig?.messages || [
       {
         role: "system",
-        content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+        content:
+          "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
       },
       {
         role: "user",
-        content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+        content:
+          'Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {"verdict": "PASS", "reason": "brief explanation"}',
       },
     ],
     useChainOfThought: initialConfig?.useChainOfThought ?? true,
@@ -802,7 +917,7 @@ export default function CreateScorerModal({
   useEffect(() => {
     // Always reset popover state when modal opens or scorer changes
     setParamsPopoverOpen(false);
-    
+
     if (initialConfig) {
       setConfig({
         name: initialConfig.name || "",
@@ -818,11 +933,13 @@ export default function CreateScorerModal({
         messages: initialConfig.messages || [
           {
             role: "system",
-            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+            content:
+              "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
           },
           {
             role: "user",
-            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+            content:
+              'Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {"verdict": "PASS", "reason": "brief explanation"}',
           },
         ],
         useChainOfThought: initialConfig.useChainOfThought ?? true,
@@ -848,11 +965,13 @@ export default function CreateScorerModal({
         messages: [
           {
             role: "system",
-            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+            content:
+              "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
           },
           {
             role: "user",
-            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+            content:
+              'Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {"verdict": "PASS", "reason": "brief explanation"}',
           },
         ],
         useChainOfThought: true,
@@ -952,11 +1071,11 @@ export default function CreateScorerModal({
         messages: prev.messages.map((msg, i) =>
           i === index
             ? { ...msg, [field]: field === "role" ? (value as Message["role"]) : value }
-            : msg
+            : msg,
         ),
       }));
     },
-    []
+    [],
   );
 
   const handleAddChoiceScore = useCallback(() => {
@@ -978,11 +1097,11 @@ export default function CreateScorerModal({
       setConfig((prev) => ({
         ...prev,
         choiceScores: prev.choiceScores.map((cs, i) =>
-          i === index ? { ...cs, [field]: value } : cs
+          i === index ? { ...cs, [field]: value } : cs,
         ),
       }));
     },
-    []
+    [],
   );
 
   const handleSubmit = async () => {
@@ -1009,7 +1128,11 @@ export default function CreateScorerModal({
       isOpen={isOpen}
       onClose={onClose}
       title={initialConfig?.name ? "Edit scorer" : "Create scorer"}
-      description={initialConfig?.name ? "Update your scorer configuration" : "Create a new scorer to evaluate model outputs"}
+      description={
+        initialConfig?.name
+          ? "Update your scorer configuration"
+          : "Create a new scorer to evaluate model outputs"
+      }
       onSubmit={handleSubmit}
       submitButtonText={initialConfig?.name ? "Save changes" : "Save as custom scorer"}
       isSubmitting={isSubmitting || !isValid}
@@ -1033,9 +1156,7 @@ export default function CreateScorerModal({
                 label="Slug"
                 placeholder="Enter slug"
                 value={config.slug}
-                onChange={(e) =>
-                  setConfig((prev) => ({ ...prev, slug: e.target.value }))
-                }
+                onChange={(e) => setConfig((prev) => ({ ...prev, slug: e.target.value }))}
                 isRequired
               />
             </Box>
@@ -1085,7 +1206,9 @@ export default function CreateScorerModal({
                       border: `1px solid ${palette.border.dark}`,
                       borderRadius: "8px",
                       cursor: "pointer",
-                      backgroundColor: paramsPopoverOpen ? palette.background.hover : palette.background.main,
+                      backgroundColor: paramsPopoverOpen
+                        ? palette.background.hover
+                        : palette.background.main,
                       transition: "all 0.15s ease",
                       "&:hover": {
                         borderColor: palette.text.disabled,
@@ -1118,17 +1241,35 @@ export default function CreateScorerModal({
                         border: `1px solid ${palette.border.dark}`,
                       }}
                     >
-                      <Typography sx={{ fontSize: "13px", fontWeight: 600, color: palette.text.secondary, mb: 2 }}>
+                      <Typography
+                        sx={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: palette.text.secondary,
+                          mb: 2,
+                        }}
+                      >
                         Model parameters
                       </Typography>
                       <Stack spacing={2.5}>
                         {/* Temperature */}
                         <Box>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mb: 0.75 }}
+                          >
                             <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
                               Temperature
                             </Typography>
-                            <Typography sx={{ fontSize: "12px", fontWeight: 500, color: palette.text.secondary }}>
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                color: palette.text.secondary,
+                              }}
+                            >
                               {config.modelParams.temperature.toFixed(1)}
                             </Typography>
                           </Stack>
@@ -1160,7 +1301,9 @@ export default function CreateScorerModal({
 
                         {/* Max Tokens */}
                         <Box>
-                          <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.75 }}>
+                          <Typography
+                            sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.75 }}
+                          >
                             Max tokens
                           </Typography>
                           <TextField
@@ -1170,7 +1313,10 @@ export default function CreateScorerModal({
                             onChange={(e) =>
                               setConfig((prev) => ({
                                 ...prev,
-                                modelParams: { ...prev.modelParams, maxTokens: parseInt(e.target.value) || 0 },
+                                modelParams: {
+                                  ...prev.modelParams,
+                                  maxTokens: parseInt(e.target.value) || 0,
+                                },
                               }))
                             }
                             inputProps={{ min: 1, max: 4096 }}
@@ -1189,11 +1335,22 @@ export default function CreateScorerModal({
 
                         {/* Top P */}
                         <Box>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mb: 0.75 }}
+                          >
                             <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
                               Top P
                             </Typography>
-                            <Typography sx={{ fontSize: "12px", fontWeight: 500, color: palette.text.secondary }}>
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                color: palette.text.secondary,
+                              }}
+                            >
                               {config.modelParams.topP.toFixed(2)}
                             </Typography>
                           </Stack>
@@ -1275,9 +1432,7 @@ export default function CreateScorerModal({
                   <MuiSelect
                     size="small"
                     value={msg.role}
-                    onChange={(e) =>
-                      handleUpdateMessage(index, "role", e.target.value)
-                    }
+                    onChange={(e) => handleUpdateMessage(index, "role", e.target.value)}
                     variant="standard"
                     disableUnderline
                     sx={{
@@ -1312,9 +1467,7 @@ export default function CreateScorerModal({
                       : "Use {{input}}, {{output}}, {{expected}} to reference test case data"
                   }
                   value={msg.content}
-                  onChange={(e) =>
-                    handleUpdateMessage(index, "content", e.target.value)
-                  }
+                  onChange={(e) => handleUpdateMessage(index, "content", e.target.value)}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       border: "none",
@@ -1359,24 +1512,24 @@ export default function CreateScorerModal({
             >
               Choice scores
             </Typography>
-            <Typography
-              sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 2 }}
-            >
-              Choice scores are required when using LLM judge scorers. The
-              model will be forced to choose one of the choices using a tool
-              schema. All choices and scores must be unique.
+            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 2 }}>
+              Choice scores are required when using LLM judge scorers. The model will be forced to
+              choose one of the choices using a tool schema. All choices and scores must be unique.
             </Typography>
 
             <Stack spacing={1.5}>
               {/* Header */}
               <Stack direction="row" spacing={2}>
-                <Typography
-                  sx={{ flex: 1, fontSize: "12px", color: palette.text.tertiary }}
-                >
+                <Typography sx={{ flex: 1, fontSize: "12px", color: palette.text.tertiary }}>
                   Choice
                 </Typography>
                 <Typography
-                  sx={{ width: 100, fontSize: "12px", color: palette.text.tertiary, textAlign: "center" }}
+                  sx={{
+                    width: 100,
+                    fontSize: "12px",
+                    color: palette.text.tertiary,
+                    textAlign: "center",
+                  }}
                 >
                   Score (0 to 1)
                 </Typography>
@@ -1390,9 +1543,7 @@ export default function CreateScorerModal({
                     size="small"
                     placeholder="Enter choice label"
                     value={cs.label}
-                    onChange={(e) =>
-                      handleUpdateChoiceScore(index, "label", e.target.value)
-                    }
+                    onChange={(e) => handleUpdateChoiceScore(index, "label", e.target.value)}
                     sx={{
                       flex: 1,
                       "& .MuiInputBase-input": { fontSize: "13px" },

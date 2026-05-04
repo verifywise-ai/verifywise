@@ -1,16 +1,15 @@
 export const ResponsibilitiesAlongAI = [
   {
     order_no: 1,
-    title:
-      "Conduct thorough due diligence before associating with high-risk AI systems.",
+    title: "Conduct thorough due diligence before associating with high-risk AI systems.",
     description:
       "Define and allocate responsibilities among distributors, importers, deployers, and third parties to ensure compliance with AI regulations.",
-    implementation_details: "Currently establishing due diligence process documentation and checklists",
+    implementation_details:
+      "Currently establishing due diligence process documentation and checklists",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We conduct thorough due diligence before associating with high-risk AI systems.",
+        title: "We conduct thorough due diligence before associating with high-risk AI systems.",
         description:
           "Comprehensive due diligence ensures third-party AI systems meet legal and ethical standards before adoption.",
         implementation_details: "Reviewing third-party compliance reports",
@@ -19,16 +18,13 @@ export const ResponsibilitiesAlongAI = [
   },
   {
     order_no: 2,
-    title:
-      "Conduct thorough due diligence before associating with high-risk AI systems.",
-    description:
-      "Establish clear contractual agreements with AI system providers.",
+    title: "Conduct thorough due diligence before associating with high-risk AI systems.",
+    description: "Establish clear contractual agreements with AI system providers.",
     implementation_details: "Drafting contracts with AI system providers to ensure compliance",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We establish clear contractual agreements with AI system providers.",
+        title: "We establish clear contractual agreements with AI system providers.",
         description:
           "Contracts define obligations and responsibilities, ensuring all parties comply with AI-related requirements.",
         implementation_details: "Drafting legal contract templates",
@@ -37,8 +33,7 @@ export const ResponsibilitiesAlongAI = [
   },
   {
     order_no: 3,
-    title:
-      "Conduct thorough due diligence before associating with high-risk AI systems.",
+    title: "Conduct thorough due diligence before associating with high-risk AI systems.",
     description:
       "Define responsibilities in agreements with third-party suppliers of AI components.",
     implementation_details: "Clarifying roles and responsibilities in supplier agreements",
@@ -55,8 +50,7 @@ export const ResponsibilitiesAlongAI = [
   },
   {
     order_no: 4,
-    title:
-      "Conduct thorough due diligence before associating with high-risk AI systems.",
+    title: "Conduct thorough due diligence before associating with high-risk AI systems.",
     description:
       "Specify information, technical access, and support required for regulatory compliance.",
     implementation_details: "Defining technical requirements for compliance",
@@ -73,8 +67,7 @@ export const ResponsibilitiesAlongAI = [
   },
   {
     order_no: 5,
-    title:
-      "Conduct thorough due diligence before associating with high-risk AI systems.",
+    title: "Conduct thorough due diligence before associating with high-risk AI systems.",
     description:
       "We ensure third-party impacts, such as IP infringement, meet organizational standards.",
     implementation_details: "Assessing third-party compliance with IP standards",
@@ -109,14 +102,12 @@ export const ResponsibilitiesAlongAI = [
   {
     order_no: 7,
     title: "Incident Monitoring for Third-Party Components",
-    description:
-      "Monitor and respond to incidents involving third-party components.",
+    description: "Monitor and respond to incidents involving third-party components.",
     implementation_details: "Planning phase - defining monitoring requirements",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We monitor and respond to incidents involving third-party components.",
+        title: "We monitor and respond to incidents involving third-party components.",
         description:
           "Monitoring ensures timely detection and resolution of issues with third-party AI components to maintain compliance.",
         implementation_details: "Implementing incident response framework",
@@ -126,14 +117,12 @@ export const ResponsibilitiesAlongAI = [
   {
     order_no: 8,
     title: "Incident Monitoring for Third-Party Components",
-    description:
-      "Implement measures to enhance AI system resilience against errors and faults.",
+    description: "Implement measures to enhance AI system resilience against errors and faults.",
     implementation_details: "Implementing resilience measures for AI systems",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We implement measures to enhance AI system resilience against errors and faults.",
+        title: "We implement measures to enhance AI system resilience against errors and faults.",
         description:
           "Validation and documentation demonstrate that systems operate reliably and meet required compliance standards.",
         implementation_details: "Testing and validating AI systems",
@@ -143,14 +132,12 @@ export const ResponsibilitiesAlongAI = [
   {
     order_no: 9,
     title: "Incident Monitoring for Third-Party Components",
-    description:
-      "Identify and assess potential non-conformities with regulations.",
+    description: "Identify and assess potential non-conformities with regulations.",
     implementation_details: "Conducting assessments for regulatory compliance",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We identify and assess potential non-conformities with regulations.",
+        title: "We identify and assess potential non-conformities with regulations.",
         description:
           "Identifying non-conformities proactively reduces regulatory risks and ensures continued compliance.",
         implementation_details: "Conducting compliance audits",

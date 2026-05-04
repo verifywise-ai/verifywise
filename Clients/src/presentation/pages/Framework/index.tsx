@@ -7,7 +7,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Popover
+  Popover,
 } from "@mui/material";
 import { useContext, useEffect, useState, useMemo, useRef } from "react";
 import {
@@ -143,9 +143,7 @@ const Framework = () => {
   const refreshProjectData = async () => {
     try {
       // Import the projects repository function
-      const { getAllProjects } = await import(
-        "../../../application/repository/project.repository"
-      );
+      const { getAllProjects } = await import("../../../application/repository/project.repository");
       const response = await getAllProjects();
       if (response?.data) {
         setProjects(response.data);
@@ -156,9 +154,7 @@ const Framework = () => {
   };
 
   // Handle dropdown menu
-  const handleManageProjectClick = (
-    event: React.MouseEvent<HTMLButtonElement>
-  ) => {
+  const handleManageProjectClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -193,9 +189,7 @@ const Framework = () => {
       if (response.status >= 200 && response.status < 300) {
         // Remove the project from context
         setProjects((prevProjects) =>
-          prevProjects.filter(
-            (project) => project.id !== organizationalProject.id
-          )
+          prevProjects.filter((project) => project.id !== organizationalProject.id),
         );
         // Stay on the Framework page - the UI will automatically show "No Organizational Project Found"
       } else {
@@ -209,10 +203,9 @@ const Framework = () => {
   };
 
   // Fetch all frameworks
-  const { allFrameworks, loading, error, refreshFilteredFrameworks } =
-    useFrameworks({
-      listOfFrameworks: organizationalProject?.framework || [], // Use organizational project's frameworks
-    });
+  const { allFrameworks, loading, error, refreshFilteredFrameworks } = useFrameworks({
+    listOfFrameworks: organizationalProject?.framework || [], // Use organizational project's frameworks
+  });
 
   // Only show frameworks that are actually assigned to the organizational project
   const filteredFrameworks = useMemo(() => {
@@ -221,9 +214,7 @@ const Framework = () => {
     }
 
     // Get framework IDs from the organizational project
-    const projectFrameworkIds = organizationalProject.framework.map((f) =>
-      Number(f.framework_id)
-    );
+    const projectFrameworkIds = organizationalProject.framework.map((f) => Number(f.framework_id));
 
     // Filter frameworks to only include those assigned to the project and exclude EU AI Act
     const filtered = allFrameworks.filter((framework) => {
@@ -268,7 +259,7 @@ const Framework = () => {
     if (!organizationalProject?.framework) return null;
 
     const projectFramework = organizationalProject.framework.find(
-      (f) => f.framework_id === Number(frameworkId)
+      (f) => f.framework_id === Number(frameworkId),
     );
 
     return projectFramework?.project_framework_id || null;
@@ -292,7 +283,6 @@ const Framework = () => {
 
   const [risksFrameworkIndex, setRisksFrameworkIndex] = useState(0);
   const [linkedModelsFrameworkIndex, setLinkedModelsFrameworkIndex] = useState(0);
-
 
   // Sync mainTabValue with URL tab param when navigating programmatically
   useEffect(() => {
@@ -383,9 +373,7 @@ const Framework = () => {
     if (framework === "iso-42001" || frameworkName === "iso-42001") {
       // Find ISO 42001 framework in filtered frameworks
       const iso42001Index = filteredFrameworks.findIndex(
-        (fw) =>
-          fw.name.toLowerCase().includes("iso") &&
-          fw.name.toLowerCase().includes("42001")
+        (fw) => fw.name.toLowerCase().includes("iso") && fw.name.toLowerCase().includes("42001"),
       );
       if (iso42001Index !== -1) {
         setSelectedFramework(iso42001Index);
@@ -400,9 +388,7 @@ const Framework = () => {
     } else if (framework === "iso-27001" || frameworkName === "iso-27001") {
       // Find ISO 27001 framework in filtered frameworks
       const iso27001Index = filteredFrameworks.findIndex(
-        (fw) =>
-          fw.name.toLowerCase().includes("iso") &&
-          fw.name.toLowerCase().includes("27001")
+        (fw) => fw.name.toLowerCase().includes("iso") && fw.name.toLowerCase().includes("27001"),
       );
       if (iso27001Index !== -1) {
         setSelectedFramework(iso27001Index);
@@ -420,7 +406,7 @@ const Framework = () => {
         (fw) =>
           fw.name.toLowerCase().includes("nist") &&
           fw.name.toLowerCase().includes("ai") &&
-          fw.name.toLowerCase().includes("rmf")
+          fw.name.toLowerCase().includes("rmf"),
       );
       if (nistAiRmfIndex !== -1) {
         setSelectedFramework(nistAiRmfIndex);
@@ -459,23 +445,18 @@ const Framework = () => {
     setOwnerFilter("");
     setReviewerFilter("");
     setDueDateFilter("");
-  }
+  };
 
   // Reset filters when tab changes (following ProjectFrameworks pattern)
   useEffect(() => {
     if (organizationalProject) {
       resetFilters();
     }
-  }, [
-    iso27001TabValue,
-    iso42001TabValue,
-    nistAiRmfTabValue,
-    organizationalProject,
-  ]);
+  }, [iso27001TabValue, iso42001TabValue, nistAiRmfTabValue, organizationalProject]);
 
   const handleFrameworkSelect = (index: number) => {
     if (organizationalProject) {
-      if(selectedFramework !== index) {
+      if (selectedFramework !== index) {
         resetFilters();
       }
       setSelectedFramework(index);
@@ -483,26 +464,17 @@ const Framework = () => {
     }
   };
 
-  const handleIso27001TabChange = (
-    _: React.SyntheticEvent,
-    newValue: string
-  ) => {
+  const handleIso27001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso27001TabValue(newValue);
     localStorage.setItem(ISO27001_TAB_KEY, newValue);
   };
 
-  const handleIso42001TabChange = (
-    _: React.SyntheticEvent,
-    newValue: string
-  ) => {
+  const handleIso42001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso42001TabValue(newValue);
     localStorage.setItem(ISO42001_TAB_KEY, newValue);
   };
 
-  const handleNistAiRmfTabChange = (
-    _: React.SyntheticEvent,
-    newValue: string
-  ) => {
+  const handleNistAiRmfTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setNistAiRmfTabValue(newValue);
     localStorage.setItem(NIST_AI_RMF_TAB_KEY, newValue);
   };
@@ -517,7 +489,7 @@ const Framework = () => {
   };
 
   useEffect(() => {
-    const getLinkedModelCount = async() => {
+    const getLinkedModelCount = async () => {
       if (filteredFrameworks.length === 0) return;
 
       const framework = filteredFrameworks[linkedModelsFrameworkIndex];
@@ -534,7 +506,6 @@ const Framework = () => {
     };
 
     getLinkedModelCount();
-
   }, [filteredFrameworks, linkedModelsFrameworkIndex]);
 
   const renderFrameworkContent = () => {
@@ -578,8 +549,8 @@ const Framework = () => {
             No ISO frameworks assigned to this project yet.
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Use the "Manage Frameworks" button to add ISO 27001 or ISO 42001
-            frameworks to your organizational project.
+            Use the "Manage Frameworks" button to add ISO 27001 or ISO 42001 frameworks to your
+            organizational project.
           </Typography>
         </Box>
       );
@@ -604,27 +575,15 @@ const Framework = () => {
                 TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
-                <Tab
-                  label="Clauses"
-                  value="clause"
-                  sx={tabStyle}
-                  disableRipple
-                />
-                <Tab
-                  label="Annexes"
-                  value="annex"
-                  sx={tabStyle}
-                  disableRipple
-                />
+                <Tab label="Clauses" value="clause" sx={tabStyle} disableRipple />
+                <Tab label="Annexes" value="annex" sx={tabStyle} disableRipple />
               </TabList>
             </Box>
 
             <TabPanel value="clause" sx={tabPanelStyle}>
               <ISO27001Clause
                 project={organizationalProject}
-                projectFrameworkId={
-                  getProjectFrameworkId(framework.id) || framework.id
-                }
+                projectFrameworkId={getProjectFrameworkId(framework.id) || framework.id}
                 statusFilter={statusFilter}
                 ownerFilter={ownerFilter}
                 reviewerFilter={reviewerFilter}
@@ -646,9 +605,7 @@ const Framework = () => {
             <TabPanel value="annex" sx={tabPanelStyle}>
               <ISO27001Annex
                 project={organizationalProject}
-                projectFrameworkId={
-                  getProjectFrameworkId(framework.id) || framework.id
-                }
+                projectFrameworkId={getProjectFrameworkId(framework.id) || framework.id}
                 statusFilter={statusFilter}
                 applicabilityFilter={applicabilityFilter}
                 dueDateFilter={dueDateFilter}
@@ -684,27 +641,15 @@ const Framework = () => {
                 TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
-                <Tab
-                  label="Clauses"
-                  value="clauses"
-                  sx={tabStyle}
-                  disableRipple
-                />
-                <Tab
-                  label="Annexes"
-                  value="annexes"
-                  sx={tabStyle}
-                  disableRipple
-                />
+                <Tab label="Clauses" value="clauses" sx={tabStyle} disableRipple />
+                <Tab label="Annexes" value="annexes" sx={tabStyle} disableRipple />
               </TabList>
             </Box>
 
             <TabPanel value="clauses" sx={tabPanelStyle}>
               <ISO42001Clause
                 project={organizationalProject}
-                projectFrameworkId={
-                  getProjectFrameworkId(framework.id) || framework.id
-                }
+                projectFrameworkId={getProjectFrameworkId(framework.id) || framework.id}
                 statusFilter={statusFilter}
                 ownerFilter={ownerFilter}
                 reviewerFilter={reviewerFilter}
@@ -726,9 +671,7 @@ const Framework = () => {
             <TabPanel value="annexes" sx={tabPanelStyle}>
               <ISO42001Annex
                 project={organizationalProject}
-                projectFrameworkId={
-                  getProjectFrameworkId(framework.id) || framework.id
-                }
+                projectFrameworkId={getProjectFrameworkId(framework.id) || framework.id}
                 statusFilter={statusFilter}
                 applicabilityFilter={applicabilityFilter}
                 dueDateFilter={dueDateFilter}
@@ -764,25 +707,10 @@ const Framework = () => {
                 TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
-                <Tab
-                  label="Govern"
-                  value="govern"
-                  sx={tabStyle}
-                  disableRipple
-                />
+                <Tab label="Govern" value="govern" sx={tabStyle} disableRipple />
                 <Tab label="Map" value="map" sx={tabStyle} disableRipple />
-                <Tab
-                  label="Measure"
-                  value="measure"
-                  sx={tabStyle}
-                  disableRipple
-                />
-                <Tab
-                  label="Manage"
-                  value="manage"
-                  sx={tabStyle}
-                  disableRipple
-                />
+                <Tab label="Measure" value="measure" sx={tabStyle} disableRipple />
+                <Tab label="Manage" value="manage" sx={tabStyle} disableRipple />
               </TabList>
             </Box>
 
@@ -822,7 +750,9 @@ const Framework = () => {
                 searchTerm={searchTerm}
                 onSearchTermChange={setSearchTerm}
                 initialCategoryId={functionId?.toLowerCase() === "measure" ? categoryId : null}
-                initialSubcategoryId={functionId?.toLowerCase() === "measure" ? subcategoryId : null}
+                initialSubcategoryId={
+                  functionId?.toLowerCase() === "measure" ? subcategoryId : null
+                }
               />
             </TabPanel>
             <TabPanel value="manage" sx={tabPanelStyle}>
@@ -864,8 +794,8 @@ const Framework = () => {
             maxWidth: "600px",
           }}
         >
-          This is a dummy content space for {framework.name}. The actual
-          framework content will be implemented here.
+          This is a dummy content space for {framework.name}. The actual framework content will be
+          implemented here.
         </Typography>
       </Box>
     );
@@ -880,383 +810,382 @@ const Framework = () => {
         tipBoxEntity="framework"
         actionButton={
           <Box>
-          {organizationalProject ? (
-            <>
-              <CustomizableButton
-                variant="contained"
-                text="Manage frameworks"
-                endIcon={<WhiteDownArrowIcon size={16} style={{ transform: rotated ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />}
-                onClick={(event) => {
-                  setRotated((prev) => !prev);
-                  handleManageProjectClick(event as React.MouseEvent<any>);
-                }}
-                isDisabled={
-                  !allowedRoles.frameworks.manage.includes(userRoleName) &&
-                  !allowedRoles.projects.edit.includes(userRoleName) &&
-                  !allowedRoles.projects.delete.includes(userRoleName)
-                }
-                sx={{
-                  backgroundColor: "brand.primary",
-                  border: "1px solid brand.primary",
-                  gap: 2,
-                  "&:hover": {
-                    backgroundColor: "#0e5c47",
-                  },
-                }}
-              />
-              <Popover
-                anchorEl={anchorEl}
-                open={isMenuOpen}
-                onClose={handleMenuClose}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "right",
-                }}
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                sx={{
-                  mt: 1,
-                  "& .MuiPopover-paper": {
-                    borderRadius: "4px",
-                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-                    border: "1px solid #d0d5dd",
-                    overflow: "visible",
-                    backgroundColor: "background.main",
-                  },
-                }}
-              >
-                <MenuItem
-                  onClick={handleManageFrameworksClick}
-                  disabled={
-                    !allowedRoles.frameworks.manage.includes(userRoleName)
+            {organizationalProject ? (
+              <>
+                <CustomizableButton
+                  variant="contained"
+                  text="Manage frameworks"
+                  endIcon={
+                    <WhiteDownArrowIcon
+                      size={16}
+                      style={{
+                        transform: rotated ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                      }}
+                    />
                   }
-                >
-                  <ListItemIcon sx={{ minWidth: 32 }}>
-                    <SettingsIcon
-                      size={16}
-                      style={{
-                        color: "text.secondary",
-                      }}
-                    />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Add/remove frameworks"
-                    primaryTypographyProps={{
-                      fontSize: "13px",
-                      fontWeight: 400,
-                      color: "text.primary",
-                    }}
-                  />
-                </MenuItem>
-                <MenuItem
-                  onClick={handleEditProjectClick}
-                  disabled={!allowedRoles.projects.edit.includes(userRoleName)}
-                >
-                  <ListItemIcon sx={{ minWidth: 32 }}>
-                    <EditIconGrey
-                      size={16}
-                      style={{
-                        color: "text.secondary",
-                      }}
-                    />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Edit project"
-                    primaryTypographyProps={{
-                      fontSize: "13px",
-                      fontWeight: 400,
-                      color: "text.primary",
-                    }}
-                  />
-                </MenuItem>
-                <Divider sx={{ my: 0.5 }} />
-                <MenuItem
-                  onClick={handleDeleteProjectClick}
-                  disabled={
+                  onClick={(event) => {
+                    setRotated((prev) => !prev);
+                    handleManageProjectClick(event as React.MouseEvent<any>);
+                  }}
+                  isDisabled={
+                    !allowedRoles.frameworks.manage.includes(userRoleName) &&
+                    !allowedRoles.projects.edit.includes(userRoleName) &&
                     !allowedRoles.projects.delete.includes(userRoleName)
                   }
+                  sx={{
+                    backgroundColor: "brand.primary",
+                    border: "1px solid brand.primary",
+                    gap: 2,
+                    "&:hover": {
+                      backgroundColor: "#0e5c47",
+                    },
+                  }}
+                />
+                <Popover
+                  anchorEl={anchorEl}
+                  open={isMenuOpen}
+                  onClose={handleMenuClose}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  sx={{
+                    mt: 1,
+                    "& .MuiPopover-paper": {
+                      borderRadius: "4px",
+                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+                      border: "1px solid #d0d5dd",
+                      overflow: "visible",
+                      backgroundColor: "background.main",
+                    },
+                  }}
                 >
-                  <ListItemIcon sx={{ minWidth: 32 }}>
-                    <DeleteIconRed
-                      size={16}
-                      style={{
-                        color: "#DB504A",
+                  <MenuItem
+                    onClick={handleManageFrameworksClick}
+                    disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <SettingsIcon
+                        size={16}
+                        style={{
+                          color: "text.secondary",
+                        }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Add/remove frameworks"
+                      primaryTypographyProps={{
+                        fontSize: "13px",
+                        fontWeight: 400,
+                        color: "text.primary",
                       }}
                     />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Delete project"
-                    primaryTypographyProps={{
-                      fontSize: "13px",
-                      fontWeight: 400,
-                      color: "error.main",
-                    }}
-                  />
-                </MenuItem>
-              </Popover>
-            </>
-          ) : (
-            <CustomizableButton
-              variant="contained"
-              text="New Project"
-              startIcon={<AddCircleOutlineIcon size={16} />}
-              onClick={() => setIsProjectFormModalOpen(true)}
-              isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
-            />
-          )}
+                  </MenuItem>
+                  <MenuItem
+                    onClick={handleEditProjectClick}
+                    disabled={!allowedRoles.projects.edit.includes(userRoleName)}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <EditIconGrey
+                        size={16}
+                        style={{
+                          color: "text.secondary",
+                        }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Edit project"
+                      primaryTypographyProps={{
+                        fontSize: "13px",
+                        fontWeight: 400,
+                        color: "text.primary",
+                      }}
+                    />
+                  </MenuItem>
+                  <Divider sx={{ my: 0.5 }} />
+                  <MenuItem
+                    onClick={handleDeleteProjectClick}
+                    disabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <DeleteIconRed
+                        size={16}
+                        style={{
+                          color: "#DB504A",
+                        }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Delete project"
+                      primaryTypographyProps={{
+                        fontSize: "13px",
+                        fontWeight: 400,
+                        color: "error.main",
+                      }}
+                    />
+                  </MenuItem>
+                </Popover>
+              </>
+            ) : (
+              <CustomizableButton
+                variant="contained"
+                text="New Project"
+                startIcon={<AddCircleOutlineIcon size={16} />}
+                onClick={() => setIsProjectFormModalOpen(true)}
+                isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+              />
+            )}
           </Box>
         }
       >
         {/* Only show framework content if organizational project exists */}
-      {organizationalProject && (
-        <>
-          <TabContext value={mainTabValue}>
-            <TabBar
-              tabs={[
-                {
-                  label: "Dashboard",
-                  value: "dashboard",
-                  icon: "LayoutDashboard",
-                  tooltip: "Compliance progress and status across this framework",
-                },
-                {
-                  label: "Framework risks",
-                  value: "framework-risks",
-                  icon: "AlertTriangle",
-                  tooltip: "Risks identified at the organizational level",
-                },
-                {
-                  label: "Linked models",
-                  value: "linked-models",
-                  icon: "Link",
-                  count: linkedModelsCount,
-                  tooltip: "AI models mapped to this framework's requirements",
-                },
-                {
-                  label: "Requirements and Controls",
-                  value: "controls",
-                  icon: "FileCode",
-                  tooltip: "Regulatory requirements and the controls implementing them",
-                },
-                {
-                  label: "Settings",
-                  value: "settings",
-                  icon: "Settings",
-                  tooltip: "Framework visibility and configuration",
-                },
-              ]}
-              activeTab={mainTabValue}
-              onChange={handleMainTabChange}
-              dataJoyrideId="framework-main-tabs"
-            />
+        {organizationalProject && (
+          <>
+            <TabContext value={mainTabValue}>
+              <TabBar
+                tabs={[
+                  {
+                    label: "Dashboard",
+                    value: "dashboard",
+                    icon: "LayoutDashboard",
+                    tooltip: "Compliance progress and status across this framework",
+                  },
+                  {
+                    label: "Framework risks",
+                    value: "framework-risks",
+                    icon: "AlertTriangle",
+                    tooltip: "Risks identified at the organizational level",
+                  },
+                  {
+                    label: "Linked models",
+                    value: "linked-models",
+                    icon: "Link",
+                    count: linkedModelsCount,
+                    tooltip: "AI models mapped to this framework's requirements",
+                  },
+                  {
+                    label: "Requirements and Controls",
+                    value: "controls",
+                    icon: "FileCode",
+                    tooltip: "Regulatory requirements and the controls implementing them",
+                  },
+                  {
+                    label: "Settings",
+                    value: "settings",
+                    icon: "Settings",
+                    tooltip: "Framework visibility and configuration",
+                  },
+                ]}
+                activeTab={mainTabValue}
+                onChange={handleMainTabChange}
+                dataJoyrideId="framework-main-tabs"
+              />
 
-            <TabPanel value="dashboard" sx={tabPanelStyle}>
-              <Box data-joyride-id="framework-dashboard">
-                <FrameworkDashboard
+              <TabPanel value="dashboard" sx={tabPanelStyle}>
+                <Box data-joyride-id="framework-dashboard">
+                  <FrameworkDashboard
+                    organizationalProject={organizationalProject}
+                    filteredFrameworks={filteredFrameworks}
+                  />
+                </Box>
+              </TabPanel>
+
+              <TabPanel value="controls" sx={tabPanelStyle}>
+                <Stack className="frameworks-switch" spacing={3}>
+                  {/* Plugin slot for custom frameworks - renders toggle + content */}
+                  <PluginSlot
+                    id={PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK}
+                    slotProps={{
+                      project: organizationalProject,
+                      builtInFrameworks: filteredFrameworks,
+                      selectedBuiltInFramework: selectedFramework,
+                      onBuiltInFrameworkSelect: handleFrameworkSelect,
+                      renderBuiltInContent: renderFrameworkContent,
+                      onRefresh: refreshProjectData,
+                    }}
+                  />
+                  {/* Default content when no plugin is loaded */}
+                  {!getComponentsForSlot(PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK).length && (
+                    <>
+                      {organizationalProject && filteredFrameworks.length > 0 && (
+                        <Box data-joyride-id="framework-toggle">
+                          <ButtonToggle
+                            options={filteredFrameworks.map((framework, index) => ({
+                              value: index.toString(),
+                              label: framework.name,
+                            }))}
+                            value={selectedFramework.toString()}
+                            onChange={(value) => handleFrameworkSelect(parseInt(value))}
+                            height={34}
+                          />
+                        </Box>
+                      )}
+                      {renderFrameworkContent()}
+                    </>
+                  )}
+                </Stack>
+              </TabPanel>
+
+              <TabPanel value="framework-risks" sx={tabPanelStyle}>
+                <FrameworkRisks
                   organizationalProject={organizationalProject}
                   filteredFrameworks={filteredFrameworks}
+                  selectedFramework={risksFrameworkIndex}
+                  onFrameworkSelect={setRisksFrameworkIndex}
                 />
-              </Box>
-            </TabPanel>
+              </TabPanel>
 
-            <TabPanel value="controls" sx={tabPanelStyle}>
-              <Stack className="frameworks-switch" spacing={3}>
-                {/* Plugin slot for custom frameworks - renders toggle + content */}
-                <PluginSlot
-                  id={PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK}
-                  slotProps={{
-                    project: organizationalProject,
-                    builtInFrameworks: filteredFrameworks,
-                    selectedBuiltInFramework: selectedFramework,
-                    onBuiltInFrameworkSelect: handleFrameworkSelect,
-                    renderBuiltInContent: renderFrameworkContent,
-                    onRefresh: refreshProjectData,
-                  }}
+              <TabPanel value="linked-models" sx={tabPanelStyle}>
+                <FrameworkLinkedModels
+                  organizationalProject={organizationalProject}
+                  filteredFrameworks={filteredFrameworks}
+                  selectedFramework={linkedModelsFrameworkIndex}
+                  onFrameworkSelect={setLinkedModelsFrameworkIndex}
                 />
-                {/* Default content when no plugin is loaded */}
-                {!getComponentsForSlot(PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK).length && (
-                  <>
-                    {organizationalProject && filteredFrameworks.length > 0 && (
-                      <Box data-joyride-id="framework-toggle">
-                        <ButtonToggle
-                          options={filteredFrameworks.map((framework, index) => ({
-                            value: index.toString(),
-                            label: framework.name,
-                          }))}
-                          value={selectedFramework.toString()}
-                          onChange={(value) =>
-                            handleFrameworkSelect(parseInt(value))
-                          }
-                          height={34}
-                        />
-                      </Box>
-                    )}
-                    {renderFrameworkContent()}
-                  </>
-                )}
-              </Stack>
-            </TabPanel>
+              </TabPanel>
 
-            <TabPanel value="framework-risks" sx={tabPanelStyle}>
-              <FrameworkRisks
-                organizationalProject={organizationalProject}
-                filteredFrameworks={filteredFrameworks}
-                selectedFramework={risksFrameworkIndex}
-                onFrameworkSelect={setRisksFrameworkIndex}
-              />
-            </TabPanel>
+              <TabPanel value="settings" sx={tabPanelStyle}>
+                <FrameworkSettings
+                  organizationalProject={organizationalProject}
+                  allFrameworks={allFrameworks}
+                  filteredFrameworks={filteredFrameworks}
+                  onProjectDataChanged={refreshProjectData}
+                  onFrameworksChanged={refreshFilteredFrameworks}
+                  setProjects={setProjects}
+                />
+              </TabPanel>
+            </TabContext>
+          </>
+        )}
 
-            <TabPanel value="linked-models" sx={tabPanelStyle}>
-              <FrameworkLinkedModels
-                organizationalProject={organizationalProject}
-                filteredFrameworks={filteredFrameworks}
-                selectedFramework={linkedModelsFrameworkIndex}
-                onFrameworkSelect={setLinkedModelsFrameworkIndex}
-              />
-            </TabPanel>
+        {/* Show message when no organizational project exists */}
+        {!organizationalProject && (
+          <NoProject message="No Organizational Project Found. Create a new organizational project to manage ISO 27001, ISO 42001, and NIST AI RMF frameworks for your organization." />
+        )}
 
-            <TabPanel value="settings" sx={tabPanelStyle}>
-              <FrameworkSettings
-                organizationalProject={organizationalProject}
-                allFrameworks={allFrameworks}
-                filteredFrameworks={filteredFrameworks}
-                onProjectDataChanged={refreshProjectData}
-                onFrameworksChanged={refreshFilteredFrameworks}
-                setProjects={setProjects}
-              />
-            </TabPanel>
-          </TabContext>
-        </>
-      )}
-
-      {/* Show message when no organizational project exists */}
-      {!organizationalProject && (
-        <NoProject message="No Organizational Project Found. Create a new organizational project to manage ISO 27001, ISO 42001, and NIST AI RMF frameworks for your organization." />
-      )}
-
-      {/* Modals */}
-      {isProjectFormModalOpen && (
-        <StandardModal
-          isOpen={isProjectFormModalOpen}
-          onClose={async () => {
-            setIsProjectFormModalOpen(false);
-            await refreshProjectData();
-          }}
-          title="Create new framework"
-          description="Set up a new organizational framework below"
-          onSubmit={() => {
-            if (createFormRef.current) {
-              createFormRef.current();
-            }
-          }}
-          submitButtonText="Create framework"
-          maxWidth="900px"
-        >
-          <ProjectForm
-            defaultFrameworkType={FrameworkTypeEnum.OrganizationWide}
-            useStandardModal={true}
-            onSubmitRef={createFormRef}
+        {/* Modals */}
+        {isProjectFormModalOpen && (
+          <StandardModal
+            isOpen={isProjectFormModalOpen}
             onClose={async () => {
               setIsProjectFormModalOpen(false);
               await refreshProjectData();
             }}
-          />
-        </StandardModal>
-      )}
+            title="Create new framework"
+            description="Set up a new organizational framework below"
+            onSubmit={() => {
+              if (createFormRef.current) {
+                createFormRef.current();
+              }
+            }}
+            submitButtonText="Create framework"
+            maxWidth="900px"
+          >
+            <ProjectForm
+              defaultFrameworkType={FrameworkTypeEnum.OrganizationWide}
+              useStandardModal={true}
+              onSubmitRef={createFormRef}
+              onClose={async () => {
+                setIsProjectFormModalOpen(false);
+                await refreshProjectData();
+              }}
+            />
+          </StandardModal>
+        )}
 
-      {isEditProjectModalOpen && organizationalProject && (
-        <StandardModal
-          isOpen={isEditProjectModalOpen}
-          onClose={async () => {
-            setIsEditProjectModalOpen(false);
-            await refreshProjectData();
-          }}
-          title="Edit framework"
-          description="Update your framework details below"
-          onSubmit={() => {
-            if (submitFormRef.current) {
-              submitFormRef.current();
-            }
-          }}
-          submitButtonText="Update framework"
-          maxWidth="780px"
-        >
-          <ProjectForm
-            projectToEdit={organizationalProject}
-            defaultFrameworkType={FrameworkTypeEnum.OrganizationWide}
-            useStandardModal={true}
-            onSubmitRef={submitFormRef}
+        {isEditProjectModalOpen && organizationalProject && (
+          <StandardModal
+            isOpen={isEditProjectModalOpen}
             onClose={async () => {
               setIsEditProjectModalOpen(false);
               await refreshProjectData();
             }}
+            title="Edit framework"
+            description="Update your framework details below"
+            onSubmit={() => {
+              if (submitFormRef.current) {
+                submitFormRef.current();
+              }
+            }}
+            submitButtonText="Update framework"
+            maxWidth="780px"
+          >
+            <ProjectForm
+              projectToEdit={organizationalProject}
+              defaultFrameworkType={FrameworkTypeEnum.OrganizationWide}
+              useStandardModal={true}
+              onSubmitRef={submitFormRef}
+              onClose={async () => {
+                setIsEditProjectModalOpen(false);
+                await refreshProjectData();
+              }}
+            />
+          </StandardModal>
+        )}
+
+        {isFrameworkModalOpen && organizationalProject && (
+          <AddFrameworkModal
+            open={isFrameworkModalOpen}
+            onClose={() => setIsFrameworkModalOpen(false)}
+            frameworks={allFrameworks
+              .filter((framework) => {
+                // Only show organizational frameworks (ISO 27001, ISO 42001, and NIST AI RMF) for organizational projects
+                const isNotEuAiAct = !framework.name.toLowerCase().includes("eu ai act");
+                const isOrganizationalFramework =
+                  framework.name.toLowerCase().includes("iso 27001") ||
+                  framework.name.toLowerCase().includes("iso 42001") ||
+                  framework.name.toLowerCase().includes("nist ai rmf");
+                return isNotEuAiAct && isOrganizationalFramework;
+              })
+              .sort((a, b) => {
+                // Sort order: ISO 42001 first, then NIST AI RMF, then ISO 27001
+                const aIsISO42001 = a.name.toLowerCase().includes("iso 42001");
+                const bIsISO42001 = b.name.toLowerCase().includes("iso 42001");
+                const aIsNISTAIRMF = a.name.toLowerCase().includes("nist ai rmf");
+                const bIsNISTAIRMF = b.name.toLowerCase().includes("nist ai rmf");
+
+                if (aIsISO42001 && !bIsISO42001) return -1;
+                if (!aIsISO42001 && bIsISO42001) return 1;
+                if (aIsNISTAIRMF && !bIsNISTAIRMF) return -1;
+                if (!aIsNISTAIRMF && bIsNISTAIRMF) return 1;
+                return 0;
+              })}
+            project={organizationalProject}
+            onFrameworksChanged={async () => {
+              // Refresh both frameworks and project data
+              await refreshProjectData();
+              refreshFilteredFrameworks();
+              setIsFrameworkModalOpen(false);
+            }}
           />
-        </StandardModal>
-      )}
+        )}
 
-      {isFrameworkModalOpen && organizationalProject && (
-        <AddFrameworkModal
-          open={isFrameworkModalOpen}
-          onClose={() => setIsFrameworkModalOpen(false)}
-          frameworks={allFrameworks
-            .filter((framework) => {
-              // Only show organizational frameworks (ISO 27001, ISO 42001, and NIST AI RMF) for organizational projects
-              const isNotEuAiAct = !framework.name
-                .toLowerCase()
-                .includes("eu ai act");
-              const isOrganizationalFramework =
-                framework.name.toLowerCase().includes("iso 27001") ||
-                framework.name.toLowerCase().includes("iso 42001") ||
-                framework.name.toLowerCase().includes("nist ai rmf");
-              return isNotEuAiAct && isOrganizationalFramework;
-            })
-            .sort((a, b) => {
-              // Sort order: ISO 42001 first, then NIST AI RMF, then ISO 27001
-              const aIsISO42001 = a.name.toLowerCase().includes("iso 42001");
-              const bIsISO42001 = b.name.toLowerCase().includes("iso 42001");
-              const aIsNISTAIRMF = a.name.toLowerCase().includes("nist ai rmf");
-              const bIsNISTAIRMF = b.name.toLowerCase().includes("nist ai rmf");
+        {isDeleteModalOpen && organizationalProject && (
+          <ConfirmationModal
+            title="Confirm Delete"
+            body={
+              <Typography fontSize={13}>
+                Are you sure you want to delete the project "{organizationalProject.project_title}"?
+                This action cannot be undone and will remove all associated data.
+              </Typography>
+            }
+            cancelText="Cancel"
+            proceedText="Delete"
+            onCancel={() => setIsDeleteModalOpen(false)}
+            onProceed={handleDeleteProject}
+            proceedButtonColor="error"
+            proceedButtonVariant="contained"
+            TitleFontSize={0}
+          />
+        )}
 
-              if (aIsISO42001 && !bIsISO42001) return -1;
-              if (!aIsISO42001 && bIsISO42001) return 1;
-              if (aIsNISTAIRMF && !bIsNISTAIRMF) return -1;
-              if (!aIsNISTAIRMF && bIsNISTAIRMF) return 1;
-              return 0;
-            })}
-          project={organizationalProject}
-          onFrameworksChanged={async () => {
-            // Refresh both frameworks and project data
-            await refreshProjectData();
-            refreshFilteredFrameworks();
-            setIsFrameworkModalOpen(false);
-          }}
-        />
-      )}
-
-      {isDeleteModalOpen && organizationalProject && (
-        <ConfirmationModal
-          title="Confirm Delete"
-          body={
-            <Typography fontSize={13}>
-              Are you sure you want to delete the project "
-              {organizationalProject.project_title}"? This action cannot be
-              undone and will remove all associated data.
-            </Typography>
-          }
-          cancelText="Cancel"
-          proceedText="Delete"
-          onCancel={() => setIsDeleteModalOpen(false)}
-          onProceed={handleDeleteProject}
-          proceedButtonColor="error"
-          proceedButtonVariant="contained"
-          TitleFontSize={0}
-        />
-      )}
-
-      {/* Page Tour */}
-      <PageTour steps={FrameworkSteps} run={true} tourKey="framework-tour" />
+        {/* Page Tour */}
+        <PageTour steps={FrameworkSteps} run={true} tourKey="framework-tour" />
       </PageHeaderExtended>
     </Box>
   );

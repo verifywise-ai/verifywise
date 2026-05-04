@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  FormControl,
-  InputLabel,
-  Select as MuiSelect,
-  MenuItem,
-} from "@mui/material";
+import { FormControl, InputLabel, Select as MuiSelect, MenuItem } from "@mui/material";
 import { SelectProps } from "../../../types/widget.types";
 
 const Select: React.FC<SelectProps> = ({
@@ -23,12 +18,7 @@ const Select: React.FC<SelectProps> = ({
   if (isHidden) return null;
 
   return (
-    <FormControl
-      size="small"
-      sx={{ minWidth: 140, ...sx }}
-      error={!!error}
-      required={isRequired}
-    >
+    <FormControl size="small" sx={{ minWidth: 140, ...sx }} error={!!error} required={isRequired}>
       <InputLabel id={`${id}-label`}>
         {label}
         {isRequired && " *"}
@@ -54,9 +44,7 @@ const Select: React.FC<SelectProps> = ({
         ))}
       </MuiSelect>
       {error && (
-        <div
-          style={{ color: "status.error.text", fontSize: "0.75rem", marginTop: "4px" }}
-        >
+        <div style={{ color: "status.error.text", fontSize: "0.75rem", marginTop: "4px" }}>
           {error}
         </div>
       )}

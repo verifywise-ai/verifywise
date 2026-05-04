@@ -74,19 +74,13 @@ describe("Test Model Inventory Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(createModelInventory(routeUrl, modelData)).rejects.toEqual(
-        mockError,
-      );
+      await expect(createModelInventory(routeUrl, modelData)).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(createModelInventory(routeUrl, modelData)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createModelInventory(routeUrl, modelData)).rejects.toThrow("Network timeout");
     });
   });
 });

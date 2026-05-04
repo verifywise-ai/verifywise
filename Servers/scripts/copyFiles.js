@@ -61,4 +61,6 @@ async function copyFile() {
 }
 
 // execute the function
-(async () => { await copyFile() })();
+(async () => {
+  await copyFile();
+})();

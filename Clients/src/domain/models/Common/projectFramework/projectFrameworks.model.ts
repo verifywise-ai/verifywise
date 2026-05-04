@@ -9,9 +9,7 @@ export class ProjectFrameworksModel {
     this.is_demo = data.is_demo;
   }
 
-  static createNewProjectFrameworks(
-    data: ProjectFrameworksModel
-  ): ProjectFrameworksModel {
+  static createNewProjectFrameworks(data: ProjectFrameworksModel): ProjectFrameworksModel {
     return new ProjectFrameworksModel(data);
   }
 }

@@ -15,10 +15,7 @@ interface EmptyIllustrationProps {
  * A teal circle with a contextual icon, dashed connector lines,
  * and floating isometric cubes. Adapts to light/dark theme.
  */
-const EmptyIllustration: FC<EmptyIllustrationProps> = ({
-  icon: Icon,
-  scale = 1,
-}) => {
+const EmptyIllustration: FC<EmptyIllustrationProps> = ({ icon: Icon, scale = 1 }) => {
   const theme = useTheme();
   const w = 180 * scale;
   const h = 120 * scale;
@@ -35,13 +32,7 @@ const EmptyIllustration: FC<EmptyIllustrationProps> = ({
   const dotFill = theme.palette.mode === "dark" ? "#4a5568" : `${borderPalette.dark}`;
 
   return (
-    <svg
-      width={w}
-      height={h}
-      viewBox="0 0 180 120"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg width={w} height={h} viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Dashed connector lines */}
       <line
         x1="72"
@@ -83,18 +74,8 @@ const EmptyIllustration: FC<EmptyIllustrationProps> = ({
 
       {/* Top-right floating cube */}
       <g transform="translate(122, 18)">
-        <path
-          d="M16 0 L32 9 L16 18 L0 9 Z"
-          fill={cubeTop}
-          stroke={cubeStroke}
-          strokeWidth="1"
-        />
-        <path
-          d="M0 9 L16 18 L16 30 L0 21 Z"
-          fill={cubeLeft}
-          stroke={cubeStroke}
-          strokeWidth="1"
-        />
+        <path d="M16 0 L32 9 L16 18 L0 9 Z" fill={cubeTop} stroke={cubeStroke} strokeWidth="1" />
+        <path d="M0 9 L16 18 L16 30 L0 21 Z" fill={cubeLeft} stroke={cubeStroke} strokeWidth="1" />
         <path
           d="M32 9 L16 18 L16 30 L32 21 Z"
           fill={cubeRight}

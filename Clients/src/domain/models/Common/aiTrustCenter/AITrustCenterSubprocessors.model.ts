@@ -14,7 +14,7 @@ export class AITrustCenterSubprocessorsModel {
   }
 
   static createNewAITrustCenterSubprocessors(
-    data: AITrustCenterSubprocessorsModel
+    data: AITrustCenterSubprocessorsModel,
   ): AITrustCenterSubprocessorsModel {
     return new AITrustCenterSubprocessorsModel(data);
   }

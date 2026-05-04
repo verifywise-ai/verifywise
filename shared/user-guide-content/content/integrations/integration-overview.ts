@@ -128,11 +128,10 @@ export const integrationOverviewContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Automatic model sync' },
+        { text: 'On-demand model sync' },
         { text: 'Multiple authentication methods (none, basic auth, API token)' },
-        { text: 'Scheduled sync every hour' },
         { text: 'Connection status monitoring' },
-        { text: 'Manual sync trigger' },
+        { text: 'Manual sync trigger from the integration page' },
       ],
     },
     {

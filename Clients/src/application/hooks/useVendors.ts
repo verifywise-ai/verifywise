@@ -1,9 +1,4 @@
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryResult,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 import {
   getAllVendors,
   getVendorById,
@@ -26,7 +21,7 @@ export const vendorQueryKeys = {
 
 // Hook to fetch all vendors
 export const useVendors = (
-  filters: { projectId?: string | number } = {}
+  filters: { projectId?: string | number } = {},
 ): UseQueryResult<VendorModel[], Error> => {
   return useQuery({
     queryKey: vendorQueryKeys.list(filters),
@@ -81,13 +76,7 @@ export const useUpdateVendor = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: Partial<VendorModel>;
-    }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<VendorModel> }) => {
       const response = await updateVendor({ id, body: data });
       return response;
     },

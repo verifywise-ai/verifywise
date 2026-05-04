@@ -1,6 +1,6 @@
-import React, { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Box, Typography } from '@mui/material';
+import React, { memo } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Box, Typography } from "@mui/material";
 import {
   FolderTree,
   List,
@@ -10,11 +10,18 @@ import {
   BookOpen,
   User,
   type LucideIcon,
-} from 'lucide-react';
-import VWTooltip from '../../components/VWTooltip';
-import { text } from '../../themes/palette';
+} from "lucide-react";
+import VWTooltip from "../../components/VWTooltip";
+import { text } from "../../themes/palette";
 
-export type EntityType = 'useCase' | 'model' | 'risk' | 'vendor' | 'evidence' | 'framework' | 'user';
+export type EntityType =
+  | "useCase"
+  | "model"
+  | "risk"
+  | "vendor"
+  | "evidence"
+  | "framework"
+  | "user";
 
 interface EntityNodeData {
   label: string;
@@ -23,7 +30,7 @@ interface EntityNodeData {
   color: string;
   status?: string;
   riskLevel?: string;
-  riskSource?: 'model' | 'project' | 'vendor';
+  riskSource?: "model" | "project" | "vendor";
   connectionCount?: number;
   isHighlighted?: boolean;
   evidenceCount?: number;
@@ -40,21 +47,21 @@ const entityIcons: Record<EntityType, LucideIcon> = {
 };
 
 export const riskLevelColors: Record<string, string> = {
-  'Low': '#4caf50',
-  'Medium': '#ff9800',
-  'High': '#f44336',
-  'Critical': '#9c27b0',
-  'Very low risk': '#4caf50',
-  'Low risk': '#8bc34a',
-  'Medium risk': '#ff9800',
-  'High risk': '#f44336',
-  'Very high risk': '#9c27b0',
+  Low: "#4caf50",
+  Medium: "#ff9800",
+  High: "#f44336",
+  Critical: "#9c27b0",
+  "Very low risk": "#4caf50",
+  "Low risk": "#8bc34a",
+  "Medium risk": "#ff9800",
+  "High risk": "#f44336",
+  "Very high risk": "#9c27b0",
 };
 
 const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }) => {
   const nodeData = data as unknown as EntityNodeData;
   const IconComponent = entityIcons[nodeData.entityType] || FolderTree;
-  const isRiskNode = nodeData.entityType === 'risk';
+  const isRiskNode = nodeData.entityType === "risk";
   const riskColor = nodeData.riskLevel ? riskLevelColors[nodeData.riskLevel] : undefined;
 
   // Node size based on connections (subtle scaling)
@@ -76,22 +83,22 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
     <VWTooltip header={nodeData.label} content={tooltipContent} placement="top" maxWidth={400}>
       <Box
         sx={{
-          backgroundColor: nodeData.isHighlighted ? '#fffbeb' : 'white',
-          border: nodeData.isHighlighted ? '3px solid #f59e0b' : `2px solid ${nodeData.color}`,
-          borderRadius: '4px',
-          padding: '8px 12px',
+          backgroundColor: nodeData.isHighlighted ? "#fffbeb" : "white",
+          border: nodeData.isHighlighted ? "3px solid #f59e0b" : `2px solid ${nodeData.color}`,
+          borderRadius: "4px",
+          padding: "8px 12px",
           minWidth: minWidth,
           maxWidth: maxWidth,
           boxShadow: nodeData.isHighlighted
-            ? '0 0 0 4px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(0,0,0,0.15)'
-            : '0 2px 4px rgba(0,0,0,0.1)',
-          cursor: 'pointer',
-          transition: 'all 0.3s ease-in-out',
-          transform: nodeData.isHighlighted ? 'scale(1.05)' : 'scale(1)',
-          position: 'relative',
-          '&:hover': {
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            transform: 'translateY(-1px)',
+            ? "0 0 0 4px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(0,0,0,0.15)"
+            : "0 2px 4px rgba(0,0,0,0.1)",
+          cursor: "pointer",
+          transition: "all 0.3s ease-in-out",
+          transform: nodeData.isHighlighted ? "scale(1.05)" : "scale(1)",
+          position: "relative",
+          "&:hover": {
+            boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+            transform: "translateY(-1px)",
           },
         }}
       >
@@ -100,21 +107,21 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
           position={targetPosition || Position.Left}
           style={{
             background: nodeData.color,
-            border: 'none',
+            border: "none",
             width: 8,
             height: 8,
           }}
         />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             sx={{
               backgroundColor: nodeData.color,
-              borderRadius: '4px',
+              borderRadius: "4px",
               p: 0.5,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <IconComponent size={14} color="white" />
@@ -125,10 +132,10 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
               sx={{
                 fontWeight: 600,
                 fontSize: 11,
-                color: 'text.secondary',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                color: "text.secondary",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {nodeData.label}
@@ -138,11 +145,11 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
                 variant="caption"
                 sx={{
                   fontSize: 9,
-                  color: 'text.icon',
-                  display: 'block',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  color: "text.icon",
+                  display: "block",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
                 {nodeData.sublabel}
@@ -156,8 +163,8 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
           <Box
             sx={{
               mt: 0.5,
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 0.5,
             }}
           >
@@ -166,7 +173,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
                 sx={{
                   width: 6,
                   height: 6,
-                  borderRadius: '50%',
+                  borderRadius: "50%",
                   backgroundColor: riskColor || nodeData.color,
                 }}
               />
@@ -184,13 +191,12 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
           </Box>
         )}
 
-
         <Handle
           type="source"
           position={sourcePosition || Position.Right}
           style={{
             background: nodeData.color,
-            border: 'none',
+            border: "none",
             width: 8,
             height: 8,
           }}

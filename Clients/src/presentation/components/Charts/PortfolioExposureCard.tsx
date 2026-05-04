@@ -73,11 +73,7 @@ export function PortfolioExposureCard({ portfolio }: PortfolioExposureCardProps)
         />
         <MetricRow
           label="Overall ROI"
-          value={
-            portfolio.overall_roi != null
-              ? `${portfolio.overall_roi.toFixed(0)}%`
-              : "N/A"
-          }
+          value={portfolio.overall_roi != null ? `${portfolio.overall_roi.toFixed(0)}%` : "N/A"}
           color={
             portfolio.overall_roi != null && portfolio.overall_roi > 0
               ? C.completed

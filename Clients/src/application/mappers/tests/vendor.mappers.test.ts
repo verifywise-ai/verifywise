@@ -17,10 +17,7 @@ import {
   mapVendorToCreateDTO,
   mapVendorToUpdateDTO,
 } from "../vendor.mapper";
-import {
-  VendorDTOBuilder,
-  VendorModelBuilder,
-} from "./mocks/vendor.mappers.mocks";
+import { VendorDTOBuilder, VendorModelBuilder } from "./mocks/vendor.mappers.mocks";
 
 describe("Test vendor mappers functions", () => {
   describe("mapReviewStatus", () => {
@@ -76,19 +73,13 @@ describe("Test vendor mappers functions", () => {
   });
   describe("mapBusinessCriticality", () => {
     it("should map string to BusinessCriticality enum", () => {
-      let result = mapBusinessCriticality(
-        "low (vendor supports non-core functions)",
-      );
+      let result = mapBusinessCriticality("low (vendor supports non-core functions)");
       expect(result).toBe(BusinessCriticality.Low);
 
-      result = mapBusinessCriticality(
-        "medium (affects operations but is replaceable)",
-      );
+      result = mapBusinessCriticality("medium (affects operations but is replaceable)");
       expect(result).toBe(BusinessCriticality.Medium);
 
-      result = mapBusinessCriticality(
-        "high (critical to core services or products)",
-      );
+      result = mapBusinessCriticality("high (critical to core services or products)");
       expect(result).toBe(BusinessCriticality.High);
     });
     it("should return undefined for undefined input", () => {
@@ -260,9 +251,7 @@ describe("Test vendor mappers functions", () => {
       const createDTO = mapVendorToCreateDTO(dto);
       const afterMapping = new Date();
       const mappedDate = new Date(createDTO.review_date);
-      expect(mappedDate >= beforeMapping && mappedDate <= afterMapping).toBe(
-        true,
-      );
+      expect(mappedDate >= beforeMapping && mappedDate <= afterMapping).toBe(true);
     });
   });
   describe("mapVendorToUpdateDTO", () => {

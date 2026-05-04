@@ -26,7 +26,7 @@ async function openCommandPalette(page: Page) {
         ctrlKey: true,
         bubbles: true,
         cancelable: true,
-      })
+      }),
     );
   });
   await page.waitForTimeout(500);
@@ -103,16 +103,19 @@ test.describe("Command Palette (Ctrl+K)", () => {
       .or(page.getByRole("option"))
       .or(page.getByText(/vendor/i));
 
-    if (await matchingItem.first().isVisible().catch(() => false)) {
+    if (
+      await matchingItem
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(matchingItem.first()).toBeVisible();
     }
 
     await page.keyboard.press("Escape");
   });
 
-  test("selecting a command navigates to page", async ({
-    authedPage: page,
-  }) => {
+  test("selecting a command navigates to page", async ({ authedPage: page }) => {
     const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
     if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await welcomeSkip.click();
@@ -142,13 +145,17 @@ test.describe("Command Palette (Ctrl+K)", () => {
       .or(page.locator(".command-item"))
       .or(page.getByRole("option"));
 
-    if (await matchingItem.first().isVisible().catch(() => false)) {
+    if (
+      await matchingItem
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await matchingItem.first().click();
       await page.waitForTimeout(1000);
 
       // Verify navigation occurred
-      const navigated =
-        page.url().includes("/tasks") || page.url().includes("/search");
+      const navigated = page.url().includes("/tasks") || page.url().includes("/search");
       if (navigated) {
         expect(page.url()).toContain("/");
       }

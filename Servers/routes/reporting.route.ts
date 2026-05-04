@@ -21,7 +21,7 @@ router.post(
   validateId("projectId"),
   validateId("frameworkId"),
   validateId("projectFrameworkId"),
-  generateReports
+  generateReports,
 );
 
 // New v2 endpoint (HTML/EJS-based, supports PDF and DOCX) - Admin only
@@ -32,7 +32,7 @@ router.post(
   validateId("projectId"),
   validateId("frameworkId"),
   validateId("projectFrameworkId"),
-  generateReportsV2
+  generateReportsV2,
 );
 
 router.delete("/:id", authenticateJWT, deleteGeneratedReportById);

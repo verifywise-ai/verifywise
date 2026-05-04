@@ -5,9 +5,11 @@ The VerifyWise email service supports multiple email providers through a simple 
 ## Supported Providers
 
 ### 1. Resend (Default)
+
 High-deliverability email service with simple API.
 
 **Environment Variables:**
+
 ```env
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=your_resend_api_key
@@ -15,9 +17,11 @@ EMAIL_ID=noreply@yourdomain.com
 ```
 
 ### 2. SMTP
+
 Standard SMTP configuration for any email server.
 
 **Environment Variables:**
+
 ```env
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.example.com
@@ -30,28 +34,31 @@ EMAIL_ID=noreply@yourdomain.com
 
 ## Configuration Options
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `EMAIL_PROVIDER` | No | Provider type: `resend` or `smtp` | `resend` |
-| `EMAIL_ID` | Yes | From email address | - |
+| Variable         | Required | Description                       | Default  |
+| ---------------- | -------- | --------------------------------- | -------- |
+| `EMAIL_PROVIDER` | No       | Provider type: `resend` or `smtp` | `resend` |
+| `EMAIL_ID`       | Yes      | From email address                | -        |
 
 ### Resend Provider
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `RESEND_API_KEY` | Yes | Resend API key |
+
+| Variable         | Required | Description    |
+| ---------------- | -------- | -------------- |
+| `RESEND_API_KEY` | Yes      | Resend API key |
 
 ### SMTP Provider
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SMTP_HOST` | Yes | SMTP server hostname |
-| `SMTP_PORT` | Yes | SMTP server port (usually 587 or 465) |
-| `SMTP_USER` | Yes | SMTP username/email |
-| `SMTP_PASS` | Yes | SMTP password |
-| `SMTP_SECURE` | No | Use TLS (true/false) |
+
+| Variable      | Required | Description                           |
+| ------------- | -------- | ------------------------------------- |
+| `SMTP_HOST`   | Yes      | SMTP server hostname                  |
+| `SMTP_PORT`   | Yes      | SMTP server port (usually 587 or 465) |
+| `SMTP_USER`   | Yes      | SMTP username/email                   |
+| `SMTP_PASS`   | Yes      | SMTP password                         |
+| `SMTP_SECURE` | No       | Use TLS (true/false)                  |
 
 ## Examples
 
 ### Gmail SMTP
+
 ```env
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.gmail.com
@@ -63,6 +70,7 @@ EMAIL_ID=noreply@yourdomain.com
 ```
 
 ### Office 365 SMTP
+
 ```env
 EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.office365.com
@@ -74,6 +82,7 @@ EMAIL_ID=noreply@company.com
 ```
 
 ### Local Development (MailHog)
+
 ```env
 EMAIL_PROVIDER=smtp
 SMTP_HOST=localhost
@@ -89,13 +98,8 @@ EMAIL_ID=test@localhost
 The email service automatically detects the configured provider and uses it transparently. No code changes are needed when switching providers.
 
 ```typescript
-import { sendEmail } from '../services/emailService';
+import { sendEmail } from "../services/emailService";
 
 // This works with any configured provider
-await sendEmail(
-  'user@example.com',
-  'Welcome to VerifyWise',
-  templateContent,
-  templateData
-);
+await sendEmail("user@example.com", "Welcome to VerifyWise", templateContent, templateData);
 ```

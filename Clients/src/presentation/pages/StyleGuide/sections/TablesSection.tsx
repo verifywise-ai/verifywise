@@ -107,17 +107,57 @@ const TablesSection: React.FC = () => {
       {/* Shared Specifications */}
       <SpecSection title="Table specifications">
         <SpecGrid>
-          <SpecCard title="Border" value="1px solid #d0d5dd" note="Frame border" onCopy={handleCopy} />
-          <SpecCard title="Border radius" value="4px" note="Container corners" onCopy={handleCopy} />
-          <SpecCard title="Cell padding" value="12px 10px" note="Header and body cells" onCopy={handleCopy} />
-          <SpecCard title="Min column width" value="120px" note="Prevents column collapse" onCopy={handleCopy} />
+          <SpecCard
+            title="Border"
+            value="1px solid #d0d5dd"
+            note="Frame border"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Border radius"
+            value="4px"
+            note="Container corners"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Cell padding"
+            value="12px 10px"
+            note="Header and body cells"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Min column width"
+            value="120px"
+            note="Prevents column collapse"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Row height" value="~44px" note="With padding" onCopy={handleCopy} />
           <SpecCard title="Header font" value="13px" note="fontSizes.medium" onCopy={handleCopy} />
           <SpecCard title="Header weight" value="400" note="Regular weight" onCopy={handleCopy} />
-          <SpecCard title="Header text" value="uppercase" note="Text transform" onCopy={handleCopy} />
-          <SpecCard title="Header color" value={text.tertiary} note="text.tertiary" onCopy={handleCopy} />
-          <SpecCard title="Header bg" value="linear-gradient(180deg, background.accent 0%, background.hover 100%)" note="Gradient background" onCopy={handleCopy} />
-          <SpecCard title="Body bg" value={background.main} note="White background" onCopy={handleCopy} />
+          <SpecCard
+            title="Header text"
+            value="uppercase"
+            note="Text transform"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Header color"
+            value={text.tertiary}
+            note="text.tertiary"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Header bg"
+            value="linear-gradient(180deg, background.accent 0%, background.hover 100%)"
+            note="Gradient background"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Body bg"
+            value={background.main}
+            note="White background"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Row hover bg" value="#fafafa" note="Hover state" onCopy={handleCopy} />
         </SpecGrid>
       </SpecSection>
@@ -127,7 +167,8 @@ const TablesSection: React.FC = () => {
       {/* Live Example */}
       <SpecSection title="Table example">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Standard data table with header and body rows. Uses MUI Table components with custom styling.
+          Standard data table with header and body rows. Uses MUI Table components with custom
+          styling.
         </Typography>
 
         <Box
@@ -237,7 +278,8 @@ const TablesSection: React.FC = () => {
                             borderRadius: "4px",
                             fontSize: "12px",
                             fontWeight: 500,
-                            backgroundColor: row.status === "Active" ? "#ecfdf3" : "background.accent",
+                            backgroundColor:
+                              row.status === "Active" ? "#ecfdf3" : "background.accent",
                             color: row.status === "Active" ? "#079455" : "#838c99",
                           }}
                         >
@@ -269,7 +311,10 @@ const TablesSection: React.FC = () => {
         <SpecTable
           onCopy={handleCopy}
           specs={[
-            { property: "backgroundColor", value: "linear-gradient(180deg, background.accent 0%, background.hover 100%)" },
+            {
+              property: "backgroundColor",
+              value: "linear-gradient(180deg, background.accent 0%, background.hover 100%)",
+            },
             { property: "color", value: "text.tertiary" },
             { property: "fontSize", value: "13px" },
             { property: "fontWeight", value: "400" },
@@ -314,11 +359,26 @@ const TablesSection: React.FC = () => {
         </Typography>
 
         <SpecGrid columns={3}>
-          <SpecCard title="Label font" value="12px" note="'Showing X - Y of Z'" onCopy={handleCopy} />
+          <SpecCard
+            title="Label font"
+            value="12px"
+            note="'Showing X - Y of Z'"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Label opacity" value="0.7" note="Muted appearance" onCopy={handleCopy} />
-          <SpecCard title="Rows per page" value="[5, 10, 15, 25]" note="Options array" onCopy={handleCopy} />
+          <SpecCard
+            title="Rows per page"
+            value="[5, 10, 15, 25]"
+            note="Options array"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Default rows" value="10" note="Initial page size" onCopy={handleCopy} />
-          <SpecCard title="Storage key" value="localStorage" note="Persisted preference" onCopy={handleCopy} />
+          <SpecCard
+            title="Storage key"
+            value="localStorage"
+            note="Persisted preference"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Button radius" value="4px" note="Page buttons" onCopy={handleCopy} />
         </SpecGrid>
       </SpecSection>
@@ -535,9 +595,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -564,9 +622,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}

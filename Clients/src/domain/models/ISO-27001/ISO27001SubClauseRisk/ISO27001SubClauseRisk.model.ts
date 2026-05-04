@@ -8,7 +8,7 @@ export class ISO27001SubClauseRiskModel {
   }
 
   static createNewISO27001SubClauseRisk(
-    data: ISO27001SubClauseRiskModel
+    data: ISO27001SubClauseRiskModel,
   ): ISO27001SubClauseRiskModel {
     return new ISO27001SubClauseRiskModel(data);
   }

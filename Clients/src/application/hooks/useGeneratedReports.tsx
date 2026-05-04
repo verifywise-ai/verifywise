@@ -13,33 +13,29 @@ import { getEntityById } from "../repository/entity.repository";
 import { UseGeneratedReportsParams } from "../../domain/interfaces/i.reports";
 import { GeneratedReports } from "../../domain/interfaces/i.reports";
 
-const useGeneratedReports = ({
-  projectId, 
-  projects,
-  refreshKey
-} : UseGeneratedReportsParams) => {
+const useGeneratedReports = ({ projectId, projects, refreshKey }: UseGeneratedReportsParams) => {
   const [generatedReports, setGeneratedReports] = useState<GeneratedReports[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(true);
   const [error, setError] = useState<string | boolean>(false);
 
   useEffect(() => {
-    if(projects.length === 0 ) {
+    if (projects.length === 0) {
       setLoadingReports(false);
-      return
-    };
+      return;
+    }
 
     const controller = new AbortController();
     const signal = controller.signal;
-    
+
     const fetchGeneratedReports = async () => {
       setLoadingReports(true);
-      try{
+      try {
         const response = await getEntityById({
           routeUrl: `/reporting/generate-report`,
           signal,
         });
-        if(response){
-          setGeneratedReports(response.data)
+        if (response) {
+          setGeneratedReports(response.data);
         }
       } catch (err: any) {
         if (err instanceof Error) {
@@ -50,20 +46,20 @@ const useGeneratedReports = ({
       } finally {
         setLoadingReports(false);
       }
-    }
+    };
 
     fetchGeneratedReports();
 
     return () => {
       controller.abort();
     };
-  }, [projectId, projects, refreshKey])
+  }, [projectId, projects, refreshKey]);
 
-  return{
+  return {
     generatedReports,
     loadingReports,
-    error
-  }
-}
+    error,
+  };
+};
 
 export default useGeneratedReports;

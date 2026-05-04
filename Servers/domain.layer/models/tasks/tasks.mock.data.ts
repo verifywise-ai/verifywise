@@ -44,7 +44,8 @@ const mockTasks = (user1: number, user2: number): ITask[] => {
     {
       id: 4,
       title: "Prepare vendor risk assessment report",
-      description: "Create detailed report on third-party AI vendor risks and mitigation strategies",
+      description:
+        "Create detailed report on third-party AI vendor risks and mitigation strategies",
       creator_id: user2,
       due_date: new Date("2025-02-15"),
       priority: TaskPriority.MEDIUM,
@@ -56,7 +57,8 @@ const mockTasks = (user1: number, user2: number): ITask[] => {
     {
       id: 5,
       title: "Train team on new compliance procedures",
-      description: "Organize and conduct training sessions for the development team on updated compliance procedures",
+      description:
+        "Organize and conduct training sessions for the development team on updated compliance procedures",
       creator_id: user1,
       due_date: new Date("2025-03-01"),
       priority: TaskPriority.LOW,

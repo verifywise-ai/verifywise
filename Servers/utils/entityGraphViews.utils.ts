@@ -32,7 +32,7 @@ import { QueryTypes } from "sequelize";
  */
 export async function createViewQuery(
   view: EntityGraphViewsModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphViewsModel> {
   try {
     const result = await sequelize.query(
@@ -50,16 +50,10 @@ export async function createViewQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
-    if (
-      result &&
-      Array.isArray(result) &&
-      result[0] &&
-      Array.isArray(result[0]) &&
-      result[0][0]
-    ) {
+    if (result && Array.isArray(result) && result[0] && Array.isArray(result[0]) && result[0][0]) {
       const row = result[0][0];
       view.id = row.id;
       view.created_at = row.created_at;
@@ -83,7 +77,7 @@ export async function createViewQuery(
  */
 export async function getViewsByUserQuery(
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphViewsModel[]> {
   try {
     const views = await sequelize.query(
@@ -97,7 +91,7 @@ export async function getViewsByUserQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return (views as any[]).map((row) => {
@@ -106,8 +100,7 @@ export async function getViewsByUserQuery(
         name: row.name,
         user_id: row.user_id,
         organization_id: row.organization_id,
-        config:
-          typeof row.config === "string" ? JSON.parse(row.config) : row.config,
+        config: typeof row.config === "string" ? JSON.parse(row.config) : row.config,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -128,7 +121,7 @@ export async function getViewsByUserQuery(
  */
 export async function getViewByIdQuery(
   viewId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphViewsModel | null> {
   try {
     const result = await sequelize.query(
@@ -139,7 +132,7 @@ export async function getViewByIdQuery(
       {
         replacements: { id: viewId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -149,8 +142,7 @@ export async function getViewByIdQuery(
         name: row.name,
         user_id: row.user_id,
         organization_id: row.organization_id,
-        config:
-          typeof row.config === "string" ? JSON.parse(row.config) : row.config,
+        config: typeof row.config === "string" ? JSON.parse(row.config) : row.config,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -177,7 +169,7 @@ export async function updateViewQuery(
   viewId: number,
   name: string | undefined,
   config: EntityGraphViewConfig | undefined,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphViewsModel | null> {
   try {
     const updatedAt = new Date();
@@ -207,7 +199,7 @@ export async function updateViewQuery(
       {
         replacements,
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     // Fetch the updated view
@@ -226,10 +218,7 @@ export async function updateViewQuery(
  * @returns {Promise<number>} Number of rows affected (0 or 1)
  * @throws {Error} If database operation fails
  */
-export async function deleteViewByIdQuery(
-  viewId: number,
-  organizationId: number
-): Promise<number> {
+export async function deleteViewByIdQuery(viewId: number, organizationId: number): Promise<number> {
   try {
     const result = await sequelize.query(
       `DELETE FROM entity_graph_views
@@ -238,7 +227,7 @@ export async function deleteViewByIdQuery(
       {
         replacements: { id: viewId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return Array.isArray(result) && result.length > 0 ? 1 : 0;
@@ -258,7 +247,7 @@ export async function deleteViewByIdQuery(
  */
 export async function getViewCountByUserQuery(
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -271,7 +260,7 @@ export async function getViewCountByUserQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return parseInt((result as any[])[0].count, 10) || 0;

@@ -15,13 +15,13 @@ const checkVersionAndClearIfNeeded = () => {
     const storedVersion = localStorage.getItem(`${STORAGE_KEY}_version`);
     if (storedVersion !== APP_VERSION) {
       // Clear all persisted data if versions don't match
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('persist:')) {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("persist:")) {
           localStorage.removeItem(key);
         }
       });
       localStorage.setItem(`${STORAGE_KEY}_version`, APP_VERSION);
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         console.log(`🔄 App version updated to ${APP_VERSION}, cleared cache`);
       }
     }

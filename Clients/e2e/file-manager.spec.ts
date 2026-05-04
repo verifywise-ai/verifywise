@@ -13,14 +13,10 @@ test.describe("File Manager", () => {
     await expect(page).toHaveURL(/\/file-manager/);
 
     // Page should show file-related content or empty state
-    await expect(
-      page.getByText(/file/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/file/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
     await page.waitForLoadState("domcontentloaded");
 
@@ -43,9 +39,7 @@ test.describe("File Manager", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("upload area or file list is visible", async ({
-    authedPage: page,
-  }) => {
+  test("upload area or file list is visible", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
 
     const content = page
@@ -58,9 +52,7 @@ test.describe("File Manager", () => {
 
   // --- Tier 1: Sidebar navigation ---
 
-  test("sidebar shows All files and Uncategorized options", async ({
-    authedPage: page,
-  }) => {
+  test("sidebar shows All files and Uncategorized options", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
 
     const allFiles = page.getByText(/all files/i);
@@ -73,15 +65,16 @@ test.describe("File Manager", () => {
 
   // --- Tier 2: Search & Column selector ---
 
-  test("searching for nonexistent file filters results", async ({
-    authedPage: page,
-  }) => {
+  test("searching for nonexistent file filters results", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
-    const searchInput = page
-      .getByPlaceholder(/search files/i)
-      .or(page.getByPlaceholder(/search/i));
+    const searchInput = page.getByPlaceholder(/search files/i).or(page.getByPlaceholder(/search/i));
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-file");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -89,16 +82,19 @@ test.describe("File Manager", () => {
     }
   });
 
-  test("column selector shows toggle options", async ({
-    authedPage: page,
-  }) => {
+  test("column selector shows toggle options", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
     const columnBtn = page
       .getByRole("button", { name: /column/i })
       .or(page.locator('[data-testid="column-selector"]'))
       .or(page.locator('[aria-label*="column"]'));
 
-    if (await columnBtn.first().isVisible().catch(() => false)) {
+    if (
+      await columnBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await columnBtn.first().click();
       await page.waitForTimeout(300);
       await page.keyboard.press("Escape");
@@ -107,9 +103,7 @@ test.describe("File Manager", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Upload file button opens upload dialog", async ({
-    authedPage: page,
-  }) => {
+  test("Upload file button opens upload dialog", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
     const uploadBtn = page.getByRole("button", { name: /upload file/i });
 
@@ -122,9 +116,7 @@ test.describe("File Manager", () => {
     }
   });
 
-  test("New folder button opens folder creation modal", async ({
-    authedPage: page,
-  }) => {
+  test("New folder button opens folder creation modal", async ({ authedPage: page }) => {
     await page.goto("/file-manager");
     const folderBtn = page.getByRole("button", { name: /new folder/i });
 
@@ -136,7 +128,7 @@ test.describe("File Manager", () => {
           .getByText(/new folder/i)
           .or(page.getByText(/create folder/i))
           .or(page.getByPlaceholder(/folder name/i))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -162,14 +154,24 @@ test.describe("File Manager", () => {
       .or(page.getByText(/browse/i))
       .or(page.getByText(/choose.*file/i));
 
-    if (await uploadArea.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await uploadArea
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       // Use Playwright fileChooser API to upload a test file
       const browseBtn = page
         .getByRole("button", { name: /browse|choose|select/i })
         .or(page.getByText(/browse/i))
         .or(page.locator('input[type="file"]'));
 
-      if (await browseBtn.first().isVisible().catch(() => false)) {
+      if (
+        await browseBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         const [fileChooser] = await Promise.all([
           page.waitForEvent("filechooser").catch(() => null),
           browseBtn.first().click(),
@@ -203,16 +205,12 @@ test.describe("File Manager", () => {
     await folderBtn.click();
 
     // Fill in the folder name
-    const nameInput = page
-      .getByPlaceholder(/folder name/i)
-      .or(page.getByRole("textbox").first());
+    const nameInput = page.getByPlaceholder(/folder name/i).or(page.getByRole("textbox").first());
     await expect(nameInput.first()).toBeVisible({ timeout: 10_000 });
     await nameInput.first().fill(folderName);
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|add|submit/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|add|submit/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
@@ -224,13 +222,23 @@ test.describe("File Manager", () => {
       const deleteOption = page
         .getByRole("menuitem", { name: /delete|remove/i })
         .or(page.getByText(/delete/i));
-      if (await deleteOption.first().isVisible().catch(() => false)) {
+      if (
+        await deleteOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteOption.first().click();
         // Confirm deletion
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);

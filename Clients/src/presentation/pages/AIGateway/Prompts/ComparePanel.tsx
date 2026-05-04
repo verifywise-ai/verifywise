@@ -5,7 +5,10 @@ import Select from "../../../components/Inputs/Select";
 import palette from "../../../themes/palette";
 import { resolveMessageVariables, streamPromptTest, StreamPromptTestResult } from "../shared";
 
-interface Message { role: string; content: string }
+interface Message {
+  role: string;
+  content: string;
+}
 interface Version {
   id: number;
   version: number;
@@ -41,7 +44,9 @@ export default function ComparePanel({
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const versionItems = versions.map((v) => ({
@@ -53,7 +58,7 @@ export default function ComparePanel({
     ver: Version,
     userMsg: string,
     setResult: React.Dispatch<React.SetStateAction<StreamPromptTestResult | null>>,
-    signal: AbortSignal
+    signal: AbortSignal,
   ) => {
     const resolved = resolveMessageVariables(ver.content || [], variableValues);
     const testMessages = [...resolved];
@@ -129,7 +134,9 @@ export default function ComparePanel({
             getOptionValue={(item) => item._id}
           />
         </Box>
-        <Typography fontSize={13} fontWeight={500} color="text.secondary" mt="8px">Endpoint</Typography>
+        <Typography fontSize={13} fontWeight={500} color="text.secondary" mt="8px">
+          Endpoint
+        </Typography>
         <Select
           id="compare-select-endpoint"
           value={selectedEndpoint}
@@ -149,27 +156,60 @@ export default function ComparePanel({
       {/* Results */}
       <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Column A */}
-        <Box sx={{ flex: 1, borderRight: `1px solid ${palette.border.light}`, overflow: "auto", p: "16px" }}>
+        <Box
+          sx={{
+            flex: 1,
+            borderRight: `1px solid ${palette.border.light}`,
+            overflow: "auto",
+            p: "16px",
+          }}
+        >
           <Typography fontSize={11} fontWeight={600} color="text.secondary" mb="8px">
             {versionA ? `v${versionA}` : "Version A"}
           </Typography>
           {resultA ? (
             <>
-              <Box sx={{ bgcolor: "#F9FAFB", borderRadius: "4px", p: "16px", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <Box
+                sx={{
+                  bgcolor: "#F9FAFB",
+                  borderRadius: "4px",
+                  p: "16px",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
                 {resultA.content || (isSending ? "..." : "")}
               </Box>
               {resultA.latency > 0 && (
                 <Box sx={{ display: "flex", gap: "16px", mt: "8px" }}>
-                  <Typography fontSize={11} color="text.secondary">{resultA.latency}ms</Typography>
-                  {resultA.tokens > 0 && <Typography fontSize={11} color="text.secondary">{resultA.tokens} tokens</Typography>}
-                  {resultA.cost > 0 && <Typography fontSize={11} color="text.secondary">${resultA.cost.toFixed(4)}</Typography>}
+                  <Typography fontSize={11} color="text.secondary">
+                    {resultA.latency}ms
+                  </Typography>
+                  {resultA.tokens > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      {resultA.tokens} tokens
+                    </Typography>
+                  )}
+                  {resultA.cost > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      ${resultA.cost.toFixed(4)}
+                    </Typography>
+                  )}
                 </Box>
               )}
             </>
           ) : !isSending ? (
             <Box sx={{ textAlign: "center", py: "32px" }}>
-              <GitCompareArrows size={24} strokeWidth={1} color={palette.border.dark} style={{ marginBottom: 8 }} />
-              <Typography fontSize={12} color="text.disabled">Select versions and send a message</Typography>
+              <GitCompareArrows
+                size={24}
+                strokeWidth={1}
+                color={palette.border.dark}
+                style={{ marginBottom: 8 }}
+              />
+              <Typography fontSize={12} color="text.disabled">
+                Select versions and send a message
+              </Typography>
             </Box>
           ) : null}
         </Box>
@@ -181,31 +221,66 @@ export default function ComparePanel({
           </Typography>
           {resultB ? (
             <>
-              <Box sx={{ bgcolor: "#F9FAFB", borderRadius: "4px", p: "16px", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <Box
+                sx={{
+                  bgcolor: "#F9FAFB",
+                  borderRadius: "4px",
+                  p: "16px",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
                 {resultB.content || (isSending ? "..." : "")}
               </Box>
               {resultB.latency > 0 && (
                 <Box sx={{ display: "flex", gap: "16px", mt: "8px" }}>
-                  <Typography fontSize={11} color="text.secondary">{resultB.latency}ms</Typography>
-                  {resultB.tokens > 0 && <Typography fontSize={11} color="text.secondary">{resultB.tokens} tokens</Typography>}
-                  {resultB.cost > 0 && <Typography fontSize={11} color="text.secondary">${resultB.cost.toFixed(4)}</Typography>}
+                  <Typography fontSize={11} color="text.secondary">
+                    {resultB.latency}ms
+                  </Typography>
+                  {resultB.tokens > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      {resultB.tokens} tokens
+                    </Typography>
+                  )}
+                  {resultB.cost > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      ${resultB.cost.toFixed(4)}
+                    </Typography>
+                  )}
                 </Box>
               )}
             </>
           ) : !isSending ? (
             <Box sx={{ textAlign: "center", py: "32px" }}>
-              <Typography fontSize={12} color="text.disabled">Output appears here</Typography>
+              <Typography fontSize={12} color="text.disabled">
+                Output appears here
+              </Typography>
             </Box>
           ) : null}
         </Box>
       </Box>
 
       {/* Chat input */}
-      <Box sx={{ display: "flex", gap: "8px", p: "16px", borderTop: `1px solid ${palette.border.light}`, bgcolor: "background.paper", flexShrink: 0 }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: "8px",
+          p: "16px",
+          borderTop: `1px solid ${palette.border.light}`,
+          bgcolor: "background.paper",
+          flexShrink: 0,
+        }}
+      >
         <TextareaAutosize
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           placeholder="Type a message to compare..."
           minRows={1}
           maxRows={4}

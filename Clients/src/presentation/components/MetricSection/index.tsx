@@ -14,11 +14,7 @@ import { MetricSectionProps } from "../../types/interfaces/i.metricSection";
  * @param {Controls} props.controls - The controls data for metrics calculation.
  * @returns {JSX.Element} The rendered MetricSection component.
  */
-const MetricSection: FC<MetricSectionProps> = ({
-  title,
-  assessments,
-  controls,
-}) => {
+const MetricSection: FC<MetricSectionProps> = ({ title, assessments, controls }) => {
   const complianceMetrics: {
     title: string;
     value: string | number;
@@ -48,12 +44,7 @@ const MetricSection: FC<MetricSectionProps> = ({
       >
         {title}
       </Typography>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        spacing={15}
-        sx={{ mb: 17 }}
-      >
+      <Stack direction="row" justifyContent="space-between" spacing={15} sx={{ mb: 17 }}>
         {metrics.map((metric, index) => (
           <StyledStack key={index}>
             <Typography sx={styles.gridTitle}>{metric.title}</Typography>

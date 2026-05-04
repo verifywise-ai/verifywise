@@ -15,7 +15,8 @@ export const EnvironmentalImpact = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization conducted an environmental impact assessment by reviewing the energy consumption of the AI models during training and inference, as well as the carbon footprint of the data centers. We also evaluated the AI provider''s sustainability practices, including their use of renewable energy and efforts to minimize waste through efficient hardware usage."
+        answer:
+          "Our organization conducted an environmental impact assessment by reviewing the energy consumption of the AI models during training and inference, as well as the carbon footprint of the data centers. We also evaluated the AI provider''s sustainability practices, including their use of renewable energy and efforts to minimize waste through efficient hardware usage.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const EnvironmentalImpact = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The AI application has a noticeable environmental effect primarily due to its energy consumption during model training and inference. The carbon footprint is measured through tracking the power usage of the data centers and the carbon intensity of the electricity grid. To mitigate these effects, we prioritize the use of AI providers who use renewable energy and implement energy-efficient hardware solutions."
+        answer:
+          "The AI application has a noticeable environmental effect primarily due to its energy consumption during model training and inference. The carbon footprint is measured through tracking the power usage of the data centers and the carbon intensity of the electricity grid. To mitigate these effects, we prioritize the use of AI providers who use renewable energy and implement energy-efficient hardware solutions.",
       },
     ],
   },

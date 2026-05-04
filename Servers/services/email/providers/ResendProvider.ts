@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
-import { EmailProvider, EmailOptions, EmailResult } from '../types';
+import { Resend } from "resend";
+import { EmailProvider, EmailOptions, EmailResult } from "../types";
 
 export class ResendProvider implements EmailProvider {
   private resend: Resend;
@@ -11,7 +11,7 @@ export class ResendProvider implements EmailProvider {
   }
 
   getProviderName(): string {
-    return 'Resend';
+    return "Resend";
   }
 
   async validateConfig(): Promise<boolean> {
@@ -20,7 +20,7 @@ export class ResendProvider implements EmailProvider {
       // Resend doesn't have a direct validation endpoint, so we'll just check if the key exists
       return !!this.apiKey && this.apiKey.length > 0;
     } catch (error) {
-      console.error('Resend configuration validation failed:', error);
+      console.error("Resend configuration validation failed:", error);
       return false;
     }
   }
@@ -36,7 +36,7 @@ export class ResendProvider implements EmailProvider {
 
       // Add attachments if provided
       if (options.attachments && options.attachments.length > 0) {
-        mailOptions.attachments = options.attachments.map(att => ({
+        mailOptions.attachments = options.attachments.map((att) => ({
           filename: att.filename,
           content: att.content,
         }));
@@ -62,8 +62,8 @@ export class ResendProvider implements EmailProvider {
       return {
         success: false,
         error: {
-          name: error.name || 'ResendError',
-          message: error.message || 'Unknown Resend error',
+          name: error.name || "ResendError",
+          message: error.message || "Unknown Resend error",
         },
       };
     }

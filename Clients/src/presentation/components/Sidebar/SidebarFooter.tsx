@@ -122,7 +122,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const location = useLocation();
   const logout = useLogout();
   const { activeModule } = useActiveModule();
-  const managementItems = activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
+  const managementItems =
+    activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
   const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
   const [selfUser, setSelfUser] = useState<User | null>(null);
 
@@ -165,9 +166,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
     localStorage.setItem("vw_dark_mode", String(darkMode));
   }, [darkMode]);
 
-  const user: User = selfUser
-    || (users ? users.find((u: User) => u.id === userId) : null)
-    || DEFAULT_USER;
+  const user: User =
+    selfUser || (users ? users.find((u: User) => u.id === userId) : null) || DEFAULT_USER;
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -223,7 +223,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   }, [slideoverOpen]);
 
   const isManagementActive = managementItems.some(
-    (item) => item.path && (location.pathname.startsWith(`${item.path}/`) || location.pathname === item.path)
+    (item) =>
+      item.path &&
+      (location.pathname.startsWith(`${item.path}/`) || location.pathname === item.path),
   );
 
   return (
@@ -269,9 +271,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 background: hasDemoData
                   ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
                   : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
-                border: hasDemoData
-                  ? "1px solid #FECDCA"
-                  : "1px solid #A6F4C5",
+                border: hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
                 "&:hover": {
                   background: hasDemoData
                     ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
@@ -319,11 +319,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   </ListItemText>
                   {/* Show X icon on hover only for "Create demo data" button */}
                   {!hasDemoData && demoButtonHovered && (
-                    <Tooltip
-                      title="Hide this button permanently"
-                      placement="top"
-                      arrow
-                    >
+                    <Tooltip title="Hide this button permanently" placement="top" arrow>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -438,154 +434,43 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           </Tooltip>
         </List>
       ) : (
-      <List
-        component="nav"
-        aria-labelledby="nested-management-subheader"
-        disablePadding
-        sx={{
-          px: theme.spacing(8),
-          flexShrink: 0,
-        }}
-      >
-        <Tooltip
-          sx={{ fontSize: 13 }}
-          placement="right"
-          title={delayedCollapsed ? "Management" : ""}
-          slotProps={{
-            popper: {
-              modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
-            },
+        <List
+          component="nav"
+          aria-labelledby="nested-management-subheader"
+          disablePadding
+          sx={{
+            px: theme.spacing(8),
+            flexShrink: 0,
           }}
-          disableInteractive
         >
-          <ListItemButton
-            disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
-            onClick={(e) => setManagementAnchorEl(e.currentTarget)}
-            sx={{
-              height: "32px",
-              gap: theme.spacing(4),
-              borderRadius: theme.shape.borderRadius,
-              px: theme.spacing(4),
-              background: isManagementActive
-                ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                : "transparent",
-              border: isManagementActive
-                ? "1px solid #D8D8D8"
-                : "1px solid transparent",
-              "&:hover": {
-                background: isManagementActive
-                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                  : "#F9F9F9",
-                border: isManagementActive
-                  ? "1px solid #D8D8D8"
-                  : "1px solid transparent",
-              },
-              "&:hover svg": {
-                color: `${brand.primary} !important`,
-                stroke: `${brand.primary} !important`,
-              },
-              "&:hover svg path": {
-                stroke: `${brand.primary} !important`,
+          <Tooltip
+            sx={{ fontSize: 13 }}
+            placement="right"
+            title={delayedCollapsed ? "Management" : ""}
+            slotProps={{
+              popper: {
+                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
               },
             }}
+            disableInteractive
           >
-            <ListItemIcon
+            <ListItemButton
+              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              onClick={(e) => setManagementAnchorEl(e.currentTarget)}
               sx={{
-                minWidth: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                width: "16px",
-                mr: 0,
-                "& svg": {
-                  color: isManagementActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
-                  stroke: isManagementActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
-                  transition: "color 0.2s ease, stroke 0.2s ease",
-                },
-                "& svg path": {
-                  stroke: isManagementActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
-                },
-              }}
-            >
-              <FolderCog size={16} strokeWidth={1.5} />
-            </ListItemIcon>
-            {!delayedCollapsed && (
-              <>
-                <ListItemText
-                  sx={{
-                    "& .MuiListItemText-primary": {
-                      fontSize: "13px",
-                    },
-                  }}
-                >
-                  Management
-                </ListItemText>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={1.5}
-                  style={{
-                    transform: managementAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 0.2s ease",
-                  }}
-                />
-              </>
-            )}
-          </ListItemButton>
-        </Tooltip>
-
-        {/* Management Dropdown Menu */}
-        <Menu
-          anchorEl={managementAnchorEl}
-          open={Boolean(managementAnchorEl)}
-          onClose={() => setManagementAnchorEl(null)}
-          anchorOrigin={{
-            vertical: "top",
-            horizontal: collapsed ? "right" : "left",
-          }}
-          transformOrigin={{
-            vertical: "bottom",
-            horizontal: collapsed ? "left" : "left",
-          }}
-          slotProps={{
-            paper: {
-              sx: {
-                width: managementAnchorEl ? managementAnchorEl.offsetWidth : "auto",
-                minWidth: collapsed ? "180px" : "auto",
-                borderRadius: theme.shape.borderRadius,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                border: `1px solid ${theme.palette.divider}`,
-                mt: -1,
-              },
-            },
-          }}
-        >
-          {managementItems.map((item) => (
-            <MenuItem
-              key={item.path || item.name}
-              onClick={() => {
-                if (item.action) {
-                  item.action();
-                } else if (item.path) {
-                  navigate(item.path);
-                }
-                setManagementAnchorEl(null);
-              }}
-              sx={{
-                display: "flex",
-                gap: theme.spacing(4),
-                px: theme.spacing(4),
-                py: 0,
                 height: "32px",
-                fontSize: "13px",
+                gap: theme.spacing(4),
                 borderRadius: theme.shape.borderRadius,
+                px: theme.spacing(4),
+                background: isManagementActive
+                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  : "transparent",
+                border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
                 "&:hover": {
-                  backgroundColor: "#F9F9F9",
+                  background: isManagementActive
+                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    : "#F9F9F9",
+                  border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
                 },
                 "&:hover svg": {
                   color: `${brand.primary} !important`,
@@ -596,56 +481,163 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 },
               }}
             >
-              <Box
+              <ListItemIcon
                 sx={{
+                  minWidth: 0,
                   display: "flex",
                   alignItems: "center",
-                  gap: "12px",
-                  width: "100%",
+                  justifyContent: "flex-start",
+                  width: "16px",
+                  mr: 0,
+                  "& svg": {
+                    color: isManagementActive
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
+                    stroke: isManagementActive
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
+                    transition: "color 0.2s ease, stroke 0.2s ease",
+                  },
+                  "& svg path": {
+                    stroke: isManagementActive
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
+                  },
+                }}
+              >
+                <FolderCog size={16} strokeWidth={1.5} />
+              </ListItemIcon>
+              {!delayedCollapsed && (
+                <>
+                  <ListItemText
+                    sx={{
+                      "& .MuiListItemText-primary": {
+                        fontSize: "13px",
+                      },
+                    }}
+                  >
+                    Management
+                  </ListItemText>
+                  <ChevronDown
+                    size={16}
+                    strokeWidth={1.5}
+                    style={{
+                      transform: managementAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </>
+              )}
+            </ListItemButton>
+          </Tooltip>
+
+          {/* Management Dropdown Menu */}
+          <Menu
+            anchorEl={managementAnchorEl}
+            open={Boolean(managementAnchorEl)}
+            onClose={() => setManagementAnchorEl(null)}
+            anchorOrigin={{
+              vertical: "top",
+              horizontal: collapsed ? "right" : "left",
+            }}
+            transformOrigin={{
+              vertical: "bottom",
+              horizontal: collapsed ? "left" : "left",
+            }}
+            slotProps={{
+              paper: {
+                sx: {
+                  width: managementAnchorEl ? managementAnchorEl.offsetWidth : "auto",
+                  minWidth: collapsed ? "180px" : "auto",
+                  borderRadius: theme.shape.borderRadius,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  border: `1px solid ${theme.palette.divider}`,
+                  mt: -1,
+                },
+              },
+            }}
+          >
+            {managementItems.map((item) => (
+              <MenuItem
+                key={item.path || item.name}
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                  } else if (item.path) {
+                    navigate(item.path);
+                  }
+                  setManagementAnchorEl(null);
+                }}
+                sx={{
+                  display: "flex",
+                  gap: theme.spacing(4),
+                  px: theme.spacing(4),
+                  py: 0,
+                  height: "32px",
+                  fontSize: "13px",
+                  borderRadius: theme.shape.borderRadius,
+                  "&:hover": {
+                    backgroundColor: "#F9F9F9",
+                  },
+                  "&:hover svg": {
+                    color: `${brand.primary} !important`,
+                    stroke: `${brand.primary} !important`,
+                  },
+                  "&:hover svg path": {
+                    stroke: `${brand.primary} !important`,
+                  },
                 }}
               >
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    width: "16px",
-                    height: "16px",
-                    flexShrink: 0,
-                    "& svg": {
-                      color:
-                        item.path && location.pathname.includes(item.path)
-                          ? `${brand.primary} !important`
-                          : `${theme.palette.text.tertiary} !important`,
-                      stroke:
-                        item.path && location.pathname.includes(item.path)
-                          ? `${brand.primary} !important`
-                          : `${theme.palette.text.tertiary} !important`,
-                      transition: "color 0.2s ease, stroke 0.2s ease",
-                    },
-                    "& svg path": {
-                      stroke:
-                        item.path && location.pathname.includes(item.path)
-                          ? `${brand.primary} !important`
-                          : `${theme.palette.text.tertiary} !important`,
-                    },
+                    gap: "12px",
+                    width: "100%",
                   }}
                 >
-                  {item.icon}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "16px",
+                      height: "16px",
+                      flexShrink: 0,
+                      "& svg": {
+                        color:
+                          item.path && location.pathname.includes(item.path)
+                            ? `${brand.primary} !important`
+                            : `${theme.palette.text.tertiary} !important`,
+                        stroke:
+                          item.path && location.pathname.includes(item.path)
+                            ? `${brand.primary} !important`
+                            : `${theme.palette.text.tertiary} !important`,
+                        transition: "color 0.2s ease, stroke 0.2s ease",
+                      },
+                      "& svg path": {
+                        stroke:
+                          item.path && location.pathname.includes(item.path)
+                            ? `${brand.primary} !important`
+                            : `${theme.palette.text.tertiary} !important`,
+                      },
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontSize: "13px",
+                      color: theme.palette.text.secondary,
+                    }}
+                  >
+                    {item.name}
+                  </Typography>
                 </Box>
-                <Typography
-                  sx={{
-                    fontSize: "13px",
-                    color: theme.palette.text.secondary,
-                  }}
-                >
-                  {item.name}
-                </Typography>
-              </Box>
-            </MenuItem>
-          ))}
-        </Menu>
-      </List>
+              </MenuItem>
+            ))}
+          </Menu>
+        </List>
       )}
 
       {/* Ready To Subscribe Box - only shown when not collapsed and enabled */}
@@ -807,7 +799,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     }}
                   >
                     <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 0.5,
+                        }}
+                      >
                         <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
                           {user.name} {user.surname}
                         </Typography>
@@ -833,75 +832,72 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   </ListItemButton>
 
                   {/* Create Demo Data / Delete Demo Data - Only for admins */}
-                  {isAdmin && (hasDemoData ? (
-                    <ListItemButton
-                      onClick={() => {
-                        if (onOpenDeleteDemoData) {
-                          onOpenDeleteDemoData();
-                        }
-                        closePopup();
-                      }}
-                      sx={{
-                        height: "32px",
-                        gap: theme.spacing(4),
-                        borderRadius: theme.shape.borderRadius,
-                        px: theme.spacing(4),
-                        "& svg": {
-                          color: theme.palette.text.tertiary,
-                          stroke: theme.palette.text.tertiary,
-                        },
-                        "&:hover": {
-                          backgroundColor: background.accent,
-                        },
-                        "&:hover svg": {
-                          color: `${brand.primary} !important`,
-                          stroke: `${brand.primary} !important`,
-                        },
-                        "&:hover svg path": {
-                          stroke: `${brand.primary} !important`,
-                        },
-                      }}
-                    >
-                      <Trash2 size={16} strokeWidth={1.5} />
-                      <Typography sx={{ fontSize: "13px" }}>
-                        Delete demo data
-                      </Typography>
-                    </ListItemButton>
-                  ) : (
-                    <ListItemButton
-                      onClick={() => {
-                        if (onOpenCreateDemoData) {
-                          onOpenCreateDemoData();
-                        }
-                        closePopup();
-                      }}
-                      sx={{
-                        height: "32px",
-                        gap: theme.spacing(4),
-                        borderRadius: theme.shape.borderRadius,
-                        px: theme.spacing(4),
-                        "& svg": {
-                          color: theme.palette.text.tertiary,
-                          stroke: theme.palette.text.tertiary,
-                        },
-                        "&:hover": {
-                          backgroundColor: background.accent,
-                        },
-                        "&:hover svg": {
-                          color: `${brand.primary} !important`,
-                          stroke: `${brand.primary} !important`,
-                        },
-                        "&:hover svg path": {
-                          stroke: `${brand.primary} !important`,
-                        },
-                      }}
-                    >
-                      <Database size={16} strokeWidth={1.5} />
-                      <Typography sx={{ fontSize: "13px" }}>
-                        Create demo data
-                      </Typography>
-                    </ListItemButton>
-                  ))}
+                  {isAdmin &&
+                    (hasDemoData ? (
+                      <ListItemButton
+                        onClick={() => {
+                          if (onOpenDeleteDemoData) {
+                            onOpenDeleteDemoData();
+                          }
+                          closePopup();
+                        }}
+                        sx={{
+                          height: "32px",
+                          gap: theme.spacing(4),
+                          borderRadius: theme.shape.borderRadius,
+                          px: theme.spacing(4),
+                          "& svg": {
+                            color: theme.palette.text.tertiary,
+                            stroke: theme.palette.text.tertiary,
+                          },
+                          "&:hover": {
+                            backgroundColor: background.accent,
+                          },
+                          "&:hover svg": {
+                            color: `${brand.primary} !important`,
+                            stroke: `${brand.primary} !important`,
+                          },
+                          "&:hover svg path": {
+                            stroke: `${brand.primary} !important`,
+                          },
+                        }}
+                      >
+                        <Trash2 size={16} strokeWidth={1.5} />
+                        <Typography sx={{ fontSize: "13px" }}>Delete demo data</Typography>
+                      </ListItemButton>
+                    ) : (
+                      <ListItemButton
+                        onClick={() => {
+                          if (onOpenCreateDemoData) {
+                            onOpenCreateDemoData();
+                          }
+                          closePopup();
+                        }}
+                        sx={{
+                          height: "32px",
+                          gap: theme.spacing(4),
+                          borderRadius: theme.shape.borderRadius,
+                          px: theme.spacing(4),
+                          "& svg": {
+                            color: theme.palette.text.tertiary,
+                            stroke: theme.palette.text.tertiary,
+                          },
+                          "&:hover": {
+                            backgroundColor: background.accent,
+                          },
+                          "&:hover svg": {
+                            color: `${brand.primary} !important`,
+                            stroke: `${brand.primary} !important`,
+                          },
+                          "&:hover svg path": {
+                            stroke: `${brand.primary} !important`,
+                          },
+                        }}
+                      >
+                        <Database size={16} strokeWidth={1.5} />
+                        <Typography sx={{ fontSize: "13px" }}>Create demo data</Typography>
+                      </ListItemButton>
+                    ))}
                 </Stack>
               </Box>
 
@@ -1133,7 +1129,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 </Typography>
 
                 <ListItemButton
-                  onClick={() => { setDarkMode((prev) => !prev); closePopup(); }}
+                  onClick={() => {
+                    setDarkMode((prev) => !prev);
+                    closePopup();
+                  }}
                   sx={{
                     height: "32px",
                     gap: theme.spacing(4),

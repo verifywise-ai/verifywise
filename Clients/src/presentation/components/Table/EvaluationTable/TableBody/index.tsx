@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { TableBody, TableRow, TableCell, IconButton, Typography, Popover, Stack, Box, keyframes } from "@mui/material";
+import {
+  TableBody,
+  TableRow,
+  TableCell,
+  IconButton,
+  Typography,
+  Popover,
+  Stack,
+  Box,
+  keyframes,
+} from "@mui/material";
 import { MoreVertical, RotateCcw, Download, Copy, Trash2, Loader2 } from "lucide-react";
 
 // Pulse animation for running text
@@ -84,12 +94,11 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
 
   return (
     <TableBody>
-      {rows
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((row) => {
-          const isRunning = row.status === "Running" || row.status === "In Progress" || row.status === "Pending";
-          
-          return (
+      {rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+        const isRunning =
+          row.status === "Running" || row.status === "In Progress" || row.status === "Pending";
+
+        return (
           <TableRow
             key={row.id}
             onClick={() => onShowDetails(row)}
@@ -133,7 +142,11 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
                   </Typography>
                 </Box>
               ) : row.status === "Failed" ? (
-                <Typography sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}>Failed</Typography>
+                <Typography
+                  sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}
+                >
+                  Failed
+                </Typography>
               ) : (
                 row.name || row.id
               )}
@@ -228,7 +241,9 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
                     Linked
                   </Box>
                 ) : (
-                  <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>Unlinked</Typography>
+                  <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
+                    Unlinked
+                  </Typography>
                 )}
               </TableCell>
             )}
@@ -281,8 +296,8 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
             )}
           </TableRow>
         );
-        })}
-      
+      })}
+
       {/* Action Menu */}
       <Popover
         open={Boolean(menuAnchorEl)}
@@ -308,7 +323,11 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
             <CustomizableButton
               variant="outlined"
               onClick={handleRerunClick}
-              isDisabled={menuRow?.status === "Running" || menuRow?.status === "In Progress" || menuRow?.status === "Pending"}
+              isDisabled={
+                menuRow?.status === "Running" ||
+                menuRow?.status === "In Progress" ||
+                menuRow?.status === "Pending"
+              }
               startIcon={<RotateCcw size={14} />}
               sx={{
                 height: "34px",
@@ -405,7 +424,8 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
           title="Delete this evaluation?"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to delete evaluation "{rowToDelete.name || rowToDelete.id}"? This action cannot be undone.
+              Are you sure you want to delete evaluation "{rowToDelete.name || rowToDelete.id}"?
+              This action cannot be undone.
             </Typography>
           }
           cancelText="Cancel"

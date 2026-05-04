@@ -11,12 +11,12 @@ export interface TabLabelWithCountOptions {
 }
 
 // Constants for consistent badge styling
-const BADGE_MIN_WIDTH = '22px';
-const BADGE_HEIGHT = '22px';
-const BADGE_FONT_SIZE = '10px';
-const BADGE_COLOR = '#047857';
-const BADGE_BG_COLOR = '#D1FAE5';
-const BADGE_BORDER_RADIUS = '11px';
+const BADGE_MIN_WIDTH = "22px";
+const BADGE_HEIGHT = "22px";
+const BADGE_FONT_SIZE = "10px";
+const BADGE_COLOR = "#047857";
+const BADGE_BG_COLOR = "#D1FAE5";
+const BADGE_BORDER_RADIUS = "11px";
 const MAX_DISPLAY_COUNT = 99;
 
 /**
@@ -64,20 +64,18 @@ export const createTabLabelWithCount = ({
   chipSx,
   icon,
 }: TabLabelWithCountOptions): ReactNode => {
-  const shouldShowChip = !isLoading &&
-                         count !== undefined &&
-                         (showZero || count > 0);
+  const shouldShowChip = !isLoading && count !== undefined && (showZero || count > 0);
 
   // Return Box wrapper for consistent alignment across all tabs
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, minHeight: BADGE_HEIGHT }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, minHeight: BADGE_HEIGHT }}>
       {icon && (
         <Box
           component="span"
           sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            marginRight: '4px',
+            display: "inline-flex",
+            alignItems: "center",
+            marginRight: "4px",
             opacity: 0.7,
           }}
         >
@@ -89,12 +87,12 @@ export const createTabLabelWithCount = ({
         <Box
           component="span"
           sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             minWidth: BADGE_MIN_WIDTH,
             height: BADGE_HEIGHT,
-            padding: '0 6px',
+            padding: "0 6px",
             fontSize: BADGE_FONT_SIZE,
             fontWeight: 600,
             color: BADGE_COLOR,

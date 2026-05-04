@@ -12,13 +12,11 @@ test.describe("AI Gateway", () => {
         .getByText(/gateway/i)
         .or(page.getByText(/ai gateway/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/ai-gateway");
     await page.waitForLoadState("domcontentloaded");
 
@@ -80,9 +78,7 @@ test.describe("AI Gateway", () => {
 
   // --- Tier 1: Sidebar navigation ---
 
-  test("can navigate between sub-pages via sidebar", async ({
-    authedPage: page,
-  }) => {
+  test("can navigate between sub-pages via sidebar", async ({ authedPage: page }) => {
     await page.goto("/ai-gateway");
     await page.waitForTimeout(1000);
 
@@ -92,7 +88,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByRole("tab", { name: /endpoint/i }))
       .or(page.getByText(/endpoints/i));
 
-    if (await sidebarLinks.first().isVisible().catch(() => false)) {
+    if (
+      await sidebarLinks
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await sidebarLinks.first().click();
       await page.waitForTimeout(500);
       await expect(page).toHaveURL(/endpoint/i, { timeout: 10_000 });
@@ -110,7 +111,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByRole("button", { name: /new.*endpoint/i }))
       .or(page.getByRole("button", { name: /create/i }));
 
-    if (!(await addBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -128,7 +134,12 @@ test.describe("AI Gateway", () => {
     const providerInput = page
       .getByRole("combobox", { name: /provider/i })
       .or(page.getByPlaceholder(/provider/i));
-    if (await providerInput.first().isVisible().catch(() => false)) {
+    if (
+      await providerInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await providerInput.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible().catch(() => false)) {
@@ -137,9 +148,7 @@ test.describe("AI Gateway", () => {
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
@@ -148,17 +157,32 @@ test.describe("AI Gateway", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
       } else {
@@ -178,7 +202,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByRole("button", { name: /new/i }))
       .or(page.getByRole("button", { name: /create/i }));
 
-    if (!(await addBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -190,7 +219,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByPlaceholder(/name/i))
       .or(page.getByRole("textbox").first());
 
-    if (await nameInput.first().isVisible().catch(() => false)) {
+    if (
+      await nameInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await nameInput.first().fill(`E2E PII Rule ${Date.now()}`);
     }
 
@@ -198,20 +232,28 @@ test.describe("AI Gateway", () => {
     const typeSelect = page
       .getByRole("combobox", { name: /type/i })
       .or(page.getByText(/select.*type/i));
-    if (await typeSelect.first().isVisible().catch(() => false)) {
+    if (
+      await typeSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await typeSelect.first().click();
       const piiOption = page
         .getByRole("option", { name: /pii/i })
         .or(page.getByRole("option").first());
-      if (await piiOption.first().isVisible().catch(() => false)) {
+      if (
+        await piiOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await piiOption.first().click();
       }
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
@@ -220,17 +262,32 @@ test.describe("AI Gateway", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
       } else {
@@ -249,7 +306,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByRole("button", { name: /new.*prompt/i }))
       .or(page.getByRole("button", { name: /create/i }));
 
-    if (!(await addBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -261,7 +323,12 @@ test.describe("AI Gateway", () => {
       .or(page.getByPlaceholder(/name/i))
       .or(page.getByRole("textbox").first());
 
-    if (await nameInput.first().isVisible().catch(() => false)) {
+    if (
+      await nameInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await nameInput.first().fill(`E2E Prompt ${Date.now()}`);
     }
 
@@ -270,14 +337,17 @@ test.describe("AI Gateway", () => {
       .getByRole("textbox", { name: /content|prompt|text/i })
       .or(page.getByPlaceholder(/prompt/i))
       .or(page.locator("textarea").first());
-    if (await contentInput.first().isVisible().catch(() => false)) {
+    if (
+      await contentInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await contentInput.first().fill("E2E test prompt content");
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
@@ -286,17 +356,32 @@ test.describe("AI Gateway", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
       } else {
@@ -308,9 +393,7 @@ test.describe("AI Gateway", () => {
   // --- Tier 5: Playground chat ---
 
   test.describe("Playground", () => {
-    test("playground page renders composer or empty state", async ({
-      authedPage: page,
-    }) => {
+    test("playground page renders composer or empty state", async ({ authedPage: page }) => {
       await page.goto("/ai-gateway/playground");
       await page.waitForTimeout(2000);
 
@@ -326,19 +409,22 @@ test.describe("AI Gateway", () => {
       await expect(content.first()).toBeVisible({ timeout: 15_000 });
     });
 
-    test("endpoint selector shows available endpoints", async ({
-      authedPage: page,
-    }) => {
+    test("endpoint selector shows available endpoints", async ({ authedPage: page }) => {
       await page.goto("/ai-gateway/playground");
       await page.waitForTimeout(2000);
 
       // MUI Select renders a hidden input#endpoint + a visible div[role=combobox]
       const endpointSelect = page
         .locator('#endpoint ~ div[role="combobox"]')
-        .or(page.locator('#endpoint').locator('..').getByRole("combobox"))
+        .or(page.locator("#endpoint").locator("..").getByRole("combobox"))
         .or(page.getByRole("combobox").first());
 
-      if (!(await endpointSelect.first().isVisible().catch(() => false))) {
+      if (
+        !(await endpointSelect
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         test.skip();
         return;
       }
@@ -348,7 +434,12 @@ test.describe("AI Gateway", () => {
 
       // Check if options appear
       const option = page.getByRole("option");
-      if (await option.first().isVisible().catch(() => false)) {
+      if (
+        await option
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(option.first()).toBeVisible();
       }
 
@@ -366,7 +457,12 @@ test.describe("AI Gateway", () => {
         .getByRole("button", { name: /settings/i })
         .or(page.locator('[aria-label*="settings" i]'));
 
-      if (!(await settingsBtn.first().isVisible().catch(() => false))) {
+      if (
+        !(await settingsBtn
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         test.skip();
         return;
       }
@@ -375,17 +471,23 @@ test.describe("AI Gateway", () => {
       await page.waitForTimeout(500);
 
       // Verify modal with temperature and max tokens
-      const tempLabel = page
-        .getByText(/temperature/i)
-        .or(page.getByText(/temp/i));
-      const tokensLabel = page
-        .getByText(/max tokens/i)
-        .or(page.getByText(/tokens/i));
+      const tempLabel = page.getByText(/temperature/i).or(page.getByText(/temp/i));
+      const tokensLabel = page.getByText(/max tokens/i).or(page.getByText(/tokens/i));
 
-      if (await tempLabel.first().isVisible().catch(() => false)) {
+      if (
+        await tempLabel
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(tempLabel.first()).toBeVisible();
       }
-      if (await tokensLabel.first().isVisible().catch(() => false)) {
+      if (
+        await tokensLabel
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(tokensLabel.first()).toBeVisible();
       }
 
@@ -393,7 +495,12 @@ test.describe("AI Gateway", () => {
       const closeBtn = page
         .getByRole("button", { name: /close|cancel/i })
         .or(page.getByRole("button", { name: /save/i }));
-      if (await closeBtn.first().isVisible().catch(() => false)) {
+      if (
+        await closeBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await closeBtn.first().click();
       } else {
         await page.keyboard.press("Escape");

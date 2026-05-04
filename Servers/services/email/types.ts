@@ -23,34 +23,39 @@ export interface EmailOptions {
 export function validateEmailOptions(options: EmailOptions): void {
   // Validate email addresses
   if (!options.to || !isValidEmail(options.to)) {
-    throw new Error('Invalid recipient email address');
+    throw new Error("Invalid recipient email address");
   }
 
   if (options.from && !isValidEmail(options.from)) {
-    throw new Error('Invalid sender email address');
+    throw new Error("Invalid sender email address");
   }
 
   // Validate subject
   if (!options.subject || options.subject.length === 0) {
-    throw new Error('Subject is required');
+    throw new Error("Subject is required");
   }
 
   if (options.subject.length > 998) {
-    throw new Error('Subject too long (max 998 characters)');
+    throw new Error("Subject too long (max 998 characters)");
   }
 
   // Prevent header injection attacks
-  if (containsNewlines(options.to) || containsNewlines(options.from || '') || containsNewlines(options.subject)) {
-    throw new Error('Email header injection detected: newline characters not allowed');
+  if (
+    containsNewlines(options.to) ||
+    containsNewlines(options.from || "") ||
+    containsNewlines(options.subject)
+  ) {
+    throw new Error("Email header injection detected: newline characters not allowed");
   }
 
   // Validate HTML content
   if (!options.html || options.html.length === 0) {
-    throw new Error('Email content is required');
+    throw new Error("Email content is required");
   }
 
-  if (options.html.length > 1000000) { // 1MB limit
-    throw new Error('Email content too large (max 1MB)');
+  if (options.html.length > 1000000) {
+    // 1MB limit
+    throw new Error("Email content too large (max 1MB)");
   }
 }
 
@@ -60,20 +65,21 @@ export function validateEmailOptions(options: EmailOptions): void {
  */
 function isValidEmail(email: string): boolean {
   // Basic length and format checks
-  if (!email || typeof email !== 'string' || email.length > 320) {
+  if (!email || typeof email !== "string" || email.length > 320) {
     return false; // RFC 5321 limit
   }
 
   // RFC 5322 compliant regex (simplified but secure)
   // Allows standard alphanumeric and safe special characters
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
   if (!emailRegex.test(email)) {
     return false;
   }
 
   // Split and validate components
-  const [localPart, domain] = email.split('@');
+  const [localPart, domain] = email.split("@");
 
   // Local part validation
   if (!localPart || localPart.length === 0 || localPart.length > 64) {
@@ -81,12 +87,12 @@ function isValidEmail(email: string): boolean {
   }
 
   // Prevent consecutive dots in local part
-  if (localPart.includes('..')) {
+  if (localPart.includes("..")) {
     return false;
   }
 
   // Prevent leading/trailing dots in local part
-  if (localPart.startsWith('.') || localPart.endsWith('.')) {
+  if (localPart.startsWith(".") || localPart.endsWith(".")) {
     return false;
   }
 
@@ -96,19 +102,19 @@ function isValidEmail(email: string): boolean {
   }
 
   // Prevent consecutive dots in domain
-  if (domain.includes('..')) {
+  if (domain.includes("..")) {
     return false;
   }
 
   // Prevent leading/trailing dots in domain
-  if (domain.startsWith('.') || domain.endsWith('.')) {
+  if (domain.startsWith(".") || domain.endsWith(".")) {
     return false;
   }
 
   // Prevent leading/trailing hyphens in domain labels
-  const domainLabels = domain.split('.');
+  const domainLabels = domain.split(".");
   for (const label of domainLabels) {
-    if (label.startsWith('-') || label.endsWith('-') || label.length === 0) {
+    if (label.startsWith("-") || label.endsWith("-") || label.length === 0) {
       return false;
     }
   }
@@ -139,7 +145,7 @@ function isValidEmail(email: string): boolean {
     /onload=/i,
     /onerror=/i,
     /%[0-9a-f]{2}/i, // URL encoding
-    /&#/i,           // HTML entities
+    /&#/i, // HTML entities
   ];
 
   for (const pattern of suspiciousPatterns) {
@@ -204,7 +210,13 @@ export interface RefreshableCredentials {
   getTimeSinceLastRefresh(): number;
 }
 
-export type EmailProviderType = 'resend' | 'smtp' | 'exchange-online' | 'exchange-onprem' | 'amazon-ses' | 'azure-communication-services';
+export type EmailProviderType =
+  | "resend"
+  | "smtp"
+  | "exchange-online"
+  | "exchange-onprem"
+  | "amazon-ses"
+  | "azure-communication-services";
 
 export interface SMTPConfig {
   host: string;

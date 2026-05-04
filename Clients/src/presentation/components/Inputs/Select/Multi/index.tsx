@@ -16,7 +16,6 @@ import { useState } from "react";
 import "./index.css";
 import { ChevronDown } from "lucide-react";
 
-
 interface CustomizableMultiSelectProps {
   label: string;
   required?: boolean;
@@ -24,7 +23,7 @@ interface CustomizableMultiSelectProps {
   value: string | number | (string | number)[];
   onChange: (
     event: SelectChangeEvent<string | number | (string | number)[]>,
-    child: React.ReactNode
+    child: React.ReactNode,
   ) => void;
   items: {
     _id: string | number;
@@ -32,7 +31,12 @@ interface CustomizableMultiSelectProps {
     email?: string;
     surname?: string;
   }[];
-  getOptionValue?: (item: { _id: string | number; name: string; email?: string; surname?: string }) => string | number;
+  getOptionValue?: (item: {
+    _id: string | number;
+    name: string;
+    email?: string;
+    surname?: string;
+  }) => string | number;
   placeholder?: string;
   isHidden?: boolean;
   width?: number;
@@ -64,9 +68,10 @@ function CustomizableMultiSelect({
 
   const handleChipDelete = (id: string | number) => {
     const idStr = String(id);
-    const current = (Array.isArray(value) ? value : [value]).filter(
-      (v) => String(v) !== idStr
-    ) as (string | number)[];
+    const current = (Array.isArray(value) ? value : [value]).filter((v) => String(v) !== idStr) as (
+      | string
+      | number
+    )[];
     const syntheticEvent = {
       target: { value: current, name: "vw-multi-select" },
     } as unknown as SelectChangeEvent<(string | number)[]>;
@@ -75,7 +80,7 @@ function CustomizableMultiSelect({
 
   const handleChange = (
     event: SelectChangeEvent<string | number | (string | number)[]>,
-    child: React.ReactNode
+    child: React.ReactNode,
   ) => {
     onChange(event, child);
     // Close the dropdown after selection
@@ -85,31 +90,33 @@ function CustomizableMultiSelect({
   const renderValue = (value: unknown) => {
     const selected = value as (string | number)[];
     const selectedItems = items.filter((item) =>
-      selected.includes(getOptionValue ? getOptionValue(item) : item._id)
+      selected.includes(getOptionValue ? getOptionValue(item) : item._id),
     );
     return (
-      <Box sx={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 0.5,
-        alignItems: 'flex-start',
-        maxHeight: '90px',
-        overflowY: 'auto',
-        width: '100%',
-        '&::-webkit-scrollbar': {
-          width: '6px',
-        },
-        '&::-webkit-scrollbar-track': {
-          background: 'transparent',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '3px',
-        },
-        '&::-webkit-scrollbar-thumb:hover': {
-          background: 'rgba(0, 0, 0, 0.3)',
-        },
-      }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 0.5,
+          alignItems: "flex-start",
+          maxHeight: "90px",
+          overflowY: "auto",
+          width: "100%",
+          "&::-webkit-scrollbar": {
+            width: "6px",
+          },
+          "&::-webkit-scrollbar-track": {
+            background: "transparent",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "rgba(0, 0, 0, 0.2)",
+            borderRadius: "3px",
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            background: "rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
         {selectedItems.map((item) => {
           const idVal = getOptionValue ? getOptionValue(item) : item._id;
           return (
@@ -127,7 +134,7 @@ function CustomizableMultiSelect({
                 fontSize: 12,
                 backgroundColor: theme.palette.background.accent,
                 color: theme.palette.text.primary,
-                '& .MuiChip-deleteIcon': {
+                "& .MuiChip-deleteIcon": {
                   color: theme.palette.action.focus,
                   fontSize: 20,
                 },
@@ -193,10 +200,10 @@ function CustomizableMultiSelect({
         error={!!error}
         sx={{
           ...sx,
-          '& .MuiOutlinedInput-input': {
-            paddingTop: '16.5px',
-            paddingBottom: '16.5px',
-          }
+          "& .MuiOutlinedInput-input": {
+            paddingTop: "16.5px",
+            paddingBottom: "16.5px",
+          },
         }}
         MenuProps={{
           disableScrollLock: true,
@@ -245,39 +252,32 @@ function CustomizableMultiSelect({
           .filter((item) => {
             const itemValue = getOptionValue ? getOptionValue(item) : item._id;
             const selectedValues = Array.isArray(value) ? value : [value];
-            return !selectedValues.map(v => String(v)).includes(String(itemValue));
+            return !selectedValues.map((v) => String(v)).includes(String(itemValue));
           })
-          .map(
-            (item: {
-              _id: string | number;
-              name: string;
-              email?: string;
-              surname?: string;
-            }) => (
-              <MenuItem
-                value={getOptionValue ? getOptionValue(item) : item._id}
-                key={`${item._id}`}
-                sx={{
-                  display: "flex",
-                  ...itemStyles,
-                  justifyContent: "space-between",
-                  flexDirection: "row",
-                  gap: 1,
-                }}
-              >
-                <span style={{ marginRight: 1 }}>{`${item.name} ${
-                  item.surname ? item.surname : ""
-                }`}</span>
-                {item.email && (
-                  <span
-                    style={{ fontSize: 11, color: theme.palette.text.disabled, marginLeft: "4px" }}
-                  >
-                    {`${item.email}`}
-                  </span>
-                )}
-              </MenuItem>
-            )
-          )}
+          .map((item: { _id: string | number; name: string; email?: string; surname?: string }) => (
+            <MenuItem
+              value={getOptionValue ? getOptionValue(item) : item._id}
+              key={`${item._id}`}
+              sx={{
+                display: "flex",
+                ...itemStyles,
+                justifyContent: "space-between",
+                flexDirection: "row",
+                gap: 1,
+              }}
+            >
+              <span style={{ marginRight: 1 }}>{`${item.name} ${
+                item.surname ? item.surname : ""
+              }`}</span>
+              {item.email && (
+                <span
+                  style={{ fontSize: 11, color: theme.palette.text.disabled, marginLeft: "4px" }}
+                >
+                  {`${item.email}`}
+                </span>
+              )}
+            </MenuItem>
+          ))}
       </MuiSelect>
       {error && (
         <Typography

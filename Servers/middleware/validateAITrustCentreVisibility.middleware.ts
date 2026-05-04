@@ -2,11 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { getIsVisibleQuery } from "../utils/aiTrustCentre.utils";
 import { getOrganizationIdFromTenantHash } from "../tools/getTenantHash";
 
-export const validateVisibility = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const validateVisibility = async (req: Request, res: Response, next: NextFunction) => {
   const hash = Array.isArray(req.params.hash) ? req.params.hash[0] : req.params.hash;
 
   if (!hash || hash.replace(/\s+/g, " ").trim().length !== 10) {

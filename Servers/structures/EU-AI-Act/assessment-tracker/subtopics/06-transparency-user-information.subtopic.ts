@@ -15,7 +15,8 @@ export const TransparencyAndUserInformation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, all users have received comprehensive training on the AI system''s appropriate usage. Training modules cover the core functionalities, risks, and ethical considerations of the system. In addition, detailed documentation is readily accessible through the internal knowledge portal, ensuring all users can refer to it whenever needed."
+        answer:
+          "Yes, all users have received comprehensive training on the AI system''s appropriate usage. Training modules cover the core functionalities, risks, and ethical considerations of the system. In addition, detailed documentation is readily accessible through the internal knowledge portal, ensuring all users can refer to it whenever needed.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const TransparencyAndUserInformation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization communicates its AI-related values through public reports, social media channels, and press releases. We focus on transparency, fairness, and accountability in AI practices. To evaluate effectiveness, we measure engagement through metrics such as social media interactions, public feedback, and media coverage, all of which indicate a positive response from our external stakeholders."
+        answer:
+          "Our organization communicates its AI-related values through public reports, social media channels, and press releases. We focus on transparency, fairness, and accountability in AI practices. To evaluate effectiveness, we measure engagement through metrics such as social media interactions, public feedback, and media coverage, all of which indicate a positive response from our external stakeholders.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const TransparencyAndUserInformation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, the AI system provides clear and concise documentation to data subjects, outlining the logic behind automated decision-making, the potential significance of the decisions, and the envisaged consequences. Additionally, the system includes easy-to-understand explanations about the impact of profiling and offers an opt-out option for users who wish to avoid automated decisions."
+        answer:
+          "Yes, the AI system provides clear and concise documentation to data subjects, outlining the logic behind automated decision-making, the potential significance of the decisions, and the envisaged consequences. Additionally, the system includes easy-to-understand explanations about the impact of profiling and offers an opt-out option for users who wish to avoid automated decisions.",
       },
       {
         order_no: 4,
@@ -57,7 +60,8 @@ export const TransparencyAndUserInformation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, our organization provides detailed explanations of the consequences of AI decision-making through various channels. This includes user guides, email notifications, and real-time alerts whenever decisions are made by the AI system. We also offer dedicated support for end users to clarify any confusion about the decisions made by the AI and their potential impact."
+        answer:
+          "Yes, our organization provides detailed explanations of the consequences of AI decision-making through various channels. This includes user guides, email notifications, and real-time alerts whenever decisions are made by the AI system. We also offer dedicated support for end users to clarify any confusion about the decisions made by the AI and their potential impact.",
       },
     ],
   },

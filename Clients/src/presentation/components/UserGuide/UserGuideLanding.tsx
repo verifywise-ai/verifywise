@@ -1,6 +1,29 @@
-import React from 'react';
-import { Search, ArrowRight, ExternalLink, Rocket, Shield, AlertTriangle, Brain, Settings, Plug, FileText, GraduationCap, BarChart3, FlaskConical, ScanSearch, EyeOff, Router, LucideIcon } from 'lucide-react';
-import { collections, fastFinds, getCollection, IconName } from '@user-guide-content/userGuideConfig';
+import React from "react";
+import {
+  Search,
+  ArrowRight,
+  ExternalLink,
+  Rocket,
+  Shield,
+  AlertTriangle,
+  Brain,
+  Settings,
+  Plug,
+  FileText,
+  GraduationCap,
+  BarChart3,
+  FlaskConical,
+  ScanSearch,
+  EyeOff,
+  Router,
+  LucideIcon,
+} from "lucide-react";
+import {
+  collections,
+  fastFinds,
+  getCollection,
+  IconName,
+} from "@user-guide-content/userGuideConfig";
 
 // Map icon names to actual Lucide components
 const iconMap: Record<IconName, LucideIcon> = {
@@ -18,43 +41,43 @@ const iconMap: Record<IconName, LucideIcon> = {
   EyeOff,
   Router,
 };
-import { colors, typography, spacing, border } from './styles/theme';
-import './UserGuideLanding.css';
+import { colors, typography, spacing, border } from "./styles/theme";
+import "./UserGuideLanding.css";
 
 interface UserGuideLandingProps {
   onNavigate: (collectionId: string, articleId?: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  mode?: 'web' | 'in-app';
+  mode?: "web" | "in-app";
 }
 
 const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
   onNavigate,
   searchQuery,
   onSearchChange,
-  mode = 'web',
+  mode = "web",
 }) => {
-  const isInApp = mode === 'in-app';
+  const isInApp = mode === "in-app";
   return (
-    <div style={{ minHeight: '100%', backgroundColor: colors.background.alt }}>
+    <div style={{ minHeight: "100%", backgroundColor: colors.background.alt }}>
       {/* Hero Section - Only shown in web mode */}
       {!isInApp && (
         <div
           style={{
             background: `linear-gradient(135deg, ${colors.brand.primary} 0%, ${colors.brand.primaryDark} 100%)`,
-            padding: `${spacing['4xl']} ${spacing['3xl']}`,
-            position: 'relative',
-            overflow: 'hidden',
+            padding: `${spacing["4xl"]} ${spacing["3xl"]}`,
+            position: "relative",
+            overflow: "hidden",
           }}
         >
           {/* Background pattern */}
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 0,
               right: 0,
-              width: '50%',
-              height: '100%',
+              width: "50%",
+              height: "100%",
               opacity: 0.1,
               background: `
                 radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%),
@@ -63,16 +86,16 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
             }}
           />
 
-          <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <div style={{ maxWidth: 800, margin: "0 auto", position: "relative", zIndex: 1 }}>
             <h1
               style={{
                 fontFamily: typography.fontFamily.sans,
-                fontSize: typography.fontSize['5xl'],
+                fontSize: typography.fontSize["5xl"],
                 fontWeight: typography.fontWeight.semibold,
                 color: colors.text.white,
                 marginBottom: spacing.sm,
                 marginTop: 0,
-                textAlign: 'center',
+                textAlign: "center",
               }}
             >
               How can we help?
@@ -84,7 +107,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                 color: colors.text.whiteMuted,
                 marginBottom: spacing.xl,
                 marginTop: 0,
-                textAlign: 'center',
+                textAlign: "center",
               }}
             >
               Search our knowledge base or browse collections below
@@ -94,8 +117,8 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
             <div
               style={{
                 maxWidth: 600,
-                margin: '0 auto',
-                position: 'relative',
+                margin: "0 auto",
+                position: "relative",
               }}
             >
               <Search
@@ -103,11 +126,11 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                 strokeWidth={1.5}
                 color={colors.text.muted}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   left: 16,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
                 }}
               />
               <input
@@ -117,16 +140,16 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="search-input"
                 style={{
-                  width: '100%',
+                  width: "100%",
                   height: 48,
                   fontSize: typography.fontSize.base,
                   fontFamily: typography.fontFamily.sans,
                   backgroundColor: colors.background.white,
                   borderRadius: border.radius,
-                  border: 'none',
+                  border: "none",
                   paddingLeft: 44,
                   paddingRight: 16,
-                  boxSizing: 'border-box',
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -135,11 +158,13 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
       )}
 
       {/* Main Content */}
-      <div style={{
-        maxWidth: isInApp ? '100%' : 1200,
-        margin: '0 auto',
-        padding: isInApp ? spacing.lg : `${spacing['3xl']} ${spacing['3xl']}`
-      }}>
+      <div
+        style={{
+          maxWidth: isInApp ? "100%" : 1200,
+          margin: "0 auto",
+          padding: isInApp ? spacing.lg : `${spacing["3xl"]} ${spacing["3xl"]}`,
+        }}
+      >
         {/* Collections Grid */}
         <h2
           style={{
@@ -156,10 +181,10 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
 
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: isInApp ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))',
+            display: "grid",
+            gridTemplateColumns: isInApp ? "1fr" : "repeat(auto-fill, minmax(340px, 1fr))",
             gap: isInApp ? spacing.md : spacing.lg,
-            marginBottom: isInApp ? spacing.xl : spacing['4xl'],
+            marginBottom: isInApp ? spacing.xl : spacing["4xl"],
           }}
         >
           {collections.map((collection) => {
@@ -174,13 +199,20 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   border: border.default,
                   borderRadius: border.radius,
                   padding: spacing.lg,
-                  cursor: 'pointer',
+                  cursor: "pointer",
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: spacing.md }}>
                   <IconComponent size={20} strokeWidth={1.5} color={colors.brand.primary} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: spacing.xs,
+                      }}
+                    >
                       <span
                         style={{
                           fontFamily: typography.fontFamily.sans,
@@ -196,7 +228,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                           fontSize: typography.fontSize.xs,
                           color: colors.text.secondary,
                           backgroundColor: colors.background.alt,
-                          padding: '2px 6px',
+                          padding: "2px 6px",
                           borderRadius: border.radius,
                         }}
                       >
@@ -209,7 +241,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                         fontSize: typography.fontSize.base,
                         color: colors.text.primary,
                         lineHeight: typography.lineHeight.normal,
-                        display: 'block',
+                        display: "block",
                       }}
                     >
                       {collection.description}
@@ -304,7 +336,8 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   margin: 0,
                 }}
               >
-                Search with the search icon at the top right, or browse by topic on the main user guide page.
+                Search with the search icon at the top right, or browse by topic on the main user
+                guide page.
               </p>
             </div>
           </div>
@@ -335,8 +368,8 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
 
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                 gap: spacing.sm,
               }}
             >
@@ -348,18 +381,18 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                     onClick={() => onNavigate(item.collectionId, item.articleId)}
                     className="fast-find-item"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
                       borderRadius: border.radius,
-                      cursor: 'pointer',
+                      cursor: "pointer",
                     }}
                   >
                     <div>
                       <span
                         style={{
-                          display: 'block',
+                          display: "block",
                           fontFamily: typography.fontFamily.sans,
                           fontSize: typography.fontSize.base,
                           fontWeight: typography.fontWeight.medium,
@@ -371,7 +404,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                       </span>
                       <span
                         style={{
-                          display: 'block',
+                          display: "block",
                           fontSize: 12,
                           color: colors.text.muted,
                         }}
@@ -397,7 +430,7 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
         {!isInApp && (
           <div
             style={{
-              marginTop: spacing['2xl'],
+              marginTop: spacing["2xl"],
               backgroundColor: colors.background.alt,
               borderRadius: border.radius,
               padding: spacing.xl,
@@ -439,7 +472,12 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   marginTop: 0,
                 }}
               >
-                On our website <span style={{ fontWeight: typography.fontWeight.normal, color: colors.text.muted }}>(You are here)</span>
+                On our website{" "}
+                <span
+                  style={{ fontWeight: typography.fontWeight.normal, color: colors.text.muted }}
+                >
+                  (You are here)
+                </span>
               </h4>
               <p
                 style={{
@@ -450,7 +488,8 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   margin: 0,
                 }}
               >
-                Search with the search bar above, or browse by topic. You can also ask a question at the end of each docs article.
+                Search with the search bar above, or browse by topic. You can also ask a question at
+                the end of each docs article.
               </p>
             </div>
 
@@ -483,8 +522,8 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
             {/* Contact and Community */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: spacing.md,
                 marginTop: spacing.xl,
                 paddingTop: spacing.lg,
@@ -520,19 +559,19 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   href="mailto:support@verifywise.ai"
                   className="about-docs-button"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     padding: `${spacing.sm} ${spacing.lg}`,
                     backgroundColor: colors.background.white,
                     border: border.default,
                     borderRadius: border.radius,
-                    textDecoration: 'none',
+                    textDecoration: "none",
                     fontFamily: typography.fontFamily.sans,
                     fontSize: typography.fontSize.sm,
                     fontWeight: typography.fontWeight.medium,
                     color: colors.text.primary,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                   }}
                 >
                   Email our support team
@@ -569,20 +608,20 @@ const UserGuideLanding: React.FC<UserGuideLandingProps> = ({
                   rel="noopener noreferrer"
                   className="about-docs-button"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     gap: spacing.xs,
                     padding: `${spacing.sm} ${spacing.lg}`,
                     backgroundColor: colors.background.white,
                     border: border.default,
                     borderRadius: border.radius,
-                    textDecoration: 'none',
+                    textDecoration: "none",
                     fontFamily: typography.fontFamily.sans,
                     fontSize: typography.fontSize.sm,
                     fontWeight: typography.fontWeight.medium,
                     color: colors.text.primary,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                   }}
                 >
                   Ask the community

@@ -1,9 +1,7 @@
 import { AnnexCategoryISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryISO.model";
 import { AnnexCategoryStructISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryStructISO.model";
 
-export const ResourcesForAISystems: Partial<
-  AnnexCategoryStructISO & AnnexCategoryISO
->[] = [
+export const ResourcesForAISystems: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
   {
     sub_id: 1.1,
     order_no: 1,

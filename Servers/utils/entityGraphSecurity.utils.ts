@@ -9,17 +9,17 @@
 
 // Valid entity types that can be annotated
 export const VALID_ENTITY_TYPES = [
-  'useCase',
-  'model',
-  'risk',
-  'vendor',
-  'control',
-  'evidence',
-  'framework',
-  'user',
+  "useCase",
+  "model",
+  "risk",
+  "vendor",
+  "control",
+  "evidence",
+  "framework",
+  "user",
 ] as const;
 
-export type ValidEntityType = typeof VALID_ENTITY_TYPES[number];
+export type ValidEntityType = (typeof VALID_ENTITY_TYPES)[number];
 
 /**
  * Validates that a schema name is safe for use in SQL queries.
@@ -29,7 +29,7 @@ export type ValidEntityType = typeof VALID_ENTITY_TYPES[number];
  * @returns {boolean} True if valid, false otherwise
  */
 export function isValidSchemaName(schemaName: string): boolean {
-  if (!schemaName || typeof schemaName !== 'string') {
+  if (!schemaName || typeof schemaName !== "string") {
     return false;
   }
 
@@ -46,7 +46,7 @@ export function isValidSchemaName(schemaName: string): boolean {
  * @returns {boolean} True if valid, false otherwise
  */
 export function isValidEntityType(entityType: string): boolean {
-  if (!entityType || typeof entityType !== 'string') {
+  if (!entityType || typeof entityType !== "string") {
     return false;
   }
 
@@ -61,7 +61,7 @@ export function isValidEntityType(entityType: string): boolean {
  * @returns {boolean} True if valid, false otherwise
  */
 export function isValidEntityId(entityId: string): boolean {
-  if (!entityId || typeof entityId !== 'string') {
+  if (!entityId || typeof entityId !== "string") {
     return false;
   }
 
@@ -71,9 +71,7 @@ export function isValidEntityId(entityId: string): boolean {
   }
 
   // Must start with a valid entity type
-  const startsWithValidType = VALID_ENTITY_TYPES.some(type =>
-    entityId.startsWith(type + '-')
-  );
+  const startsWithValidType = VALID_ENTITY_TYPES.some((type) => entityId.startsWith(type + "-"));
 
   // Only allow alphanumeric, hyphens, and underscores
   const safeCharsRegex = /^[a-zA-Z0-9\-_]+$/;
@@ -93,21 +91,21 @@ export function sanitizeAnnotationContent(content: string): {
   sanitized: string;
   error?: string;
 } {
-  if (!content || typeof content !== 'string') {
-    return { valid: false, sanitized: '', error: 'Content is required' };
+  if (!content || typeof content !== "string") {
+    return { valid: false, sanitized: "", error: "Content is required" };
   }
 
   const sanitized = content.trim();
 
   if (sanitized.length === 0) {
-    return { valid: false, sanitized: '', error: 'Content cannot be empty' };
+    return { valid: false, sanitized: "", error: "Content cannot be empty" };
   }
 
   if (sanitized.length > 2000) {
     return {
       valid: false,
-      sanitized: '',
-      error: 'Content cannot exceed 2000 characters',
+      sanitized: "",
+      error: "Content cannot exceed 2000 characters",
     };
   }
 
@@ -125,21 +123,21 @@ export function sanitizeViewName(name: string): {
   sanitized: string;
   error?: string;
 } {
-  if (!name || typeof name !== 'string') {
-    return { valid: false, sanitized: '', error: 'View name is required' };
+  if (!name || typeof name !== "string") {
+    return { valid: false, sanitized: "", error: "View name is required" };
   }
 
   const sanitized = name.trim();
 
   if (sanitized.length === 0) {
-    return { valid: false, sanitized: '', error: 'View name cannot be empty' };
+    return { valid: false, sanitized: "", error: "View name cannot be empty" };
   }
 
   if (sanitized.length > 100) {
     return {
       valid: false,
-      sanitized: '',
-      error: 'View name cannot exceed 100 characters',
+      sanitized: "",
+      error: "View name cannot exceed 100 characters",
     };
   }
 
@@ -168,8 +166,8 @@ export function sanitizeViewConfig(config: unknown): {
   };
   error?: string;
 } {
-  if (!config || typeof config !== 'object') {
-    return { valid: false, sanitized: {}, error: 'Valid config object is required' };
+  if (!config || typeof config !== "object") {
+    return { valid: false, sanitized: {}, error: "Valid config object is required" };
   }
 
   const c = config as Record<string, unknown>;
@@ -188,21 +186,21 @@ export function sanitizeViewConfig(config: unknown): {
   // Validate visibleEntities
   if (c.visibleEntities !== undefined) {
     if (!Array.isArray(c.visibleEntities)) {
-      return { valid: false, sanitized: {}, error: 'visibleEntities must be an array' };
+      return { valid: false, sanitized: {}, error: "visibleEntities must be an array" };
     }
     // Filter to only valid strings with max 50 chars each
     sanitized.visibleEntities = c.visibleEntities
-      .filter((e): e is string => typeof e === 'string' && e.length <= 50)
+      .filter((e): e is string => typeof e === "string" && e.length <= 50)
       .slice(0, 20); // Max 20 entities
   }
 
   // Validate visibleRelationships
   if (c.visibleRelationships !== undefined) {
     if (!Array.isArray(c.visibleRelationships)) {
-      return { valid: false, sanitized: {}, error: 'visibleRelationships must be an array' };
+      return { valid: false, sanitized: {}, error: "visibleRelationships must be an array" };
     }
     sanitized.visibleRelationships = c.visibleRelationships
-      .filter((r): r is string => typeof r === 'string' && r.length <= 50)
+      .filter((r): r is string => typeof r === "string" && r.length <= 50)
       .slice(0, 20);
   }
 
@@ -218,25 +216,25 @@ export function sanitizeViewConfig(config: unknown): {
   // Validate query
   if (c.query !== undefined && c.query !== null) {
     const q = c.query as Record<string, unknown>;
-    if (typeof q !== 'object') {
-      return { valid: false, sanitized: {}, error: 'query must be an object' };
+    if (typeof q !== "object") {
+      return { valid: false, sanitized: {}, error: "query must be an object" };
     }
 
     if (
-      typeof q.entityType !== 'string' ||
-      typeof q.condition !== 'string' ||
-      typeof q.attribute !== 'string'
+      typeof q.entityType !== "string" ||
+      typeof q.condition !== "string" ||
+      typeof q.attribute !== "string"
     ) {
       return {
         valid: false,
         sanitized: {},
-        error: 'query must have entityType, condition, and attribute strings',
+        error: "query must have entityType, condition, and attribute strings",
       };
     }
 
     // Validate string lengths
     if (q.entityType.length > 50 || q.condition.length > 50 || q.attribute.length > 50) {
-      return { valid: false, sanitized: {}, error: 'query fields cannot exceed 50 characters' };
+      return { valid: false, sanitized: {}, error: "query fields cannot exceed 50 characters" };
     }
 
     sanitized.query = {
@@ -262,31 +260,31 @@ export function validateGapRules(rules: unknown): {
   error?: string;
 } {
   if (!Array.isArray(rules)) {
-    return { valid: false, error: 'Rules must be an array' };
+    return { valid: false, error: "Rules must be an array" };
   }
 
   if (rules.length > 50) {
-    return { valid: false, error: 'Maximum of 50 gap rules allowed' };
+    return { valid: false, error: "Maximum of 50 gap rules allowed" };
   }
 
-  const validEntityTypes = ['model', 'risk', 'control', 'vendor', 'useCase'];
-  const validSeverities = ['critical', 'warning', 'info'];
+  const validEntityTypes = ["model", "risk", "control", "vendor", "useCase"];
+  const validSeverities = ["critical", "warning", "info"];
 
   for (let i = 0; i < rules.length; i++) {
     const rule = rules[i] as Record<string, unknown>;
 
-    if (!rule || typeof rule !== 'object') {
+    if (!rule || typeof rule !== "object") {
       return { valid: false, error: `Rule ${i + 1}: must be an object` };
     }
 
     if (!rule.entityType || !validEntityTypes.includes(rule.entityType as string)) {
       return {
         valid: false,
-        error: `Rule ${i + 1}: entityType must be one of: ${validEntityTypes.join(', ')}`,
+        error: `Rule ${i + 1}: entityType must be one of: ${validEntityTypes.join(", ")}`,
       };
     }
 
-    if (!rule.requirement || typeof rule.requirement !== 'string') {
+    if (!rule.requirement || typeof rule.requirement !== "string") {
       return { valid: false, error: `Rule ${i + 1}: requirement is required` };
     }
 
@@ -297,11 +295,11 @@ export function validateGapRules(rules: unknown): {
     if (!rule.severity || !validSeverities.includes(rule.severity as string)) {
       return {
         valid: false,
-        error: `Rule ${i + 1}: severity must be one of: ${validSeverities.join(', ')}`,
+        error: `Rule ${i + 1}: severity must be one of: ${validSeverities.join(", ")}`,
       };
     }
 
-    if (typeof rule.enabled !== 'boolean') {
+    if (typeof rule.enabled !== "boolean") {
       return { valid: false, error: `Rule ${i + 1}: enabled must be a boolean` };
     }
   }
@@ -318,22 +316,22 @@ export function validateGapRules(rules: unknown): {
  * @returns {string} Safe error message
  */
 export function sanitizeErrorMessage(error: Error, fallbackMessage: string): string {
-  const message = error.message || '';
+  const message = error.message || "";
 
   // Check for patterns that indicate internal implementation details
   const unsafePatterns = [
-    /at\s+[\w.]+\s+\(/i,           // Stack trace patterns
-    /ENOENT|ECONNREFUSED/i,        // System errors
+    /at\s+[\w.]+\s+\(/i, // Stack trace patterns
+    /ENOENT|ECONNREFUSED/i, // System errors
     /SELECT|INSERT|UPDATE|DELETE/i, // SQL keywords
-    /\.ts:|\.js:/i,                // File paths
-    /node_modules/i,               // Internal paths
-    /Error:\s*$/,                  // Empty error prefix
-    /UNIQUE constraint/i,          // DB constraint errors
-    /foreign key/i,                // FK errors
-    /duplicate key/i,              // Duplicate key errors
-    /syntax error/i,               // SQL syntax errors
-    /relation.*does not exist/i,   // Table not found
-    /column.*does not exist/i,     // Column not found
+    /\.ts:|\.js:/i, // File paths
+    /node_modules/i, // Internal paths
+    /Error:\s*$/, // Empty error prefix
+    /UNIQUE constraint/i, // DB constraint errors
+    /foreign key/i, // FK errors
+    /duplicate key/i, // Duplicate key errors
+    /syntax error/i, // SQL syntax errors
+    /relation.*does not exist/i, // Table not found
+    /column.*does not exist/i, // Column not found
   ];
 
   for (const pattern of unsafePatterns) {

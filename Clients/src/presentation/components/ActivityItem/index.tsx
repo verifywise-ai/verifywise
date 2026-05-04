@@ -8,60 +8,57 @@ interface ActivityItemProps {
   isLast?: boolean;
 }
 
-const ActivityItem: React.FC<ActivityItemProps> = memo(({
-  title,
-  timestamp,
-  type,
-  isLast = false,
-}) => {
-  const theme = useTheme();
+const ActivityItem: React.FC<ActivityItemProps> = memo(
+  ({ title, timestamp, type, isLast = false }) => {
+    const theme = useTheme();
 
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      justifyContent="space-between"
-      role="listitem"
-      aria-label={`${type}: ${title} at ${timestamp}`}
-      sx={{
-        py: 1,
-        borderBottom: isLast ? "none" : `1px solid ${theme.palette.divider}`,
-      }}
-    >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography
-          sx={{
-            fontSize: theme.typography.body2.fontSize,
-            color: theme.palette.text.primary,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {title}
-        </Typography>
+    return (
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        role="listitem"
+        aria-label={`${type}: ${title} at ${timestamp}`}
+        sx={{
+          py: 1,
+          borderBottom: isLast ? "none" : `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontSize: theme.typography.body2.fontSize,
+              color: theme.palette.text.primary,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: theme.typography.caption.fontSize,
+              color: theme.palette.text.secondary,
+            }}
+          >
+            {type}
+          </Typography>
+        </Box>
         <Typography
           sx={{
             fontSize: theme.typography.caption.fontSize,
             color: theme.palette.text.secondary,
+            ml: 2,
+            flexShrink: 0,
           }}
         >
-          {type}
+          {timestamp}
         </Typography>
-      </Box>
-      <Typography
-        sx={{
-          fontSize: theme.typography.caption.fontSize,
-          color: theme.palette.text.secondary,
-          ml: 2,
-          flexShrink: 0,
-        }}
-      >
-        {timestamp}
-      </Typography>
-    </Stack>
-  );
-});
+      </Stack>
+    );
+  },
+);
 
 ActivityItem.displayName = "ActivityItem";
 

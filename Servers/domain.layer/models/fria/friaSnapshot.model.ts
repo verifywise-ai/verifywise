@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IFriaSnapshot } from "../../interfaces/i.fria";
 
@@ -13,10 +7,7 @@ import { IFriaSnapshot } from "../../interfaces/i.fria";
   timestamps: false,
   underscored: true,
 })
-export class FriaSnapshotModel
-  extends Model<FriaSnapshotModel>
-  implements IFriaSnapshot
-{
+export class FriaSnapshotModel extends Model<FriaSnapshotModel> implements IFriaSnapshot {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

@@ -79,9 +79,7 @@ Two sensitive fields are encrypted at rest:
 **Encryption Implementation:**
 
 ```typescript
-const { iv: accessTokeniv, value: accessToken } = encryptText(
-  access_token.trim(),
-);
+const { iv: accessTokeniv, value: accessToken } = encryptText(access_token.trim());
 const { iv: ivUrl, value: encryptedUrl } = encryptText(url.trim());
 ```
 

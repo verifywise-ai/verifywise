@@ -5,22 +5,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Stack,
-  Typography,
-  Box,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Stack, Typography, Box, IconButton, useTheme } from "@mui/material";
 import { Plus, X } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Checkbox from "../../../components/Inputs/Checkbox";
-import {
-  PMMQuestion,
-  QuestionType,
-} from "../../../../domain/types/PostMarketMonitoring";
+import { PMMQuestion, QuestionType } from "../../../../domain/types/PostMarketMonitoring";
 
 interface PMMQuestionEditorProps {
   isOpen: boolean;
@@ -161,9 +152,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
       <Stack spacing={4}>
         {/* Question text */}
         <Stack spacing={1}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-            Question text *
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Question text *</Typography>
           <Field
             id="question-text"
             label=""
@@ -178,9 +167,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
 
         {/* Question type */}
         <Stack spacing={1}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-            Response type *
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Response type *</Typography>
           <Select
             id="question-type"
             label=""
@@ -194,9 +181,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
         {/* Options for multi-select */}
         {questionType === "multi_select" && (
           <Stack spacing={1}>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Options *
-            </Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Options *</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
               Add at least 2 options for the user to choose from
             </Typography>
@@ -217,7 +202,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
                       color: theme.palette.other.icon,
                       "&:hover": {
                         backgroundColor: theme.palette.status.error.light,
-                        color: theme.palette.status.error.text
+                        color: theme.palette.status.error.text,
                       },
                     }}
                   >
@@ -280,9 +265,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
 
         {/* EU AI Act article reference */}
         <Stack spacing={1}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-            EU AI Act reference
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>EU AI Act reference</Typography>
           <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
             Optional article reference (e.g., "Article 9", "Article 72")
           </Typography>
@@ -299,9 +282,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
         {/* Required toggle */}
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack spacing={0.5}>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Required question
-            </Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Required question</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
               User must answer this question to submit
             </Typography>
@@ -318,9 +299,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
         {/* Allow flag for concern toggle */}
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack spacing={0.5}>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Allow flag for concern
-            </Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Allow flag for concern</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
               User can flag this question for immediate attention
             </Typography>

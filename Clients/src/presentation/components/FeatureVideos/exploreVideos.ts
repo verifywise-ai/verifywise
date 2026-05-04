@@ -36,7 +36,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
     ],
   },
 
-  "Compliance": {
+  Compliance: {
     introTitle: "Compliance",
     introSubtitle: "Framework alignment",
     features: [
@@ -100,8 +100,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
         number: "04",
         category: "VENDORS",
         title: "Vendor risk\nlinkage",
-        description:
-          "Link vendor risks to project risks for end-to-end supply chain visibility.",
+        description: "Link vendor risks to project risks for end-to-end supply chain visibility.",
       },
     ],
   },
@@ -149,8 +148,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
         number: "01",
         category: "SCANNING",
         title: "Repository\nscanning",
-        description:
-          "Scan code repositories for AI-generated code patterns and ML library usage.",
+        description: "Scan code repositories for AI-generated code patterns and ML library usage.",
       },
       {
         number: "02",
@@ -211,7 +209,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
     ],
   },
 
-  "Policies": {
+  Policies: {
     introTitle: "Policies",
     introSubtitle: "Governance documentation",
     features: [
@@ -233,13 +231,12 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
         number: "03",
         category: "TRACKING",
         title: "Due date\ntracking",
-        description:
-          "Set review deadlines with automated due-soon reminders via email and Slack.",
+        description: "Set review deadlines with automated due-soon reminders via email and Slack.",
       },
     ],
   },
 
-  "Reporting": {
+  Reporting: {
     introTitle: "Reporting",
     introSubtitle: "Compliance documentation",
     features: [
@@ -274,7 +271,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
     ],
   },
 
-  "Training": {
+  Training: {
     introTitle: "Training",
     introSubtitle: "Team readiness",
     features: [
@@ -302,7 +299,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
     ],
   },
 
-  "Plugins": {
+  Plugins: {
     introTitle: "Plugins",
     introSubtitle: "Extend the platform",
     features: [

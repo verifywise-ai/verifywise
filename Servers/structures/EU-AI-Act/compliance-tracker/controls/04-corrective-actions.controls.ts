@@ -4,12 +4,12 @@ export const CorrectiveActionsDutyOfInfo = [
     title: "Proportionate Oversight Measures",
     description:
       "Take prompt and effective corrective actions for non-conforming high-risk AI systems and ensure ongoing system value post-deployment.",
-    implementation_details: "Implementation of oversight measures in progress with regular stakeholder consultations",
+    implementation_details:
+      "Implementation of oversight measures in progress with regular stakeholder consultations",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We consult with diverse experts and end-users to inform corrective measures.",
+        title: "We consult with diverse experts and end-users to inform corrective measures.",
         description:
           "Consulting experts and end-users ensures corrective measures are comprehensive and address real-world implications.",
         implementation_details: "Engaging stakeholders for feedback",
@@ -25,16 +25,14 @@ export const CorrectiveActionsDutyOfInfo = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We validate and document system reliability and standards compliance.",
+        title: "We validate and document system reliability and standards compliance.",
         description:
           "Validation and documentation demonstrate that systems operate reliably and meet required compliance standards.",
         implementation_details: "Reviewing documentation and validation reports",
       },
       {
         order_no: 2,
-        title:
-          "We sustain AI system value post-deployment through continuous improvements.",
+        title: "We sustain AI system value post-deployment through continuous improvements.",
         description:
           "Continuous improvements ensure AI systems remain effective, compliant, and aligned with user needs after deployment.",
         implementation_details: "Developing enhancement roadmap",

@@ -1,6 +1,6 @@
 /**
  * Data Transfer Objects (DTOs) for Task entity
- * 
+ *
  * DTOs represent the data structure as it comes from the API.
  * They are separate from domain models to maintain a clear boundary
  * between infrastructure (API) and domain layers.
@@ -97,4 +97,3 @@ export interface TaskFilterDTO {
   page?: string;
   page_size?: string;
 }
-

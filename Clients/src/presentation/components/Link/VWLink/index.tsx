@@ -57,17 +57,16 @@ export const VWLink = memo(function VWLink({
 }: IVWLinkProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const linkProps = url && openInNewTab
-    ? {
-        target: "_blank",
-        rel: "noopener noreferrer",
-      }
-    : {};
+  const linkProps =
+    url && openInNewTab
+      ? {
+          target: "_blank",
+          rel: "noopener noreferrer",
+        }
+      : {};
 
   // Build component props conditionally
-  const componentProps = onClick
-    ? { component: "button" as const }
-    : {};
+  const componentProps = onClick ? { component: "button" as const } : {};
 
   return (
     <Box

@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  Collapse,
-  useTheme,
-} from "@mui/material";
+import { Box, Typography, Stack, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEntityIntakeSubmission } from "../../../../application/hooks/useEntityIntakeSubmission";
 import type { IntakeSubmissionField } from "../../../../application/repository/intakeForm.repository";
@@ -33,9 +27,7 @@ function renderFieldValue(field: IntakeSubmissionField): string {
   }
 
   if (type === "multiselect" && Array.isArray(value) && options) {
-    return value
-      .map((v) => options.find((o) => o.value === v)?.label || v)
-      .join(", ");
+    return value.map((v) => options.find((o) => o.value === v)?.label || v).join(", ");
   }
 
   return String(value);
@@ -75,23 +67,18 @@ function FieldRow({ field }: { field: IntakeSubmissionField }) {
   );
 }
 
-export default function IntakeSubmissionCard({
-  projectId,
-}: IntakeSubmissionCardProps) {
+export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCardProps) {
   const theme = useTheme();
-  const { data: submission, isLoading } = useEntityIntakeSubmission(
-    "use_case",
-    projectId
-  );
+  const { data: submission, isLoading } = useEntityIntakeSubmission("use_case", projectId);
   const [showAdditional, setShowAdditional] = useState(false);
 
   if (isLoading || !submission) return null;
 
   const mappedFields = submission.fields.filter(
-    (f) => f.isMapped && f.value !== null && f.value !== undefined && f.value !== ""
+    (f) => f.isMapped && f.value !== null && f.value !== undefined && f.value !== "",
   );
   const unmappedFields = submission.fields.filter(
-    (f) => !f.isMapped && f.value !== null && f.value !== undefined && f.value !== ""
+    (f) => !f.isMapped && f.value !== null && f.value !== undefined && f.value !== "",
   );
 
   if (mappedFields.length === 0 && unmappedFields.length === 0) return null;
@@ -132,9 +119,7 @@ export default function IntakeSubmissionCard({
         {(submission.submitterName || submission.submitterEmail) && (
           <> &middot; {submission.submitterName || submission.submitterEmail}</>
         )}
-        {submission.riskTier && (
-          <> &middot; Risk: {submission.riskTier}</>
-        )}
+        {submission.riskTier && <> &middot; Risk: {submission.riskTier}</>}
       </Typography>
 
       {/* Mapped fields — always visible */}

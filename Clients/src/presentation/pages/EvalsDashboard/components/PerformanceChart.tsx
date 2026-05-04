@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Typography } from "@mui/material";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { getAllExperiments, type Experiment } from "../../../../application/repository/deepEval.repository";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  getAllExperiments,
+  type Experiment,
+} from "../../../../application/repository/deepEval.repository";
 import { vwTooltipStyle, ChartOutlineWrapper } from "../../../components/Charts/VWCharts";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
@@ -17,7 +29,6 @@ interface PerformanceChartProps {
   projectId: string;
   timeRange: TimeRange;
 }
-
 
 // 15 distinct colors for the chart - no repetition
 const CHART_COLORS = [
@@ -76,7 +87,7 @@ const formatMetricLabel = (key: string): string => {
     .replace(/([A-Z])/g, " $1")
     .trim()
     .split(" ")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 };
 
@@ -136,27 +147,34 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
       completedExps.forEach((exp, i) => {
         // Use pre-computed avg_scores from experiment results
         const avgScores = exp.results?.avg_scores || {};
-        
+
         // Track which metrics this experiment has
         const calculatedMetrics: string[] = [];
         Object.keys(avgScores).forEach((key) => {
-                  metricsFound.add(key);
+          metricsFound.add(key);
           calculatedMetrics.push(key);
-          });
+        });
 
         // Build chart point
-          const dateStr = new Date(exp.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-          const timeStr = new Date(exp.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-          const point: ChartPoint = {
-            name: `Run ${i + 1}`,
-            date: `${dateStr}`,
-            uniqueId: `${dateStr} ${timeStr}`,
+        const dateStr = new Date(exp.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        const timeStr = new Date(exp.created_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+        const point: ChartPoint = {
+          name: `Run ${i + 1}`,
+          date: `${dateStr}`,
+          uniqueId: `${dateStr} ${timeStr}`,
           index: i,
-            _calculatedMetrics: calculatedMetrics,
+          _calculatedMetrics: calculatedMetrics,
           ...avgScores, // Spread all avg_scores directly
         };
 
-          chartData.push(point);
+        chartData.push(point);
       });
 
       setData(chartData);
@@ -196,9 +214,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
   }
 
   // Get the metrics to display - only those that have data
-  const metricsToDisplay = activeMetrics.length > 0 
-    ? activeMetrics 
-    : Object.keys(metricDefinitions);
+  const metricsToDisplay =
+    activeMetrics.length > 0 ? activeMetrics : Object.keys(metricDefinitions);
 
   // Calculate dynamic height based on number of legend items
   // Estimate ~10 items per line, each line ~20px
@@ -228,7 +245,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
     color?: string;
     payload?: ChartPoint;
   }
-  
+
   interface CustomTooltipProps {
     active?: boolean;
     payload?: TooltipEntry[];
@@ -245,14 +262,15 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
     // Only show metrics that actually exist as a key in this data point
     // (not name, date, uniqueId, or _calculatedMetrics)
     const excludeKeys = ["name", "date", "uniqueId", "_calculatedMetrics"];
-    
+
     const validEntries = payload.filter((entry: TooltipEntry) => {
       const metricKey = entry.dataKey as string;
       // Check if this metric key actually exists in the data point with a real value
-      const hasValue = metricKey in dataPoint && 
-                       !excludeKeys.includes(metricKey) &&
-                       dataPoint[metricKey] !== null && 
-                       dataPoint[metricKey] !== undefined;
+      const hasValue =
+        metricKey in dataPoint &&
+        !excludeKeys.includes(metricKey) &&
+        dataPoint[metricKey] !== null &&
+        dataPoint[metricKey] !== undefined;
       return hasValue;
     });
 
@@ -308,15 +326,20 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   return (
     <ChartOutlineWrapper>
-        <ResponsiveContainer key={`rc-${projectId}-${data.length}-${activeMetrics.join(",")}-${timeRange}`} width="100%" height={Math.max(dynamicHeight, 220)} minWidth={0} debounce={1}>
+      <ResponsiveContainer
+        key={`rc-${projectId}-${data.length}-${activeMetrics.join(",")}-${timeRange}`}
+        width="100%"
+        height={Math.max(dynamicHeight, 220)}
+        minWidth={0}
+        debounce={1}
+      >
         <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-          <XAxis 
+          <XAxis
             dataKey="index"
             type="number"
-            domain={data.length > 4 
-              ? [0, data.length - 1]
-              : [-0.5, Math.max(data.length - 0.5, 1.5)]
+            domain={
+              data.length > 4 ? [0, data.length - 1] : [-0.5, Math.max(data.length - 0.5, 1.5)]
             }
             ticks={data.map((_, i) => i)}
             tickFormatter={formatXAxisTick}
@@ -329,15 +352,15 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
             tickMargin={10}
             allowDataOverflow={false}
           />
-          <YAxis 
-            domain={[0, 1]} 
+          <YAxis
+            domain={[0, 1]}
             tick={{ fontSize: 10, fill: "#6B7280" }}
             axisLine={{ stroke: "#E5E7EB" }}
             tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
             width={40}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ paddingTop: 12, fontSize: 11 }}
             formatter={(value: string) => {
               const metricDef = metricDefinitions[value as keyof typeof metricDefinitions];
@@ -367,4 +390,3 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
     </ChartOutlineWrapper>
   );
 }
-

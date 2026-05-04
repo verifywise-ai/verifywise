@@ -1,10 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import * as riskUtils from "../../../utils/risk.utils";
 import { availableRiskTools } from "../../functions/riskFunctions";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
@@ -14,7 +8,7 @@ import {
   mockProjectRisks,
   mockFrameworkRisks,
 } from "../../mocks/mockRiskData";
-import { createMockTenant } from '../../mocks/mockTenant';
+import { createMockTenant } from "../../mocks/mockTenant";
 import { IRisk } from "../../../domain.layer/interfaces/I.risk";
 
 const availableTools = {
@@ -114,9 +108,11 @@ describe("Advisor Functions: fetchRisks", () => {
     it("should filter by category (case-insensitive)", async () => {
       const result = await fetchRisks({ category: "privacy" }, mockTenant);
 
-      expect(result.every((r: any) =>
-          r.risk_category.some((cat: any) => cat.toLowerCase().includes("privacy"))
-      )).toBe(true);
+      expect(
+        result.every((r: any) =>
+          r.risk_category.some((cat: any) => cat.toLowerCase().includes("privacy")),
+        ),
+      ).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
 
@@ -135,21 +131,31 @@ describe("Advisor Functions: fetchRisks", () => {
     });
 
     it("should filter by AI lifecycle phase", async () => {
-      const result = await fetchRisks({ aiLifecyclePhase: "Model development & training" }, mockTenant);
+      const result = await fetchRisks(
+        { aiLifecyclePhase: "Model development & training" },
+        mockTenant,
+      );
 
-      expect(result.every((r: any) => r.ai_lifecycle_phase === "Model development & training")).toBe(true);
+      expect(
+        result.every((r: any) => r.ai_lifecycle_phase === "Model development & training"),
+      ).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
 
     it("should apply multiple filters simultaneously", async () => {
-      const result = await fetchRisks({
+      const result = await fetchRisks(
+        {
           severity: "Catastrophic",
-          mitigationStatus: "In Progress"
-      }, mockTenant);
+          mitigationStatus: "In Progress",
+        },
+        mockTenant,
+      );
 
-      expect(result.every((r: any) =>
-          r.severity === "Catastrophic" && r.mitigation_status === "In Progress"
-      )).toBe(true);
+      expect(
+        result.every(
+          (r: any) => r.severity === "Catastrophic" && r.mitigation_status === "In Progress",
+        ),
+      ).toBe(true);
     });
   });
 

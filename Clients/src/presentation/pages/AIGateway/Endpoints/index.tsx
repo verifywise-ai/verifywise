@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { Box, Typography, Stack, IconButton } from "@mui/material";
 import {
-  Box,
-  Typography,
-  Stack,
-  IconButton,
-} from "@mui/material";
-import { CirclePlus, Router, Trash2, Zap, Settings, Shield, TriangleAlert, KeyRound, Pencil } from "lucide-react";
+  CirclePlus,
+  Router,
+  Trash2,
+  Zap,
+  Settings,
+  Shield,
+  TriangleAlert,
+  KeyRound,
+  Pencil,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -39,11 +44,20 @@ interface EndpointForm {
 }
 
 const EMPTY_FORM: EndpointForm = {
-  display_name: "", slug: "", provider: "", model: "",
-  api_key_id: "", max_tokens: "", temperature: "", system_prompt: "",
-  rate_limit_rpm: "", fallback_endpoint_id: "",
-  prompt_id: "", prompt_label: "production",
-  cache_enabled: false, cache_ttl_seconds: "14400",
+  display_name: "",
+  slug: "",
+  provider: "",
+  model: "",
+  api_key_id: "",
+  max_tokens: "",
+  temperature: "",
+  system_prompt: "",
+  rate_limit_rpm: "",
+  fallback_endpoint_id: "",
+  prompt_id: "",
+  prompt_label: "production",
+  cache_enabled: false,
+  cache_ttl_seconds: "14400",
 };
 
 export default function EndpointsPage() {
@@ -83,7 +97,9 @@ export default function EndpointsPage() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleNameChange = (value: string) => {
     setForm((p) => ({
@@ -170,7 +186,11 @@ export default function EndpointsPage() {
       setForm({ ...EMPTY_FORM });
       await loadData();
     } catch (err: any) {
-      setFormError(err?.response?.data?.detail || err?.response?.data?.message || `Failed to ${editingId ? "update" : "create"} endpoint`);
+      setFormError(
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          `Failed to ${editingId ? "update" : "create"} endpoint`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -225,7 +245,9 @@ export default function EndpointsPage() {
     >
       {loading ? (
         <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Loading endpoints...</Typography>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+            Loading endpoints...
+          </Typography>
         </Box>
       ) : endpoints.length === 0 ? (
         <EmptyState
@@ -234,41 +256,61 @@ export default function EndpointsPage() {
           showBorder
         >
           {apiKeyItems.length === 0 && (
-            <Box sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "8px",
-              p: "12px 16px",
-              borderRadius: "4px",
-              border: "1px solid #FEDF89",
-              bgcolor: "#FFFAEB",
-              mb: "8px",
-            }}>
-              <TriangleAlert size={16} strokeWidth={1.5} color="#B54708" style={{ flexShrink: 0, marginTop: 1 }} />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px",
+                p: "12px 16px",
+                borderRadius: "4px",
+                border: "1px solid #FEDF89",
+                bgcolor: "#FFFAEB",
+                mb: "8px",
+              }}
+            >
+              <TriangleAlert
+                size={16}
+                strokeWidth={1.5}
+                color="#B54708"
+                style={{ flexShrink: 0, marginTop: 1 }}
+              />
               <Box>
                 <Typography fontSize={13} fontWeight={500} color="#B54708">
                   No API keys configured
                 </Typography>
                 <Typography fontSize={12} color="#93370D" mt="2px">
                   You need at least one LLM provider API key before you can create an endpoint.{" "}
-                  <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>Go to Settings</Link> to add your OpenAI, Anthropic, or other provider keys.
+                  <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
+                    Go to Settings
+                  </Link>{" "}
+                  to add your OpenAI, Anthropic, or other provider keys.
                 </Typography>
               </Box>
             </Box>
           )}
           <EmptyStateTip
             icon={apiKeyItems.length === 0 ? KeyRound : Zap}
-            title={apiKeyItems.length === 0 ? "Step 1: Add an API key in Settings" : "Route requests through a unified gateway"}
-            description={apiKeyItems.length === 0
-              ? "Go to the Settings tab in the sidebar and add your provider API key (OpenAI, Anthropic, etc.). Once added, come back here to create your first endpoint."
-              : "Each endpoint maps to a specific provider and model. Your applications reference endpoints by slug, so you can swap models without changing application code."}
+            title={
+              apiKeyItems.length === 0
+                ? "Step 1: Add an API key in Settings"
+                : "Route requests through a unified gateway"
+            }
+            description={
+              apiKeyItems.length === 0
+                ? "Go to the Settings tab in the sidebar and add your provider API key (OpenAI, Anthropic, etc.). Once added, come back here to create your first endpoint."
+                : "Each endpoint maps to a specific provider and model. Your applications reference endpoints by slug, so you can swap models without changing application code."
+            }
           />
           <EmptyStateTip
             icon={Settings}
-            title={apiKeyItems.length === 0 ? "Step 2: Create an endpoint" : "Configure API keys first"}
-            description={apiKeyItems.length === 0
-              ? "After adding a key, create an endpoint that pairs a model with that key. Each endpoint gets a unique slug your applications can reference."
-              : "Go to Settings to add your provider API keys (OpenAI, Anthropic, etc.). Then create endpoints that reference those keys."}
+            title={
+              apiKeyItems.length === 0 ? "Step 2: Create an endpoint" : "Configure API keys first"
+            }
+            description={
+              apiKeyItems.length === 0
+                ? "After adding a key, create an endpoint that pairs a model with that key. Each endpoint gets a unique slug your applications can reference."
+                : "Go to Settings to add your provider API keys (OpenAI, Anthropic, etc.). Then create endpoints that reference those keys."
+            }
           />
           <EmptyStateTip
             icon={Shield}
@@ -304,40 +346,48 @@ export default function EndpointsPage() {
                           {ep.display_name}
                         </Typography>
                         {boundPrompt && (
-                          <Chip label={`${boundPrompt} (${ep.prompt_label || "production"})`} variant="info" />
+                          <Chip
+                            label={`${boundPrompt} (${ep.prompt_label || "production"})`}
+                            variant="info"
+                          />
                         )}
                       </Stack>
                       <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                         {ep.provider} / {ep.model} &middot; {ep.api_key_name || "No key"}
-                        {ep.rate_limit_rpm > 0 && (
-                          <span> &middot; {ep.rate_limit_rpm} RPM</span>
-                        )}
-                        {ep.fallback_endpoint_id && (
-                          <span> &middot; has fallback</span>
-                        )}
+                        {ep.rate_limit_rpm > 0 && <span> &middot; {ep.rate_limit_rpm} RPM</span>}
+                        {ep.fallback_endpoint_id && <span> &middot; has fallback</span>}
                         {activeGuardrailCount > 0 && (
-                          <span> &middot; {activeGuardrailCount} guardrail{activeGuardrailCount !== 1 ? "s" : ""}</span>
+                          <span>
+                            {" "}
+                            &middot; {activeGuardrailCount} guardrail
+                            {activeGuardrailCount !== 1 ? "s" : ""}
+                          </span>
                         )}
                         {ep.cache_enabled && (
-                          <span> &middot; cached {Math.round((ep.cache_ttl_seconds || 14400) / 3600)}h</span>
+                          <span>
+                            {" "}
+                            &middot; cached {Math.round((ep.cache_ttl_seconds || 14400) / 3600)}h
+                          </span>
                         )}
                       </Typography>
                       <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "2px" }}>
-                        {ep.created_by_name ? `Added by ${ep.created_by_name}` : "Added"} &middot; {displayFormattedDate(ep.created_at)}
+                        {ep.created_by_name ? `Added by ${ep.created_by_name}` : "Added"} &middot;{" "}
+                        {displayFormattedDate(ep.created_at)}
                       </Typography>
                     </Box>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap="8px" onClick={(e) => e.stopPropagation()}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap="8px"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Toggle
                       checked={ep.is_active}
                       onChange={() => handleToggleActive(ep.id, ep.is_active)}
                       size="small"
                     />
-                    <IconButton
-                      size="small"
-                      onClick={() => openEditModal(ep)}
-                      sx={{ p: 0.5 }}
-                    >
+                    <IconButton size="small" onClick={() => openEditModal(ep)} sx={{ p: 0.5 }}>
                       <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                     </IconButton>
                     <IconButton
@@ -360,7 +410,11 @@ export default function EndpointsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? "Edit endpoint" : "Add endpoint"}
-        description={isEditing ? "Update this endpoint's configuration." : "Configure a new LLM provider endpoint"}
+        description={
+          isEditing
+            ? "Update this endpoint's configuration."
+            : "Configure a new LLM provider endpoint"
+        }
         onSubmit={handleSubmit}
         submitButtonText={isEditing ? "Save changes" : "Create endpoint"}
         isSubmitting={isSubmitting}
@@ -520,7 +574,9 @@ export default function EndpointsPage() {
                   .filter((ep) => ep.id !== editingId && ep.is_active)
                   .map((ep) => ({ _id: String(ep.id), name: ep.display_name })),
               ]}
-              onChange={(e) => setForm((p) => ({ ...p, fallback_endpoint_id: e.target.value as string }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, fallback_endpoint_id: e.target.value as string }))
+              }
               getOptionValue={(item) => item._id}
               isOptional
             />
@@ -569,7 +625,8 @@ export default function EndpointsPage() {
         maxWidth="400px"
       >
         <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-          Are you sure you want to delete "{deleteTarget?.name}"? This will permanently remove the endpoint and any requests using its slug will fail.
+          Are you sure you want to delete "{deleteTarget?.name}"? This will permanently remove the
+          endpoint and any requests using its slug will fail.
         </Typography>
       </StandardModal>
     </PageHeaderExtended>

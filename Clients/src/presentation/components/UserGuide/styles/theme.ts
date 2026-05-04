@@ -8,18 +8,18 @@ import { brand, background, border as borderPalette, status } from "../../../the
 // Colors - Text
 export const colors = {
   text: {
-    primary: '#1a1a1a',
-    secondary: '#374151',
+    primary: "#1a1a1a",
+    secondary: "#374151",
     muted: `${status.default.text}`,
     white: `${background.main}`,
-    whiteMuted: 'rgba(255, 255, 255, 0.8)',
+    whiteMuted: "rgba(255, 255, 255, 0.8)",
   },
   brand: {
     primary: `${brand.primary}`,
-    primaryDark: '#0A4A3A',
-    success: '#17B26A',
-    warning: '#F79009',
-    error: '#F04438',
+    primaryDark: "#0A4A3A",
+    success: "#17B26A",
+    warning: "#F79009",
+    error: "#F04438",
   },
   border: {
     default: `${borderPalette.dark}`,
@@ -27,7 +27,7 @@ export const colors = {
   background: {
     white: `${background.main}`,
     alt: `${background.accent}`,
-    code: '#1C2130',
+    code: "#1C2130",
   },
 } as const;
 
@@ -44,10 +44,10 @@ export const typography = {
     md: 14,
     lg: 15,
     xl: 16,
-    '2xl': 20,
-    '3xl': 22,
-    '4xl': 26,
-    '5xl': 30,
+    "2xl": 20,
+    "3xl": 22,
+    "4xl": 26,
+    "5xl": 30,
   },
   lineHeight: {
     tight: 1.2,
@@ -65,36 +65,36 @@ export const typography = {
 
 // Spacing
 export const spacing = {
-  xs: '4px',
-  sm: '8px',
-  md: '12px',
-  lg: '16px',
-  xl: '24px',
-  '2xl': '32px',
-  '3xl': '40px',
-  '4xl': '48px',
+  xs: "4px",
+  sm: "8px",
+  md: "12px",
+  lg: "16px",
+  xl: "24px",
+  "2xl": "32px",
+  "3xl": "40px",
+  "4xl": "48px",
 } as const;
 
 // Border
 export const border = {
-  radius: '4px',
+  radius: "4px",
   default: `1px solid ${colors.border.default}`,
 } as const;
 
 // Image styles
 export const imageStyles = {
   image: {
-    width: '100%',
+    width: "100%",
     borderRadius: border.radius,
     border: border.default,
-    display: 'block' as const,
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    display: "block" as const,
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
   },
   caption: {
     fontSize: 10,
     color: colors.text.muted,
-    textAlign: 'center' as const,
-    fontStyle: 'italic' as const,
+    textAlign: "center" as const,
+    fontStyle: "italic" as const,
   },
 } as const;
 
@@ -102,21 +102,21 @@ export const imageStyles = {
 export const chipStyles = {
   // URL chips (light green)
   url: {
-    backgroundColor: '#e6f4ea',
-    color: '#1e7e34',
-    padding: '2px 8px',
-    borderRadius: '4px',
+    backgroundColor: "#e6f4ea",
+    color: "#1e7e34",
+    padding: "2px 8px",
+    borderRadius: "4px",
     fontFamily: typography.fontFamily.mono,
-    fontSize: '0.9em',
+    fontSize: "0.9em",
   },
   // File/code chips (light gray)
   code: {
-    backgroundColor: '#f1f3f4',
-    color: '#5f6368',
-    padding: '2px 8px',
-    borderRadius: '4px',
+    backgroundColor: "#f1f3f4",
+    color: "#5f6368",
+    padding: "2px 8px",
+    borderRadius: "4px",
     fontFamily: typography.fontFamily.mono,
-    fontSize: '0.9em',
+    fontSize: "0.9em",
   },
 } as const;
 
@@ -132,7 +132,7 @@ export const componentStyles = {
   heading: {
     h2: {
       fontFamily: typography.fontFamily.sans,
-      fontSize: typography.fontSize['2xl'],
+      fontSize: typography.fontSize["2xl"],
       fontWeight: typography.fontWeight.semibold,
       color: colors.text.primary,
       lineHeight: typography.lineHeight.normal,

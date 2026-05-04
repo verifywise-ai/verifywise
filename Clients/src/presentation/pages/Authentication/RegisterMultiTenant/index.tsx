@@ -57,8 +57,7 @@ const RegisterMultiTenant: React.FC = () => {
   const [organizationValues, setOrganizationValues] =
     useState<OrganizationFormValues>(initialOrganizationState);
   // State for organization form errors
-  const [organizationErrors, setOrganizationErrors] =
-    useState<OrganizationFormErrors>({});
+  const [organizationErrors, setOrganizationErrors] = useState<OrganizationFormErrors>({});
 
   // State to track which form to show
   const [showOrganizationForm, setShowOrganizationForm] = useState(false);
@@ -83,12 +82,10 @@ const RegisterMultiTenant: React.FC = () => {
   }, []);
 
   // Handle input field changes for user form
-  const handleChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues({ ...values, [prop]: event.target.value });
-      setErrors({ ...errors, [prop]: "" }); // Clear error for the specific field
-    };
+  const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [prop]: event.target.value });
+    setErrors({ ...errors, [prop]: "" }); // Clear error for the specific field
+  };
 
   // Handle password field focus
   const handlePasswordFocus = () => {
@@ -105,8 +102,7 @@ const RegisterMultiTenant: React.FC = () => {
 
   // Handle input field changes for organization form
   const handleOrganizationChange =
-    (prop: keyof OrganizationFormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (prop: keyof OrganizationFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setOrganizationValues({
         ...organizationValues,
         [prop]: event.target.value,
@@ -115,13 +111,10 @@ const RegisterMultiTenant: React.FC = () => {
     };
 
   // Handle organization form submission (Next button)
-  const handleOrganizationSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleOrganizationSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const { isFormValid, errors } =
-      validateOrganizationForm(organizationValues);
+    const { isFormValid, errors } = validateOrganizationForm(organizationValues);
     if (!isFormValid) {
       setOrganizationErrors(errors);
       return;
@@ -169,7 +162,8 @@ const RegisterMultiTenant: React.FC = () => {
         users,
       });
       const token = response.data.data.token;
-      const organizationName = response.data.data.organization?.name || `${values.name}'s Organization`;
+      const organizationName =
+        response.data.data.organization?.name || `${values.name}'s Organization`;
       const expirationDate = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
       dispatch(setAuthToken(token));
       dispatch(setExpiration(expirationDate));
@@ -282,9 +276,7 @@ const RegisterMultiTenant: React.FC = () => {
           />
         </Suspense>
       )}
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <Background
         style={{
           position: "absolute",
@@ -385,9 +377,7 @@ const RegisterMultiTenant: React.FC = () => {
               Verify
               <span style={{ color: singleTheme.textColors.theme }}>Wise</span>
             </Typography>
-            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-              Create admin account
-            </Typography>
+            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Create admin account</Typography>
             <Typography
               sx={{
                 color: singleTheme.buttons.primary.contained.backgroundColor,
@@ -481,13 +471,7 @@ const RegisterMultiTenant: React.FC = () => {
                 disableRipple
                 variant="contained"
                 sx={{
-                  marginTop: !(
-                    isPasswordFocused ||
-                    values.password ||
-                    errors.password
-                  )
-                    ? 10
-                    : 0,
+                  marginTop: !(isPasswordFocused || values.password || errors.password) ? 10 : 0,
                   ...singleTheme.buttons.primary.contained,
                 }}
               >

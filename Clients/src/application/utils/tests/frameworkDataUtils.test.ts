@@ -84,7 +84,7 @@ describe("frameworkDataUtils", () => {
     it("returns invalid when extractedData is not an array (covers lines 106-111)", () => {
       const isArraySpy = vi.spyOn(Array, "isArray");
       isArraySpy
-        .mockImplementationOnce(() => true)  // response is treated as array (for branch)
+        .mockImplementationOnce(() => true) // response is treated as array (for branch)
         .mockImplementationOnce(() => false); // extractedData is not an array (forced)
 
       const result = validateApiResponse([{ id: 1 }], "ISO 27001", "clauses");
@@ -96,7 +96,7 @@ describe("frameworkDataUtils", () => {
       });
 
       isArraySpy.mockRestore();
-    }); 
+    });
   });
 
   describe("processSubItems", () => {
@@ -116,7 +116,7 @@ describe("frameworkDataUtils", () => {
           { id: 2, title: "X", status: "Not started", owner: undefined },
         ],
         "PARENT",
-        "ISO 27001"
+        "ISO 27001",
       );
 
       // invalid entries removed
@@ -223,16 +223,13 @@ describe("frameworkDataUtils", () => {
     });
 
     it("ISO27001: falls back to clause_no when arrangement is present but falsy (covers OR branch at line 202)", () => {
-    (isISO27001 as any).mockReturnValue(true);
+      (isISO27001 as any).mockReturnValue(true);
 
-    // arrangement exists (does not trigger 'missing clause number'), but is "" (falsy)
-    // so it should use clause_no
-    const result = isValidClauseNumber(
-        { arrangement: "", clause_no: "4" },
-        "ISO 27001"
-    );
+      // arrangement exists (does not trigger 'missing clause number'), but is "" (falsy)
+      // so it should use clause_no
+      const result = isValidClauseNumber({ arrangement: "", clause_no: "4" }, "ISO 27001");
 
-    expect(result).toBe(true);
+      expect(result).toBe(true);
     });
   });
 
@@ -268,7 +265,7 @@ describe("frameworkDataUtils", () => {
 
       const result = processAnnexNumber(
         { id: 1, title: "A.5 Organizational policies and governance" } as any,
-        "ISO 27001"
+        "ISO 27001",
       );
 
       expect(result.displayNumber).toBe("A.5");
@@ -289,7 +286,7 @@ describe("frameworkDataUtils", () => {
 
       const result = processAnnexNumber(
         { id: 99, title: "X", arrangement: "12" } as any,
-        "ISO 42001"
+        "ISO 42001",
       );
 
       expect(result.displayNumber).toBe("A.12");
@@ -299,10 +296,7 @@ describe("frameworkDataUtils", () => {
     it("non-ISO27001 uses annex_no when arrangement missing", () => {
       (isISO27001 as any).mockReturnValue(false);
 
-      const result = processAnnexNumber(
-        { id: 99, title: "X", annex_no: "7" } as any,
-        "ISO 42001"
-      );
+      const result = processAnnexNumber({ id: 99, title: "X", annex_no: "7" } as any, "ISO 42001");
 
       expect(result.displayNumber).toBe("A.7");
     });

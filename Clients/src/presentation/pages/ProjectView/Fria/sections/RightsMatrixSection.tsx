@@ -39,29 +39,20 @@ function RightsMatrixSection({
 }: RightsMatrixSectionProps) {
   const theme = useTheme();
 
-  const [localRights, setLocalRights] = useState<FriaRight[]>(() =>
-    rights.map((r) => ({ ...r }))
-  );
+  const [localRights, setLocalRights] = useState<FriaRight[]>(() => rights.map((r) => ({ ...r })));
 
   // Sync localRights when parent rights prop changes
   useEffect(() => {
     setLocalRights(rights.map((r) => ({ ...r })));
   }, [rights]);
 
-  const updateLocalRight = useCallback(
-    (index: number, patch: Partial<FriaRight>) => {
-      setLocalRights((prev) =>
-        prev.map((r, i) => (i === index ? { ...r, ...patch } : r))
-      );
-    },
-    []
-  );
+  const updateLocalRight = useCallback((index: number, patch: Partial<FriaRight>) => {
+    setLocalRights((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }, []);
 
   const handleFlagChange = (index: number, checked: boolean) => {
     const patch: Partial<FriaRight> = { flagged: checked };
-    const next = localRights.map((r, i) =>
-      i === index ? { ...r, ...patch } : r
-    );
+    const next = localRights.map((r, i) => (i === index ? { ...r, ...patch } : r));
     setLocalRights(next);
     onUpdateRights(next);
   };
@@ -70,9 +61,7 @@ function RightsMatrixSection({
     (index: number, field: "severity" | "confidence") =>
     (e: SelectChangeEvent<string | number>) => {
       const patch = { [field]: Number(e.target.value) };
-      const next = localRights.map((r, i) =>
-        i === index ? { ...r, ...patch } : r
-      );
+      const next = localRights.map((r, i) => (i === index ? { ...r, ...patch } : r));
       setLocalRights(next);
       onUpdateRights(next);
     };
@@ -80,7 +69,7 @@ function RightsMatrixSection({
   const handleTextChange = (
     index: number,
     field: "impact_pathway" | "mitigation",
-    value: string
+    value: string,
   ) => {
     updateLocalRight(index, { [field]: value });
   };
@@ -96,11 +85,22 @@ function RightsMatrixSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)(b)–(d)
           </a>{" "}
-          requires assessing impacts on the right to human dignity, personal data protection, privacy, non-discrimination, equality, and other rights in the{" "}
-          <a href={EU_CHARTER_LINK} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          requires assessing impacts on the right to human dignity, personal data protection,
+          privacy, non-discrimination, equality, and other rights in the{" "}
+          <a
+            href={EU_CHARTER_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             EU Charter of Fundamental Rights
           </a>
           . Flag any right where the system may have a material adverse impact.
@@ -164,9 +164,7 @@ function RightsMatrixSection({
                     label="Flag"
                     isChecked={right.flagged}
                     value={right.right_key}
-                    onChange={(e) =>
-                      handleFlagChange(index, e.target.checked)
-                    }
+                    onChange={(e) => handleFlagChange(index, e.target.checked)}
                     isDisabled={isSaving}
                   />
                 </Box>
@@ -211,9 +209,7 @@ function RightsMatrixSection({
                       type="description"
                       rows={3}
                       value={right.impact_pathway ?? ""}
-                      onChange={(e) =>
-                        handleTextChange(index, "impact_pathway", e.target.value)
-                      }
+                      onChange={(e) => handleTextChange(index, "impact_pathway", e.target.value)}
                       disabled={isSaving}
                     />
                   </Box>
@@ -226,9 +222,7 @@ function RightsMatrixSection({
                       type="description"
                       rows={3}
                       value={right.mitigation ?? ""}
-                      onChange={(e) =>
-                        handleTextChange(index, "mitigation", e.target.value)
-                      }
+                      onChange={(e) => handleTextChange(index, "mitigation", e.target.value)}
                       disabled={isSaving}
                     />
                   </Box>

@@ -53,59 +53,59 @@ export const viewProjectButtonStyle = {
 };
 
 export const euAiActChipStyle = {
-  backgroundColor: '#014576',
+  backgroundColor: "#014576",
   color: `${background.main}`,
   fontWeight: 600,
   fontSize: 11,
   height: 28,
   borderRadius: "4px",
   mb: 1,
-  textTransform: 'none',
-  minWidth: 'auto',
-  padding: '0 6px 0 10px',
-  boxShadow: 'none',
-  '&:hover': {
-    backgroundColor: '#014576',
-    boxShadow: 'none',
+  textTransform: "none",
+  minWidth: "auto",
+  padding: "0 6px 0 10px",
+  boxShadow: "none",
+  "&:hover": {
+    backgroundColor: "#014576",
+    boxShadow: "none",
   },
-  '&:active': {
-    backgroundColor: '#014576',
-    boxShadow: 'none',
+  "&:active": {
+    backgroundColor: "#014576",
+    boxShadow: "none",
   },
-  '&:focus': {
-    backgroundColor: '#014576',
-    boxShadow: 'none',
+  "&:focus": {
+    backgroundColor: "#014576",
+    boxShadow: "none",
   },
-  '& .MuiButton-endIcon': {
-    marginLeft: '4px',
+  "& .MuiButton-endIcon": {
+    marginLeft: "4px",
   },
 };
 
 export const iso42001ChipStyle = {
-  backgroundColor: '#0ca5af',
+  backgroundColor: "#0ca5af",
   color: `${background.main}`,
   fontWeight: 600,
   fontSize: 11,
   height: 28,
   borderRadius: "4px",
   mb: 1,
-  textTransform: 'none',
-  minWidth: 'auto',
-  padding: '0 6px 0 10px',
-  boxShadow: 'none',
-  '&:hover': {
-    backgroundColor: '#0ca5af',
-    boxShadow: 'none',
+  textTransform: "none",
+  minWidth: "auto",
+  padding: "0 6px 0 10px",
+  boxShadow: "none",
+  "&:hover": {
+    backgroundColor: "#0ca5af",
+    boxShadow: "none",
   },
-  '&:active': {
-    backgroundColor: '#0ca5af',
-    boxShadow: 'none',
+  "&:active": {
+    backgroundColor: "#0ca5af",
+    boxShadow: "none",
   },
-  '&:focus': {
-    backgroundColor: '#0ca5af',
-    boxShadow: 'none',
+  "&:focus": {
+    backgroundColor: "#0ca5af",
+    boxShadow: "none",
   },
-  '& .MuiButton-endIcon': {
-    marginLeft: '4px',
+  "& .MuiButton-endIcon": {
+    marginLeft: "4px",
   },
 };

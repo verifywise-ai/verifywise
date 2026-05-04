@@ -1,14 +1,19 @@
 import React from "react";
-import { Box, Typography, Stack, FormControl, RadioGroup, FormControlLabel, Radio } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Stack,
+  FormControl,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+} from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { OnboardingUseCase } from "../../../../domain/enums/onboarding.enum";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
 import { brand, text, background, border as borderPalette } from "../../../themes/palette";
 
-const PreferencesStep: React.FC<OnboardingStepProps> = ({
-  preferences,
-  updatePreferences,
-}) => {
+const PreferencesStep: React.FC<OnboardingStepProps> = ({ preferences, updatePreferences }) => {
   const handleUseCaseChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     updatePreferences?.({ primaryUseCase: event.target.value as OnboardingUseCase });
   };
@@ -57,7 +62,9 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
             marginBottom: 3,
           }}
         >
-          Help us personalize your experience by sharing a bit about your focus. This information helps us customize your dashboard. You can skip this step or update these preferences later in settings.
+          Help us personalize your experience by sharing a bit about your focus. This information
+          helps us customize your dashboard. You can skip this step or update these preferences
+          later in settings.
         </Typography>
       </Box>
 
@@ -74,10 +81,7 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({
           >
             What's your primary focus?
           </Typography>
-          <RadioGroup
-            value={preferences?.primaryUseCase || ""}
-            onChange={handleUseCaseChange}
-          >
+          <RadioGroup value={preferences?.primaryUseCase || ""} onChange={handleUseCaseChange}>
             {Object.values(OnboardingUseCase).map((useCase) => (
               <FormControlLabel
                 key={useCase}

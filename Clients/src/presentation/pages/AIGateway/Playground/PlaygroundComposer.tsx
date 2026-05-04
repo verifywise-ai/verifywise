@@ -49,7 +49,11 @@ export function PlaygroundComposer({ disabled }: PlaygroundComposerProps) {
       <Stack direction="row" gap="8px" alignItems="flex-end">
         <ComposerPrimitive.Input
           asChild
-          placeholder={disabled ? "Select an endpoint first" : "Type a message... (Enter to send, Shift+Enter for new line)"}
+          placeholder={
+            disabled
+              ? "Select an endpoint first"
+              : "Type a message... (Enter to send, Shift+Enter for new line)"
+          }
         >
           <ComposerInput disabled={disabled} />
         </ComposerPrimitive.Input>

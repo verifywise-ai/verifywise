@@ -3,8 +3,7 @@ export const QualityManagementSystem = [
     order_no: 1,
     title:
       "Establish and maintain a quality management system documented in a systematic and orderly manner in the form of written policies, procedures, and instructions.",
-    description:
-      "QMS establishment covering every element required by Art 17.1.a-m.",
+    description: "QMS establishment covering every element required by Art 17.1.a-m.",
     article: "Art. 17(1)",
     subControls: [
       {
@@ -18,8 +17,7 @@ export const QualityManagementSystem = [
         order_no: 2,
         title:
           "Our QMS includes documented design and development procedures, including design control and design verification.",
-        description:
-          "Design-control and design-verification procedures documented (Art 17.1.c).",
+        description: "Design-control and design-verification procedures documented (Art 17.1.c).",
       },
       {
         order_no: 3,
@@ -56,10 +54,8 @@ export const QualityManagementSystem = [
       },
       {
         order_no: 8,
-        title:
-          "Our QMS includes procedures for reporting serious incidents per Article 73.",
-        description:
-          "Serious incident reporting procedures embedded in the QMS (Art 17.1.i).",
+        title: "Our QMS includes procedures for reporting serious incidents per Article 73.",
+        description: "Serious incident reporting procedures embedded in the QMS (Art 17.1.i).",
       },
       {
         order_no: 9,
@@ -72,15 +68,13 @@ export const QualityManagementSystem = [
         order_no: 10,
         title:
           "Our QMS includes systems and procedures for record-keeping of relevant documentation and information.",
-        description:
-          "Record-keeping systems and retention procedures are documented (Art 17.1.k).",
+        description: "Record-keeping systems and retention procedures are documented (Art 17.1.k).",
       },
       {
         order_no: 11,
         title:
           "Our QMS includes resource management procedures, including supply-chain related measures.",
-        description:
-          "Resource and supply-chain management procedures (Art 17.1.l).",
+        description: "Resource and supply-chain management procedures (Art 17.1.l).",
       },
       {
         order_no: 12,

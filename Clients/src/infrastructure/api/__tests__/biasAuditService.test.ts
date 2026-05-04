@@ -38,11 +38,9 @@ describe("biasAuditService", () => {
     const file = new File(["csv"], "data.csv");
     const config = { presetId: "p1", orgId: "org1", outcomeColumn: "hired", columnMapping: {} };
     const result = await biasAuditService.runAudit(file, config as any);
-    expect(mockAxios.post).toHaveBeenCalledWith(
-      "/deepeval/bias-audits/run",
-      expect.any(FormData),
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/bias-audits/run", expect.any(FormData), {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     expect(result.auditId).toBe("a1");
   });
 
@@ -63,7 +61,9 @@ describe("biasAuditService", () => {
   it("listAudits fetches with params", async () => {
     mockAxios.get.mockResolvedValue({ data: { audits: [] } });
     const result = await biasAuditService.listAudits({ org_id: "org1" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/bias-audits", { params: { org_id: "org1" } });
+    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/bias-audits", {
+      params: { org_id: "org1" },
+    });
     expect(result).toEqual([]);
   });
 
@@ -77,7 +77,9 @@ describe("biasAuditService", () => {
   it("updateAuditName patches audit", async () => {
     mockAxios.patch.mockResolvedValue({ data: { auditId: "a1", systemName: "New Name" } });
     const result = await biasAuditService.updateAuditName("a1", "New Name");
-    expect(mockAxios.patch).toHaveBeenCalledWith("/deepeval/bias-audits/a1", { systemName: "New Name" });
+    expect(mockAxios.patch).toHaveBeenCalledWith("/deepeval/bias-audits/a1", {
+      systemName: "New Name",
+    });
     expect(result.systemName).toBe("New Name");
   });
 
@@ -85,7 +87,9 @@ describe("biasAuditService", () => {
     const blob = new Blob(["pdf"]);
     mockAxios.get.mockResolvedValue({ data: blob });
     const result = await biasAuditService.downloadReport("a1");
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/bias-audits/a1/report.pdf", { responseType: "blob" });
+    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/bias-audits/a1/report.pdf", {
+      responseType: "blob",
+    });
     expect(result).toBe(blob);
   });
 
@@ -96,7 +100,7 @@ describe("biasAuditService", () => {
     expect(mockAxios.post).toHaveBeenCalledWith(
       "/deepeval/bias-audits/parse-headers",
       expect.any(FormData),
-      { headers: { "Content-Type": "multipart/form-data" } }
+      { headers: { "Content-Type": "multipart/form-data" } },
     );
     expect(result).toEqual(["name", "age", "hired"]);
   });

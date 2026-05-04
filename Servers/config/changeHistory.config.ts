@@ -96,9 +96,7 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
     if (Array.isArray(value)) {
       if (value.length === 0) return "-";
       // DO NOT SORT - order may be meaningful!
-      return value
-        .map((item) => String(item).trim())
-        .join(", ");
+      return value.map((item) => String(item).trim()).join(", ");
     }
     // Handle string representations of arrays
     if (typeof value === "string" && (value.startsWith("[") || value.includes(","))) {
@@ -106,12 +104,13 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) {
           // DO NOT SORT - order may be meaningful!
-          return parsed
-            .map((item) => String(item).trim())
-            .join(", ");
+          return parsed.map((item) => String(item).trim()).join(", ");
         }
       } catch {
-        const items = value.split(",").map((item) => item.trim()).filter(Boolean);
+        const items = value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
         if (items.length > 1) {
           // DO NOT SORT - order may be meaningful!
           return items.join(", ");
@@ -131,7 +130,7 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
           {
             replacements: { userId: value },
             type: QueryTypes.SELECT,
-          }
+          },
         );
 
         if (users && users.length > 0) {
@@ -187,17 +186,18 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
         {
           replacements: { userIds },
           type: QueryTypes.SELECT,
-        }
+        },
       );
 
       if (users && users.length > 0) {
         // Map user IDs to names in the original order
         const userMap = new Map(
-          users.map((u) => [u.id, u.name && u.surname ? `${u.name} ${u.surname}` : u.email || `User #${u.id}`])
+          users.map((u) => [
+            u.id,
+            u.name && u.surname ? `${u.name} ${u.surname}` : u.email || `User #${u.id}`,
+          ]),
         );
-        return userIds
-          .map((id) => userMap.get(id) || `User #${id}`)
-          .join(", ");
+        return userIds.map((id) => userMap.get(id) || `User #${id}`).join(", ");
       }
       return userIds.map((id) => `User #${id}`).join(", ");
     } catch (error) {
@@ -371,10 +371,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   project: {
     tableName: "project_change_history",
     foreignKeyField: "project_id",
-    fieldsToTrack: [
-      "name",
-      "description",
-    ],
+    fieldsToTrack: ["name", "description"],
     fieldLabels: {
       name: "Name",
       description: "Description",
@@ -384,10 +381,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   framework: {
     tableName: "framework_change_history",
     foreignKeyField: "framework_id",
-    fieldsToTrack: [
-      "name",
-      "description",
-    ],
+    fieldsToTrack: ["name", "description"],
     fieldLabels: {
       name: "Name",
       description: "Description",
@@ -397,11 +391,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   evidence_hub: {
     tableName: "evidence_hub_change_history",
     foreignKeyField: "evidence_hub_id",
-    fieldsToTrack: [
-      "name",
-      "type",
-      "description",
-    ],
+    fieldsToTrack: ["name", "type", "description"],
     fieldLabels: {
       name: "Name",
       type: "Type",
@@ -498,13 +488,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   policy: {
     tableName: "policy_change_history",
     foreignKeyField: "policy_id",
-    fieldsToTrack: [
-      "title",
-      "status",
-      "tags",
-      "next_review_date",
-      "assigned_reviewer_ids",
-    ],
+    fieldsToTrack: ["title", "status", "tags", "next_review_date", "assigned_reviewer_ids"],
     fieldLabels: {
       title: "Title",
       status: "Status",
@@ -579,14 +563,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   file: {
     tableName: "file_change_history",
     foreignKeyField: "file_id",
-    fieldsToTrack: [
-      "filename",
-      "version",
-      "review_status",
-      "tags",
-      "expiry_date",
-      "description",
-    ],
+    fieldsToTrack: ["filename", "version", "review_status", "tags", "expiry_date", "description"],
     fieldLabels: {
       filename: "Filename",
       version: "Version",
@@ -604,10 +581,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   model_lifecycle: {
     tableName: "model_lifecycle_change_history",
     foreignKeyField: "model_lifecycle_value_id",
-    fieldsToTrack: [
-      "value_text",
-      "value_json",
-    ],
+    fieldsToTrack: ["value_text", "value_json"],
     fieldLabels: {
       value_text: "Value",
       value_json: "Value (structured)",
@@ -620,14 +594,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   task: {
     tableName: "task_change_history",
     foreignKeyField: "task_id",
-    fieldsToTrack: [
-      "title",
-      "description",
-      "status",
-      "priority",
-      "due_date",
-      "categories",
-    ],
+    fieldsToTrack: ["title", "description", "status", "priority", "due_date", "categories"],
     fieldLabels: {
       title: "Title",
       description: "Description",
@@ -785,14 +752,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   ai_gateway_guardrail: {
     tableName: "ai_gateway_guardrail_change_history",
     foreignKeyField: "guardrail_id",
-    fieldsToTrack: [
-      "name",
-      "guardrail_type",
-      "action",
-      "scope",
-      "is_active",
-      "config",
-    ],
+    fieldsToTrack: ["name", "guardrail_type", "action", "scope", "is_active", "config"],
     fieldLabels: {
       name: "Name",
       guardrail_type: "Type",

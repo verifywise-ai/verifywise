@@ -90,9 +90,7 @@ describe("jwt.utils", () => {
       const decoded = getTokenPayload(token!);
 
       const thirtyDaysMs = 30 * 24 * 3600 * 1000;
-      expect(decoded.expire).toBeGreaterThanOrEqual(
-        before + thirtyDaysMs - 100
-      );
+      expect(decoded.expire).toBeGreaterThanOrEqual(before + thirtyDaysMs - 100);
     });
 
     it("should use custom expiration in days", () => {
@@ -101,12 +99,8 @@ describe("jwt.utils", () => {
       const decoded = getTokenPayload(token!);
 
       const sevenDaysMs = 7 * 24 * 3600 * 1000;
-      expect(decoded.expire).toBeGreaterThanOrEqual(
-        before + sevenDaysMs - 100
-      );
-      expect(decoded.expire).toBeLessThanOrEqual(
-        before + sevenDaysMs + 1000
-      );
+      expect(decoded.expire).toBeGreaterThanOrEqual(before + sevenDaysMs - 100);
+      expect(decoded.expire).toBeLessThanOrEqual(before + sevenDaysMs + 1000);
     });
   });
 

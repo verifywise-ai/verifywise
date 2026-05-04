@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * ISO 42001 Clause 6.1 restructure to match the 2023 standard's 3-level shape.
@@ -28,84 +28,84 @@
 
 const NEW_SUBCLAUSES = [
   {
-    subclause_id: '6.1.1',
+    subclause_id: "6.1.1",
     order_no: 1,
-    title: 'General — actions to address risks and opportunities',
+    title: "General — actions to address risks and opportunities",
     summary:
-      'When planning for the AIMS, consider the issues from 4.1, requirements from 4.2, and determine risks and opportunities that need to be addressed to ensure the AIMS can achieve its intended outcomes, prevent or reduce undesired effects, and achieve continual improvement.',
+      "When planning for the AIMS, consider the issues from 4.1, requirements from 4.2, and determine risks and opportunities that need to be addressed to ensure the AIMS can achieve its intended outcomes, prevent or reduce undesired effects, and achieve continual improvement.",
     questions: [
-      'Have we identified risks and opportunities considering the context (4.1) and interested parties (4.2)?',
-      'Do our planned actions integrate into AIMS processes?',
-      'How do we evaluate the effectiveness of these actions?',
+      "Have we identified risks and opportunities considering the context (4.1) and interested parties (4.2)?",
+      "Do our planned actions integrate into AIMS processes?",
+      "How do we evaluate the effectiveness of these actions?",
     ],
     evidence_examples: [
-      'Risk and opportunity register linked to context analysis',
-      'Planning records showing integration into AIMS processes',
-      'Effectiveness evaluation records',
+      "Risk and opportunity register linked to context analysis",
+      "Planning records showing integration into AIMS processes",
+      "Effectiveness evaluation records",
     ],
   },
   {
-    subclause_id: '6.1.2',
+    subclause_id: "6.1.2",
     order_no: 2,
-    title: 'AI risk assessment',
+    title: "AI risk assessment",
     summary:
-      'Define and apply an AI risk assessment process that establishes risk criteria, identifies risks to individuals, groups, and societies from AI systems, analyzes and evaluates those risks, and selects treatment options.',
+      "Define and apply an AI risk assessment process that establishes risk criteria, identifies risks to individuals, groups, and societies from AI systems, analyzes and evaluates those risks, and selects treatment options.",
     questions: [
-      'Is there a documented AI risk assessment methodology with defined risk criteria?',
-      'Are risks to individuals, groups, and societies from AI systems systematically identified?',
-      'How are identified risks analyzed (likelihood, severity, affected parties)?',
-      'How are risks evaluated against acceptance criteria?',
+      "Is there a documented AI risk assessment methodology with defined risk criteria?",
+      "Are risks to individuals, groups, and societies from AI systems systematically identified?",
+      "How are identified risks analyzed (likelihood, severity, affected parties)?",
+      "How are risks evaluated against acceptance criteria?",
     ],
     evidence_examples: [
-      'AI risk assessment methodology document',
-      'Risk criteria definitions (likelihood scales, impact scales, acceptance thresholds)',
-      'AI risk assessment reports per system',
-      'Risk register with analysis and evaluation results',
+      "AI risk assessment methodology document",
+      "Risk criteria definitions (likelihood scales, impact scales, acceptance thresholds)",
+      "AI risk assessment reports per system",
+      "Risk register with analysis and evaluation results",
     ],
   },
   {
-    subclause_id: '6.1.3',
+    subclause_id: "6.1.3",
     order_no: 3,
-    title: 'AI risk treatment',
+    title: "AI risk treatment",
     summary:
-      'Define and apply an AI risk treatment process to select appropriate treatment options, determine controls (referencing Annex A), produce a Statement of Applicability, and formulate a risk treatment plan.',
+      "Define and apply an AI risk treatment process to select appropriate treatment options, determine controls (referencing Annex A), produce a Statement of Applicability, and formulate a risk treatment plan.",
     questions: [
-      'How are risk treatment options selected for each identified AI risk?',
-      'Is there a Statement of Applicability (SoA) documenting which Annex A controls apply and which are excluded with justification?',
-      'Is there a documented risk treatment plan with owners, timelines, and resources?',
-      'Have risk owners approved the risk treatment plan and accepted residual risks?',
+      "How are risk treatment options selected for each identified AI risk?",
+      "Is there a Statement of Applicability (SoA) documenting which Annex A controls apply and which are excluded with justification?",
+      "Is there a documented risk treatment plan with owners, timelines, and resources?",
+      "Have risk owners approved the risk treatment plan and accepted residual risks?",
     ],
     evidence_examples: [
-      'AI risk treatment plan',
-      'Statement of Applicability (SoA)',
-      'Risk owner approval records',
-      'Residual risk acceptance documentation',
+      "AI risk treatment plan",
+      "Statement of Applicability (SoA)",
+      "Risk owner approval records",
+      "Residual risk acceptance documentation",
     ],
   },
   {
-    subclause_id: '6.1.4',
+    subclause_id: "6.1.4",
     order_no: 4,
-    title: 'AI system impact assessment',
+    title: "AI system impact assessment",
     summary:
-      'Define and apply an AI system impact assessment process to assess potential consequences — positive and negative — of AI systems on individuals, groups, and societies, considering the AI system lifecycle.',
+      "Define and apply an AI system impact assessment process to assess potential consequences — positive and negative — of AI systems on individuals, groups, and societies, considering the AI system lifecycle.",
     questions: [
-      'Is there a documented impact assessment methodology for AI systems?',
-      'Are both positive and negative impacts on individuals, groups, and societies assessed?',
-      'At which lifecycle stages are impact assessments conducted or updated?',
-      'How are impact assessment results fed into risk treatment and system design decisions?',
+      "Is there a documented impact assessment methodology for AI systems?",
+      "Are both positive and negative impacts on individuals, groups, and societies assessed?",
+      "At which lifecycle stages are impact assessments conducted or updated?",
+      "How are impact assessment results fed into risk treatment and system design decisions?",
     ],
     evidence_examples: [
-      'AI impact assessment methodology',
-      'Completed impact assessment reports per AI system',
-      'Records linking impact findings to design or treatment decisions',
+      "AI impact assessment methodology",
+      "Completed impact assessment reports per AI system",
+      "Records linking impact findings to design or treatment decisions",
     ],
   },
 ];
 
 const toPgArray = (arr) => {
-  if (!arr || !Array.isArray(arr) || arr.length === 0) return '{}';
-  const escaped = arr.map(v => `"${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
-  return `{${escaped.join(',')}}`;
+  if (!arr || !Array.isArray(arr) || arr.length === 0) return "{}";
+  const escaped = arr.map((v) => `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${escaped.join(",")}}`;
 };
 
 module.exports = {
@@ -116,10 +116,10 @@ module.exports = {
         `SELECT id FROM verifywise.frameworks
          WHERE name ILIKE 'ISO 42001%' OR name ILIKE 'ISO/IEC 42001%'
          LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[iso42001-split-6.1] ISO 42001 framework not found — skipping');
+        console.warn("[iso42001-split-6.1] ISO 42001 framework not found — skipping");
         await t.commit();
         return;
       }
@@ -129,10 +129,10 @@ module.exports = {
         `SELECT id FROM verifywise.clauses_struct_iso
          WHERE framework_id = :frameworkId AND clause_no = 6
          LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
       if (!clause6) {
-        console.warn('[iso42001-split-6.1] Clause 6 not found — skipping');
+        console.warn("[iso42001-split-6.1] Clause 6 not found — skipping");
         await t.commit();
         return;
       }
@@ -145,7 +145,7 @@ module.exports = {
       const [[oldSixOne]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.subclauses_struct_iso
          WHERE clause_id = :clauseId AND subclause_id = '6.1' LIMIT 1;`,
-        { transaction: t, replacements: { clauseId } }
+        { transaction: t, replacements: { clauseId } },
       );
 
       if (oldSixOne?.id) {
@@ -158,20 +158,20 @@ module.exports = {
                   OR reviewer IS NOT NULL
                   OR approver IS NOT NULL
                   OR auditor_feedback IS NOT NULL);`,
-          { transaction: t, replacements: { structId: oldSixOne.id } }
+          { transaction: t, replacements: { structId: oldSixOne.id } },
         );
 
         if (Number(conflict.n) > 0) {
           console.warn(
-            `[iso42001-split-6.1] old merged '6.1' has ${conflict.n} tenant row(s) with content — these will be removed by CASCADE (replaced by 6.1.1–6.1.4)`
+            `[iso42001-split-6.1] old merged '6.1' has ${conflict.n} tenant row(s) with content — these will be removed by CASCADE (replaced by 6.1.1–6.1.4)`,
           );
         }
 
         await queryInterface.sequelize.query(
           `DELETE FROM verifywise.subclauses_struct_iso WHERE id = :id;`,
-          { transaction: t, replacements: { id: oldSixOne.id } }
+          { transaction: t, replacements: { id: oldSixOne.id } },
         );
-        console.log('[iso42001-split-6.1] deleted old merged 6.1 struct row');
+        console.log("[iso42001-split-6.1] deleted old merged 6.1 struct row");
       }
 
       // 2) Update 6.2 from order_no 2 → 5 before inserting the new children,
@@ -180,7 +180,7 @@ module.exports = {
         `UPDATE verifywise.subclauses_struct_iso
            SET order_no = 5
          WHERE clause_id = :clauseId AND subclause_id = '6.2';`,
-        { transaction: t, replacements: { clauseId } }
+        { transaction: t, replacements: { clauseId } },
       );
 
       // 3) Insert the 4 new struct rows, idempotent by (clause_id, subclause_id)
@@ -190,7 +190,7 @@ module.exports = {
           `SELECT id FROM verifywise.subclauses_struct_iso
            WHERE clause_id = :clauseId AND subclause_id = :subclause_id
            LIMIT 1;`,
-          { transaction: t, replacements: { clauseId, subclause_id: sub.subclause_id } }
+          { transaction: t, replacements: { clauseId, subclause_id: sub.subclause_id } },
         );
         let structId = existing?.id;
         if (structId) {
@@ -199,7 +199,7 @@ module.exports = {
             `UPDATE verifywise.subclauses_struct_iso
                SET order_no = :order_no
              WHERE id = :id;`,
-            { transaction: t, replacements: { id: structId, order_no: sub.order_no } }
+            { transaction: t, replacements: { id: structId, order_no: sub.order_no } },
           );
         } else {
           const [[inserted]] = await queryInterface.sequelize.query(
@@ -219,7 +219,7 @@ module.exports = {
                 evidence_examples: toPgArray(sub.evidence_examples),
                 order_no: sub.order_no,
               },
-            }
+            },
           );
           structId = inserted.id;
         }
@@ -241,12 +241,12 @@ module.exports = {
                WHERE si.projects_frameworks_id = pf.id
                  AND si.subclause_meta_id = :structId
              );`,
-          { transaction: t, replacements: { structId, frameworkId } }
+          { transaction: t, replacements: { structId, frameworkId } },
         );
       }
 
       await t.commit();
-      console.log('[iso42001-split-6.1] clause 6 restructured to 6.1.1-6.1.4 + renumbered 6.2 → 5');
+      console.log("[iso42001-split-6.1] clause 6 restructured to 6.1.1-6.1.4 + renumbered 6.2 → 5");
     } catch (err) {
       await t.rollback();
       throw err;

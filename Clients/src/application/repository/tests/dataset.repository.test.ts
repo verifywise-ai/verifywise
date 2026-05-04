@@ -49,17 +49,12 @@ describe("Test Dataset Repository", () => {
       const routeUrl = "/datasets";
       const data = { name: "Bad Dataset" };
       const error = new Error("post failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(createDataset(routeUrl, data)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating dataset:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating dataset:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -86,17 +81,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when get fails", async () => {
       const error = new Error("fetch failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getAllDatasets()).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching datasets:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching datasets:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -121,17 +111,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when get fails", async () => {
       const error = new Error("not found");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getDatasetById(99)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching dataset:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching dataset:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -156,17 +141,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when get fails", async () => {
       const error = new Error("model fetch failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getDatasetsByModelId(12)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching datasets by model:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching datasets by model:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -191,17 +171,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when get fails", async () => {
       const error = new Error("project fetch failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getDatasetsByProjectId(33)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching datasets by project:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching datasets by project:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -227,17 +202,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when patch fails", async () => {
       const error = new Error("update failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValue(error);
 
       await expect(updateDataset(7, {})).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error updating dataset:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error updating dataset:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -262,17 +232,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when delete fails", async () => {
       const error = new Error("delete failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
       await expect(deleteDataset(8)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error deleting dataset:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error deleting dataset:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -297,17 +262,12 @@ describe("Test Dataset Repository", () => {
 
     it("should log and rethrow when get fails", async () => {
       const error = new Error("history fetch failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getDatasetHistory(3)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching dataset history:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching dataset history:", error);
 
       consoleErrorSpy.mockRestore();
     });

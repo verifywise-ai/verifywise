@@ -53,17 +53,12 @@ import { getOrganizationsExistsQuery } from "../utils/organization.utils";
  * // Always allowed regardless of multi-tenancy setting
  * // Enables initial setup for self-hosted deployments
  */
-export const checkMultiTenancy = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const checkMultiTenancy = async (req: Request, res: Response, next: NextFunction) => {
   const requestOrigin = req.headers.origin || req.headers.host;
   const organizationExists = await getOrganizationsExistsQuery();
   if (
     (process.env.MULTI_TENANCY_ENABLED === "true" &&
-      (requestOrigin?.includes("app.ai") ||
-        requestOrigin?.includes("test.ai"))) ||
+      (requestOrigin?.includes("app.ai") || requestOrigin?.includes("test.ai"))) ||
     !organizationExists.exists
   ) {
     return next();

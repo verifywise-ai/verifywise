@@ -119,11 +119,7 @@ function GroupedSelect({
         >
           {label}
           {isRequired && (
-            <Typography
-              component="span"
-              ml={theme.spacing(1)}
-              color={theme.palette.error.text}
-            >
+            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
               *
             </Typography>
           )}
@@ -240,9 +236,7 @@ function GroupedSelect({
                   justifyContent="space-between"
                   sx={{ width: "100%" }}
                 >
-                  <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                    {item.label}
-                  </Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Typography>
                   {item.description && (
                     <Typography sx={{ fontSize: 11, color: theme.palette.text.disabled }}>
                       {item.description}

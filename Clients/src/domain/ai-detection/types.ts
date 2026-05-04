@@ -12,13 +12,7 @@ import type { RiskGrade, RiskScoreDetails } from "./riskScoringTypes";
 // Scan Types
 // ============================================================================
 
-export type ScanStatus =
-  | "pending"
-  | "cloning"
-  | "scanning"
-  | "completed"
-  | "failed"
-  | "cancelled";
+export type ScanStatus = "pending" | "cloning" | "scanning" | "completed" | "failed" | "cancelled";
 
 export type ConfidenceLevel = "high" | "medium" | "low";
 

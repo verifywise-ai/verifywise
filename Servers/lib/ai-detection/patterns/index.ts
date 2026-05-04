@@ -43,25 +43,19 @@ export const ALL_PATTERNS: DetectionPattern[] = [
  * Get patterns by provider name
  */
 export function getPatternsByProvider(provider: string): DetectionPattern[] {
-  return ALL_PATTERNS.filter(
-    (p) => p.provider.toLowerCase() === provider.toLowerCase()
-  );
+  return ALL_PATTERNS.filter((p) => p.provider.toLowerCase() === provider.toLowerCase());
 }
 
 /**
  * Get patterns that have secret detection
  */
 export function getSecretPatterns(): DetectionPattern[] {
-  return ALL_PATTERNS.filter(
-    (p) => p.patterns.secrets && p.patterns.secrets.length > 0
-  );
+  return ALL_PATTERNS.filter((p) => p.patterns.secrets && p.patterns.secrets.length > 0);
 }
 
 /**
  * Get patterns that have API call detection
  */
 export function getApiCallPatterns(): DetectionPattern[] {
-  return ALL_PATTERNS.filter(
-    (p) => p.patterns.apiCalls && p.patterns.apiCalls.length > 0
-  );
+  return ALL_PATTERNS.filter((p) => p.patterns.apiCalls && p.patterns.apiCalls.length > 0);
 }

@@ -51,7 +51,8 @@ export async function scanH5File(filePath: string): Promise<IModelScanResult> {
       findings.push({
         threatType: "lambda_injection",
         threatName: "Lambda Layer Injection",
-        description: "Keras Lambda layer found which can contain arbitrary Python code: " + lambda.layerName,
+        description:
+          "Keras Lambda layer found which can contain arbitrary Python code: " + lambda.layerName,
         severity: "medium",
         moduleName: "keras.layers",
         operatorName: "Lambda",
@@ -80,12 +81,16 @@ export async function scanH5File(filePath: string): Promise<IModelScanResult> {
       });
     }
 
-    const highestSeverity = findings.length > 0
-      ? findings.reduce((max, f) => {
-          const order = { critical: 0, high: 1, medium: 2, low: 3 };
-          return order[f.severity] < order[max] ? f.severity : max;
-        }, "low" as "critical" | "high" | "medium" | "low")
-      : null;
+    const highestSeverity =
+      findings.length > 0
+        ? findings.reduce(
+            (max, f) => {
+              const order = { critical: 0, high: 1, medium: 2, low: 3 };
+              return order[f.severity] < order[max] ? f.severity : max;
+            },
+            "low" as "critical" | "high" | "medium" | "low",
+          )
+        : null;
 
     return {
       filePath,
@@ -123,7 +128,7 @@ async function analyzeH5File(filePath: string): Promise<IH5ScanResult> {
     try {
       const magicBuffer = Buffer.alloc(8);
       await fd.read(magicBuffer, 0, 8, 0);
-      
+
       if (!magicBuffer.equals(H5_MAGIC)) {
         return {
           success: false,
@@ -165,10 +170,7 @@ async function analyzeH5File(filePath: string): Promise<IH5ScanResult> {
     }
 
     // Search for custom object patterns
-    const customObjectPatterns = [
-      /"custom_objects":\s*\{[^}]+\}/gi,
-      /custom_objects\s*=/gi,
-    ];
+    const customObjectPatterns = [/"custom_objects":\s*\{[^}]+\}/gi, /custom_objects\s*=/gi];
 
     for (const pattern of customObjectPatterns) {
       const matches = contentStr.match(pattern);

@@ -35,7 +35,12 @@ describe("evaluationLlmApiKeysService", () => {
 
   describe("addKey", () => {
     it("posts key and returns data", async () => {
-      const newKey = { provider: "openai" as const, maskedKey: "sk-***", createdAt: "", updatedAt: "" };
+      const newKey = {
+        provider: "openai" as const,
+        maskedKey: "sk-***",
+        createdAt: "",
+        updatedAt: "",
+      };
       mockAxios.post.mockResolvedValue({ data: { success: true, data: newKey } });
       const result = await evaluationLlmApiKeysService.addKey({
         provider: "openai",
@@ -60,7 +65,10 @@ describe("evaluationLlmApiKeysService", () => {
   describe("hasKey", () => {
     it("returns true when key exists for provider", async () => {
       mockAxios.get.mockResolvedValue({
-        data: { success: true, data: [{ provider: "openai", maskedKey: "sk-***", createdAt: "", updatedAt: "" }] },
+        data: {
+          success: true,
+          data: [{ provider: "openai", maskedKey: "sk-***", createdAt: "", updatedAt: "" }],
+        },
       });
       const result = await evaluationLlmApiKeysService.hasKey("openai");
       expect(result).toBe(true);

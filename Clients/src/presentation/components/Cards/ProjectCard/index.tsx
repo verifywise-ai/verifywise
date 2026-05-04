@@ -64,18 +64,11 @@ interface ProjectCardProps {
 }
 
 // Helper to fetch progress data
-function useProjectProgress(
-  projectFrameworkId?: number,
-  projectFrameworkId2?: number
-) {
-  const [complianceProgressData, setComplianceProgressData] =
-    useState<ComplianceProgress>();
-  const [assessmentProgressData, setAssessmentProgressData] =
-    useState<AssessmentProgress>();
-  const [annexesProgressData, setAnnexesProgressData] =
-    useState<AnnexesProgress>();
-  const [clausesProgressData, setClausesProgressData] =
-    useState<ClausesProgress>();
+function useProjectProgress(projectFrameworkId?: number, projectFrameworkId2?: number) {
+  const [complianceProgressData, setComplianceProgressData] = useState<ComplianceProgress>();
+  const [assessmentProgressData, setAssessmentProgressData] = useState<AssessmentProgress>();
+  const [annexesProgressData, setAnnexesProgressData] = useState<AnnexesProgress>();
+  const [clausesProgressData, setClausesProgressData] = useState<ClausesProgress>();
 
   useEffect(() => {
     const fetchProgressData = async () => {
@@ -83,21 +76,21 @@ function useProjectProgress(
         if (projectFrameworkId) {
           await fetchData(
             `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
-            setComplianceProgressData
+            setComplianceProgressData,
           );
           await fetchData(
             `/eu-ai-act/assessments/progress/${projectFrameworkId}`,
-            setAssessmentProgressData
+            setAssessmentProgressData,
           );
         }
         if (projectFrameworkId2) {
           await fetchData(
             `/iso-42001/clauses/progress/${projectFrameworkId2}`,
-            setClausesProgressData
+            setClausesProgressData,
           );
           await fetchData(
             `/iso-42001/annexes/progress/${projectFrameworkId2}`,
-            setAnnexesProgressData
+            setAnnexesProgressData,
           );
         }
       } catch (_error) {
@@ -152,22 +145,21 @@ function FrameworkButton({
 
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 
-export const ProjectCard = React.memo(function ProjectCard({ project, isLoading = false }: ProjectCardProps) {
+export const ProjectCard = React.memo(function ProjectCard({
+  project,
+  isLoading = false,
+}: ProjectCardProps) {
   const navigate = useNavigateSearch();
   const { users } = useUsers();
 
   // Memoize framework IDs
   const projectFrameworkId = useMemo(
-    () =>
-      project.framework?.find((p) => p.framework_id === 1)
-        ?.project_framework_id,
-    [project.framework]
+    () => project.framework?.find((p) => p.framework_id === 1)?.project_framework_id,
+    [project.framework],
   );
   const projectFrameworkId2 = useMemo(
-    () =>
-      project.framework?.find((p) => p.framework_id === 2)
-        ?.project_framework_id,
-    [project.framework]
+    () => project.framework?.find((p) => p.framework_id === 2)?.project_framework_id,
+    [project.framework],
   );
 
   // Fetch progress data
@@ -181,7 +173,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
   // Find project owner
   const ownerUser: User | null = useMemo(
     () => users?.find((user: User) => user.id === project.owner) ?? null,
-    [users, project.owner]
+    [users, project.owner],
   );
 
   // Navigation handlers for framework buttons
@@ -208,15 +200,14 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
       <Stack className="project-card-header" sx={{ gap: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
           <Typography className="project-card-title" sx={projectCardTitleStyle}>
-            {project.uc_id ? `${project.uc_id}: ` : ''}{project.project_title}
+            {project.uc_id ? `${project.uc_id}: ` : ""}
+            {project.project_title}
           </Typography>
           <Stack direction="row" spacing={8} sx={{ ml: 2 }}>
             <Stack className="project-card-spec-tile" alignItems="flex-end">
               <Typography sx={projectCardSpecKeyStyle}>Project owner</Typography>
               <Typography sx={projectCardSpecValueStyle}>
-                {ownerUser
-                  ? `${ownerUser.name} ${ownerUser.surname}`
-                  : "Unknown User"}
+                {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
               </Typography>
             </Stack>
             <Stack className="project-card-spec-tile" alignItems="flex-end">
@@ -227,35 +218,17 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
             </Stack>
           </Stack>
         </Stack>
-        <Stack
-          direction="row"
-          spacing={5}
-          className="project-card-frameworks"
-          sx={{ mb: "16px" }}
-        >
+        <Stack direction="row" spacing={5} className="project-card-frameworks" sx={{ mb: "16px" }}>
           {projectFrameworkId && (
-            <FrameworkButton
-              label="EU AI Act"
-              type="eu"
-              onClick={() => handleFrameworkClick(1)}
-            />
+            <FrameworkButton label="EU AI Act" type="eu" onClick={() => handleFrameworkClick(1)} />
           )}
           {projectFrameworkId2 && (
-            <FrameworkButton
-              label="ISO 42001"
-              type="iso"
-              onClick={() => handleFrameworkClick(2)}
-            />
+            <FrameworkButton label="ISO 42001" type="iso" onClick={() => handleFrameworkClick(2)} />
           )}
         </Stack>
       </Stack>
       {projectFrameworkId && projectFrameworkId2 ? (
-        <Stack
-          direction="row"
-          spacing={10}
-          className="project-card-stats"
-          sx={{ mb: 2 }}
-        >
+        <Stack direction="row" spacing={10} className="project-card-stats" sx={{ mb: 2 }}>
           <Stack sx={{ flex: 1, gap: 1 }}>
             <Stack className="project-progress" sx={{ gap: 1 }}>
               <ProgressBar
@@ -271,12 +244,14 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                 </Typography>
                 <Link
                   component="button"
-                  onClick={() => navigate("/project-view", {
-                    projectId: project.id.toString(),
-                    tab: "frameworks",
-                    framework: "1",
-                    subtab: "compliance"
-                  })}
+                  onClick={() =>
+                    navigate("/project-view", {
+                      projectId: project.id.toString(),
+                      tab: "frameworks",
+                      framework: "1",
+                      subtab: "compliance",
+                    })
+                  }
                   sx={{
                     color: "#014576",
                     textDecoration: "none",
@@ -287,8 +262,8 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                     padding: 0,
                     ml: 1,
                     "&:hover": {
-                      opacity: 0.7
-                    }
+                      opacity: 0.7,
+                    },
                   }}
                 >
                   <ExternalLink size={12} />
@@ -309,12 +284,14 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                 </Typography>
                 <Link
                   component="button"
-                  onClick={() => navigate("/project-view", {
-                    projectId: project.id.toString(),
-                    tab: "frameworks",
-                    framework: "1",
-                    subtab: "assessment"
-                  })}
+                  onClick={() =>
+                    navigate("/project-view", {
+                      projectId: project.id.toString(),
+                      tab: "frameworks",
+                      framework: "1",
+                      subtab: "assessment",
+                    })
+                  }
                   sx={{
                     color: "#014576",
                     textDecoration: "none",
@@ -325,8 +302,8 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                     padding: 0,
                     ml: 1,
                     "&:hover": {
-                      opacity: 0.7
-                    }
+                      opacity: 0.7,
+                    },
                   }}
                 >
                   <ExternalLink size={12} />
@@ -379,12 +356,14 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                   </Typography>
                   <Link
                     component="button"
-                    onClick={() => navigate("/project-view", {
-                      projectId: project.id.toString(),
-                      tab: "frameworks",
-                      framework: "1",
-                      subtab: "compliance"
-                    })}
+                    onClick={() =>
+                      navigate("/project-view", {
+                        projectId: project.id.toString(),
+                        tab: "frameworks",
+                        framework: "1",
+                        subtab: "compliance",
+                      })
+                    }
                     sx={{
                       color: "#014576",
                       textDecoration: "none",
@@ -395,8 +374,8 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                       padding: 0,
                       ml: 1,
                       "&:hover": {
-                        opacity: 0.7
-                      }
+                        opacity: 0.7,
+                      },
                     }}
                   >
                     <ExternalLink size={12} />
@@ -417,12 +396,14 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                   </Typography>
                   <Link
                     component="button"
-                    onClick={() => navigate("/project-view", {
-                      projectId: project.id.toString(),
-                      tab: "frameworks",
-                      framework: "1",
-                      subtab: "assessment"
-                    })}
+                    onClick={() =>
+                      navigate("/project-view", {
+                        projectId: project.id.toString(),
+                        tab: "frameworks",
+                        framework: "1",
+                        subtab: "assessment",
+                      })
+                    }
                     sx={{
                       color: "#014576",
                       textDecoration: "none",
@@ -433,8 +414,8 @@ export const ProjectCard = React.memo(function ProjectCard({ project, isLoading 
                       padding: 0,
                       ml: 1,
                       "&:hover": {
-                        opacity: 0.7
-                      }
+                        opacity: 0.7,
+                      },
                     }}
                   >
                     <ExternalLink size={12} />

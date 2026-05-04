@@ -16,7 +16,16 @@ interface StatCardProps {
   onClick?: () => void;
 }
 
-export function StatCard({ title, value, Icon, highlight, active, subtitle, tooltip, onClick }: StatCardProps) {
+export function StatCard({
+  title,
+  value,
+  Icon,
+  highlight,
+  active,
+  subtitle,
+  tooltip,
+  onClick,
+}: StatCardProps) {
   const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
 

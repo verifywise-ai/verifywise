@@ -49,9 +49,7 @@ describe("useCommandPalette", () => {
     const { result } = renderHook(() => useCommandPalette());
 
     act(() => {
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", metaKey: true })
-      );
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
     });
 
     expect(result.current.isOpen).toBe(true);
@@ -74,9 +72,7 @@ describe("useCommandPalette", () => {
     const { result } = renderHook(() => useCommandPalette());
 
     act(() => {
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", ctrlKey: true })
-      );
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
     });
 
     expect(result.current.isOpen).toBe(true);

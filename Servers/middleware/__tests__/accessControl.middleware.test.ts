@@ -76,13 +76,9 @@ describe("accessControl.middleware (authorize)", () => {
       const req = createMockReq(role);
       const res = createMockRes();
 
-      authorize(["Admin", "Reviewer", "Editor", "Auditor"])(
-        req as Request,
-        res as Response,
-        next
-      );
+      authorize(["Admin", "Reviewer", "Editor", "Auditor"])(req as Request, res as Response, next);
 
       expect(next).toHaveBeenCalled();
-    }
+    },
   );
 });

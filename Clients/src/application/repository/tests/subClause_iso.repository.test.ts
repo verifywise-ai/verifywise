@@ -95,9 +95,7 @@ describe("subClause_iso.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(GetSubClausesById({ routeUrl, signal })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(GetSubClausesById({ routeUrl, signal })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -173,9 +171,7 @@ describe("subClause_iso.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(UpdateSubClauseById({ routeUrl, body })).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(UpdateSubClauseById({ routeUrl, body })).rejects.toThrow("Connection refused");
     });
   });
 
@@ -244,9 +240,7 @@ describe("subClause_iso.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(
-        ISO27001GetSubClauseByClauseId({ routeUrl, signal }),
-      ).rejects.toThrow();
+      await expect(ISO27001GetSubClauseByClauseId({ routeUrl, signal })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -256,9 +250,9 @@ describe("subClause_iso.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(
-        ISO27001GetSubClauseByClauseId({ routeUrl, signal }),
-      ).rejects.toThrow("Network timeout");
+      await expect(ISO27001GetSubClauseByClauseId({ routeUrl, signal })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 

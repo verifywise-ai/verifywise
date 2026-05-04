@@ -1,6 +1,6 @@
 import { Box, Paper, Typography, Stack, Button } from "@mui/material";
 import CustomTextField from "../Components/CustomTextField/CustomTextField";
-import { CheckCircle as CheckCircleOutlineIcon } from 'lucide-react';
+import { CheckCircle as CheckCircleOutlineIcon } from "lucide-react";
 import { downloadResource } from "../../../../application/tools/downloadResource";
 import { brand } from "../../../themes/palette";
 
@@ -9,7 +9,7 @@ const Overview = ({
   loading,
   error,
   onShowAllResources,
-  hash
+  hash,
 }: {
   data: any;
   loading: boolean;
@@ -17,7 +17,6 @@ const Overview = ({
   onShowAllResources: () => void;
   hash: string | null;
 }) => {
-
   const handleDownload = async (id: string) => {
     if (hash) {
       await downloadResource(id, hash);
@@ -42,10 +41,7 @@ const Overview = ({
     <Stack spacing={6} sx={{ width: "100%", mx: "auto", mb: 8 }}>
       {/* intro */}
       {data?.intro && (
-        <Paper
-          elevation={0}
-          sx={{ background: "none", boxShadow: "none", maxWidth: "100%" }}
-        >
+        <Paper elevation={0} sx={{ background: "none", boxShadow: "none", maxWidth: "100%" }}>
           <Stack
             justifyContent="flex-start"
             alignItems="flex-start"
@@ -53,18 +49,12 @@ const Overview = ({
             spacing={4}
           >
             {data.intro.purpose && (
-              <CustomTextField
-                label="Purpose of our trust center"
-                value={data.intro.purpose}
-              />
+              <CustomTextField label="Purpose of our trust center" value={data.intro.purpose} />
             )}
             {data.intro.statement && (
-              <CustomTextField
-                label="Our statement"
-                value={data.intro.statement}
-              />
+              <CustomTextField label="Our statement" value={data.intro.statement} />
             )}
-             {data.intro.mission && (
+            {data.intro.mission && (
               <CustomTextField label="Our mission" value={data.intro.mission} />
             )}
           </Stack>
@@ -86,13 +76,9 @@ const Overview = ({
             {Object.entries(data.compliance_badges).map(([key, value]) =>
               value ? (
                 <Box key={key}>
-                  <img
-                    src={`/assets/badges/${key}.svg`}
-                    alt={key}
-                    height={68}
-                  />
+                  <img src={`/assets/badges/${key}.svg`} alt={key} height={68} />
                 </Box>
-              ) : null
+              ) : null,
             )}
           </Stack>
         </Paper>
@@ -103,10 +89,7 @@ const Overview = ({
         <Paper elevation={0} sx={{ background: "none", boxShadow: "none" }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
             {data.company_description.background && (
-              <CustomTextField
-                label="Background"
-                value={data.company_description.background}
-              />
+              <CustomTextField label="Background" value={data.company_description.background} />
             )}
             {data.company_description.core_benefits && (
               <CustomTextField
@@ -127,11 +110,7 @@ const Overview = ({
       {/* Resources */}
       {data?.resources && data.resources.length > 0 && (
         <Box sx={{ width: "100%", maxWidth: 500, mb: 2 }}>
-          <Typography
-            variant="subtitle2"
-            color={brand.primary}
-            sx={{ fontWeight: 600, mb: 1 }}
-          >
+          <Typography variant="subtitle2" color={brand.primary} sx={{ fontWeight: 600, mb: 1 }}>
             Resources
           </Typography>
           <Paper
@@ -154,10 +133,7 @@ const Overview = ({
                   sx={{ py: 0.5 }}
                 >
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CheckCircleOutlineIcon
-                      size={24}
-                      style={{ color: "#10B981" }}
-                    />
+                    <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
                     <Typography variant="body2">{resource.name}</Typography>
                   </Box>
                   <Button

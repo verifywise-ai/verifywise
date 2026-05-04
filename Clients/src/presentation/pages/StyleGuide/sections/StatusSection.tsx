@@ -91,8 +91,8 @@ const StatusSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Color schemes and components for displaying entity statuses across VerifyWise.
-          Centralized in statusColors.ts for consistency.
+          Color schemes and components for displaying entity statuses across VerifyWise. Centralized
+          in statusColors.ts for consistency.
         </Typography>
       </Box>
 
@@ -100,13 +100,15 @@ const StatusSection: React.FC = () => {
       <SpecSection title="Status color schemes">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
           Predefined color schemes for different entity types. All colors are defined in
-          <code style={{
-            backgroundColor: theme.palette.background.fill,
-            padding: "2px 6px",
-            borderRadius: 4,
-            marginLeft: 4,
-            fontSize: 12
-          }}>
+          <code
+            style={{
+              backgroundColor: theme.palette.background.fill,
+              padding: "2px 6px",
+              borderRadius: 4,
+              marginLeft: 4,
+              fontSize: 12,
+            }}
+          >
             src/presentation/utils/statusColors.ts
           </code>
         </Typography>
@@ -117,10 +119,26 @@ const StatusSection: React.FC = () => {
             title="Models"
             entityType="models"
             statuses={[
-              { name: "Development", color: statusColorSchemes.models.development, icon: <Zap size={14} /> },
-              { name: "Training", color: statusColorSchemes.models.training, icon: <Clock size={14} /> },
-              { name: "Validation", color: statusColorSchemes.models.validation, icon: <AlertCircle size={14} /> },
-              { name: "Production", color: statusColorSchemes.models.production, icon: <Check size={14} /> },
+              {
+                name: "Development",
+                color: statusColorSchemes.models.development,
+                icon: <Zap size={14} />,
+              },
+              {
+                name: "Training",
+                color: statusColorSchemes.models.training,
+                icon: <Clock size={14} />,
+              },
+              {
+                name: "Validation",
+                color: statusColorSchemes.models.validation,
+                icon: <AlertCircle size={14} />,
+              },
+              {
+                name: "Production",
+                color: statusColorSchemes.models.production,
+                icon: <Check size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
@@ -130,11 +148,31 @@ const StatusSection: React.FC = () => {
             title="Vendors"
             entityType="vendors"
             statuses={[
-              { name: "Active", color: statusColorSchemes.vendors.active, icon: <Check size={14} /> },
-              { name: "In review", color: statusColorSchemes.vendors["in review"], icon: <Clock size={14} /> },
-              { name: "Reviewed", color: statusColorSchemes.vendors.reviewed, icon: <Check size={14} /> },
-              { name: "Requires follow up", color: statusColorSchemes.vendors["requires follow up"], icon: <AlertTriangle size={14} /> },
-              { name: "Inactive", color: statusColorSchemes.vendors.inactive, icon: <Circle size={14} /> },
+              {
+                name: "Active",
+                color: statusColorSchemes.vendors.active,
+                icon: <Check size={14} />,
+              },
+              {
+                name: "In review",
+                color: statusColorSchemes.vendors["in review"],
+                icon: <Clock size={14} />,
+              },
+              {
+                name: "Reviewed",
+                color: statusColorSchemes.vendors.reviewed,
+                icon: <Check size={14} />,
+              },
+              {
+                name: "Requires follow up",
+                color: statusColorSchemes.vendors["requires follow up"],
+                icon: <AlertTriangle size={14} />,
+              },
+              {
+                name: "Inactive",
+                color: statusColorSchemes.vendors.inactive,
+                icon: <Circle size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
@@ -144,11 +182,31 @@ const StatusSection: React.FC = () => {
             title="Policies"
             entityType="policies"
             statuses={[
-              { name: "Draft", color: statusColorSchemes.policies.draft, icon: <Circle size={14} /> },
-              { name: "In review", color: statusColorSchemes.policies["in review"], icon: <Clock size={14} /> },
-              { name: "Approved", color: statusColorSchemes.policies.approved, icon: <Check size={14} /> },
-              { name: "Published", color: statusColorSchemes.policies.published, icon: <Zap size={14} /> },
-              { name: "Archived", color: statusColorSchemes.policies.archived, icon: <XCircle size={14} /> },
+              {
+                name: "Draft",
+                color: statusColorSchemes.policies.draft,
+                icon: <Circle size={14} />,
+              },
+              {
+                name: "In review",
+                color: statusColorSchemes.policies["in review"],
+                icon: <Clock size={14} />,
+              },
+              {
+                name: "Approved",
+                color: statusColorSchemes.policies.approved,
+                icon: <Check size={14} />,
+              },
+              {
+                name: "Published",
+                color: statusColorSchemes.policies.published,
+                icon: <Zap size={14} />,
+              },
+              {
+                name: "Archived",
+                color: statusColorSchemes.policies.archived,
+                icon: <XCircle size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
@@ -158,9 +216,21 @@ const StatusSection: React.FC = () => {
             title="Trainings"
             entityType="trainings"
             statuses={[
-              { name: "Planned", color: statusColorSchemes.trainings.planned, icon: <Circle size={14} /> },
-              { name: "In progress", color: statusColorSchemes.trainings["in progress"], icon: <Clock size={14} /> },
-              { name: "Completed", color: statusColorSchemes.trainings.completed, icon: <Check size={14} /> },
+              {
+                name: "Planned",
+                color: statusColorSchemes.trainings.planned,
+                icon: <Circle size={14} />,
+              },
+              {
+                name: "In progress",
+                color: statusColorSchemes.trainings["in progress"],
+                icon: <Clock size={14} />,
+              },
+              {
+                name: "Completed",
+                color: statusColorSchemes.trainings.completed,
+                icon: <Check size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
@@ -170,11 +240,27 @@ const StatusSection: React.FC = () => {
             title="Vendor risks"
             entityType="vendorRisks"
             statuses={[
-              { name: "Very low", color: statusColorSchemes.vendorRisks["very low"], icon: <Check size={14} /> },
+              {
+                name: "Very low",
+                color: statusColorSchemes.vendorRisks["very low"],
+                icon: <Check size={14} />,
+              },
               { name: "Low", color: statusColorSchemes.vendorRisks.low, icon: <Check size={14} /> },
-              { name: "Medium", color: statusColorSchemes.vendorRisks.medium, icon: <AlertCircle size={14} /> },
-              { name: "High", color: statusColorSchemes.vendorRisks.high, icon: <AlertTriangle size={14} /> },
-              { name: "Very high", color: statusColorSchemes.vendorRisks["very high"], icon: <XCircle size={14} /> },
+              {
+                name: "Medium",
+                color: statusColorSchemes.vendorRisks.medium,
+                icon: <AlertCircle size={14} />,
+              },
+              {
+                name: "High",
+                color: statusColorSchemes.vendorRisks.high,
+                icon: <AlertTriangle size={14} />,
+              },
+              {
+                name: "Very high",
+                color: statusColorSchemes.vendorRisks["very high"],
+                icon: <XCircle size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
@@ -184,20 +270,32 @@ const StatusSection: React.FC = () => {
             title="Incidents"
             entityType="incidents"
             statuses={[
-              { name: "Open", color: statusColorSchemes.incidents.open, icon: <AlertTriangle size={14} /> },
-              { name: "In progress", color: statusColorSchemes.incidents["in progress"], icon: <Clock size={14} /> },
-              { name: "Resolved", color: statusColorSchemes.incidents.resolved, icon: <Check size={14} /> },
-              { name: "Closed", color: statusColorSchemes.incidents.closed, icon: <Circle size={14} /> },
+              {
+                name: "Open",
+                color: statusColorSchemes.incidents.open,
+                icon: <AlertTriangle size={14} />,
+              },
+              {
+                name: "In progress",
+                color: statusColorSchemes.incidents["in progress"],
+                icon: <Clock size={14} />,
+              },
+              {
+                name: "Resolved",
+                color: statusColorSchemes.incidents.resolved,
+                icon: <Check size={14} />,
+              },
+              {
+                name: "Closed",
+                color: statusColorSchemes.incidents.closed,
+                icon: <Circle size={14} />,
+              },
             ]}
             onCopy={handleCopy}
           />
         </Box>
 
-        <ExampleWithCode
-          label="Using status colors"
-          code={statusColorsSnippet}
-          onCopy={handleCopy}
-        >
+        <ExampleWithCode label="Using status colors" code={statusColorsSnippet} onCopy={handleCopy}>
           <Box sx={{ display: "flex", gap: "16px", alignItems: "center" }}>
             <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
               getStatusColor("models", "production"):
@@ -230,15 +328,20 @@ const StatusSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Chip variants
             </Typography>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Basic status chip"
-                code={chipSnippet}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Basic status chip" code={chipSnippet} onCopy={handleCopy}>
                 <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                   <StatusChip label="Active" status="success" />
                   <StatusChip label="Pending" status="warning" />
@@ -262,7 +365,17 @@ const StatusSection: React.FC = () => {
               </ExampleWithCode>
             </Stack>
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "32px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "32px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Dot indicators
             </Typography>
             <Stack spacing="24px">
@@ -283,7 +396,16 @@ const StatusSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Chip specifications
             </Typography>
             <SpecTable
@@ -300,7 +422,17 @@ const StatusSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Dot specifications
             </Typography>
             <SpecTable
@@ -324,7 +456,13 @@ const StatusSection: React.FC = () => {
           Standard colors used across all status types. Reference these for consistency.
         </Typography>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gap: "16px",
+          }}
+        >
           <SemanticColorCard
             name="Success / Active"
             textColor={status.success.text}
@@ -395,7 +533,7 @@ const StatusSection: React.FC = () => {
             "Always use colors from statusColors.ts - never hardcode status colors",
             "Use getStatusColor() helper for dynamic status coloring",
             "Chip height should be 24px for consistency",
-            "Use sentence case for status labels (\"In progress\" not \"IN PROGRESS\")",
+            'Use sentence case for status labels ("In progress" not "IN PROGRESS")',
             "For new entity types, add color scheme to statusColors.ts first",
             "Dot indicators are 8px with 50% border radius",
             "Status chips should have background color with 10-15% opacity of the text color",
@@ -439,7 +577,12 @@ interface StatusSchemeCardProps {
   onCopy: (text: string) => void;
 }
 
-const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({ title, entityType, statuses, onCopy }) => {
+const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({
+  title,
+  entityType,
+  statuses,
+  onCopy,
+}) => {
   const theme = useTheme();
 
   return (
@@ -464,7 +607,9 @@ const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({ title, entityType, 
         <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
           {title}
         </Typography>
-        <Typography sx={{ fontSize: 11, color: theme.palette.text.accent, fontFamily: "monospace" }}>
+        <Typography
+          sx={{ fontSize: 11, color: theme.palette.text.accent, fontFamily: "monospace" }}
+        >
           statusColorSchemes.{entityType}
         </Typography>
       </Box>
@@ -478,7 +623,8 @@ const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({ title, entityType, 
               alignItems: "center",
               justifyContent: "space-between",
               p: "10px 16px",
-              borderBottom: index < statuses.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
+              borderBottom:
+                index < statuses.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
               cursor: "pointer",
               transition: "background-color 150ms ease",
               "&:hover": {
@@ -501,7 +647,9 @@ const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({ title, entityType, 
                   backgroundColor: status.color,
                 }}
               />
-              <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.accent }}>
+              <Typography
+                sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.accent }}
+              >
                 {status.color}
               </Typography>
             </Box>
@@ -567,9 +715,7 @@ const DotIndicator: React.FC<{ label: string; color: string }> = ({ label, color
           backgroundColor: color,
         }}
       />
-      <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-        {label}
-      </Typography>
+      <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>{label}</Typography>
     </Box>
   );
 };
@@ -582,7 +728,13 @@ interface SemanticColorCardProps {
   onCopy: (text: string) => void;
 }
 
-const SemanticColorCard: React.FC<SemanticColorCardProps> = ({ name, textColor, bgColor, usage, onCopy }) => {
+const SemanticColorCard: React.FC<SemanticColorCardProps> = ({
+  name,
+  textColor,
+  bgColor,
+  usage,
+  onCopy,
+}) => {
   const theme = useTheme();
 
   return (
@@ -603,9 +755,7 @@ const SemanticColorCard: React.FC<SemanticColorCardProps> = ({ name, textColor, 
           justifyContent: "center",
         }}
       >
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: textColor }}>
-          {name}
-        </Typography>
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: textColor }}>{name}</Typography>
       </Box>
       <Box sx={{ p: "12px" }}>
         <Box sx={{ display: "flex", gap: "8px", mb: "8px" }}>
@@ -624,7 +774,9 @@ const SemanticColorCard: React.FC<SemanticColorCardProps> = ({ name, textColor, 
             <Typography sx={{ fontSize: 10, color: theme.palette.text.accent, mb: "2px" }}>
               Text
             </Typography>
-            <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}>
+            <Typography
+              sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}
+            >
               {textColor}
             </Typography>
           </Box>
@@ -643,14 +795,14 @@ const SemanticColorCard: React.FC<SemanticColorCardProps> = ({ name, textColor, 
             <Typography sx={{ fontSize: 10, color: theme.palette.text.accent, mb: "2px" }}>
               Background
             </Typography>
-            <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}>
+            <Typography
+              sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}
+            >
               {bgColor}
             </Typography>
           </Box>
         </Box>
-        <Typography sx={{ fontSize: 11, color: theme.palette.text.accent }}>
-          {usage}
-        </Typography>
+        <Typography sx={{ fontSize: 11, color: theme.palette.text.accent }}>{usage}</Typography>
       </Box>
     </Box>
   );
@@ -706,9 +858,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -735,9 +885,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -796,9 +944,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

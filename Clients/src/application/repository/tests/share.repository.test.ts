@@ -153,9 +153,7 @@ describe("share.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getShareLinksForResource("policy", 1)).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getShareLinksForResource("policy", 1)).rejects.toThrow("Connection refused");
     });
   });
 
@@ -208,9 +206,7 @@ describe("share.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getShareLinkByToken("abc123")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getShareLinkByToken("abc123")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -283,9 +279,7 @@ describe("share.repository", () => {
         is_enabled: false,
       };
 
-      await expect(updateShareLink(1, params)).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(updateShareLink(1, params)).rejects.toThrow("Connection refused");
     });
   });
 

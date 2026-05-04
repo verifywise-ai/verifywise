@@ -59,10 +59,10 @@ async function resetDatabase() {
         "verifywise@email.com",
         "MyJH4rTm!@.45L0wm",
         1,
-        1
+        1,
       ),
       transaction,
-      true
+      true,
     );
     await transaction.commit();
     console.log("Default admin user created.");
@@ -91,7 +91,7 @@ async function resetDatabase() {
           is_demo: true,
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
     console.log("Database reset successfully.");

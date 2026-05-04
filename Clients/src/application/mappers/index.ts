@@ -1,6 +1,6 @@
 /**
  * Mappers Index
- * 
+ *
  * Central export point for all mapper functions.
  * Mappers convert between DTOs (API layer) and domain models.
  */
@@ -43,4 +43,3 @@ export {
   mapVendorToCreateDTO,
   mapVendorToUpdateDTO,
 } from "./vendor.mapper";
-

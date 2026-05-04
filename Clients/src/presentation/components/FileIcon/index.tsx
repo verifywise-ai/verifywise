@@ -45,8 +45,8 @@ const FILE_ICON_MAP: Record<string, string> = {
   zip: zipIcon,
   rar: rarIcon,
   "7z": zipIcon, // Use zip icon for 7z
-  tar: zipIcon,  // Use zip icon for tar
-  gz: zipIcon,   // Use zip icon for gz
+  tar: zipIcon, // Use zip icon for tar
+  gz: zipIcon, // Use zip icon for gz
 
   // Images
   jpg: jpgIcon,

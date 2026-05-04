@@ -46,7 +46,6 @@ interface PreviewData {
 // Helpers
 // ============================================================================
 
-
 /**
  * Returns a color for a dimension score bar based on the score value.
  */
@@ -120,9 +119,7 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
                     mb: 0.5,
                   }}
                 >
-                  <Typography
-                    sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}
-                  >
+                  <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
                     {dimLabel}
                   </Typography>
                   <Typography sx={{ fontSize: "12px", fontWeight: 600, color: barColor }}>
@@ -155,7 +152,9 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
               { color: "#dc2626", label: "Critical (76-100)" },
             ].map((item) => (
               <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }} />
+                <Box
+                  sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }}
+                />
                 <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
                   {item.label}
                 </Typography>
@@ -381,8 +380,7 @@ function SubmissionPreviewModal({
     previewData?.formSchema?.fields?.filter((field) => Boolean(field.entityFieldMapping)) ?? [];
 
   // Derived: entity type label
-  const entityLabel =
-    previewData?.entityType === "model" ? "model inventory" : "use case";
+  const entityLabel = previewData?.entityType === "model" ? "model inventory" : "use case";
 
   // ============================================================================
   // Render
@@ -443,7 +441,9 @@ function SubmissionPreviewModal({
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mb: 2 }}>
               <ShieldAlert size={16} color={theme.palette.text.tertiary} strokeWidth={1.5} />
-              <Typography sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary }}>
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary }}
+              >
                 Risk assessment
               </Typography>
             </Box>
@@ -505,7 +505,9 @@ function SubmissionPreviewModal({
                 p: 2.5,
               }}
             >
-              <Typography sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary, mb: 2 }}>
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary, mb: 2 }}
+              >
                 {previewData?.entityType === "model"
                   ? "Model inventory preview"
                   : "Use case preview"}
@@ -579,9 +581,7 @@ function SubmissionPreviewModal({
                       mb: 2,
                     }}
                   >
-                    <Typography
-                      sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}
-                    >
+                    <Typography sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}>
                       Reject submission
                     </Typography>
                     <Box

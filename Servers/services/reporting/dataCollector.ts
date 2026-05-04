@@ -82,7 +82,7 @@ export class ReportDataCollector {
     projectId: number,
     frameworkId: number,
     projectFrameworkId: number,
-    userId: number
+    userId: number,
   ) {
     this.organizationId = organizationId;
     this.projectId = projectId;
@@ -210,14 +210,13 @@ export class ReportDataCollector {
     const rendered: RenderedCharts = {};
 
     if (charts.riskDistribution && charts.riskDistribution.length > 0) {
-      rendered.riskDistributionBar = generateRiskDistributionChart(
-        charts.riskDistribution,
-        { width: 350, title: "Risk distribution by level" }
-      );
-      rendered.riskDistributionDonut = generateRiskDonutChart(
-        charts.riskDistribution,
-        { size: 180 }
-      );
+      rendered.riskDistributionBar = generateRiskDistributionChart(charts.riskDistribution, {
+        width: 350,
+        title: "Risk distribution by level",
+      });
+      rendered.riskDistributionDonut = generateRiskDonutChart(charts.riskDistribution, {
+        size: 180,
+      });
       rendered.riskLegend = generateRiskLegend(charts.riskDistribution, {
         width: 350,
         inline: true,
@@ -225,21 +224,18 @@ export class ReportDataCollector {
     }
 
     if (charts.complianceProgress && charts.complianceProgress.length > 0) {
-      rendered.complianceProgress = generateComplianceProgressChart(
-        charts.complianceProgress,
-        { width: 350, title: "Compliance progress by category" }
-      );
+      rendered.complianceProgress = generateComplianceProgressChart(charts.complianceProgress, {
+        width: 350,
+        title: "Compliance progress by category",
+      });
     }
 
     if (charts.assessmentStatus && charts.assessmentStatus.length > 0) {
-      rendered.assessmentStatus = generateAssessmentStatusChart(
-        charts.assessmentStatus,
-        { size: 180, title: "" }
-      );
-      rendered.assessmentLegend = generateAssessmentLegend(
-        charts.assessmentStatus,
-        { width: 300 }
-      );
+      rendered.assessmentStatus = generateAssessmentStatusChart(charts.assessmentStatus, {
+        size: 180,
+        title: "",
+      });
+      rendered.assessmentLegend = generateAssessmentLegend(charts.assessmentStatus, { width: 300 });
     }
 
     return rendered;
@@ -358,14 +354,11 @@ export class ReportDataCollector {
     try {
       const controlCategories = await getComplianceReportQuery(
         this.projectFrameworkId,
-        this.organizationId
+        this.organizationId,
       );
 
       // Calculate progress per control category
-      const progressMap: Record<
-        string,
-        { completed: number; total: number }
-      > = {};
+      const progressMap: Record<string, { completed: number; total: number }> = {};
 
       (controlCategories as any[]).forEach((category) => {
         const categoryName = category.name || category.dataValues?.name || "Other";
@@ -387,8 +380,7 @@ export class ReportDataCollector {
         category,
         completed: data.completed,
         total: data.total,
-        percentage:
-          data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
+        percentage: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
       }));
     } catch (error) {
       console.error("[ReportDataCollector] Error collecting compliance progress:", error);
@@ -404,7 +396,7 @@ export class ReportDataCollector {
       const assessmentData = await getAssessmentReportQuery(
         this.projectId,
         this.frameworkId,
-        this.organizationId
+        this.organizationId,
       );
 
       let answered = 0;
@@ -436,10 +428,7 @@ export class ReportDataCollector {
    * Collect project risks section data
    */
   private async collectProjectRisks(): Promise<ProjectRisksSectionData> {
-    const risks = (await getProjectRisksReportQuery(
-      this.projectId,
-      this.organizationId
-    )) as any[];
+    const risks = (await getProjectRisksReportQuery(this.projectId, this.organizationId)) as any[];
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
@@ -462,7 +451,8 @@ export class ReportDataCollector {
         impact: risk.risk_severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         mitigationStatus: risk.approval_status || "Unknown",
-        owner: `${risk.risk_owner_name || ""} ${risk.risk_owner_surname || ""}`.trim() || "Unassigned",
+        owner:
+          `${risk.risk_owner_name || ""} ${risk.risk_owner_surname || ""}`.trim() || "Unassigned",
       })),
     };
   }
@@ -529,7 +519,9 @@ export class ReportDataCollector {
    * For use case reports: filtered by project
    * For organizational reports: ALL vendor risks across organization
    */
-  private async collectVendorRisks(isOrganizational: boolean = false): Promise<VendorRisksSectionData> {
+  private async collectVendorRisks(
+    isOrganizational: boolean = false,
+  ): Promise<VendorRisksSectionData> {
     try {
       let vendorRisksQuery: string;
       let replacements: Record<string, any>;
@@ -590,7 +582,7 @@ export class ReportDataCollector {
   private async collectCompliance(): Promise<ComplianceSectionData> {
     const controlCategories = (await getComplianceReportQuery(
       this.projectFrameworkId,
-      this.organizationId
+      this.organizationId,
     )) as any[];
 
     // Flatten controls from all categories
@@ -606,14 +598,12 @@ export class ReportDataCollector {
     });
 
     const completedControls = allControls.filter(
-      (c) => c.status === "Compliant" || c.status === "Complete"
+      (c) => c.status === "Compliant" || c.status === "Complete",
     ).length;
 
     return {
       overallProgress:
-        allControls.length > 0
-          ? Math.round((completedControls / allControls.length) * 100)
-          : 0,
+        allControls.length > 0 ? Math.round((completedControls / allControls.length) * 100) : 0,
       totalControls: allControls.length,
       completedControls,
       controls: allControls.map((c) => ({
@@ -622,9 +612,7 @@ export class ReportDataCollector {
         title: c.title || "Untitled Control",
         status: c.status || "Unknown",
         description: c.description,
-        owner: c.owner_name
-          ? `${c.owner_name} ${c.owner_surname || ""}`.trim()
-          : undefined,
+        owner: c.owner_name ? `${c.owner_name} ${c.owner_surname || ""}`.trim() : undefined,
       })),
     };
   }
@@ -636,7 +624,7 @@ export class ReportDataCollector {
     const assessmentData = await getAssessmentReportQuery(
       this.projectId,
       this.frameworkId,
-      this.organizationId
+      this.organizationId,
     );
 
     let totalQuestions = 0;
@@ -667,21 +655,18 @@ export class ReportDataCollector {
 
       const topicQuestions = subtopics.reduce(
         (sum: number, st: any) => sum + st.questions.length,
-        0
+        0,
       );
       const topicAnswered = subtopics.reduce(
         (sum: number, st: any) =>
           sum + st.questions.filter((q: any) => q.status === "Answered").length,
-        0
+        0,
       );
 
       return {
         id: topic.id,
         title: topic.title || "Untitled Topic",
-        progress:
-          topicQuestions > 0
-            ? Math.round((topicAnswered / topicQuestions) * 100)
-            : 0,
+        progress: topicQuestions > 0 ? Math.round((topicAnswered / topicQuestions) * 100) : 0,
         subtopics,
       };
     });
@@ -698,14 +683,8 @@ export class ReportDataCollector {
    */
   private async collectClausesAndAnnexes(): Promise<ClausesAndAnnexesSectionData> {
     try {
-      const clauses = await getClausesReportQuery(
-        this.projectFrameworkId,
-        this.organizationId
-      );
-      const annexes = await getAnnexesReportQuery(
-        this.projectFrameworkId,
-        this.organizationId
-      );
+      const clauses = await getClausesReportQuery(this.projectFrameworkId, this.organizationId);
+      const annexes = await getAnnexesReportQuery(this.projectFrameworkId, this.organizationId);
 
       return {
         clauses: (clauses as any[]).map((clause) => ({
@@ -783,9 +762,7 @@ export class ReportDataCollector {
           name: m.name || "Unnamed Model",
           version: m.version,
           status: m.status || "Unknown",
-          owner: m.owner_name
-            ? `${m.owner_name} ${m.owner_surname || ""}`.trim()
-            : undefined,
+          owner: m.owner_name ? `${m.owner_name} ${m.owner_surname || ""}`.trim() : undefined,
           description: m.description,
         })),
       };
@@ -800,7 +777,9 @@ export class ReportDataCollector {
    * For use case reports: filtered by project
    * For organizational reports: ALL model risks across organization
    */
-  private async collectModelRisks(isOrganizational: boolean = false): Promise<ModelRisksSectionData> {
+  private async collectModelRisks(
+    isOrganizational: boolean = false,
+  ): Promise<ModelRisksSectionData> {
     try {
       let modelRisksQuery: string;
       let replacements: Record<string, any>;
@@ -912,12 +891,8 @@ export class ReportDataCollector {
           policyName: p.title || "Unnamed Policy",
           version: p.version,
           status: p.status || "Unknown",
-          reviewDate: p.review_date
-            ? new Date(p.review_date).toLocaleDateString()
-            : undefined,
-          owner: p.owner_name
-            ? `${p.owner_name} ${p.owner_surname || ""}`.trim()
-            : undefined,
+          reviewDate: p.review_date ? new Date(p.review_date).toLocaleDateString() : undefined,
+          owner: p.owner_name ? `${p.owner_name} ${p.owner_surname || ""}`.trim() : undefined,
         })),
       };
     } catch (error) {
@@ -951,7 +926,10 @@ export class ReportDataCollector {
       `;
 
       const results = (await sequelize.query(subcategoriesQuery, {
-        replacements: { organizationId: this.organizationId, projectFrameworkId: this.projectFrameworkId },
+        replacements: {
+          organizationId: this.organizationId,
+          projectFrameworkId: this.projectFrameworkId,
+        },
         type: QueryTypes.SELECT,
       })) as any[];
 
@@ -970,9 +948,7 @@ export class ReportDataCollector {
         }
 
         // Find or create subcategory entry
-        let subcategory = functionMap[func][cat].find(
-          (s) => s.id === row.id
-        );
+        let subcategory = functionMap[func][cat].find((s) => s.id === row.id);
         if (!subcategory) {
           subcategory = {
             id: row.id,
@@ -1030,7 +1006,9 @@ export class ReportDataCollector {
    * For organizational reports: all incidents
    * For use case reports: incidents linked to project
    */
-  private async collectIncidentManagement(isOrganizational: boolean): Promise<IncidentManagementSectionData> {
+  private async collectIncidentManagement(
+    isOrganizational: boolean,
+  ): Promise<IncidentManagementSectionData> {
     try {
       let incidentsQuery: string;
       let replacements: Record<string, any> = {};
@@ -1071,9 +1049,7 @@ export class ReportDataCollector {
           type: inc.type || "Unknown",
           severity: inc.severity || "Unknown",
           status: inc.status || "Unknown",
-          reportedDate: inc.created_at
-            ? new Date(inc.created_at).toLocaleDateString()
-            : undefined,
+          reportedDate: inc.created_at ? new Date(inc.created_at).toLocaleDateString() : undefined,
           resolvedDate: inc.resolved_at
             ? new Date(inc.resolved_at).toLocaleDateString()
             : undefined,
@@ -1097,13 +1073,13 @@ export function createDataCollector(
   projectId: number,
   frameworkId: number,
   projectFrameworkId: number,
-  userId: number
+  userId: number,
 ): ReportDataCollector {
   return new ReportDataCollector(
     organizationId,
     projectId,
     frameworkId,
     projectFrameworkId,
-    userId
+    userId,
   );
 }

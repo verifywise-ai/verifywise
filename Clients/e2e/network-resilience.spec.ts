@@ -1,9 +1,7 @@
 import { test, expect } from "./fixtures/auth.fixture";
 
 test.describe("Network Error Recovery", () => {
-  test("API 401 triggers logout and clears token", async ({
-    authedPage: page,
-  }) => {
+  test("API 401 triggers logout and clears token", async ({ authedPage: page }) => {
     // Navigate to tasks page normally first
     await page.goto("/tasks");
     await page.waitForTimeout(2000);
@@ -17,14 +15,17 @@ test.describe("Network Error Recovery", () => {
         status: 401,
         contentType: "application/json",
         body: JSON.stringify({ message: "Unauthorized" }),
-      })
+      }),
     );
 
     // Trigger a fresh API call by clicking a UI element that refetches
-    const searchInput = page
-      .getByPlaceholder(/search/i)
-      .or(page.getByPlaceholder(/search tasks/i));
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    const searchInput = page.getByPlaceholder(/search/i).or(page.getByPlaceholder(/search tasks/i));
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("trigger-refetch");
       await page.waitForTimeout(3000);
     } else {
@@ -44,9 +45,7 @@ test.describe("Network Error Recovery", () => {
     expect(tokenCleared || onLogin).toBe(true);
   });
 
-  test("API 403 with org mismatch shows alert", async ({
-    authedPage: page,
-  }) => {
+  test("API 403 with org mismatch shows alert", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     await page.waitForTimeout(2000);
 
@@ -65,7 +64,7 @@ test.describe("Network Error Recovery", () => {
         body: JSON.stringify({
           message: "User does not belong to this organization",
         }),
-      })
+      }),
     );
 
     // Trigger the intercepted call
@@ -86,9 +85,7 @@ test.describe("Network Error Recovery", () => {
     expect(onLogin || hadAlert || uiAlert).toBe(true);
   });
 
-  test("API 406 triggers token refresh attempt", async ({
-    authedPage: page,
-  }) => {
+  test("API 406 triggers token refresh attempt", async ({ authedPage: page }) => {
     let refreshAttempted = false;
 
     // Intercept the refresh token endpoint
@@ -122,13 +119,9 @@ test.describe("Network Error Recovery", () => {
     expect(refreshAttempted).toBe(true);
   });
 
-  test("network offline shows error state or blank page", async ({
-    authedPage: page,
-  }) => {
+  test("network offline shows error state or blank page", async ({ authedPage: page }) => {
     // Abort all API calls to simulate network failure
-    await page.route("**/api/**", (route) =>
-      route.abort("connectionfailed")
-    );
+    await page.route("**/api/**", (route) => route.abort("connectionfailed"));
 
     await page.goto("/tasks");
     await page.waitForTimeout(3000);
@@ -144,9 +137,7 @@ test.describe("Network Error Recovery", () => {
 
   test("network recovery after offline", async ({ authedPage: page }) => {
     // Start with aborted routes
-    await page.route("**/api/**", (route) =>
-      route.abort("connectionfailed")
-    );
+    await page.route("**/api/**", (route) => route.abort("connectionfailed"));
 
     await page.goto("/tasks");
     await page.waitForTimeout(2000);

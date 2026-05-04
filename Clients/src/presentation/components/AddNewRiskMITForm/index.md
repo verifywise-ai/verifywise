@@ -73,9 +73,7 @@ function RiskManagementComponent() {
 
   return (
     <>
-      <Button onClick={() => setIsModalOpen(true)}>
-        Add Risk from Database
-      </Button>
+      <Button onClick={() => setIsModalOpen(true)}>Add Risk from Database</Button>
 
       <AddNewRiskMITModal
         isOpen={isModalOpen}

@@ -94,7 +94,15 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
     if (currentStepIndex < totalSteps - 1) {
       setCurrentStep(currentStepIndex + 1);
     }
-  }, [currentStepIndex, totalSteps, currentStepConfig, completeStep, setCurrentStep, completeOnboarding, onComplete]);
+  }, [
+    currentStepIndex,
+    totalSteps,
+    currentStepConfig,
+    completeStep,
+    setCurrentStep,
+    completeOnboarding,
+    onComplete,
+  ]);
 
   const handleBack = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -298,11 +306,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
         </Box>
       </Box>
 
-      <SkipConfirmation
-        open={showSkipConfirmation}
-        onConfirm={confirmSkip}
-        onCancel={cancelSkip}
-      />
+      <SkipConfirmation open={showSkipConfirmation} onConfirm={confirmSkip} onCancel={cancelSkip} />
     </>
   );
 };

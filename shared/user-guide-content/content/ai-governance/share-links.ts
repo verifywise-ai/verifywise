@@ -26,6 +26,7 @@ export const shareLinksContent: ArticleContent = {
         { text: 'Choose what fields to include in the shared view.' },
         { text: 'Set an expiration date (how long the link stays active).' },
         { text: 'Optionally allow data export from the shared view.' },
+        { text: 'Optionally show the toolbar (search, filter, sort) in the shared view.' },
         { text: 'Click **Create link**. The URL is copied to your clipboard.' },
       ],
     },
@@ -70,7 +71,7 @@ export const shareLinksContent: ArticleContent = {
       rows: [
         { action: 'Create share links', roles: 'Admin or Editor' },
         { action: 'View active share links', roles: 'Admin or Editor' },
-        { action: 'Revoke share links', roles: 'Admin' },
+        { action: 'Revoke share links', roles: 'Creator (any role can revoke a link they created)' },
         { action: 'Access shared view (external)', roles: 'Anyone with the link' },
       ],
     },

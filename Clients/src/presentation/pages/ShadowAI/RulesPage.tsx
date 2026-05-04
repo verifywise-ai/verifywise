@@ -77,17 +77,25 @@ type ViewMode = "rules" | "history";
 const ALERTS_PER_PAGE = 10;
 
 const BASE_TABS = [
-  { label: "Rules", value: "rules", icon: "Bell" as const, tooltip: "Configure alerts for Shadow AI activity" },
-  { label: "Alert history", value: "history", icon: "History" as const, tooltip: "Past alerts triggered by your rules" },
+  {
+    label: "Rules",
+    value: "rules",
+    icon: "Bell" as const,
+    tooltip: "Configure alerts for Shadow AI activity",
+  },
+  {
+    label: "Alert history",
+    value: "history",
+    icon: "History" as const,
+    tooltip: "Past alerts triggered by your rules",
+  },
 ];
 
 export default function RulesPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const viewMode: ViewMode = location.pathname.includes("/rules/alerts")
-    ? "history"
-    : "rules";
+  const viewMode: ViewMode = location.pathname.includes("/rules/alerts") ? "history" : "rules";
 
   const [loading, setLoading] = useState(true);
   const [rules, setRules] = useState<IShadowAiRule[]>([]);
@@ -121,32 +129,42 @@ export default function RulesPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // ─── Sorting ───
-  const ALERTS_COLUMNS: SortableColumn[] = useMemo(() => [
-    { id: "rule_name", label: "Rule" },
-    { id: "trigger_type", label: "Trigger" },
-    { id: "fired_at", label: "Fired at" },
-  ], []);
-
-  const { sortConfig: alertsSortConfig, handleSort: handleAlertsSort } =
-    useTableSort("vw_shadow_ai_alerts_sort");
-
-  const getAlertValue = useCallback(
-    (row: IShadowAiAlertHistory, key: string): string | number => {
-      switch (key) {
-        case "rule_name": return row.rule_name || `Rule #${row.rule_id}`;
-        case "trigger_type": return row.trigger_type || "";
-        case "fired_at": return row.fired_at ? new Date(row.fired_at).getTime() : 0;
-        default: return "";
-      }
-    }, []
+  const ALERTS_COLUMNS: SortableColumn[] = useMemo(
+    () => [
+      { id: "rule_name", label: "Rule" },
+      { id: "trigger_type", label: "Trigger" },
+      { id: "fired_at", label: "Fired at" },
+    ],
+    [],
   );
+
+  const { sortConfig: alertsSortConfig, handleSort: handleAlertsSort } = useTableSort(
+    "vw_shadow_ai_alerts_sort",
+  );
+
+  const getAlertValue = useCallback((row: IShadowAiAlertHistory, key: string): string | number => {
+    switch (key) {
+      case "rule_name":
+        return row.rule_name || `Rule #${row.rule_id}`;
+      case "trigger_type":
+        return row.trigger_type || "";
+      case "fired_at":
+        return row.fired_at ? new Date(row.fired_at).getTime() : 0;
+      default:
+        return "";
+    }
+  }, []);
 
   const sortedAlerts = useSortedRows(alerts, alertsSortConfig, getAlertValue);
 
-  const tabs = useMemo(() => BASE_TABS.map((tab) => ({
-    ...tab,
-    count: tab.value === "rules" ? rules.length : alertsTotal,
-  })), [rules.length, alertsTotal]);
+  const tabs = useMemo(
+    () =>
+      BASE_TABS.map((tab) => ({
+        ...tab,
+        count: tab.value === "rules" ? rules.length : alertsTotal,
+      })),
+    [rules.length, alertsTotal],
+  );
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -162,10 +180,7 @@ export default function RulesPage() {
     const controller = new AbortController();
     const fetchCounts = async () => {
       try {
-        const [rulesData, alertsData] = await Promise.all([
-          getRules(),
-          getAlertHistory(1, 1),
-        ]);
+        const [rulesData, alertsData] = await Promise.all([getRules(), getAlertHistory(1, 1)]);
         if (controller.signal.aborted) return;
         setRules(rulesData);
         setAlertsTotal(alertsData.total);
@@ -174,7 +189,9 @@ export default function RulesPage() {
       }
     };
     fetchCounts();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -200,7 +217,9 @@ export default function RulesPage() {
       }
     };
     fetchData();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [viewMode, alertsPage]);
 
   // Simple refetch for mutation handlers
@@ -225,11 +244,7 @@ export default function RulesPage() {
     try {
       const newState = !rule.is_active;
       await updateRule(rule.id, { is_active: newState });
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === rule.id ? { ...r, is_active: newState } : r
-        )
-      );
+      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, is_active: newState } : r)));
       setToast({
         variant: "success",
         body: `Rule "${rule.name}" ${newState ? "enabled" : "disabled"} successfully`,
@@ -276,7 +291,10 @@ export default function RulesPage() {
       }
     }
     if (formTrigger === "sensitive_department") {
-      const depts = formDepartments.split(",").map((d) => d.trim()).filter(Boolean);
+      const depts = formDepartments
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
       if (depts.length === 0) {
         errors.departments = "Enter at least one department";
       }
@@ -344,7 +362,6 @@ export default function RulesPage() {
     <PageHeaderExtended
       title="Rules"
       description="Configure alert rules to get notified about Shadow AI activity. Set triggers for new tool detection, usage thresholds, sensitive department usage, and more."
-
       helpArticlePath="shadow-ai/rules"
       tipBoxEntity="shadow-ai-rules"
       alert={
@@ -361,436 +378,477 @@ export default function RulesPage() {
       }
     >
       <TabContext value={viewMode}>
+        {/* Controls */}
+        <Stack sx={{ position: "relative" }}>
+          <TabBar tabs={tabs} activeTab={viewMode} onChange={handleTabChange} />
+          {viewMode === "rules" && (
+            <CustomizableButton
+              text="Create rule"
+              variant="contained"
+              sx={{
+                backgroundColor: palette.brand.primary,
+                "&:hover": { backgroundColor: palette.brand.primaryHover },
+                height: 34,
+                fontSize: 13,
+                position: "absolute",
+                right: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+              onClick={() => setCreateModalOpen(true)}
+            />
+          )}
+        </Stack>
 
-      {/* Controls */}
-      <Stack sx={{ position: "relative" }}>
-        <TabBar
-          tabs={tabs}
-          activeTab={viewMode}
-          onChange={handleTabChange}
-        />
-        {viewMode === "rules" && (
-          <CustomizableButton
-            text="Create rule"
-            variant="contained"
-            sx={{
-              backgroundColor: palette.brand.primary,
-              "&:hover": { backgroundColor: palette.brand.primaryHover },
-              height: 34,
-              fontSize: 13,
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-            onClick={() => setCreateModalOpen(true)}
-          />
-        )}
-      </Stack>
-
-      {/* Content */}
-      {loading ? (
-        <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
-      ) : viewMode === "rules" ? (
-        rules.length === 0 ? (
-          <EmptyState
-            icon={ShieldCheck}
-            message="No rules configured yet. Create rules to automate alerts and enforce AI usage policies."
-            showBorder
-          >
-            <EmptyStateTip
-              icon={Zap}
-              title="Trigger-based alerts"
-              description="Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered."
-            />
-            <EmptyStateTip
-              icon={Mail}
-              title="Notify the right people"
-              description="Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients."
-            />
-            <EmptyStateTip
-              icon={Filter}
-              title="Common rules to start with"
-              description="Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department."
-            />
-          </EmptyState>
-        ) : (
-          <Stack gap="12px">
-            {rules.map((rule) => (
-              <Paper
-                key={rule.id}
-                elevation={0}
-                sx={{
-                  p: "16px",
-                  border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
-                  opacity: rule.is_active ? 1 : 0.6,
-                  transition: "opacity 0.2s ease",
-                }}
-              >
-                <Stack gap="12px">
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Stack direction="row" alignItems="center" gap="8px">
-                      <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
-                        {rule.name}
+        {/* Content */}
+        {loading ? (
+          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+        ) : viewMode === "rules" ? (
+          rules.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              message="No rules configured yet. Create rules to automate alerts and enforce AI usage policies."
+              showBorder
+            >
+              <EmptyStateTip
+                icon={Zap}
+                title="Trigger-based alerts"
+                description="Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered."
+              />
+              <EmptyStateTip
+                icon={Mail}
+                title="Notify the right people"
+                description="Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients."
+              />
+              <EmptyStateTip
+                icon={Filter}
+                title="Common rules to start with"
+                description="Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department."
+              />
+            </EmptyState>
+          ) : (
+            <Stack gap="12px">
+              {rules.map((rule) => (
+                <Paper
+                  key={rule.id}
+                  elevation={0}
+                  sx={{
+                    p: "16px",
+                    border: `1px solid ${palette.border.dark}`,
+                    borderRadius: "4px",
+                    opacity: rule.is_active ? 1 : 0.6,
+                    transition: "opacity 0.2s ease",
+                  }}
+                >
+                  <Stack gap="12px">
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" alignItems="center" gap="8px">
+                        <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{rule.name}</Typography>
+                        <Chip
+                          label={TRIGGER_LABELS[rule.trigger_type] || rule.trigger_type}
+                          size="small"
+                          variant="info"
+                          uppercase={false}
+                        />
+                      </Stack>
+                      <Stack direction="row" alignItems="center" gap="4px">
+                        <Toggle
+                          checked={rule.is_active}
+                          onChange={() => handleToggleActive(rule)}
+                          size="small"
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => setDeleteTarget(rule)}
+                          sx={{ color: palette.status.error.text }}
+                        >
+                          <Trash2 size={14} strokeWidth={1.5} />
+                        </IconButton>
+                      </Stack>
+                    </Stack>
+                    {rule.description && (
+                      <Typography
+                        sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}
+                      >
+                        {rule.description}
                       </Typography>
+                    )}
+                    {/* Display trigger config summary */}
+                    {rule.trigger_config && Object.keys(rule.trigger_config).length > 0 && (
+                      <Typography sx={{ fontSize: 12, color: palette.status.default.text }}>
+                        {rule.trigger_type === "risk_score_exceeded" &&
+                          rule.trigger_config.risk_score_min != null && (
+                            <>
+                              Threshold: risk score &ge;{" "}
+                              {String(rule.trigger_config.risk_score_min)}
+                            </>
+                          )}
+                        {rule.trigger_type === "usage_threshold_exceeded" &&
+                          rule.trigger_config.event_count_threshold != null && (
+                            <>
+                              Threshold: {String(rule.trigger_config.event_count_threshold)} events
+                            </>
+                          )}
+                        {rule.trigger_type === "sensitive_department" &&
+                          Array.isArray(rule.trigger_config.departments) && (
+                            <>
+                              Departments:{" "}
+                              {(rule.trigger_config.departments as string[]).join(", ")}
+                            </>
+                          )}
+                      </Typography>
+                    )}
+                    {/* Cooldown & notification */}
+                    <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+                      {rule.cooldown_minutes != null && (
+                        <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
+                          Cooldown:{" "}
+                          {rule.cooldown_minutes >= 1440
+                            ? `${rule.cooldown_minutes / 1440}d`
+                            : rule.cooldown_minutes >= 60
+                              ? `${rule.cooldown_minutes / 60}h`
+                              : `${rule.cooldown_minutes}m`}
+                        </Typography>
+                      )}
+                      {rule.notification_user_ids && rule.notification_user_ids.length > 0 && (
+                        <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
+                          {rule.cooldown_minutes != null ? "· " : ""}Notifies via in-app + email
+                        </Typography>
+                      )}
+                    </Stack>
+                    <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
+                      Actions:{" "}
+                      {Array.isArray(rule.actions)
+                        ? rule.actions
+                            .map((a: { type: string }) => a.type.replace(/_/g, " "))
+                            .join(", ")
+                        : rule.actions && typeof rule.actions === "object"
+                          ? Object.keys(rule.actions)
+                              .map((k) => k.replace(/_/g, " "))
+                              .join(", ")
+                          : "None"}
+                    </Typography>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          )
+        ) : alerts.length === 0 ? (
+          <EmptyState icon={Bell} message="No alerts have been triggered yet." showBorder />
+        ) : (
+          <TableContainer sx={singleTheme.tableStyles.primary.frame}>
+            <Table>
+              <SortableTableHead
+                columns={ALERTS_COLUMNS}
+                sortConfig={alertsSortConfig}
+                onSort={handleAlertsSort}
+              />
+              <TableBody>
+                {sortedAlerts.map((a) => (
+                  <TableRow key={a.id} sx={singleTheme.tableStyles.primary.body.row}>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {a.rule_name || `Rule #${a.rule_id}`}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                       <Chip
                         label={
-                          TRIGGER_LABELS[rule.trigger_type] || rule.trigger_type
+                          TRIGGER_LABELS[a.trigger_type as ShadowAiTriggerType] ||
+                          a.trigger_type ||
+                          "—"
                         }
                         size="small"
                         variant="info"
                         uppercase={false}
                       />
-                    </Stack>
-                    <Stack direction="row" alignItems="center" gap="4px">
-                      <Toggle
-                        checked={rule.is_active}
-                        onChange={() => handleToggleActive(rule)}
-                        size="small"
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={() => setDeleteTarget(rule)}
-                        sx={{ color: palette.status.error.text }}
-                      >
-                        <Trash2 size={14} strokeWidth={1.5} />
-                      </IconButton>
-                    </Stack>
-                  </Stack>
-                  {rule.description && (
-                    <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
-                      {rule.description}
-                    </Typography>
-                  )}
-                  {/* Display trigger config summary */}
-                  {rule.trigger_config && Object.keys(rule.trigger_config).length > 0 && (
-                    <Typography sx={{ fontSize: 12, color: palette.status.default.text }}>
-                      {rule.trigger_type === "risk_score_exceeded" && rule.trigger_config.risk_score_min != null && (
-                        <>Threshold: risk score &ge; {String(rule.trigger_config.risk_score_min)}</>
-                      )}
-                      {rule.trigger_type === "usage_threshold_exceeded" && rule.trigger_config.event_count_threshold != null && (
-                        <>Threshold: {String(rule.trigger_config.event_count_threshold)} events</>
-                      )}
-                      {rule.trigger_type === "sensitive_department" && Array.isArray(rule.trigger_config.departments) && (
-                        <>Departments: {(rule.trigger_config.departments as string[]).join(", ")}</>
-                      )}
-                    </Typography>
-                  )}
-                  {/* Cooldown & notification */}
-                  <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
-                    {rule.cooldown_minutes != null && (
-                      <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
-                        Cooldown: {rule.cooldown_minutes >= 1440
-                          ? `${rule.cooldown_minutes / 1440}d`
-                          : rule.cooldown_minutes >= 60
-                            ? `${rule.cooldown_minutes / 60}h`
-                            : `${rule.cooldown_minutes}m`}
-                      </Typography>
-                    )}
-                    {rule.notification_user_ids && rule.notification_user_ids.length > 0 && (
-                      <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
-                        {rule.cooldown_minutes != null ? "· " : ""}Notifies via in-app + email
-                      </Typography>
-                    )}
-                  </Stack>
-                  <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
-                    Actions:{" "}
-                    {Array.isArray(rule.actions)
-                      ? rule.actions.map((a: { type: string }) => a.type.replace(/_/g, " ")).join(", ")
-                      : rule.actions && typeof rule.actions === "object"
-                        ? Object.keys(rule.actions).map((k) => k.replace(/_/g, " ")).join(", ")
-                        : "None"}
-                  </Typography>
-                </Stack>
-              </Paper>
-            ))}
-          </Stack>
-        )
-      ) : alerts.length === 0 ? (
-        <EmptyState
-          icon={Bell}
-          message="No alerts have been triggered yet."
-          showBorder
-        />
-      ) : (
-        <TableContainer sx={singleTheme.tableStyles.primary.frame}>
-          <Table>
-            <SortableTableHead
-              columns={ALERTS_COLUMNS}
-              sortConfig={alertsSortConfig}
-              onSort={handleAlertsSort}
-            />
-            <TableBody>
-              {sortedAlerts.map((a) => (
-                <TableRow key={a.id} sx={singleTheme.tableStyles.primary.body.row}>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {a.rule_name || `Rule #${a.rule_id}`}
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Chip
-                      label={
-                        TRIGGER_LABELS[a.trigger_type as ShadowAiTriggerType] ||
-                        a.trigger_type ||
-                        "—"
-                      }
-                      size="small"
-                      variant="info"
-                      uppercase={false}
-                    />
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {a.fired_at ? new Date(a.fired_at).toLocaleString() : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow
-                sx={{
-                  "& .MuiTableCell-root.MuiTableCell-footer": {
-                    paddingX: theme.spacing(8),
-                    paddingY: theme.spacing(4),
-                  },
-                }}
-              >
-                <TableCell
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {a.fired_at ? new Date(a.fired_at).toLocaleString() : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow
                   sx={{
-                    paddingX: theme.spacing(2),
-                    fontSize: 12,
-                    opacity: 0.7,
+                    "& .MuiTableCell-root.MuiTableCell-footer": {
+                      paddingX: theme.spacing(8),
+                      paddingY: theme.spacing(4),
+                    },
                   }}
                 >
-                  Showing {alertsPage * ALERTS_PER_PAGE + 1} -{" "}
-                  {Math.min((alertsPage + 1) * ALERTS_PER_PAGE, alertsTotal)} of{" "}
-                  {alertsTotal} items
-                </TableCell>
-                <TablePagination
-                  count={alertsTotal}
-                  page={alertsPage}
-                  onPageChange={(_e, newPage) => setAlertsPage(newPage)}
-                  rowsPerPage={ALERTS_PER_PAGE}
-                  rowsPerPageOptions={[ALERTS_PER_PAGE]}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
-                  labelRowsPerPage=""
-                  labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / ALERTS_PER_PAGE))}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: {
-                        keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
+                  <TableCell
+                    sx={{
+                      paddingX: theme.spacing(2),
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    Showing {alertsPage * ALERTS_PER_PAGE + 1} -{" "}
+                    {Math.min((alertsPage + 1) * ALERTS_PER_PAGE, alertsTotal)} of {alertsTotal}{" "}
+                    items
+                  </TableCell>
+                  <TablePagination
+                    count={alertsTotal}
+                    page={alertsPage}
+                    onPageChange={(_e, newPage) => setAlertsPage(newPage)}
+                    rowsPerPage={ALERTS_PER_PAGE}
+                    rowsPerPageOptions={[ALERTS_PER_PAGE]}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                    labelRowsPerPage=""
+                    labelDisplayedRows={({ page, count }) =>
+                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / ALERTS_PER_PAGE))}`
+                    }
+                    slotProps={{
+                      select: {
+                        MenuProps: {
+                          keepMounted: true,
+                          PaperProps: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          },
+                          transformOrigin: { vertical: "bottom", horizontal: "left" },
+                          anchorOrigin: { vertical: "top", horizontal: "left" },
+                          sx: { mt: theme.spacing(-2) },
                         },
-                        transformOrigin: { vertical: "bottom", horizontal: "left" },
-                        anchorOrigin: { vertical: "top", horizontal: "left" },
-                        sx: { mt: theme.spacing(-2) },
-                      },
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: SelectorVertical,
-                      sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
-                        "&.Mui-focused > div": {
-                          backgroundColor: theme.palette.background.main,
+                        inputProps: { id: "pagination-dropdown" },
+                        IconComponent: SelectorVertical,
+                        sx: {
+                          ml: theme.spacing(4),
+                          mr: theme.spacing(12),
+                          minWidth: theme.spacing(20),
+                          textAlign: "left",
+                          "&.Mui-focused > div": {
+                            backgroundColor: theme.palette.background.main,
+                          },
                         },
                       },
-                    },
-                  }}
-                  sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
-                    "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
-                    "& .MuiSelect-select": {
-                      width: theme.spacing(10),
-                      borderRadius: theme.shape.borderRadius,
-                      border: `1px solid ${theme.palette.border.light}`,
-                      padding: theme.spacing(4),
-                    },
-                  }}
-                />
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </TableContainer>
-      )}
+                    }}
+                    sx={{
+                      mt: theme.spacing(6),
+                      color: theme.palette.text.secondary,
+                      "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
+                      "& .MuiSelect-select": {
+                        width: theme.spacing(10),
+                        borderRadius: theme.shape.borderRadius,
+                        border: `1px solid ${theme.palette.border.light}`,
+                        padding: theme.spacing(4),
+                      },
+                    }}
+                  />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </TableContainer>
+        )}
 
-      {/* Create rule modal */}
-      <StandardModal
-        isOpen={createModalOpen}
-        onClose={() => {
-          setCreateModalOpen(false);
-          resetForm();
-        }}
-        title="Create alert rule"
-        description=""
-        submitButtonText="Create"
-        onSubmit={handleCreate}
-        isSubmitting={creating}
-        maxWidth="480px"
-      >
-        <Stack gap="16px">
-          <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
-            Create a rule to receive alerts when specific Shadow AI activity is detected. Choose a trigger type and the system will notify you when the condition is met.
-          </Typography>
-          <Field
-            label="Rule name"
-            value={formName}
-            onChange={(e) => {
-              setFormName(e.target.value);
-              if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: "" }));
-            }}
-            placeholder="e.g., Alert on new AI tools"
-            error={formErrors.name}
-          />
-          <Field
-            label="Description"
-            value={formDescription}
-            onChange={(e) => setFormDescription(e.target.value)}
-            placeholder="Optional description"
-          />
-          <Select
-            id="trigger-type-select"
-            label="Trigger type"
-            value={formTrigger}
-            onChange={(e: SelectChangeEvent<string | number>) => {
-              setFormTrigger(e.target.value as ShadowAiTriggerType);
-              setFormErrors({});
-            }}
-            items={Object.entries(TRIGGER_LABELS).map(([value, label]) => ({
-              _id: value,
-              name: label,
-            }))}
-          />
-
-          {/* Trigger-specific config fields */}
-          {formTrigger === "risk_score_exceeded" && (
-            <Stack gap="6px">
-              <Field
-                label="Minimum risk score"
-                type="number"
-                value={formRiskScoreMin}
-                onChange={(e) => {
-                  setFormRiskScoreMin(e.target.value);
-                  if (formErrors.riskScoreMin) setFormErrors((prev) => ({ ...prev, riskScoreMin: "" }));
-                }}
-                placeholder="e.g., 70"
-                error={formErrors.riskScoreMin}
-              />
-              <Stack direction="row" alignItems="flex-start" gap="6px" sx={{ p: "8px 12px", bgcolor: palette.background.accent, borderRadius: "4px", border: `1px solid ${palette.border.light}` }}>
-                <Info size={14} strokeWidth={1.5} color={palette.status.default.text} style={{ marginTop: 2, flexShrink: 0 }} />
-                <Typography sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}>
-                  Risk score (0–100) is calculated nightly using a weighted formula: approval status (40%), data &amp; compliance policies (25%), usage volume (15%), and department sensitivity (20%). Unapproved tools with weak compliance posture in sensitive departments score highest.
-                </Typography>
-              </Stack>
-            </Stack>
-          )}
-          {formTrigger === "usage_threshold_exceeded" && (
-            <Stack gap="6px">
-              <Field
-                label="Event count threshold"
-                type="number"
-                value={formUsageThreshold}
-                onChange={(e) => {
-                  setFormUsageThreshold(e.target.value);
-                  if (formErrors.usageThreshold) setFormErrors((prev) => ({ ...prev, usageThreshold: "" }));
-                }}
-                placeholder="e.g., 100"
-                error={formErrors.usageThreshold}
-              />
-              <Stack direction="row" alignItems="flex-start" gap="6px" sx={{ p: "8px 12px", bgcolor: palette.background.accent, borderRadius: "4px", border: `1px solid ${palette.border.light}` }}>
-                <Info size={14} strokeWidth={1.5} color={palette.status.default.text} style={{ marginTop: 2, flexShrink: 0 }} />
-                <Typography sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}>
-                  This is the cumulative number of network events (API calls, page visits) recorded for a single AI tool across all users. For example, a threshold of 100 means the alert fires once a tool has been accessed 100 times total.
-                </Typography>
-              </Stack>
-            </Stack>
-          )}
-          {formTrigger === "sensitive_department" && (
+        {/* Create rule modal */}
+        <StandardModal
+          isOpen={createModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            resetForm();
+          }}
+          title="Create alert rule"
+          description=""
+          submitButtonText="Create"
+          onSubmit={handleCreate}
+          isSubmitting={creating}
+          maxWidth="480px"
+        >
+          <Stack gap="16px">
+            <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
+              Create a rule to receive alerts when specific Shadow AI activity is detected. Choose a
+              trigger type and the system will notify you when the condition is met.
+            </Typography>
             <Field
-              label="Departments (comma-separated)"
-              value={formDepartments}
+              label="Rule name"
+              value={formName}
               onChange={(e) => {
-                setFormDepartments(e.target.value);
-                if (formErrors.departments) setFormErrors((prev) => ({ ...prev, departments: "" }));
+                setFormName(e.target.value);
+                if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: "" }));
               }}
-              placeholder="e.g., Finance, Legal, HR"
-              error={formErrors.departments}
+              placeholder="e.g., Alert on new AI tools"
+              error={formErrors.name}
             />
-          )}
+            <Field
+              label="Description"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Optional description"
+            />
+            <Select
+              id="trigger-type-select"
+              label="Trigger type"
+              value={formTrigger}
+              onChange={(e: SelectChangeEvent<string | number>) => {
+                setFormTrigger(e.target.value as ShadowAiTriggerType);
+                setFormErrors({});
+              }}
+              items={Object.entries(TRIGGER_LABELS).map(([value, label]) => ({
+                _id: value,
+                name: label,
+              }))}
+            />
 
-          {/* Cooldown period */}
-          <Select
-            id="cooldown-select"
-            label="Cooldown period"
-            value={formCooldown}
-            onChange={(e: SelectChangeEvent<string | number>) =>
-              setFormCooldown(String(e.target.value))
-            }
-            items={[
-              { _id: "60", name: "1 hour" },
-              { _id: "360", name: "6 hours" },
-              { _id: "720", name: "12 hours" },
-              { _id: "1440", name: "24 hours" },
-            ]}
-          />
-
-          {/* Notification */}
-          <FormControlLabel
-            control={
-              <MuiCheckbox
-                size="small"
-                checked={notifyMe}
-                onChange={(e) => setNotifyMe(e.target.checked)}
-                sx={{ py: 0.5 }}
+            {/* Trigger-specific config fields */}
+            {formTrigger === "risk_score_exceeded" && (
+              <Stack gap="6px">
+                <Field
+                  label="Minimum risk score"
+                  type="number"
+                  value={formRiskScoreMin}
+                  onChange={(e) => {
+                    setFormRiskScoreMin(e.target.value);
+                    if (formErrors.riskScoreMin)
+                      setFormErrors((prev) => ({ ...prev, riskScoreMin: "" }));
+                  }}
+                  placeholder="e.g., 70"
+                  error={formErrors.riskScoreMin}
+                />
+                <Stack
+                  direction="row"
+                  alignItems="flex-start"
+                  gap="6px"
+                  sx={{
+                    p: "8px 12px",
+                    bgcolor: palette.background.accent,
+                    borderRadius: "4px",
+                    border: `1px solid ${palette.border.light}`,
+                  }}
+                >
+                  <Info
+                    size={14}
+                    strokeWidth={1.5}
+                    color={palette.status.default.text}
+                    style={{ marginTop: 2, flexShrink: 0 }}
+                  />
+                  <Typography
+                    sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}
+                  >
+                    Risk score (0–100) is calculated nightly using a weighted formula: approval
+                    status (40%), data &amp; compliance policies (25%), usage volume (15%), and
+                    department sensitivity (20%). Unapproved tools with weak compliance posture in
+                    sensitive departments score highest.
+                  </Typography>
+                </Stack>
+              </Stack>
+            )}
+            {formTrigger === "usage_threshold_exceeded" && (
+              <Stack gap="6px">
+                <Field
+                  label="Event count threshold"
+                  type="number"
+                  value={formUsageThreshold}
+                  onChange={(e) => {
+                    setFormUsageThreshold(e.target.value);
+                    if (formErrors.usageThreshold)
+                      setFormErrors((prev) => ({ ...prev, usageThreshold: "" }));
+                  }}
+                  placeholder="e.g., 100"
+                  error={formErrors.usageThreshold}
+                />
+                <Stack
+                  direction="row"
+                  alignItems="flex-start"
+                  gap="6px"
+                  sx={{
+                    p: "8px 12px",
+                    bgcolor: palette.background.accent,
+                    borderRadius: "4px",
+                    border: `1px solid ${palette.border.light}`,
+                  }}
+                >
+                  <Info
+                    size={14}
+                    strokeWidth={1.5}
+                    color={palette.status.default.text}
+                    style={{ marginTop: 2, flexShrink: 0 }}
+                  />
+                  <Typography
+                    sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}
+                  >
+                    This is the cumulative number of network events (API calls, page visits)
+                    recorded for a single AI tool across all users. For example, a threshold of 100
+                    means the alert fires once a tool has been accessed 100 times total.
+                  </Typography>
+                </Stack>
+              </Stack>
+            )}
+            {formTrigger === "sensitive_department" && (
+              <Field
+                label="Departments (comma-separated)"
+                value={formDepartments}
+                onChange={(e) => {
+                  setFormDepartments(e.target.value);
+                  if (formErrors.departments)
+                    setFormErrors((prev) => ({ ...prev, departments: "" }));
+                }}
+                placeholder="e.g., Finance, Legal, HR"
+                error={formErrors.departments}
               />
-            }
-            label={
-              <Typography sx={{ fontSize: 13 }}>
-                Notify me when this rule fires (in-app + email)
-              </Typography>
-            }
-            sx={{ m: 0 }}
-          />
+            )}
 
-          <Stack direction="row" alignItems="center" gap="8px">
-            <Typography sx={{ fontSize: 13 }}>Active</Typography>
-            <Toggle
-              checked={formActive}
-              onChange={(e) => setFormActive(e.target.checked)}
-              size="small"
+            {/* Cooldown period */}
+            <Select
+              id="cooldown-select"
+              label="Cooldown period"
+              value={formCooldown}
+              onChange={(e: SelectChangeEvent<string | number>) =>
+                setFormCooldown(String(e.target.value))
+              }
+              items={[
+                { _id: "60", name: "1 hour" },
+                { _id: "360", name: "6 hours" },
+                { _id: "720", name: "12 hours" },
+                { _id: "1440", name: "24 hours" },
+              ]}
             />
-          </Stack>
-        </Stack>
-      </StandardModal>
 
-      {/* Delete confirmation modal */}
-      <StandardModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title={`Delete "${deleteTarget?.name}"?`}
-        description=""
-        submitButtonText="Delete"
-        onSubmit={handleDelete}
-        submitButtonColor={palette.status.error.text}
-        maxWidth="400px"
-      >
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          This action cannot be undone. All alert history for this rule will be
-          preserved.
-        </Typography>
-      </StandardModal>
-    </TabContext>
+            {/* Notification */}
+            <FormControlLabel
+              control={
+                <MuiCheckbox
+                  size="small"
+                  checked={notifyMe}
+                  onChange={(e) => setNotifyMe(e.target.checked)}
+                  sx={{ py: 0.5 }}
+                />
+              }
+              label={
+                <Typography sx={{ fontSize: 13 }}>
+                  Notify me when this rule fires (in-app + email)
+                </Typography>
+              }
+              sx={{ m: 0 }}
+            />
+
+            <Stack direction="row" alignItems="center" gap="8px">
+              <Typography sx={{ fontSize: 13 }}>Active</Typography>
+              <Toggle
+                checked={formActive}
+                onChange={(e) => setFormActive(e.target.checked)}
+                size="small"
+              />
+            </Stack>
+          </Stack>
+        </StandardModal>
+
+        {/* Delete confirmation modal */}
+        <StandardModal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title={`Delete "${deleteTarget?.name}"?`}
+          description=""
+          submitButtonText="Delete"
+          onSubmit={handleDelete}
+          submitButtonColor={palette.status.error.text}
+          maxWidth="400px"
+        >
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            This action cannot be undone. All alert history for this rule will be preserved.
+          </Typography>
+        </StandardModal>
+      </TabContext>
     </PageHeaderExtended>
   );
 }

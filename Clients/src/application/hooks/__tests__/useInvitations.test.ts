@@ -30,9 +30,7 @@ describe("useInvitations", () => {
   });
 
   it("fetches invitations", async () => {
-    const invitations = [
-      { id: 1, email: "test@example.com", status: "pending" },
-    ];
+    const invitations = [{ id: 1, email: "test@example.com", status: "pending" }];
     mockGetInvitations.mockResolvedValue({ invitations } as any);
 
     const { result } = renderHook(() => useInvitations(), {

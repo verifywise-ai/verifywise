@@ -32,9 +32,7 @@ export const ISO27001_ENUMS = {
 /**
  * Validates implementation description field
  */
-export const validateImplementationDescription = (
-  value: any
-): ValidationResult => {
+export const validateImplementationDescription = (value: any): ValidationResult => {
   if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Allow empty strings for optional fields
   }
@@ -139,11 +137,7 @@ export const validateRisksDelete = (value: any): ValidationResult => {
 
   // Validate each risk ID in the array
   for (let i = 0; i < risksArray.length; i++) {
-    const riskIdValidation = validateForeignKey(
-      risksArray[i],
-      `Risk ID at index ${i}`,
-      true
-    );
+    const riskIdValidation = validateForeignKey(risksArray[i], `Risk ID at index ${i}`, true);
     if (!riskIdValidation.isValid) {
       return {
         isValid: false,
@@ -197,7 +191,7 @@ export const validateRisksMitigated = (value: any): ValidationResult => {
     const riskIdValidation = validateForeignKey(
       risksArray[i],
       `Mitigated risk ID at index ${i}`,
-      true
+      true,
     );
     if (!riskIdValidation.isValid) {
       return {
@@ -246,11 +240,7 @@ export const validateFilesDelete = (value: any): ValidationResult => {
 
   // Validate each file ID in the array
   for (let i = 0; i < filesToDelete.length; i++) {
-    const fileIdValidation = validateForeignKey(
-      filesToDelete[i],
-      `File ID at index ${i}`,
-      true
-    );
+    const fileIdValidation = validateForeignKey(filesToDelete[i], `File ID at index ${i}`, true);
     if (!fileIdValidation.isValid) {
       return {
         isValid: false,
@@ -271,16 +261,7 @@ export const validateFileUploads = (files: any[]): ValidationResult => {
     return { isValid: true }; // Optional files
   }
 
-  const allowedTypes = [
-    "pdf",
-    "doc",
-    "docx",
-    "txt",
-    "jpg",
-    "jpeg",
-    "png",
-    "gif",
-  ];
+  const allowedTypes = ["pdf", "doc", "docx", "txt", "jpg", "jpeg", "png", "gif"];
   const maxFileSize = 10 * 1024 * 1024; // 10MB
 
   for (let i = 0; i < files.length; i++) {
@@ -401,14 +382,14 @@ export const updateAnnexControlSchema = {
  */
 export const validateUpdateSubClause = (
   data: any,
-  skipFileFields: boolean = false
+  skipFileFields: boolean = false,
 ): ValidationError[] => {
   // Create a copy of the schema, excluding user_id and project_id if skipFileFields is true
   const schemaToUse = skipFileFields
     ? Object.fromEntries(
         Object.entries(updateSubClauseSchema).filter(
-          ([key]) => key !== "user_id" && key !== "project_id"
-        )
+          ([key]) => key !== "user_id" && key !== "project_id",
+        ),
       )
     : updateSubClauseSchema;
 
@@ -428,8 +409,7 @@ export const validateUpdateSubClause = (
   ];
 
   const hasMeaningfulField = meaningfulFields.some(
-    (field) =>
-      data[field] !== undefined && data[field] !== null && data[field] !== ""
+    (field) => data[field] !== undefined && data[field] !== null && data[field] !== "",
   );
 
   if (!hasMeaningfulField) {
@@ -448,14 +428,14 @@ export const validateUpdateSubClause = (
  */
 export const validateUpdateAnnexControl = (
   data: any,
-  skipFileFields: boolean = false
+  skipFileFields: boolean = false,
 ): ValidationError[] => {
   // Create a copy of the schema, excluding user_id and project_id if skipFileFields is true
   const schemaToUse = skipFileFields
     ? Object.fromEntries(
         Object.entries(updateAnnexControlSchema).filter(
-          ([key]) => key !== "user_id" && key !== "project_id"
-        )
+          ([key]) => key !== "user_id" && key !== "project_id",
+        ),
       )
     : updateAnnexControlSchema;
 
@@ -475,8 +455,7 @@ export const validateUpdateAnnexControl = (
   ];
 
   const hasMeaningfulField = meaningfulFields.some(
-    (field) =>
-      data[field] !== undefined && data[field] !== null && data[field] !== ""
+    (field) => data[field] !== undefined && data[field] !== null && data[field] !== "",
   );
 
   if (!hasMeaningfulField) {
@@ -493,10 +472,7 @@ export const validateUpdateAnnexControl = (
 /**
  * Complete validation for ISO-27001 subclause updates
  */
-export const validateCompleteSubClauseUpdate = (
-  data: any,
-  files?: any[]
-): ValidationError[] => {
+export const validateCompleteSubClauseUpdate = (data: any, files?: any[]): ValidationError[] => {
   const hasFiles = files && files.length > 0;
 
   // Skip user_id and project_id validation if no files are present
@@ -518,24 +494,16 @@ export const validateCompleteSubClauseUpdate = (
     if (!userIdValidation.isValid) {
       errors.push({
         field: "user_id",
-        message:
-          userIdValidation.message ||
-          "User ID is required when uploading files",
+        message: userIdValidation.message || "User ID is required when uploading files",
         code: userIdValidation.code || "USER_ID_REQUIRED_FOR_FILES",
       });
     }
 
-    const projectIdValidation = validateForeignKey(
-      data.project_id,
-      "Project ID",
-      true
-    );
+    const projectIdValidation = validateForeignKey(data.project_id, "Project ID", true);
     if (!projectIdValidation.isValid) {
       errors.push({
         field: "project_id",
-        message:
-          projectIdValidation.message ||
-          "Project ID is required when uploading files",
+        message: projectIdValidation.message || "Project ID is required when uploading files",
         code: projectIdValidation.code || "PROJECT_ID_REQUIRED_FOR_FILES",
       });
     }
@@ -547,10 +515,7 @@ export const validateCompleteSubClauseUpdate = (
 /**
  * Complete validation for ISO-27001 annex control updates
  */
-export const validateCompleteAnnexControlUpdate = (
-  data: any,
-  files?: any[]
-): ValidationError[] => {
+export const validateCompleteAnnexControlUpdate = (data: any, files?: any[]): ValidationError[] => {
   const hasFiles = files && files.length > 0;
 
   // Skip user_id and project_id validation if no files are present
@@ -572,24 +537,16 @@ export const validateCompleteAnnexControlUpdate = (
     if (!userIdValidation.isValid) {
       errors.push({
         field: "user_id",
-        message:
-          userIdValidation.message ||
-          "User ID is required when uploading files",
+        message: userIdValidation.message || "User ID is required when uploading files",
         code: userIdValidation.code || "USER_ID_REQUIRED_FOR_FILES",
       });
     }
 
-    const projectIdValidation = validateForeignKey(
-      data.project_id,
-      "Project ID",
-      true
-    );
+    const projectIdValidation = validateForeignKey(data.project_id, "Project ID", true);
     if (!projectIdValidation.isValid) {
       errors.push({
         field: "project_id",
-        message:
-          projectIdValidation.message ||
-          "Project ID is required when uploading files",
+        message: projectIdValidation.message || "Project ID is required when uploading files",
         code: projectIdValidation.code || "PROJECT_ID_REQUIRED_FOR_FILES",
       });
     }

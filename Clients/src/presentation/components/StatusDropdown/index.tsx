@@ -122,11 +122,7 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
       displayEmpty
       renderValue={renderValue}
       IconComponent={(props) => (
-        <WhiteDownArrowIcon
-          {...props}
-          size={size === "small" ? 14 : 16}
-          strokeWidth={1.5}
-        />
+        <WhiteDownArrowIcon {...props} size={size === "small" ? 14 : 16} strokeWidth={1.5} />
       )}
       MenuProps={{
         disableScrollLock: true,

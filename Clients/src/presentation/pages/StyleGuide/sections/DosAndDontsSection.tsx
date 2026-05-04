@@ -293,8 +293,8 @@ const DosAndDontsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Visual examples of correct and incorrect patterns. Follow these guidelines
-          to maintain consistency across the VerifyWise application.
+          Visual examples of correct and incorrect patterns. Follow these guidelines to maintain
+          consistency across the VerifyWise application.
         </Typography>
       </Box>
 
@@ -372,7 +372,9 @@ const DosAndDontsSection: React.FC = () => {
           }}
         >
           <Stack spacing="8px">
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.status.success.text }}>
+            <Typography
+              sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.status.success.text }}
+            >
               Always do
             </Typography>
             {[
@@ -393,7 +395,9 @@ const DosAndDontsSection: React.FC = () => {
             ))}
           </Stack>
           <Stack spacing="8px">
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.status.error.text }}>
+            <Typography
+              sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.status.error.text }}
+            >
               Never do
             </Typography>
             {[

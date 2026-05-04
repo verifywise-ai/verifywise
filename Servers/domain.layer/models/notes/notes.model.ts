@@ -37,14 +37,7 @@
  * @module domain.layer/models/notes
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 import { ValidationException } from "../../exceptions/custom.exception";
@@ -103,7 +96,7 @@ export class NotesModel extends Model<NotesModel> {
       NotesAttachedToEnum.EU_AI_ACT_SUBCONTROL,
       NotesAttachedToEnum.VENDOR,
       NotesAttachedToEnum.RISK,
-      NotesAttachedToEnum.CONTROL
+      NotesAttachedToEnum.CONTROL,
     ),
     allowNull: false,
   })
@@ -175,22 +168,18 @@ export class NotesModel extends Model<NotesModel> {
     author_id: number,
     attached_to: NotesAttachedToEnum,
     attached_to_id: string,
-    organization_id: number
+    organization_id: number,
   ): Promise<NotesModel> {
     // Validate content
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Note content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Note content is required", "content", content);
     }
 
     if (content.trim().length > 5000) {
       throw new ValidationException(
         "Note content cannot exceed 5000 characters",
         "content",
-        content
+        content,
       );
     }
 
@@ -199,29 +188,22 @@ export class NotesModel extends Model<NotesModel> {
       throw new ValidationException(
         "Valid author_id is required (must be >= 1)",
         "author_id",
-        author_id
+        author_id,
       );
     }
 
     // Validate attached_to
-    if (
-      !attached_to ||
-      !Object.values(NotesAttachedToEnum).includes(attached_to)
-    ) {
+    if (!attached_to || !Object.values(NotesAttachedToEnum).includes(attached_to)) {
       throw new ValidationException(
         "Valid attached_to type is required",
         "attached_to",
-        attached_to
+        attached_to,
       );
     }
 
     // Validate attached_to_id
     if (!attached_to_id || attached_to_id.trim().length === 0) {
-      throw new ValidationException(
-        "attached_to_id is required",
-        "attached_to_id",
-        attached_to_id
-      );
+      throw new ValidationException("attached_to_id is required", "attached_to_id", attached_to_id);
     }
 
     // Validate organization_id
@@ -229,7 +211,7 @@ export class NotesModel extends Model<NotesModel> {
       throw new ValidationException(
         "Valid organization_id is required (must be >= 1)",
         "organization_id",
-        organization_id
+        organization_id,
       );
     }
 
@@ -265,18 +247,14 @@ export class NotesModel extends Model<NotesModel> {
   async updateContent(content: string): Promise<void> {
     // Validate content
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Note content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Note content is required", "content", content);
     }
 
     if (content.trim().length > 5000) {
       throw new ValidationException(
         "Note content cannot exceed 5000 characters",
         "content",
-        content
+        content,
       );
     }
 
@@ -308,18 +286,14 @@ export class NotesModel extends Model<NotesModel> {
    */
   async validateNoteData(): Promise<void> {
     if (!this.content || this.content.trim().length === 0) {
-      throw new ValidationException(
-        "Note content is required",
-        "content",
-        this.content
-      );
+      throw new ValidationException("Note content is required", "content", this.content);
     }
 
     if (this.content.trim().length > 5000) {
       throw new ValidationException(
         "Note content cannot exceed 5000 characters",
         "content",
-        this.content
+        this.content,
       );
     }
 
@@ -327,18 +301,15 @@ export class NotesModel extends Model<NotesModel> {
       throw new ValidationException(
         "Valid author_id is required (must be >= 1)",
         "author_id",
-        this.author_id
+        this.author_id,
       );
     }
 
-    if (
-      !this.attached_to ||
-      !Object.values(NotesAttachedToEnum).includes(this.attached_to)
-    ) {
+    if (!this.attached_to || !Object.values(NotesAttachedToEnum).includes(this.attached_to)) {
       throw new ValidationException(
         "Valid attached_to type is required",
         "attached_to",
-        this.attached_to
+        this.attached_to,
       );
     }
 
@@ -346,7 +317,7 @@ export class NotesModel extends Model<NotesModel> {
       throw new ValidationException(
         "attached_to_id is required",
         "attached_to_id",
-        this.attached_to_id
+        this.attached_to_id,
       );
     }
 
@@ -354,7 +325,7 @@ export class NotesModel extends Model<NotesModel> {
       throw new ValidationException(
         "Valid organization_id is required (must be >= 1)",
         "organization_id",
-        this.organization_id
+        this.organization_id,
       );
     }
   }

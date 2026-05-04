@@ -159,11 +159,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
     }
 
     if (!this.description?.trim()) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        this.description
-      );
+      throw new ValidationException("Description is required", "description", this.description);
     }
 
     if (!this.slug?.trim()) {
@@ -171,19 +167,11 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
     }
 
     if (!Object.values(IntakeEntityType).includes(this.entityType)) {
-      throw new ValidationException(
-        "Invalid entity type",
-        "entityType",
-        this.entityType
-      );
+      throw new ValidationException("Invalid entity type", "entityType", this.entityType);
     }
 
     if (!this.createdBy) {
-      throw new ValidationException(
-        "Created by is required",
-        "createdBy",
-        this.createdBy
-      );
+      throw new ValidationException("Created by is required", "createdBy", this.createdBy);
     }
   }
 

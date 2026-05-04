@@ -176,10 +176,19 @@ export const DonutCenterLabel: React.FC<DonutCenterLabelProps> = ({ value, label
       pointerEvents: "none",
     }}
   >
-    <Typography sx={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2, color: palette.text.primary }}>
+    <Typography
+      sx={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2, color: palette.text.primary }}
+    >
       {value}
     </Typography>
-    <Typography sx={{ fontSize: 10, color: palette.text.tertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>
+    <Typography
+      sx={{
+        fontSize: 10,
+        color: palette.text.tertiary,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+      }}
+    >
       {label}
     </Typography>
   </Box>
@@ -254,8 +263,19 @@ export const PROVIDER_COLORS: Record<string, string> = {
 /** Get provider color — falls back to chart palette by index. */
 export const getProviderColor = (provider: string, index: number = 0): string => {
   const p = provider.toLowerCase().replace(/[^a-z_]/g, "");
-  return PROVIDER_COLORS[p] || [
-    "#13715B", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6",
-    "#06B6D4", "#EC4899", "#14B8A6", "#F97316", "#6366F1",
-  ][index % 10];
+  return (
+    PROVIDER_COLORS[p] ||
+    [
+      "#13715B",
+      "#3B82F6",
+      "#F59E0B",
+      "#EF4444",
+      "#8B5CF6",
+      "#06B6D4",
+      "#EC4899",
+      "#14B8A6",
+      "#F97316",
+      "#6366F1",
+    ][index % 10]
+  );
 };

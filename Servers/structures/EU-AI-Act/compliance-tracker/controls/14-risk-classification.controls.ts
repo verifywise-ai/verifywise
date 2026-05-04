@@ -11,8 +11,7 @@ export const RiskClassification = [
         order_no: 1,
         title:
           "We have assessed whether the AI system falls under Annex I product safety legislation (machinery, toys, lifts, medical devices, vehicles, aviation, marine equipment, etc.).",
-        description:
-          "Annex I applicability assessment report per AI system.",
+        description: "Annex I applicability assessment report per AI system.",
       },
       {
         order_no: 2,
@@ -25,8 +24,7 @@ export const RiskClassification = [
   },
   {
     order_no: 2,
-    title:
-      "Determine whether the AI system falls into a high-risk use case listed in Annex III.",
+    title: "Determine whether the AI system falls into a high-risk use case listed in Annex III.",
     description:
       "Annex III standalone high-risk classification across the eight listed areas, plus Art 6(3) derogation assessment (Art 6.2-3, Art 7).",
     article: "Art. 6(2)-(3), Art. 7",

@@ -39,18 +39,9 @@ class TestVendorModel {
   website!: string;
   vendor_contact_person!: string;
   review_result!: string;
-  review_status!:
-    | "Not started"
-    | "In review"
-    | "Reviewed"
-    | "Requires follow-up";
+  review_status!: "Not started" | "In review" | "Reviewed" | "Requires follow-up";
   reviewer!: number;
-  risk_status!:
-    | "Very high risk"
-    | "High risk"
-    | "Medium risk"
-    | "Low risk"
-    | "Very low risk";
+  risk_status!: "Very high risk" | "High risk" | "Medium risk" | "Low risk" | "Very low risk";
   review_date!: Date;
   is_demo?: boolean;
   created_at?: Date;
@@ -67,36 +58,23 @@ class TestVendorModel {
     website: string,
     vendor_contact_person: string,
     review_result: string,
-    review_status:
-      | "Not started"
-      | "In review"
-      | "Reviewed"
-      | "Requires follow-up",
+    review_status: "Not started" | "In review" | "Reviewed" | "Requires follow-up",
     reviewer: number,
-    risk_status:
-      | "Very high risk"
-      | "High risk"
-      | "Medium risk"
-      | "Low risk"
-      | "Very low risk",
+    risk_status: "Very high risk" | "High risk" | "Medium risk" | "Low risk" | "Very low risk",
     review_date: Date,
     order_no?: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestVendorModel> {
     // Validate required fields
     if (!vendor_name || vendor_name.trim().length === 0) {
-      throw new ValidationException(
-        "Vendor name is required",
-        "vendor_name",
-        vendor_name
-      );
+      throw new ValidationException("Vendor name is required", "vendor_name", vendor_name);
     }
 
     if (!vendor_provides || vendor_provides.trim().length === 0) {
       throw new ValidationException(
         "Vendor provides is required",
         "vendor_provides",
-        vendor_provides
+        vendor_provides,
       );
     }
 
@@ -108,16 +86,12 @@ class TestVendorModel {
       throw new ValidationException(
         "Vendor contact person is required",
         "vendor_contact_person",
-        vendor_contact_person
+        vendor_contact_person,
       );
     }
 
     if (!review_result || review_result.trim().length === 0) {
-      throw new ValidationException(
-        "Review result is required",
-        "review_result",
-        review_result
-      );
+      throw new ValidationException("Review result is required", "review_result", review_result);
     }
 
     // Validate assignee
@@ -125,7 +99,7 @@ class TestVendorModel {
       throw new ValidationException(
         "Valid assignee ID is required (must be >= 1)",
         "assignee",
-        assignee
+        assignee,
       );
     }
 
@@ -134,7 +108,7 @@ class TestVendorModel {
       throw new ValidationException(
         "Valid reviewer ID is required (must be >= 1)",
         "reviewer",
-        reviewer
+        reviewer,
       );
     }
 
@@ -167,31 +141,19 @@ class TestVendorModel {
     website?: string;
     vendor_contact_person?: string;
     review_result?: string;
-    review_status?:
-      | "Not started"
-      | "In review"
-      | "Reviewed"
-      | "Requires follow-up";
+    review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up";
     reviewer?: number;
-    risk_status?:
-      | "Very high risk"
-      | "High risk"
-      | "Medium risk"
-      | "Low risk"
-      | "Very low risk";
+    risk_status?: "Very high risk" | "High risk" | "Medium risk" | "Low risk" | "Very low risk";
     review_date?: Date;
     order_no?: number;
   }): Promise<void> {
     // Validate vendor_name if provided
     if (updateData.vendor_name !== undefined) {
-      if (
-        !updateData.vendor_name ||
-        updateData.vendor_name.trim().length === 0
-      ) {
+      if (!updateData.vendor_name || updateData.vendor_name.trim().length === 0) {
         throw new ValidationException(
           "Vendor name is required",
           "vendor_name",
-          updateData.vendor_name
+          updateData.vendor_name,
         );
       }
       this.vendor_name = updateData.vendor_name.trim();
@@ -199,14 +161,11 @@ class TestVendorModel {
 
     // Validate vendor_provides if provided
     if (updateData.vendor_provides !== undefined) {
-      if (
-        !updateData.vendor_provides ||
-        updateData.vendor_provides.trim().length === 0
-      ) {
+      if (!updateData.vendor_provides || updateData.vendor_provides.trim().length === 0) {
         throw new ValidationException(
           "Vendor provides is required",
           "vendor_provides",
-          updateData.vendor_provides
+          updateData.vendor_provides,
         );
       }
       this.vendor_provides = updateData.vendor_provides.trim();
@@ -215,11 +174,7 @@ class TestVendorModel {
     // Validate website if provided
     if (updateData.website !== undefined) {
       if (!updateData.website || updateData.website.trim().length === 0) {
-        throw new ValidationException(
-          "Website is required",
-          "website",
-          updateData.website
-        );
+        throw new ValidationException("Website is required", "website", updateData.website);
       }
       this.website = updateData.website.trim();
     }
@@ -233,7 +188,7 @@ class TestVendorModel {
         throw new ValidationException(
           "Vendor contact person is required",
           "vendor_contact_person",
-          updateData.vendor_contact_person
+          updateData.vendor_contact_person,
         );
       }
       this.vendor_contact_person = updateData.vendor_contact_person.trim();
@@ -241,14 +196,11 @@ class TestVendorModel {
 
     // Validate review_result if provided
     if (updateData.review_result !== undefined) {
-      if (
-        !updateData.review_result ||
-        updateData.review_result.trim().length === 0
-      ) {
+      if (!updateData.review_result || updateData.review_result.trim().length === 0) {
         throw new ValidationException(
           "Review result is required",
           "review_result",
-          updateData.review_result
+          updateData.review_result,
         );
       }
       this.review_result = updateData.review_result.trim();
@@ -260,7 +212,7 @@ class TestVendorModel {
         throw new ValidationException(
           "Valid assignee ID is required (must be >= 1)",
           "assignee",
-          updateData.assignee
+          updateData.assignee,
         );
       }
       this.assignee = updateData.assignee;
@@ -272,7 +224,7 @@ class TestVendorModel {
         throw new ValidationException(
           "Valid reviewer ID is required (must be >= 1)",
           "reviewer",
-          updateData.reviewer
+          updateData.reviewer,
         );
       }
       this.reviewer = updateData.reviewer;
@@ -300,37 +252,26 @@ class TestVendorModel {
   // Instance method to validate vendor data
   async validateVendorData(): Promise<void> {
     if (!this.vendor_name || this.vendor_name.trim().length === 0) {
-      throw new ValidationException(
-        "Vendor name is required",
-        "vendor_name",
-        this.vendor_name
-      );
+      throw new ValidationException("Vendor name is required", "vendor_name", this.vendor_name);
     }
 
     if (!this.vendor_provides || this.vendor_provides.trim().length === 0) {
       throw new ValidationException(
         "Vendor provides is required",
         "vendor_provides",
-        this.vendor_provides
+        this.vendor_provides,
       );
     }
 
     if (!this.website || this.website.trim().length === 0) {
-      throw new ValidationException(
-        "Website is required",
-        "website",
-        this.website
-      );
+      throw new ValidationException("Website is required", "website", this.website);
     }
 
-    if (
-      !this.vendor_contact_person ||
-      this.vendor_contact_person.trim().length === 0
-    ) {
+    if (!this.vendor_contact_person || this.vendor_contact_person.trim().length === 0) {
       throw new ValidationException(
         "Vendor contact person is required",
         "vendor_contact_person",
-        this.vendor_contact_person
+        this.vendor_contact_person,
       );
     }
 
@@ -338,24 +279,16 @@ class TestVendorModel {
       throw new ValidationException(
         "Review result is required",
         "review_result",
-        this.review_result
+        this.review_result,
       );
     }
 
     if (!this.assignee || !numberValidation(this.assignee, 1)) {
-      throw new ValidationException(
-        "Valid assignee ID is required",
-        "assignee",
-        this.assignee
-      );
+      throw new ValidationException("Valid assignee ID is required", "assignee", this.assignee);
     }
 
     if (!this.reviewer || !numberValidation(this.reviewer, 1)) {
-      throw new ValidationException(
-        "Valid reviewer ID is required",
-        "reviewer",
-        this.reviewer
-      );
+      throw new ValidationException("Valid reviewer ID is required", "reviewer", this.reviewer);
     }
 
     // Order number validation removed as requested
@@ -372,7 +305,7 @@ class TestVendorModel {
       throw new BusinessLogicException(
         "Demo vendors cannot be modified",
         "DEMO_VENDOR_RESTRICTION",
-        { vendorId: this.id, vendorName: this.vendor_name }
+        { vendorId: this.id, vendorName: this.vendor_name },
       );
     }
     return true;
@@ -385,9 +318,7 @@ class TestVendorModel {
 
   // Instance method to check if vendor has high risk status
   hasHighRisk(): boolean {
-    return (
-      this.risk_status === "Very high risk" || this.risk_status === "High risk"
-    );
+    return this.risk_status === "Very high risk" || this.risk_status === "High risk";
   }
 
   // Instance method to get vendor summary
@@ -432,11 +363,7 @@ class TestVendorModel {
   // Static method to find vendor by ID with validation
   static async findByIdWithValidation(id: number): Promise<TestVendorModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
@@ -495,7 +422,7 @@ describe("VendorModel", () => {
         validVendorData.risk_status,
         validVendorData.review_date,
         validVendorData.order_no,
-        validVendorData.is_demo
+        validVendorData.is_demo,
       );
 
       expect(vendor).toBeInstanceOf(TestVendorModel);
@@ -518,8 +445,8 @@ describe("VendorModel", () => {
           validVendorData.review_status,
           validVendorData.reviewer,
           validVendorData.risk_status,
-          validVendorData.review_date
-        )
+          validVendorData.review_date,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -535,8 +462,8 @@ describe("VendorModel", () => {
           validVendorData.review_status,
           validVendorData.reviewer,
           validVendorData.risk_status,
-          validVendorData.review_date
-        )
+          validVendorData.review_date,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -557,9 +484,7 @@ describe("VendorModel", () => {
     it("should throw ValidationException for empty vendor name update", async () => {
       const vendor = new TestVendorModel(validVendorData);
 
-      await expect(vendor.updateVendor({ vendor_name: "" })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(vendor.updateVendor({ vendor_name: "" })).rejects.toThrow(ValidationException);
     });
   });
 
@@ -576,9 +501,7 @@ describe("VendorModel", () => {
         vendor_name: "",
       });
 
-      await expect(vendor.validateVendorData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(vendor.validateVendorData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -644,15 +567,11 @@ describe("VendorModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(TestVendorModel.findByIdWithValidation(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestVendorModel.findByIdWithValidation(0)).rejects.toThrow(ValidationException);
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(TestVendorModel.findByIdWithValidation(999)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(TestVendorModel.findByIdWithValidation(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

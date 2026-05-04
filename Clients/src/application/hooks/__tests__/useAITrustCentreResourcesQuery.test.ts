@@ -39,7 +39,16 @@ describe("useAITrustCentreResourcesQuery", () => {
   });
 
   it("fetches resources", async () => {
-    const resources = [{ id: 1, name: "Policy Doc", description: "test", visible: true, file_id: 1, updated_at: "2024-01-01" }];
+    const resources = [
+      {
+        id: 1,
+        name: "Policy Doc",
+        description: "test",
+        visible: true,
+        file_id: 1,
+        updated_at: "2024-01-01",
+      },
+    ];
     mockGetResources.mockResolvedValue({ data: { data: { resources } } });
 
     const { result } = renderHook(() => useAITrustCentreResourcesQuery(), {

@@ -1,16 +1,16 @@
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from "@mui/material/styles";
 
 export const useStyles = () => {
   const theme = useTheme();
 
   return {
     root: {
-      display: 'flex',
-      flexDirection: 'column',
+      display: "flex",
+      flexDirection: "column",
       gap: theme.spacing(4),
       fontSize: 13,
-      width: '100%',
-      margin: '0 auto',
+      width: "100%",
+      margin: "0 auto",
     },
     card: {
       background: theme.palette.background.paper,
@@ -18,8 +18,8 @@ export const useStyles = () => {
       borderRadius: theme.shape.borderRadius,
       padding: theme.spacing(5, 6),
       marginBottom: theme.spacing(4),
-      boxShadow: 'none',
-      width: '100%',
+      boxShadow: "none",
+      width: "100%",
     },
     sectionTitle: {
       fontWeight: 600,
@@ -33,8 +33,8 @@ export const useStyles = () => {
       marginBottom: theme.spacing(4),
     },
     row: {
-      display: 'flex',
-      alignItems: 'center',
+      display: "flex",
+      alignItems: "center",
       gap: theme.spacing(3),
       marginBottom: theme.spacing(20),
     },
@@ -42,20 +42,20 @@ export const useStyles = () => {
       width: 120,
       height: 48,
       borderRadius: 2,
-      background: 'linear-gradient(90deg, #A6C1EE 0%, #FBC2EB 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      background: "linear-gradient(90deg, #A6C1EE 0%, #FBC2EB 100%)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
       border: `1px solid ${theme.palette.border.light}`,
     },
     logoActions: {
-      display: 'flex',
-      flexDirection: 'row',
+      display: "flex",
+      flexDirection: "row",
       gap: theme.spacing(1),
     },
     colorSwatchRow: {
-      display: 'flex',
-      alignItems: 'center',
+      display: "flex",
+      alignItems: "center",
       gap: theme.spacing(2),
       marginBottom: theme.spacing(2),
       flex: 0.5,
@@ -63,16 +63,16 @@ export const useStyles = () => {
     colorSwatch: (color: string, selected: boolean) => ({
       width: 28,
       height: 28,
-      borderRadius: '50%',
+      borderRadius: "50%",
       background: color,
       border: selected ? `2px solid #2C6392` : `1.5px solid ${theme.palette.border.light}`,
-      cursor: 'pointer',
-      boxSizing: 'border-box',
-      display: 'inline-block',
+      cursor: "pointer",
+      boxSizing: "border-box",
+      display: "inline-block",
     }),
     customColorRow: {
-      display: 'flex',
-      alignItems: 'center',
+      display: "flex",
+      alignItems: "center",
       gap: theme.spacing(2),
     },
     customColorLabel: {
@@ -87,17 +87,17 @@ export const useStyles = () => {
       fontSize: 13,
       borderRadius: 2,
       border: `1px solid ${theme.palette.border.light}`,
-      padding: '0 10px',
-      background: 'background.main',
+      padding: "0 10px",
+      background: "background.main",
       marginRight: theme.spacing(1),
     },
     customColorCircle: (color: string) => ({
       width: 32,
       height: 32,
-      borderRadius: '50%',
+      borderRadius: "50%",
       background: color,
       border: `1.5px solid ${theme.palette.border.light}`,
-      display: 'inline-block',
+      display: "inline-block",
     }),
     trustTitleInput: {
       width: 340,
@@ -105,8 +105,8 @@ export const useStyles = () => {
       marginTop: 0,
     },
     toggleRow: {
-      display: 'flex',
-      alignItems: 'center',
+      display: "flex",
+      alignItems: "center",
       gap: theme.spacing(2),
       marginBottom: theme.spacing(10),
       flex: 0.5,
@@ -118,9 +118,9 @@ export const useStyles = () => {
       fontWeight: 500,
     },
     saveButtonRow: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      width: '100%',
+      display: "flex",
+      justifyContent: "flex-end",
+      width: "100%",
       marginTop: theme.spacing(4),
     },
     saveButton: {
@@ -135,9 +135,9 @@ export const useStyles = () => {
       marginLeft: theme.spacing(1),
       height: 34,
       borderRadius: 2,
-      background: 'transparent',
-      '&:hover': {
-        background: 'rgba(219, 80, 74, 0.08)',
+      background: "transparent",
+      "&:hover": {
+        background: "rgba(219, 80, 74, 0.08)",
         borderColor: theme.palette.error.dark,
       },
     },
@@ -147,8 +147,8 @@ export const useStyles = () => {
       fontSize: 13,
       height: 34,
       borderRadius: 2,
-      background: 'transparent',
-      '&:hover': {
+      background: "transparent",
+      "&:hover": {
         background: theme.palette.background.accent,
       },
     },
@@ -157,4 +157,4 @@ export const useStyles = () => {
       color: theme.palette.text.disabled,
     },
   };
-}; 
+};

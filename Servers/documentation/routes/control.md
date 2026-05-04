@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Controls**
-
   - Route: `/`
   - Handler: `getAllControls`
   - Authentication: JWT (currently commented out)
@@ -36,7 +35,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### POST Routes
 
 - **Create Control**
-
   - Route: `/`
   - Handler: `createControl`
   - Authentication: JWT (currently commented out)
@@ -49,7 +47,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### PUT Routes
 
 - **Update Control**
-
   - Route: `/:id`
   - Handler: `updateControlById`
   - Authentication: JWT (currently commented out)

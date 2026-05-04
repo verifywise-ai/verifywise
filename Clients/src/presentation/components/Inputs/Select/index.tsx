@@ -34,7 +34,7 @@ import { SelectProps } from "../../../types/widget.types";
 import { getSelectStyles } from "../../../utils/inputStyles";
 
 function isRecordSx(sx: SxProps<Theme>): sx is Record<string, unknown> {
-  return typeof sx === 'object' && sx !== null && !Array.isArray(sx);
+  return typeof sx === "object" && sx !== null && !Array.isArray(sx);
 }
 
 function Select({
@@ -66,24 +66,30 @@ function Select({
   };
 
   // Extract width, flexGrow, minWidth, maxWidth from sx prop to apply to wrapper Stack
-  const extractedLayoutProps = sx && isRecordSx(sx)
-    ? {
-        width: sx.width as string | number | undefined,
-        flexGrow: sx.flexGrow as number | undefined,
-        minWidth: sx.minWidth as string | number | undefined,
-        maxWidth: sx.maxWidth as string | number | undefined,
-      }
-    : {};
+  const extractedLayoutProps =
+    sx && isRecordSx(sx)
+      ? {
+          width: sx.width as string | number | undefined,
+          flexGrow: sx.flexGrow as number | undefined,
+          minWidth: sx.minWidth as string | number | undefined,
+          maxWidth: sx.maxWidth as string | number | undefined,
+        }
+      : {};
 
   // Create a copy of sx without layout props to pass to MuiSelect
-  const sxWithoutLayoutProps = sx && isRecordSx(sx)
-    ? Object.fromEntries(Object.entries(sx).filter(([key]) => !['width', 'flexGrow', 'minWidth', 'maxWidth'].includes(key)))
-    : sx;
+  const sxWithoutLayoutProps =
+    sx && isRecordSx(sx)
+      ? Object.fromEntries(
+          Object.entries(sx).filter(
+            ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key),
+          ),
+        )
+      : sx;
 
   const renderValue = (value: unknown) => {
     const selected = value as string | number;
     const selectedItem = items.find(
-      (item) => (getOptionValue ? getOptionValue(item) : item._id) === selected
+      (item) => (getOptionValue ? getOptionValue(item) : item._id) === selected,
     );
 
     let displayText;
@@ -91,8 +97,7 @@ function Select({
       displayText = customRenderValue(value, selectedItem);
     } else {
       displayText = selectedItem
-        ? selectedItem.name +
-          (selectedItem.surname ? " " + selectedItem.surname : "")
+        ? selectedItem.name + (selectedItem.surname ? " " + selectedItem.surname : "")
         : placeholder;
     }
 
@@ -116,11 +121,7 @@ function Select({
   };
 
   return (
-    <Stack
-      gap={theme.spacing(2)}
-      className="select-wrapper"
-      sx={extractedLayoutProps}
-    >
+    <Stack gap={theme.spacing(2)} className="select-wrapper" sx={extractedLayoutProps}>
       {label && (
         <Typography
           component="p"
@@ -130,18 +131,14 @@ function Select({
           fontSize={"13px"}
           sx={{
             margin: 0,
-            height: '22px',
+            height: "22px",
             display: "flex",
             alignItems: "center",
           }}
         >
           {label}
           {isRequired && (
-            <Typography
-              component="span"
-              ml={theme.spacing(1)}
-              color={theme.palette.error.text}
-            >
+            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
               *
             </Typography>
           )}
@@ -169,12 +166,12 @@ function Select({
           <ChevronDown
             size={16}
             style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              pointerEvents: 'none',
-              color: theme.palette.text.tertiary
+              position: "absolute",
+              right: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              color: theme.palette.text.tertiary,
             }}
           />
         )}
@@ -213,7 +210,9 @@ function Select({
           fontSize: 13,
           minWidth: "125px",
           width: "100%",
-          backgroundColor: isFilterApplied ? theme.palette.background.fill : theme.palette.background.main,
+          backgroundColor: isFilterApplied
+            ? theme.palette.background.fill
+            : theme.palette.background.main,
           position: "relative",
           cursor: "pointer",
           ...getSelectStyles(theme, { hasError: !!error }),
@@ -221,14 +220,17 @@ function Select({
         }}
       >
         {items.flatMap(
-          (item: {
-            _id: string | number;
-            name: string;
-            email?: string;
-            surname?: string;
-            icon?: React.ComponentType<{ color?: string; size?: number }>;
-            color?: string;
-          }, index: number) => {
+          (
+            item: {
+              _id: string | number;
+              name: string;
+              email?: string;
+              surname?: string;
+              icon?: React.ComponentType<{ color?: string; size?: number }>;
+              color?: string;
+            },
+            index: number,
+          ) => {
             const menuItem = (
               <MenuItem
                 value={getOptionValue ? getOptionValue(item) : item._id}
@@ -270,7 +272,7 @@ function Select({
                     }}
                   >
                     {dividerLabel}
-                  </ListSubheader>
+                  </ListSubheader>,
                 );
               }
               elements.push(menuItem);
@@ -296,7 +298,7 @@ function Select({
                     }}
                   >
                     {dividerEntry.label}
-                  </ListSubheader>
+                  </ListSubheader>,
                 );
               }
               elements.push(menuItem);
@@ -304,7 +306,7 @@ function Select({
             }
 
             return [menuItem];
-          }
+          },
         )}
       </MuiSelect>
       {error && (

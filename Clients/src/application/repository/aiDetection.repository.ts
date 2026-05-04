@@ -62,13 +62,9 @@ export async function startScan(
     repository_url: repositoryUrl,
     ...options,
   };
-  const response = await apiServices.post<{ data: Scan }>(
-    `${BASE_URL}/scans`,
-    body,
-    {
-      signal,
-    }
-  );
+  const response = await apiServices.post<{ data: Scan }>(`${BASE_URL}/scans`, body, {
+    signal,
+  });
   return response.data.data;
 }
 
@@ -88,7 +84,7 @@ export async function getScanStatus(
     `${BASE_URL}/scans/${scanId}/status`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -101,16 +97,10 @@ export async function getScanStatus(
  * @param authToken - Optional auth token
  * @returns Scan with summary
  */
-export async function getScan(
-  scanId: number,
-  signal?: AbortSignal,
-): Promise<ScanResponse> {
-  const response = await apiServices.get<{ data: ScanResponse }>(
-    `${BASE_URL}/scans/${scanId}`,
-    {
-      signal,
-    }
-  );
+export async function getScan(scanId: number, signal?: AbortSignal): Promise<ScanResponse> {
+  const response = await apiServices.get<{ data: ScanResponse }>(`${BASE_URL}/scans/${scanId}`, {
+    signal,
+  });
   return response.data.data;
 }
 
@@ -187,7 +177,7 @@ export async function getScanSecuritySummary(
     `${BASE_URL}/scans/${scanId}/security-summary`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -237,7 +227,7 @@ export async function cancelScan(
     {},
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -258,7 +248,7 @@ export async function deleteScan(
     `${BASE_URL}/scans/${scanId}`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -271,9 +261,7 @@ export async function deleteScan(
  * @param authToken - Optional auth token
  * @returns Most recent active scan or null
  */
-export async function getActiveScan(
-  signal?: AbortSignal,
-): Promise<Scan | null> {
+export async function getActiveScan(signal?: AbortSignal): Promise<Scan | null> {
   // Use the dedicated active scan endpoint for efficiency (single API call)
   const url = `${BASE_URL}/scans/active`;
 
@@ -305,7 +293,7 @@ export async function pollScanStatus(
   scanId: number,
   onProgress?: (status: ScanStatusResponse) => void,
   pollInterval: number = 1000,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<ScanStatusResponse> {
   return new Promise((resolve, reject) => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -318,10 +306,7 @@ export async function pollScanStatus(
       }
     };
 
-    const settle = (
-      resolver: (value: ScanStatusResponse) => void,
-      value: ScanStatusResponse
-    ) => {
+    const settle = (resolver: (value: ScanStatusResponse) => void, value: ScanStatusResponse) => {
       if (isSettled) return;
       isSettled = true;
       cleanup();
@@ -341,11 +326,9 @@ export async function pollScanStatus(
         reject(new Error("Polling aborted"));
         return;
       }
-      signal.addEventListener(
-        "abort",
-        () => settleError(new Error("Polling aborted")),
-        { once: true }
-      );
+      signal.addEventListener("abort", () => settleError(new Error("Polling aborted")), {
+        once: true,
+      });
     }
 
     const poll = async () => {
@@ -406,7 +389,7 @@ export async function updateFindingGovernanceStatus(
     { governance_status: governanceStatus },
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -427,7 +410,7 @@ export async function getGovernanceSummary(
     `${BASE_URL}/scans/${scanId}/governance-summary`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -443,15 +426,10 @@ export async function getGovernanceSummary(
  * @param authToken - Optional auth token
  * @returns AI Detection statistics
  */
-export async function getAIDetectionStats(
-  signal?: AbortSignal,
-): Promise<AIDetectionStats> {
-  const response = await apiServices.get<{ data: AIDetectionStats }>(
-    `${BASE_URL}/stats`,
-    {
-      signal,
-    }
-  );
+export async function getAIDetectionStats(signal?: AbortSignal): Promise<AIDetectionStats> {
+  const response = await apiServices.get<{ data: AIDetectionStats }>(`${BASE_URL}/stats`, {
+    signal,
+  });
   return response.data.data;
 }
 
@@ -467,15 +445,12 @@ export async function getAIDetectionStats(
  * @param authToken - Optional auth token
  * @returns AI-BOM JSON data
  */
-export async function exportAIBOM(
-  scanId: number,
-  signal?: AbortSignal,
-): Promise<unknown> {
+export async function exportAIBOM(scanId: number, signal?: AbortSignal): Promise<unknown> {
   const response = await apiServices.get<{ data: unknown }>(
     `${BASE_URL}/scans/${scanId}/export/ai-bom`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -500,7 +475,7 @@ export async function getDependencyGraph(
     `${BASE_URL}/scans/${scanId}/dependency-graph`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -525,7 +500,7 @@ export async function getComplianceMapping(
     `${BASE_URL}/scans/${scanId}/compliance`,
     {
       signal,
-    }
+    },
   );
   return response.data.data;
 }
@@ -537,13 +512,10 @@ export async function getComplianceMapping(
 /**
  * Get risk score for a scan
  */
-export async function getRiskScore(
-  scanId: number,
-  signal?: AbortSignal,
-): Promise<RiskScore> {
+export async function getRiskScore(scanId: number, signal?: AbortSignal): Promise<RiskScore> {
   const response = await apiServices.get<{ data: RiskScore }>(
     `${BASE_URL}/scans/${scanId}/risk-score`,
-    { signal }
+    { signal },
   );
   return response.data.data;
 }
@@ -558,7 +530,7 @@ export async function recalculateRiskScore(
   const response = await apiServices.post<{ data: RiskScoreResult }>(
     `${BASE_URL}/scans/${scanId}/risk-score/recalculate`,
     {},
-    { signal }
+    { signal },
   );
   return response.data.data;
 }
@@ -566,12 +538,10 @@ export async function recalculateRiskScore(
 /**
  * Get risk scoring configuration
  */
-export async function getRiskScoringConfig(
-  signal?: AbortSignal,
-): Promise<RiskScoringConfig> {
+export async function getRiskScoringConfig(signal?: AbortSignal): Promise<RiskScoringConfig> {
   const response = await apiServices.get<{ data: RiskScoringConfig }>(
     `${BASE_URL}/risk-scoring/config`,
-    { signal }
+    { signal },
   );
   return response.data.data;
 }
@@ -580,13 +550,22 @@ export async function getRiskScoringConfig(
  * Update risk scoring configuration
  */
 export async function updateRiskScoringConfig(
-  config: Partial<Pick<RiskScoringConfig, "llm_enabled" | "llm_key_id" | "dimension_weights" | "vulnerability_scan_enabled" | "vulnerability_types_enabled">>,
+  config: Partial<
+    Pick<
+      RiskScoringConfig,
+      | "llm_enabled"
+      | "llm_key_id"
+      | "dimension_weights"
+      | "vulnerability_scan_enabled"
+      | "vulnerability_types_enabled"
+    >
+  >,
   signal?: AbortSignal,
 ): Promise<RiskScoringConfig> {
   const response = await apiServices.patch<{ data: RiskScoringConfig }>(
     `${BASE_URL}/risk-scoring/config`,
     config,
-    { signal }
+    { signal },
   );
   return response.data.data;
 }
@@ -604,8 +583,12 @@ export async function getScanVulnerabilityFindings(
 ): Promise<Finding[]> {
   const responses = await Promise.all(
     VULNERABILITY_FINDING_TYPES.map((type) =>
-      getScanFindings(scanId, { page: 1, limit: 50, finding_type: type as VulnerabilityFindingType }, signal)
-    )
+      getScanFindings(
+        scanId,
+        { page: 1, limit: 50, finding_type: type as VulnerabilityFindingType },
+        signal,
+      ),
+    ),
   );
   return responses.flatMap((r) => r.findings);
 }

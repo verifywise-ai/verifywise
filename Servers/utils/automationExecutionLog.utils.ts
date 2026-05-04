@@ -12,7 +12,7 @@ export async function createAutomationExecutionLog(
   status: "success" | "partial_success" | "failure" = "success",
   organizationId: number,
   error_message?: string,
-  execution_time_ms?: number
+  execution_time_ms?: number,
 ): Promise<IAutomationExecutionLog> {
   const result = (await sequelize.query(
     `INSERT INTO automation_execution_logs (organization_id, automation_id, trigger_data, action_results, status, error_message, execution_time_ms, triggered_at, created_at) VALUES (:organizationId, :automation_id, :trigger_data, :action_results, :status, :error_message, :execution_time_ms, NOW(), NOW()) RETURNING *`,
@@ -26,7 +26,7 @@ export async function createAutomationExecutionLog(
         error_message: error_message || null,
         execution_time_ms: execution_time_ms || null,
       },
-    }
+    },
   )) as [IAutomationExecutionLog[], number];
   return result[0][0];
 }
@@ -38,7 +38,7 @@ export async function getAutomationExecutionLogs(
   automation_id: number,
   limit: number = 50,
   offset: number = 0,
-  organizationId: number
+  organizationId: number,
 ): Promise<{ logs: IAutomationExecutionLog[]; total: number }> {
   const result = (await sequelize.query(
     `SELECT *, COUNT(*) OVER() as total_count
@@ -48,7 +48,7 @@ export async function getAutomationExecutionLogs(
      LIMIT :limit OFFSET :offset`,
     {
       replacements: { organizationId, automation_id, limit, offset },
-    }
+    },
   )) as [IAutomationExecutionLog[], number];
 
   const total = result.length > 0 ? (result[0] as any).total_count : 0;
@@ -60,7 +60,7 @@ export async function getAutomationExecutionLogs(
  */
 export async function getAutomationExecutionStats(
   automation_id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   total_executions: number;
   successful_executions: number;
@@ -77,7 +77,7 @@ export async function getAutomationExecutionStats(
     WHERE organization_id = :organizationId AND automation_id = :automation_id`,
     {
       replacements: { organizationId, automation_id },
-    }
+    },
   )) as [
     {
       total_executions: number;
@@ -105,7 +105,7 @@ export async function logAutomationExecution(
     error_message?: string;
   }>,
   organizationId: number,
-  startTime?: number
+  startTime?: number,
 ): Promise<IAutomationExecutionLog> {
   // Determine overall status
   const hasFailure = actionResults.some((r) => r.status === "failure");
@@ -124,12 +124,10 @@ export async function logAutomationExecution(
   const execution_time_ms = startTime ? Date.now() - startTime : undefined;
 
   // Add executed_at timestamp to each action result
-  const timestampedActionResults: IActionExecutionResult[] = actionResults.map(
-    (ar) => ({
-      ...ar,
-      executed_at: new Date(),
-    })
-  );
+  const timestampedActionResults: IActionExecutionResult[] = actionResults.map((ar) => ({
+    ...ar,
+    executed_at: new Date(),
+  }));
 
   // Create the execution log with all data
   return await createAutomationExecutionLog(
@@ -139,7 +137,7 @@ export async function logAutomationExecution(
     status,
     organizationId,
     hasFailure ? "One or more actions failed" : undefined,
-    execution_time_ms
+    execution_time_ms,
   );
 }
 
@@ -149,7 +147,7 @@ export async function logAutomationExecution(
 export async function getAllAutomationExecutionLogs(
   organizationId: number,
   limit: number = 50,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ logs: IAutomationExecutionLog[]; total: number }> {
   const result = (await sequelize.query(
     `SELECT
@@ -163,7 +161,7 @@ export async function getAllAutomationExecutionLogs(
     LIMIT :limit OFFSET :offset`,
     {
       replacements: { organizationId, limit, offset },
-    }
+    },
   )) as [IAutomationExecutionLog[], number];
 
   const total = result.length > 0 ? (result[0] as any).total_count : 0;

@@ -11,99 +11,87 @@ interface StandardTableHeadProps {
   onSort: (columnId: string) => void;
 }
 
-const StandardTableHead: React.FC<StandardTableHeadProps> = memo(({
-  columns,
-  sortConfig,
-  onSort,
-}) => {
-  return (
-    <TableHead
-      sx={{
-        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
-      }}
-    >
-      <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-        {columns.map((column, index) => {
-          const isFirstColumn = index === 0;
-          const isActionColumn = column.id === "actions";
+const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
+  ({ columns, sortConfig, onSort }) => {
+    return (
+      <TableHead
+        sx={{
+          backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
+        }}
+      >
+        <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+          {columns.map((column, index) => {
+            const isFirstColumn = index === 0;
+            const isActionColumn = column.id === "actions";
 
-          return (
-            <TableCell
-              key={column.id}
-              sx={{
-                ...singleTheme.tableStyles.primary.header.cell,
-                textAlign: column.align ?? (isFirstColumn ? "left" : "center"),
-                ...(column.sortable
-                  ? {
-                      cursor: "pointer",
-                      userSelect: "none",
-                      "&:hover": {
-                        backgroundColor: "rgba(0, 0, 0, 0.04)",
-                      },
-                    }
-                  : {}),
-                ...(isActionColumn
-                  ? {
-                      minWidth: column.minWidth ?? "80px",
-                      maxWidth: "80px",
-                    }
-                  : {}),
-                ...(column.width ? { width: column.width } : {}),
-                ...(column.minWidth && !isActionColumn
-                  ? { minWidth: column.minWidth }
-                  : {}),
-              }}
-              onClick={() => column.sortable && onSort(column.id)}
-            >
-              <Box
+            return (
+              <TableCell
+                key={column.id}
                 sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 1,
+                  ...singleTheme.tableStyles.primary.header.cell,
+                  textAlign: column.align ?? (isFirstColumn ? "left" : "center"),
+                  ...(column.sortable
+                    ? {
+                        cursor: "pointer",
+                        userSelect: "none",
+                        "&:hover": {
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                        },
+                      }
+                    : {}),
+                  ...(isActionColumn
+                    ? {
+                        minWidth: column.minWidth ?? "80px",
+                        maxWidth: "80px",
+                      }
+                    : {}),
+                  ...(column.width ? { width: column.width } : {}),
+                  ...(column.minWidth && !isActionColumn ? { minWidth: column.minWidth } : {}),
                 }}
+                onClick={() => column.sortable && onSort(column.id)}
               >
-                <Typography
-                  variant="body2"
+                <Box
                   sx={{
-                    fontWeight: 500,
-                    fontSize: "13px",
-                    color:
-                      sortConfig.key === column.id ? "primary.main" : "inherit",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1,
                   }}
                 >
-                  {column.label}
-                </Typography>
-                {column.sortable && (
-                  <Box
+                  <Typography
+                    variant="body2"
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      color:
-                        sortConfig.key === column.id
-                          ? "primary.main"
-                          : `${text.disabled}`,
+                      fontWeight: 500,
+                      fontSize: "13px",
+                      color: sortConfig.key === column.id ? "primary.main" : "inherit",
                     }}
                   >
-                    {sortConfig.key === column.id &&
-                      sortConfig.direction === "asc" && (
+                    {column.label}
+                  </Typography>
+                  {column.sortable && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
+                      }}
+                    >
+                      {sortConfig.key === column.id && sortConfig.direction === "asc" && (
                         <ChevronUp size={14} />
                       )}
-                    {sortConfig.key === column.id &&
-                      sortConfig.direction === "desc" && (
+                      {sortConfig.key === column.id && sortConfig.direction === "desc" && (
                         <ChevronDown size={14} />
                       )}
-                    {sortConfig.key !== column.id && (
-                      <ChevronsUpDown size={14} />
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </TableCell>
-          );
-        })}
-      </TableRow>
-    </TableHead>
-  );
-});
+                      {sortConfig.key !== column.id && <ChevronsUpDown size={14} />}
+                    </Box>
+                  )}
+                </Box>
+              </TableCell>
+            );
+          })}
+        </TableRow>
+      </TableHead>
+    );
+  },
+);
 
 export default StandardTableHead;

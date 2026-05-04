@@ -12,13 +12,18 @@ import { useAuth } from "./application/hooks/useAuth";
 import { Project } from "./domain/types/Project";
 import { CookiesProvider } from "react-cookie";
 import { createRoutes } from "./application/config/routes";
-import { DashboardState, UIValues, AuthValues, InputValues } from "./application/interfaces/appStates";
+import {
+  DashboardState,
+  UIValues,
+  AuthValues,
+  InputValues,
+} from "./application/interfaces/appStates";
 import { ComponentVisible } from "./application/interfaces/ComponentVisible";
 import { AlertProps } from "./presentation/types/alert.types";
 import { setShowAlertCallback } from "./infrastructure/api/customAxios";
 import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useLocation, useNavigate } from "react-router-dom";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
@@ -27,31 +32,35 @@ import CommandPaletteErrorBoundary from "./presentation/components/CommandPalett
 import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
-import { SidebarWrapper, UserGuideSidebarProvider, useUserGuideSidebarContext } from "./presentation/components/UserGuide";
-import { AdvisorConversationProvider } from './application/contexts/AdvisorConversation.context';
-import { PluginRegistryProvider } from './application/contexts/PluginRegistry.context';
-import PluginLoader from './presentation/components/PluginLoader';
+import {
+  SidebarWrapper,
+  UserGuideSidebarProvider,
+  useUserGuideSidebarContext,
+} from "./presentation/components/UserGuide";
+import { AdvisorConversationProvider } from "./application/contexts/AdvisorConversation.context";
+import { PluginRegistryProvider } from "./application/contexts/PluginRegistry.context";
+import PluginLoader from "./presentation/components/PluginLoader";
 // SSE notifications disabled for now - can be re-enabled later if needed
 // import { useNotifications } from "./application/hooks/useNotifications";
 
 // Auth routes where the helper sidebar should not be shown
 const AUTH_ROUTES = [
-  '/login',
-  '/admin-reg',
-  '/user-reg',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-  '/set-new-password',
-  '/reset-password-continue',
+  "/login",
+  "/admin-reg",
+  "/user-reg",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/set-new-password",
+  "/reset-password-continue",
 ];
 
 // Public route patterns where the sidebar should not be shown
 const PUBLIC_ROUTE_PATTERNS = [
-  /\/use-case-form-intake/,   // Public intake forms (new & legacy)
-  /^\/intake\//,              // Legacy intake form routes
-  /^\/shared\//,              // Share link views
-  /\/aiTrustCentre\//,        // Public AI Trust Centre
+  /\/use-case-form-intake/, // Public intake forms (new & legacy)
+  /^\/intake\//, // Legacy intake form routes
+  /^\/shared\//, // Share link views
+  /\/aiTrustCentre\//, // Public AI Trust Centre
 ];
 
 // Component for User Guide Sidebar that uses the context
@@ -60,8 +69,8 @@ const UserGuideSidebarContainer = () => {
   const userGuideSidebar = useUserGuideSidebarContext();
 
   // Don't show the helper sidebar on auth or public pages
-  const isAuthPage = AUTH_ROUTES.some(route => location.pathname === route);
-  const isPublicPage = PUBLIC_ROUTE_PATTERNS.some(pattern => pattern.test(location.pathname));
+  const isAuthPage = AUTH_ROUTES.some((route) => location.pathname === route);
+  const isPublicPage = PUBLIC_ROUTE_PATTERNS.some((pattern) => pattern.test(location.pathname));
   if (isAuthPage || isPublicPage) {
     return null;
   }
@@ -79,7 +88,7 @@ const UserGuideSidebarContainer = () => {
 // Component to conditionally apply theme based on route
 const ConditionalThemeWrapper = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isAITrustCentreRoute = location.pathname.includes('/aiTrustCentre');
+  const isAITrustCentreRoute = location.pathname.includes("/aiTrustCentre");
 
   // For aiTrustCentre routes, don't apply theme (like /public route)
   if (isAITrustCentreRoute) {
@@ -106,7 +115,7 @@ function App() {
   const { token, userRoleName, organizationId, userId } = useAuth();
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const { users, refreshUsers } = useUsers();
-  const {userPreferences} = useUserPreferences();
+  const { userPreferences } = useUserPreferences();
   const commandPalette = useCommandPalette();
   const { completeOnboarding, state, isLoading: isOnboardingLoading } = useOnboarding();
 
@@ -118,7 +127,7 @@ function App() {
   // });
 
   // Onboarding should show on dashboard (/) or start-here page
-  const isOnboardingRoute = location.pathname === '/' || location.pathname === '/start-here';
+  const isOnboardingRoute = location.pathname === "/" || location.pathname === "/start-here";
 
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:
@@ -128,7 +137,7 @@ function App() {
   // 4. Currently on dashboard or start-here route
   const showModal = useMemo(
     () => token && userId && !isOnboardingLoading && !state.isComplete && isOnboardingRoute,
-    [token, userId, isOnboardingLoading, state.isComplete, isOnboardingRoute]
+    [token, userId, isOnboardingLoading, state.isComplete, isOnboardingRoute],
   );
 
   const handleOnboardingDone = useCallback(() => {
@@ -171,7 +180,6 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [triggerSidebar, setTriggerSidebar] = useState(false);
 
-
   const [currentProjectId, setCurrentProjectId] = useState<string | null>("");
   const [componentsVisible, setComponentsVisible] = useState<ComponentVisible>({
     home: false,
@@ -186,7 +194,7 @@ function App() {
         [component]: value,
       }));
     },
-    []
+    [],
   );
 
   const [photoRefreshFlag, setPhotoRefreshFlag] = useState(false);
@@ -239,7 +247,7 @@ function App() {
       organizationId,
       photoRefreshFlag,
       setPhotoRefreshFlag,
-    ]
+    ],
   );
 
   const triggerSidebarReload = () => {
@@ -255,38 +263,33 @@ function App() {
               <PluginLoader />
               <UserGuideSidebarProvider>
                 <ConditionalThemeWrapper>
-                {alert && (
-                  <Alert
-                    variant={alert.variant}
-                    title={alert.title}
-                    body={alert.body}
-                    isToast={true}
-                    onClick={() => setAlert(null)}
-                  />
-                )}
-                <CommandPaletteErrorBoundary>
-                  <CommandPalette
-                    open={commandPalette.isOpen}
-                    onOpenChange={commandPalette.close}
-                  />
-                </CommandPaletteErrorBoundary>
-                {showModal && (
-                  <SetupModal
-                    onComplete={handleOnboardingDone}
-                    onSkip={handleOnboardingDone}
-                  />
-                )}
-                <ChunkErrorBoundary>
-                  <Routes>
-                    {createRoutes(triggerSidebar, triggerSidebarReload)}
-                  </Routes>
-                </ChunkErrorBoundary>
+                  {alert && (
+                    <Alert
+                      variant={alert.variant}
+                      title={alert.title}
+                      body={alert.body}
+                      isToast={true}
+                      onClick={() => setAlert(null)}
+                    />
+                  )}
+                  <CommandPaletteErrorBoundary>
+                    <CommandPalette
+                      open={commandPalette.isOpen}
+                      onOpenChange={commandPalette.close}
+                    />
+                  </CommandPaletteErrorBoundary>
+                  {showModal && (
+                    <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
+                  )}
+                  <ChunkErrorBoundary>
+                    <Routes>{createRoutes(triggerSidebar, triggerSidebarReload)}</Routes>
+                  </ChunkErrorBoundary>
 
-                {/* User Guide Sidebar with Advisor Conversation persistence */}
-                <AdvisorConversationProvider>
-                  <UserGuideSidebarContainer />
-                </AdvisorConversationProvider>
-              </ConditionalThemeWrapper>
+                  {/* User Guide Sidebar with Advisor Conversation persistence */}
+                  <AdvisorConversationProvider>
+                    <UserGuideSidebarContainer />
+                  </AdvisorConversationProvider>
+                </ConditionalThemeWrapper>
               </UserGuideSidebarProvider>
             </PluginRegistryProvider>
           </VerifyWiseContext.Provider>
@@ -294,9 +297,7 @@ function App() {
       </Provider>
 
       {/* React Query DevTools - Only in development */}
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </CookiesProvider>
   );
 }

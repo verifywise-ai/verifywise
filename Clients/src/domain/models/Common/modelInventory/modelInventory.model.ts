@@ -31,9 +31,7 @@ export class ModelInventoryModel {
     this.updated_at = data.updated_at;
   }
 
-  static createNewModelInventory(
-    data: ModelInventoryModel
-  ): ModelInventoryModel {
+  static createNewModelInventory(data: ModelInventoryModel): ModelInventoryModel {
     return new ModelInventoryModel(data);
   }
 }

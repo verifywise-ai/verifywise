@@ -27,11 +27,7 @@ const BAR_COLORS: Record<string, string> = {
   Upcoming: "#10B981",
 };
 
-export function TaskRadarCard({
-  overdue,
-  due,
-  upcoming,
-}: TaskRadarCardProps) {
+export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -62,12 +58,7 @@ export function TaskRadarCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => navigate("/tasks")}
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        mb="8px"
-      >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
         <Typography
           sx={{
             fontSize: 14,

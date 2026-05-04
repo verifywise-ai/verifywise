@@ -16,7 +16,7 @@ const FRAMEWORK_TYPE = "generic_assessment";
 const ENTITY_TYPE = "question";
 
 export const getAllQuestionsQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<(IQuestion & { evidence_files: Object[] })[]> => {
   const questions = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
@@ -24,7 +24,7 @@ export const getAllQuestionsQuery = async (
       replacements: { organizationId },
       mapToModel: true,
       model: QuestionModel,
-    }
+    },
   );
 
   // Batch fetch evidence files from file_entity_links
@@ -37,7 +37,7 @@ export const getAllQuestionsQuery = async (
       FRAMEWORK_TYPE,
       ENTITY_TYPE,
       questionIds,
-      "evidence"
+      "evidence",
     );
   }
 
@@ -55,7 +55,7 @@ export const getAllQuestionsQuery = async (
 
 export const getQuestionByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IQuestion & { evidence_files: Object[] }> => {
   const result = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId AND id = :id`,
@@ -63,7 +63,7 @@ export const getQuestionByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: QuestionModel,
-    }
+    },
   );
 
   if (!result.length) {
@@ -76,7 +76,7 @@ export const getQuestionByIdQuery = async (
     FRAMEWORK_TYPE,
     ENTITY_TYPE,
     id,
-    "evidence"
+    "evidence",
   );
 
   return {
@@ -105,7 +105,7 @@ export type RequestWithFile = Omit<Request, "file" | "files"> & {
 export const createNewQuestionQuery = async (
   question: QuestionModel,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<QuestionModel> => {
   const result = await sequelize.query(
     `INSERT INTO questions (
@@ -130,7 +130,7 @@ export const createNewQuestionQuery = async (
       mapToModel: true,
       model: QuestionModel,
       transaction,
-    }
+    },
   );
 
   // Attach empty array for backward compatibility
@@ -150,7 +150,7 @@ export const addFileToQuestion = async (
   }[],
   deletedFiles: number[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<QuestionModel> => {
   // Delete file entity links for deleted files
   for (const fileId of deletedFiles) {
@@ -160,7 +160,7 @@ export const addFileToQuestion = async (
       FRAMEWORK_TYPE,
       ENTITY_TYPE,
       id,
-      transaction
+      transaction,
     );
   }
 
@@ -175,7 +175,7 @@ export const addFileToQuestion = async (
       id,
       "evidence",
       file.project_id,
-      transaction
+      transaction,
     );
   }
 
@@ -187,7 +187,7 @@ export const addFileToQuestion = async (
       mapToModel: true,
       model: QuestionModel,
       transaction,
-    }
+    },
   );
 
   // Fetch evidence_files for response
@@ -196,7 +196,7 @@ export const addFileToQuestion = async (
     FRAMEWORK_TYPE,
     ENTITY_TYPE,
     id,
-    "evidence"
+    "evidence",
   );
 
   (result[0] as any).evidence_files = evidenceFiles;
@@ -208,7 +208,7 @@ export const updateQuestionByIdQuery = async (
   id: number,
   question: Partial<QuestionModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<QuestionModel | null> => {
   const updateQuestion: Partial<Record<keyof QuestionModel, any>> & {
     organizationId?: number;
@@ -216,8 +216,7 @@ export const updateQuestionByIdQuery = async (
   const setClause = ["answer", "status"]
     .filter((f) => {
       if (question[f as keyof QuestionModel] !== undefined) {
-        updateQuestion[f as keyof QuestionModel] =
-          question[f as keyof QuestionModel];
+        updateQuestion[f as keyof QuestionModel] = question[f as keyof QuestionModel];
         if (f === "answer" && !question[f]) {
           updateQuestion[f as keyof QuestionModel] = "";
         }
@@ -237,7 +236,7 @@ export const updateQuestionByIdQuery = async (
         mapToModel: true,
         model: QuestionModel,
         transaction,
-      }
+      },
     );
 
     if (!result.length) return null;
@@ -248,7 +247,7 @@ export const updateQuestionByIdQuery = async (
       FRAMEWORK_TYPE,
       ENTITY_TYPE,
       id,
-      "evidence"
+      "evidence",
     );
 
     (result[0] as any).evidence_files = evidenceFiles;
@@ -276,7 +275,7 @@ export const updateQuestionByIdQuery = async (
     FRAMEWORK_TYPE,
     ENTITY_TYPE,
     id,
-    "evidence"
+    "evidence",
   );
 
   (result[0] as any).evidence_files = evidenceFiles;
@@ -287,7 +286,7 @@ export const updateQuestionByIdQuery = async (
 export const deleteQuestionByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   // First get the linked files so we can delete them after
   const linkedFiles = await getEvidenceFilesForEntity(
@@ -295,7 +294,7 @@ export const deleteQuestionByIdQuery = async (
     FRAMEWORK_TYPE,
     ENTITY_TYPE,
     id,
-    "evidence"
+    "evidence",
   );
 
   // Clean up file_entity_links first
@@ -313,7 +312,7 @@ export const deleteQuestionByIdQuery = async (
         entityId: id,
       },
       transaction,
-    }
+    },
   );
 
   const result = await sequelize.query(
@@ -324,16 +323,16 @@ export const deleteQuestionByIdQuery = async (
       model: QuestionModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
 
   // Delete the actual files
   if (result.length && linkedFiles.length > 0) {
     await Promise.all(
       linkedFiles.map(async (f) => {
-        const fileId = typeof f.id === 'string' ? parseInt(f.id) : f.id;
+        const fileId = typeof f.id === "string" ? parseInt(f.id) : f.id;
         await deleteFileById(fileId, organizationId, transaction);
-      })
+      }),
     );
   }
 
@@ -342,7 +341,7 @@ export const deleteQuestionByIdQuery = async (
 
 export const getQuestionBySubTopicIdQuery = async (
   subTopicId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IQuestion[]> => {
   const result = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId AND subtopic_id = :subtopic_id ORDER BY created_at DESC, id ASC`,
@@ -350,7 +349,7 @@ export const getQuestionBySubTopicIdQuery = async (
       replacements: { organizationId, subtopic_id: subTopicId },
       mapToModel: true,
       model: QuestionModel,
-    }
+    },
   );
 
   // Batch fetch evidence files
@@ -363,7 +362,7 @@ export const getQuestionBySubTopicIdQuery = async (
       FRAMEWORK_TYPE,
       ENTITY_TYPE,
       questionIds,
-      "evidence"
+      "evidence",
     );
   }
 
@@ -377,7 +376,7 @@ export const getQuestionBySubTopicIdQuery = async (
 
 export const getQuestionByTopicIdQuery = async (
   topicId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IQuestion[]> => {
   const result = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId AND subtopic_id IN (SELECT id FROM subtopics WHERE organization_id = :organizationId AND topic_id = :topic_id) ORDER BY created_at DESC, id ASC;`,
@@ -385,7 +384,7 @@ export const getQuestionByTopicIdQuery = async (
       replacements: { organizationId, topic_id: topicId },
       mapToModel: true,
       model: QuestionModel,
-    }
+    },
   );
 
   // Batch fetch evidence files
@@ -398,7 +397,7 @@ export const getQuestionByTopicIdQuery = async (
       FRAMEWORK_TYPE,
       ENTITY_TYPE,
       questionIds,
-      "evidence"
+      "evidence",
     );
   }
 
@@ -427,7 +426,7 @@ export const createNewQuestionsQuery = async (
   }[],
   enable_ai_data_insertion: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   let query = `
     INSERT INTO questions(

@@ -1,11 +1,11 @@
-import React from 'react';
-import UserGuideLanding from './UserGuideLanding';
-import CollectionPage from './CollectionPage';
-import ArticlePage from './ArticlePage';
-import ContentRenderer from './ContentRenderer';
-import { getCollection, getArticle } from '@user-guide-content/userGuideConfig';
-import { getArticleContent } from '@user-guide-content/content';
-import { extractToc } from '@user-guide-content/contentTypes';
+import React from "react";
+import UserGuideLanding from "./UserGuideLanding";
+import CollectionPage from "./CollectionPage";
+import ArticlePage from "./ArticlePage";
+import ContentRenderer from "./ContentRenderer";
+import { getCollection, getArticle } from "@user-guide-content/userGuideConfig";
+import { getArticleContent } from "@user-guide-content/content";
+import { extractToc } from "@user-guide-content/contentTypes";
 
 interface UserGuideWrapperProps {
   collectionId?: string;
@@ -18,7 +18,7 @@ const UserGuideWrapper: React.FC<UserGuideWrapperProps> = ({
   articleId,
   onNavigate,
 }) => {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Navigate to a collection or article
   const handleNavigate = (newCollectionId: string, newArticleId?: string) => {
@@ -31,7 +31,7 @@ const UserGuideWrapper: React.FC<UserGuideWrapperProps> = ({
 
   // Navigate back to landing page
   const handleBackToHome = () => {
-    onNavigate('/resources/user-guide');
+    onNavigate("/resources/user-guide");
   };
 
   // Navigate back to collection
@@ -52,16 +52,18 @@ const UserGuideWrapper: React.FC<UserGuideWrapperProps> = ({
     const currentIndex = collection.articles.findIndex((a) => a.id === articleId);
     return {
       prev: currentIndex > 0 ? collection.articles[currentIndex - 1] : undefined,
-      next: currentIndex < collection.articles.length - 1 ? collection.articles[currentIndex + 1] : undefined,
+      next:
+        currentIndex < collection.articles.length - 1
+          ? collection.articles[currentIndex + 1]
+          : undefined,
     };
   };
 
   const { prev: prevArticle, next: nextArticle } = getAdjacentArticles();
 
   // Get article content from the content system
-  const articleContent = collectionId && articleId
-    ? getArticleContent(collectionId, articleId)
-    : undefined;
+  const articleContent =
+    collectionId && articleId ? getArticleContent(collectionId, articleId) : undefined;
 
   // Auto-generate TOC from content headings
   const tocItems = articleContent ? extractToc(articleContent.blocks) : undefined;
@@ -77,8 +79,12 @@ const UserGuideWrapper: React.FC<UserGuideWrapperProps> = ({
         onBackToHome={handleBackToHome}
         prevArticle={prevArticle}
         nextArticle={nextArticle}
-        onPrevArticle={prevArticle ? () => handleNavigate(collectionId!, prevArticle.id) : undefined}
-        onNextArticle={nextArticle ? () => handleNavigate(collectionId!, nextArticle.id) : undefined}
+        onPrevArticle={
+          prevArticle ? () => handleNavigate(collectionId!, prevArticle.id) : undefined
+        }
+        onNextArticle={
+          nextArticle ? () => handleNavigate(collectionId!, nextArticle.id) : undefined
+        }
         tocItems={tocItems}
       >
         {articleContent && <ContentRenderer content={articleContent} onNavigate={handleNavigate} />}

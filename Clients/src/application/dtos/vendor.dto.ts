@@ -1,6 +1,6 @@
 /**
  * Data Transfer Objects (DTOs) for Vendor entity
- * 
+ *
  * DTOs represent the data structure as it comes from the API.
  * They are separate from domain models to maintain a clear boundary
  * between infrastructure (API) and domain layers.
@@ -25,7 +25,7 @@ export interface VendorResponseDTO {
   is_demo?: boolean;
   created_at?: string; // ISO date string from API
   projects?: number[];
-  
+
   // Vendor scorecard fields
   data_sensitivity?: string; // DataSensitivity enum as string
   business_criticality?: string; // BusinessCriticality enum as string
@@ -75,4 +75,3 @@ export interface UpdateVendorDTO {
   past_issues?: string;
   regulatory_exposure?: string;
 }
-

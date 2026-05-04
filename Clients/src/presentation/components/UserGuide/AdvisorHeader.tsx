@@ -28,8 +28,7 @@ const AdvisorHeader: FC<AdvisorHeaderProps> = ({
     const fetchLLMKeys = async () => {
       try {
         const response = await getLLMKeys();
-        const keys =
-          response.data.data?.map((key: LLMKeysModel) => new LLMKeysModel(key)) || [];
+        const keys = response.data.data?.map((key: LLMKeysModel) => new LLMKeysModel(key)) || [];
         setLLMKeys(keys);
 
         // Notify parent about keys status
@@ -37,7 +36,8 @@ const AdvisorHeader: FC<AdvisorHeaderProps> = ({
 
         // Auto-select first key if none selected or if saved key is not in the list
         if (keys.length > 0 && onLLMKeyChange) {
-          const savedKeyExists = selectedLLMKeyId && keys.some((k: LLMKeysModel) => k.id === selectedLLMKeyId);
+          const savedKeyExists =
+            selectedLLMKeyId && keys.some((k: LLMKeysModel) => k.id === selectedLLMKeyId);
           if (!savedKeyExists) {
             onLLMKeyChange(keys[0].id);
           }

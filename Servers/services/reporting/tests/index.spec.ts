@@ -85,13 +85,7 @@ describe("Report Generation Service", () => {
 
       const result = await generateReport(baseRequest, 1, 1);
 
-      expect(createDataCollector).toHaveBeenCalledWith(
-        1,
-        1,
-        1,
-        1,
-        1
-      );
+      expect(createDataCollector).toHaveBeenCalledWith(1, 1, 1, 1, 1);
       expect(mockDataCollector.collectAllData).toHaveBeenCalled();
       expect(generatePDF).toHaveBeenCalledWith(mockReportData);
       expect(result.success).toBe(true);
@@ -103,8 +97,7 @@ describe("Report Generation Service", () => {
         success: true,
         filename: "test_report.docx",
         content: Buffer.from("docx content"),
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       };
       (generateDOCX as jest.Mock).mockResolvedValue(mockDocxResult);
 

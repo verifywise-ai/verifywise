@@ -21,10 +21,10 @@ export const paginationStatus = (theme: any) => ({
   opacity: 0.7,
 });
 
-export const paginationStyle = (theme: any) => ({ 
+export const paginationStyle = (theme: any) => ({
   mt: theme.spacing(6),
   color: theme.palette.text.secondary,
-    "& .MuiSelect-icon": {
+  "& .MuiSelect-icon": {
     width: "24px",
     height: "fit-content",
   },
@@ -36,7 +36,7 @@ export const paginationStyle = (theme: any) => ({
   },
 });
 
-export const paginationSelect = (theme: any) => ({ 
+export const paginationSelect = (theme: any) => ({
   ml: theme.spacing(4),
   mr: theme.spacing(12),
   minWidth: theme.spacing(20),
@@ -48,7 +48,7 @@ export const paginationSelect = (theme: any) => ({
 
 export const paginationDropdown = (theme: any) => ({
   mt: 0,
-  mb: theme.spacing(2)
+  mb: theme.spacing(2),
 });
 
 export const emptyData = {

@@ -27,23 +27,19 @@ const BASE_PATH = "/pmm";
 
 // ==================== Configuration ====================
 
-export const getConfigByProjectId = async (
-  projectId: number
-): Promise<PMMConfigWithDetails> => {
+export const getConfigByProjectId = async (projectId: number): Promise<PMMConfigWithDetails> => {
   const response = await CustomAxios.get(`${BASE_PATH}/config/${projectId}`);
   return response.data.data;
 };
 
-export const createConfig = async (
-  data: PMMConfigCreateRequest
-): Promise<PMMConfigWithDetails> => {
+export const createConfig = async (data: PMMConfigCreateRequest): Promise<PMMConfigWithDetails> => {
   const response = await CustomAxios.post(`${BASE_PATH}/config`, data);
   return response.data.data;
 };
 
 export const updateConfig = async (
   configId: number,
-  data: PMMConfigUpdateRequest
+  data: PMMConfigUpdateRequest,
 ): Promise<PMMConfigWithDetails> => {
   const response = await CustomAxios.put(`${BASE_PATH}/config/${configId}`, data);
   return response.data.data;
@@ -56,9 +52,7 @@ export const deleteConfig = async (configId: number): Promise<void> => {
 // ==================== Questions ====================
 
 export const getQuestions = async (configId: number): Promise<PMMQuestion[]> => {
-  const response = await CustomAxios.get(
-    `${BASE_PATH}/config/${configId}/questions`
-  );
+  const response = await CustomAxios.get(`${BASE_PATH}/config/${configId}/questions`);
   return response.data.data;
 };
 
@@ -69,23 +63,17 @@ export const getOrgQuestions = async (): Promise<PMMQuestion[]> => {
 
 export const addQuestion = async (
   configId: number,
-  data: PMMQuestionCreate
+  data: PMMQuestionCreate,
 ): Promise<PMMQuestion> => {
-  const response = await CustomAxios.post(
-    `${BASE_PATH}/config/${configId}/questions`,
-    data
-  );
+  const response = await CustomAxios.post(`${BASE_PATH}/config/${configId}/questions`, data);
   return response.data.data;
 };
 
 export const updateQuestion = async (
   questionId: number,
-  data: PMMQuestionUpdate
+  data: PMMQuestionUpdate,
 ): Promise<PMMQuestion> => {
-  const response = await CustomAxios.put(
-    `${BASE_PATH}/questions/${questionId}`,
-    data
-  );
+  const response = await CustomAxios.put(`${BASE_PATH}/questions/${questionId}`, data);
   return response.data.data;
 };
 
@@ -94,20 +82,16 @@ export const deleteQuestion = async (questionId: number): Promise<void> => {
 };
 
 export const reorderQuestions = async (
-  orders: Array<{ id: number; display_order: number }>
+  orders: Array<{ id: number; display_order: number }>,
 ): Promise<void> => {
   await CustomAxios.post(`${BASE_PATH}/questions/reorder`, { orders });
 };
 
 // ==================== Cycles ====================
 
-export const getActiveCycle = async (
-  projectId: number
-): Promise<PMMCycleWithDetails | null> => {
+export const getActiveCycle = async (projectId: number): Promise<PMMCycleWithDetails | null> => {
   try {
-    const response = await CustomAxios.get(
-      `${BASE_PATH}/active-cycle/${projectId}`
-    );
+    const response = await CustomAxios.get(`${BASE_PATH}/active-cycle/${projectId}`);
     return response.data.data;
   } catch (error) {
     const axiosError = error as { response?: { status?: number } };
@@ -118,23 +102,19 @@ export const getActiveCycle = async (
   }
 };
 
-export const getCycleById = async (
-  cycleId: number
-): Promise<PMMCycleWithDetails> => {
+export const getCycleById = async (cycleId: number): Promise<PMMCycleWithDetails> => {
   const response = await CustomAxios.get(`${BASE_PATH}/cycles/${cycleId}`);
   return response.data.data;
 };
 
-export const getResponses = async (
-  cycleId: number
-): Promise<PMMResponse[]> => {
+export const getResponses = async (cycleId: number): Promise<PMMResponse[]> => {
   const response = await CustomAxios.get(`${BASE_PATH}/cycles/${cycleId}/responses`);
   return response.data.data;
 };
 
 export const saveResponses = async (
   cycleId: number,
-  responses: PMMResponseSave[]
+  responses: PMMResponseSave[],
 ): Promise<void> => {
   await CustomAxios.post(`${BASE_PATH}/cycles/${cycleId}/responses`, {
     responses,
@@ -143,19 +123,16 @@ export const saveResponses = async (
 
 export const submitCycle = async (
   cycleId: number,
-  data: PMMCycleSubmitRequest
+  data: PMMCycleSubmitRequest,
 ): Promise<{ message: string; report_generated: boolean; report_filename?: string }> => {
-  const response = await CustomAxios.post(
-    `${BASE_PATH}/cycles/${cycleId}/submit`,
-    data
-  );
+  const response = await CustomAxios.post(`${BASE_PATH}/cycles/${cycleId}/submit`, data);
   return response.data.data;
 };
 
 export const flagConcern = async (
   cycleId: number,
   questionId: number,
-  responseValue: boolean | string | string[]
+  responseValue: boolean | string | string[],
 ): Promise<void> => {
   await CustomAxios.post(`${BASE_PATH}/cycles/${cycleId}/flag`, {
     question_id: questionId,
@@ -165,9 +142,7 @@ export const flagConcern = async (
 
 // ==================== Reports ====================
 
-export const getReports = async (
-  filters: PMMReportsFilterRequest
-): Promise<PMMReportsResponse> => {
+export const getReports = async (filters: PMMReportsFilterRequest): Promise<PMMReportsResponse> => {
   const params = new URLSearchParams();
 
   if (filters.project_id) {
@@ -192,9 +167,7 @@ export const getReports = async (
     params.append("limit", filters.limit.toString());
   }
 
-  const response = await CustomAxios.get(
-    `${BASE_PATH}/reports?${params.toString()}`
-  );
+  const response = await CustomAxios.get(`${BASE_PATH}/reports?${params.toString()}`);
   return response.data.data;
 };
 
@@ -207,19 +180,15 @@ export const downloadReport = async (reportId: number): Promise<void> => {
 
 export const reassignStakeholder = async (
   cycleId: number,
-  stakeholderId: number
+  stakeholderId: number,
 ): Promise<void> => {
   await CustomAxios.post(`${BASE_PATH}/cycles/${cycleId}/reassign`, {
     stakeholder_id: stakeholderId,
   });
 };
 
-export const startNewCycle = async (
-  projectId: number
-): Promise<PMMCycleWithDetails> => {
-  const response = await CustomAxios.post(
-    `${BASE_PATH}/projects/${projectId}/start-cycle`
-  );
+export const startNewCycle = async (projectId: number): Promise<PMMCycleWithDetails> => {
+  const response = await CustomAxios.post(`${BASE_PATH}/projects/${projectId}/start-cycle`);
   return response.data.data;
 };
 

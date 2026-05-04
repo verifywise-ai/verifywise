@@ -53,6 +53,7 @@ EXCHANGE_ONLINE_TENANT_ID=your-tenant-id-optional
    - Add necessary MX and SPF records
 
 ### Features
+
 - ✅ High deliverability rates
 - ✅ Integrated with Microsoft ecosystem
 - ✅ Enterprise security features
@@ -97,6 +98,7 @@ EXCHANGE_ONPREM_SECURE=false
    - Implement IP restrictions if possible
 
 ### Features
+
 - ✅ Full organizational control
 - ✅ Custom security policies
 - ✅ Integration with Active Directory
@@ -130,17 +132,14 @@ SES_CONFIGURATION_SET=your-configuration-set-optional
    - Verify your sending domain and/or email addresses
 
 2. **IAM Configuration**:
+
    ```json
    {
      "Version": "2012-10-17",
      "Statement": [
        {
          "Effect": "Allow",
-         "Action": [
-           "ses:SendEmail",
-           "ses:SendRawEmail",
-           "ses:GetSendQuota"
-         ],
+         "Action": ["ses:SendEmail", "ses:SendRawEmail", "ses:GetSendQuota"],
          "Resource": "*"
        }
      ]
@@ -153,6 +152,7 @@ SES_CONFIGURATION_SET=your-configuration-set-optional
    - Set up dedicated IP if needed
 
 ### Features
+
 - ✅ Excellent deliverability
 - ✅ Detailed analytics and bounce handling
 - ✅ Cost-effective at scale
@@ -182,6 +182,7 @@ SMTP_SECURE=false
 ### Common Providers
 
 **SendGrid:**
+
 ```bash
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
@@ -190,6 +191,7 @@ SMTP_PASS="your-sendgrid-api-key"
 ```
 
 **Mailgun:**
+
 ```bash
 SMTP_HOST=smtp.mailgun.org
 SMTP_PORT=587
@@ -198,6 +200,7 @@ SMTP_PASS="your-mailgun-smtp-password"
 ```
 
 **Postmark:**
+
 ```bash
 SMTP_HOST=smtp.postmarkapp.com
 SMTP_PORT=587

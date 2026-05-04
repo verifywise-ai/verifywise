@@ -44,16 +44,13 @@ describe("uiSlice", () => {
       (module) => {
         const state = uiReducer(initialState, setActiveModule(module));
         expect(state.appModule.active).toBe(module);
-      }
+      },
     );
   });
 
   describe("setModelInventoryStatusFilter", () => {
     it("should update the status filter", () => {
-      const state = uiReducer(
-        initialState,
-        setModelInventoryStatusFilter("active")
-      );
+      const state = uiReducer(initialState, setModelInventoryStatusFilter("active"));
       expect(state.modelInventory.statusFilter).toBe("active");
     });
   });
@@ -61,18 +58,12 @@ describe("uiSlice", () => {
   describe("setRowsPerPage", () => {
     it("should set rows per page for a known table key", () => {
       const stateWithTable = { ...initialState, vendors: { rowsPerPage: 10 } } as any;
-      const state = uiReducer(
-        stateWithTable,
-        setRowsPerPage({ table: "vendors", value: 25 })
-      );
+      const state = uiReducer(stateWithTable, setRowsPerPage({ table: "vendors", value: 25 }));
       expect((state as any).vendors.rowsPerPage).toBe(25);
     });
 
     it("should be a no-op for an unknown table key", () => {
-      const state = uiReducer(
-        initialState,
-        setRowsPerPage({ table: "nonexistent", value: 50 })
-      );
+      const state = uiReducer(initialState, setRowsPerPage({ table: "nonexistent", value: 50 }));
       expect(state).toEqual(initialState);
     });
   });

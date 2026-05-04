@@ -90,7 +90,7 @@ function getRequestedSections(reportType: string | string[]): string[] {
 export async function generateReport(
   request: ReportGenerationRequest,
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ReportGenerationResult> {
   try {
     // Create data collector
@@ -99,7 +99,7 @@ export async function generateReport(
       request.projectId,
       request.frameworkId,
       request.projectFrameworkId,
-      userId
+      userId,
     );
 
     // Determine which sections to include
@@ -115,7 +115,7 @@ export async function generateReport(
         reportData.aiSummaries = await generateAISummaries(
           reportData,
           reportData.metadata.organizationId,
-          request.llmKeyId
+          request.llmKeyId,
         );
       } catch (error) {
         logger.warn("AI summarization failed, continuing with standard report:", error);
@@ -173,14 +173,14 @@ export async function generateReport(
 export async function getReportData(
   request: Omit<ReportGenerationRequest, "format">,
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ReportData> {
   const dataCollector = createDataCollector(
     organizationId,
     request.projectId,
     request.frameworkId,
     request.projectFrameworkId,
-    userId
+    userId,
   );
 
   const sections = getRequestedSections(request.reportType);

@@ -220,12 +220,7 @@ import Breadcrumbs from "./components/Breadcrumbs";
 import { ChevronRight } from "@mui/icons-material";
 
 function MyPage() {
-  return (
-    <Breadcrumbs
-      autoGenerate={true}
-      separator={<ChevronRight fontSize="small" />}
-    />
-  );
+  return <Breadcrumbs autoGenerate={true} separator={<ChevronRight fontSize="small" />} />;
 }
 ```
 
@@ -342,11 +337,7 @@ import PageBreadcrumbs from "./components/Breadcrumbs/PageBreadcrumbs";
 function ProductPage() {
   return (
     <div>
-      <PageBreadcrumbs
-        homeLabel="Store"
-        homePath="/store"
-        maxLabelLength={30}
-      />
+      <PageBreadcrumbs homeLabel="Store" homePath="/store" maxLabelLength={30} />
       {/* Product content */}
     </div>
   );

@@ -18,11 +18,7 @@
 
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
-import {
-  EntityType,
-  getEntityConfig,
-  GENERIC_FORMATTERS,
-} from "../config/changeHistory.config";
+import { EntityType, getEntityConfig, GENERIC_FORMATTERS } from "../config/changeHistory.config";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
 import { appendToAuditLedger } from "./auditLedger.utils";
@@ -62,7 +58,7 @@ export const recordEntityChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   try {
     const config = getEntityConfig(entityType);
@@ -85,7 +81,7 @@ export const recordEntityChange = async (
           changed_by_user_id: changedByUserId,
         },
         transaction,
-      }
+      },
     );
 
     // Append to tamper-proof audit ledger (fire-and-forget)
@@ -99,7 +95,7 @@ export const recordEntityChange = async (
       fieldName: fieldName || null,
       oldValue: oldValue || null,
       newValue: newValue || null,
-    }).catch(err => logger.error(`[audit_ledger] write failed: ${err}`));
+    }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
   } catch (error) {
     logger.error(`Error recording ${entityType} change: ${error}`);
     throw error;
@@ -122,7 +118,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   for (const change of changes) {
     await recordEntityChange(
@@ -134,7 +130,7 @@ export const recordMultipleFieldChanges = async (
       change.fieldName,
       change.oldValue,
       change.newValue,
-      transaction
+      transaction,
     );
   }
 };
@@ -154,7 +150,7 @@ export const getEntityChangeHistory = async (
   entityId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
   try {
     const config = getEntityConfig(entityType);
@@ -170,7 +166,7 @@ export const getEntityChangeHistory = async (
       {
         replacements: { organization_id: organizationId, entity_id: entityId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
     const total = parseInt(countResult[0]?.count || "0", 10);
 
@@ -189,7 +185,7 @@ export const getEntityChangeHistory = async (
       {
         replacements: { organization_id: organizationId, entity_id: entityId, limit, offset },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return {
@@ -216,7 +212,7 @@ export const getEntityChangeHistory = async (
 export const formatFieldValue = async (
   entityType: EntityType,
   fieldName: string,
-  value: any
+  value: any,
 ): Promise<string> => {
   if (value === null || value === undefined || value === "") {
     return "-";
@@ -235,7 +231,7 @@ export const formatFieldValue = async (
   } catch (error) {
     // If formatter fails, log error and return raw value as fallback
     logger.error(
-      `Error formatting field "${fieldName}" for ${entityType}: ${error} Value: ${JSON.stringify(value)}`
+      `Error formatting field "${fieldName}" for ${entityType}: ${error} Value: ${JSON.stringify(value)}`,
     );
     // Return stringified raw value as safe fallback
     return String(value);
@@ -249,10 +245,7 @@ export const formatFieldValue = async (
  * @param fieldName - The database field name
  * @returns Human-readable field label from config or the original name
  */
-export const getFieldLabel = (
-  entityType: EntityType,
-  fieldName: string
-): string => {
+export const getFieldLabel = (entityType: EntityType, fieldName: string): string => {
   const config = getEntityConfig(entityType);
   return config.fieldLabels[fieldName] || fieldName;
 };
@@ -270,10 +263,8 @@ export const getFieldLabel = (
 export const trackEntityChanges = async (
   entityType: EntityType,
   oldData: any,
-  newData: any
-): Promise<
-  Array<{ fieldName: string; oldValue: string; newValue: string }>
-> => {
+  newData: any,
+): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   const changes: Array<{
     fieldName: string;
     oldValue: string;
@@ -323,7 +314,7 @@ export const recordEntityCreation = async (
   changedByUserId: number,
   organizationId: number,
   entityData: any,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   const config = getEntityConfig(entityType);
 
@@ -340,7 +331,7 @@ export const recordEntityCreation = async (
         getFieldLabel(entityType, field),
         "-",
         await formatFieldValue(entityType, field, value),
-        transaction
+        transaction,
       );
     }
   }
@@ -362,7 +353,7 @@ export const recordEntityDeletion = async (
   entityId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   // Get the entity name from the config or use a default
   const entityName = entityType
@@ -379,7 +370,7 @@ export const recordEntityDeletion = async (
     entityName,
     "Active",
     "Deleted",
-    transaction
+    transaction,
   );
 };
 
@@ -403,7 +394,7 @@ export const recordEvidenceAddedToEntity = async (
   organizationId: number,
   evidenceName: string,
   evidenceType: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await recordEntityChange(
     entityType,
@@ -414,7 +405,7 @@ export const recordEvidenceAddedToEntity = async (
     "Evidence added",
     "-",
     `${evidenceName} (${evidenceType})`,
-    transaction
+    transaction,
   );
 };
 
@@ -438,7 +429,7 @@ export const recordEvidenceRemovedFromEntity = async (
   organizationId: number,
   evidenceName: string,
   evidenceType: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await recordEntityChange(
     entityType,
@@ -449,7 +440,7 @@ export const recordEvidenceRemovedFromEntity = async (
     "Evidence removed",
     `${evidenceName} (${evidenceType})`,
     "-",
-    transaction
+    transaction,
   );
 };
 
@@ -477,7 +468,7 @@ export const recordEvidenceFieldChangeForEntity = async (
   fieldName: string,
   oldValue: string,
   newValue: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await recordEntityChange(
     entityType,
@@ -488,6 +479,6 @@ export const recordEvidenceFieldChangeForEntity = async (
     `Evidence: ${evidenceName} - ${fieldName}`,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };

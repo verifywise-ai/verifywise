@@ -108,12 +108,9 @@ describe("entityGraphSecurity.utils", () => {
   // ============================================
   describe("isValidEntityType", () => {
     describe("valid entity types", () => {
-      it.each(VALID_ENTITY_TYPES)(
-        "should return true for valid entity type: %s",
-        (entityType) => {
-          expect(isValidEntityType(entityType)).toBe(true);
-        }
-      );
+      it.each(VALID_ENTITY_TYPES)("should return true for valid entity type: %s", (entityType) => {
+        expect(isValidEntityType(entityType)).toBe(true);
+      });
     });
 
     describe("invalid entity types", () => {
@@ -371,21 +368,14 @@ describe("entityGraphSecurity.utils", () => {
         const config = { visibleEntities: ["model", "risk", "control"] };
         const result = sanitizeViewConfig(config);
         expect(result.valid).toBe(true);
-        expect(result.sanitized.visibleEntities).toEqual([
-          "model",
-          "risk",
-          "control",
-        ]);
+        expect(result.sanitized.visibleEntities).toEqual(["model", "risk", "control"]);
       });
 
       it("should sanitize visibleRelationships array", () => {
         const config = { visibleRelationships: ["hasRisk", "hasControl"] };
         const result = sanitizeViewConfig(config);
         expect(result.valid).toBe(true);
-        expect(result.sanitized.visibleRelationships).toEqual([
-          "hasRisk",
-          "hasControl",
-        ]);
+        expect(result.sanitized.visibleRelationships).toEqual(["hasRisk", "hasControl"]);
       });
 
       it("should sanitize boolean flags", () => {
@@ -437,10 +427,7 @@ describe("entityGraphSecurity.utils", () => {
         };
         const result = sanitizeViewConfig(config);
         expect(result.valid).toBe(true);
-        expect(result.sanitized.visibleEntities).toEqual([
-          "valid",
-          "alsoValid",
-        ]);
+        expect(result.sanitized.visibleEntities).toEqual(["valid", "alsoValid"]);
       });
     });
 
@@ -481,9 +468,7 @@ describe("entityGraphSecurity.utils", () => {
         const config = { query: { entityType: "model" } as any };
         const result = sanitizeViewConfig(config);
         expect(result.valid).toBe(false);
-        expect(result.error).toBe(
-          "query must have entityType, condition, and attribute strings"
-        );
+        expect(result.error).toBe("query must have entityType, condition, and attribute strings");
       });
 
       it("should return invalid for query fields exceeding 50 chars", () => {
@@ -615,9 +600,7 @@ describe("entityGraphSecurity.utils", () => {
         ];
         const result = validateGapRules(rules);
         expect(result.valid).toBe(false);
-        expect(result.error).toContain(
-          "requirement cannot exceed 100 characters"
-        );
+        expect(result.error).toContain("requirement cannot exceed 100 characters");
       });
 
       it("should return invalid for rule with invalid severity", () => {

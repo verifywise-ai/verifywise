@@ -7,7 +7,10 @@ import { IModelInventoryHistory } from "../../interfaces/i.modelInventoryHistory
   timestamps: true,
   underscored: true,
 })
-export class ModelInventoryHistoryModel extends Model<ModelInventoryHistoryModel> implements IModelInventoryHistory {
+export class ModelInventoryHistoryModel
+  extends Model<ModelInventoryHistoryModel>
+  implements IModelInventoryHistory
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

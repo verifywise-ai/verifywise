@@ -21,15 +21,7 @@
  */
 
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Checkbox,
-  Popover,
-  Typography,
-  Stack,
-  Divider,
-} from "@mui/material";
+import { Box, Button, Checkbox, Popover, Typography, Stack, Divider } from "@mui/material";
 import { Columns } from "lucide-react";
 import { ColumnConfig } from "../../../../application/hooks/useColumnVisibility";
 import { brand, text, background, border as borderPalette } from "../../../themes/palette";
@@ -165,9 +157,7 @@ export function ColumnSelector<TKey extends string = string>({
                 cursor: column.alwaysVisible ? "not-allowed" : "pointer",
                 opacity: column.alwaysVisible ? 0.6 : 1,
                 "&:hover": {
-                  backgroundColor: column.alwaysVisible
-                    ? "transparent"
-                    : `${background.accent}`,
+                  backgroundColor: column.alwaysVisible ? "transparent" : `${background.accent}`,
                 },
               }}
             >

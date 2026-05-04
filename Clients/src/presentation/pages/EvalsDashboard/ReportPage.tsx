@@ -24,9 +24,7 @@ import ReportConfigModal from "./ReportConfigModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import type { ReportConfig } from "./types";
 import CustomAxios from "../../../infrastructure/api/customAxios";
-import {
-  getAllExperiments,
-} from "../../../application/repository/deepEval.repository";
+import { getAllExperiments } from "../../../application/repository/deepEval.repository";
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 
@@ -102,7 +100,9 @@ export default function ReportPage({
 
   const loadReports = useCallback(async () => {
     try {
-      const res = await CustomAxios.get(`/deepeval/reports?project_id=${encodeURIComponent(projectId)}`);
+      const res = await CustomAxios.get(
+        `/deepeval/reports?project_id=${encodeURIComponent(projectId)}`,
+      );
       setReports(res.data || []);
     } catch (err) {
       console.error("Failed to load reports:", err);
@@ -115,10 +115,10 @@ export default function ReportPage({
   }, [loadExperiments, loadReports]);
 
   const fetchReportFile = async (reportId: string): Promise<Blob> => {
-    const response = await CustomAxios.get(
-      `/deepeval/reports/${reportId}/file`,
-      { responseType: "blob", timeout: 30000 },
-    );
+    const response = await CustomAxios.get(`/deepeval/reports/${reportId}/file`, {
+      responseType: "blob",
+      timeout: 30000,
+    });
     return response.data;
   };
 
@@ -169,10 +169,16 @@ export default function ReportPage({
       if (config.format === "pdf") {
         showPdf(blob, reportTitle);
       } else {
-        downloadBlob(blob, `${reportTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_eval_report.csv`);
+        downloadBlob(
+          blob,
+          `${reportTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_eval_report.csv`,
+        );
       }
 
-      setAlert({ variant: "success", body: `Report generated successfully (${config.format.toUpperCase()})` });
+      setAlert({
+        variant: "success",
+        body: `Report generated successfully (${config.format.toUpperCase()})`,
+      });
       setTimeout(() => setAlert(null), 4000);
     } catch (err) {
       console.error("Report generation failed:", err);
@@ -208,7 +214,10 @@ export default function ReportPage({
     try {
       const blob = await fetchReportFile(report.id);
       const ext = report.format.toLowerCase() === "csv" ? "csv" : "pdf";
-      downloadBlob(blob, `${report.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_eval_report.${ext}`);
+      downloadBlob(
+        blob,
+        `${report.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_eval_report.${ext}`,
+      );
     } catch (err) {
       console.error("Failed to download report:", err);
       setAlert({
@@ -231,7 +240,7 @@ export default function ReportPage({
     setShowDeleteConfirm(null);
     try {
       await CustomAxios.delete(`/deepeval/reports/${reportId}`);
-      setReports(prev => prev.filter(r => r.id !== reportId));
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
       if (pdfBlobUrl) {
         closePdfViewer();
       }
@@ -283,7 +292,7 @@ export default function ReportPage({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const completedCount = experiments.filter(e => e.status === "completed").length;
+  const completedCount = experiments.filter((e) => e.status === "completed").length;
 
   if (loading) {
     return (
@@ -296,28 +305,31 @@ export default function ReportPage({
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%" }}>
       {alert && (
-        <Alert
-          variant={alert.variant}
-          body={alert.body}
-          isToast
-          onClick={() => setAlert(null)}
-        />
+        <Alert variant={alert.variant} body={alert.body} isToast onClick={() => setAlert(null)} />
       )}
 
       {/* Header */}
       <Stack spacing={1}>
-        <Typography variant="h6" sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
+        <Typography
+          variant="h6"
+          sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}
+        >
           Evaluation Reports
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1.8, fontSize: 13 }}>
-          Generate evaluation reports from your experiment results.
-          Reports follow the{" "}
+          Generate evaluation reports from your experiment results. Reports follow the{" "}
           <Typography
             component="a"
             href="https://arxiv.org/abs/2206.11249"
             target="_blank"
             rel="noopener noreferrer"
-            sx={{ fontSize: 13, color: palette.brand.primary, fontWeight: 600, textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+            sx={{
+              fontSize: 13,
+              color: palette.brand.primary,
+              fontWeight: 600,
+              textDecoration: "none",
+              "&:hover": { textDecoration: "underline" },
+            }}
           >
             EvalCards
           </Typography>{" "}
@@ -340,8 +352,16 @@ export default function ReportPage({
             <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
               Generating report...
             </Typography>
-            <Typography sx={{ fontSize: 12, color: palette.text.secondary, textAlign: "center", maxWidth: 400 }}>
-              Analyzing evaluation results and generating AI-powered summaries. This may take up to a minute.
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: palette.text.secondary,
+                textAlign: "center",
+                maxWidth: 400,
+              }}
+            >
+              Analyzing evaluation results and generating AI-powered summaries. This may take up to
+              a minute.
             </Typography>
           </Stack>
         ) : (
@@ -458,11 +478,7 @@ export default function ReportPage({
 
       {/* Empty State — no reports yet */}
       {reports.length === 0 && !isGenerating && (
-        <EmptyState
-          message="No reports generated yet"
-          icon={FileText}
-          showBorder
-        >
+        <EmptyState message="No reports generated yet" icon={FileText} showBorder>
           <EmptyStateTip
             icon={FileText}
             title="About EvalCards"
@@ -480,7 +496,9 @@ export default function ReportPage({
       {reports.length > 0 && (
         <TableContainer sx={{ overflowX: "auto" }}>
           <Table sx={singleTheme.tableStyles.primary.frame}>
-            <TableHead sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}>
+            <TableHead
+              sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
+            >
               <TableRow sx={singleTheme.tableStyles.primary.header.row}>
                 <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "30%" }}>
                   <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Report</Typography>
@@ -497,22 +515,38 @@ export default function ReportPage({
                 <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "23%" }}>
                   <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Generated</Typography>
                 </TableCell>
-                <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "15%", minWidth: 120 }}>
+                <TableCell
+                  sx={{
+                    ...singleTheme.tableStyles.primary.header.cell,
+                    width: "15%",
+                    minWidth: 120,
+                  }}
+                >
                   <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Actions</Typography>
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {reports.map(report => (
+              {reports.map((report) => (
                 <TableRow
                   key={report.id}
-                  onClick={() => report.format.toLowerCase() === "pdf" ? handleViewReport(report) : handleDownloadReport(report)}
-                  sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer", "&:hover": { backgroundColor: palette.background.accent } }}
+                  onClick={() =>
+                    report.format.toLowerCase() === "pdf"
+                      ? handleViewReport(report)
+                      : handleDownloadReport(report)
+                  }
+                  sx={{
+                    ...singleTheme.tableStyles.primary.body.row,
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: palette.background.accent },
+                  }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Stack direction="row" alignItems="center" gap={1}>
                       <FileText size={14} strokeWidth={1.5} color={palette.brand.primary} />
-                      <Typography sx={{ fontSize: 13, color: theme.palette.text.primary, fontWeight: 500 }}>
+                      <Typography
+                        sx={{ fontSize: 13, color: theme.palette.text.primary, fontWeight: 500 }}
+                      >
                         {report.title}
                       </Typography>
                     </Stack>
@@ -545,7 +579,10 @@ export default function ReportPage({
                       {formatDate(report.createdAt)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell} onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    sx={singleTheme.tableStyles.primary.body.cell}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Stack direction="row" spacing="4px">
                       <Tooltip title="Download">
                         <IconButton
@@ -554,7 +591,11 @@ export default function ReportPage({
                           disabled={loadingReportId === report.id}
                           sx={{ padding: "4px" }}
                         >
-                          <Download size={16} strokeWidth={1.5} color={theme.palette.text.secondary} />
+                          <Download
+                            size={16}
+                            strokeWidth={1.5}
+                            color={theme.palette.text.secondary}
+                          />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
@@ -563,7 +604,11 @@ export default function ReportPage({
                           onClick={() => handleDeleteReport(report.id)}
                           sx={{ padding: "4px" }}
                         >
-                          <Trash2 size={16} strokeWidth={1.5} color={theme.palette.text.secondary} />
+                          <Trash2
+                            size={16}
+                            strokeWidth={1.5}
+                            color={theme.palette.text.secondary}
+                          />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -592,7 +637,9 @@ export default function ReportPage({
           title="Delete report"
           body={
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              Are you sure you want to delete &quot;{reports.find(r => r.id === showDeleteConfirm)?.title || "this report"}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;
+              {reports.find((r) => r.id === showDeleteConfirm)?.title || "this report"}&quot;? This
+              action cannot be undone.
             </Typography>
           }
           proceedText="Delete"

@@ -45,7 +45,7 @@ export interface EntityGraphData {
     model_id: number | null;
     project_id?: number;
     vendor_id?: number;
-    source: 'model' | 'project' | 'vendor';
+    source: "model" | "project" | "vendor";
     created_at?: string;
     // Additional fields for project risks
     risk_owner?: string;
@@ -120,17 +120,19 @@ export interface EntityGraphData {
 // Callback for tracking loading progress
 type ProgressCallback = (loaded: number, total: number) => void;
 
-export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promise<EntityGraphData> {
+export async function fetchEntityGraphData(
+  onProgress?: ProgressCallback,
+): Promise<EntityGraphData> {
   const endpoints = [
-    { name: 'useCases', url: "/projects" },
-    { name: 'models', url: "/modelInventory" },
-    { name: 'modelRisks', url: "/modelRisks" },
-    { name: 'vendors', url: "/vendors" },
-    { name: 'vendorRisks', url: "/vendorRisks/all" },
-    { name: 'projectRisks', url: "/projectRisks" },
-    { name: 'evidence', url: "/evidenceHub" },
-    { name: 'frameworks', url: "/frameworks" },
-    { name: 'users', url: "/users" },
+    { name: "useCases", url: "/projects" },
+    { name: "models", url: "/modelInventory" },
+    { name: "modelRisks", url: "/modelRisks" },
+    { name: "vendors", url: "/vendors" },
+    { name: "vendorRisks", url: "/vendorRisks/all" },
+    { name: "projectRisks", url: "/projectRisks" },
+    { name: "evidence", url: "/evidenceHub" },
+    { name: "frameworks", url: "/frameworks" },
+    { name: "users", url: "/users" },
   ];
 
   const total = endpoints.length;
@@ -140,7 +142,12 @@ export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promi
   const extractData = (res: { data: unknown }): unknown[] => {
     const data = res.data;
     if (Array.isArray(data)) return data;
-    if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data: unknown[] }).data)) {
+    if (
+      data &&
+      typeof data === "object" &&
+      "data" in data &&
+      Array.isArray((data as { data: unknown[] }).data)
+    ) {
       return (data as { data: unknown[] }).data;
     }
     return [];
@@ -164,7 +171,7 @@ export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promi
     evidenceRes,
     frameworksRes,
     usersRes,
-  ] = await Promise.all(endpoints.map(e => fetchWithProgress(e.url)));
+  ] = await Promise.all(endpoints.map((e) => fetchWithProgress(e.url)));
 
   // Combine all risks into unified array with source indicator
   const modelRisks = extractData(modelRisksRes) as Array<{
@@ -204,22 +211,22 @@ export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promi
     vendor_name?: string;
   }>;
 
-  const combinedRisks: EntityGraphData['risks'] = [
-    ...modelRisks.map(r => ({
+  const combinedRisks: EntityGraphData["risks"] = [
+    ...modelRisks.map((r) => ({
       id: r.id,
       risk_name: r.risk_name,
       risk_level: r.risk_level,
       model_id: r.model_id,
-      source: 'model' as const,
+      source: "model" as const,
       risk_description: r.risk_description,
     })),
-    ...projectRisks.map(r => ({
+    ...projectRisks.map((r) => ({
       id: r.id + 100000, // Offset to avoid ID collision
       risk_name: r.risk_name,
       risk_level: r.current_risk_level,
       model_id: null,
       project_id: r.project_id,
-      source: 'project' as const,
+      source: "project" as const,
       risk_owner: r.risk_owner,
       ai_lifecycle_phase: r.ai_lifecycle_phase,
       risk_category: r.risk_category,
@@ -232,13 +239,13 @@ export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promi
       date_of_assessment: r.date_of_assessment,
       risk_description: r.risk_description,
     })),
-    ...vendorRisks.map(r => ({
+    ...vendorRisks.map((r) => ({
       id: r.risk_id + 200000, // Offset to avoid ID collision
-      risk_name: r.risk_description?.substring(0, 50) || 'Vendor Risk',
+      risk_name: r.risk_description?.substring(0, 50) || "Vendor Risk",
       risk_level: r.risk_severity,
       model_id: null,
       vendor_id: r.vendor_id,
-      source: 'vendor' as const,
+      source: "vendor" as const,
       impact: r.impact,
       impact_description: r.impact_description,
       likelihood: r.likelihood,
@@ -250,12 +257,12 @@ export async function fetchEntityGraphData(onProgress?: ProgressCallback): Promi
   ];
 
   return {
-    useCases: extractData(useCasesRes) as EntityGraphData['useCases'],
-    models: extractData(modelsRes) as EntityGraphData['models'],
+    useCases: extractData(useCasesRes) as EntityGraphData["useCases"],
+    models: extractData(modelsRes) as EntityGraphData["models"],
     risks: combinedRisks,
-    vendors: extractData(vendorsRes) as EntityGraphData['vendors'],
-    evidence: extractData(evidenceRes) as EntityGraphData['evidence'],
-    frameworks: extractData(frameworksRes) as EntityGraphData['frameworks'],
-    users: extractData(usersRes) as EntityGraphData['users'],
+    vendors: extractData(vendorsRes) as EntityGraphData["vendors"],
+    evidence: extractData(evidenceRes) as EntityGraphData["evidence"],
+    frameworks: extractData(frameworksRes) as EntityGraphData["frameworks"],
+    users: extractData(usersRes) as EntityGraphData["users"],
   };
 }

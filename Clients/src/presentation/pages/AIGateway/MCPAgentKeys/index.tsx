@@ -109,14 +109,30 @@ export default function MCPAgentKeysPage() {
       if (createForm.rate_limit_rpm) payload.rate_limit_rpm = Number(createForm.rate_limit_rpm);
       if (createForm.expires_at) payload.expires_at = new Date(createForm.expires_at).toISOString();
 
-      const parseList = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
-      if (createForm.allowed_tools.trim()) payload.allowed_tools = parseList(createForm.allowed_tools);
-      if (createForm.blocked_tools.trim()) payload.blocked_tools = parseList(createForm.blocked_tools);
+      const parseList = (v: string) =>
+        v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      if (createForm.allowed_tools.trim())
+        payload.allowed_tools = parseList(createForm.allowed_tools);
+      if (createForm.blocked_tools.trim())
+        payload.blocked_tools = parseList(createForm.blocked_tools);
 
-      const res = await apiServices.post<Record<string, any>>("/ai-gateway/mcp/agent-keys", payload);
+      const res = await apiServices.post<Record<string, any>>(
+        "/ai-gateway/mcp/agent-keys",
+        payload,
+      );
       const created = res?.data?.data;
       setIsCreateOpen(false);
-      setCreateForm({ name: "", description: "", allowed_tools: "", blocked_tools: "", rate_limit_rpm: "", expires_at: "" });
+      setCreateForm({
+        name: "",
+        description: "",
+        allowed_tools: "",
+        blocked_tools: "",
+        rate_limit_rpm: "",
+        expires_at: "",
+      });
 
       if (created?.plain_key) {
         setNewKey(created.plain_key);
@@ -125,7 +141,8 @@ export default function MCPAgentKeysPage() {
 
       await loadData();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
       setCreateError(errData?.detail || errData?.message || "Failed to create agent key");
     } finally {
       setCreateSubmitting(false);
@@ -171,7 +188,14 @@ export default function MCPAgentKeysPage() {
       text="Create agent key"
       icon={<CirclePlus size={14} strokeWidth={1.5} />}
       onClick={() => {
-        setCreateForm({ name: "", description: "", allowed_tools: "", blocked_tools: "", rate_limit_rpm: "", expires_at: "" });
+        setCreateForm({
+          name: "",
+          description: "",
+          allowed_tools: "",
+          blocked_tools: "",
+          rate_limit_rpm: "",
+          expires_at: "",
+        });
         setCreateError("");
         setIsCreateOpen(true);
       }}
@@ -221,9 +245,7 @@ export default function MCPAgentKeysPage() {
                     <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
                     <Box flex={1}>
                       <Stack direction="row" alignItems="center" gap="8px">
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                          {key.name}
-                        </Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
                         <Chip label={status} size="small" uppercase={false} />
                       </Stack>
                       <Stack direction="row" gap="12px" alignItems="center" mt="2px">
@@ -242,10 +264,18 @@ export default function MCPAgentKeysPage() {
                           </Typography>
                         )}
                         {key.allowed_tools?.length > 0 && (
-                          <Chip label={`${key.allowed_tools.length} allowed tool${key.allowed_tools.length !== 1 ? "s" : ""}`} size="small" uppercase={false} />
+                          <Chip
+                            label={`${key.allowed_tools.length} allowed tool${key.allowed_tools.length !== 1 ? "s" : ""}`}
+                            size="small"
+                            uppercase={false}
+                          />
                         )}
                         {key.blocked_tools?.length > 0 && (
-                          <Chip label={`${key.blocked_tools.length} blocked tool${key.blocked_tools.length !== 1 ? "s" : ""}`} size="small" uppercase={false} />
+                          <Chip
+                            label={`${key.blocked_tools.length} blocked tool${key.blocked_tools.length !== 1 ? "s" : ""}`}
+                            size="small"
+                            uppercase={false}
+                          />
                         )}
                         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                           by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
@@ -416,14 +446,15 @@ export default function MCPAgentKeysPage() {
                 overflow: "auto",
               }}
             >
-{`# Authenticate an MCP agent with the gateway
+              {`# Authenticate an MCP agent with the gateway
 curl -H "Authorization: Bearer ${newKey}" \\
   https://your-verifywise-host/api/ai-gateway/mcp/servers`}
             </Box>
           </Box>
 
           <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-            Use agent keys from backend services only. Each key is scoped to specific tools and rate limits.
+            Use agent keys from backend services only. Each key is scoped to specific tools and rate
+            limits.
           </Typography>
         </Stack>
       </StandardModal>

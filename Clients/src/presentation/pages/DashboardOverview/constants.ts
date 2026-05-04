@@ -49,7 +49,7 @@ export const navIconButtonSx = {
   color: COLORS.textSecondary,
   "&:hover": {
     backgroundColor: COLORS.backgroundHover,
-    color: COLORS.textPrimary
+    color: COLORS.textPrimary,
   },
 } as const;
 
@@ -60,7 +60,13 @@ export const getRiskLevelData = (distribution: { high: number; medium: number; l
   { label: "Low", value: distribution.low || 0, color: COLORS.low },
 ];
 
-export const getVendorRiskData = (distribution: { veryHigh: number; high: number; medium: number; low: number; veryLow: number }) => [
+export const getVendorRiskData = (distribution: {
+  veryHigh: number;
+  high: number;
+  medium: number;
+  low: number;
+  veryLow: number;
+}) => [
   { label: "Very High", value: distribution.veryHigh || 0, color: COLORS.critical },
   { label: "High", value: distribution.high || 0, color: COLORS.high },
   { label: "Medium", value: distribution.medium || 0, color: COLORS.medium },
@@ -68,7 +74,12 @@ export const getVendorRiskData = (distribution: { veryHigh: number; high: number
   { label: "Very Low", value: distribution.veryLow || 0, color: COLORS.low },
 ];
 
-export const getModelRiskData = (distribution: { critical: number; high: number; medium: number; low: number }) => [
+export const getModelRiskData = (distribution: {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}) => [
   { label: "Critical", value: distribution.critical || 0, color: COLORS.critical },
   { label: "High", value: distribution.high || 0, color: COLORS.high },
   { label: "Medium", value: distribution.medium || 0, color: COLORS.medium },
@@ -87,7 +98,11 @@ export const getNistStatusData = (breakdown: {
   { label: "Implemented", value: breakdown.implemented || 0, color: COLORS.implemented },
   { label: "In Progress", value: breakdown.inProgress || 0, color: COLORS.inProgress },
   { label: "Awaiting Review", value: breakdown.awaitingReview || 0, color: COLORS.awaitingReview },
-  { label: "Awaiting Approval", value: breakdown.awaitingApproval || 0, color: COLORS.awaitingApproval },
+  {
+    label: "Awaiting Approval",
+    value: breakdown.awaitingApproval || 0,
+    color: COLORS.awaitingApproval,
+  },
   { label: "Draft", value: breakdown.draft || 0, color: COLORS.pending },
   { label: "Needs Rework", value: breakdown.needsRework || 0, color: COLORS.needsRework },
   { label: "Not Started", value: breakdown.notStarted || 0, color: COLORS.notStarted },
@@ -99,7 +114,11 @@ export const getCompletionData = (done: number, pending: number) => [
 ];
 
 // Training status data
-export const getTrainingStatusData = (distribution: { planned: number; inProgress: number; completed: number }) => [
+export const getTrainingStatusData = (distribution: {
+  planned: number;
+  inProgress: number;
+  completed: number;
+}) => [
   { label: "Planned", value: distribution.planned, color: COLORS.draft },
   { label: "In progress", value: distribution.inProgress, color: COLORS.inProgress },
   { label: "Completed", value: distribution.completed, color: COLORS.completed },
@@ -112,13 +131,14 @@ export const getPolicyStatusData = (distribution: {
   underReview: number;
   draft: number;
   archived: number;
-}) => [
-  { label: "Published", value: distribution.published, color: COLORS.completed },
-  { label: "Approved", value: distribution.approved, color: COLORS.approved },
-  { label: "Under review", value: distribution.underReview, color: COLORS.inProgress },
-  { label: "Draft", value: distribution.draft, color: COLORS.draft },
-  { label: "Archived", value: distribution.archived, color: COLORS.archived },
-].filter((item) => item.value > 0);
+}) =>
+  [
+    { label: "Published", value: distribution.published, color: COLORS.completed },
+    { label: "Approved", value: distribution.approved, color: COLORS.approved },
+    { label: "Under review", value: distribution.underReview, color: COLORS.inProgress },
+    { label: "Draft", value: distribution.draft, color: COLORS.draft },
+    { label: "Archived", value: distribution.archived, color: COLORS.archived },
+  ].filter((item) => item.value > 0);
 
 // Incident status data
 export const getIncidentStatusData = (distribution: {
@@ -139,9 +159,10 @@ export const getModelLifecycleData = (distribution: {
   pending: number;
   restricted: number;
   blocked: number;
-}) => [
-  { label: "Approved", value: distribution.approved, color: COLORS.completed },
-  { label: "Pending", value: distribution.pending, color: COLORS.inProgress },
-  { label: "Restricted", value: distribution.restricted, color: COLORS.restricted },
-  { label: "Blocked", value: distribution.blocked, color: COLORS.blocked },
-].filter((item) => item.value > 0);
+}) =>
+  [
+    { label: "Approved", value: distribution.approved, color: COLORS.completed },
+    { label: "Pending", value: distribution.pending, color: COLORS.inProgress },
+    { label: "Restricted", value: distribution.restricted, color: COLORS.restricted },
+    { label: "Blocked", value: distribution.blocked, color: COLORS.blocked },
+  ].filter((item) => item.value > 0);

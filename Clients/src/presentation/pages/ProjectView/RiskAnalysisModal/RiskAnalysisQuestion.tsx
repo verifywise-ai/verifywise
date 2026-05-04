@@ -1,9 +1,4 @@
-import {
-  Box,
-  FormControl,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, FormControl, Stack, Typography } from "@mui/material";
 import { IQuestion, IQuestionnaireAnswers } from "./iQuestion";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Radio from "../../../components/Inputs/Radio";
@@ -35,11 +30,7 @@ interface RiskAnalysisQuestionProps {
   answers: IQuestionnaireAnswers;
 }
 
-const RiskAnalysisQuestion = ({
-  question,
-  onSelect,
-  answers,
-}: RiskAnalysisQuestionProps) => {
+const RiskAnalysisQuestion = ({ question, onSelect, answers }: RiskAnalysisQuestionProps) => {
   return (
     <Stack>
       <Typography fontSize={15} fontWeight={600} my={4} color="text.primary">
@@ -48,16 +39,18 @@ const RiskAnalysisQuestion = ({
       {/* Options */}
       <Stack spacing={2}>
         {question.inputType === "single_select" ? (
-          <FormControl sx={{gap: 4}}>
+          <FormControl sx={{ gap: 4 }}>
             {question.options.map((option) => (
-              <Box 
-                key={option.value} 
-                sx={{ "& > label": {
-                  ...radioOptionStyle, 
-                  padding: "10px",
-                  margin: 0,
-                  alignItems: "center",
-                }}}
+              <Box
+                key={option.value}
+                sx={{
+                  "& > label": {
+                    ...radioOptionStyle,
+                    padding: "10px",
+                    margin: 0,
+                    alignItems: "center",
+                  },
+                }}
               >
                 <Radio
                   id={option.value}
@@ -72,7 +65,7 @@ const RiskAnalysisQuestion = ({
             ))}
           </FormControl>
         ) : (
-          <FormControl sx={{gap: 4}}>
+          <FormControl sx={{ gap: 4 }}>
             {question.options.map((option) => {
               const selectedValues =
                 answers[question.id] && Array.isArray(answers[question.id])
@@ -80,13 +73,15 @@ const RiskAnalysisQuestion = ({
                   : [];
               const isChecked = (selectedValues ?? []).includes(option.value);
               return (
-                <Box 
-                  key={option.value} 
-                  sx={{ "& > label": {
-                    ...radioOptionStyle, 
-                    padding: "10px",
-                    margin: 0,
-                  }}}
+                <Box
+                  key={option.value}
+                  sx={{
+                    "& > label": {
+                      ...radioOptionStyle,
+                      padding: "10px",
+                      margin: 0,
+                    },
+                  }}
                 >
                   <Checkbox
                     id={option.value}
@@ -95,13 +90,15 @@ const RiskAnalysisQuestion = ({
                     isChecked={isChecked}
                     value={option.value}
                     onChange={(event) => {
-                      const currentValues = (Array.isArray(answers[question.id]) ? answers[question.id] : []) as string[];
+                      const currentValues = (
+                        Array.isArray(answers[question.id]) ? answers[question.id] : []
+                      ) as string[];
                       const newValues = event.target.checked
                         ? [...currentValues, option.value]
                         : currentValues.filter((v) => v !== option.value);
                       onSelect(question.id, newValues);
                     }}
-                />
+                  />
                 </Box>
               );
             })}

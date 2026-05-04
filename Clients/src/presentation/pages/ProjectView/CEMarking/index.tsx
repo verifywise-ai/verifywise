@@ -22,7 +22,11 @@ import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
 import { background } from "../../../themes/palette";
-import { CEMarkingData, ConformityStepStatus, ConformityStep } from "../../../../domain/types/ceMarking";
+import {
+  CEMarkingData,
+  ConformityStepStatus,
+  ConformityStep,
+} from "../../../../domain/types/ceMarking";
 import { VWLink } from "../../../components/Link/VWLink";
 import Select from "../../../components/Inputs/Select";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -54,11 +58,20 @@ interface CEMarkingProps {
 
 // Annex III Category options
 const ANNEX_III_OPTIONS = [
-  { _id: "annex_iii_1", name: "Annex III 1 – Biometric identification and categorisation of natural persons" },
+  {
+    _id: "annex_iii_1",
+    name: "Annex III 1 – Biometric identification and categorisation of natural persons",
+  },
   { _id: "annex_iii_2", name: "Annex III 2 – Management and operation of critical infrastructure" },
   { _id: "annex_iii_3", name: "Annex III 3 – Education and vocational training" },
-  { _id: "annex_iii_4", name: "Annex III 4 – Employment, workers management and access to self employment" },
-  { _id: "annex_iii_5", name: "Annex III 5 – Access to essential private and public services and benefits" },
+  {
+    _id: "annex_iii_4",
+    name: "Annex III 4 – Employment, workers management and access to self employment",
+  },
+  {
+    _id: "annex_iii_5",
+    name: "Annex III 5 – Access to essential private and public services and benefits",
+  },
   { _id: "annex_iii_6", name: "Annex III 6 – Law enforcement" },
   { _id: "annex_iii_7", name: "Annex III 7 – Migration, asylum and border control management" },
   { _id: "annex_iii_8", name: "Annex III 8 – Administration of justice and democratic processes" },
@@ -75,7 +88,10 @@ const ROLE_IN_PRODUCT_OPTIONS = [
   { _id: "standalone", name: "Standalone AI system" },
   { _id: "safety_component", name: "Safety component of a product" },
   { _id: "component_larger", name: "Component in a larger AI product or workflow" },
-  { _id: "foundation_model", name: "General purpose or foundation model integrated into a downstream system" },
+  {
+    _id: "foundation_model",
+    name: "General purpose or foundation model integrated into a downstream system",
+  },
 ];
 
 // Status options for dropdown
@@ -105,22 +121,25 @@ const REGISTRATION_STATUS_OPTIONS = [
 // Helper function to format status for display
 const formatStatusDisplay = (status: string): string => {
   const statusMap: Record<string, string> = {
-    'draft': 'Draft',
-    'ready_for_signature': 'Ready for signature',
-    'signed': 'Signed',
-    'archived': 'Archived',
-    'not_registered': 'Not registered',
-    'pending': 'Pending',
-    'registered': 'Registered',
-    'rejected': 'Rejected'
+    draft: "Draft",
+    ready_for_signature: "Ready for signature",
+    signed: "Signed",
+    archived: "Archived",
+    not_registered: "Not registered",
+    pending: "Pending",
+    registered: "Registered",
+    rejected: "Rejected",
   };
   return statusMap[status] || status;
 };
 
 // Helper function to get user name from ID
-const getUserNameById = (userId: string | null, users: Array<{ id: string | number; name: string; surname: string }>): string => {
+const getUserNameById = (
+  userId: string | null,
+  users: Array<{ id: string | number; name: string; surname: string }>,
+): string => {
   if (!userId) return "–";
-  const user = users?.find(u => String(u.id) === String(userId));
+  const user = users?.find((u) => String(u.id) === String(userId));
   return user ? `${user.name} ${user.surname}` : userId; // Fallback to ID if user not found
 };
 
@@ -131,7 +150,7 @@ const ensureUrlProtocol = (url: string | null): string | null => {
   if (!trimmedUrl) return null;
 
   // Check if URL already has a protocol
-  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+  if (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")) {
     return trimmedUrl;
   }
 
@@ -173,7 +192,6 @@ const getTableBodyCellStyles = () => ({
   whiteSpace: "nowrap",
   backgroundColor: "white",
 });
-
 
 const getStatusColor = (status: ConformityStepStatus): string => {
   switch (status) {
@@ -252,19 +270,39 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
   // Modal state for linking policies
   const [isPoliciesModalOpen, setIsPoliciesModalOpen] = useState(false);
-  const [availablePolicies, setAvailablePolicies] = useState<Array<{ id: number; title: string; status: string; tags?: string[] }>>([]);
+  const [availablePolicies, setAvailablePolicies] = useState<
+    Array<{ id: number; title: string; status: string; tags?: string[] }>
+  >([]);
   const [selectedPolicies, setSelectedPolicies] = useState<number[]>([]);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
 
   // Modal state for linking evidences
   const [isEvidencesModalOpen, setIsEvidencesModalOpen] = useState(false);
-  const [availableEvidences, setAvailableEvidences] = useState<Array<{ id: number; filename: string; source: string; project_title?: string; uploaded_time?: string }>>([]);
+  const [availableEvidences, setAvailableEvidences] = useState<
+    Array<{
+      id: number;
+      filename: string;
+      source: string;
+      project_title?: string;
+      uploaded_time?: string;
+    }>
+  >([]);
   const [selectedEvidences, setSelectedEvidences] = useState<number[]>([]);
   const [loadingEvidences, setLoadingEvidences] = useState(false);
 
   // Modal state for linking incidents
   const [isIncidentsModalOpen, setIsIncidentsModalOpen] = useState(false);
-  const [availableIncidents, setAvailableIncidents] = useState<Array<{ id: number; incident_id?: string; type: string; severity: string; status: string; occurred_date?: string; description?: string }>>([]);
+  const [availableIncidents, setAvailableIncidents] = useState<
+    Array<{
+      id: number;
+      incident_id?: string;
+      type: string;
+      severity: string;
+      status: string;
+      occurred_date?: string;
+      description?: string;
+    }>
+  >([]);
   const [selectedIncidents, setSelectedIncidents] = useState<number[]>([]);
   const [loadingIncidents, setLoadingIncidents] = useState(false);
 
@@ -308,12 +346,15 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
     }
   };
 
-  const showAlert = (message: string, variant: "success" | "error" | "info" | "warning" = "success") => {
+  const showAlert = (
+    message: string,
+    variant: "success" | "error" | "info" | "warning" = "success",
+  ) => {
     showGlobalAlert({
       variant,
       title: variant === "error" ? "Error" : "Success",
       body: message,
-      isToast: true
+      isToast: true,
     });
   };
 
@@ -346,7 +387,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
           setIsHighRiskAISystem(data?.isHighRiskAISystem || false);
         } finally {
           setSaving(false);
-          setConfirmationDialog(prev => ({ ...prev, isOpen: false }));
+          setConfirmationDialog((prev) => ({ ...prev, isOpen: false }));
         }
       },
     });
@@ -421,17 +462,15 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
     try {
       setSaving(true);
-      const updatedData = await updateConformityStep(
-        projectId,
-        selectedStep.id,
-        {
-          description: stepEditForm.description,
-          status: stepEditForm.status,
-          owner: stepEditForm.owner,
-          dueDate: stepEditForm.dueDate ? stepEditForm.dueDate.format("YYYY-MM-DD") : null,
-          completedDate: stepEditForm.completedDate ? stepEditForm.completedDate.format("YYYY-MM-DD") : null,
-        }
-      );
+      const updatedData = await updateConformityStep(projectId, selectedStep.id, {
+        description: stepEditForm.description,
+        status: stepEditForm.status,
+        owner: stepEditForm.owner,
+        dueDate: stepEditForm.dueDate ? stepEditForm.dueDate.format("YYYY-MM-DD") : null,
+        completedDate: stepEditForm.completedDate
+          ? stepEditForm.completedDate.format("YYYY-MM-DD")
+          : null,
+      });
 
       setData(updatedData);
       showAlert("Conformity step updated successfully");
@@ -468,15 +507,14 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   const handleDeclarationModalSave = async () => {
     try {
       setSaving(true);
-      const updatedData = await updateDeclaration(
-        projectId,
-        {
-          declarationStatus: declarationEditForm.status,
-          signedOn: declarationEditForm.signedOn ? declarationEditForm.signedOn.format("YYYY-MM-DD") : null,
-          signatory: declarationEditForm.signatory,
-          declarationDocument: declarationEditForm.declarationDocument,
-        }
-      );
+      const updatedData = await updateDeclaration(projectId, {
+        declarationStatus: declarationEditForm.status,
+        signedOn: declarationEditForm.signedOn
+          ? declarationEditForm.signedOn.format("YYYY-MM-DD")
+          : null,
+        signatory: declarationEditForm.signatory,
+        declarationDocument: declarationEditForm.declarationDocument,
+      });
 
       setData(updatedData);
       showAlert("Declaration details updated successfully");
@@ -513,15 +551,14 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   const handleRegistrationModalSave = async () => {
     try {
       setSaving(true);
-      const updatedData = await updateRegistration(
-        projectId,
-        {
-          registrationStatus: registrationEditForm.status,
-          euRegistrationId: registrationEditForm.euRegistrationId,
-          registrationDate: registrationEditForm.registrationDate ? registrationEditForm.registrationDate.format("YYYY-MM-DD") : null,
-          euRecordUrl: registrationEditForm.euRecordUrl,
-        }
-      );
+      const updatedData = await updateRegistration(projectId, {
+        registrationStatus: registrationEditForm.status,
+        euRegistrationId: registrationEditForm.euRegistrationId,
+        registrationDate: registrationEditForm.registrationDate
+          ? registrationEditForm.registrationDate.format("YYYY-MM-DD")
+          : null,
+        euRecordUrl: registrationEditForm.euRecordUrl,
+      });
 
       setData(updatedData);
       showAlert("EU registration details updated successfully");
@@ -569,10 +606,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   };
 
   const togglePolicy = (policyId: number) => {
-    setSelectedPolicies(prev =>
-      prev.includes(policyId)
-        ? prev.filter(id => id !== policyId)
-        : [...prev, policyId]
+    setSelectedPolicies((prev) =>
+      prev.includes(policyId) ? prev.filter((id) => id !== policyId) : [...prev, policyId],
     );
   };
 
@@ -612,10 +647,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   };
 
   const toggleEvidence = (evidenceId: number) => {
-    setSelectedEvidences(prev =>
-      prev.includes(evidenceId)
-        ? prev.filter(id => id !== evidenceId)
-        : [...prev, evidenceId]
+    setSelectedEvidences((prev) =>
+      prev.includes(evidenceId) ? prev.filter((id) => id !== evidenceId) : [...prev, evidenceId],
     );
   };
 
@@ -655,17 +688,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   };
 
   const toggleIncident = (incidentId: number) => {
-    setSelectedIncidents(prev =>
-      prev.includes(incidentId)
-        ? prev.filter(id => id !== incidentId)
-        : [...prev, incidentId]
+    setSelectedIncidents((prev) =>
+      prev.includes(incidentId) ? prev.filter((id) => id !== incidentId) : [...prev, incidentId],
     );
   };
 
   // Show loading spinner while data is being fetched
   if (loading || projectLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -687,7 +720,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
     return (
       <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
         <Typography sx={{ fontSize: 14, color: theme.palette.text.secondary }}>
-          Unable to load CE Marking data. Please refresh the page or contact support if the problem persists.
+          Unable to load CE Marking data. Please refresh the page or contact support if the problem
+          persists.
         </Typography>
       </Box>
     );
@@ -705,7 +739,9 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
             lineHeight: 1.6,
           }}
         >
-          Track your EU AI Act conformity assessment journey. High-risk AI systems require CE marking before being placed on the EU market, demonstrating compliance with safety, transparency, and fundamental rights requirements.
+          Track your EU AI Act conformity assessment journey. High-risk AI systems require CE
+          marking before being placed on the EU market, demonstrating compliance with safety,
+          transparency, and fundamental rights requirements.
         </Typography>
       </Box>
 
@@ -860,12 +896,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}
                   >
-                    {data.controlsTotal > 0 ? Math.round((data.controlsCompleted / data.controlsTotal) * 100) : 0}%
+                    {data.controlsTotal > 0
+                      ? Math.round((data.controlsCompleted / data.controlsTotal) * 100)
+                      : 0}
+                    %
                   </Typography>
                 </Stack>
                 <LinearProgress
                   variant="determinate"
-                  value={data.controlsTotal > 0 ? (data.controlsCompleted / data.controlsTotal) * 100 : 0}
+                  value={
+                    data.controlsTotal > 0 ? (data.controlsCompleted / data.controlsTotal) * 100 : 0
+                  }
                   sx={{
                     height: 8,
                     borderRadius: 4,
@@ -893,12 +934,19 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}
                   >
-                    {data.assessmentsTotal > 0 ? Math.round((data.assessmentsCompleted / data.assessmentsTotal) * 100) : 0}%
+                    {data.assessmentsTotal > 0
+                      ? Math.round((data.assessmentsCompleted / data.assessmentsTotal) * 100)
+                      : 0}
+                    %
                   </Typography>
                 </Stack>
                 <LinearProgress
                   variant="determinate"
-                  value={data.assessmentsTotal > 0 ? (data.assessmentsCompleted / data.assessmentsTotal) * 100 : 0}
+                  value={
+                    data.assessmentsTotal > 0
+                      ? (data.assessmentsCompleted / data.assessmentsTotal) * 100
+                      : 0
+                  }
                   sx={{
                     height: 8,
                     borderRadius: 4,
@@ -912,9 +960,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               </Box>
 
               <Box sx={{ display: "flex", justifyContent: "flex-end", paddingTop: "8px" }}>
-                <VWLink onClick={handleViewChecklist}>
-                  View detailed EU AI Act checklist
-                </VWLink>
+                <VWLink onClick={handleViewChecklist}>View detailed EU AI Act checklist</VWLink>
               </Box>
             </Stack>
           </CardContent>
@@ -971,9 +1017,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
             <Table>
               <TableHead>
                 <TableRow sx={getTableHeaderRowStyles()}>
-                  <TableCell sx={{ ...getTableHeaderCellStyles(), width: "60px" }}>
-                    #
-                  </TableCell>
+                  <TableCell sx={{ ...getTableHeaderCellStyles(), width: "60px" }}>#</TableCell>
                   <TableCell sx={getTableHeaderCellStyles()}>STEP</TableCell>
                   <TableCell sx={getTableHeaderCellStyles()}>STATUS</TableCell>
                   <TableCell sx={getTableHeaderCellStyles()}>OWNER</TableCell>
@@ -1139,7 +1183,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   DECLARATION DOCUMENT LINK
                 </Typography>
                 {data.declarationDocument ? (
-                  <VWLink url={ensureUrlProtocol(data.declarationDocument) || ''} openInNewTab={true}>
+                  <VWLink
+                    url={ensureUrlProtocol(data.declarationDocument) || ""}
+                    openInNewTab={true}
+                  >
                     {data.declarationDocument}
                   </VWLink>
                 ) : (
@@ -1256,7 +1303,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   EU RECORD URL
                 </Typography>
                 {data.euRecordUrl ? (
-                  <VWLink url={ensureUrlProtocol(data.euRecordUrl) || ''} openInNewTab={true}>
+                  <VWLink url={ensureUrlProtocol(data.euRecordUrl) || ""} openInNewTab={true}>
                     {data.euRecordUrl}
                   </VWLink>
                 ) : (
@@ -1323,9 +1370,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   >
                     {data.policiesLinked} policies linked to this use case.
                   </Typography>
-                  <VWLink onClick={handleOpenPoliciesModal}>
-                    Manage linked policies
-                  </VWLink>
+                  <VWLink onClick={handleOpenPoliciesModal}>Manage linked policies</VWLink>
                 </Stack>
               </Box>
 
@@ -1347,9 +1392,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   >
                     {data.evidenceLinked} evidence items.
                   </Typography>
-                  <VWLink onClick={handleOpenEvidencesModal}>
-                    Manage linked evidence
-                  </VWLink>
+                  <VWLink onClick={handleOpenEvidencesModal}>Manage linked evidence</VWLink>
                 </Stack>
               </Box>
             </Stack>
@@ -1390,9 +1433,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 </Typography>
               </Box>
 
-              <VWLink onClick={handleOpenIncidentsModal}>
-                View incidents for this use case
-              </VWLink>
+              <VWLink onClick={handleOpenIncidentsModal}>View incidents for this use case</VWLink>
             </Stack>
           </CardContent>
         </Card>
@@ -1442,7 +1483,12 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               <Select
                 id="conformity-step-owner"
                 label="Owner"
-                items={users?.map(user => ({ _id: String(user.id), name: `${user.name} ${user.surname}` })) || []}
+                items={
+                  users?.map((user) => ({
+                    _id: String(user.id),
+                    name: `${user.name} ${user.surname}`,
+                  })) || []
+                }
                 value={stepEditForm.owner}
                 onChange={(e) =>
                   setStepEditForm({ ...stepEditForm, owner: String(e.target.value) })
@@ -1525,10 +1571,13 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     content={
                       <>
                         <p>
-                          The signatory is the person who signs the EU Declaration of Conformity on behalf of the provider of the AI system. In practice it should be:
+                          The signatory is the person who signs the EU Declaration of Conformity on
+                          behalf of the provider of the AI system. In practice it should be:
                         </p>
                         <ul>
-                          <li>A natural person inside the company (or its authorised representative),</li>
+                          <li>
+                            A natural person inside the company (or its authorised representative),
+                          </li>
                           <li>Officially authorised to sign regulatory declarations,</li>
                           <li>Whose name and role appear on the declaration document</li>
                         </ul>
@@ -1583,7 +1632,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 placeholder="Enter document link or reference"
                 value={declarationEditForm.declarationDocument}
                 onChange={(e) =>
-                  setDeclarationEditForm({ ...declarationEditForm, declarationDocument: e.target.value })
+                  setDeclarationEditForm({
+                    ...declarationEditForm,
+                    declarationDocument: e.target.value,
+                  })
                 }
               />
             </Box>
@@ -1615,8 +1667,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
             <Typography component="span" sx={{ fontWeight: 600 }}>
               EU registration ID
             </Typography>{" "}
-            is the official ID/number assigned by the EU high-risk AI database for this
-            specific AI system.{" "}
+            is the official ID/number assigned by the EU high-risk AI database for this specific AI
+            system.{" "}
             <Typography component="span" sx={{ fontWeight: 600 }}>
               EU record URL
             </Typography>{" "}
@@ -1633,7 +1685,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 items={REGISTRATION_STATUS_OPTIONS}
                 value={registrationEditForm.status}
                 onChange={(e) =>
-                  setRegistrationEditForm({ ...registrationEditForm, status: String(e.target.value) })
+                  setRegistrationEditForm({
+                    ...registrationEditForm,
+                    status: String(e.target.value),
+                  })
                 }
               />
             </Box>
@@ -1645,7 +1700,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 placeholder="Enter registration ID"
                 value={registrationEditForm.euRegistrationId}
                 onChange={(e) =>
-                  setRegistrationEditForm({ ...registrationEditForm, euRegistrationId: e.target.value })
+                  setRegistrationEditForm({
+                    ...registrationEditForm,
+                    euRegistrationId: e.target.value,
+                  })
                 }
               />
             </Box>
@@ -1686,18 +1744,18 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         title="Link policies to CE Marking"
         description="Select policies to link with this CE Marking process. These policies will be included in your compliance documentation."
         onSubmit={handleSavePolicies}
-        submitButtonText={`Link ${selectedPolicies.length} ${selectedPolicies.length === 1 ? 'policy' : 'policies'}`}
+        submitButtonText={`Link ${selectedPolicies.length} ${selectedPolicies.length === 1 ? "policy" : "policies"}`}
         isSubmitting={saving}
         maxWidth="800px"
       >
         {loadingPolicies ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
             {availablePolicies.length === 0 ? (
-              <Typography sx={{ textAlign: 'center', py: 4, color: theme.palette.text.secondary }}>
+              <Typography sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
                 No policies available. Create policies in the Policies section first.
               </Typography>
             ) : (
@@ -1706,12 +1764,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={policy.id}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      padding: '12px',
-                      borderBottom: index < availablePolicies.length - 1 ? `1px solid ${theme.palette.border?.light || '#e0e0e0'}` : 'none',
-                      '&:hover': { backgroundColor: theme.palette.action?.hover || background.surface },
-                      cursor: 'pointer',
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "12px",
+                      borderBottom:
+                        index < availablePolicies.length - 1
+                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          : "none",
+                      "&:hover": {
+                        backgroundColor: theme.palette.action?.hover || background.surface,
+                      },
+                      cursor: "pointer",
                     }}
                     onClick={() => togglePolicy(policy.id)}
                   >
@@ -1725,18 +1788,27 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       />
                     </Box>
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}>
+                      <Typography
+                        sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}
+                      >
                         {policy.title}
                       </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ marginTop: 0.5 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ marginTop: 0.5 }}
+                      >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Status: {policy.status}
                         </Typography>
                         {policy.tags && policy.tags.length > 0 && (
                           <>
-                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Tags: {policy.tags.join(', ')}
+                              •
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                              Tags: {policy.tags.join(", ")}
                             </Typography>
                           </>
                         )}
@@ -1757,18 +1829,18 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         title="Link evidence files to CE Marking"
         description="Select evidence files to link with this CE Marking process. These files will serve as supporting documentation."
         onSubmit={handleSaveEvidences}
-        submitButtonText={`Link ${selectedEvidences.length} ${selectedEvidences.length === 1 ? 'file' : 'files'}`}
+        submitButtonText={`Link ${selectedEvidences.length} ${selectedEvidences.length === 1 ? "file" : "files"}`}
         isSubmitting={saving}
         maxWidth="800px"
       >
         {loadingEvidences ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
             {availableEvidences.length === 0 ? (
-              <Typography sx={{ textAlign: 'center', py: 4, color: theme.palette.text.secondary }}>
+              <Typography sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
                 No evidence files available. Upload files in the Files section first.
               </Typography>
             ) : (
@@ -1777,12 +1849,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={evidence.id}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      padding: '12px',
-                      borderBottom: index < availableEvidences.length - 1 ? `1px solid ${theme.palette.border?.light || '#e0e0e0'}` : 'none',
-                      '&:hover': { backgroundColor: theme.palette.action?.hover || background.surface },
-                      cursor: 'pointer',
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "12px",
+                      borderBottom:
+                        index < availableEvidences.length - 1
+                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          : "none",
+                      "&:hover": {
+                        backgroundColor: theme.palette.action?.hover || background.surface,
+                      },
+                      cursor: "pointer",
                     }}
                     onClick={() => toggleEvidence(evidence.id)}
                   >
@@ -1796,16 +1873,25 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       />
                     </Box>
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}>
+                      <Typography
+                        sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}
+                      >
                         {evidence.filename}
                       </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ marginTop: 0.5 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ marginTop: 0.5 }}
+                      >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Source: {evidence.source}
                         </Typography>
                         {evidence.project_title && (
                           <>
-                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
+                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                              •
+                            </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                               Project: {evidence.project_title}
                             </Typography>
@@ -1813,9 +1899,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                         )}
                         {evidence.uploaded_time && (
                           <>
-                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Uploaded: {dayjs(evidence.uploaded_time).format('MMM DD, YYYY')}
+                              •
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                              Uploaded: {dayjs(evidence.uploaded_time).format("MMM DD, YYYY")}
                             </Typography>
                           </>
                         )}
@@ -1836,18 +1924,18 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         title="Link incidents to CE Marking"
         description="Select incidents to link with this CE Marking process. These incidents will be included in your compliance documentation."
         onSubmit={handleSaveIncidents}
-        submitButtonText={`Link ${selectedIncidents.length} ${selectedIncidents.length === 1 ? 'incident' : 'incidents'}`}
+        submitButtonText={`Link ${selectedIncidents.length} ${selectedIncidents.length === 1 ? "incident" : "incidents"}`}
         isSubmitting={saving}
         maxWidth="800px"
       >
         {loadingIncidents ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
             {availableIncidents.length === 0 ? (
-              <Typography sx={{ textAlign: 'center', py: 4, color: theme.palette.text.secondary }}>
+              <Typography sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
                 No incidents available. Create incidents in the Incident Management section first.
               </Typography>
             ) : (
@@ -1856,12 +1944,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={incident.id}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      padding: '12px',
-                      borderBottom: index < availableIncidents.length - 1 ? `1px solid ${theme.palette.border?.light || '#e0e0e0'}` : 'none',
-                      '&:hover': { backgroundColor: theme.palette.action?.hover || background.surface },
-                      cursor: 'pointer',
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "12px",
+                      borderBottom:
+                        index < availableIncidents.length - 1
+                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          : "none",
+                      "&:hover": {
+                        backgroundColor: theme.palette.action?.hover || background.surface,
+                      },
+                      cursor: "pointer",
                     }}
                     onClick={() => toggleIncident(incident.id)}
                   >
@@ -1875,32 +1968,47 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       />
                     </Box>
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}>
+                      <Typography
+                        sx={{ fontSize: 14, fontWeight: 500, color: theme.palette.text.primary }}
+                      >
                         {incident.incident_id || `Incident #${incident.id}`}
                       </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ marginTop: 0.5 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ marginTop: 0.5 }}
+                      >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Type: {incident.type}
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
+                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                          •
+                        </Typography>
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Severity: {incident.severity}
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
+                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                          •
+                        </Typography>
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Status: {incident.status}
                         </Typography>
                         {incident.occurred_date && (
                           <>
-                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>•</Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Occurred: {dayjs(incident.occurred_date).format('MMM DD, YYYY')}
+                              •
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                              Occurred: {dayjs(incident.occurred_date).format("MMM DD, YYYY")}
                             </Typography>
                           </>
                         )}
                       </Stack>
                       {incident.description && (
-                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary, marginTop: 0.5 }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: theme.palette.text.secondary, marginTop: 0.5 }}
+                        >
                           {incident.description.length > 100
                             ? `${incident.description.substring(0, 100)}...`
                             : incident.description}
@@ -1918,7 +2026,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
       {/* Confirmation Dialog */}
       <StandardModal
         isOpen={confirmationDialog.isOpen}
-        onClose={() => setConfirmationDialog(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setConfirmationDialog((prev) => ({ ...prev, isOpen: false }))}
         title={confirmationDialog.title}
         description=""
         onSubmit={confirmationDialog.onConfirm}
@@ -1930,7 +2038,6 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
           {confirmationDialog.message}
         </Typography>
       </StandardModal>
-
     </Box>
   );
 };

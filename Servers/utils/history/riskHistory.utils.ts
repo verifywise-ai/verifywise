@@ -9,15 +9,11 @@ export async function recordHistorySnapshot(
   parameter: string,
   organizationId: number,
   triggered_by_user_id?: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel> {
   try {
     // Get current counts for the parameter
-    const snapshot_data = await getCurrentParameterCounts(
-      parameter,
-      organizationId,
-      transaction
-    );
+    const snapshot_data = await getCurrentParameterCounts(parameter, organizationId, transaction);
 
     // Create history snapshot
     const recorded_at = new Date();
@@ -39,15 +35,12 @@ export async function recordHistorySnapshot(
         mapToModel: true,
         model: RiskHistoryModel,
         transaction,
-      }
+      },
     );
 
     return result[0];
   } catch (error) {
-    console.error(
-      `Error recording history snapshot for parameter ${parameter}:`,
-      error
-    );
+    console.error(`Error recording history snapshot for parameter ${parameter}:`, error);
     throw error;
   }
 }
@@ -58,7 +51,7 @@ export async function recordHistorySnapshot(
 export async function getCurrentParameterCounts(
   parameter: string,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<Record<string, number>> {
   try {
     const counts: Record<string, number> = {};
@@ -74,17 +67,11 @@ export async function getCurrentParameterCounts(
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
-        }
+        },
       )) as Array<{ severity: string; count: string }>;
 
       // Initialize all severity levels to 0
-      const severityLevels = [
-        "Negligible",
-        "Minor",
-        "Moderate",
-        "Major",
-        "Catastrophic",
-      ];
+      const severityLevels = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"];
       severityLevels.forEach((severity) => {
         counts[severity] = 0;
       });
@@ -106,17 +93,11 @@ export async function getCurrentParameterCounts(
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
-        }
+        },
       )) as Array<{ likelihood: string; count: string }>;
 
       // Initialize all likelihood levels to 0
-      const likelihoodLevels = [
-        "Rare",
-        "Unlikely",
-        "Possible",
-        "Likely",
-        "Almost Certain",
-      ];
+      const likelihoodLevels = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
       likelihoodLevels.forEach((likelihood) => {
         counts[likelihood] = 0;
       });
@@ -138,7 +119,7 @@ export async function getCurrentParameterCounts(
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
-        }
+        },
       )) as Array<{ mitigation_status: string; count: string }>;
 
       // Initialize all mitigation statuses to 0
@@ -172,7 +153,7 @@ export async function getCurrentParameterCounts(
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
-        }
+        },
       )) as Array<{ risk_level_autocalculated: string; count: string }>;
 
       // Initialize all risk levels to 0
@@ -205,7 +186,7 @@ export async function getCurrentParameterCounts(
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
-        }
+        },
       )) as Array<{ [key: string]: any; count: string }>;
 
       paramCounts.forEach((row) => {
@@ -216,10 +197,7 @@ export async function getCurrentParameterCounts(
 
     return counts;
   } catch (error) {
-    console.error(
-      `Error getting current parameter counts for ${parameter}:`,
-      error
-    );
+    console.error(`Error getting current parameter counts for ${parameter}:`, error);
     throw error;
   }
 }
@@ -232,7 +210,7 @@ export async function getTimeseriesData(
   _startDate: Date,
   endDate: Date,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel[]> {
   try {
     // For proper interpolation, we need to include snapshots from before the start date
@@ -251,7 +229,7 @@ export async function getTimeseriesData(
           endDate,
         },
         transaction,
-      }
+      },
     )) as [RiskHistoryModel[], number];
 
     return snapshots[0];
@@ -265,7 +243,7 @@ async function getTimeseriesDataAtATime(
   parameter: string,
   date: Date,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel> {
   try {
     const snapshots = (await sequelize.query(
@@ -281,7 +259,7 @@ async function getTimeseriesDataAtATime(
           date,
         },
         transaction,
-      }
+      },
     )) as [RiskHistoryModel[], number];
 
     return snapshots[0][0];
@@ -300,7 +278,7 @@ export async function getTimeseriesWithInterpolation(
   endDate: Date,
   organizationId: number,
   intervalHours: number = 24,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<Array<{ timestamp: Date; data: Record<string, number> }>> {
   try {
     // Get actual snapshots from database
@@ -313,7 +291,7 @@ export async function getTimeseriesWithInterpolation(
       startDate,
       endDateInclusive,
       organizationId,
-      transaction
+      transaction,
     );
 
     if (snapshots.length === 0) {
@@ -383,7 +361,7 @@ export async function getTimeseriesWithInterpolation(
             parameter,
             timePoint,
             organizationId,
-            transaction
+            transaction,
           );
           if (snapshotBefore) {
             result.push({
@@ -422,7 +400,7 @@ export async function getTimeseriesForTimeframe(
   parameter: string,
   timeframe: "7days" | "15days" | "1month" | "3months" | "6months" | "1year",
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<Array<{ timestamp: Date; data: Record<string, number> }>> {
   const endDate = new Date();
   const startDate = new Date();
@@ -463,7 +441,7 @@ export async function getTimeseriesForTimeframe(
     endDate,
     organizationId,
     intervalHours,
-    transaction
+    transaction,
   );
 }
 
@@ -473,7 +451,7 @@ export async function getTimeseriesForTimeframe(
 export async function getLatestSnapshot(
   parameter: string,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel | null> {
   try {
     const snapshots = await sequelize.query(
@@ -486,7 +464,7 @@ export async function getLatestSnapshot(
         mapToModel: true,
         model: RiskHistoryModel,
         transaction,
-      }
+      },
     );
 
     return snapshots.length > 0 ? snapshots[0] : null;
@@ -503,7 +481,7 @@ export async function getSnapshotAtTime(
   parameter: string,
   timestamp: Date,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel | null> {
   try {
     const snapshots = await sequelize.query(
@@ -521,7 +499,7 @@ export async function getSnapshotAtTime(
         mapToModel: true,
         model: RiskHistoryModel,
         transaction,
-      }
+      },
     );
 
     return snapshots.length > 0 ? snapshots[0] : null;
@@ -537,25 +515,17 @@ export async function getSnapshotAtTime(
 export async function shouldRecordSnapshot(
   parameter: string,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   try {
-    const latestSnapshot = await getLatestSnapshot(
-      parameter,
-      organizationId,
-      transaction
-    );
+    const latestSnapshot = await getLatestSnapshot(parameter, organizationId, transaction);
 
     if (!latestSnapshot) {
       // No previous snapshot, should record
       return true;
     }
 
-    const currentCounts = await getCurrentParameterCounts(
-      parameter,
-      organizationId,
-      transaction
-    );
+    const currentCounts = await getCurrentParameterCounts(parameter, organizationId, transaction);
     const previousCounts = latestSnapshot.snapshot_data;
 
     // Compare current and previous counts
@@ -589,20 +559,16 @@ export async function recordSnapshotIfChanged(
   parameter: string,
   organizationId: number,
   triggered_by_user_id?: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<RiskHistoryModel | null> {
-  const shouldRecord = await shouldRecordSnapshot(
-    parameter,
-    organizationId,
-    transaction
-  );
+  const shouldRecord = await shouldRecordSnapshot(parameter, organizationId, transaction);
 
   if (shouldRecord) {
     return await recordHistorySnapshot(
       parameter,
       organizationId,
       triggered_by_user_id,
-      transaction
+      transaction,
     );
   }
 

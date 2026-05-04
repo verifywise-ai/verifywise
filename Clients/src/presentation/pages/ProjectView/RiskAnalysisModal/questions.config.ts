@@ -26,8 +26,7 @@ export const QUESTIONS: IQuestion[] = [
       },
       {
         value: "conversational_assistance",
-        label:
-          "Provide conversational assistance without making decisions about people",
+        label: "Provide conversational assistance without making decisions about people",
       },
       {
         value: "data_analysis",
@@ -47,8 +46,7 @@ export const QUESTIONS: IQuestion[] = [
     text: "In which domain are those decisions made?",
     inputType: "single_select",
     isRequired: true,
-    showCondition: (answers: IQuestionnaireAnswers) =>
-      answers.Q1 === "decisions_about_people",
+    showCondition: (answers: IQuestionnaireAnswers) => answers.Q1 === "decisions_about_people",
     options: [
       {
         value: "employment",
@@ -87,23 +85,19 @@ export const QUESTIONS: IQuestion[] = [
     text: "Which biometric function best describes your system?",
     inputType: "single_select",
     isRequired: true,
-    showCondition: (answers: IQuestionnaireAnswers) =>
-      answers.Q1 === "biometric_identification",
+    showCondition: (answers: IQuestionnaireAnswers) => answers.Q1 === "biometric_identification",
     options: [
       {
         value: "realtime_remote_biometric",
-        label:
-          "Real time remote biometric identification in publicly accessible spaces",
+        label: "Real time remote biometric identification in publicly accessible spaces",
       },
       {
         value: "post_biometric_identification",
-        label:
-          "Post or non real time biometric identification or one to many search",
+        label: "Post or non real time biometric identification or one to many search",
       },
       {
         value: "biometric_verification",
-        label:
-          "Biometric verification, one to one check to confirm a claimed identity",
+        label: "Biometric verification, one to one check to confirm a claimed identity",
       },
       {
         value: "emotion_recognition",
@@ -111,8 +105,7 @@ export const QUESTIONS: IQuestion[] = [
       },
       {
         value: "biometric_categorisation_sensitive",
-        label:
-          "Biometric categorisation inferring sensitive or protected attributes",
+        label: "Biometric categorisation inferring sensitive or protected attributes",
       },
       {
         value: "biometric_categorisation_non_sensitive",
@@ -127,8 +120,7 @@ export const QUESTIONS: IQuestion[] = [
     text: "Does your system generate or manipulate media that could be mistaken for real?",
     inputType: "single_select",
     isRequired: true,
-    showCondition: (answers: IQuestionnaireAnswers) =>
-      answers.Q1 === "generate_media",
+    showCondition: (answers: IQuestionnaireAnswers) => answers.Q1 === "generate_media",
     options: [
       { value: "yes", label: "Yes" },
       { value: "no", label: "No" },
@@ -226,8 +218,7 @@ export const QUESTIONS: IQuestion[] = [
       },
       {
         value: "prototype_sandbox",
-        label:
-          "Prototype in a controlled sandbox, not accessible to the public",
+        label: "Prototype in a controlled sandbox, not accessible to the public",
       },
     ],
   },
@@ -249,9 +240,7 @@ export const QUESTIONS: IQuestion[] = [
 /**
  * Helper function to get visible questions based on current answers
  */
-export const getVisibleQuestions = (
-  answers: IQuestionnaireAnswers,
-): IQuestion[] => {
+export const getVisibleQuestions = (answers: IQuestionnaireAnswers): IQuestion[] => {
   return QUESTIONS.filter((question) => {
     // If no show condition, always show
     if (!question.showCondition) return true;
@@ -268,9 +257,7 @@ export const getNextQuestion = (
   answers: IQuestionnaireAnswers,
 ): IQuestion | null => {
   const visibleQuestions = getVisibleQuestions(answers);
-  const currentIndex = visibleQuestions.findIndex(
-    (q) => q.id === currentQuestionId,
-  );
+  const currentIndex = visibleQuestions.findIndex((q) => q.id === currentQuestionId);
 
   if (currentIndex === -1 || currentIndex === visibleQuestions.length - 1) {
     return null;
@@ -287,9 +274,7 @@ export const getPreviousQuestion = (
   answers: IQuestionnaireAnswers,
 ): IQuestion | null => {
   const visibleQuestions = getVisibleQuestions(answers);
-  const currentIndex = visibleQuestions.findIndex(
-    (q) => q.id === currentQuestionId,
-  );
+  const currentIndex = visibleQuestions.findIndex((q) => q.id === currentQuestionId);
 
   if (currentIndex <= 0) {
     return null;
@@ -306,9 +291,7 @@ export const getProgress = (
   answers: IQuestionnaireAnswers,
 ): { current: number; total: number } => {
   const visibleQuestions = getVisibleQuestions(answers);
-  const currentIndex = visibleQuestions.findIndex(
-    (q) => q.id === currentQuestionId,
-  );
+  const currentIndex = visibleQuestions.findIndex((q) => q.id === currentQuestionId);
 
   return {
     current: currentIndex >= 0 ? currentIndex + 1 : 1,

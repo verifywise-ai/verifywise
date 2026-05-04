@@ -1,6 +1,6 @@
 /**
  * Data Transfer Objects (DTOs) for Project entity
- * 
+ *
  * DTOs represent the data structure as it comes from the API.
  * They are separate from domain models to maintain a clear boundary
  * between infrastructure (API) and domain layers.
@@ -40,7 +40,7 @@ export interface ProjectResponseDTO {
   status?: string;
   is_demo?: boolean;
   created_at?: string; // ISO date string from API
-  
+
   // Statistical fields (may be included in response)
   doneSubcontrols?: number;
   totalSubcontrols?: number;
@@ -108,4 +108,3 @@ export interface ProjectProgressDTO {
   totalAssessments?: number;
   [key: string]: unknown; // Allow additional fields
 }
-

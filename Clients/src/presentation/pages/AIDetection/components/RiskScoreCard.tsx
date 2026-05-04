@@ -214,23 +214,32 @@ function renderNarrative(text: string) {
   const paragraphs = text.split(/\n\n+/).filter(Boolean);
 
   // If only one paragraph and it's long, split on sentence boundaries
-  const blocks = paragraphs.length === 1 && paragraphs[0].length > 300
-    ? paragraphs[0].split(/(?<=\.)\s+(?=[A-Z])/).reduce<string[]>((acc, sentence) => {
-        const last = acc[acc.length - 1];
-        if (last && last.length + sentence.length < 250) {
-          acc[acc.length - 1] = `${last} ${sentence}`;
-        } else {
-          acc.push(sentence);
-        }
-        return acc;
-      }, [])
-    : paragraphs;
+  const blocks =
+    paragraphs.length === 1 && paragraphs[0].length > 300
+      ? paragraphs[0].split(/(?<=\.)\s+(?=[A-Z])/).reduce<string[]>((acc, sentence) => {
+          const last = acc[acc.length - 1];
+          if (last && last.length + sentence.length < 250) {
+            acc[acc.length - 1] = `${last} ${sentence}`;
+          } else {
+            acc.push(sentence);
+          }
+          return acc;
+        }, [])
+      : paragraphs;
 
   return blocks.map((block, i) => {
     // Handle **bold** markers within text
     const parts = block.split(/(\*\*[^*]+\*\*)/g);
     return (
-      <Typography key={i} sx={{ fontSize: 13, color: palette.text.secondary, mb: i < blocks.length - 1 ? "8px" : 0, lineHeight: 1.6 }}>
+      <Typography
+        key={i}
+        sx={{
+          fontSize: 13,
+          color: palette.text.secondary,
+          mb: i < blocks.length - 1 ? "8px" : 0,
+          lineHeight: 1.6,
+        }}
+      >
         {parts.map((part, j) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return <strong key={j}>{part.slice(2, -2)}</strong>;
@@ -250,7 +259,13 @@ function LLMSection({ details }: { details: RiskScoreDetails }) {
   return (
     <Box>
       <Box
-        sx={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", "&:hover": { opacity: 0.8 } }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          cursor: "pointer",
+          "&:hover": { opacity: 0.8 },
+        }}
         onClick={() => setShowLLMDetails(!showLLMDetails)}
       >
         {showLLMDetails ? (
@@ -259,16 +274,18 @@ function LLMSection({ details }: { details: RiskScoreDetails }) {
           <ChevronRight size={14} strokeWidth={1.5} color={palette.text.accent} />
         )}
         <Sparkles size={12} color={palette.accent.purple.text} strokeWidth={1.5} />
-        <Typography sx={{ fontSize: 13, color: palette.text.secondary, fontWeight: 500 }}>AI analysis</Typography>
+        <Typography sx={{ fontSize: 13, color: palette.text.secondary, fontWeight: 500 }}>
+          AI analysis
+        </Typography>
       </Box>
       <Collapse in={showLLMDetails}>
         <Box sx={{ mt: "12px", pl: "24px" }}>
-          <Box sx={{ mb: "12px" }}>
-            {renderNarrative(details.llm_narrative)}
-          </Box>
+          <Box sx={{ mb: "12px" }}>{renderNarrative(details.llm_narrative)}</Box>
           {details.llm_recommendations && details.llm_recommendations.length > 0 && (
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary, mb: "8px" }}>
+              <Typography
+                sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary, mb: "8px" }}
+              >
                 Recommendations
               </Typography>
               <Box sx={{ pl: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -277,8 +294,19 @@ function LLMSection({ details }: { details: RiskScoreDetails }) {
                   const parts = rec.split(/(\*\*[^*]+\*\*)/g);
                   return (
                     <Box key={i} sx={{ display: "flex", gap: "8px" }}>
-                      <Typography sx={{ fontSize: 13, color: palette.text.accent, lineHeight: 1.5, flexShrink: 0 }}>•</Typography>
-                      <Typography sx={{ fontSize: 13, color: palette.text.secondary, lineHeight: 1.5 }}>
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          color: palette.text.accent,
+                          lineHeight: 1.5,
+                          flexShrink: 0,
+                        }}
+                      >
+                        •
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 13, color: palette.text.secondary, lineHeight: 1.5 }}
+                      >
                         {parts.map((part, j) => {
                           if (part.startsWith("**") && part.endsWith("**")) {
                             return <strong key={j}>{part.slice(2, -2)}</strong>;
@@ -330,7 +358,8 @@ export function RiskScoreCard({
               AI governance risk score
             </Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.accent, mt: 1.5 }}>
-              No risk score has been calculated for this scan yet. Click "Calculate" to generate the AI Governance Risk Score.
+              No risk score has been calculated for this scan yet. Click "Calculate" to generate the
+              AI Governance Risk Score.
             </Typography>
           </CardContent>
         </Card>
@@ -354,7 +383,6 @@ export function RiskScoreCard({
     <Box sx={{ mb: 2 }}>
       {/* 4 cards in a row, 16px gap */}
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
-
         {/* Card 1 — Overall score */}
         <RiskStatCard
           title="Overall score"
@@ -379,7 +407,9 @@ export function RiskScoreCard({
           value={`${dimensionsAtRisk} / ${DIMENSION_ORDER.length}`}
           subtitle="Below 70 threshold"
           Icon={AlertTriangle}
-          valueColor={dimensionsAtRisk > 0 ? palette.status.error.text : palette.status.success.text}
+          valueColor={
+            dimensionsAtRisk > 0 ? palette.status.error.text : palette.status.success.text
+          }
         />
 
         {/* Card 4 — Dimension breakdown */}
@@ -429,7 +459,15 @@ export function RiskScoreCard({
               <BarChart3 size={64} />
             </Box>
 
-            <Box sx={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <Typography
                 sx={{
                   color: palette.status.default.text,
@@ -443,7 +481,15 @@ export function RiskScoreCard({
               </Typography>
 
               {details?.dimensions && (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, justifyContent: "center" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    flex: 1,
+                    justifyContent: "center",
+                  }}
+                >
                   {DIMENSION_ORDER.map((key) => {
                     const dim = details.dimensions[key];
                     if (!dim) return null;
@@ -451,12 +497,23 @@ export function RiskScoreCard({
                     return (
                       <Tooltip
                         key={key}
-                        title={dim.top_contributors.length > 0 ? dim.top_contributors.join(", ") : "No penalties"}
+                        title={
+                          dim.top_contributors.length > 0
+                            ? dim.top_contributors.join(", ")
+                            : "No penalties"
+                        }
                         placement="top"
                         arrow
                       >
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Typography sx={{ fontSize: 13, color: palette.text.secondary, minWidth: 100, lineHeight: 1 }}>
+                          <Typography
+                            sx={{
+                              fontSize: 13,
+                              color: palette.text.secondary,
+                              minWidth: 100,
+                              lineHeight: 1,
+                            }}
+                          >
                             {DIMENSION_LABELS[key]}
                           </Typography>
                           <Box sx={{ flex: 1 }}>
@@ -467,11 +524,23 @@ export function RiskScoreCard({
                                 height: 4,
                                 borderRadius: 2,
                                 backgroundColor: palette.border.light,
-                                "& .MuiLinearProgress-bar": { backgroundColor: barColor, borderRadius: 2 },
+                                "& .MuiLinearProgress-bar": {
+                                  backgroundColor: barColor,
+                                  borderRadius: 2,
+                                },
                               }}
                             />
                           </Box>
-                          <Typography sx={{ fontSize: 13, fontWeight: 600, color: barColor, minWidth: 24, textAlign: "right", lineHeight: 1 }}>
+                          <Typography
+                            sx={{
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: barColor,
+                              minWidth: 24,
+                              textAlign: "right",
+                              lineHeight: 1,
+                            }}
+                          >
                             {Math.round(dim.score)}
                           </Typography>
                         </Box>

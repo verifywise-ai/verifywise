@@ -1,5 +1,12 @@
 :root {
-  font-family: "Geist", system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-family:
+    "Geist",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    Helvetica,
+    Arial,
+    sans-serif;
 }
 
 /* Thin auto-hiding scrollbar for all scrollable areas */
@@ -68,7 +75,7 @@ html.dark-mode .MuiTooltip-popper {
 /* PageTour (react-joyride): counter-invert so dark tooltips stay dark */
 html.dark-mode .__floater,
 html.dark-mode .react-joyride__tooltip {
-  filter: invert(1) hue-rotate(180deg) drop-shadow(0 8px 32px rgba(255,255,255,0.15)) !important;
+  filter: invert(1) hue-rotate(180deg) drop-shadow(0 8px 32px rgba(255, 255, 255, 0.15)) !important;
 }
 
 /* PageTour beacon: counter-invert so green pulsing dot stays visible in dark mode */
@@ -76,12 +83,13 @@ html.dark-mode .react-joyride__beacon {
   filter: invert(1) hue-rotate(180deg) !important;
 }
 
-
 /* All modals/dialogs: subtle light glow in dark mode (not drawers) */
 html.dark-mode .MuiModal-root:not(.MuiDrawer-root) > :not(.MuiBackdrop-root),
 html.dark-mode .MuiDialog-paper,
 html.dark-mode [role="dialog"] {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15) !important;
+  box-shadow:
+    0 0 30px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Modal backdrops: use white so it inverts to dark overlay */
@@ -101,7 +109,9 @@ html.dark-mode .command-dialog {
 }
 
 html.dark-mode .command-dialog-content {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15) !important;
+  box-shadow:
+    0 0 30px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Wise Search welcome banner: counter-invert so dark card stays dark */

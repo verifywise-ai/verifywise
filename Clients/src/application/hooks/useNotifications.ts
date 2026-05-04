@@ -121,6 +121,8 @@ interface UseNotificationsReturn {
   markAsRead: (notificationId: number) => Promise<void>;
   /** Mark all notifications as read */
   markAllAsRead: () => Promise<void>;
+  /** Delete a notification */
+  deleteNotification: (notificationId: number) => Promise<void>;
   /** Refresh notifications from server */
   refresh: () => Promise<void>;
   /** Load more notifications */
@@ -163,6 +165,8 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 
   // State for stored notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const notificationsRef = useRef<Notification[]>([]);
+  notificationsRef.current = notifications;
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,7 +186,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 
     setIsLoading(true);
     try {
-      const response = await apiServices.get<{ data: NotificationSummary }>("/notifications/summary");
+      const response = await apiServices.get<{ data: NotificationSummary }>(
+        "/notifications/summary",
+      );
       const summary: NotificationSummary = response.data.data;
       setNotifications(summary.recent_notifications);
       setUnreadCount(summary.unread_count);
@@ -208,14 +214,14 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     setIsLoadingMore(true);
     try {
       const response = await apiServices.get<{ data: Notification[] }>(
-        `/notifications?limit=${PAGE_SIZE}&offset=${currentOffset}`
+        `/notifications?limit=${PAGE_SIZE}&offset=${currentOffset}`,
       );
       const moreNotifications: Notification[] = response.data.data;
 
       // Append to existing notifications, avoiding duplicates
-      setNotifications(prev => {
-        const existingIds = new Set(prev.map(n => n.id));
-        const newNotifications = moreNotifications.filter(n => !existingIds.has(n.id));
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id));
+        const newNotifications = moreNotifications.filter((n) => !existingIds.has(n.id));
         return [...prev, ...newNotifications];
       });
     } catch (error) {
@@ -231,14 +237,12 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
       await apiServices.patch(`/notifications/${notificationId}/read`);
-      setNotifications(prev =>
-        prev.map(n =>
-          n.id === notificationId
-            ? { ...n, is_read: true, read_at: new Date().toISOString() }
-            : n
-        )
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n,
+        ),
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
       throw error;
@@ -251,16 +255,32 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const markAllAsRead = useCallback(async () => {
     try {
       await apiServices.patch("/notifications/read-all");
-      setNotifications(prev =>
-        prev.map(n => ({
+      setNotifications((prev) =>
+        prev.map((n) => ({
           ...n,
           is_read: true,
           read_at: n.read_at || new Date().toISOString(),
-        }))
+        })),
       );
       setUnreadCount(0);
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
+      throw error;
+    }
+  }, []);
+
+  const deleteNotification = useCallback(async (notificationId: number) => {
+    try {
+      await apiServices.delete(`/notifications/${notificationId}`);
+      const target = notificationsRef.current.find((n) => n.id === notificationId);
+      if (!target) return;
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      if (!target.is_read) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
       throw error;
     }
   }, []);
@@ -275,61 +295,64 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   /**
    * Display notification using existing alert system
    */
-  const displayNotification = useCallback((notification: Notification) => {
-    // Skip "connected" type - it's just for internal handshake
-    if (notification.type === "connected") {
-      return;
-    }
-
-    // Call the onNotification callback if provided
-    if (onNotification) {
-      onNotification(notification);
-    }
-
-    // Add to local state if it has an ID (stored notification)
-    if (notification.id) {
-      setNotifications(prev => {
-        // Prevent duplicates
-        if (prev.some(n => n.id === notification.id)) return prev;
-        // Add to beginning (no limit since we support pagination now)
-        return [notification, ...prev];
-      });
-      if (!notification.is_read) {
-        setUnreadCount(prev => prev + 1);
+  const displayNotification = useCallback(
+    (notification: Notification) => {
+      // Skip "connected" type - it's just for internal handshake
+      if (notification.type === "connected") {
+        return;
       }
-      setTotalCount(prev => prev + 1);
-    }
 
-    // Map notification types to alert variants
-    const alertVariants: Record<string, "success" | "info" | "warning" | "error"> = {
-      task_assigned: "info",
-      task_completed: "success",
-      review_requested: "info",
-      review_approved: "success",
-      review_rejected: "warning",
-      approval_requested: "info",
-      approval_approved: "success",
-      approval_rejected: "error",
-      approval_complete: "success",
-      policy_due_soon: "warning",
-      policy_overdue: "error",
-      training_assigned: "info",
-      training_completed: "success",
-      vendor_review_due: "warning",
-      file_uploaded: "info",
-      comment_added: "info",
-      mention: "info",
-      system: "info",
-    };
+      // Call the onNotification callback if provided
+      if (onNotification) {
+        onNotification(notification);
+      }
 
-    const variant = alertVariants[notification.type] || "info";
+      // Add to local state if it has an ID (stored notification)
+      if (notification.id) {
+        setNotifications((prev) => {
+          // Prevent duplicates
+          if (prev.some((n) => n.id === notification.id)) return prev;
+          // Add to beginning (no limit since we support pagination now)
+          return [notification, ...prev];
+        });
+        if (!notification.is_read) {
+          setUnreadCount((prev) => prev + 1);
+        }
+        setTotalCount((prev) => prev + 1);
+      }
 
-    showAlert({
-      variant,
-      title: notification.title,
-      body: notification.message || "You have a new notification",
-    });
-  }, [onNotification]);
+      // Map notification types to alert variants
+      const alertVariants: Record<string, "success" | "info" | "warning" | "error"> = {
+        task_assigned: "info",
+        task_completed: "success",
+        review_requested: "info",
+        review_approved: "success",
+        review_rejected: "warning",
+        approval_requested: "info",
+        approval_approved: "success",
+        approval_rejected: "error",
+        approval_complete: "success",
+        policy_due_soon: "warning",
+        policy_overdue: "error",
+        training_assigned: "info",
+        training_completed: "success",
+        vendor_review_due: "warning",
+        file_uploaded: "info",
+        comment_added: "info",
+        mention: "info",
+        system: "info",
+      };
+
+      const variant = alertVariants[notification.type] || "info";
+
+      showAlert({
+        variant,
+        title: notification.title,
+        body: notification.message || "You have a new notification",
+      });
+    },
+    [onNotification],
+  );
 
   /**
    * Connect to SSE endpoint using fetch() with Authorization header
@@ -360,18 +383,18 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 
       // Use fetch() instead of EventSource to send custom headers
       const headers: Record<string, string> = {
-        'Authorization': `Bearer ${authToken}`,
-        'Accept': 'text/event-stream',
+        Authorization: `Bearer ${authToken}`,
+        Accept: "text/event-stream",
       };
 
       // Include X-Organization-Id for super-admin org context
       const activeOrgId = store.getState().auth.activeOrganizationId;
       if (activeOrgId) {
-        headers['X-Organization-Id'] = String(activeOrgId);
+        headers["X-Organization-Id"] = String(activeOrgId);
       }
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers,
         signal: abortController.signal,
       });
@@ -381,7 +404,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       }
 
       if (!response.body) {
-        throw new Error('Response body is null');
+        throw new Error("Response body is null");
       }
 
       setIsConnected(true);
@@ -389,7 +412,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       // Read the stream
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer = "";
 
       // Process the stream
       while (true) {
@@ -403,20 +426,20 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
         buffer += decoder.decode(value, { stream: true });
 
         // Process complete messages (separated by \n\n)
-        const messages = buffer.split('\n\n');
-        buffer = messages.pop() || ''; // Keep incomplete message in buffer
+        const messages = buffer.split("\n\n");
+        buffer = messages.pop() || ""; // Keep incomplete message in buffer
 
         for (const message of messages) {
           if (!message.trim()) continue;
 
           // Parse SSE message format
-          const lines = message.split('\n');
-          let data = '';
+          const lines = message.split("\n");
+          let data = "";
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
+            if (line.startsWith("data: ")) {
               data = line.substring(6); // Remove "data: " prefix
-            } else if (line.startsWith(':')) {
+            } else if (line.startsWith(":")) {
               // Ignore comments (heartbeat)
               continue;
             }
@@ -444,7 +467,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       setIsConnected(false);
 
       // Don't reconnect if manually aborted
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         return;
       }
 
@@ -499,7 +522,11 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   // Reconnect when tab becomes visible or network comes back online
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !isConnected && !isManuallyDisconnectedRef.current) {
+      if (
+        document.visibilityState === "visible" &&
+        !isConnected &&
+        !isManuallyDisconnectedRef.current
+      ) {
         // Tab became visible and we're not connected - reconnect
         connect();
       }
@@ -512,12 +539,12 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
     };
   }, [connect, isConnected]);
 
@@ -543,6 +570,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     hasMore,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     refresh,
     loadMore,
   };

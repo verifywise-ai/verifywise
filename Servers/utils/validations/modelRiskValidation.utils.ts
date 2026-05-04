@@ -10,11 +10,11 @@ import {
   validateForeignKey,
   validateSchema,
   ValidationResult,
-  ValidationError
-} from './validation.utils';
-import { ModelRiskCategory } from '../../domain.layer/enums/model-risk-category.enum';
-import { ModelRiskLevel } from '../../domain.layer/enums/model-risk-level.enum';
-import { ModelRiskStatus } from '../../domain.layer/enums/model-risk-status.enum';
+  ValidationError,
+} from "./validation.utils";
+import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
+import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
+import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
 
 /**
  * Validation constants for model risks
@@ -24,7 +24,7 @@ export const MODEL_RISK_VALIDATION_LIMITS = {
   OWNER: { MIN: 2, MAX: 100 },
   DESCRIPTION: { MIN: 10, MAX: 2000 },
   MITIGATION_PLAN: { MIN: 10, MAX: 2000 },
-  NOTES: { MIN: 1, MAX: 1000 }
+  NOTES: { MIN: 1, MAX: 1000 },
 } as const;
 
 /**
@@ -46,11 +46,11 @@ export const MODEL_RISK_STATUS_ENUM = Object.values(ModelRiskStatus);
  * Validates risk name field
  */
 export const validateRiskName = (value: any): ValidationResult => {
-  return validateString(value, 'Risk name', {
+  return validateString(value, "Risk name", {
     required: true,
     minLength: MODEL_RISK_VALIDATION_LIMITS.RISK_NAME.MIN,
     maxLength: MODEL_RISK_VALIDATION_LIMITS.RISK_NAME.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -58,32 +58,32 @@ export const validateRiskName = (value: any): ValidationResult => {
  * Validates risk category field
  */
 export const validateRiskCategory = (value: any): ValidationResult => {
-  return validateEnum(value, 'Risk category', MODEL_RISK_CATEGORY_ENUM, true);
+  return validateEnum(value, "Risk category", MODEL_RISK_CATEGORY_ENUM, true);
 };
 
 /**
  * Validates risk level field
  */
 export const validateRiskLevel = (value: any): ValidationResult => {
-  return validateEnum(value, 'Risk level', MODEL_RISK_LEVEL_ENUM, true);
+  return validateEnum(value, "Risk level", MODEL_RISK_LEVEL_ENUM, true);
 };
 
 /**
  * Validates model risk status field
  */
 export const validateModelRiskStatus = (value: any): ValidationResult => {
-  return validateEnum(value, 'Risk status', MODEL_RISK_STATUS_ENUM, true);
+  return validateEnum(value, "Risk status", MODEL_RISK_STATUS_ENUM, true);
 };
 
 /**
  * Validates owner field
  */
 export const validateOwner = (value: any): ValidationResult => {
-  return validateString(value, 'Owner', {
+  return validateString(value, "Owner", {
     required: true,
     minLength: MODEL_RISK_VALIDATION_LIMITS.OWNER.MIN,
     maxLength: MODEL_RISK_VALIDATION_LIMITS.OWNER.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -91,22 +91,22 @@ export const validateOwner = (value: any): ValidationResult => {
  * Validates target date field
  */
 export const validateTargetDate = (value: any): ValidationResult => {
-  return validateDate(value, 'Target date', { required: true });
+  return validateDate(value, "Target date", { required: true });
 };
 
 /**
  * Validates description field (optional)
  */
 export const validateDescription = (value: any): ValidationResult => {
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Description is optional
   }
 
-  return validateString(value, 'Description', {
+  return validateString(value, "Description", {
     required: false,
     minLength: MODEL_RISK_VALIDATION_LIMITS.DESCRIPTION.MIN,
     maxLength: MODEL_RISK_VALIDATION_LIMITS.DESCRIPTION.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -114,15 +114,15 @@ export const validateDescription = (value: any): ValidationResult => {
  * Validates mitigation plan field (optional)
  */
 export const validateMitigationPlan = (value: any): ValidationResult => {
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Mitigation plan is optional
   }
 
-  return validateString(value, 'Mitigation plan', {
+  return validateString(value, "Mitigation plan", {
     required: false,
     minLength: MODEL_RISK_VALIDATION_LIMITS.MITIGATION_PLAN.MIN,
     maxLength: MODEL_RISK_VALIDATION_LIMITS.MITIGATION_PLAN.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -130,15 +130,15 @@ export const validateMitigationPlan = (value: any): ValidationResult => {
  * Validates notes field (optional)
  */
 export const validateNotes = (value: any): ValidationResult => {
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Notes are optional
   }
 
-  return validateString(value, 'Notes', {
+  return validateString(value, "Notes", {
     required: false,
     minLength: MODEL_RISK_VALIDATION_LIMITS.NOTES.MIN,
     maxLength: MODEL_RISK_VALIDATION_LIMITS.NOTES.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -146,7 +146,7 @@ export const validateNotes = (value: any): ValidationResult => {
  * Validates model risk ID parameter
  */
 export const validateModelRiskIdParam = (id: any): ValidationResult => {
-  return validateForeignKey(id, 'Model risk ID', true);
+  return validateForeignKey(id, "Model risk ID", true);
 };
 
 /**
@@ -161,7 +161,7 @@ export const createModelRiskSchema = {
   targetDate: validateTargetDate,
   description: validateDescription,
   mitigationPlan: validateMitigationPlan,
-  notes: validateNotes
+  notes: validateNotes,
 };
 
 /**
@@ -177,7 +177,7 @@ export const updateModelRiskSchema = {
   targetDate: validateTargetDate,
   description: validateDescription,
   mitigationPlan: validateMitigationPlan,
-  notes: validateNotes
+  notes: validateNotes,
 };
 
 /**
@@ -208,9 +208,9 @@ export const validateModelRiskCreationBusinessRules = (data: any): ValidationErr
 
     if (targetDate <= today) {
       errors.push({
-        field: 'targetDate',
-        message: 'Target date must be in the future',
-        code: 'INVALID_TARGET_DATE'
+        field: "targetDate",
+        message: "Target date must be in the future",
+        code: "INVALID_TARGET_DATE",
       });
     }
 
@@ -220,21 +220,25 @@ export const validateModelRiskCreationBusinessRules = (data: any): ValidationErr
 
     if (targetDate > oneYearFromNow) {
       errors.push({
-        field: 'targetDate',
-        message: 'Target date more than one year in the future may indicate unrealistic timeline',
-        code: 'DISTANT_TARGET_DATE'
+        field: "targetDate",
+        message: "Target date more than one year in the future may indicate unrealistic timeline",
+        code: "DISTANT_TARGET_DATE",
       });
     }
   }
 
   // Validate risk level and mitigation plan consistency
   if (data.riskLevel && data.mitigationPlan) {
-    const highRiskLevels = ['High', 'Critical'];
-    if (highRiskLevels.includes(data.riskLevel) && (!data.mitigationPlan || data.mitigationPlan.length < 50)) {
+    const highRiskLevels = ["High", "Critical"];
+    if (
+      highRiskLevels.includes(data.riskLevel) &&
+      (!data.mitigationPlan || data.mitigationPlan.length < 50)
+    ) {
       errors.push({
-        field: 'mitigationPlan',
-        message: 'High and Critical risk levels require detailed mitigation plans (minimum 50 characters)',
-        code: 'INSUFFICIENT_MITIGATION_PLAN'
+        field: "mitigationPlan",
+        message:
+          "High and Critical risk levels require detailed mitigation plans (minimum 50 characters)",
+        code: "INSUFFICIENT_MITIGATION_PLAN",
       });
     }
   }
@@ -263,23 +267,23 @@ export const validateModelRiskCreationBusinessRules = (data: any): ValidationErr
 
   // Validate owner format (should include full name)
   if (data.owner) {
-    if (!data.owner.includes(' ') || data.owner.length < 5) {
+    if (!data.owner.includes(" ") || data.owner.length < 5) {
       errors.push({
-        field: 'owner',
-        message: 'Owner should include full name (first and last name)',
-        code: 'INVALID_OWNER_FORMAT'
+        field: "owner",
+        message: "Owner should include full name (first and last name)",
+        code: "INVALID_OWNER_FORMAT",
       });
     }
   }
 
   // Validate status for new risks
   if (data.status) {
-    const validInitialStatuses = ['Open'];
+    const validInitialStatuses = ["Open"];
     if (!validInitialStatuses.includes(data.status)) {
       errors.push({
-        field: 'status',
+        field: "status",
         message: 'New model risks should start with "Open" status',
-        code: 'INVALID_INITIAL_STATUS'
+        code: "INVALID_INITIAL_STATUS",
       });
     }
   }
@@ -305,26 +309,41 @@ export const validateModelRiskCreationBusinessRules = (data: any): ValidationErr
 /**
  * Business rule validation for model risk updates
  */
-export const validateModelRiskUpdateBusinessRules = (data: any, existingData?: any): ValidationError[] => {
+export const validateModelRiskUpdateBusinessRules = (
+  data: any,
+  existingData?: any,
+): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Validate status transitions
   if (data.status && existingData?.status) {
     const invalidTransitions = [
-      { from: 'Resolved', to: 'Open', message: 'Cannot reopen resolved risks without proper justification' },
-      { from: 'Accepted', to: 'Open', message: 'Cannot reopen accepted risks without risk committee approval' },
-      { from: 'Resolved', to: 'In Progress', message: 'Resolved risks should not be moved back to in progress' }
+      {
+        from: "Resolved",
+        to: "Open",
+        message: "Cannot reopen resolved risks without proper justification",
+      },
+      {
+        from: "Accepted",
+        to: "Open",
+        message: "Cannot reopen accepted risks without risk committee approval",
+      },
+      {
+        from: "Resolved",
+        to: "In Progress",
+        message: "Resolved risks should not be moved back to in progress",
+      },
     ];
 
     const invalidTransition = invalidTransitions.find(
-      t => t.from === existingData.status && t.to === data.status
+      (t) => t.from === existingData.status && t.to === data.status,
     );
 
     if (invalidTransition) {
       errors.push({
-        field: 'status',
+        field: "status",
         message: invalidTransition.message,
-        code: 'INVALID_STATUS_TRANSITION'
+        code: "INVALID_STATUS_TRANSITION",
       });
     }
   }
@@ -336,11 +355,11 @@ export const validateModelRiskUpdateBusinessRules = (data: any, existingData?: a
     today.setHours(0, 0, 0, 0);
 
     // Allow past dates for resolved/accepted risks
-    if (data.status && !['Resolved', 'Accepted'].includes(data.status) && targetDate <= today) {
+    if (data.status && !["Resolved", "Accepted"].includes(data.status) && targetDate <= today) {
       errors.push({
-        field: 'targetDate',
-        message: 'Target date must be in the future for active risks',
-        code: 'INVALID_TARGET_DATE'
+        field: "targetDate",
+        message: "Target date must be in the future for active risks",
+        code: "INVALID_TARGET_DATE",
       });
     }
 
@@ -348,12 +367,15 @@ export const validateModelRiskUpdateBusinessRules = (data: any, existingData?: a
     if (existingData?.targetDate) {
       const existingTargetDate = new Date(existingData.targetDate);
       if (targetDate > existingTargetDate) {
-        const daysDifference = Math.ceil((targetDate.getTime() - existingTargetDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDifference = Math.ceil(
+          (targetDate.getTime() - existingTargetDate.getTime()) / (1000 * 60 * 60 * 24),
+        );
         if (daysDifference > 30) {
           errors.push({
-            field: 'targetDate',
-            message: 'Moving target date more than 30 days into the future may indicate scope creep',
-            code: 'SIGNIFICANT_DATE_EXTENSION'
+            field: "targetDate",
+            message:
+              "Moving target date more than 30 days into the future may indicate scope creep",
+            code: "SIGNIFICANT_DATE_EXTENSION",
           });
         }
       }
@@ -361,33 +383,33 @@ export const validateModelRiskUpdateBusinessRules = (data: any, existingData?: a
   }
 
   // Validate mitigation plan requirements for status changes
-  if (data.status === 'In Progress' && (!data.mitigationPlan || data.mitigationPlan.length < 20)) {
+  if (data.status === "In Progress" && (!data.mitigationPlan || data.mitigationPlan.length < 20)) {
     errors.push({
-      field: 'mitigationPlan',
+      field: "mitigationPlan",
       message: 'Moving risk to "In Progress" requires a detailed mitigation plan',
-      code: 'MITIGATION_PLAN_REQUIRED'
+      code: "MITIGATION_PLAN_REQUIRED",
     });
   }
 
-  if (data.status === 'Resolved' && (!data.mitigationPlan || data.mitigationPlan.length < 50)) {
+  if (data.status === "Resolved" && (!data.mitigationPlan || data.mitigationPlan.length < 50)) {
     errors.push({
-      field: 'mitigationPlan',
-      message: 'Resolving risk requires comprehensive documentation of mitigation actions taken',
-      code: 'RESOLUTION_DOCUMENTATION_REQUIRED'
+      field: "mitigationPlan",
+      message: "Resolving risk requires comprehensive documentation of mitigation actions taken",
+      code: "RESOLUTION_DOCUMENTATION_REQUIRED",
     });
   }
 
   // Validate risk level escalation
   if (data.riskLevel && existingData?.riskLevel) {
-    const riskLevelHierarchy = ['Low', 'Medium', 'High', 'Critical'];
+    const riskLevelHierarchy = ["Low", "Medium", "High", "Critical"];
     const currentLevel = riskLevelHierarchy.indexOf(existingData.riskLevel);
     const newLevel = riskLevelHierarchy.indexOf(data.riskLevel);
 
     if (newLevel > currentLevel + 1) {
       errors.push({
-        field: 'riskLevel',
-        message: 'Escalating risk level by more than one tier requires additional justification',
-        code: 'SIGNIFICANT_RISK_ESCALATION'
+        field: "riskLevel",
+        message: "Escalating risk level by more than one tier requires additional justification",
+        code: "SIGNIFICANT_RISK_ESCALATION",
       });
     }
   }
@@ -408,7 +430,10 @@ export const validateCompleteModelRiskCreation = (data: any): ValidationError[] 
 /**
  * Complete validation for model risk updates with business rules
  */
-export const validateCompleteModelRiskUpdate = (data: any, existingData?: any): ValidationError[] => {
+export const validateCompleteModelRiskUpdate = (
+  data: any,
+  existingData?: any,
+): ValidationError[] => {
   const validationErrors = validateUpdateModelRisk(data);
   const businessErrors = validateModelRiskUpdateBusinessRules(data, existingData);
 

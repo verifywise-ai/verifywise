@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  NotFoundException,
-} from "../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../exceptions/custom.exception";
 
 // Mock sequelize-typescript
 jest.mock("sequelize-typescript", () => ({
@@ -79,12 +76,7 @@ class TestProjectRiskModel {
   mitigation_plan!: string;
   implementation_strategy!: string;
   mitigation_evidence_document!: string;
-  likelihood_mitigation!:
-    | "Rare"
-    | "Unlikely"
-    | "Possible"
-    | "Likely"
-    | "Almost Certain";
+  likelihood_mitigation!: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   risk_severity!: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
   final_risk_level!: string;
   risk_approval!: number;
@@ -100,25 +92,22 @@ class TestProjectRiskModel {
   // Static method to create new project risk
   static async createProjectRisk(
     projectRiskData: any,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestProjectRiskModel> {
     // Validate required fields
     if (!projectRiskData.project_id || projectRiskData.project_id < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        projectRiskData.project_id
+        projectRiskData.project_id,
       );
     }
 
-    if (
-      !projectRiskData.risk_name ||
-      projectRiskData.risk_name.trim().length === 0
-    ) {
+    if (!projectRiskData.risk_name || projectRiskData.risk_name.trim().length === 0) {
       throw new ValidationException(
         "Risk name is required",
         "risk_name",
-        projectRiskData.risk_name
+        projectRiskData.risk_name,
       );
     }
 
@@ -126,18 +115,15 @@ class TestProjectRiskModel {
       throw new ValidationException(
         "Valid risk owner is required (must be >= 1)",
         "risk_owner",
-        projectRiskData.risk_owner
+        projectRiskData.risk_owner,
       );
     }
 
-    if (
-      !projectRiskData.risk_description ||
-      projectRiskData.risk_description.trim().length === 0
-    ) {
+    if (!projectRiskData.risk_description || projectRiskData.risk_description.trim().length === 0) {
       throw new ValidationException(
         "Risk description is required",
         "risk_description",
-        projectRiskData.risk_description
+        projectRiskData.risk_description,
       );
     }
 
@@ -158,7 +144,7 @@ class TestProjectRiskModel {
         throw new ValidationException(
           "Valid project ID is required (must be >= 1)",
           "project_id",
-          updateData.project_id
+          updateData.project_id,
         );
       }
       this.project_id = updateData.project_id;
@@ -167,11 +153,7 @@ class TestProjectRiskModel {
     // Validate risk_name if provided
     if (updateData.risk_name !== undefined) {
       if (!updateData.risk_name || updateData.risk_name.trim().length === 0) {
-        throw new ValidationException(
-          "Risk name is required",
-          "risk_name",
-          updateData.risk_name
-        );
+        throw new ValidationException("Risk name is required", "risk_name", updateData.risk_name);
       }
       this.risk_name = updateData.risk_name.trim();
     }
@@ -182,7 +164,7 @@ class TestProjectRiskModel {
         throw new ValidationException(
           "Valid risk owner is required (must be >= 1)",
           "risk_owner",
-          updateData.risk_owner
+          updateData.risk_owner,
         );
       }
       this.risk_owner = updateData.risk_owner;
@@ -190,14 +172,11 @@ class TestProjectRiskModel {
 
     // Validate risk_description if provided
     if (updateData.risk_description !== undefined) {
-      if (
-        !updateData.risk_description ||
-        updateData.risk_description.trim().length === 0
-      ) {
+      if (!updateData.risk_description || updateData.risk_description.trim().length === 0) {
         throw new ValidationException(
           "Risk description is required",
           "risk_description",
-          updateData.risk_description
+          updateData.risk_description,
         );
       }
       this.risk_description = updateData.risk_description.trim();
@@ -261,8 +240,7 @@ class TestProjectRiskModel {
     }
 
     if (updateData.mitigation_evidence_document !== undefined) {
-      this.mitigation_evidence_document =
-        updateData.mitigation_evidence_document;
+      this.mitigation_evidence_document = updateData.mitigation_evidence_document;
     }
 
     if (updateData.likelihood_mitigation !== undefined) {
@@ -296,23 +274,19 @@ class TestProjectRiskModel {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
 
     if (!this.risk_name || this.risk_name.trim().length === 0) {
-      throw new ValidationException(
-        "Risk name is required",
-        "risk_name",
-        this.risk_name
-      );
+      throw new ValidationException("Risk name is required", "risk_name", this.risk_name);
     }
 
     if (!this.risk_owner || this.risk_owner < 1) {
       throw new ValidationException(
         "Valid risk owner is required (must be >= 1)",
         "risk_owner",
-        this.risk_owner
+        this.risk_owner,
       );
     }
 
@@ -320,7 +294,7 @@ class TestProjectRiskModel {
       throw new ValidationException(
         "Risk description is required",
         "risk_description",
-        this.risk_description
+        this.risk_description,
       );
     }
   }
@@ -365,15 +339,9 @@ class TestProjectRiskModel {
   }
 
   // Static method to find project risk by ID with validation
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TestProjectRiskModel> {
+  static async findByIdWithValidation(id: number): Promise<TestProjectRiskModel> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     // Mock database lookup
@@ -392,14 +360,12 @@ class TestProjectRiskModel {
   }
 
   // Static method to find project risks by project ID
-  static async findByProjectId(
-    projectId: number
-  ): Promise<TestProjectRiskModel[]> {
+  static async findByProjectId(projectId: number): Promise<TestProjectRiskModel[]> {
     if (!projectId || projectId < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "projectId",
-        projectId
+        projectId,
       );
     }
 
@@ -424,14 +390,12 @@ class TestProjectRiskModel {
   }
 
   // Static method to find project risks by risk owner
-  static async findByRiskOwner(
-    riskOwnerId: number
-  ): Promise<TestProjectRiskModel[]> {
+  static async findByRiskOwner(riskOwnerId: number): Promise<TestProjectRiskModel[]> {
     if (!riskOwnerId || riskOwnerId < 1) {
       throw new ValidationException(
         "Valid risk owner ID is required (must be >= 1)",
         "riskOwnerId",
-        riskOwnerId
+        riskOwnerId,
       );
     }
 
@@ -450,14 +414,10 @@ class TestProjectRiskModel {
   // Static method to update project risk by ID
   static async updateProjectRiskById(
     id: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestProjectRiskModel[]]> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return [1, [new TestProjectRiskModel({ id, ...updateData })]];
@@ -466,11 +426,7 @@ class TestProjectRiskModel {
   // Static method to delete project risk by ID
   static async deleteProjectRiskById(id: number): Promise<number> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return 1;
@@ -512,8 +468,7 @@ describe("ProjectRiskModel", () => {
 
   describe("createProjectRisk", () => {
     it("should create project risk with valid data", async () => {
-      const projectRisk =
-        await TestProjectRiskModel.createProjectRisk(validData);
+      const projectRisk = await TestProjectRiskModel.createProjectRisk(validData);
 
       expect(projectRisk).toBeInstanceOf(TestProjectRiskModel);
       expect(projectRisk.project_id).toBe(1);
@@ -525,10 +480,7 @@ describe("ProjectRiskModel", () => {
     });
 
     it("should create with custom is_demo value", async () => {
-      const projectRisk = await TestProjectRiskModel.createProjectRisk(
-        validData,
-        true
-      );
+      const projectRisk = await TestProjectRiskModel.createProjectRisk(validData, true);
 
       expect(projectRisk.is_demo).toBe(true);
     });
@@ -538,7 +490,7 @@ describe("ProjectRiskModel", () => {
         TestProjectRiskModel.createProjectRisk({
           ...validData,
           project_id: 0,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -547,7 +499,7 @@ describe("ProjectRiskModel", () => {
         TestProjectRiskModel.createProjectRisk({
           ...validData,
           risk_name: "",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -556,7 +508,7 @@ describe("ProjectRiskModel", () => {
         TestProjectRiskModel.createProjectRisk({
           ...validData,
           risk_owner: 0,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -565,7 +517,7 @@ describe("ProjectRiskModel", () => {
         TestProjectRiskModel.createProjectRisk({
           ...validData,
           risk_description: "",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -586,33 +538,33 @@ describe("ProjectRiskModel", () => {
     it("should throw ValidationException for invalid project_id in update", async () => {
       const projectRisk = new TestProjectRiskModel(validData);
 
-      await expect(
-        projectRisk.updateProjectRisk({ project_id: 0 })
-      ).rejects.toThrow(ValidationException);
+      await expect(projectRisk.updateProjectRisk({ project_id: 0 })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for empty risk_name in update", async () => {
       const projectRisk = new TestProjectRiskModel(validData);
 
-      await expect(
-        projectRisk.updateProjectRisk({ risk_name: "" })
-      ).rejects.toThrow(ValidationException);
+      await expect(projectRisk.updateProjectRisk({ risk_name: "" })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid risk_owner in update", async () => {
       const projectRisk = new TestProjectRiskModel(validData);
 
-      await expect(
-        projectRisk.updateProjectRisk({ risk_owner: 0 })
-      ).rejects.toThrow(ValidationException);
+      await expect(projectRisk.updateProjectRisk({ risk_owner: 0 })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for empty risk_description in update", async () => {
       const projectRisk = new TestProjectRiskModel(validData);
 
-      await expect(
-        projectRisk.updateProjectRisk({ risk_description: "" })
-      ).rejects.toThrow(ValidationException);
+      await expect(projectRisk.updateProjectRisk({ risk_description: "" })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -620,9 +572,7 @@ describe("ProjectRiskModel", () => {
     it("should pass validation with valid data", async () => {
       const projectRisk = new TestProjectRiskModel(validData);
 
-      await expect(
-        projectRisk.validateProjectRiskData()
-      ).resolves.not.toThrow();
+      await expect(projectRisk.validateProjectRiskData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
@@ -631,9 +581,7 @@ describe("ProjectRiskModel", () => {
         project_id: 0,
       });
 
-      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty risk_name", async () => {
@@ -642,9 +590,7 @@ describe("ProjectRiskModel", () => {
         risk_name: "",
       });
 
-      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid risk_owner", async () => {
@@ -653,9 +599,7 @@ describe("ProjectRiskModel", () => {
         risk_owner: 0,
       });
 
-      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty risk_description", async () => {
@@ -664,9 +608,7 @@ describe("ProjectRiskModel", () => {
         risk_description: "",
       });
 
-      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectRisk.validateProjectRiskData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -723,15 +665,15 @@ describe("ProjectRiskModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestProjectRiskModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectRiskModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestProjectRiskModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestProjectRiskModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -745,9 +687,7 @@ describe("ProjectRiskModel", () => {
     });
 
     it("should throw ValidationException for invalid project ID", async () => {
-      await expect(TestProjectRiskModel.findByProjectId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestProjectRiskModel.findByProjectId(0)).rejects.toThrow(ValidationException);
     });
   });
 
@@ -760,18 +700,15 @@ describe("ProjectRiskModel", () => {
     });
 
     it("should throw ValidationException for invalid risk owner ID", async () => {
-      await expect(TestProjectRiskModel.findByRiskOwner(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestProjectRiskModel.findByRiskOwner(0)).rejects.toThrow(ValidationException);
     });
   });
 
   describe("updateProjectRiskById", () => {
     it("should update project risk by ID", async () => {
-      const [affected, updated] =
-        await TestProjectRiskModel.updateProjectRiskById(1, {
-          risk_name: "Updated Risk",
-        });
+      const [affected, updated] = await TestProjectRiskModel.updateProjectRiskById(1, {
+        risk_name: "Updated Risk",
+      });
 
       expect(affected).toBe(1);
       expect(updated).toHaveLength(1);
@@ -780,7 +717,7 @@ describe("ProjectRiskModel", () => {
 
     it("should throw ValidationException for invalid ID", async () => {
       await expect(
-        TestProjectRiskModel.updateProjectRiskById(0, { risk_name: "Updated" })
+        TestProjectRiskModel.updateProjectRiskById(0, { risk_name: "Updated" }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -793,9 +730,9 @@ describe("ProjectRiskModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestProjectRiskModel.deleteProjectRiskById(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectRiskModel.deleteProjectRiskById(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 });

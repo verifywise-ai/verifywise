@@ -38,7 +38,7 @@ export const recordVendorChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "vendor",
@@ -49,7 +49,7 @@ export const recordVendorChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -62,7 +62,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "vendor",
@@ -70,7 +70,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -82,15 +82,9 @@ export const getVendorChangeHistory = async (
   vendorId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "vendor",
-    vendorId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("vendor", vendorId, organizationId, limit, offset);
 };
 
 /**
@@ -99,7 +93,7 @@ export const getVendorChangeHistory = async (
  */
 export const trackVendorChanges = async (
   oldVendor: VendorModel,
-  newVendor: Partial<VendorModel>
+  newVendor: Partial<VendorModel>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("vendor", oldVendor, newVendor);
 };
@@ -113,7 +107,7 @@ export const recordVendorCreation = async (
   changedByUserId: number,
   organizationId: number,
   vendorData: Partial<VendorModel>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "vendor",
@@ -121,7 +115,7 @@ export const recordVendorCreation = async (
     changedByUserId,
     organizationId,
     vendorData,
-    transaction
+    transaction,
   );
 };
 
@@ -133,13 +127,7 @@ export const recordVendorDeletion = async (
   vendorId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
-  return recordEntityDeletion(
-    "vendor",
-    vendorId,
-    changedByUserId,
-    organizationId,
-    transaction
-  );
+  return recordEntityDeletion("vendor", vendorId, changedByUserId, organizationId, transaction);
 };

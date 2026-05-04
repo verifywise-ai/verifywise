@@ -1,22 +1,22 @@
-import type { CSSProperties } from 'react';
-import { SxProps, Theme } from '@mui/material';
+import type { CSSProperties } from "react";
+import { SxProps, Theme } from "@mui/material";
 import { brand, text, border as borderPalette, status } from "../../themes/palette";
 
 // Design system colors (from CLAUDE.md)
 const COLORS = {
   primary: `${brand.primary}`,
-  primaryLight: '#f0fdf4',
+  primaryLight: "#f0fdf4",
   border: `${borderPalette.dark}`,
   borderLight: `${status.default.border}`,
   textPrimary: `${text.secondary}`,
   textSecondary: `${text.icon}`,
   textTertiary: `${text.disabled}`,
-  background: '#fafafa',
+  background: "#fafafa",
 } as const;
 
 // Container styles
 export const graphContainerStyle: CSSProperties = {
-  position: 'absolute',
+  position: "absolute",
   top: 0,
   left: 0,
   right: 0,
@@ -26,11 +26,11 @@ export const graphContainerStyle: CSSProperties = {
 
 // Loading state styles
 export const loadingContainerSx: SxProps<Theme> = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100vh',
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "100vh",
   gap: 2,
 };
 
@@ -44,7 +44,7 @@ export const loadingProgressSx: SxProps<Theme> = {
   height: 8,
   borderRadius: 4,
   backgroundColor: COLORS.borderLight,
-  '& .MuiLinearProgress-bar': {
+  "& .MuiLinearProgress-bar": {
     backgroundColor: COLORS.primary,
     borderRadius: 4,
   },
@@ -57,19 +57,19 @@ export const loadingPercentSx: SxProps<Theme> = {
 
 // Error state styles
 export const errorContainerSx: SxProps<Theme> = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100vh',
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "100vh",
 };
 
 // Empty state styles
 export const emptyStateContainerSx: SxProps<Theme> = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: 'calc(100vh - 64px)',
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "calc(100vh - 64px)",
   gap: 2,
   backgroundColor: COLORS.background,
 };
@@ -83,16 +83,16 @@ export const emptyStateTitleSx: SxProps<Theme> = {
 export const emptyStateDescriptionSx: SxProps<Theme> = {
   fontSize: 13,
   color: COLORS.textSecondary,
-  textAlign: 'center',
+  textAlign: "center",
   maxWidth: 300,
 };
 
 // Preparing state styles
 export const preparingContainerSx: SxProps<Theme> = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: 'calc(100vh - 64px)',
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "calc(100vh - 64px)",
   backgroundColor: COLORS.background,
 };
 
@@ -102,25 +102,25 @@ export const preparingTextSx: SxProps<Theme> = {
 
 // Control panel styles
 export const controlPanelSx: SxProps<Theme> = {
-  gap: '8px',
-  p: '12px',
-  backgroundColor: 'white',
-  borderRadius: '8px',
+  gap: "8px",
+  p: "12px",
+  backgroundColor: "white",
+  borderRadius: "8px",
   border: `1px solid ${COLORS.border}`,
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   minWidth: 280,
   maxWidth: 320,
 };
 
 export const problemsToggleRowSx: SxProps<Theme> = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
 };
 
 export const problemsToggleLabelContainerSx: SxProps<Theme> = {
-  display: 'flex',
-  alignItems: 'center',
+  display: "flex",
+  alignItems: "center",
   gap: 1,
 };
 
@@ -137,19 +137,19 @@ export const entityTypesLabelSx: SxProps<Theme> = {
 };
 
 export const toggleButtonGroupSx: SxProps<Theme> = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  columnGap: '4px',
-  rowGap: '8px',
+  display: "flex",
+  flexWrap: "wrap",
+  columnGap: "4px",
+  rowGap: "8px",
   maxWidth: 220,
-  '& .MuiToggleButton-root': {
+  "& .MuiToggleButton-root": {
     border: `1px solid ${COLORS.border}`,
-    borderRadius: '4px !important',
-    textTransform: 'none',
+    borderRadius: "4px !important",
+    textTransform: "none",
     fontSize: 11,
     py: 0.5,
     px: 1,
-    '&.Mui-selected': {
+    "&.Mui-selected": {
       backgroundColor: COLORS.primaryLight,
       borderColor: COLORS.primary,
       color: COLORS.primary,
@@ -160,13 +160,13 @@ export const toggleButtonGroupSx: SxProps<Theme> = {
 export const colorDotSx = (color: string): SxProps<Theme> => ({
   width: 8,
   height: 8,
-  borderRadius: '50%',
+  borderRadius: "50%",
   backgroundColor: color,
   mr: 0.5,
 });
 
 export const statsContainerSx: SxProps<Theme> = {
-  pt: '8px',
+  pt: "8px",
   borderTop: `1px solid ${COLORS.borderLight}`,
 };
 

@@ -4,30 +4,27 @@
  * Note: Questions only have GET routes, no CREATE/UPDATE operations via API
  */
 
-import {
-  validateForeignKey,
-  ValidationResult
-} from './validation.utils';
+import { validateForeignKey, ValidationResult } from "./validation.utils";
 
 /**
  * Validates question ID for existing records
  */
 export const validateQuestionId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Question ID', true);
+  return validateForeignKey(value, "Question ID", true);
 };
 
 /**
  * Validates subtopic ID for queries
  */
 export const validateSubtopicId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Subtopic ID', true);
+  return validateForeignKey(value, "Subtopic ID", true);
 };
 
 /**
  * Validates topic ID for queries
  */
 export const validateTopicId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Topic ID', true);
+  return validateForeignKey(value, "Topic ID", true);
 };
 
 /**

@@ -143,7 +143,9 @@ describe("user.repository", () => {
       const result = await createNewUser({ userData });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/users/register", userData, { headers: undefined });
+      expect(apiServices.post).toHaveBeenCalledWith("/users/register", userData, {
+        headers: undefined,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -166,7 +168,7 @@ describe("user.repository", () => {
         password: "password123",
       };
 
-      const headers = { "Authorization": "Bearer token" };
+      const headers = { Authorization: "Bearer token" };
 
       vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
 
@@ -536,7 +538,7 @@ describe("user.repository", () => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        })
+        }),
       );
       expect(result).toEqual(mockResponse);
     });

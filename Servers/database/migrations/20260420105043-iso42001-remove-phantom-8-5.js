@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * ISO 42001 phantom subclause 8.5 "Third-party relationships" removal.

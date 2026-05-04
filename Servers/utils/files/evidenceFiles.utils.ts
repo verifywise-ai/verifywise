@@ -30,7 +30,7 @@ export async function getEvidenceFilesForEntity(
   frameworkType: string,
   entityType: string,
   entityId: number,
-  linkType: string = "evidence"
+  linkType: string = "evidence",
 ): Promise<EvidenceFile[]> {
   const result = await sequelize.query(
     `SELECT
@@ -52,7 +52,7 @@ export async function getEvidenceFilesForEntity(
     {
       replacements: { organizationId, frameworkType, entityType, entityId, linkType },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return result as EvidenceFile[];
@@ -67,7 +67,7 @@ export async function getEvidenceFilesForEntities(
   frameworkType: string,
   entityType: string,
   entityIds: number[],
-  linkType: string = "evidence"
+  linkType: string = "evidence",
 ): Promise<Map<number, EvidenceFile[]>> {
   if (entityIds.length === 0) {
     return new Map();
@@ -93,7 +93,7 @@ export async function getEvidenceFilesForEntities(
     {
       replacements: { organizationId, frameworkType, entityType, entityIds, linkType },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   // Group by entity_id
@@ -127,7 +127,7 @@ export async function createFileEntityLink(
   entityId: number,
   linkType: string = "evidence",
   createdBy?: number,
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   await sequelize.query(
     `INSERT INTO file_entity_links
@@ -135,9 +135,17 @@ export async function createFileEntityLink(
      VALUES (:organizationId, :fileId, :frameworkType, :entityType, :entityId, :linkType, :createdBy, NOW())
      ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
     {
-      replacements: { organizationId, fileId, frameworkType, entityType, entityId, linkType, createdBy },
+      replacements: {
+        organizationId,
+        fileId,
+        frameworkType,
+        entityType,
+        entityId,
+        linkType,
+        createdBy,
+      },
       ...(transaction && { transaction }),
-    }
+    },
   );
 }
 
@@ -150,7 +158,7 @@ export async function deleteFileEntityLink(
   frameworkType: string,
   entityType: string,
   entityId: number,
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   await sequelize.query(
     `DELETE FROM file_entity_links
@@ -162,7 +170,7 @@ export async function deleteFileEntityLink(
     {
       replacements: { organizationId, fileId, frameworkType, entityType, entityId },
       ...(transaction && { transaction }),
-    }
+    },
   );
 }
 
@@ -175,7 +183,7 @@ export async function getEvidenceFilesForEntityTypes(
   frameworkType: string,
   entityTypes: string[],
   entityId: number,
-  linkType: string = "evidence"
+  linkType: string = "evidence",
 ): Promise<Record<string, EvidenceFile[]>> {
   if (entityTypes.length === 0) {
     return {};
@@ -202,7 +210,7 @@ export async function getEvidenceFilesForEntityTypes(
     {
       replacements: { organizationId, frameworkType, entityTypes, entityId, linkType },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const map: Record<string, EvidenceFile[]> = {};
@@ -231,7 +239,7 @@ export async function getEvidenceFilesForEntityTypes(
 export async function deleteFileEntityLinkById(
   linkId: number,
   organizationId: number,
-  transaction?: any
+  transaction?: any,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `DELETE FROM file_entity_links
@@ -242,7 +250,7 @@ export async function deleteFileEntityLinkById(
       replacements: { linkId, organizationId },
       type: QueryTypes.DELETE,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   return Array.isArray(result) && result.length > 0;
@@ -256,7 +264,7 @@ export async function deleteAllFileEntityLinksForEntity(
   frameworkType: string,
   entityType: string,
   entityId: number,
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   await sequelize.query(
     `DELETE FROM file_entity_links
@@ -267,7 +275,7 @@ export async function deleteAllFileEntityLinksForEntity(
     {
       replacements: { organizationId, frameworkType, entityType, entityId },
       ...(transaction && { transaction }),
-    }
+    },
   );
 }
 
@@ -280,7 +288,7 @@ export async function deleteAllFileEntityLinksForEntities(
   frameworkType: string,
   entityType: string,
   entityIds: number[],
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   if (entityIds.length === 0) {
     return;
@@ -294,7 +302,7 @@ export async function deleteAllFileEntityLinksForEntities(
     {
       replacements: { organizationId, frameworkType, entityType, entityIds },
       ...(transaction && { transaction }),
-    }
+    },
   );
 }
 
@@ -306,7 +314,7 @@ export async function deleteAllFileEntityLinksForFramework(
   organizationId: number,
   frameworkType: string,
   projectId: number,
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   // Delete by joining with files to filter by project_id
   await sequelize.query(
@@ -319,6 +327,6 @@ export async function deleteAllFileEntityLinksForFramework(
     {
       replacements: { organizationId, frameworkType, projectId },
       ...(transaction && { transaction }),
-    }
+    },
   );
 }

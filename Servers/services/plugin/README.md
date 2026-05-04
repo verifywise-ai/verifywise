@@ -7,27 +7,32 @@ A comprehensive plugin architecture for extending VerifyWise functionality with 
 The plugin system consists of several layers:
 
 ### 1. **Database Layer** (`/utils/pluginInstallation.utils.ts`)
+
 - Raw SQL queries for plugin installation records
 - Tenant-scoped data using `plugin_installations` table
 - Tracks installation status, configuration, and metadata
 
 ### 2. **Service Layer** (`/services/plugin/pluginService.ts`)
+
 - Business logic for plugin management
 - Loads and executes plugin code dynamically
 - Handles plugin lifecycle (install, uninstall, configure)
 - Fetches plugins from marketplace
 
 ### 3. **Controller Layer** (`/controllers/plugin.ctrl.ts`)
+
 - HTTP request handlers
 - Authentication and authorization
 - Request validation and error handling
 
 ### 4. **Routes** (`/routes/plugin.route.ts`)
+
 - REST API endpoints for plugin operations
 - Rate limiting for installation endpoints
 - JWT authentication middleware
 
 ### 5. **Plugin Marketplace** (`/plugin-marketplace/`)
+
 - Plugin registry (`plugins.json`)
 - Plugin source code (`plugins/<plugin-key>/index.ts`)
 - Plugin metadata and dependencies
@@ -53,12 +58,14 @@ CREATE TABLE plugin_installations (
 ## API Endpoints
 
 ### Marketplace Endpoints
+
 - `GET /api/plugins/marketplace` - Get all available plugins
 - `GET /api/plugins/marketplace/:key` - Get plugin by key
 - `GET /api/plugins/marketplace/search?q=query` - Search plugins
 - `GET /api/plugins/categories` - Get plugin categories
 
 ### Installation Management
+
 - `POST /api/plugins/install` - Install a plugin
 - `DELETE /api/plugins/installations/:id` - Uninstall a plugin
 - `GET /api/plugins/installations` - Get installed plugins
@@ -71,14 +78,16 @@ Each plugin must export the following methods:
 ### Required Methods
 
 #### `install(userId: number, organizationId: number, config: any): Promise<InstallResult>`
+
 Called when a user installs the plugin.
 
 **Example:**
+
 ```typescript
 export async function install(
   userId: number,
   organizationId: number,
-  config: any
+  config: any,
 ): Promise<InstallResult> {
   // Initialize plugin state
   // Create database records
@@ -93,14 +102,13 @@ export async function install(
 ```
 
 #### `uninstall(userId: number, organizationId: number): Promise<UninstallResult>`
+
 Called when a user uninstalls the plugin.
 
 **Example:**
+
 ```typescript
-export async function uninstall(
-  userId: number,
-  organizationId: number
-): Promise<UninstallResult> {
+export async function uninstall(userId: number, organizationId: number): Promise<UninstallResult> {
   // Clean up plugin state
   // Remove database records
   // Unregister webhooks
@@ -114,14 +122,16 @@ export async function uninstall(
 ```
 
 #### `configure(userId: number, organizationId: number, config: any): Promise<ConfigureResult>`
+
 Called when a user updates plugin configuration.
 
 **Example:**
+
 ```typescript
 export async function configure(
   userId: number,
   organizationId: number,
-  config: any
+  config: any,
 ): Promise<ConfigureResult> {
   // Validate configuration
   // Update plugin settings
@@ -165,11 +175,7 @@ interface PluginConfig {
 }
 
 // Install method
-export async function install(
-  userId: number,
-  organizationId: number,
-  config: PluginConfig
-) {
+export async function install(userId: number, organizationId: number, config: PluginConfig) {
   // Implementation
   return {
     success: true,
@@ -179,10 +185,7 @@ export async function install(
 }
 
 // Uninstall method
-export async function uninstall(
-  userId: number,
-  organizationId: number
-) {
+export async function uninstall(userId: number, organizationId: number) {
   // Implementation
   return {
     success: true,
@@ -192,11 +195,7 @@ export async function uninstall(
 }
 
 // Configure method
-export async function configure(
-  userId: number,
-  organizationId: number,
-  config: PluginConfig
-) {
+export async function configure(userId: number, organizationId: number, config: PluginConfig) {
   // Implementation
   return {
     success: true,
@@ -328,10 +327,13 @@ export async function install(userId: number, organizationId: number, config: an
 Plugins are written in TypeScript and loaded using `ts-node/register`. The service automatically detects `.ts` entry points and enables TypeScript support.
 
 ### Development
+
 In development, plugins are loaded directly from the `plugin-marketplace` directory.
 
 ### Production
+
 In production, plugins would be:
+
 1. Compiled to JavaScript
 2. Downloaded from a Git repository
 3. Cached locally
@@ -350,16 +352,16 @@ In production, plugins would be:
 
 ```typescript
 // Example test
-import { install, uninstall, configure } from './index';
+import { install, uninstall, configure } from "./index";
 
-describe('My Plugin', () => {
-  it('should install successfully', async () => {
-    const result = await install(1, 1, { apiKey: 'test' });
+describe("My Plugin", () => {
+  it("should install successfully", async () => {
+    const result = await install(1, 1, { apiKey: "test" });
     expect(result.success).toBe(true);
   });
 
-  it('should validate configuration', async () => {
-    const result = await configure(1, 1, { apiKey: 'invalid' });
+  it("should validate configuration", async () => {
+    const result = await configure(1, 1, { apiKey: "invalid" });
     // Assert behavior
   });
 });
@@ -381,22 +383,26 @@ describe('My Plugin', () => {
 ## Example Plugins
 
 See the following examples:
+
 - **MLflow** (`plugins/mlflow/index.ts`) - ML model tracking integration
 - **Slack** (`plugins/slack/index.ts`) - Team notification integration
 
 ## Troubleshooting
 
 ### Plugin fails to load
+
 - Check that `ts-node` is installed: `npm install -D ts-node`
 - Verify plugin path in `plugins.json`
 - Check for syntax errors in plugin code
 
 ### Installation fails
+
 - Check database connection
 - Verify tenant hash is correct
 - Check plugin permissions
 
 ### Configuration not saving
+
 - Verify configuration schema
 - Check API endpoint permissions
 - Review server logs for errors

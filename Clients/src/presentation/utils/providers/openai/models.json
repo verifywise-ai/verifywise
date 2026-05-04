@@ -2,15 +2,76 @@
   "provider": "openai",
   "displayName": "OpenAI",
   "models": [
-    { "id": "gpt-4.1-mini", "name": "GPT-4.1 Mini (Recommended)", "description": "Best value for AI advisor tasks", "inputCost": 0.40, "outputCost": 1.60, "recommended": true },
-    { "id": "gpt-4.1-nano", "name": "GPT-4.1 Nano", "description": "Cheapest option, good for simple queries", "inputCost": 0.10, "outputCost": 0.40 },
-    { "id": "gpt-4.1", "name": "GPT-4.1", "description": "More capable, higher cost", "inputCost": 2.00, "outputCost": 8.00 },
-    { "id": "gpt-4o-mini", "name": "GPT-4o Mini", "description": "Fast and affordable", "inputCost": 0.15, "outputCost": 0.60 },
-    { "id": "gpt-4o", "name": "GPT-4o", "description": "Omni model", "inputCost": 2.50, "outputCost": 10.00 },
-    { "id": "gpt-5-mini", "name": "GPT-5 Mini", "description": "Compact GPT-5", "inputCost": 0.25, "outputCost": 2.00 },
-    { "id": "gpt-5-nano", "name": "GPT-5 Nano", "description": "Smallest GPT-5", "inputCost": 0.05, "outputCost": 0.40 },
-    { "id": "gpt-5", "name": "GPT-5", "description": "Fifth generation", "inputCost": 1.25, "outputCost": 10.00 },
-    { "id": "gpt-5.1", "name": "GPT-5.1", "description": "Previous flagship", "inputCost": 1.25, "outputCost": 10.00 },
-    { "id": "gpt-5.2", "name": "GPT-5.2", "description": "Latest flagship model", "inputCost": 1.75, "outputCost": 14.00 }
+    {
+      "id": "gpt-4.1-mini",
+      "name": "GPT-4.1 Mini (Recommended)",
+      "description": "Best value for AI advisor tasks",
+      "inputCost": 0.4,
+      "outputCost": 1.6,
+      "recommended": true
+    },
+    {
+      "id": "gpt-4.1-nano",
+      "name": "GPT-4.1 Nano",
+      "description": "Cheapest option, good for simple queries",
+      "inputCost": 0.1,
+      "outputCost": 0.4
+    },
+    {
+      "id": "gpt-4.1",
+      "name": "GPT-4.1",
+      "description": "More capable, higher cost",
+      "inputCost": 2.0,
+      "outputCost": 8.0
+    },
+    {
+      "id": "gpt-4o-mini",
+      "name": "GPT-4o Mini",
+      "description": "Fast and affordable",
+      "inputCost": 0.15,
+      "outputCost": 0.6
+    },
+    {
+      "id": "gpt-4o",
+      "name": "GPT-4o",
+      "description": "Omni model",
+      "inputCost": 2.5,
+      "outputCost": 10.0
+    },
+    {
+      "id": "gpt-5-mini",
+      "name": "GPT-5 Mini",
+      "description": "Compact GPT-5",
+      "inputCost": 0.25,
+      "outputCost": 2.0
+    },
+    {
+      "id": "gpt-5-nano",
+      "name": "GPT-5 Nano",
+      "description": "Smallest GPT-5",
+      "inputCost": 0.05,
+      "outputCost": 0.4
+    },
+    {
+      "id": "gpt-5",
+      "name": "GPT-5",
+      "description": "Fifth generation",
+      "inputCost": 1.25,
+      "outputCost": 10.0
+    },
+    {
+      "id": "gpt-5.1",
+      "name": "GPT-5.1",
+      "description": "Previous flagship",
+      "inputCost": 1.25,
+      "outputCost": 10.0
+    },
+    {
+      "id": "gpt-5.2",
+      "name": "GPT-5.2",
+      "description": "Latest flagship model",
+      "inputCost": 1.75,
+      "outputCost": 14.0
+    }
   ]
 }

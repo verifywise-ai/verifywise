@@ -5,7 +5,7 @@
  * Based on DeepEval's LLM Arena: https://deepeval.com/docs/getting-started-llm-arena
  */
 
-import CustomAxios from './customAxios';
+import CustomAxios from "./customAxios";
 
 // Types for Arena functionality
 export interface ArenaTestCase {
@@ -25,7 +25,13 @@ export interface ArenaContestant {
 export interface ArenaMetricConfig {
   name: string;
   criteria: string;
-  evaluationParams: ('input' | 'actual_output' | 'expected_output' | 'context' | 'retrieval_context')[];
+  evaluationParams: (
+    | "input"
+    | "actual_output"
+    | "expected_output"
+    | "context"
+    | "retrieval_context"
+  )[];
 }
 
 export interface CreateArenaComparisonRequest {
@@ -36,7 +42,7 @@ export interface CreateArenaComparisonRequest {
   datasetPath?: string;
   metric: ArenaMetricConfig;
   judgeModel?: string;
-  apiKeys?: Record<string, string>;  // Provider -> API key mapping
+  apiKeys?: Record<string, string>; // Provider -> API key mapping
 }
 
 export interface ArenaComparisonResult {
@@ -63,7 +69,7 @@ export interface ArenaComparison {
   contestantNames: string[];
   metricConfig: ArenaMetricConfig;
   judgeModel: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress?: string;
   winner?: string;
   winCounts: Record<string, number>;
@@ -79,7 +85,7 @@ export interface ArenaComparisonSummary {
   id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   contestants: string[];
   winner?: string;
   dataset?: string;
@@ -87,7 +93,7 @@ export interface ArenaComparisonSummary {
   completedAt?: string;
 }
 
-const BASE_URL = '/deepeval';
+const BASE_URL = "/deepeval";
 
 // API timeout for arena operations (matches experiments)
 const API_TIMEOUT_MS = 60000;
@@ -113,7 +119,10 @@ class DeepEvalArenaService {
     comparisons: ArenaComparisonSummary[];
   }> {
     // Match experiments timeout (60s)
-    const response = await CustomAxios.get(`${BASE_URL}/arena/comparisons`, { params, timeout: API_TIMEOUT_MS });
+    const response = await CustomAxios.get(`${BASE_URL}/arena/comparisons`, {
+      params,
+      timeout: API_TIMEOUT_MS,
+    });
     return response.data;
   }
 
@@ -123,14 +132,16 @@ class DeepEvalArenaService {
   async getComparisonStatus(comparisonId: string): Promise<{
     id: string;
     name: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: "pending" | "running" | "completed" | "failed";
     progress?: string;
     contestants: string[];
     createdAt: string;
     updatedAt?: string;
   }> {
     // Match experiments timeout (60s)
-    const response = await CustomAxios.get(`${BASE_URL}/arena/comparisons/${comparisonId}`, { timeout: API_TIMEOUT_MS });
+    const response = await CustomAxios.get(`${BASE_URL}/arena/comparisons/${comparisonId}`, {
+      timeout: API_TIMEOUT_MS,
+    });
     return response.data;
   }
 
@@ -141,7 +152,7 @@ class DeepEvalArenaService {
     id: string;
     name: string;
     description?: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: "pending" | "running" | "completed" | "failed";
     metric: ArenaMetricConfig;
     judgeModel: string;
     results: {
@@ -160,7 +171,10 @@ class DeepEvalArenaService {
     errorMessage?: string;
   }> {
     // Match experiments timeout (60s)
-    const response = await CustomAxios.get(`${BASE_URL}/arena/comparisons/${comparisonId}/results`, { timeout: API_TIMEOUT_MS });
+    const response = await CustomAxios.get(
+      `${BASE_URL}/arena/comparisons/${comparisonId}/results`,
+      { timeout: API_TIMEOUT_MS },
+    );
     return response.data;
   }
 
@@ -172,10 +186,11 @@ class DeepEvalArenaService {
     id: string;
   }> {
     // Delete operations should also have reasonable timeout
-    const response = await CustomAxios.delete(`${BASE_URL}/arena/comparisons/${comparisonId}`, { timeout: API_TIMEOUT_MS });
+    const response = await CustomAxios.delete(`${BASE_URL}/arena/comparisons/${comparisonId}`, {
+      timeout: API_TIMEOUT_MS,
+    });
     return response.data;
   }
 }
 
 export const deepEvalArenaService = new DeepEvalArenaService();
-

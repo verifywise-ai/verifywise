@@ -8,15 +8,13 @@ import {
   frameworkFilesDeletionSourceMap,
 } from "../types/framework.type";
 
-export const getAllFrameworksQuery = async (
-  organizationId: number
-): Promise<FrameworkModel[]> => {
+export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
   const frameworks = await sequelize.query(
     `SELECT * FROM frameworks ORDER BY created_at DESC, id ASC;`,
     {
       mapToModel: true,
       model: FrameworkModel,
-    }
+    },
   );
   for (let framework of frameworks) {
     const frameworkProjects = await sequelize.query(
@@ -25,7 +23,7 @@ export const getAllFrameworksQuery = async (
         replacements: { frameworkId: framework.id, organizationId },
         mapToModel: true,
         model: ProjectFrameworksModel,
-      }
+      },
     );
     (framework as any).projects = frameworkProjects;
   }
@@ -34,7 +32,7 @@ export const getAllFrameworksQuery = async (
 
 export const getAllFrameworkByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FrameworkModel | null> => {
   const result = await sequelize.query(
     `SELECT * FROM frameworks WHERE id = :id ORDER BY created_at DESC, id ASC`,
@@ -42,7 +40,7 @@ export const getAllFrameworkByIdQuery = async (
       replacements: { id },
       mapToModel: true,
       model: FrameworkModel,
-    }
+    },
   );
   const framework = result[0];
   const frameworkProjects = await sequelize.query(
@@ -51,7 +49,7 @@ export const getAllFrameworkByIdQuery = async (
       replacements: { frameworkId: framework.id, organizationId },
       mapToModel: true,
       model: ProjectFrameworksModel,
-    }
+    },
   );
   (framework as any).projects = frameworkProjects;
   return framework;
@@ -61,11 +59,11 @@ const checkFrameworkExistsQuery = async (
   frameworkId: number,
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
   const [[{ exists }]] = (await sequelize.query(
     `SELECT EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS exists;`,
-    { replacements: { projectId, frameworkId, organizationId }, transaction }
+    { replacements: { projectId, frameworkId, organizationId }, transaction },
   )) as [[{ exists: boolean }], number];
   return exists;
 };
@@ -74,13 +72,13 @@ const canRemoveFrameworkFromProjectQuery = async (
   frameworkId: number,
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
   const exists = await checkFrameworkExistsQuery(
     frameworkId,
     projectId,
     organizationId,
-    transaction
+    transaction,
   );
   if (!exists) {
     return false; // Framework not found in the project
@@ -98,7 +96,7 @@ const canRemoveFrameworkFromProjectQuery = async (
         ELSE 0
       END
     ) > 1 AND EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS can_remove;`,
-    { replacements: { projectId, frameworkId, organizationId }, transaction }
+    { replacements: { projectId, frameworkId, organizationId }, transaction },
   )) as [[{ can_remove: boolean }], number];
   return can_remove;
 };
@@ -107,13 +105,13 @@ export const canAddFrameworkToProjectQuery = async (
   frameworkId: number,
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
   const exists = await checkFrameworkExistsQuery(
     frameworkId,
     projectId,
     organizationId,
-    transaction
+    transaction,
   );
   if (exists) {
     return false; // Framework already added
@@ -121,11 +119,11 @@ export const canAddFrameworkToProjectQuery = async (
 
   const [[{ is_framework_organizational }]] = (await sequelize.query(
     `SELECT is_organizational AS is_framework_organizational FROM frameworks WHERE id = :frameworkId;`,
-    { replacements: { frameworkId }, transaction }
+    { replacements: { frameworkId }, transaction },
   )) as [[{ is_framework_organizational: boolean }], number];
   const [[{ is_project_organizational }]] = (await sequelize.query(
     `SELECT is_organizational AS is_project_organizational FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
-    { replacements: { projectId, organizationId }, transaction }
+    { replacements: { projectId, organizationId }, transaction },
   )) as [[{ is_project_organizational: boolean }], number];
 
   if (is_framework_organizational !== is_project_organizational) {
@@ -139,13 +137,13 @@ export const addFrameworkToProjectQuery = async (
   frameworkId: number,
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
   const canAdd = await canAddFrameworkToProjectQuery(
     frameworkId,
     projectId,
     organizationId,
-    transaction
+    transaction,
   );
   if (!canAdd) {
     return false;
@@ -159,7 +157,7 @@ export const addFrameworkToProjectQuery = async (
   // add the framework to the project
   const result = (await sequelize.query(
     `INSERT INTO projects_frameworks (organization_id, project_id, framework_id) VALUES (:organizationId, :projectId, :frameworkId) RETURNING *;`,
-    { replacements: { projectId, frameworkId, organizationId }, transaction }
+    { replacements: { projectId, frameworkId, organizationId }, transaction },
   )) as [ProjectFrameworksModel[], number];
   if (!result[0]?.length) {
     return false;
@@ -173,7 +171,7 @@ const deleteFrameworkEvidenceFiles = async (
   projectId: number,
   source: string[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   // First clean up any virtual folder mappings for these files
   await sequelize.query(
@@ -185,7 +183,7 @@ const deleteFrameworkEvidenceFiles = async (
     {
       replacements: { project_id: projectId, source, organizationId },
       transaction,
-    }
+    },
   );
 
   await sequelize.query(
@@ -193,7 +191,7 @@ const deleteFrameworkEvidenceFiles = async (
     {
       replacements: { project_id: projectId, source, organizationId },
       transaction,
-    }
+    },
   );
 };
 
@@ -201,21 +199,20 @@ export const deleteFrameworkFromProjectQuery = async (
   frameworkId: number,
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
   const canRemove = await canRemoveFrameworkFromProjectQuery(
     frameworkId,
     projectId,
     organizationId,
-    transaction
+    transaction,
   );
   if (!canRemove) {
     return false;
   }
 
   // delete evidence files for the framework
-  const frameworkFilesDeletionSource =
-    frameworkFilesDeletionSourceMap[frameworkId];
+  const frameworkFilesDeletionSource = frameworkFilesDeletionSourceMap[frameworkId];
   if (!frameworkFilesDeletionSource) {
     return false;
   }
@@ -223,7 +220,7 @@ export const deleteFrameworkFromProjectQuery = async (
     projectId,
     frameworkFilesDeletionSource,
     organizationId,
-    transaction
+    transaction,
   );
 
   const frameworkDeletionFunction = frameworkDeletionMap[frameworkId];
@@ -231,10 +228,6 @@ export const deleteFrameworkFromProjectQuery = async (
     return false;
   }
   // call framework deletion function
-  const result = await frameworkDeletionFunction(
-    projectId,
-    organizationId,
-    transaction
-  );
+  const result = await frameworkDeletionFunction(projectId, organizationId, transaction);
   return result;
 };

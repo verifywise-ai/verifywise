@@ -46,10 +46,9 @@ describe("Test Comments Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/comments/tasks/100?page=2&limit=25",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/comments/tasks/100?page=2&limit=25", {
+        signal,
+      });
       expect(response).toEqual(mockData);
     });
 
@@ -63,10 +62,9 @@ describe("Test Comments Repository", () => {
         rowId: "abc",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/comments/vendors/abc?page=1&limit=50",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/comments/vendors/abc?page=1&limit=50", {
+        signal: undefined,
+      });
     });
   });
 
@@ -156,8 +154,7 @@ describe("Test Comments Repository", () => {
       });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      const [url, formData, config] = vi.mocked(apiServices.post).mock
-        .calls[0] as any;
+      const [url, formData, config] = vi.mocked(apiServices.post).mock.calls[0] as any;
       expect(url).toBe("/comments/files");
       expect(formData).toBeInstanceOf(FormData);
       expect(formData.get("tableId")).toBe("tasks");
@@ -185,8 +182,7 @@ describe("Test Comments Repository", () => {
         onProgress,
       });
 
-      const [, formData, config] = vi.mocked(apiServices.post).mock
-        .calls[0] as any;
+      const [, formData, config] = vi.mocked(apiServices.post).mock.calls[0] as any;
       expect(formData.get("commentId")).toBeNull();
 
       config.onUploadProgress({ loaded: 20, total: undefined });
@@ -201,10 +197,9 @@ describe("Test Comments Repository", () => {
 
       const response = await downloadFile({ fileId: "f-22" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/comments/files/f-22/download",
-        { responseType: "blob" },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/comments/files/f-22/download", {
+        responseType: "blob",
+      });
       expect(response).toBe(blob);
     });
   });
@@ -246,9 +241,7 @@ describe("Test Comments Repository", () => {
 
       const response = await removeReaction({ commentId: "12", emoji: "👍" });
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/comments/12/reactions/%F0%9F%91%8D",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/comments/12/reactions/%F0%9F%91%8D");
       expect(response).toEqual(mockData);
     });
   });

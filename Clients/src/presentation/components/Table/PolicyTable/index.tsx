@@ -33,9 +33,7 @@ type SortConfig = {
   direction: SortDirection;
 };
 
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 
@@ -52,7 +50,7 @@ const CustomizablePolicyTable = ({
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE)
+    getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE),
   );
   const { setInputValues } = useContext(VerifyWiseContext);
 
@@ -92,24 +90,15 @@ const CustomizablePolicyTable = ({
     });
   }, []);
 
-  const handleChangePage = useCallback(
-    (_: unknown, newPage: number) => setPage(newPage),
-    []
-  );
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("policyManager", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
+  const handleChangePage = useCallback((_: unknown, newPage: number) => setPage(newPage), []);
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    setPaginationRowCount("policyManager", newRowsPerPage);
+    setPage(0);
+  }, []);
 
-  const onRowClickHandler = (
-    event: React.MouseEvent<HTMLTableRowElement>,
-    rowData: any
-  ) => {
+  const onRowClickHandler = (event: React.MouseEvent<HTMLTableRowElement>, rowData: any) => {
     setSelectedRow(rowData);
     setInputValues(rowData);
     setAnchorEl(event.currentTarget);
@@ -185,8 +174,7 @@ const CustomizablePolicyTable = ({
   const tableHeader = (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -243,9 +231,7 @@ const CustomizablePolicyTable = ({
                     {sortConfig.key === col.name && sortConfig.direction === "desc" && (
                       <ChevronDown size={16} />
                     )}
-                    {sortConfig.key !== col.name && (
-                      <ChevronsUpDown size={16} />
-                    )}
+                    {sortConfig.key !== col.name && <ChevronsUpDown size={16} />}
                   </Box>
                 )}
               </Box>
@@ -258,37 +244,36 @@ const CustomizablePolicyTable = ({
 
   const tableBody = (
     <TableBody>
-      {(hidePagination ? sortedData : (sortedData ?? []).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage))
-        .map((row) =>
-          renderRow ? (
-            renderRow(row, sortConfig)
-          ) : (
-            <TableRow
-              key={row.id}
-              onClick={(event) => onRowClickHandler(event, row)}
-              sx={{
-                ...(flashRowId === row.id && {
-                  backgroundColor: singleTheme.flashColors.background,
-                  "& td": {
-                    backgroundColor: "transparent !important",
-                  },
-                  "&:hover": {
-                    backgroundColor: singleTheme.flashColors.backgroundHover,
-                  },
-                }),
-              }}
-            >
-              {data.cols.map((col) => (
-                <TableCell
-                  key={col.id}
-                  style={singleTheme.tableStyles.primary.body.cell}
-                >
-                  {row[col.id]}
-                </TableCell>
-              ))}
-            </TableRow>
-          )
-        )}
+      {(hidePagination
+        ? sortedData
+        : (sortedData ?? []).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+      ).map((row) =>
+        renderRow ? (
+          renderRow(row, sortConfig)
+        ) : (
+          <TableRow
+            key={row.id}
+            onClick={(event) => onRowClickHandler(event, row)}
+            sx={{
+              ...(flashRowId === row.id && {
+                backgroundColor: singleTheme.flashColors.background,
+                "& td": {
+                  backgroundColor: "transparent !important",
+                },
+                "&:hover": {
+                  backgroundColor: singleTheme.flashColors.backgroundHover,
+                },
+              }),
+            }}
+          >
+            {data.cols.map((col) => (
+              <TableCell key={col.id} style={singleTheme.tableStyles.primary.body.cell}>
+                {row[col.id]}
+              </TableCell>
+            ))}
+          </TableRow>
+        ),
+      )}
     </TableBody>
   );
 
@@ -334,11 +319,8 @@ const CustomizablePolicyTable = ({
                     }}
                   >
                     Showing {page * rowsPerPage + 1} -{" "}
-                    {Math.min(
-                      page * rowsPerPage + rowsPerPage,
-                      sortedData.length
-                    )}{" "}
-                    of {sortedData.length} items
+                    {Math.min(page * rowsPerPage + rowsPerPage, sortedData.length)} of{" "}
+                    {sortedData.length} items
                   </TableCell>
                   <TablePagination
                     count={sortedData.length}
@@ -347,9 +329,7 @@ const CustomizablePolicyTable = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={
-                      TablePaginationActions as React.ComponentType<any>
-                    }
+                    ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                     labelRowsPerPage="Rows per page"
                     slotProps={{
                       select: {

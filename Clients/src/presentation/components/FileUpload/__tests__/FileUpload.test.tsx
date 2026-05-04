@@ -99,7 +99,7 @@ describe("FileUploadComponent", () => {
     // Click the delete button
     const deleteButtons = screen.getAllByRole("button");
     const deleteBtn = deleteButtons.find(
-      (btn) => btn !== screen.getByText("Save").closest("button")
+      (btn) => btn !== screen.getByText("Save").closest("button"),
     );
     if (deleteBtn) {
       await user.click(deleteBtn);
@@ -110,9 +110,7 @@ describe("FileUploadComponent", () => {
   it("should call onClose when Save is clicked", async () => {
     const mockOnClose = vi.fn();
     const user = userEvent.setup();
-    renderWithProviders(
-      <FileUploadComponent {...defaultProps} onClose={mockOnClose} />
-    );
+    renderWithProviders(<FileUploadComponent {...defaultProps} onClose={mockOnClose} />);
 
     await user.click(screen.getByText("Save"));
     expect(mockOnClose).toHaveBeenCalledTimes(1);
@@ -121,10 +119,7 @@ describe("FileUploadComponent", () => {
   it("should call onHeightChange when files are added", async () => {
     const mockHeightChange = vi.fn();
     renderWithProviders(
-      <FileUploadComponent
-        {...defaultProps}
-        onHeightChange={mockHeightChange}
-      />
+      <FileUploadComponent {...defaultProps} onHeightChange={mockHeightChange} />,
     );
 
     const file = new File(["content"], "height-test.pdf", {

@@ -106,12 +106,12 @@ describe("tableExport", () => {
        * Some environments don't support Response(blob).text() properly.
        */
       const readBlobAsText = (blob: Blob): Promise<string> =>
-          new Promise((resolve, reject) => {
+        new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result ?? ""));
           reader.onerror = () => reject(reader.error);
           reader.readAsText(blob);
-          });
+        });
 
       const csvText = await readBlobAsText(blobArg);
 
@@ -122,7 +122,6 @@ describe("tableExport", () => {
       expect(csvText).toContain('"A,lice"');
       expect(csvText).toContain('"He said ""hi""\nnext"');
     });
-
 
     it("uses default filename 'export' when not provided", () => {
       exportToCSV([{ name: "X", note: "Y" }] as any, columns as any);
@@ -198,7 +197,7 @@ describe("tableExport", () => {
 
       const data = [
         { name: "Alice", note: undefined, count: 0 }, // undefined -> '' ; 0 must be preserved
-        { name: null, note: "Hello", count: 5 },      // null -> ''
+        { name: null, note: "Hello", count: 5 }, // null -> ''
       ];
 
       exportToExcel(data as any, columns as any, "test-export");
@@ -237,12 +236,7 @@ describe("tableExport", () => {
     });
 
     it("generates PDF with title (startY=25) and writes title", () => {
-      exportToPDF(
-        [{ name: "Alice", note: "ok" }] as any,
-        columns as any,
-        "pdf-title",
-        "My Report"
-      );
+      exportToPDF([{ name: "Alice", note: "ok" }] as any, columns as any, "pdf-title", "My Report");
 
       const instances = (jsPDFModule as any).__instances as any[];
       const doc = instances[instances.length - 1];
@@ -271,7 +265,7 @@ describe("tableExport", () => {
 
       expect(console.error).toHaveBeenCalledWith("Error generating PDF:", expect.any(Error));
       expect(globalThis.alert).toHaveBeenCalledWith(
-        "Failed to generate PDF. Please try again or use CSV/Excel export instead."
+        "Failed to generate PDF. Please try again or use CSV/Excel export instead.",
       );
 
       (jsPDFModule as any).default = Original;
@@ -289,7 +283,7 @@ describe("tableExport", () => {
 
       const data = [
         { name: "Alice", note: undefined }, // undefined -> ''
-        { name: null, note: "Hi" },         // null -> ''
+        { name: null, note: "Hi" }, // null -> ''
       ];
 
       exportToPDF(data as any, columns as any, "pdf-export");
@@ -382,9 +376,12 @@ describe("tableExport", () => {
 
       printTable([{ name: "A", note: "B" }] as any, columns as any);
 
-      expect(console.error).toHaveBeenCalledWith("Error generating print preview:", expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        "Error generating print preview:",
+        expect.any(Error),
+      );
       expect(globalThis.alert).toHaveBeenCalledWith(
-        "Failed to generate print preview. Please try exporting to PDF instead."
+        "Failed to generate print preview. Please try exporting to PDF instead.",
       );
     });
 
@@ -412,7 +409,7 @@ describe("tableExport", () => {
 
       const data = [
         { name: "Alice", note: undefined }, // undefined -> ''
-        { name: null, note: "Hi" },         // null -> ''
+        { name: null, note: "Hi" }, // null -> ''
       ];
 
       printTable(data as any, columns as any);

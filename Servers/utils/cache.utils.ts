@@ -49,7 +49,7 @@ export async function getFromCache<T>(key: string): Promise<T | null> {
 export async function setInCache<T>(
   key: string,
   value: T,
-  ttlSeconds: number = DEFAULT_CACHE_TTL
+  ttlSeconds: number = DEFAULT_CACHE_TTL,
 ): Promise<void> {
   try {
     await redisClient.setex(key, ttlSeconds, JSON.stringify(value));
@@ -99,7 +99,7 @@ export async function deleteByPattern(pattern: string): Promise<void> {
 export async function cacheAside<T>(
   key: string,
   computeFn: () => Promise<T>,
-  ttlSeconds: number = DEFAULT_CACHE_TTL
+  ttlSeconds: number = DEFAULT_CACHE_TTL,
 ): Promise<T> {
   // Try to get from cache first
   const cached = await getFromCache<T>(key);

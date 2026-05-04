@@ -17,27 +17,33 @@ describe("useAssessmentAnswers", () => {
     mockGetAnswers.mockResolvedValue({
       data: {
         message: {
-          topics: [{
-            id: 1,
-            assessment_id: "a1",
-            title: "Topic 1",
-            subTopics: [{
-              id: 10,
-              topic_id: 1,
-              name: "Sub 1",
-              questions: [{
-                id: 100,
-                subtopic_id: "10",
-                question: "Q1",
-                answer_type: "text",
-                evidence_file_required: false,
-                hint: "",
-                is_required: true,
-                priority_level: "high priority",
-                answer: "Yes",
-              }],
-            }],
-          }],
+          topics: [
+            {
+              id: 1,
+              assessment_id: "a1",
+              title: "Topic 1",
+              subTopics: [
+                {
+                  id: 10,
+                  topic_id: 1,
+                  name: "Sub 1",
+                  questions: [
+                    {
+                      id: 100,
+                      subtopic_id: "10",
+                      question: "Q1",
+                      answer_type: "text",
+                      evidence_file_required: false,
+                      hint: "",
+                      is_required: true,
+                      priority_level: "high priority",
+                      answer: "Yes",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         },
       },
     });

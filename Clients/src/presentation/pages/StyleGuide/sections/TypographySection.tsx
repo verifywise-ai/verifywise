@@ -42,8 +42,8 @@ const TypographySection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Typography styles and text hierarchy used in VerifyWise. All text uses the Geist font family
-          with Inter as fallback, with consistent sizing and weights.
+          Typography styles and text hierarchy used in VerifyWise. All text uses the Geist font
+          family with Inter as fallback, with consistent sizing and weights.
         </Typography>
       </Box>
 
@@ -490,7 +490,17 @@ const TypographyExample: React.FC<{
   textTransform?: string;
   bgColor?: string;
   onCopy: (text: string) => void;
-}> = ({ label, fontSize, fontWeight, lineHeight, color, example, textTransform, bgColor, onCopy }) => {
+}> = ({
+  label,
+  fontSize,
+  fontWeight,
+  lineHeight,
+  color,
+  example,
+  textTransform,
+  bgColor,
+  onCopy,
+}) => {
   const theme = useTheme();
 
   return (
@@ -579,10 +589,10 @@ const SpecChip: React.FC<{
         transition: "background-color 150ms ease",
       }}
     >
-      <Typography sx={{ fontSize: 10, color: theme.palette.text.accent }}>
-        {label}:
-      </Typography>
-      <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.secondary }}>
+      <Typography sx={{ fontSize: 10, color: theme.palette.text.accent }}>{label}:</Typography>
+      <Typography
+        sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.secondary }}
+      >
         {value}
       </Typography>
       {isHovered && <Copy size={10} color={theme.palette.primary.main} />}

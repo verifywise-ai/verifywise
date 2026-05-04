@@ -33,9 +33,7 @@ function extractData<T>(response: { data: { data: T } }): T {
 /**
  * Get all entity links for a task
  */
-export async function getTaskEntityLinks(
-  taskId: number
-): Promise<ITaskEntityLink[]> {
+export async function getTaskEntityLinks(taskId: number): Promise<ITaskEntityLink[]> {
   try {
     const response = await apiServices.get<{
       message: string;
@@ -43,11 +41,7 @@ export async function getTaskEntityLinks(
     }>(`/tasks/${taskId}/entities`);
     return extractData<ITaskEntityLink[]>(response);
   } catch (error: any) {
-    throw new APIError(
-      "Failed to fetch task entity links",
-      error?.response?.status,
-      error
-    );
+    throw new APIError("Failed to fetch task entity links", error?.response?.status, error);
   }
 }
 
@@ -58,7 +52,7 @@ export async function addTaskEntityLink(
   taskId: number,
   entityId: number,
   entityType: EntityType,
-  entityName?: string
+  entityName?: string,
 ): Promise<ITaskEntityLink> {
   try {
     const response = await apiServices.post<{
@@ -71,28 +65,17 @@ export async function addTaskEntityLink(
     });
     return extractData<ITaskEntityLink>(response);
   } catch (error: any) {
-    throw new APIError(
-      "Failed to add entity link to task",
-      error?.response?.status,
-      error
-    );
+    throw new APIError("Failed to add entity link to task", error?.response?.status, error);
   }
 }
 
 /**
  * Remove an entity link from a task
  */
-export async function removeTaskEntityLink(
-  taskId: number,
-  linkId: number
-): Promise<void> {
+export async function removeTaskEntityLink(taskId: number, linkId: number): Promise<void> {
   try {
     await apiServices.delete(`/tasks/${taskId}/entities/${linkId}`);
   } catch (error: any) {
-    throw new APIError(
-      "Failed to remove entity link from task",
-      error?.response?.status,
-      error
-    );
+    throw new APIError("Failed to remove entity link from task", error?.response?.status, error);
   }
 }

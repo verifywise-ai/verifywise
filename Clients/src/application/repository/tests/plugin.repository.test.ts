@@ -185,13 +185,10 @@ describe("plugin.repository", () => {
 
       const result = await getPluginByKey({ key: "slack-integration" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/slack-integration",
-        {
-          signal: undefined,
-          responseType: "json",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/slack-integration", {
+        signal: undefined,
+        responseType: "json",
+      });
       expect(result).toEqual(mockPlugin);
     });
 
@@ -205,13 +202,10 @@ describe("plugin.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/slack-integration",
-        {
-          signal: abortController.signal,
-          responseType: "json",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/slack-integration", {
+        signal: abortController.signal,
+        responseType: "json",
+      });
       expect(result).toEqual(mockPlugin);
     });
 
@@ -224,22 +218,17 @@ describe("plugin.repository", () => {
         responseType: "blob",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/slack-integration",
-        {
-          signal: undefined,
-          responseType: "blob",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/slack-integration", {
+        signal: undefined,
+        responseType: "blob",
+      });
     });
 
     it("should handle plugin not found", async () => {
       const error = new Error("Plugin not found");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(getPluginByKey({ key: "non-existent" })).rejects.toThrow(
-        "Plugin not found",
-      );
+      await expect(getPluginByKey({ key: "non-existent" })).rejects.toThrow("Plugin not found");
     });
   });
 
@@ -250,14 +239,11 @@ describe("plugin.repository", () => {
 
       const result = await searchPlugins({ query: "slack" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/search",
-        {
-          q: "slack",
-          signal: undefined,
-          responseType: "json",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/search", {
+        q: "slack",
+        signal: undefined,
+        responseType: "json",
+      });
       expect(result).toEqual(mockPlugins);
     });
 
@@ -271,14 +257,11 @@ describe("plugin.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/search",
-        {
-          q: "slack",
-          signal: abortController.signal,
-          responseType: "json",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/search", {
+        q: "slack",
+        signal: abortController.signal,
+        responseType: "json",
+      });
       expect(result).toEqual(mockPlugins);
     });
 
@@ -291,14 +274,11 @@ describe("plugin.repository", () => {
         responseType: "blob",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/marketplace/search",
-        {
-          q: "integration",
-          signal: undefined,
-          responseType: "blob",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/marketplace/search", {
+        q: "integration",
+        signal: undefined,
+        responseType: "blob",
+      });
     });
 
     it("should return empty array when no plugins match query", async () => {
@@ -314,9 +294,7 @@ describe("plugin.repository", () => {
       const error = new Error("Search failed");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(searchPlugins({ query: "slack" })).rejects.toThrow(
-        "Search failed",
-      );
+      await expect(searchPlugins({ query: "slack" })).rejects.toThrow("Search failed");
     });
   });
 
@@ -337,18 +315,18 @@ describe("plugin.repository", () => {
       const error = new Error("Installation failed");
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        installPlugin({ pluginKey: "slack-integration" }),
-      ).rejects.toThrow("Installation failed");
+      await expect(installPlugin({ pluginKey: "slack-integration" })).rejects.toThrow(
+        "Installation failed",
+      );
     });
 
     it("should handle plugin already installed error", async () => {
       const error = new Error("Plugin already installed");
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        installPlugin({ pluginKey: "slack-integration" }),
-      ).rejects.toThrow("Plugin already installed");
+      await expect(installPlugin({ pluginKey: "slack-integration" })).rejects.toThrow(
+        "Plugin already installed",
+      );
     });
   });
 
@@ -359,9 +337,7 @@ describe("plugin.repository", () => {
 
       const result = await uninstallPlugin({ installationId: 1 });
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/plugins/installations/1",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/plugins/installations/1");
       expect(result).toEqual({ success: true });
     });
 
@@ -369,9 +345,7 @@ describe("plugin.repository", () => {
       const error = new Error("Uninstall failed");
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
-      await expect(uninstallPlugin({ installationId: 1 })).rejects.toThrow(
-        "Uninstall failed",
-      );
+      await expect(uninstallPlugin({ installationId: 1 })).rejects.toThrow("Uninstall failed");
     });
 
     it("should handle installation not found", async () => {
@@ -489,9 +463,7 @@ describe("plugin.repository", () => {
       const error = new Error("Failed to fetch categories");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(getCategories()).rejects.toThrow(
-        "Failed to fetch categories",
-      );
+      await expect(getCategories()).rejects.toThrow("Failed to fetch categories");
     });
   });
 
@@ -510,10 +482,9 @@ describe("plugin.repository", () => {
         configuration: updatedConfig,
       });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/plugins/installations/1/configuration",
-        { configuration: updatedConfig },
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/plugins/installations/1/configuration", {
+        configuration: updatedConfig,
+      });
       expect(result.configuration).toEqual(updatedConfig);
     });
 
@@ -553,12 +524,9 @@ describe("plugin.repository", () => {
         configuration: { webhookUrl: "https://hooks.slack.com/..." },
       });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/plugins/slack-integration/test-connection",
-        {
-          configuration: { webhookUrl: "https://hooks.slack.com/..." },
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/plugins/slack-integration/test-connection", {
+        configuration: { webhookUrl: "https://hooks.slack.com/..." },
+      });
       expect(result).toEqual(testResult);
     });
 
@@ -598,10 +566,9 @@ describe("plugin.repository", () => {
         code: "xoxb-auth-code",
       });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/plugins/slack-integration/oauth/connect",
-        { code: "xoxb-auth-code" },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/plugins/slack-integration/oauth/connect", {
+        code: "xoxb-auth-code",
+      });
       expect(result).toEqual(mockOAuthWorkspaces[0]);
     });
 
@@ -639,10 +606,9 @@ describe("plugin.repository", () => {
         pluginKey: "slack-integration",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/slack-integration/oauth/workspaces",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/slack-integration/oauth/workspaces", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockOAuthWorkspaces);
     });
 
@@ -656,10 +622,9 @@ describe("plugin.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/plugins/slack-integration/oauth/workspaces",
-        { signal: abortController.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/plugins/slack-integration/oauth/workspaces", {
+        signal: abortController.signal,
+      });
       expect(result).toEqual(mockOAuthWorkspaces);
     });
 
@@ -678,9 +643,9 @@ describe("plugin.repository", () => {
       const error = new Error("Failed to fetch workspaces");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getOAuthWorkspaces({ pluginKey: "slack-integration" }),
-      ).rejects.toThrow("Failed to fetch workspaces");
+      await expect(getOAuthWorkspaces({ pluginKey: "slack-integration" })).rejects.toThrow(
+        "Failed to fetch workspaces",
+      );
     });
   });
 

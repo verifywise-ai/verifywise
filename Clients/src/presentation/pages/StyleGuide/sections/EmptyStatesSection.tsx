@@ -65,16 +65,16 @@ const EmptyStatesSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Components for displaying empty or no-data states in tables and lists.
-          Uses an abstract SVG illustration with a contextual icon.
+          Components for displaying empty or no-data states in tables and lists. Uses an abstract
+          SVG illustration with a contextual icon.
         </Typography>
       </Box>
 
       {/* EmptyState Component */}
       <SpecSection title="EmptyState component">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Reusable component for tables and lists when no data is available.
-          Displays an abstract illustration with a contextual Lucide icon and a message.
+          Reusable component for tables and lists when no data is available. Displays an abstract
+          illustration with a contextual Lucide icon and a message.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -108,7 +108,10 @@ const EmptyStatesSection: React.FC = () => {
                     overflow: "hidden",
                   }}
                 >
-                  <EmptyState icon={Database} message="No datasets found. Add a dataset to get started." />
+                  <EmptyState
+                    icon={Database}
+                    message="No datasets found. Add a dataset to get started."
+                  />
                 </Box>
               </ExampleWithCode>
 
@@ -117,17 +120,22 @@ const EmptyStatesSection: React.FC = () => {
                 code={emptyStateSnippets.withIcon}
                 onCopy={handleCopy}
               >
-                <EmptyState
-                  icon={ShieldAlert}
-                  message="No risks identified."
-                  showBorder={true}
-                />
+                <EmptyState icon={ShieldAlert} message="No risks identified." showBorder={true} />
               </ExampleWithCode>
             </Stack>
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               EmptyState props
             </Typography>
             <SpecTable
@@ -140,7 +148,17 @@ const EmptyStatesSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Styling specifications
             </Typography>
             <SpecTable
@@ -164,8 +182,9 @@ const EmptyStatesSection: React.FC = () => {
       {/* EmptyIllustration Component */}
       <SpecSection title="EmptyIllustration component">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Standalone SVG illustration used inside EmptyState. Shows a teal circle with a contextual icon,
-          dashed connector lines, and floating isometric cubes. Theme-aware colors for light and dark mode.
+          Standalone SVG illustration used inside EmptyState. Shows a teal circle with a contextual
+          icon, dashed connector lines, and floating isometric cubes. Theme-aware colors for light
+          and dark mode.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -195,7 +214,16 @@ const EmptyStatesSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               EmptyIllustration props
             </Typography>
             <SpecTable
@@ -206,7 +234,17 @@ const EmptyStatesSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               SVG dimensions
             </Typography>
             <SpecTable
@@ -333,9 +371,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -357,9 +393,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -410,9 +444,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

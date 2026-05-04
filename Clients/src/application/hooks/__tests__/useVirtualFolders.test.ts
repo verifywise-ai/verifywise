@@ -100,7 +100,10 @@ describe("useVirtualFolders", () => {
   it("sets breadcrumb when selecting a numeric folder", async () => {
     mockGetFolderTree.mockResolvedValue([]);
     mockGetAllFolders.mockResolvedValue([]);
-    mockGetFolderPath.mockResolvedValue([{ id: 1, name: "Root" }, { id: 3, name: "Sub" }] as any);
+    mockGetFolderPath.mockResolvedValue([
+      { id: 1, name: "Root" },
+      { id: 3, name: "Sub" },
+    ] as any);
 
     const { result } = renderHook(() => useVirtualFolders());
     await waitFor(() => expect(result.current.loading).toBe(false));

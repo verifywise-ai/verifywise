@@ -1,15 +1,7 @@
 import { Box, Typography, Stack } from "@mui/material";
 import { DollarSign, Hash, Layers, Clock } from "lucide-react";
 import { StatCard } from "../../../components/Cards/StatCard";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import palette, { chart as chartPalette } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
 
@@ -44,10 +36,30 @@ export default function MockDashboard() {
     <Stack gap="16px">
       {/* Stat cards */}
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-        <StatCard title="Total cost" value="$47.82" Icon={DollarSign} tooltip="Total spend across all endpoints for this period" />
-        <StatCard title="Total requests" value="1,247" Icon={Hash} tooltip="Number of completion and embedding requests processed" />
-        <StatCard title="Total tokens" value="892,340" Icon={Layers} tooltip="Combined prompt and completion tokens across all requests" />
-        <StatCard title="Avg latency" value="245ms" Icon={Clock} tooltip="Average round-trip time from request to complete response" />
+        <StatCard
+          title="Total cost"
+          value="$47.82"
+          Icon={DollarSign}
+          tooltip="Total spend across all endpoints for this period"
+        />
+        <StatCard
+          title="Total requests"
+          value="1,247"
+          Icon={Hash}
+          tooltip="Number of completion and embedding requests processed"
+        />
+        <StatCard
+          title="Total tokens"
+          value="892,340"
+          Icon={Layers}
+          tooltip="Combined prompt and completion tokens across all requests"
+        />
+        <StatCard
+          title="Avg latency"
+          value="245ms"
+          Icon={Clock}
+          tooltip="Average round-trip time from request to complete response"
+        />
       </Box>
 
       {/* Cost over time chart */}
@@ -70,8 +82,15 @@ export default function MockDashboard() {
                 tickFormatter={(v) => `$${v}`}
               />
               <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 4, border: `1px solid ${palette.border.light}` }}
-                formatter={(value) => { const v = Number(value) || 0; return [`$${v.toFixed(2)}`, "Cost"]; }}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 4,
+                  border: `1px solid ${palette.border.light}`,
+                }}
+                formatter={(value) => {
+                  const v = Number(value) || 0;
+                  return [`$${v.toFixed(2)}`, "Cost"];
+                }}
               />
               <Bar dataKey="total_cost" fill={chartPalette[0]} radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -104,22 +123,58 @@ export default function MockDashboard() {
                   >
                     <Box
                       sx={{
-                        position: "absolute", left: 0, top: 0, bottom: 0,
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
                         width: `${pct}%`,
                         backgroundColor: palette.border.light,
                         opacity: 0.4,
                       }}
                     />
-                    <Stack direction="row" alignItems="center" gap="8px" sx={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: chartPalette[i % chartPalette.length], flexShrink: 0 }} />
-                      <Typography sx={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      gap="8px"
+                      sx={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          backgroundColor: chartPalette[i % chartPalette.length],
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {m.group_key}
                       </Typography>
                     </Stack>
-                    <Stack direction="row" gap="12px" alignItems="center" sx={{ flexShrink: 0, position: "relative", zIndex: 1 }}>
-                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>{m.total_requests.toLocaleString()} req</Typography>
-                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>{m.total_tokens.toLocaleString()} tok</Typography>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, minWidth: 70, textAlign: "right" }}>${m.total_cost.toFixed(2)}</Typography>
+                    <Stack
+                      direction="row"
+                      gap="12px"
+                      alignItems="center"
+                      sx={{ flexShrink: 0, position: "relative", zIndex: 1 }}
+                    >
+                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                        {m.total_requests.toLocaleString()} req
+                      </Typography>
+                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                        {m.total_tokens.toLocaleString()} tok
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 12, fontWeight: 600, minWidth: 70, textAlign: "right" }}
+                      >
+                        ${m.total_cost.toFixed(2)}
+                      </Typography>
                     </Stack>
                   </Stack>
                 );
@@ -151,19 +206,46 @@ export default function MockDashboard() {
                   >
                     <Box
                       sx={{
-                        position: "absolute", left: 0, top: 0, bottom: 0,
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
                         width: `${pct}%`,
                         backgroundColor: palette.border.light,
                         opacity: 0.4,
                       }}
                     />
-                    <Stack direction="row" alignItems="center" gap="8px" sx={{ position: "relative", zIndex: 1 }}>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: chartPalette[i % chartPalette.length], flexShrink: 0 }} />
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      gap="8px"
+                      sx={{ position: "relative", zIndex: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          backgroundColor: chartPalette[i % chartPalette.length],
+                          flexShrink: 0,
+                        }}
+                      />
                       <Typography sx={{ fontSize: 12 }}>{ep.group_key}</Typography>
                     </Stack>
-                    <Stack direction="row" gap="12px" alignItems="center" sx={{ position: "relative", zIndex: 1 }}>
-                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>{ep.total_requests.toLocaleString()} req</Typography>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, minWidth: 70, textAlign: "right" }}>${ep.total_cost.toFixed(2)}</Typography>
+                    <Stack
+                      direction="row"
+                      gap="12px"
+                      alignItems="center"
+                      sx={{ position: "relative", zIndex: 1 }}
+                    >
+                      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                        {ep.total_requests.toLocaleString()} req
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 12, fontWeight: 600, minWidth: 70, textAlign: "right" }}
+                      >
+                        ${ep.total_cost.toFixed(2)}
+                      </Typography>
                     </Stack>
                   </Stack>
                 );

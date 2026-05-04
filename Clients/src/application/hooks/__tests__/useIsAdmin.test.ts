@@ -46,16 +46,13 @@ describe("useIsAdmin", () => {
     expect(result.current).toBe(true);
   });
 
-  it.each(["Reviewer", "Editor", "Auditor"])(
-    "should return false for %s role",
-    (role) => {
-      const token = fakeJwt({ id: "1", roleName: role });
-      const { result } = renderHook(() => useIsAdmin(), {
-        wrapper: createWrapper(token),
-      });
-      expect(result.current).toBe(false);
-    }
-  );
+  it.each(["Reviewer", "Editor", "Auditor"])("should return false for %s role", (role) => {
+    const token = fakeJwt({ id: "1", roleName: role });
+    const { result } = renderHook(() => useIsAdmin(), {
+      wrapper: createWrapper(token),
+    });
+    expect(result.current).toBe(false);
+  });
 
   it("should return false when no token", () => {
     const { result } = renderHook(() => useIsAdmin(), {
@@ -74,7 +71,7 @@ describe("useUserRole", () => {
         wrapper: createWrapper(token),
       });
       expect(result.current).toBe(role);
-    }
+    },
   );
 
   it("should return null when no token", () => {

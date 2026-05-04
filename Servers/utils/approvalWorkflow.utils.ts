@@ -10,7 +10,7 @@ import { EntityType } from "../domain.layer/enums/approval-workflow.enum";
  */
 export const getAllApprovalWorkflowsQuery = async (
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<ApprovalWorkflowModel[]> => {
   const workflows = await sequelize.query(
     `SELECT * FROM approval_workflows WHERE organization_id = :organizationId AND is_active = true ORDER BY created_at DESC`,
@@ -19,13 +19,13 @@ export const getAllApprovalWorkflowsQuery = async (
       mapToModel: true,
       model: ApprovalWorkflowModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   // Load steps for each workflow
   for (const workflow of workflows) {
     const steps = await getWorkflowStepsQuery(workflow.id!, organizationId, transaction);
-    workflow.setDataValue('steps', steps);
+    workflow.setDataValue("steps", steps);
   }
 
   return workflows;
@@ -37,7 +37,7 @@ export const getAllApprovalWorkflowsQuery = async (
 export const getApprovalWorkflowByIdQuery = async (
   workflowId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<ApprovalWorkflowModel | null> => {
   const workflows = await sequelize.query(
     `SELECT * FROM approval_workflows WHERE organization_id = :organizationId AND id = :workflowId`,
@@ -46,7 +46,7 @@ export const getApprovalWorkflowByIdQuery = async (
       mapToModel: true,
       model: ApprovalWorkflowModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   if (!workflows || workflows.length === 0) {
@@ -59,7 +59,7 @@ export const getApprovalWorkflowByIdQuery = async (
   const steps = await getWorkflowStepsQuery(workflowId, organizationId, transaction);
 
   // Set steps on workflow instance
-  workflow.setDataValue('steps', steps);
+  workflow.setDataValue("steps", steps);
 
   return workflow;
 };
@@ -70,7 +70,7 @@ export const getApprovalWorkflowByIdQuery = async (
 export const getWorkflowStepsQuery = async (
   workflowId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<ApprovalWorkflowStepModel[]> => {
   const steps = await sequelize.query(
     `SELECT * FROM approval_workflow_steps
@@ -82,7 +82,7 @@ export const getWorkflowStepsQuery = async (
       mapToModel: true,
       model: ApprovalWorkflowStepModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   // Load approvers for each step
@@ -94,9 +94,9 @@ export const getWorkflowStepsQuery = async (
         mapToModel: true,
         model: ApprovalStepApproversModel,
         ...(transaction && { transaction }),
-      }
+      },
     );
-    step.setDataValue('approvers', approvers);
+    step.setDataValue("approvers", approvers);
   }
 
   return steps;
@@ -119,7 +119,7 @@ export const createApprovalWorkflowQuery = async (
     }>;
   },
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ApprovalWorkflowModel> => {
   // Create workflow
   const [workflow] = await sequelize.query(
@@ -138,7 +138,7 @@ export const createApprovalWorkflowQuery = async (
       mapToModel: true,
       model: ApprovalWorkflowModel,
       transaction,
-    }
+    },
   );
 
   // Create steps
@@ -162,7 +162,7 @@ export const createApprovalWorkflowQuery = async (
         mapToModel: true,
         model: ApprovalWorkflowStepModel,
         transaction,
-      }
+      },
     );
 
     // Create approvers for this step
@@ -178,13 +178,17 @@ export const createApprovalWorkflowQuery = async (
             approver_id: approverId,
           },
           transaction,
-        }
+        },
       );
     }
   }
 
   // Fetch and return the complete workflow with steps
-  const createdWorkflow = await getApprovalWorkflowByIdQuery((workflow as any).id, organizationId, transaction);
+  const createdWorkflow = await getApprovalWorkflowByIdQuery(
+    (workflow as any).id,
+    organizationId,
+    transaction,
+  );
 
   if (!createdWorkflow) {
     throw new Error("Failed to retrieve created workflow");
@@ -209,7 +213,7 @@ export const updateApprovalWorkflowQuery = async (
     }>;
   },
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ApprovalWorkflowModel | null> => {
   // Update workflow
   await sequelize.query(
@@ -226,7 +230,7 @@ export const updateApprovalWorkflowQuery = async (
         description: workflowData.description || null,
       },
       transaction,
-    }
+    },
   );
 
   // If steps are provided, delete old steps and create new ones
@@ -241,7 +245,7 @@ export const updateApprovalWorkflowQuery = async (
       {
         replacements: { organizationId, workflowId },
         transaction,
-      }
+      },
     );
 
     // Delete old steps
@@ -250,7 +254,7 @@ export const updateApprovalWorkflowQuery = async (
       {
         replacements: { organizationId, workflowId },
         transaction,
-      }
+      },
     );
 
     // Create new steps
@@ -274,7 +278,7 @@ export const updateApprovalWorkflowQuery = async (
           mapToModel: true,
           model: ApprovalWorkflowStepModel,
           transaction,
-        }
+        },
       );
 
       // Create approvers for this step
@@ -290,7 +294,7 @@ export const updateApprovalWorkflowQuery = async (
               approver_id: approverId,
             },
             transaction,
-          }
+          },
         );
       }
     }
@@ -305,7 +309,7 @@ export const updateApprovalWorkflowQuery = async (
 export const deleteApprovalWorkflowQuery = async (
   workflowId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE approval_workflows
@@ -314,6 +318,6 @@ export const deleteApprovalWorkflowQuery = async (
     {
       replacements: { organizationId, workflowId },
       transaction,
-    }
+    },
   );
 };

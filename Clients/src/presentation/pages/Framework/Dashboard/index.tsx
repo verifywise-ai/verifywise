@@ -119,10 +119,7 @@ const tabListStyle = {
 
 const DASHBOARD_TAB_STORAGE_KEY = "verifywise_dashboard_active_tab";
 
-const FrameworkDashboard = ({
-  organizationalProject,
-  filteredFrameworks,
-}: DashboardProps) => {
+const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: DashboardProps) => {
   const navigate = useNavigate();
   const { getComponentsForSlot } = usePluginRegistry();
   const [loading, setLoading] = useState(true);
@@ -141,11 +138,17 @@ const FrameworkDashboard = ({
     // Determine framework index based on filtered frameworks
     let frameworkIndex = 0;
     if (isISO27001) {
-      frameworkIndex = filteredFrameworks.findIndex(f => f.name.toLowerCase().includes("iso 27001"));
+      frameworkIndex = filteredFrameworks.findIndex((f) =>
+        f.name.toLowerCase().includes("iso 27001"),
+      );
     } else if (isISO42001) {
-      frameworkIndex = filteredFrameworks.findIndex(f => f.name.toLowerCase().includes("iso 42001"));
+      frameworkIndex = filteredFrameworks.findIndex((f) =>
+        f.name.toLowerCase().includes("iso 42001"),
+      );
     } else if (isNISTAIRMF) {
-      frameworkIndex = filteredFrameworks.findIndex(f => f.name.toLowerCase().includes("nist ai rmf"));
+      frameworkIndex = filteredFrameworks.findIndex((f) =>
+        f.name.toLowerCase().includes("nist ai rmf"),
+      );
     }
 
     if (frameworkIndex === -1) frameworkIndex = 0;
@@ -183,7 +186,7 @@ const FrameworkDashboard = ({
         const dataPromises = filteredFrameworks.map(async (framework) => {
           // Get project framework ID
           const projectFramework = organizationalProject.framework?.find(
-            (f) => f.framework_id === Number(framework.id)
+            (f) => f.framework_id === Number(framework.id),
           );
           const projectFrameworkId = projectFramework?.project_framework_id || framework.id;
 
@@ -192,7 +195,11 @@ const FrameworkDashboard = ({
           const isNISTAIRMF = framework.name.toLowerCase().includes("nist ai rmf");
 
           let clauseProgress, annexProgress, assignmentStatus, statusBreakdown;
-          let nistProgress, nistProgressByFunction, nistAssignments, nistAssignmentsByFunction, nistStatusBreakdown;
+          let nistProgress,
+            nistProgressByFunction,
+            nistAssignments,
+            nistAssignmentsByFunction,
+            nistStatusBreakdown;
 
           if (isNISTAIRMF) {
             // Fetch NIST AI RMF data
@@ -290,16 +297,21 @@ const FrameworkDashboard = ({
                   doneSubclauses: clauseProgressRes.data.doneSubclauses || 0,
                 };
               } else {
-                console.warn(`Invalid clause progress response structure for ISO 27001 framework ${framework.id}`);
+                console.warn(
+                  `Invalid clause progress response structure for ISO 27001 framework ${framework.id}`,
+                );
                 clauseProgress = { totalSubclauses: 0, doneSubclauses: 0 };
               }
             } catch (error) {
               if (!abortController.signal.aborted) {
-                console.error(`Error fetching ISO 27001 clause progress for framework ${framework.id}:`, {
-                  error: error instanceof Error ? error.message : error,
-                  projectFrameworkId,
-                  frameworkName: framework.name,
-                });
+                console.error(
+                  `Error fetching ISO 27001 clause progress for framework ${framework.id}:`,
+                  {
+                    error: error instanceof Error ? error.message : error,
+                    projectFrameworkId,
+                    frameworkName: framework.name,
+                  },
+                );
               }
               clauseProgress = { totalSubclauses: 0, doneSubclauses: 0 };
             }
@@ -316,16 +328,21 @@ const FrameworkDashboard = ({
                   doneAnnexControls: annexProgressRes.data.doneAnnexControls || 0,
                 };
               } else {
-                console.warn(`Invalid annex progress response structure for ISO 27001 framework ${framework.id}`);
+                console.warn(
+                  `Invalid annex progress response structure for ISO 27001 framework ${framework.id}`,
+                );
                 annexProgress = { totalAnnexControls: 0, doneAnnexControls: 0 };
               }
             } catch (error) {
               if (!abortController.signal.aborted) {
-                console.error(`Error fetching ISO 27001 annex progress for framework ${framework.id}:`, {
-                  error: error instanceof Error ? error.message : error,
-                  projectFrameworkId,
-                  frameworkName: framework.name,
-                });
+                console.error(
+                  `Error fetching ISO 27001 annex progress for framework ${framework.id}:`,
+                  {
+                    error: error instanceof Error ? error.message : error,
+                    projectFrameworkId,
+                    frameworkName: framework.name,
+                  },
+                );
               }
               annexProgress = { totalAnnexControls: 0, doneAnnexControls: 0 };
             }
@@ -343,16 +360,21 @@ const FrameworkDashboard = ({
                   doneSubclauses: clauseProgressRes.data.doneSubclauses || 0,
                 };
               } else {
-                console.warn(`Invalid clause progress response structure for ISO 42001 framework ${framework.id}`);
+                console.warn(
+                  `Invalid clause progress response structure for ISO 42001 framework ${framework.id}`,
+                );
                 clauseProgress = { totalSubclauses: 0, doneSubclauses: 0 };
               }
             } catch (error) {
               if (!abortController.signal.aborted) {
-                console.error(`Error fetching ISO 42001 clause progress for framework ${framework.id}:`, {
-                  error: error instanceof Error ? error.message : error,
-                  projectFrameworkId,
-                  frameworkName: framework.name,
-                });
+                console.error(
+                  `Error fetching ISO 42001 clause progress for framework ${framework.id}:`,
+                  {
+                    error: error instanceof Error ? error.message : error,
+                    projectFrameworkId,
+                    frameworkName: framework.name,
+                  },
+                );
               }
               clauseProgress = { totalSubclauses: 0, doneSubclauses: 0 };
             }
@@ -369,16 +391,21 @@ const FrameworkDashboard = ({
                   doneAnnexcategories: annexProgressRes.data.doneAnnexcategories || 0,
                 };
               } else {
-                console.warn(`Invalid annex progress response structure for ISO 42001 framework ${framework.id}`);
+                console.warn(
+                  `Invalid annex progress response structure for ISO 42001 framework ${framework.id}`,
+                );
                 annexProgress = { totalAnnexcategories: 0, doneAnnexcategories: 0 };
               }
             } catch (error) {
               if (!abortController.signal.aborted) {
-                console.error(`Error fetching ISO 42001 annex progress for framework ${framework.id}:`, {
-                  error: error instanceof Error ? error.message : error,
-                  projectFrameworkId,
-                  frameworkName: framework.name,
-                });
+                console.error(
+                  `Error fetching ISO 42001 annex progress for framework ${framework.id}:`,
+                  {
+                    error: error instanceof Error ? error.message : error,
+                    projectFrameworkId,
+                    frameworkName: framework.name,
+                  },
+                );
               }
               annexProgress = { totalAnnexcategories: 0, doneAnnexcategories: 0 };
             }
@@ -423,16 +450,16 @@ const FrameworkDashboard = ({
   // Memoize filtered framework data to prevent unnecessary re-renders in child components
   // These must be called before any early returns to follow React's Rules of Hooks
   const iso42001FrameworksData = useMemo(
-    () => frameworksData.filter(f => f.frameworkName.toLowerCase().includes("iso 42001")),
-    [frameworksData]
+    () => frameworksData.filter((f) => f.frameworkName.toLowerCase().includes("iso 42001")),
+    [frameworksData],
   );
   const iso27001FrameworksData = useMemo(
-    () => frameworksData.filter(f => f.frameworkName.toLowerCase().includes("iso 27001")),
-    [frameworksData]
+    () => frameworksData.filter((f) => f.frameworkName.toLowerCase().includes("iso 27001")),
+    [frameworksData],
   );
   const nistAiRmfFrameworksData = useMemo(
-    () => frameworksData.filter(f => f.frameworkName.toLowerCase().includes("nist ai rmf")),
-    [frameworksData]
+    () => frameworksData.filter((f) => f.frameworkName.toLowerCase().includes("nist ai rmf")),
+    [frameworksData],
   );
 
   if (loading) {
@@ -451,7 +478,8 @@ const FrameworkDashboard = ({
   }
 
   // Check if plugin provides custom framework dashboard
-  const hasCustomFrameworkDashboard = getComponentsForSlot(PLUGIN_SLOTS.FRAMEWORK_DASHBOARD_CUSTOM).length > 0;
+  const hasCustomFrameworkDashboard =
+    getComponentsForSlot(PLUGIN_SLOTS.FRAMEWORK_DASHBOARD_CUSTOM).length > 0;
 
   if (frameworksData.length === 0) {
     // If plugin provides custom framework dashboard, render it
@@ -485,19 +513,25 @@ const FrameworkDashboard = ({
   }
 
   // Determine which frameworks are available
-  const hasISO27001 = frameworksData.some(f => f.frameworkName.toLowerCase().includes("iso 27001"));
-  const hasISO42001 = frameworksData.some(f => f.frameworkName.toLowerCase().includes("iso 42001"));
-  const hasNISTAIRMF = frameworksData.some(f => f.frameworkName.toLowerCase().includes("nist ai rmf"));
+  const hasISO27001 = frameworksData.some((f) =>
+    f.frameworkName.toLowerCase().includes("iso 27001"),
+  );
+  const hasISO42001 = frameworksData.some((f) =>
+    f.frameworkName.toLowerCase().includes("iso 42001"),
+  );
+  const hasNISTAIRMF = frameworksData.some((f) =>
+    f.frameworkName.toLowerCase().includes("nist ai rmf"),
+  );
 
   // Create tabs array with ISO 42001 first, then NIST AI RMF, then ISO 27001
   const tabs: { id: string; label: string }[] = [];
-  if (hasISO42001) tabs.push({ id: 'iso42001', label: 'ISO 42001' });
-  if (hasNISTAIRMF) tabs.push({ id: 'nist-ai-rmf', label: 'NIST AI RMF' });
-  if (hasISO27001) tabs.push({ id: 'iso27001', label: 'ISO 27001' });
+  if (hasISO42001) tabs.push({ id: "iso42001", label: "ISO 42001" });
+  if (hasNISTAIRMF) tabs.push({ id: "nist-ai-rmf", label: "NIST AI RMF" });
+  if (hasISO27001) tabs.push({ id: "iso27001", label: "ISO 27001" });
 
   // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
-    const newIndex = tabs.findIndex(tab => tab.id === newValue);
+    const newIndex = tabs.findIndex((tab) => tab.id === newValue);
     setActiveTab(newIndex);
     localStorage.setItem(DASHBOARD_TAB_STORAGE_KEY, newIndex.toString());
   };
@@ -566,14 +600,8 @@ const FrameworkDashboard = ({
                 TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
                 sx={tabListStyle}
               >
-                {tabs.map(tab => (
-                  <Tab
-                    key={tab.id}
-                    label={tab.label}
-                    value={tab.id}
-                    sx={tabStyle}
-                    disableRipple
-                  />
+                {tabs.map((tab) => (
+                  <Tab key={tab.id} label={tab.label} value={tab.id} sx={tabStyle} disableRipple />
                 ))}
               </TabList>
             </Box>
@@ -631,7 +659,10 @@ const FrameworkDashboard = ({
 
       {/* Fallback when no frameworks */}
       {!hasISO27001 && !hasISO42001 && !hasNISTAIRMF && (
-        <ControlCategoriesCard frameworksData={frameworksData} onNavigate={handleNavigateToControls} />
+        <ControlCategoriesCard
+          frameworksData={frameworksData}
+          onNavigate={handleNavigateToControls}
+        />
       )}
 
       {/* Custom Framework Dashboard - Plugin Slot */}

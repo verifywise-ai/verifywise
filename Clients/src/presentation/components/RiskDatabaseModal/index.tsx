@@ -48,10 +48,7 @@ const RiskDatabaseModal = ({
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // Memoized filtered risks for performance
-  const filteredRisks = useMemo(
-    () => filterRisks(riskData, search),
-    [riskData, search]
-  );
+  const filteredRisks = useMemo(() => filterRisks(riskData, search), [riskData, search]);
 
   // Memoized handlers for performance
   const handleClose = useCallback(() => {
@@ -68,14 +65,14 @@ const RiskDatabaseModal = ({
     (riskId: number) => {
       setSelectedId(selectedId === riskId ? null : riskId);
     },
-    [selectedId]
+    [selectedId],
   );
 
   const handleRadioChange = useCallback(
     (riskId: number) => {
       setSelectedId(selectedId === riskId ? null : riskId);
     },
-    [selectedId]
+    [selectedId],
   );
 
   const handleUseSelectedRisk = useCallback(() => {
@@ -217,8 +214,7 @@ const RiskDatabaseModal = ({
                       }}
                       sx={{
                         cursor: "pointer",
-                        backgroundColor:
-                          selectedId === risk.Id ? selectedRowBgColor : "inherit",
+                        backgroundColor: selectedId === risk.Id ? selectedRowBgColor : "inherit",
                         "&:hover": {
                           backgroundColor: theme.palette.action.hover,
                         },
@@ -290,9 +286,7 @@ const RiskDatabaseModal = ({
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ maxWidth: 150 }}>
-                        <span style={truncatedTextStyle}>
-                          {risk["Risk Category"]}
-                        </span>
+                        <span style={truncatedTextStyle}>{risk["Risk Category"]}</span>
                       </TableCell>
                     </TableRow>
                   ))

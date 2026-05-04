@@ -21,13 +21,11 @@ test.describe("Super Admin", () => {
         page
           .getByText(/organization/i)
           .or(page.getByRole("heading"))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 15_000 });
     });
 
-    test("displays organizations table or empty state", async ({
-      authedPage: page,
-    }) => {
+    test("displays organizations table or empty state", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
       if (!page.url().includes("/super-admin")) {
@@ -56,7 +54,10 @@ test.describe("Super Admin", () => {
         .or(page.locator('[data-testid="search-input"]'));
 
       if (
-        !(await searchInput.first().isVisible({ timeout: 10_000 }).catch(() => false))
+        !(await searchInput
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false))
       ) {
         test.skip();
         return;
@@ -68,9 +69,7 @@ test.describe("Super Admin", () => {
       await page.waitForTimeout(500);
     });
 
-    test("create organization button opens modal", async ({
-      authedPage: page,
-    }) => {
+    test("create organization button opens modal", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
       if (!page.url().includes("/super-admin")) {
@@ -83,7 +82,12 @@ test.describe("Super Admin", () => {
         .or(page.getByRole("button", { name: /add.*organization/i }))
         .or(page.getByRole("button", { name: /new.*organization/i }));
 
-      if (!(await createBtn.first().isVisible().catch(() => false))) {
+      if (
+        !(await createBtn
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         test.skip();
         return;
       }
@@ -121,16 +125,14 @@ test.describe("Super Admin", () => {
         const sortIndicator = page
           .locator('[class*="sort" i]')
           .or(page.locator("svg"))
-          .or(page.locator('[aria-sort]'));
+          .or(page.locator("[aria-sort]"));
 
         // Just verify the click didn't break anything
         await expect(page.locator("body")).not.toBeEmpty();
       }
     });
 
-    test("page has no accessibility violations", async ({
-      authedPage: page,
-    }) => {
+    test("page has no accessibility violations", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
       if (!page.url().includes("/super-admin")) {
@@ -171,17 +173,12 @@ test.describe("Super Admin", () => {
         return;
       }
 
-      await expect(
-        page
-          .getByText(/user/i)
-          .or(page.getByRole("heading"))
-          .first()
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/user/i).or(page.getByRole("heading")).first()).toBeVisible({
+        timeout: 15_000,
+      });
     });
 
-    test("displays users table with columns", async ({
-      authedPage: page,
-    }) => {
+    test("displays users table with columns", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
       if (!page.url().includes("/super-admin")) {
@@ -196,7 +193,10 @@ test.describe("Super Admin", () => {
         .or(page.getByRole("heading"));
 
       if (
-        !(await table.first().isVisible({ timeout: 10_000 }).catch(() => false))
+        !(await table
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false))
       ) {
         test.skip();
         return;
@@ -218,7 +218,10 @@ test.describe("Super Admin", () => {
         .or(page.locator('[data-testid="search-input"]'));
 
       if (
-        !(await searchInput.first().isVisible({ timeout: 10_000 }).catch(() => false))
+        !(await searchInput
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false))
       ) {
         test.skip();
         return;
@@ -229,9 +232,7 @@ test.describe("Super Admin", () => {
       await searchInput.first().clear();
     });
 
-    test("organization filter dropdown is available", async ({
-      authedPage: page,
-    }) => {
+    test("organization filter dropdown is available", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
       if (!page.url().includes("/super-admin")) {
@@ -245,14 +246,17 @@ test.describe("Super Admin", () => {
         .or(page.getByPlaceholder(/organization/i))
         .or(page.getByText(/all organizations/i));
 
-      if (await orgFilter.first().isVisible().catch(() => false)) {
+      if (
+        await orgFilter
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(orgFilter.first()).toBeVisible();
       }
     });
 
-    test("role filter dropdown is available", async ({
-      authedPage: page,
-    }) => {
+    test("role filter dropdown is available", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
       if (!page.url().includes("/super-admin")) {
@@ -266,7 +270,12 @@ test.describe("Super Admin", () => {
         .or(page.getByText(/all roles/i))
         .or(page.getByPlaceholder(/role/i));
 
-      if (await roleFilter.first().isVisible().catch(() => false)) {
+      if (
+        await roleFilter
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(roleFilter.first()).toBeVisible();
       }
     });
@@ -275,9 +284,7 @@ test.describe("Super Admin", () => {
   // --- Settings ---
 
   test.describe("Settings", () => {
-    test("renders the super admin settings page", async ({
-      authedPage: page,
-    }) => {
+    test("renders the super admin settings page", async ({ authedPage: page }) => {
       await page.goto("/super-admin/settings");
 
       if (!page.url().includes("/super-admin")) {
@@ -290,7 +297,7 @@ test.describe("Super Admin", () => {
           .getByText(/settings/i)
           .or(page.getByText(/profile/i))
           .or(page.getByRole("heading"))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 15_000 });
     });
 
@@ -302,25 +309,31 @@ test.describe("Super Admin", () => {
         return;
       }
 
-      const profileTab = page
-        .getByRole("tab", { name: /profile/i })
-        .or(page.getByText(/profile/i));
+      const profileTab = page.getByRole("tab", { name: /profile/i }).or(page.getByText(/profile/i));
       const passwordTab = page
         .getByRole("tab", { name: /password/i })
         .or(page.getByText(/password/i));
 
-      if (await profileTab.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      if (
+        await profileTab
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false)
+      ) {
         await expect(profileTab.first()).toBeVisible();
       }
 
-      if (await passwordTab.first().isVisible().catch(() => false)) {
+      if (
+        await passwordTab
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(passwordTab.first()).toBeVisible();
       }
     });
 
-    test("clicking Password tab shows password form", async ({
-      authedPage: page,
-    }) => {
+    test("clicking Password tab shows password form", async ({ authedPage: page }) => {
       await page.goto("/super-admin/settings");
 
       if (!page.url().includes("/super-admin")) {
@@ -333,7 +346,10 @@ test.describe("Super Admin", () => {
         .or(page.getByText(/password/i));
 
       if (
-        !(await passwordTab.first().isVisible({ timeout: 10_000 }).catch(() => false))
+        !(await passwordTab
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false))
       ) {
         test.skip();
         return;
@@ -347,7 +363,12 @@ test.describe("Super Admin", () => {
         .locator('input[type="password"]')
         .or(page.getByPlaceholder(/password/i));
 
-      if (await passwordField.first().isVisible().catch(() => false)) {
+      if (
+        await passwordField
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(passwordField.first()).toBeVisible();
       }
     });
@@ -355,9 +376,7 @@ test.describe("Super Admin", () => {
 
   // --- Navigation between sub-pages ---
 
-  test("can navigate from organizations to users page", async ({
-    authedPage: page,
-  }) => {
+  test("can navigate from organizations to users page", async ({ authedPage: page }) => {
     await page.goto("/super-admin");
 
     if (!page.url().includes("/super-admin")) {
@@ -370,14 +389,17 @@ test.describe("Super Admin", () => {
       .getByRole("button", { name: /users/i })
       .or(page.getByRole("link", { name: /users/i }));
 
-    if (await usersBtn.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await usersBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await usersBtn.first().click();
       await page.waitForTimeout(1000);
 
       // Should navigate to organization users page
-      const isUsersPage =
-        page.url().includes("/users") ||
-        page.url().includes("/super-admin");
+      const isUsersPage = page.url().includes("/users") || page.url().includes("/super-admin");
       expect(isUsersPage).toBe(true);
     }
   });

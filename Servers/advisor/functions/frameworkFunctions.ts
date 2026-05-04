@@ -7,7 +7,7 @@ export interface FetchFrameworksParams {
 
 const fetchFrameworks = async (
   params: FetchFrameworksParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<any[]> => {
   try {
     let frameworks = await getAllFrameworksQuery(organizationId);
@@ -22,34 +22,32 @@ const fetchFrameworks = async (
       id: f.id,
       name: f.name,
       description: f.description,
-      projectCount: Array.isArray((f as any).projects)
-        ? (f as any).projects.length
-        : 0,
+      projectCount: Array.isArray((f as any).projects) ? (f as any).projects.length : 0,
       created_at: f.created_at,
     }));
   } catch (error) {
     logger.error("Error fetching frameworks:", error);
     throw new Error(
-      `Failed to fetch frameworks: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch frameworks: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getFrameworkAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const frameworks = await getAllFrameworksQuery(organizationId);
     const total = frameworks.length;
 
     // Framework adoption (project count per framework)
-    const frameworkAdoption = frameworks.map((f: any) => ({
-      name: f.name,
-      projectCount: Array.isArray((f as any).projects)
-        ? (f as any).projects.length
-        : 0,
-    })).sort((a: any, b: any) => b.projectCount - a.projectCount);
+    const frameworkAdoption = frameworks
+      .map((f: any) => ({
+        name: f.name,
+        projectCount: Array.isArray((f as any).projects) ? (f as any).projects.length : 0,
+      }))
+      .sort((a: any, b: any) => b.projectCount - a.projectCount);
 
     // Total projects using any framework
     const allProjectIds = new Set<number>();
@@ -70,7 +68,7 @@ const getFrameworkAnalytics = async (
   } catch (error) {
     logger.error("Error getting framework analytics:", error);
     throw new Error(
-      `Failed to get framework analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get framework analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

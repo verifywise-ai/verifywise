@@ -24,15 +24,12 @@ const getStreamUrl = (): string => {
   if (import.meta.env.PROD) {
     return `${ENV_VARs.URL}/api/ai-gateway/chat/stream`;
   }
-  const devBase =
-    import.meta.env.VITE_APP_API_BASE_URL || "http://localhost:3000";
+  const devBase = import.meta.env.VITE_APP_API_BASE_URL || "http://localhost:3000";
   return `${devBase}/api/ai-gateway/chat/stream`;
 };
 
 export function usePlaygroundRuntime(configRef: React.RefObject<PlaygroundConfig>) {
-  const authToken = useSelector(
-    (state: RootState) => state.auth.authToken
-  );
+  const authToken = useSelector((state: RootState) => state.auth.authToken);
   const tokenRef = useRef(authToken);
   tokenRef.current = authToken;
 

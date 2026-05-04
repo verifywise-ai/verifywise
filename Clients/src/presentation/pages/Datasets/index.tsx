@@ -15,13 +15,18 @@ import { logEngine } from "../../../application/tools/log.engine";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { PluginSlot } from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
-import { IDataset, DatasetSummary as DatasetSummaryType } from "../../../domain/interfaces/i.dataset";
+import {
+  IDataset,
+  DatasetSummary as DatasetSummaryType,
+} from "../../../domain/interfaces/i.dataset";
 import { DatasetStatus, DatasetType, DataClassification } from "../../../domain/enums/dataset.enum";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DatasetSummary from "../ModelInventory/DatasetSummary";
@@ -35,6 +40,31 @@ const DATASET_GROUP_BY_OPTIONS = [
   { id: "type", label: "Type" },
   { id: "classification", label: "Classification" },
   { id: "owner", label: "Owner" },
+];
+
+type DatasetColumnKey =
+  | "name"
+  | "version"
+  | "type"
+  | "source"
+  | "classification"
+  | "contains_pii"
+  | "status"
+  | "owner"
+  | "updated_at"
+  | "actions";
+
+const DATASET_TABLE_COLUMNS: ColumnConfig<DatasetColumnKey>[] = [
+  { key: "name", label: "Name", defaultVisible: true, alwaysVisible: true },
+  { key: "version", label: "Version", defaultVisible: true },
+  { key: "type", label: "Type", defaultVisible: true },
+  { key: "source", label: "Source", defaultVisible: true },
+  { key: "classification", label: "Classification", defaultVisible: true },
+  { key: "contains_pii", label: "PII", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "owner", label: "Owner", defaultVisible: true },
+  { key: "updated_at", label: "Updated", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
 const DATASET_FILTER_COLUMNS: FilterColumn[] = [
@@ -111,7 +141,18 @@ const Datasets: React.FC = () => {
   const { userRoleName } = useAuth();
 
   // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();;
+  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
+
+  // Column visibility
+  const {
+    visibleColumns: datasetVisibleColumns,
+    allColumns: allDatasetColumns,
+    toggleColumn: toggleDatasetColumn,
+    resetToDefaults: resetDatasetColumns,
+  } = useColumnVisibility({
+    tableId: "datasets-table",
+    columns: DATASET_TABLE_COLUMNS,
+  });
 
   // FilterBy - Field value getter
   const getDatasetFieldValue = useCallback(
@@ -135,7 +176,7 @@ const Datasets: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook
@@ -219,13 +260,16 @@ const Datasets: React.FC = () => {
   }, [alert]);
 
   // Summary
-  const datasetSummary: DatasetSummaryType = useMemo(() => ({
-    draft: datasetData.filter((item) => item.status === DatasetStatus.DRAFT).length,
-    active: datasetData.filter((item) => item.status === DatasetStatus.ACTIVE).length,
-    deprecated: datasetData.filter((item) => item.status === DatasetStatus.DEPRECATED).length,
-    archived: datasetData.filter((item) => item.status === DatasetStatus.ARCHIVED).length,
-    total: datasetData.length,
-  }), [datasetData]);
+  const datasetSummary: DatasetSummaryType = useMemo(
+    () => ({
+      draft: datasetData.filter((item) => item.status === DatasetStatus.DRAFT).length,
+      active: datasetData.filter((item) => item.status === DatasetStatus.ACTIVE).length,
+      deprecated: datasetData.filter((item) => item.status === DatasetStatus.DEPRECATED).length,
+      archived: datasetData.filter((item) => item.status === DatasetStatus.ARCHIVED).length,
+      total: datasetData.length,
+    }),
+    [datasetData],
+  );
 
   // Filter datasets by FilterBy + status card + search
   const filteredDatasets = useMemo(() => {
@@ -252,7 +296,7 @@ const Datasets: React.FC = () => {
           item.name?.toLowerCase().includes(query) ||
           item.description?.toLowerCase().includes(query) ||
           item.source?.toLowerCase().includes(query) ||
-          item.owner?.toLowerCase().includes(query)
+          item.owner?.toLowerCase().includes(query),
       );
     }
 
@@ -338,10 +382,13 @@ const Datasets: React.FC = () => {
       ? "Failed to update dataset. Please try again."
       : "Failed to add dataset. Please try again.";
 
-    const errorData = error?.response?.data || error?.response || (error?.status && error?.errors ? error : null);
+    const errorData =
+      error?.response?.data || error?.response || (error?.status && error?.errors ? error : null);
     if (errorData) {
       if (errorData.status === "error" && Array.isArray(errorData.errors)) {
-        errorMessage = errorData.errors.map((err: any) => err.message || "Validation error").join(", ");
+        errorMessage = errorData.errors
+          .map((err: any) => err.message || "Validation error")
+          .join(", ");
       } else if (errorData.message) {
         errorMessage = errorData.message;
       }
@@ -349,34 +396,37 @@ const Datasets: React.FC = () => {
     setAlert({ variant: "error", body: errorMessage });
   };
 
-  const handleDatasetStatusCardClick = useCallback((statusKey: string) => {
-    if (statusCardTimerRef.current) clearTimeout(statusCardTimerRef.current);
-    if (statusCardFadeTimerRef.current) clearTimeout(statusCardFadeTimerRef.current);
+  const handleDatasetStatusCardClick = useCallback(
+    (statusKey: string) => {
+      if (statusCardTimerRef.current) clearTimeout(statusCardTimerRef.current);
+      if (statusCardFadeTimerRef.current) clearTimeout(statusCardFadeTimerRef.current);
 
-    if (statusKey === "total" || selectedDatasetStatus === statusKey) {
-      setSelectedDatasetStatus(null);
-      setAlert(null);
-      setShowAlert(false);
-    } else {
-      setSelectedDatasetStatus(statusKey);
-      const labelMap: Record<string, string> = {
-        draft: "Draft",
-        active: "Active",
-        deprecated: "Deprecated",
-        archived: "Archived",
-      };
-      setAlert({
-        variant: "info",
-        title: `Filtering by ${labelMap[statusKey]} datasets`,
-        body: "Click the card again or click Total to see all datasets.",
-      });
-      setShowAlert(true);
-      statusCardTimerRef.current = setTimeout(() => {
+      if (statusKey === "total" || selectedDatasetStatus === statusKey) {
+        setSelectedDatasetStatus(null);
+        setAlert(null);
         setShowAlert(false);
-        statusCardFadeTimerRef.current = setTimeout(() => setAlert(null), 300);
-      }, 5000);
-    }
-  }, [selectedDatasetStatus]);
+      } else {
+        setSelectedDatasetStatus(statusKey);
+        const labelMap: Record<string, string> = {
+          draft: "Draft",
+          active: "Active",
+          deprecated: "Deprecated",
+          archived: "Archived",
+        };
+        setAlert({
+          variant: "info",
+          title: `Filtering by ${labelMap[statusKey]} datasets`,
+          body: "Click the card again or click Total to see all datasets.",
+        });
+        setShowAlert(true);
+        statusCardTimerRef.current = setTimeout(() => {
+          setShowAlert(false);
+          statusCardFadeTimerRef.current = setTimeout(() => setAlert(null), 300);
+        }, 5000);
+      }
+    },
+    [selectedDatasetStatus],
+  );
 
   return (
     <PageHeaderExtended
@@ -414,19 +464,15 @@ const Datasets: React.FC = () => {
     >
       {/* Controls row */}
       <Stack spacing={2}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-        >
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy
-              columns={DATASET_FILTER_COLUMNS}
-              onFilterChange={handleDatasetFilterChange}
-            />
-            <GroupBy
-              options={DATASET_GROUP_BY_OPTIONS}
-              onGroupChange={handleGroupChange}
+            <FilterBy columns={DATASET_FILTER_COLUMNS} onFilterChange={handleDatasetFilterChange} />
+            <GroupBy options={DATASET_GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
+            <ColumnSelector
+              columns={allDatasetColumns}
+              visibleColumns={datasetVisibleColumns}
+              onToggleColumn={toggleDatasetColumn}
+              onResetToDefaults={resetDatasetColumns}
             />
             <SearchBox
               placeholder="Search datasets..."
@@ -446,7 +492,11 @@ const Datasets: React.FC = () => {
             />
             <CustomizableButton
               variant="contained"
-              sx={{ backgroundColor: "brand.primary", border: "1px solid brand.primary", gap: "8px" }}
+              sx={{
+                backgroundColor: "brand.primary",
+                border: "1px solid brand.primary",
+                gap: "8px",
+              }}
               text="Add new dataset"
               icon={<AddCircleOutlineIcon size={16} />}
               onClick={handleNewDatasetClick}
@@ -469,6 +519,7 @@ const Datasets: React.FC = () => {
             deletingId={deletingDatasetId}
             flashRowId={flashDatasetRowId}
             hidePagination={options?.hidePagination}
+            visibleColumns={datasetVisibleColumns}
           />
         )}
       />

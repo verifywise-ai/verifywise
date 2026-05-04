@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DeploymentManager, SessionManager, lazyWithRetry, clearChunkReloadFlag } from "../deploymentHelpers";
+import {
+  DeploymentManager,
+  SessionManager,
+  lazyWithRetry,
+  clearChunkReloadFlag,
+} from "../deploymentHelpers";
 
 // Mock ENV_VARs
 vi.mock("../../../../env.vars", () => ({
@@ -15,9 +20,7 @@ function createMockStorage(): Storage {
   Object.defineProperties(storage, {
     getItem: {
       value: (key: string) =>
-        Object.prototype.hasOwnProperty.call(storage, key)
-          ? storage[key]
-          : null,
+        Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
       enumerable: false,
       writable: true,
       configurable: true,
@@ -113,10 +116,9 @@ describe("deploymentHelpers", () => {
       DeploymentManager.startPolling();
       await Promise.resolve();
 
-      expect(fetch).toHaveBeenCalledWith(
-        "http://localhost:3000/api/version",
-        { cache: "no-cache" }
-      );
+      expect(fetch).toHaveBeenCalledWith("http://localhost:3000/api/version", {
+        cache: "no-cache",
+      });
     });
 
     it("sets up an interval for periodic checking", () => {
@@ -130,10 +132,7 @@ describe("deploymentHelpers", () => {
 
       DeploymentManager.startPolling();
 
-      expect(setIntervalSpy).toHaveBeenCalledWith(
-        expect.any(Function),
-        60_000
-      );
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 60_000);
     });
 
     it("registers a visibilitychange listener", () => {
@@ -146,10 +145,7 @@ describe("deploymentHelpers", () => {
 
       DeploymentManager.startPolling();
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith(
-        "visibilitychange",
-        expect.any(Function)
-      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
     });
 
     it("does not start a second interval if already polling", () => {
@@ -267,15 +263,11 @@ describe("deploymentHelpers", () => {
     it("checks for update when user returns to tab", async () => {
       let visibilityCb: (() => void) | undefined;
 
-      vi.spyOn(document, "addEventListener").mockImplementation(
-        ((event: any, cb: any) => {
-          if (event === "visibilitychange") visibilityCb = cb;
-        }) as any
-      );
+      vi.spyOn(document, "addEventListener").mockImplementation(((event: any, cb: any) => {
+        if (event === "visibilitychange") visibilityCb = cb;
+      }) as any);
 
-      vi.spyOn(globalThis, "setInterval").mockImplementation(
-        (() => 1) as any
-      );
+      vi.spyOn(globalThis, "setInterval").mockImplementation((() => 1) as any);
 
       // First call (startup): versions match
       (fetch as any).mockResolvedValue({
@@ -326,10 +318,7 @@ describe("deploymentHelpers", () => {
     });
 
     it("returns false if auth token does not exist in persisted state", async () => {
-      localStorage.setItem(
-        "persist:root",
-        JSON.stringify({ auth: JSON.stringify({}) })
-      );
+      localStorage.setItem("persist:root", JSON.stringify({ auth: JSON.stringify({}) }));
 
       const result = await SessionManager.recoverAuthenticationState();
 
@@ -340,7 +329,7 @@ describe("deploymentHelpers", () => {
     it("returns true if auth token exists and /me responds ok", async () => {
       localStorage.setItem(
         "persist:root",
-        JSON.stringify({ auth: JSON.stringify({ authToken: "TOKEN123" }) })
+        JSON.stringify({ auth: JSON.stringify({ authToken: "TOKEN123" }) }),
       );
 
       (fetch as any).mockResolvedValue({ ok: true });
@@ -362,7 +351,7 @@ describe("deploymentHelpers", () => {
         JSON.stringify({
           auth: JSON.stringify({ authToken: "BADTOKEN", user: "abc" }),
           other: "keep",
-        })
+        }),
       );
 
       (fetch as any).mockResolvedValue({ ok: false });
@@ -385,10 +374,7 @@ describe("deploymentHelpers", () => {
     });
 
     it("returns false when persisted state exists but has no auth key", async () => {
-      localStorage.setItem(
-        "persist:root",
-        JSON.stringify({ somethingElse: "keep" })
-      );
+      localStorage.setItem("persist:root", JSON.stringify({ somethingElse: "keep" }));
 
       const result = await SessionManager.recoverAuthenticationState();
 
@@ -408,7 +394,7 @@ describe("deploymentHelpers", () => {
             otherAuth: "keep",
           }),
           somethingElse: "keep2",
-        })
+        }),
       );
 
       SessionManager.clearAuthState();
@@ -448,10 +434,7 @@ describe("deploymentHelpers", () => {
       DeploymentManager.startPolling();
       DeploymentManager.stopPolling();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        "visibilitychange",
-        expect.any(Function)
-      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
     });
 
     it("allows restart after stop", () => {

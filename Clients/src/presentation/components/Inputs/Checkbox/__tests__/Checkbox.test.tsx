@@ -12,7 +12,7 @@ describe("Checkbox Component", () => {
         isChecked={false}
         value="false"
         onChange={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("Accept terms")).toBeInTheDocument();
@@ -20,28 +20,15 @@ describe("Checkbox Component", () => {
 
   it("renders without label (table mode)", () => {
     renderWithProviders(
-      <Checkbox
-        id="test-cb"
-        isChecked={false}
-        value="false"
-        onChange={vi.fn()}
-      />
+      <Checkbox id="test-cb" isChecked={false} value="false" onChange={vi.fn()} />,
     );
 
-    expect(
-      screen.getByRole("checkbox", { name: /controlled checkbox/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /controlled checkbox/i })).toBeInTheDocument();
   });
 
   it("reflects checked state", () => {
     renderWithProviders(
-      <Checkbox
-        id="test-cb"
-        label="Check me"
-        isChecked={true}
-        value="true"
-        onChange={vi.fn()}
-      />
+      <Checkbox id="test-cb" label="Check me" isChecked={true} value="true" onChange={vi.fn()} />,
     );
 
     expect(screen.getByRole("checkbox")).toBeChecked();
@@ -49,13 +36,7 @@ describe("Checkbox Component", () => {
 
   it("reflects unchecked state", () => {
     renderWithProviders(
-      <Checkbox
-        id="test-cb"
-        label="Check me"
-        isChecked={false}
-        value="false"
-        onChange={vi.fn()}
-      />
+      <Checkbox id="test-cb" label="Check me" isChecked={false} value="false" onChange={vi.fn()} />,
     );
 
     expect(screen.getByRole("checkbox")).not.toBeChecked();
@@ -72,7 +53,7 @@ describe("Checkbox Component", () => {
         isChecked={false}
         value="false"
         onChange={handleChange}
-      />
+      />,
     );
 
     await user.click(screen.getByRole("checkbox"));
@@ -88,7 +69,7 @@ describe("Checkbox Component", () => {
         value="false"
         onChange={vi.fn()}
         isDisabled
-      />
+      />,
     );
 
     expect(screen.getByRole("checkbox")).toBeDisabled();

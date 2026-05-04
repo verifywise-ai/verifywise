@@ -184,9 +184,9 @@ export const vendorManagementContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Low', text: 'Vendor is non-essential; easy to replace' },
-        { bold: 'Medium', text: 'Vendor supports important but not critical functions' },
-        { bold: 'High', text: 'Vendor is critical to core business operations' },
+        { bold: 'Low (vendor supports non-core functions)', text: 'Easy to replace; alternatives are readily available' },
+        { bold: 'Medium (affects operations but is replaceable)', text: 'Important but not critical; disruption would be manageable' },
+        { bold: 'High (critical to core services or products)', text: 'Disruption would significantly impact business' },
       ],
     },
     {
@@ -203,8 +203,8 @@ export const vendorManagementContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'None', text: 'No past incidents' },
-        { bold: 'Minor incident', text: 'Small issues that were resolved' },
-        { bold: 'Major incident', text: 'Significant incidents affecting operations' },
+        { bold: 'Minor incident (e.g. small delay, minor bug)', text: 'Small issues that were resolved' },
+        { bold: 'Major incident (e.g. data breach, legal issue)', text: 'Significant incidents affecting operations' },
       ],
     },
     {

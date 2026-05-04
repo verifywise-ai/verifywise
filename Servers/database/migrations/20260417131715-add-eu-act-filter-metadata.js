@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Adds a single `article` text column to the three EU AI Act struct tables.

@@ -8,32 +8,32 @@ import {
   validateForeignKey,
   validateSchema,
   ValidationResult,
-  ValidationError
-} from './validation.utils';
+  ValidationError,
+} from "./validation.utils";
 import {
   validateUserEmail,
   validateName,
   validateSurname,
-  validateUserPassword
-} from './userValidation.utils';
+  validateUserPassword,
+} from "./userValidation.utils";
 
 /**
  * Validation constants for organizations
  */
 export const ORGANIZATION_VALIDATION_LIMITS = {
   NAME: { MIN: 2, MAX: 255 },
-  LOGO: { MIN: 1, MAX: 500 }
+  LOGO: { MIN: 1, MAX: 500 },
 } as const;
 
 /**
  * Validates organization name field
  */
 export const validateOrganizationName = (value: any): ValidationResult => {
-  return validateString(value, 'Organization name', {
+  return validateString(value, "Organization name", {
     required: true,
     minLength: ORGANIZATION_VALIDATION_LIMITS.NAME.MIN,
     maxLength: ORGANIZATION_VALIDATION_LIMITS.NAME.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -41,15 +41,15 @@ export const validateOrganizationName = (value: any): ValidationResult => {
  * Validates organization logo field
  */
 export const validateOrganizationLogo = (value: any): ValidationResult => {
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Logo is optional
   }
 
-  return validateString(value, 'Organization logo', {
+  return validateString(value, "Organization logo", {
     required: false,
     minLength: ORGANIZATION_VALIDATION_LIMITS.LOGO.MIN,
     maxLength: ORGANIZATION_VALIDATION_LIMITS.LOGO.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -57,7 +57,7 @@ export const validateOrganizationLogo = (value: any): ValidationResult => {
  * Validates organization ID parameter
  */
 export const validateOrganizationIdParam = (id: any): ValidationResult => {
-  return validateForeignKey(id, 'Organization ID', true);
+  return validateForeignKey(id, "Organization ID", true);
 };
 
 /**
@@ -101,7 +101,7 @@ export const createOrganizationSchema = {
   userEmail: validateOrgUserEmail,
   userName: validateOrgUserName,
   userSurname: validateOrgUserSurname,
-  userPassword: validateOrgUserPassword
+  userPassword: validateOrgUserPassword,
 };
 
 /**
@@ -109,8 +109,8 @@ export const createOrganizationSchema = {
  * All fields are optional for updates
  */
 export const updateOrganizationSchema = {
-  name: (value: any) => value !== undefined ? validateOrganizationName(value) : { isValid: true },
-  logo: (value: any) => value !== undefined ? validateOrganizationLogo(value) : { isValid: true }
+  name: (value: any) => (value !== undefined ? validateOrganizationName(value) : { isValid: true }),
+  logo: (value: any) => (value !== undefined ? validateOrganizationLogo(value) : { isValid: true }),
 };
 
 /**
@@ -125,15 +125,17 @@ export const validateCompleteOrganization = (data: any): ValidationError[] => {
  */
 export const validateUpdateOrganization = (data: any): ValidationError[] => {
   // Check if at least one field is provided for update
-  const updateFields = ['name', 'logo'];
-  const hasUpdateField = updateFields.some(field => data[field] !== undefined);
+  const updateFields = ["name", "logo"];
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
-    return [{
-      field: 'body',
-      message: 'At least one field must be provided for update',
-      code: 'NO_UPDATE_FIELDS'
-    }];
+    return [
+      {
+        field: "body",
+        message: "At least one field must be provided for update",
+        code: "NO_UPDATE_FIELDS",
+      },
+    ];
   }
 
   return validateSchema(data, updateOrganizationSchema);
@@ -146,23 +148,24 @@ export const validateOrganizationCreationBusinessRules = (data: any): Validation
   const errors: ValidationError[] = [];
 
   // Check for reserved organization names
-  const reservedNames = ['admin', 'system', 'root', 'api', 'www', 'mail', 'ftp'];
-  if (data.name && reservedNames.some(reserved =>
-    data.name.toLowerCase().includes(reserved.toLowerCase())
-  )) {
+  const reservedNames = ["admin", "system", "root", "api", "www", "mail", "ftp"];
+  if (
+    data.name &&
+    reservedNames.some((reserved) => data.name.toLowerCase().includes(reserved.toLowerCase()))
+  ) {
     errors.push({
-      field: 'name',
-      message: 'Organization name cannot contain reserved words',
-      code: 'RESERVED_NAME'
+      field: "name",
+      message: "Organization name cannot contain reserved words",
+      code: "RESERVED_NAME",
     });
   }
 
   // Check organization name doesn't start with special characters
   if (data.name && /^[^a-zA-Z]/.test(data.name)) {
     errors.push({
-      field: 'name',
-      message: 'Organization name must start with a letter',
-      code: 'INVALID_NAME_START'
+      field: "name",
+      message: "Organization name must start with a letter",
+      code: "INVALID_NAME_START",
     });
   }
 
@@ -171,47 +174,50 @@ export const validateOrganizationCreationBusinessRules = (data: any): Validation
     const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*\.(jpg|jpeg|png|gif|svg|webp)(\?[^\s]*)?$/i;
     if (!urlPattern.test(data.logo)) {
       errors.push({
-        field: 'logo',
-        message: 'Logo must be a valid image URL (jpg, jpeg, png, gif, svg, webp)',
-        code: 'INVALID_LOGO_URL'
+        field: "logo",
+        message: "Logo must be a valid image URL (jpg, jpeg, png, gif, svg, webp)",
+        code: "INVALID_LOGO_URL",
       });
     }
   }
 
   // Validate user email domain
   if (data.userEmail) {
-    const emailDomain = data.userEmail.split('@')[1];
+    const emailDomain = data.userEmail.split("@")[1];
     if (emailDomain) {
       // Check for suspicious email domains
-      const suspiciousDomains = ['example.com', 'test.com', 'temp.com', 'fake.com'];
+      const suspiciousDomains = ["example.com", "test.com", "temp.com", "fake.com"];
       if (suspiciousDomains.includes(emailDomain.toLowerCase())) {
         errors.push({
-          field: 'userEmail',
-          message: 'Please use a valid business email address',
-          code: 'SUSPICIOUS_EMAIL_DOMAIN'
+          field: "userEmail",
+          message: "Please use a valid business email address",
+          code: "SUSPICIOUS_EMAIL_DOMAIN",
         });
       }
     }
   }
 
   // Validate that user name and surname are different
-  if (data.userName && data.userSurname &&
-      data.userName.toLowerCase() === data.userSurname.toLowerCase()) {
+  if (
+    data.userName &&
+    data.userSurname &&
+    data.userName.toLowerCase() === data.userSurname.toLowerCase()
+  ) {
     errors.push({
-      field: 'userSurname',
-      message: 'User name and surname cannot be the same',
-      code: 'IDENTICAL_NAME_SURNAME'
+      field: "userSurname",
+      message: "User name and surname cannot be the same",
+      code: "IDENTICAL_NAME_SURNAME",
     });
   }
 
   // Check for common weak passwords (additional security on top of comprehensive validation)
   if (data.userPassword) {
-    const weakPasswords = ['password', '12345678', 'qwerty', 'admin123', 'password123'];
+    const weakPasswords = ["password", "12345678", "qwerty", "admin123", "password123"];
     if (weakPasswords.includes(data.userPassword.toLowerCase())) {
       errors.push({
-        field: 'userPassword',
-        message: 'Password is too common. Please choose a stronger password',
-        code: 'WEAK_PASSWORD'
+        field: "userPassword",
+        message: "Password is too common. Please choose a stronger password",
+        code: "WEAK_PASSWORD",
       });
     }
   }
@@ -228,35 +234,35 @@ export const validateOrganizationUpdateBusinessRules = (data: any): ValidationEr
   // Only validate name if it's being updated
   if (data.name !== undefined) {
     // Check for reserved organization names
-    const reservedNames = ['admin', 'system', 'root', 'api', 'www', 'mail', 'ftp'];
-    if (reservedNames.some(reserved =>
-      data.name.toLowerCase().includes(reserved.toLowerCase())
-    )) {
+    const reservedNames = ["admin", "system", "root", "api", "www", "mail", "ftp"];
+    if (
+      reservedNames.some((reserved) => data.name.toLowerCase().includes(reserved.toLowerCase()))
+    ) {
       errors.push({
-        field: 'name',
-        message: 'Organization name cannot contain reserved words',
-        code: 'RESERVED_NAME'
+        field: "name",
+        message: "Organization name cannot contain reserved words",
+        code: "RESERVED_NAME",
       });
     }
 
     // Check organization name doesn't start with special characters
     if (/^[^a-zA-Z]/.test(data.name)) {
       errors.push({
-        field: 'name',
-        message: 'Organization name must start with a letter',
-        code: 'INVALID_NAME_START'
+        field: "name",
+        message: "Organization name must start with a letter",
+        code: "INVALID_NAME_START",
       });
     }
   }
 
   // Only validate logo if it's being updated
-  if (data.logo !== undefined && data.logo !== null && data.logo !== '') {
+  if (data.logo !== undefined && data.logo !== null && data.logo !== "") {
     const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*\.(jpg|jpeg|png|gif|svg|webp)(\?[^\s]*)?$/i;
     if (!urlPattern.test(data.logo)) {
       errors.push({
-        field: 'logo',
-        message: 'Logo must be a valid image URL (jpg, jpeg, png, gif, svg, webp)',
-        code: 'INVALID_LOGO_URL'
+        field: "logo",
+        message: "Logo must be a valid image URL (jpg, jpeg, png, gif, svg, webp)",
+        code: "INVALID_LOGO_URL",
       });
     }
   }

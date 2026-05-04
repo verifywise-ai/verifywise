@@ -79,18 +79,39 @@ export function SubmissionSuccess() {
 
         {/* Tear line with circles */}
         <Box sx={{ position: "relative", height: 24, backgroundColor: "transparent" }}>
-          <Box sx={{
-            position: "absolute", left: -12, top: "50%", transform: "translateY(-50%)",
-            width: 24, height: 24, borderRadius: "50%", backgroundColor: "#fafafa",
-          }} />
-          <Box sx={{
-            position: "absolute", right: -12, top: "50%", transform: "translateY(-50%)",
-            width: 24, height: 24, borderRadius: "50%", backgroundColor: "#fafafa",
-          }} />
-          <Box sx={{
-            position: "absolute", left: 12, right: 12, top: "50%",
-            borderTop: "2px dashed #e2e8f0",
-          }} />
+          <Box
+            sx={{
+              position: "absolute",
+              left: -12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              backgroundColor: "#fafafa",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              right: -12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              backgroundColor: "#fafafa",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              left: 12,
+              right: 12,
+              top: "50%",
+              borderTop: "2px dashed #e2e8f0",
+            }}
+          />
         </Box>
 
         {/* Ticket bottom */}
@@ -106,9 +127,18 @@ export function SubmissionSuccess() {
           {/* Details rows */}
           {(() => {
             const rows = [
-              { label: "Reference", value: `${state.submissionId}`, icon: <Hash size={13} color="#94a3b8" /> },
+              {
+                label: "Reference",
+                value: `${state.submissionId}`,
+                icon: <Hash size={13} color="#94a3b8" />,
+              },
               ...(state.submitterEmail ? [{ label: "Email", value: state.submitterEmail }] : []),
-              { label: "Status", value: "Pending review", color: "#f59e0b", icon: <Clock size={13} color="#f59e0b" /> },
+              {
+                label: "Status",
+                value: "Pending review",
+                color: "#f59e0b",
+                icon: <Clock size={13} color="#f59e0b" />,
+              },
             ];
             return rows.map((row, i) => (
               <Box
@@ -124,11 +154,16 @@ export function SubmissionSuccess() {
                 <Typography sx={{ fontSize: "13px", color: "#94a3b8" }}>{row.label}</Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   {(row as any).icon}
-                  <Typography sx={{
-                    fontSize: "13px", fontWeight: 600,
-                    color: (row as any).color || "#1e293b",
-                    maxWidth: 220, textAlign: "right", wordBreak: "break-all",
-                  }}>
+                  <Typography
+                    sx={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: (row as any).color || "#1e293b",
+                      maxWidth: 220,
+                      textAlign: "right",
+                      wordBreak: "break-all",
+                    }}
+                  >
                     {row.value}
                   </Typography>
                 </Box>
@@ -144,8 +179,13 @@ export function SubmissionSuccess() {
                 startIcon={<Edit size={15} />}
                 text="Edit and resubmit"
                 sx={{
-                  width: "100%", height: 44, backgroundColor: "brand.primary",
-                  fontSize: "13px", fontWeight: 600, borderRadius: "8px", textTransform: "none",
+                  width: "100%",
+                  height: 44,
+                  backgroundColor: "brand.primary",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  textTransform: "none",
                   boxShadow: "none",
                   "&:hover": { backgroundColor: "brand.primaryHover" },
                 }}

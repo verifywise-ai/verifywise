@@ -16,9 +16,9 @@ import { sequelize } from "../database/db";
  * @returns A 10-character alphanumeric hash
  */
 export const getTenantHash = (tenantId: number): string => {
-  const hash = createHash('sha256').update(tenantId.toString()).digest('base64');
-  return hash.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
-}
+  const hash = createHash("sha256").update(tenantId.toString()).digest("base64");
+  return hash.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+};
 
 /**
  * Reverse lookup: find organization ID from tenant hash.
@@ -27,10 +27,10 @@ export const getTenantHash = (tenantId: number): string => {
  * @param tenantHash - The tenant hash (10-character alphanumeric)
  * @returns The organization ID, or null if not found
  */
-export const getOrganizationIdFromTenantHash = async (tenantHash: string): Promise<number | null> => {
-  const [rows] = await sequelize.query(
-    `SELECT id FROM organizations ORDER BY id`
-  );
+export const getOrganizationIdFromTenantHash = async (
+  tenantHash: string,
+): Promise<number | null> => {
+  const [rows] = await sequelize.query(`SELECT id FROM organizations ORDER BY id`);
 
   for (const row of rows as { id: number }[]) {
     if (getTenantHash(row.id) === tenantHash) {
@@ -39,4 +39,4 @@ export const getOrganizationIdFromTenantHash = async (tenantHash: string): Promi
   }
 
   return null;
-}
+};

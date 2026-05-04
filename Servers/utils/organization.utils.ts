@@ -30,8 +30,8 @@ import { createHash } from "crypto";
  * This is used for backward compatibility and identifying old tenant schemas.
  */
 const generateTenantId = (orgId: number): string => {
-  const hash = createHash('sha256').update(orgId.toString()).digest('base64');
-  return hash.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  const hash = createHash("sha256").update(orgId.toString()).digest("base64");
+  return hash.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
 };
 
 /**
@@ -45,7 +45,7 @@ const generateTenantId = (orgId: number): string => {
  * @throws {Error} If there is an error executing the SQL query.
  */
 export const getAllOrganizationsQuery = async (
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<OrganizationModel[]> => {
   const organizations = await sequelize.query(
     "SELECT * FROM organizations ORDER BY created_at DESC, id ASC",
@@ -53,17 +53,18 @@ export const getAllOrganizationsQuery = async (
       mapToModel: true,
       model: OrganizationModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
   return organizations;
 };
 
 export const getOrganizationsExistsQuery = async () => {
-  const result = await sequelize.query(
-    "SELECT COUNT(*) > 0 AS exists FROM organizations"
-  ) as [{ exists: boolean }[], number];
+  const result = (await sequelize.query("SELECT COUNT(*) > 0 AS exists FROM organizations")) as [
+    { exists: boolean }[],
+    number,
+  ];
   return result[0][0];
-}
+};
 
 /**
  * Retrieves an organization from the database by its unique identifier.
@@ -73,17 +74,12 @@ export const getOrganizationsExistsQuery = async () => {
  *
  * @throws {Error} If the query fails.
  */
-export const getOrganizationByIdQuery = async (
-  id: number
-): Promise<OrganizationModel | null> => {
-  const result = await sequelize.query(
-    "SELECT * FROM organizations WHERE id = :id",
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: OrganizationModel,
-    }
-  );
+export const getOrganizationByIdQuery = async (id: number): Promise<OrganizationModel | null> => {
+  const result = await sequelize.query("SELECT * FROM organizations WHERE id = :id", {
+    replacements: { id },
+    mapToModel: true,
+    model: OrganizationModel,
+  });
   return result[0] || null;
 };
 
@@ -95,7 +91,7 @@ export const getOrganizationByIdQuery = async (
  * @returns {Promise<OrganizationModel | null>} A promise that resolves to the organization object or null if not found.
  */
 export const getOrganizationByTenantHashQuery = async (
-  tenantHash: string
+  tenantHash: string,
 ): Promise<OrganizationModel | null> => {
   const result = await sequelize.query(
     "SELECT * FROM organizations WHERE tenant_id = :tenantHash",
@@ -103,7 +99,7 @@ export const getOrganizationByTenantHashQuery = async (
       replacements: { tenantHash },
       mapToModel: true,
       model: OrganizationModel,
-    }
+    },
   );
   return result[0] || null;
 };
@@ -119,7 +115,7 @@ export const getOrganizationByTenantHashQuery = async (
  */
 export const createOrganizationQuery = async (
   organization: Partial<OrganizationModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<OrganizationModel> => {
   // Generate a unique slug for the organization
   const slug = Math.random().toString(36).substring(2, 10);
@@ -138,20 +134,17 @@ export const createOrganizationQuery = async (
       mapToModel: true,
       model: OrganizationModel,
       transaction,
-    }
+    },
   );
 
   const createdOrg = result[0];
 
   // Generate and set tenant_id based on the organization ID
   const tenantId = generateTenantId(createdOrg.id!);
-  await sequelize.query(
-    `UPDATE organizations SET tenant_id = :tenantId WHERE id = :id`,
-    {
-      replacements: { tenantId, id: createdOrg.id },
-      transaction,
-    }
-  );
+  await sequelize.query(`UPDATE organizations SET tenant_id = :tenantId WHERE id = :id`, {
+    replacements: { tenantId, id: createdOrg.id },
+    transaction,
+  });
 
   // Return organization with tenant_id
   createdOrg.tenant_id = tenantId;
@@ -171,7 +164,7 @@ export const createOrganizationQuery = async (
 export const updateOrganizationByIdQuery = async (
   id: number,
   organization: Partial<OrganizationModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<OrganizationModel | null> => {
   const updateOrg: Partial<Record<keyof OrganizationModel, any>> = {};
   const updateFields = ["name", "logo"];
@@ -217,17 +210,14 @@ export const updateOrganizationByIdQuery = async (
  */
 export const deleteOrganizationByIdQuery = async (
   id: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM organizations WHERE id = :id RETURNING *`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: OrganizationModel,
-      type: QueryTypes.DELETE,
-      transaction,
-    }
-  );
+  const result = await sequelize.query(`DELETE FROM organizations WHERE id = :id RETURNING *`, {
+    replacements: { id },
+    mapToModel: true,
+    model: OrganizationModel,
+    type: QueryTypes.DELETE,
+    transaction,
+  });
   return result.length > 0;
 };

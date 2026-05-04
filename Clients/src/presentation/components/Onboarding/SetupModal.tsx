@@ -188,7 +188,8 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               lineHeight: 1.5,
             }}
           >
-            How would you like to get started? You can explore with sample data or begin with a clean slate.
+            How would you like to get started? You can explore with sample data or begin with a
+            clean slate.
           </Typography>
         </Stack>
 

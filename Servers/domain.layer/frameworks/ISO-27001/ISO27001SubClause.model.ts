@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { IISO27001SubClause } from "../../interfaces/i.ISO27001SubClause";
 import { UserModel } from "../../models/user/user.model";
 import { ISO27001ClauseStructModel } from "./ISO27001ClauseStruct.model";
@@ -16,8 +10,8 @@ import { ProjectFrameworksModel } from "../../models/projectFrameworks/projectFr
 })
 export class ISO27001SubClauseModel
   extends Model<ISO27001SubClauseModel>
-  implements IISO27001SubClause {
-
+  implements IISO27001SubClause
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -125,5 +119,4 @@ export class ISO27001SubClauseModel
       is_demo: this.is_demo,
     };
   }
-
 }

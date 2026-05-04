@@ -224,9 +224,7 @@ describe("project.repository", () => {
       const error = new Error("Network timeout");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(getProjectById({ id: "1" })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getProjectById({ id: "1" })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -294,9 +292,7 @@ describe("project.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createProject({ body: { name: "Duplicate" } }),
-      ).rejects.toEqual(error);
+      await expect(createProject({ body: { name: "Duplicate" } })).rejects.toEqual(error);
     });
 
     it("should handle 403 forbidden on create", async () => {
@@ -523,12 +519,9 @@ describe("project.repository", () => {
         routeUrl: "/projects/5/progress/detailed",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projects/5/progress/detailed",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projects/5/progress/detailed", {
+        signal: undefined,
+      });
     });
 
     it("should handle dynamic route URLs with query parameters", async () => {
@@ -580,9 +573,9 @@ describe("project.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getProjectProgressData({ routeUrl: "/projects/999/progress" }),
-      ).rejects.toEqual(error);
+      await expect(getProjectProgressData({ routeUrl: "/projects/999/progress" })).rejects.toEqual(
+        error,
+      );
     });
 
     it("should throw error with 403 forbidden", async () => {
@@ -592,18 +585,18 @@ describe("project.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getProjectProgressData({ routeUrl: "/projects/1/progress" }),
-      ).rejects.toEqual(error);
+      await expect(getProjectProgressData({ routeUrl: "/projects/1/progress" })).rejects.toEqual(
+        error,
+      );
     });
 
     it("should handle network errors on progress fetch", async () => {
       const error = new Error("Network timeout");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getProjectProgressData({ routeUrl: "/projects/1/progress" }),
-      ).rejects.toThrow("Network timeout");
+      await expect(getProjectProgressData({ routeUrl: "/projects/1/progress" })).rejects.toThrow(
+        "Network timeout",
+      );
     });
 
     it("should handle 500 server error on progress fetch", async () => {
@@ -613,9 +606,9 @@ describe("project.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getProjectProgressData({ routeUrl: "/projects/1/progress" }),
-      ).rejects.toEqual(error);
+      await expect(getProjectProgressData({ routeUrl: "/projects/1/progress" })).rejects.toEqual(
+        error,
+      );
     });
   });
 });

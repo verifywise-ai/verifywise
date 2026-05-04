@@ -58,12 +58,12 @@ const SpacingLayoutSection: React.FC = () => {
   ];
 
   const commonMargins = [
-    { property: "mb: \"4px\"", usage: "Label to input" },
-    { property: "mb: \"8px\"", usage: "Title to subtitle" },
-    { property: "mb: \"16px\"", usage: "Section header to content" },
-    { property: "mb: \"24px\"", usage: "Section to section" },
-    { property: "mb: \"32px\"", usage: "Page header to content" },
-    { property: "mt: \"40px\"", usage: "Footer/checklist sections" },
+    { property: 'mb: "4px"', usage: "Label to input" },
+    { property: 'mb: "8px"', usage: "Title to subtitle" },
+    { property: 'mb: "16px"', usage: "Section header to content" },
+    { property: 'mb: "24px"', usage: "Section to section" },
+    { property: 'mb: "32px"', usage: "Page header to content" },
+    { property: 'mt: "40px"', usage: "Footer/checklist sections" },
   ];
 
   return (
@@ -95,16 +95,16 @@ const SpacingLayoutSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Consistent spacing scale and layout patterns used throughout VerifyWise.
-          Based on MUI theme.spacing() with a 2px base unit.
+          Consistent spacing scale and layout patterns used throughout VerifyWise. Based on MUI
+          theme.spacing() with a 2px base unit.
         </Typography>
       </Box>
 
       {/* Spacing Scale */}
       <SpecSection title="Spacing scale">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          VerifyWise uses theme.spacing(n) where the base unit is 2px.
-          Use these consistent values instead of arbitrary pixel values.
+          VerifyWise uses theme.spacing(n) where the base unit is 2px. Use these consistent values
+          instead of arbitrary pixel values.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -164,9 +164,7 @@ const SpacingLayoutSection: React.FC = () => {
                       >
                         {item.value}
                       </Typography>
-                      <Typography
-                        sx={{ fontSize: 11, color: theme.palette.text.tertiary }}
-                      >
+                      <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
                         {item.usage}
                       </Typography>
                     </Box>
@@ -177,7 +175,16 @@ const SpacingLayoutSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Base configuration
             </Typography>
             <SpecTable
@@ -189,7 +196,17 @@ const SpacingLayoutSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Most common values
             </Typography>
             <SpecTable
@@ -238,12 +255,21 @@ const SpacingLayoutSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Common margin patterns
             </Typography>
             <SpecTable
               onCopy={handleCopy}
-              specs={commonMargins.map(m => ({ property: m.property, value: m.usage }))}
+              specs={commonMargins.map((m) => ({ property: m.property, value: m.usage }))}
             />
           </Box>
         </Box>
@@ -257,11 +283,7 @@ const SpacingLayoutSection: React.FC = () => {
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
-            <ExampleWithCode
-              label="Gap scale"
-              code={spacingSnippets.gaps}
-              onCopy={handleCopy}
-            >
+            <ExampleWithCode label="Gap scale" code={spacingSnippets.gaps} onCopy={handleCopy}>
               <Box
                 sx={{
                   p: "24px",
@@ -281,7 +303,16 @@ const SpacingLayoutSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Gap recommendations
             </Typography>
             <SpecTable
@@ -369,7 +400,16 @@ const SpacingLayoutSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Available mixins
             </Typography>
             <SpecTable
@@ -562,9 +602,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -586,9 +624,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -639,9 +675,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

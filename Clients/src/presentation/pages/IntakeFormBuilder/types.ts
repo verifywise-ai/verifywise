@@ -177,20 +177,83 @@ export interface EntityFieldMapping {
  */
 export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[]> = {
   [IntakeEntityType.MODEL]: [
-    { field: "name", label: "Model name", description: "Name of the AI model", requiredFieldType: ["text"], entityRequired: true },
-    { field: "description", label: "Description", description: "Model description", requiredFieldType: ["textarea", "text"] },
-    { field: "modelVersion", label: "Model version", description: "Version of the model", requiredFieldType: ["text"] },
-    { field: "provider", label: "Provider", description: "Model provider/vendor", requiredFieldType: ["text", "select"] },
-    { field: "modelType", label: "Model type", description: "Type of AI model", requiredFieldType: ["text", "select"] },
-    { field: "intendedUse", label: "Intended use", description: "Intended use of the model", requiredFieldType: ["textarea", "text"] },
+    {
+      field: "name",
+      label: "Model name",
+      description: "Name of the AI model",
+      requiredFieldType: ["text"],
+      entityRequired: true,
+    },
+    {
+      field: "description",
+      label: "Description",
+      description: "Model description",
+      requiredFieldType: ["textarea", "text"],
+    },
+    {
+      field: "modelVersion",
+      label: "Model version",
+      description: "Version of the model",
+      requiredFieldType: ["text"],
+    },
+    {
+      field: "provider",
+      label: "Provider",
+      description: "Model provider/vendor",
+      requiredFieldType: ["text", "select"],
+    },
+    {
+      field: "modelType",
+      label: "Model type",
+      description: "Type of AI model",
+      requiredFieldType: ["text", "select"],
+    },
+    {
+      field: "intendedUse",
+      label: "Intended use",
+      description: "Intended use of the model",
+      requiredFieldType: ["textarea", "text"],
+    },
   ],
   [IntakeEntityType.USE_CASE]: [
-    { field: "project_title", label: "Project title", description: "Title of the use case/project", requiredFieldType: ["text"], entityRequired: true },
-    { field: "goal", label: "Goal", description: "Goal of the project", requiredFieldType: ["text", "textarea"], entityRequired: true },
-    { field: "start_date", label: "Start date", description: "Project start date", requiredFieldType: ["date"] },
-    { field: "ai_risk_classification", label: "AI risk classification", description: "Risk classification", requiredFieldType: ["select"] },
-    { field: "type_of_high_risk_role", label: "High risk role type", description: "Type of high-risk role", requiredFieldType: ["select"] },
-    { field: "geography", label: "Geography", description: "Geographic scope of the use case", requiredFieldType: ["select"] },
+    {
+      field: "project_title",
+      label: "Project title",
+      description: "Title of the use case/project",
+      requiredFieldType: ["text"],
+      entityRequired: true,
+    },
+    {
+      field: "goal",
+      label: "Goal",
+      description: "Goal of the project",
+      requiredFieldType: ["text", "textarea"],
+      entityRequired: true,
+    },
+    {
+      field: "start_date",
+      label: "Start date",
+      description: "Project start date",
+      requiredFieldType: ["date"],
+    },
+    {
+      field: "ai_risk_classification",
+      label: "AI risk classification",
+      description: "Risk classification",
+      requiredFieldType: ["select"],
+    },
+    {
+      field: "type_of_high_risk_role",
+      label: "High risk role type",
+      description: "Type of high-risk role",
+      requiredFieldType: ["select"],
+    },
+    {
+      field: "geography",
+      label: "Geography",
+      description: "Geographic scope of the use case",
+      requiredFieldType: ["select"],
+    },
   ],
 };
 
@@ -225,7 +288,10 @@ export const PALETTE_ITEMS: PaletteItem[] = [
     description: "Email address input",
     defaultConfig: {
       placeholder: "email@example.com",
-      validation: { pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", patternMessage: "Please enter a valid email address" },
+      validation: {
+        pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+        patternMessage: "Please enter a valid email address",
+      },
     },
   },
   {
@@ -355,7 +421,8 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     type: "textarea",
     label: "What does this AI system do?",
     placeholder: "Describe the core functionality and purpose",
-    guidanceText: "Understanding what the system does is critical for risk assessment and compliance review.",
+    guidanceText:
+      "Understanding what the system does is critical for risk assessment and compliance review.",
     validation: { required: true, maxLength: 2000 },
     entityFieldMapping: "description",
     order: 1,
@@ -416,7 +483,8 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     id: generateFieldId(),
     type: "select",
     label: "Does this system make autonomous decisions?",
-    guidanceText: "Autonomous decision-making increases risk and may require human oversight measures.",
+    guidanceText:
+      "Autonomous decision-making increases risk and may require human oversight measures.",
     options: [
       { label: "No — always requires human approval", value: "no" },
       { label: "Partially — recommends but human decides", value: "partial" },
@@ -448,7 +516,8 @@ export const DEFAULT_MODEL_FIELDS: FormField[] = [
     type: "text",
     label: "Model name",
     placeholder: "Enter the name of your AI model",
-    guidanceText: "A clear name helps reviewers identify and track this model across the organization.",
+    guidanceText:
+      "A clear name helps reviewers identify and track this model across the organization.",
     validation: { required: true, maxLength: 255 },
     entityFieldMapping: "name",
     order: 0,
@@ -495,7 +564,8 @@ export const DEFAULT_MODEL_FIELDS: FormField[] = [
     type: "textarea",
     label: "Intended use",
     placeholder: "Describe how this model will be used in production",
-    guidanceText: "Intended use determines whether the model falls under high-risk categories in the EU AI Act.",
+    guidanceText:
+      "Intended use determines whether the model falls under high-risk categories in the EU AI Act.",
     validation: { maxLength: 2000 },
     entityFieldMapping: "intendedUse",
     order: 5,
@@ -522,13 +592,11 @@ export interface MappingCoverage {
  */
 export function analyzeMappingCoverage(
   fields: FormField[],
-  entityType: IntakeEntityType
+  entityType: IntakeEntityType,
 ): MappingCoverage {
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const mappedKeys = new Set(
-    fields
-      .filter((f) => f.entityFieldMapping)
-      .map((f) => f.entityFieldMapping!)
+    fields.filter((f) => f.entityFieldMapping).map((f) => f.entityFieldMapping!),
   );
 
   const missingRequired: EntityFieldMapping[] = [];
@@ -547,9 +615,7 @@ export function analyzeMappingCoverage(
   const typeMismatches: MappingCoverage["typeMismatches"] = [];
   for (const field of fields) {
     if (!field.entityFieldMapping) continue;
-    const mapping = entityMappings.find(
-      (m) => m.field === field.entityFieldMapping
-    );
+    const mapping = entityMappings.find((m) => m.field === field.entityFieldMapping);
     if (mapping && !mapping.requiredFieldType.includes(field.type)) {
       typeMismatches.push({ formField: field, entityMapping: mapping });
     }
@@ -571,20 +637,96 @@ export interface SuggestedQuestion {
 
 export const HARDCODED_SUGGESTED_QUESTIONS: SuggestedQuestion[] = [
   // Risks
-  { label: "What happens if this AI system fails?", fieldType: "textarea", category: "Risks", guidanceText: "Understanding failure modes helps plan mitigation strategies." },
-  { label: "How many people are affected by this system's decisions?", fieldType: "select", category: "Risks", guidanceText: "Impact scope is a key factor in risk assessment.", options: [{ label: "Less than 100", value: "small" }, { label: "100–10,000", value: "medium" }, { label: "More than 10,000", value: "large" }] },
+  {
+    label: "What happens if this AI system fails?",
+    fieldType: "textarea",
+    category: "Risks",
+    guidanceText: "Understanding failure modes helps plan mitigation strategies.",
+  },
+  {
+    label: "How many people are affected by this system's decisions?",
+    fieldType: "select",
+    category: "Risks",
+    guidanceText: "Impact scope is a key factor in risk assessment.",
+    options: [
+      { label: "Less than 100", value: "small" },
+      { label: "100–10,000", value: "medium" },
+      { label: "More than 10,000", value: "large" },
+    ],
+  },
   // Compliance
-  { label: "Has a data protection impact assessment been conducted?", fieldType: "select", category: "Compliance", guidanceText: "DPIAs are required for high-risk data processing under GDPR.", options: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }, { label: "In progress", value: "in_progress" }] },
-  { label: "Which regulations apply to this use case?", fieldType: "textarea", category: "Compliance", guidanceText: "Identifying applicable regulations early prevents compliance gaps." },
+  {
+    label: "Has a data protection impact assessment been conducted?",
+    fieldType: "select",
+    category: "Compliance",
+    guidanceText: "DPIAs are required for high-risk data processing under GDPR.",
+    options: [
+      { label: "Yes", value: "yes" },
+      { label: "No", value: "no" },
+      { label: "In progress", value: "in_progress" },
+    ],
+  },
+  {
+    label: "Which regulations apply to this use case?",
+    fieldType: "textarea",
+    category: "Compliance",
+    guidanceText: "Identifying applicable regulations early prevents compliance gaps.",
+  },
   // Operations
-  { label: "Who is responsible for monitoring this system in production?", fieldType: "text", category: "Operations", guidanceText: "Clear ownership ensures ongoing governance after deployment." },
-  { label: "How frequently will this system be retrained or updated?", fieldType: "select", category: "Operations", guidanceText: "Retraining frequency affects model drift and ongoing risk.", options: [{ label: "Never", value: "never" }, { label: "Quarterly", value: "quarterly" }, { label: "Monthly", value: "monthly" }, { label: "Continuously", value: "continuous" }] },
+  {
+    label: "Who is responsible for monitoring this system in production?",
+    fieldType: "text",
+    category: "Operations",
+    guidanceText: "Clear ownership ensures ongoing governance after deployment.",
+  },
+  {
+    label: "How frequently will this system be retrained or updated?",
+    fieldType: "select",
+    category: "Operations",
+    guidanceText: "Retraining frequency affects model drift and ongoing risk.",
+    options: [
+      { label: "Never", value: "never" },
+      { label: "Quarterly", value: "quarterly" },
+      { label: "Monthly", value: "monthly" },
+      { label: "Continuously", value: "continuous" },
+    ],
+  },
   // Vendors
-  { label: "Are any third-party AI vendors or APIs used?", fieldType: "textarea", category: "Vendors", guidanceText: "Third-party dependencies create supply chain risks that need governance." },
-  { label: "Where is the AI model hosted?", fieldType: "select", category: "Vendors", guidanceText: "Hosting location affects data sovereignty and regulatory compliance.", options: [{ label: "On-premises", value: "on_prem" }, { label: "Cloud (same region)", value: "cloud_local" }, { label: "Cloud (different region)", value: "cloud_remote" }] },
+  {
+    label: "Are any third-party AI vendors or APIs used?",
+    fieldType: "textarea",
+    category: "Vendors",
+    guidanceText: "Third-party dependencies create supply chain risks that need governance.",
+  },
+  {
+    label: "Where is the AI model hosted?",
+    fieldType: "select",
+    category: "Vendors",
+    guidanceText: "Hosting location affects data sovereignty and regulatory compliance.",
+    options: [
+      { label: "On-premises", value: "on_prem" },
+      { label: "Cloud (same region)", value: "cloud_local" },
+      { label: "Cloud (different region)", value: "cloud_remote" },
+    ],
+  },
   // Models
-  { label: "Can the AI system explain its decisions?", fieldType: "select", category: "Models", guidanceText: "Explainability is required under EU AI Act for high-risk systems.", options: [{ label: "Yes — fully explainable", value: "full" }, { label: "Partially", value: "partial" }, { label: "No — black box", value: "none" }] },
-  { label: "What training data was used?", fieldType: "textarea", category: "Models", guidanceText: "Training data quality and provenance are key governance concerns." },
+  {
+    label: "Can the AI system explain its decisions?",
+    fieldType: "select",
+    category: "Models",
+    guidanceText: "Explainability is required under EU AI Act for high-risk systems.",
+    options: [
+      { label: "Yes — fully explainable", value: "full" },
+      { label: "Partially", value: "partial" },
+      { label: "No — black box", value: "none" },
+    ],
+  },
+  {
+    label: "What training data was used?",
+    fieldType: "textarea",
+    category: "Models",
+    guidanceText: "Training data quality and provenance are key governance concerns.",
+  },
 ];
 
 /**
@@ -600,11 +742,12 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     entityType: type,
     schema: {
       version: "1.0",
-      fields: type === IntakeEntityType.USE_CASE
-        ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
-        : type === IntakeEntityType.MODEL
-        ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
-        : [],
+      fields:
+        type === IntakeEntityType.USE_CASE
+          ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+          : type === IntakeEntityType.MODEL
+            ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+            : [],
     },
     submitButtonText: "Submit",
     status: IntakeFormStatus.DRAFT,

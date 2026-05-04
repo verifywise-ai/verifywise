@@ -24,7 +24,7 @@ export type RiskData = {
 };
 
 interface OverviewProps {
-  projectRisksSummary: RiskData;  
+  projectRisksSummary: RiskData;
 }
 
 interface ProgressBarCardProps {
@@ -78,7 +78,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         color: "#2D3748",
       },
     }),
-    [theme]
+    [theme],
   );
 
   const progressBarCardRender = useCallback(
@@ -99,7 +99,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         </Typography>
       </Stack>
     ),
-    [styles.block, styles.title]
+    [styles.block, styles.title],
   );
 
   if (!project) {
@@ -137,7 +137,12 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
           </Stack>
         </Stack>
         <IntakeSubmissionCard projectId={numericProjectId} />
-        <Stack direction="row" spacing={18} sx={{ pb: "56px" }} data-joyride-id="framework-progress">
+        <Stack
+          direction="row"
+          spacing={18}
+          sx={{ pb: "56px" }}
+          data-joyride-id="framework-progress"
+        >
           {progressBarCardRender({
             progress: controlsProgress,
             label: "control",
@@ -150,14 +155,10 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
               completed: requirementsCompleted,
             })}
           </Stack>
-          <Stack
-            sx={{ minWidth: 228, width: "100%", p: "8px 36px 14px 14px" }}
-          ></Stack>
+          <Stack sx={{ minWidth: 228, width: "100%", p: "8px 36px 14px 14px" }}></Stack>
         </Stack>
         <Stack sx={{ mb: 0 }} data-joyride-id="risk-summary">
-          <Typography
-            sx={{ color: `${text.primary}`, fontWeight: 600, mb: "10px", fontSize: 16 }}
-          >
+          <Typography sx={{ color: `${text.primary}`, fontWeight: 600, mb: "10px", fontSize: 16 }}>
             Use case risks
           </Typography>
           <Risks {...projectRisksSummary} />

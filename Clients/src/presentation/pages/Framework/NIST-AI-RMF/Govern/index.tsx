@@ -99,7 +99,7 @@ const NISTAIRMFGovern = ({
         let filteredSubcategories = detailedSubcategories;
         if (statusFilter && statusFilter !== "all") {
           filteredSubcategories = detailedSubcategories.filter(
-            (subcategory: any) => subcategory.status === statusFilter
+            (subcategory: any) => subcategory.status === statusFilter,
           );
         }
 
@@ -114,7 +114,7 @@ const NISTAIRMFGovern = ({
         setLoadingSubcategories((prev) => ({ ...prev, [categoryId]: false }));
       }
     },
-    [statusFilter]
+    [statusFilter],
   );
 
   useEffect(() => {
@@ -142,14 +142,11 @@ const NISTAIRMFGovern = ({
       }
     };
 
-  const handleSubcategoryClick = useCallback(
-    (category: any, subcategory: any, _index: number) => {
-      setSelectedCategory(category);
-      setSelectedSubcategory(subcategory);
-      setDrawerOpen(true);
-    },
-    []
-  );
+  const handleSubcategoryClick = useCallback((category: any, subcategory: any, _index: number) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory(subcategory);
+    setDrawerOpen(true);
+  }, []);
 
   const handleDrawerClose = () => {
     setDrawerOpen(false);
@@ -168,7 +165,12 @@ const NISTAIRMFGovern = ({
   // Auto-open drawer when initialCategoryId and initialSubcategoryId are provided
   useEffect(() => {
     // Skip if already auto-opened or missing params
-    if (hasAutoOpenedRef.current || !initialCategoryId || !initialSubcategoryId || categories.length === 0) {
+    if (
+      hasAutoOpenedRef.current ||
+      !initialCategoryId ||
+      !initialSubcategoryId ||
+      categories.length === 0
+    ) {
       return;
     }
 
@@ -195,9 +197,21 @@ const NISTAIRMFGovern = ({
       // Trigger fetch if not already loading
       fetchSubcategories(catId, "GOVERN");
     }
-  }, [initialCategoryId, initialSubcategoryId, categories, subcategoriesMap, loadingSubcategories, fetchSubcategories, handleSubcategoryClick]);
+  }, [
+    initialCategoryId,
+    initialSubcategoryId,
+    categories,
+    subcategoriesMap,
+    loadingSubcategories,
+    fetchSubcategories,
+    handleSubcategoryClick,
+  ]);
 
-  const handleDrawerSaveSuccess = (success: boolean, _message?: string, savedSubcategoryId?: number) => {
+  const handleDrawerSaveSuccess = (
+    success: boolean,
+    _message?: string,
+    savedSubcategoryId?: number,
+  ) => {
     if (success && savedSubcategoryId) {
       // Set flashing row ID for green highlighting
       setFlashingRowId(savedSubcategoryId);
@@ -211,7 +225,7 @@ const NISTAIRMFGovern = ({
   const handleStatusUpdate = async (
     updatedStatus: string,
     subcategory: any,
-    index: number
+    index: number,
   ): Promise<boolean> => {
     try {
       // Update the local state to show the new status immediately
@@ -220,7 +234,7 @@ const NISTAIRMFGovern = ({
           const updated = { ...prev };
           if (updated[expanded]) {
             updated[expanded] = updated[expanded].map((item, idx) =>
-              idx === index ? { ...item, status: updatedStatus } : item
+              idx === index ? { ...item, status: updatedStatus } : item,
             );
           }
           return updated;
@@ -276,7 +290,7 @@ const NISTAIRMFGovern = ({
           const updated = { ...prev };
           if (updated[expanded]) {
             updated[expanded] = updated[expanded].map((item, idx) =>
-              idx === index ? { ...item, status: subcategory.status } : item
+              idx === index ? { ...item, status: subcategory.status } : item,
             );
           }
           return updated;
@@ -303,9 +317,7 @@ const NISTAIRMFGovern = ({
 
     const filteredSubcategories =
       statusFilter && statusFilter !== ""
-        ? subcategories.filter(
-            (sc) => sc.status?.toLowerCase() === statusFilter.toLowerCase()
-          )
+        ? subcategories.filter((sc) => sc.status?.toLowerCase() === statusFilter.toLowerCase())
         : subcategories;
 
     return (
@@ -323,7 +335,7 @@ const NISTAIRMFGovern = ({
               }}
               sx={styles.subClauseRow(
                 filteredSubcategories.length - 1 === index,
-                flashingRowId === subcategory.id
+                flashingRowId === subcategory.id,
               )}
             >
               <Stack sx={{ flex: 1, pr: 2 }}>
@@ -346,9 +358,7 @@ const NISTAIRMFGovern = ({
               </Stack>
               <StatusDropdown
                 currentStatus={subcategory.status ?? "Not started"}
-                onStatusChange={(newStatus) =>
-                  handleStatusUpdate(newStatus, subcategory, index)
-                }
+                onStatusChange={(newStatus) => handleStatusUpdate(newStatus, subcategory, index)}
                 size="small"
                 allowedRoles={allowedRoles.frameworks.edit}
                 userRole={userRoleName}
@@ -356,9 +366,7 @@ const NISTAIRMFGovern = ({
             </Stack>
           ))
         ) : (
-          <Stack sx={styles.noSubClausesContainer}>
-            No matching subcategories
-          </Stack>
+          <Stack sx={styles.noSubClausesContainer}>No matching subcategories</Stack>
         )}
       </AccordionDetails>
     );
@@ -369,17 +377,16 @@ const NISTAIRMFGovern = ({
     if (!searchTerm.trim()) {
       return categories;
     }
-    return categories.filter((category: any) =>
-      category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    return categories.filter(
+      (category: any) =>
+        category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        category.description?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [categories, searchTerm]);
 
   return (
     <Stack className="nist-ai-rmf-govern" spacing={0}>
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       <Typography
         sx={{
           ...styles.title,
@@ -426,11 +433,7 @@ const NISTAIRMFGovern = ({
               >
                 <RightArrowBlack
                   size={16}
-                  style={
-                    styles.expandIcon(
-                      expanded === category.id
-                    ) as React.CSSProperties
-                  }
+                  style={styles.expandIcon(expanded === category.id) as React.CSSProperties}
                 />
                 <Stack sx={{ paddingLeft: "2.5px", flex: 1 }}>
                   <Typography

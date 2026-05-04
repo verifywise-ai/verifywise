@@ -78,7 +78,8 @@ const RiskManagementStep: React.FC<OnboardingStepProps> = () => {
             lineHeight: 1.6,
           }}
         >
-          Track risks, assign mitigation tasks, and monitor progress to maintain control over your AI systems.
+          Track risks, assign mitigation tasks, and monitor progress to maintain control over your
+          AI systems.
         </Typography>
       </Box>
 

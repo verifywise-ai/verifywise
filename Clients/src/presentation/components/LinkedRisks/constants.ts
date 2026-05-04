@@ -5,5 +5,5 @@ export const TITLE_OF_COLUMNS = [
   "RISK DESCRIPTION",
   "SEVERITY",
   "LIKELIHOOD",
-  "CATEGORY"
+  "CATEGORY",
 ];

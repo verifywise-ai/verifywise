@@ -1,7 +1,7 @@
 import {
   CEMarkingData,
   ConformityStepsUpdatePayload,
-  LinkedResourcesUpdatePayload
+  LinkedResourcesUpdatePayload,
 } from "../../domain/types/ceMarking";
 import CustomAxios from "./customAxios";
 
@@ -16,23 +16,15 @@ export const ceMarkingService = {
    * Creates default record if none exists
    */
   async getCEMarking(projectId: string): Promise<CEMarkingData> {
-    const response = await CustomAxios.get<CEMarkingData>(
-      `${CE_MARKING_API}/${projectId}`
-    );
+    const response = await CustomAxios.get<CEMarkingData>(`${CE_MARKING_API}/${projectId}`);
     return response.data;
   },
 
   /**
    * Update CE Marking data for a project
    */
-  async updateCEMarking(
-    projectId: string,
-    data: Partial<CEMarkingData>
-  ): Promise<CEMarkingData> {
-    const response = await CustomAxios.put<CEMarkingData>(
-      `${CE_MARKING_API}/${projectId}`,
-      data
-    );
+  async updateCEMarking(projectId: string, data: Partial<CEMarkingData>): Promise<CEMarkingData> {
+    const response = await CustomAxios.put<CEMarkingData>(`${CE_MARKING_API}/${projectId}`, data);
     return response.data;
   },
 
@@ -49,15 +41,17 @@ export const ceMarkingService = {
       owner?: string;
       dueDate?: string | null;
       completedDate?: string | null;
-    }
+    },
   ): Promise<CEMarkingData> {
     // Backend expects a simple object with the step update fields
     // The controller will handle updating the specific step by ID
     const updateData: ConformityStepsUpdatePayload = {
-      conformitySteps: [{
-        id: stepId,
-        ...stepData
-      }]
+      conformitySteps: [
+        {
+          id: stepId,
+          ...stepData,
+        },
+      ],
     };
 
     return await this.updateCEMarking(projectId, updateData as any);
@@ -72,7 +66,7 @@ export const ceMarkingService = {
       isHighRiskAISystem?: boolean;
       roleInProduct?: string;
       annexIIICategory?: string;
-    }
+    },
   ): Promise<CEMarkingData> {
     return await this.updateCEMarking(projectId, data);
   },
@@ -87,7 +81,7 @@ export const ceMarkingService = {
       signedOn?: string | null;
       signatory?: string | null;
       declarationDocument?: string | null;
-    }
+    },
   ): Promise<CEMarkingData> {
     return await this.updateCEMarking(projectId, data);
   },
@@ -102,7 +96,7 @@ export const ceMarkingService = {
       euRegistrationId?: string | null;
       registrationDate?: string | null;
       euRecordUrl?: string | null;
-    }
+    },
   ): Promise<CEMarkingData> {
     return await this.updateCEMarking(projectId, data);
   },
@@ -111,7 +105,7 @@ export const ceMarkingService = {
    * Get all available policies
    */
   async getAllPolicies(): Promise<any[]> {
-    const response = await CustomAxios.get('/policies');
+    const response = await CustomAxios.get("/policies");
     // The policies API returns { message: "OK", data: [...] }
     // Extract the data array from the wrapped response
     if (response.data && response.data.data) {
@@ -125,21 +119,18 @@ export const ceMarkingService = {
    * Get all available evidence/files
    */
   async getAllEvidences(): Promise<any[]> {
-    const response = await CustomAxios.get('/files');
+    const response = await CustomAxios.get("/files");
     // The files API returns the array directly (not wrapped)
-    return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+    return Array.isArray(response.data) ? response.data : response.data?.data || [];
   },
 
   /**
    * Update linked policies
    */
-  async updateLinkedPolicies(
-    projectId: string,
-    policyIds: number[]
-  ): Promise<CEMarkingData> {
+  async updateLinkedPolicies(projectId: string, policyIds: number[]): Promise<CEMarkingData> {
     const updateData: LinkedResourcesUpdatePayload = {
       linkedPolicies: policyIds,
-      policiesLinked: policyIds.length
+      policiesLinked: policyIds.length,
     };
     return await this.updateCEMarking(projectId, updateData);
   },
@@ -147,13 +138,10 @@ export const ceMarkingService = {
   /**
    * Update linked evidence
    */
-  async updateLinkedEvidences(
-    projectId: string,
-    evidenceIds: number[]
-  ): Promise<CEMarkingData> {
+  async updateLinkedEvidences(projectId: string, evidenceIds: number[]): Promise<CEMarkingData> {
     const updateData: LinkedResourcesUpdatePayload = {
       linkedEvidences: evidenceIds,
-      evidenceLinked: evidenceIds.length
+      evidenceLinked: evidenceIds.length,
     };
     return await this.updateCEMarking(projectId, updateData);
   },
@@ -162,7 +150,7 @@ export const ceMarkingService = {
    * Get all available incidents
    */
   async getAllIncidents(): Promise<any[]> {
-    const response = await CustomAxios.get('/ai-incident-managements');
+    const response = await CustomAxios.get("/ai-incident-managements");
     // The incidents API returns { message: "OK", data: [...] }
     if (response.data && response.data.data) {
       return response.data.data;
@@ -174,13 +162,10 @@ export const ceMarkingService = {
   /**
    * Update linked incidents
    */
-  async updateLinkedIncidents(
-    projectId: string,
-    incidentIds: number[]
-  ): Promise<CEMarkingData> {
+  async updateLinkedIncidents(projectId: string, incidentIds: number[]): Promise<CEMarkingData> {
     const updateData: LinkedResourcesUpdatePayload = {
       linkedIncidents: incidentIds,
-      totalIncidents: incidentIds.length
+      totalIncidents: incidentIds.length,
     };
     return await this.updateCEMarking(projectId, updateData);
   },

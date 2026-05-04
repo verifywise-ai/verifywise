@@ -29,9 +29,9 @@ export interface EnhancedRiskSummary extends risksSummary {
 }
 
 export interface RiskTrend {
-  direction: 'up' | 'down' | 'stable';
+  direction: "up" | "down" | "stable";
   change: number;
-  period: 'week' | 'month';
+  period: "week" | "month";
 }
 
 export interface RiskMetrics {

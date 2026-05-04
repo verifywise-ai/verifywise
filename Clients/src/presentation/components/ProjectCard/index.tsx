@@ -35,15 +35,10 @@ const ProjectCard: FC<IProjectCardProps> = ({
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { users } = useUsers();
-  const ownerUser: User =
-    users.find((user: User) => user.id.toString() === owner) ?? ({} as User);
+  const ownerUser: User = users.find((user: User) => user.id.toString() === owner) ?? ({} as User);
 
-  const {
-    controlsProgress,
-    requirementsProgress,
-    controlsCompleted,
-    requirementsCompleted,
-  } = getProjectData({ projectId: id, assessments, controls });
+  const { controlsProgress, requirementsProgress, controlsCompleted, requirementsCompleted } =
+    getProjectData({ projectId: id, assessments, controls });
 
   return (
     <Card>
@@ -54,9 +49,7 @@ const ProjectCard: FC<IProjectCardProps> = ({
             Project owner
           </Typography>
           <SubtitleValue>
-            {ownerUser
-              ? `${ownerUser.name} ${ownerUser.surname}`
-              : "Unknown User"}
+            {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
           </SubtitleValue>
         </Box>
         <Box>
@@ -87,12 +80,8 @@ const ProjectCard: FC<IProjectCardProps> = ({
         </Box>
         <Btn
           variant="outlined"
-          disableRipple={
-            theme.components?.MuiButton?.defaultProps?.disableRipple
-          }
-          onClick={() =>
-            navigate("/project-view", { projectId: id.toString() })
-          }
+          disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
+          onClick={() => navigate("/project-view", { projectId: id.toString() })}
         >
           View project
         </Btn>

@@ -28,7 +28,10 @@ import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
 import { ChevronsUpDown, ShieldAlert } from "lucide-react";
 import { IModelRisk, IModelRiskFormData } from "../../../domain/interfaces/i.modelRisk";
-import { getAllEntities, updateEntityById } from "../../../application/repository/entity.repository";
+import {
+  getAllEntities,
+  updateEntityById,
+} from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
 import NewModelRisk from "../Modals/NewModelRisk";
 
@@ -79,14 +82,14 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
       ]);
 
       // Handle risks data
-      const risksData = Array.isArray(risksResponse) ? risksResponse : (risksResponse.data || []);
+      const risksData = Array.isArray(risksResponse) ? risksResponse : risksResponse.data || [];
       const risks = risksData.filter(
-        (risk: IModelRisk) => risk.model_id === modelId && !risk.is_deleted
+        (risk: IModelRisk) => risk.model_id === modelId && !risk.is_deleted,
       );
       setModelRisks(risks);
 
       // Handle users data
-      const usersData = Array.isArray(usersResponse) ? usersResponse : (usersResponse.data || []);
+      const usersData = Array.isArray(usersResponse) ? usersResponse : usersResponse.data || [];
       setUsers(usersData);
     } catch (err) {
       console.error("Failed to fetch model risks:", err);
@@ -107,9 +110,7 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -165,242 +166,220 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
 
   return (
     <>
-    <StandardModal
-      isOpen={open}
-      onClose={onClose}
-      title={`Model risks ${modelName ? `- ${modelName}` : ""} (${modelRisks.length})`}
-      description="View all risks associated with this model"
-      maxWidth="900px"
-      hideFooter={true}
-    >
-      {loading ? (
-        <Stack
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            py: 4,
-          }}
-        >
-          <CircularProgress size={40} />
-        </Stack>
-      ) : error ? (
-        <MuiAlert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </MuiAlert>
-      ) : (
-        <TableContainer>
-          <Table
+      <StandardModal
+        isOpen={open}
+        onClose={onClose}
+        title={`Model risks ${modelName ? `- ${modelName}` : ""} (${modelRisks.length})`}
+        description="View all risks associated with this model"
+        maxWidth="900px"
+        hideFooter={true}
+      >
+        {loading ? (
+          <Stack
             sx={{
-              ...singleTheme.tableStyles.primary.frame,
-              ...tableWrapper(theme),
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 4,
             }}
           >
-            <TableHead
+            <CircularProgress size={40} />
+          </Stack>
+        ) : error ? (
+          <MuiAlert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </MuiAlert>
+        ) : (
+          <TableContainer>
+            <Table
               sx={{
-                backgroundColor:
-                  singleTheme.tableStyles.primary.header.backgroundColors,
+                ...singleTheme.tableStyles.primary.frame,
+                ...tableWrapper(theme),
               }}
             >
-              <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                <TableCell
-                  style={{
-                    ...singleTheme.tableStyles.primary.header.cell,
-                  }}
-                >
-                  Risk name
-                </TableCell>
-                <TableCell
-                  style={{
-                    ...singleTheme.tableStyles.primary.header.cell,
-                  }}
-                >
-                  Category
-                </TableCell>
-                <TableCell
-                  style={{
-                    ...singleTheme.tableStyles.primary.header.cell,
-                  }}
-                >
-                  Risk level
-                </TableCell>
-                <TableCell
-                  style={{
-                    ...singleTheme.tableStyles.primary.header.cell,
-                  }}
-                >
-                  Status
-                </TableCell>
-                <TableCell
-                  style={{
-                    ...singleTheme.tableStyles.primary.header.cell,
-                  }}
-                >
-                  Owner
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            {modelRisks.length > 0 ? (
-              <>
-                <TableBody>
-                  {modelRisks
-                    .slice(
-                      page * rowsPerPage,
-                      page * rowsPerPage + rowsPerPage
-                    )
-                    .map((risk) => (
-                      <TableRow
-                        key={risk.id}
-                        sx={{
-                          ...singleTheme.tableStyles.primary.body.row,
-                          cursor: "pointer",
-                          "&:hover": {
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                          },
-                        }}
-                        onClick={() => handleRiskClick(risk)}
-                      >
-                        <TableCell
-                          sx={{
-                            ...singleTheme.tableStyles.primary.body.cell,
-                            maxWidth: 200,
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            noWrap
-                            title={risk.risk_name}
-                          >
-                            {risk.risk_name && risk.risk_name.length > 30
-                              ? `${risk.risk_name.slice(0, 30)}...`
-                              : risk.risk_name || "-"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            ...singleTheme.tableStyles.primary.body.cell,
-                            maxWidth: 120,
-                          }}
-                        >
-                          <Typography variant="body2">
-                            {risk.risk_category || "-"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell
-                          sx={singleTheme.tableStyles.primary.body.cell}
-                        >
-                          <Chip label={risk.risk_level} />
-                        </TableCell>
-                        <TableCell
-                          sx={singleTheme.tableStyles.primary.body.cell}
-                        >
-                          <Chip label={risk.status} />
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            ...singleTheme.tableStyles.primary.body.cell,
-                            maxWidth: 120,
-                          }}
-                        >
-                          {(() => {
-                            const ownerName = risk.owner
-                              ? userMap.get(risk.owner.toString()) || "-"
-                              : "-";
-                            return (
-                              <Typography variant="body2" noWrap title={ownerName}>
-                                {ownerName.length > 15
-                                  ? `${ownerName.slice(0, 15)}...`
-                                  : ownerName}
-                              </Typography>
-                            );
-                          })()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow
-                    sx={{
-                      "& .MuiTableCell-root.MuiTableCell-footer": {
-                        paddingX: theme.spacing(8),
-                        paddingY: theme.spacing(4),
-                      },
+              <TableHead
+                sx={{
+                  backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
+                }}
+              >
+                <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
                     }}
                   >
-                    <TablePagination
-                      count={modelRisks.length}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      rowsPerPage={rowsPerPage}
-                      rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => (
-                        <TablePaginationActions {...props} />
-                      )}
-                      labelRowsPerPage="Risks per page"
-                      labelDisplayedRows={({ page, count }) =>
-                        `Page ${page + 1} of ${Math.max(
-                          0,
-                          Math.ceil(count / rowsPerPage)
-                        )}`
-                      }
-                      sx={paginationStyle(theme)}
-                      slotProps={{
-                        select: {
-                          MenuProps: {
-                            keepMounted: true,
-                            PaperProps: {
-                              className: "pagination-dropdown",
-                              sx: paginationDropdown(theme),
-                            },
-                            transformOrigin: {
-                              vertical: "bottom",
-                              horizontal: "left",
-                            },
-                            anchorOrigin: {
-                              vertical: "top",
-                              horizontal: "left",
-                            },
-                            sx: { mt: theme.spacing(-2) },
-                          },
-                          inputProps: { id: "pagination-dropdown" },
-                          IconComponent: SelectorVertical,
-                          sx: paginationSelect(theme),
-                        },
-                      }}
-                    />
-                  </TableRow>
-                </TableFooter>
-              </>
-            ) : (
-              <TableBody>
-                <TableRow>
+                    Risk name
+                  </TableCell>
                   <TableCell
-                    colSpan={5}
-                    sx={{ border: "none", p: 0 }}
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
                   >
-                    <EmptyState icon={ShieldAlert} message="No risks found for this model." />
+                    Category
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Risk level
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Status
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Owner
                   </TableCell>
                 </TableRow>
-              </TableBody>
-            )}
-          </Table>
-        </TableContainer>
-      )}
-    </StandardModal>
+              </TableHead>
+              {modelRisks.length > 0 ? (
+                <>
+                  <TableBody>
+                    {modelRisks
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((risk) => (
+                        <TableRow
+                          key={risk.id}
+                          sx={{
+                            ...singleTheme.tableStyles.primary.body.row,
+                            cursor: "pointer",
+                            "&:hover": {
+                              backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            },
+                          }}
+                          onClick={() => handleRiskClick(risk)}
+                        >
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 200,
+                            }}
+                          >
+                            <Typography variant="body2" noWrap title={risk.risk_name}>
+                              {risk.risk_name && risk.risk_name.length > 30
+                                ? `${risk.risk_name.slice(0, 30)}...`
+                                : risk.risk_name || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 120,
+                            }}
+                          >
+                            <Typography variant="body2">{risk.risk_category || "-"}</Typography>
+                          </TableCell>
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                            <Chip label={risk.risk_level} />
+                          </TableCell>
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                            <Chip label={risk.status} />
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 120,
+                            }}
+                          >
+                            {(() => {
+                              const ownerName = risk.owner
+                                ? userMap.get(risk.owner.toString()) || "-"
+                                : "-";
+                              return (
+                                <Typography variant="body2" noWrap title={ownerName}>
+                                  {ownerName.length > 15
+                                    ? `${ownerName.slice(0, 15)}...`
+                                    : ownerName}
+                                </Typography>
+                              );
+                            })()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow
+                      sx={{
+                        "& .MuiTableCell-root.MuiTableCell-footer": {
+                          paddingX: theme.spacing(8),
+                          paddingY: theme.spacing(4),
+                        },
+                      }}
+                    >
+                      <TablePagination
+                        count={modelRisks.length}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                        labelRowsPerPage="Risks per page"
+                        labelDisplayedRows={({ page, count }) =>
+                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                        }
+                        sx={paginationStyle(theme)}
+                        slotProps={{
+                          select: {
+                            MenuProps: {
+                              keepMounted: true,
+                              PaperProps: {
+                                className: "pagination-dropdown",
+                                sx: paginationDropdown(theme),
+                              },
+                              transformOrigin: {
+                                vertical: "bottom",
+                                horizontal: "left",
+                              },
+                              anchorOrigin: {
+                                vertical: "top",
+                                horizontal: "left",
+                              },
+                              sx: { mt: theme.spacing(-2) },
+                            },
+                            inputProps: { id: "pagination-dropdown" },
+                            IconComponent: SelectorVertical,
+                            sx: paginationSelect(theme),
+                          },
+                        }}
+                      />
+                    </TableRow>
+                  </TableFooter>
+                </>
+              ) : (
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={5} sx={{ border: "none", p: 0 }}>
+                      <EmptyState icon={ShieldAlert} message="No risks found for this model." />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              )}
+            </Table>
+          </TableContainer>
+        )}
+      </StandardModal>
 
-    {/* Edit Risk Modal */}
-    {isEditModalOpen && selectedRisk && selectedRiskFormData && (
-      <NewModelRisk
-        isOpen={isEditModalOpen}
-        setIsOpen={handleEditModalClose}
-        initialData={selectedRiskFormData}
-        isEdit={true}
-        onSuccess={handleEditSuccess}
-        entityId={selectedRisk?.id}
-      />
-    )}
-  </>
+      {/* Edit Risk Modal */}
+      {isEditModalOpen && selectedRisk && selectedRiskFormData && (
+        <NewModelRisk
+          isOpen={isEditModalOpen}
+          setIsOpen={handleEditModalClose}
+          initialData={selectedRiskFormData}
+          isEdit={true}
+          onSuccess={handleEditSuccess}
+          entityId={selectedRisk?.id}
+        />
+      )}
+    </>
   );
 };
 

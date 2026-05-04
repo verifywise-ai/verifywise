@@ -14,13 +14,7 @@
 /**
  * Valid status values for a scan
  */
-export type ScanStatus =
-  | "pending"
-  | "cloning"
-  | "scanning"
-  | "completed"
-  | "failed"
-  | "cancelled";
+export type ScanStatus = "pending" | "cloning" | "scanning" | "completed" | "failed" | "cancelled";
 
 /**
  * Scan mode: full scans all files, incremental scans only changed files
@@ -122,9 +116,23 @@ export interface IUpdateScanProgressInput {
  * Use FINDING_TYPES for runtime validation; use FindingType for static typing.
  */
 export const FINDING_TYPES = [
-  "library", "dependency", "api_call", "secret", "model_ref", "rag_component", "agent",
-  "prompt_injection", "pii_exposure", "excessive_agency", "jailbreak_risk",
-  "training_data_poisoning", "model_dos", "supply_chain", "insecure_plugin", "overreliance", "model_theft",
+  "library",
+  "dependency",
+  "api_call",
+  "secret",
+  "model_ref",
+  "rag_component",
+  "agent",
+  "prompt_injection",
+  "pii_exposure",
+  "excessive_agency",
+  "jailbreak_risk",
+  "training_data_poisoning",
+  "model_dos",
+  "supply_chain",
+  "insecure_plugin",
+  "overreliance",
+  "model_theft",
 ] as const;
 
 export type FindingType = (typeof FINDING_TYPES)[number];
@@ -133,8 +141,16 @@ export type FindingType = (typeof FINDING_TYPES)[number];
  * Vulnerability-specific finding types (subset of FindingType).
  */
 export const VULNERABILITY_FINDING_TYPES = [
-  "prompt_injection", "pii_exposure", "excessive_agency", "jailbreak_risk",
-  "training_data_poisoning", "model_dos", "supply_chain", "insecure_plugin", "overreliance", "model_theft",
+  "prompt_injection",
+  "pii_exposure",
+  "excessive_agency",
+  "jailbreak_risk",
+  "training_data_poisoning",
+  "model_dos",
+  "supply_chain",
+  "insecure_plugin",
+  "overreliance",
+  "model_theft",
 ] as const;
 
 export type VulnerabilityFindingType = (typeof VULNERABILITY_FINDING_TYPES)[number];

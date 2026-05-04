@@ -37,7 +37,7 @@ export function isValidTenantHash(tenantId: string): boolean {
  * @returns true if valid organization ID (positive integer)
  */
 export function isValidOrganizationId(organizationId: number | string): boolean {
-  const id = typeof organizationId === 'string' ? parseInt(organizationId, 10) : organizationId;
+  const id = typeof organizationId === "string" ? parseInt(organizationId, 10) : organizationId;
   return Number.isInteger(id) && id > 0;
 }
 
@@ -48,7 +48,7 @@ export function isValidOrganizationId(organizationId: number | string): boolean 
  * @returns true if valid resource type
  */
 export function isValidResourceType(resourceType: string): boolean {
-  const allowedTypes = ['model', 'vendor', 'project', 'policy', 'risk'];
+  const allowedTypes = ["model", "vendor", "project", "policy", "risk"];
   return allowedTypes.includes(resourceType);
 }
 
@@ -72,20 +72,23 @@ export function isValidShareToken(token: string): boolean {
  * @param defaultMessage - Default message to return if sanitization needed
  * @returns Sanitized error message
  */
-export function sanitizeErrorMessage(error: Error, defaultMessage: string = "An error occurred"): string {
+export function sanitizeErrorMessage(
+  error: Error,
+  defaultMessage: string = "An error occurred",
+): string {
   const message = error.message || "";
 
   // List of patterns that indicate sensitive information
   const sensitivePatterns = [
-    /\/.*\//,  // File paths
-    /at\s+.*\s+\(/,  // Stack traces
-    /column/i,  // SQL column references
-    /table/i,  // SQL table references
-    /relation/i,  // PostgreSQL relation errors
-    /schema/i,  // Schema references
-    /password/i,  // Password mentions
-    /token/i,  // Token values (but allow "token" as generic word)
-    /secret/i,  // Secret mentions
+    /\/.*\//, // File paths
+    /at\s+.*\s+\(/, // Stack traces
+    /column/i, // SQL column references
+    /table/i, // SQL table references
+    /relation/i, // PostgreSQL relation errors
+    /schema/i, // Schema references
+    /password/i, // Password mentions
+    /token/i, // Token values (but allow "token" as generic word)
+    /secret/i, // Secret mentions
   ];
 
   // Check if message contains sensitive info
@@ -110,7 +113,7 @@ export function sanitizeErrorMessage(error: Error, defaultMessage: string = "An 
  */
 export function safeSQLIdentifier(identifier: string): string {
   if (!isValidSQLIdentifier(identifier)) {
-    throw new Error('Invalid SQL identifier');
+    throw new Error("Invalid SQL identifier");
   }
   return identifier;
 }

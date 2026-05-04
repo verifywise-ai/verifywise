@@ -1,16 +1,7 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IRisk } from "../../interfaces/I.risk";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "project_risks",
@@ -44,7 +35,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       "Model validation & testing",
       "Deployment & integration",
       "Monitoring & maintenance",
-      "Decommissioning & retirement"
+      "Decommissioning & retirement",
     ),
   })
   ai_lifecycle_phase!:
@@ -82,24 +73,12 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
   controls_mapping!: string;
 
   @Column({
-    type: DataType.ENUM(
-      "Rare",
-      "Unlikely",
-      "Possible",
-      "Likely",
-      "Almost Certain"
-    ),
+    type: DataType.ENUM("Rare", "Unlikely", "Possible", "Likely", "Almost Certain"),
   })
   likelihood!: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
 
   @Column({
-    type: DataType.ENUM(
-      "Negligible",
-      "Minor",
-      "Moderate",
-      "Major",
-      "Catastrophic"
-    ),
+    type: DataType.ENUM("Negligible", "Minor", "Moderate", "Major", "Catastrophic"),
   })
   severity!: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
 
@@ -110,7 +89,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       "Low risk",
       "Medium risk",
       "High risk",
-      "Very high risk"
+      "Very high risk",
     ),
   })
   risk_level_autocalculated!:
@@ -134,7 +113,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       "On Hold",
       "Deferred",
       "Canceled",
-      "Requires review"
+      "Requires review",
     ),
   })
   mitigation_status!:
@@ -147,13 +126,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
     | "Requires review";
 
   @Column({
-    type: DataType.ENUM(
-      "Very Low risk",
-      "Low risk",
-      "Medium risk",
-      "High risk",
-      "Very high risk"
-    ),
+    type: DataType.ENUM("Very Low risk", "Low risk", "Medium risk", "High risk", "Very high risk"),
   })
   current_risk_level!:
     | "Very Low risk"
@@ -183,20 +156,9 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
   mitigation_evidence_document!: string;
 
   @Column({
-    type: DataType.ENUM(
-      "Rare",
-      "Unlikely",
-      "Possible",
-      "Likely",
-      "Almost Certain"
-    ),
+    type: DataType.ENUM("Rare", "Unlikely", "Possible", "Likely", "Almost Certain"),
   })
-  likelihood_mitigation!:
-    | "Rare"
-    | "Unlikely"
-    | "Possible"
-    | "Likely"
-    | "Almost Certain";
+  likelihood_mitigation!: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
 
   @Column({
     type: DataType.ENUM("Negligible", "Minor", "Moderate", "Major", "Critical"),
@@ -294,7 +256,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
   @Column({ type: DataType.INTEGER, allowNull: true })
   benchmark_id?: number | null;
 
-  @Column({ type: DataType.STRING(3), allowNull: true, defaultValue: 'USD' })
+  @Column({ type: DataType.STRING(3), allowNull: true, defaultValue: "USD" })
   currency?: string | null;
 
   @Column({
@@ -333,16 +295,13 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
    */
   static async createProjectRisk(
     projectRiskData: Partial<IRisk>,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<RiskModel> {
-    if (
-      !projectRiskData.risk_name ||
-      projectRiskData.risk_name.trim().length === 0
-    ) {
+    if (!projectRiskData.risk_name || projectRiskData.risk_name.trim().length === 0) {
       throw new ValidationException(
         "Risk name is required",
         "risk_name",
-        projectRiskData.risk_name
+        projectRiskData.risk_name,
       );
     }
 
@@ -350,18 +309,15 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       throw new ValidationException(
         "Valid risk owner is required (must be >= 1)",
         "risk_owner",
-        projectRiskData.risk_owner
+        projectRiskData.risk_owner,
       );
     }
 
-    if (
-      !projectRiskData.risk_description ||
-      projectRiskData.risk_description.trim().length === 0
-    ) {
+    if (!projectRiskData.risk_description || projectRiskData.risk_description.trim().length === 0) {
       throw new ValidationException(
         "Risk description is required",
         "risk_description",
-        projectRiskData.risk_description
+        projectRiskData.risk_description,
       );
     }
 
@@ -381,11 +337,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
     // Validate risk_name if provided
     if (updateData.risk_name !== undefined) {
       if (!updateData.risk_name || updateData.risk_name.trim().length === 0) {
-        throw new ValidationException(
-          "Risk name is required",
-          "risk_name",
-          updateData.risk_name
-        );
+        throw new ValidationException("Risk name is required", "risk_name", updateData.risk_name);
       }
       this.risk_name = updateData.risk_name.trim();
     }
@@ -396,7 +348,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
         throw new ValidationException(
           "Valid risk owner is required (must be >= 1)",
           "risk_owner",
-          updateData.risk_owner
+          updateData.risk_owner,
         );
       }
       this.risk_owner = updateData.risk_owner;
@@ -404,14 +356,11 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
 
     // Validate risk_description if provided
     if (updateData.risk_description !== undefined) {
-      if (
-        !updateData.risk_description ||
-        updateData.risk_description.trim().length === 0
-      ) {
+      if (!updateData.risk_description || updateData.risk_description.trim().length === 0) {
         throw new ValidationException(
           "Risk description is required",
           "risk_description",
-          updateData.risk_description
+          updateData.risk_description,
         );
       }
       this.risk_description = updateData.risk_description.trim();
@@ -475,8 +424,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
     }
 
     if (updateData.mitigation_evidence_document !== undefined) {
-      this.mitigation_evidence_document =
-        updateData.mitigation_evidence_document;
+      this.mitigation_evidence_document = updateData.mitigation_evidence_document;
     }
 
     if (updateData.likelihood_mitigation !== undefined) {
@@ -509,18 +457,14 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
    */
   async validateProjectRiskData(): Promise<void> {
     if (!this.risk_name || this.risk_name.trim().length === 0) {
-      throw new ValidationException(
-        "Risk name is required",
-        "risk_name",
-        this.risk_name
-      );
+      throw new ValidationException("Risk name is required", "risk_name", this.risk_name);
     }
 
     if (!this.risk_owner || this.risk_owner < 1) {
       throw new ValidationException(
         "Valid risk owner is required (must be >= 1)",
         "risk_owner",
-        this.risk_owner
+        this.risk_owner,
       );
     }
 
@@ -528,7 +472,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       throw new ValidationException(
         "Risk description is required",
         "risk_description",
-        this.risk_description
+        this.risk_description,
       );
     }
   }
@@ -605,11 +549,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
    */
   static async findByIdWithValidation(id: number): Promise<RiskModel> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const projectRisk = await RiskModel.findByPk(id);
@@ -628,7 +568,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
       throw new ValidationException(
         "Valid risk owner ID is required (must be >= 1)",
         "riskOwnerId",
-        riskOwnerId
+        riskOwnerId,
       );
     }
 
@@ -643,14 +583,10 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
    */
   static async updateProjectRiskById(
     id: number,
-    updateData: Partial<IRisk>
+    updateData: Partial<IRisk>,
   ): Promise<[number, RiskModel[]]> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await RiskModel.update(updateData, {
@@ -664,11 +600,7 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
    */
   static async deleteProjectRiskById(id: number): Promise<number> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await RiskModel.destroy({

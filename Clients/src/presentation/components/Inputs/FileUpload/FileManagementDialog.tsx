@@ -1,13 +1,5 @@
 import React, { useState, useRef } from "react";
-import {
-  Stack,
-  useTheme,
-  IconButton,
-  Typography,
-  Link,
-  Box,
-  Button,
-} from "@mui/material";
+import { Stack, useTheme, IconButton, Typography, Link, Box, Button } from "@mui/material";
 import {
   X as CloseIcon,
   Trash2 as DeleteIcon,
@@ -69,7 +61,10 @@ function FileListItem({
       }}
     >
       <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-        <FileIcon size={16} color={isPending ? theme.palette.warning.dark : theme.palette.text.disabled} />
+        <FileIcon
+          size={16}
+          color={isPending ? theme.palette.warning.dark : theme.palette.text.disabled}
+        />
         {!isPending && onDownloadClick ? (
           <Link
             component="button"
@@ -93,10 +88,7 @@ function FileListItem({
           </Typography>
         )}
         {isPending && (
-          <Typography
-            variant="caption"
-            sx={{ color: theme.palette.warning.dark, ml: 1 }}
-          >
+          <Typography variant="caption" sx={{ color: theme.palette.warning.dark, ml: 1 }}>
             (pending)
           </Typography>
         )}
@@ -145,7 +137,11 @@ function FileManagementDialog({
     isPending: false,
   });
 
-  const handleOpenDeleteFileModal = (fileId: string, fileName: string, isPending: boolean = false) => {
+  const handleOpenDeleteFileModal = (
+    fileId: string,
+    fileName: string,
+    isPending: boolean = false,
+  ) => {
     setDeleteFileModal({ isOpen: true, fileId, fileName, isPending });
   };
 
@@ -235,7 +231,10 @@ function FileManagementDialog({
           >
             Add files
           </Button>
-          <Typography variant="caption" sx={{ display: "block", mt: 1, color: theme.palette.text.disabled }}>
+          <Typography
+            variant="caption"
+            sx={{ display: "block", mt: 1, color: theme.palette.text.disabled }}
+          >
             Supported formats: PDF, DOC, DOCX, XLS, XLSX, Images
           </Typography>
         </Box>

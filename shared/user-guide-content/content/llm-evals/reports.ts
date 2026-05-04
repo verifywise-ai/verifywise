@@ -71,7 +71,7 @@ export const reportsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All generated reports appear in a history table below the generate button. The table shows the report title, format, number of experiments included, file size and creation date. Click any row to view a PDF or download a CSV.',
+      text: 'All generated reports appear in a history table below the generate button. The table shows the report name, type of report, project/organization, date generated and who generated it. Click any row to view a PDF or download a CSV.',
     },
     {
       type: 'heading',

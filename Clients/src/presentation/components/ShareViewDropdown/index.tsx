@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Popover,
-  Typography,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
-import {
-  Copy,
-  RotateCw,
-  ExternalLink,
-  Info,
-} from "lucide-react";
+import { Box, Popover, Typography, IconButton, Tooltip } from "@mui/material";
+import { Copy, RotateCw, ExternalLink, Info } from "lucide-react";
 import Toggle from "../Inputs/Toggle";
 import Checkbox from "../Inputs/Checkbox";
 import Field from "../Inputs/Field";
@@ -102,9 +91,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
     }
   }, [initialLink]);
 
-  const handleToggleEnabled = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleToggleEnabled = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newEnabled = event.target.checked;
     setIsEnabled(newEnabled);
     onEnabledChange?.(newEnabled);
@@ -222,14 +209,10 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   marginTop: "8px",
                 }}
               >
-                Send a view only link to anyone or embed this report on a
-                website
+                Send a view only link to anyone or embed this report on a website
               </Typography>
             </Box>
-            <Toggle
-              checked={isEnabled}
-              onChange={handleToggleEnabled}
-            />
+            <Toggle checked={isEnabled} onChange={handleToggleEnabled} />
           </Box>
         </Box>
 
@@ -399,7 +382,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                 />
                 <ManageShareLinks
                   resourceType="model"
-                  resourceId={typeof modelId === 'number' ? modelId : parseInt(String(modelId))}
+                  resourceId={typeof modelId === "number" ? modelId : parseInt(String(modelId))}
                   onCopyLink={onCopyLink}
                   onOpenLink={onOpenLink}
                 />
@@ -422,12 +405,7 @@ interface SettingItemProps {
   helpText: string;
 }
 
-const SettingItem: React.FC<SettingItemProps> = ({
-  label,
-  checked,
-  onChange,
-  helpText,
-}) => {
+const SettingItem: React.FC<SettingItemProps> = ({ label, checked, onChange, helpText }) => {
   return (
     <Box
       sx={{
@@ -438,7 +416,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
     >
       <Box sx={{ flexGrow: 1, marginRight: "8px" }}>
         <Checkbox
-          id={`setting-${label.replace(/\s+/g, '-').toLowerCase()}`}
+          id={`setting-${label.replace(/\s+/g, "-").toLowerCase()}`}
           label={label}
           isChecked={checked}
           value={label}

@@ -17,7 +17,7 @@ import {
 export const createNewTrainingRegistarQuery = async (
   trainingRegistar: ITrainingRegister,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const result = await sequelize.query(
     `INSERT INTO trainingregistar (
@@ -40,7 +40,7 @@ export const createNewTrainingRegistarQuery = async (
       mapToModel: true,
       model: TrainingRegistarModel,
       transaction,
-    }
+    },
   );
   const createdTrainingRegistar = result[0];
   const automations = (await sequelize.query(
@@ -50,7 +50,7 @@ export const createNewTrainingRegistarQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -83,9 +83,7 @@ export const createNewTrainingRegistarQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
   // Return the created TrainingRegistar instance
@@ -98,7 +96,7 @@ export const createNewTrainingRegistarQuery = async (
  */
 
 export const getAllTrainingRegistarQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<ITrainingRegister[]> => {
   const trainingRegistars = await sequelize.query(
     `SELECT * FROM trainingregistar WHERE organization_id = :organizationId ORDER BY id ASC`,
@@ -106,12 +104,10 @@ export const getAllTrainingRegistarQuery = async (
       replacements: { organizationId },
       mapToModel: true,
       model: TrainingRegistarModel,
-    }
+    },
   );
   // Return all training registars or an empty array if none found
-  return Array.isArray(trainingRegistars)
-    ? (trainingRegistars as TrainingRegistarModel[])
-    : [];
+  return Array.isArray(trainingRegistars) ? (trainingRegistars as TrainingRegistarModel[]) : [];
 };
 
 /**
@@ -119,7 +115,7 @@ export const getAllTrainingRegistarQuery = async (
  */
 export const getTrainingRegistarByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ITrainingRegister> => {
   const trainingRegistarsById = await sequelize.query(
     `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id`,
@@ -127,11 +123,10 @@ export const getTrainingRegistarByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: TrainingRegistarModel,
-    }
+    },
   );
   // Return the first training registar or null if none found
-  return Array.isArray(trainingRegistarsById) &&
-    trainingRegistarsById.length > 0
+  return Array.isArray(trainingRegistarsById) && trainingRegistarsById.length > 0
     ? (trainingRegistarsById[0] as ITrainingRegister)
     : (null as any);
 };
@@ -143,12 +138,9 @@ export const updateTrainingRegistarByIdQuery = async (
   id: number,
   trainingRegistar: Partial<TrainingRegistarModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<TrainingRegistarModel> => {
-  const existingTrainingRegistar = await getTrainingRegistarByIdQuery(
-    id,
-    organizationId
-  );
+  const existingTrainingRegistar = await getTrainingRegistarByIdQuery(id, organizationId);
   const updateTrainingRegistar: Partial<
     Record<keyof TrainingRegistarModel, any> & { people?: number }
   > & { organizationId?: number } = {};
@@ -194,7 +186,7 @@ export const updateTrainingRegistarByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -209,12 +201,9 @@ export const updateTrainingRegistarByIdQuery = async (
       const params = automation.params!;
 
       // Build replacements
-      const replacements = buildTrainingUpdateReplacements(
-        existingTrainingRegistar,
-        {
-          ...updatedTrainingRegistar.dataValues,
-        }
-      );
+      const replacements = buildTrainingUpdateReplacements(existingTrainingRegistar, {
+        ...updatedTrainingRegistar.dataValues,
+      });
 
       // Replace variables in subject and body
       const processedParams = {
@@ -230,9 +219,7 @@ export const updateTrainingRegistarByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -249,7 +236,7 @@ export const updateTrainingRegistarByIdQuery = async (
 export const deleteTrainingRegistarByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM trainingregistar WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -259,7 +246,7 @@ export const deleteTrainingRegistarByIdQuery = async (
       model: TrainingRegistarModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   const deletedTrainingRegistar = result[0];
   const automations = (await sequelize.query(
@@ -269,7 +256,7 @@ export const deleteTrainingRegistarByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -300,9 +287,7 @@ export const deleteTrainingRegistarByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 

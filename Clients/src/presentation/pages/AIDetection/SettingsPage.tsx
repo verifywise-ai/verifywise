@@ -20,14 +20,7 @@ import {
 } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
-import {
-  Eye,
-  EyeOff,
-  Trash2,
-  ExternalLink,
-  Info,
-  RotateCcw,
-} from "lucide-react";
+import { Eye, EyeOff, Trash2, ExternalLink, Info, RotateCcw } from "lucide-react";
 import Toggle from "../../components/Inputs/Toggle";
 import Select from "../../components/Inputs/Select";
 import TabBar from "../../components/TabBar";
@@ -85,14 +78,14 @@ export default function SettingsPage() {
   const [riskConfigSaving, setRiskConfigSaving] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
   const [llmKeyId, setLlmKeyId] = useState<number | null>(null);
-  const [dimensionWeights, setDimensionWeights] = useState<Record<DimensionKey, number>>(
-    { ...DEFAULT_DIMENSION_WEIGHTS }
-  );
+  const [dimensionWeights, setDimensionWeights] = useState<Record<DimensionKey, number>>({
+    ...DEFAULT_DIMENSION_WEIGHTS,
+  });
   const [llmKeys, setLlmKeys] = useState<LLMKeysModel[]>([]);
   const [vulnerabilityScanEnabled, setVulnerabilityScanEnabled] = useState(false);
-  const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<Record<VulnerabilityTypeKey, boolean>>(
-    { ...DEFAULT_VULNERABILITY_TYPES_ENABLED }
-  );
+  const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<
+    Record<VulnerabilityTypeKey, boolean>
+  >({ ...DEFAULT_VULNERABILITY_TYPES_ENABLED });
 
   // Load token status on mount
   const loadTokenStatus = useCallback(async () => {
@@ -116,16 +109,15 @@ export default function SettingsPage() {
   const loadRiskConfig = useCallback(async () => {
     setRiskConfigLoading(true);
     try {
-      const [config, keysResponse] = await Promise.all([
-        getRiskScoringConfig(),
-        getLLMKeys(),
-      ]);
+      const [config, keysResponse] = await Promise.all([getRiskScoringConfig(), getLLMKeys()]);
       setRiskConfig(config);
       setLlmEnabled(config.llm_enabled);
       setLlmKeyId(config.llm_key_id);
       setDimensionWeights(config.dimension_weights);
       setVulnerabilityScanEnabled(config.vulnerability_scan_enabled ?? false);
-      setVulnerabilityTypesEnabled(config.vulnerability_types_enabled ?? { ...DEFAULT_VULNERABILITY_TYPES_ENABLED });
+      setVulnerabilityTypesEnabled(
+        config.vulnerability_types_enabled ?? { ...DEFAULT_VULNERABILITY_TYPES_ENABLED },
+      );
 
       const keys = keysResponse?.data?.data || keysResponse?.data || [];
       setLlmKeys(Array.isArray(keys) ? keys : []);
@@ -169,7 +161,10 @@ export default function SettingsPage() {
         setAlert({ variant: "error", body: result.error || "Token is invalid" });
       }
     } catch (err) {
-      setAlert({ variant: "error", body: err instanceof Error ? err.message : "Failed to test token" });
+      setAlert({
+        variant: "error",
+        body: err instanceof Error ? err.message : "Failed to test token",
+      });
     } finally {
       setIsTesting(false);
     }
@@ -184,16 +179,16 @@ export default function SettingsPage() {
     setIsSaving(true);
 
     try {
-      const status = await saveGitHubToken(
-        tokenInput,
-        tokenNameInput.trim() || undefined
-      );
+      const status = await saveGitHubToken(tokenInput, tokenNameInput.trim() || undefined);
       setTokenStatus(status);
       setTokenInput("");
       setTokenNameInput("");
       setAlert({ variant: "success", body: "GitHub token saved successfully" });
     } catch (err) {
-      setAlert({ variant: "error", body: err instanceof Error ? err.message : "Failed to save token" });
+      setAlert({
+        variant: "error",
+        body: err instanceof Error ? err.message : "Failed to save token",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -207,7 +202,10 @@ export default function SettingsPage() {
       setTokenStatus({ configured: false });
       setAlert({ variant: "success", body: "GitHub token deleted successfully" });
     } catch (err) {
-      setAlert({ variant: "error", body: err instanceof Error ? err.message : "Failed to delete token" });
+      setAlert({
+        variant: "error",
+        body: err instanceof Error ? err.message : "Failed to delete token",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -254,7 +252,10 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <PageHeaderExtended title="Settings" description="Configure integrations and tokens for AI detection scanning.">
+      <PageHeaderExtended
+        title="Settings"
+        description="Configure integrations and tokens for AI detection scanning."
+      >
         <Box
           sx={{
             display: "flex",
@@ -312,9 +313,9 @@ export default function SettingsPage() {
             {/* Help Text */}
             <Box>
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                To scan private repositories, you need a GitHub Personal Access
-                Token with <strong>repo</strong> scope (for private repos) or{" "}
-                <strong>public_repo</strong> scope (for public repos only).
+                To scan private repositories, you need a GitHub Personal Access Token with{" "}
+                <strong>repo</strong> scope (for private repos) or <strong>public_repo</strong>{" "}
+                scope (for public repos only).
               </Typography>
               <Typography
                 component="a"
@@ -351,9 +352,7 @@ export default function SettingsPage() {
                 }}
               >
                 <Box sx={{ flex: 1 }}>
-                  <Typography
-                    sx={{ fontSize: 14, fontWeight: 500, color: palette.brand.primary }}
-                  >
+                  <Typography sx={{ fontSize: 14, fontWeight: 500, color: palette.brand.primary }}>
                     Token configured
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
@@ -367,11 +366,7 @@ export default function SettingsPage() {
                   isDisabled={isDeleting}
                   sx={{ color: palette.status.error.text, minWidth: "auto", p: 1 }}
                 >
-                  {isDeleting ? (
-                    <CircularProgress size={16} />
-                  ) : (
-                    <Trash2 size={16} />
-                  )}
+                  {isDeleting ? <CircularProgress size={16} /> : <Trash2 size={16} />}
                 </CustomizableButton>
               </Box>
             )}
@@ -388,11 +383,7 @@ export default function SettingsPage() {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => setShowToken(!showToken)}
-                      edge="end"
-                    >
+                    <IconButton size="small" onClick={() => setShowToken(!showToken)} edge="end">
                       {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
                     </IconButton>
                   </InputAdornment>
@@ -451,7 +442,9 @@ export default function SettingsPage() {
                 <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
                   LLM-enhanced analysis
                 </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                >
                   <Box>
                     <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
                       Use an LLM to provide contextual narrative, cross-finding correlation, and
@@ -506,7 +499,9 @@ export default function SettingsPage() {
                 }}
               >
                 <Box>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  >
                     <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
                       Vulnerability detection
                     </Typography>
@@ -518,9 +513,9 @@ export default function SettingsPage() {
                     />
                   </Box>
                   <Typography sx={{ fontSize: 13, color: palette.text.secondary, mt: "4px" }}>
-                    Use LLM analysis to detect security vulnerabilities in scanned code.
-                    Uses additional LLM API tokens per scan. Patterns are adapted from
-                    Promptfoo redteam graders and mapped to the OWASP LLM Top 10.
+                    Use LLM analysis to detect security vulnerabilities in scanned code. Uses
+                    additional LLM API tokens per scan. Patterns are adapted from Promptfoo redteam
+                    graders and mapped to the OWASP LLM Top 10.
                   </Typography>
                 </Box>
 
@@ -546,9 +541,17 @@ export default function SettingsPage() {
                           opacity: vulnerabilityTypesEnabled[vulnType.key] ? 1 : 0.6,
                         }}
                       >
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
                           <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
+                            <Typography
+                              sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}
+                            >
                               {vulnType.name}
                             </Typography>
                             <Chip
@@ -594,7 +597,9 @@ export default function SettingsPage() {
                   gap: "8px",
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                >
                   <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
                     Dimension weights
                   </Typography>
@@ -615,14 +620,24 @@ export default function SettingsPage() {
                     <Box key={key}>
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                         <Box>
-                          <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary }}>
+                          <Typography
+                            sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary }}
+                          >
                             {DIMENSION_LABELS[key]}
                           </Typography>
                           <Typography sx={{ fontSize: 13, color: palette.text.accent }}>
                             {DIMENSION_DESCRIPTIONS[key]}
                           </Typography>
                         </Box>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary, fontFamily: "monospace", flexShrink: 0 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: palette.text.primary,
+                            fontFamily: "monospace",
+                            flexShrink: 0,
+                          }}
+                        >
                           {pct}%
                         </Typography>
                       </Box>
@@ -646,8 +661,21 @@ export default function SettingsPage() {
                   );
                 })}
 
-                <Box sx={{ display: "flex", justifyContent: "space-between", pt: "8px", borderTop: `1px solid ${palette.border.light}` }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: weightsValid ? palette.text.secondary : palette.status.error.text }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    pt: "8px",
+                    borderTop: `1px solid ${palette.border.light}`,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: weightsValid ? palette.text.secondary : palette.status.error.text,
+                    }}
+                  >
                     Total: {Math.round(weightsTotal * 100)}%
                   </Typography>
                   {!weightsValid && (

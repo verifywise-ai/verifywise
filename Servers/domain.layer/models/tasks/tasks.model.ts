@@ -1,18 +1,11 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { TaskPriority } from "../../enums/task-priority.enum";
 import { TaskStatus } from "../../enums/task-status.enum";
 import { ITask, ITaskSafeJSON } from "../../interfaces/i.task";
 import { stringValidation, enumValidation } from "../../validations/string.valid";
 import { numberValidation } from "../../validations/number.valid";
-import {ValidationException} from "../../exceptions/custom.exception";
-
+import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "tasks",
@@ -32,13 +25,13 @@ export class TasksModel extends Model<TasksModel> implements ITask {
     allowNull: false,
     validate: {
       notEmpty: {
-        msg: "Title cannot be empty"
+        msg: "Title cannot be empty",
       },
       len: {
         args: [1, 255],
-        msg: "Title must be between 1 and 255 characters"
-      }
-    }
+        msg: "Title must be between 1 and 255 characters",
+      },
+    },
   })
   title!: string;
 
@@ -74,9 +67,9 @@ export class TasksModel extends Model<TasksModel> implements ITask {
     validate: {
       isIn: {
         args: [Object.values(TaskPriority)],
-        msg: "Priority must be Low, Medium, or High"
-      }
-    }
+        msg: "Priority must be Low, Medium, or High",
+      },
+    },
   })
   priority!: TaskPriority;
 
@@ -87,9 +80,9 @@ export class TasksModel extends Model<TasksModel> implements ITask {
     validate: {
       isIn: {
         args: [Object.values(TaskStatus)],
-        msg: "Status must be Open, In Progress, Completed, Overdue, or Deleted"
-      }
-    }
+        msg: "Status must be Open, In Progress, Completed, Overdue, or Deleted",
+      },
+    },
   })
   status!: TaskStatus;
 
@@ -162,7 +155,7 @@ export class TasksModel extends Model<TasksModel> implements ITask {
       throw new ValidationException(
         "Title must be between 1 and 255 characters",
         "title",
-        this.title
+        this.title,
       );
     }
 
@@ -172,7 +165,7 @@ export class TasksModel extends Model<TasksModel> implements ITask {
         throw new ValidationException(
           "Description cannot exceed 5000 characters",
           "description",
-          this.description
+          this.description,
         );
       }
     }
@@ -182,7 +175,7 @@ export class TasksModel extends Model<TasksModel> implements ITask {
       throw new ValidationException(
         "Valid creator_id is required (must be >= 1)",
         "creator_id",
-        this.creator_id
+        this.creator_id,
       );
     }
 
@@ -192,27 +185,19 @@ export class TasksModel extends Model<TasksModel> implements ITask {
         throw new ValidationException(
           "Valid organization_id is required (must be >= 1)",
           "organization_id",
-          this.organization_id
+          this.organization_id,
         );
       }
     }
 
     // Validate priority
     if (!enumValidation(this.priority, Object.values(TaskPriority))) {
-      throw new ValidationException(
-        "Invalid priority value",
-        "priority",
-        this.priority
-      );
+      throw new ValidationException("Invalid priority value", "priority", this.priority);
     }
 
     // Validate status
     if (!enumValidation(this.status, Object.values(TaskStatus))) {
-      throw new ValidationException(
-        "Invalid status value",
-        "status",
-        this.status
-      );
+      throw new ValidationException("Invalid status value", "status", this.status);
     }
 
     // Validate due_date (must be in the future for new tasks)
@@ -220,18 +205,14 @@ export class TasksModel extends Model<TasksModel> implements ITask {
       throw new ValidationException(
         "Due date must be in the future for new tasks",
         "due_date",
-        this.due_date
+        this.due_date,
       );
     }
 
     // Validate categories array
     if (this.categories) {
       if (!Array.isArray(this.categories)) {
-        throw new ValidationException(
-          "Categories must be an array",
-          "categories",
-          this.categories
-        );
+        throw new ValidationException("Categories must be an array", "categories", this.categories);
       }
 
       for (const category of this.categories) {
@@ -239,7 +220,7 @@ export class TasksModel extends Model<TasksModel> implements ITask {
           throw new ValidationException(
             "Each category must be between 1 and 50 characters",
             "categories",
-            category
+            category,
           );
         }
       }
@@ -248,7 +229,7 @@ export class TasksModel extends Model<TasksModel> implements ITask {
         throw new ValidationException(
           "Maximum 10 categories allowed",
           "categories",
-          this.categories
+          this.categories,
         );
       }
     }
@@ -258,13 +239,17 @@ export class TasksModel extends Model<TasksModel> implements ITask {
    * Check if the task is overdue
    */
   isOverdue(): boolean {
-    if (!this.due_date || (this.status === TaskStatus.COMPLETED || this.status === TaskStatus.DELETED)) return false;
+    if (
+      !this.due_date ||
+      this.status === TaskStatus.COMPLETED ||
+      this.status === TaskStatus.DELETED
+    )
+      return false;
     return new Date() > this.due_date;
   }
 
-
   /**
-   * Get task data 
+   * Get task data
    */
   toSafeJSON(): ITaskSafeJSON {
     return {

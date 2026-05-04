@@ -26,14 +26,18 @@ interface ScorersTableBodyProps {
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }) + ", " + date.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return (
+    date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }) +
+    ", " +
+    date.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
 };
 
 const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
@@ -91,102 +95,100 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
 
   return (
     <TableBody>
-      {rows
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((scorer) => (
-          <TableRow
-            key={scorer.id}
-            onClick={() => onRowClick?.(scorer)}
+      {rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((scorer) => (
+        <TableRow
+          key={scorer.id}
+          onClick={() => onRowClick?.(scorer)}
+          sx={{
+            ...singleTheme.tableStyles.primary.body.row,
+            cursor: onRowClick ? "pointer" : "default",
+            "&:hover": {
+              backgroundColor: `${background.accent}`,
+            },
+          }}
+        >
+          {/* SCORER NAME */}
+          <TableCell
             sx={{
-              ...singleTheme.tableStyles.primary.body.row,
-              cursor: onRowClick ? "pointer" : "default",
-              "&:hover": {
-                backgroundColor: `${background.accent}`,
-              },
+              ...singleTheme.tableStyles.primary.body.cell,
+              textTransform: "none",
             }}
           >
-            {/* SCORER NAME */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textTransform: "none",
-              }}
-            >
-              {scorer.name}
-            </TableCell>
+            {scorer.name}
+          </TableCell>
 
-            {/* MODEL - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              {getModelName(scorer)}
-            </TableCell>
+          {/* MODEL - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            {getModelName(scorer)}
+          </TableCell>
 
-            {/* THRESHOLD - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              {scorer.defaultThreshold ?? "-"}
-            </TableCell>
+          {/* THRESHOLD - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            {scorer.defaultThreshold ?? "-"}
+          </TableCell>
 
-            {/* # CHOICE SCORES - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              {scorer.config?.choiceScores?.length ?? "-"}
-            </TableCell>
+          {/* # CHOICE SCORES - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            {scorer.config?.choiceScores?.length ?? "-"}
+          </TableCell>
 
-            {/* DATE - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              <Typography sx={{ fontSize: "12px", color: `${status.default.text}` }}>
-                {formatDate(scorer.createdAt)}
-              </Typography>
-            </TableCell>
+          {/* DATE - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            <Typography sx={{ fontSize: "12px", color: `${status.default.text}` }}>
+              {formatDate(scorer.createdAt)}
+            </Typography>
+          </TableCell>
 
-            {/* ACTION - center aligned */}
-            <TableCell
+          {/* ACTION - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              minWidth: "80px",
+              maxWidth: "80px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IconButton
+              size="small"
+              onClick={(e) => handleMenuOpen(e, scorer)}
               sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                minWidth: "80px",
-                maxWidth: "80px",
+                color: `${text.icon}`,
+                padding: "6px",
+                "&:hover": {
+                  backgroundColor: `${background.hover}`,
+                },
               }}
-              onClick={(e) => e.stopPropagation()}
             >
-              <IconButton
-                size="small"
-                onClick={(e) => handleMenuOpen(e, scorer)}
-                sx={{
-                  color: `${text.icon}`,
-                  padding: "6px",
-                  "&:hover": {
-                    backgroundColor: `${background.hover}`,
-                  },
-                }}
-              >
-                <MoreVertical size={18} />
-              </IconButton>
-            </TableCell>
-          </TableRow>
-        ))}
+              <MoreVertical size={18} />
+            </IconButton>
+          </TableCell>
+        </TableRow>
+      ))}
 
       {/* Action Menu */}
       <Popover
@@ -261,4 +263,3 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
 };
 
 export default ScorersTableBody;
-

@@ -30,10 +30,7 @@ describe("displayFormattedDate", () => {
   });
 
   it("respects localStorage preference for MM-DD-YYYY", () => {
-    localStorage.setItem(
-      "verifywise_preferences",
-      JSON.stringify({ date_format: "MM-DD-YYYY" })
-    );
+    localStorage.setItem("verifywise_preferences", JSON.stringify({ date_format: "MM-DD-YYYY" }));
     const result = displayFormattedDate("2024-11-01");
     expect(result).toBe("11-01-2024");
   });

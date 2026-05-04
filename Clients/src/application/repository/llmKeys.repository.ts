@@ -1,9 +1,7 @@
 import { LLMKeysModel } from "../../domain/models/Common/llmKeys/llmKeys.model";
 import { apiServices } from "../../infrastructure/api/networkServices";
 
-export async function createLLMKey({
-  body,
-}: {body: Partial<LLMKeysModel>}): Promise<any> {
+export async function createLLMKey({ body }: { body: Partial<LLMKeysModel> }): Promise<any> {
   const response = await apiServices.post("/llm-keys", body);
   return response;
 }
@@ -11,7 +9,10 @@ export async function createLLMKey({
 export async function editLLMKey({
   id,
   body,
-}: {id: string, body: Partial<LLMKeysModel>}): Promise<any> {
+}: {
+  id: string;
+  body: Partial<LLMKeysModel>;
+}): Promise<any> {
   const response = await apiServices.patch(`/llm-keys/${id}`, body);
   return response;
 }

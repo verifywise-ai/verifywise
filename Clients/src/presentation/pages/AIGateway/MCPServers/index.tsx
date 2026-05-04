@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
 import { CirclePlus, Server, Trash2, Pencil, Search, Activity } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
@@ -162,7 +156,11 @@ export default function MCPServersPage() {
       setForm({ ...EMPTY_FORM });
       await loadData();
     } catch (err: any) {
-      setFormError(err?.response?.data?.detail || err?.response?.data?.message || `Failed to ${editingId ? "update" : "create"} server`);
+      setFormError(
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          `Failed to ${editingId ? "update" : "create"} server`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -218,7 +216,9 @@ export default function MCPServersPage() {
     >
       {loading ? (
         <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Loading servers...</Typography>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+            Loading servers...
+          </Typography>
         </Box>
       ) : servers.length === 0 ? (
         <EmptyState
@@ -259,9 +259,7 @@ export default function MCPServersPage() {
                   <Server size={16} strokeWidth={1.5} color={palette.text.tertiary} />
                   <Box>
                     <Stack direction="row" alignItems="center" gap="8px">
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        {srv.name}
-                      </Typography>
+                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
                       <Chip
                         label={getHealthLabel(srv.health_status)}
                         variant={getHealthChipVariant(srv.health_status)}
@@ -269,7 +267,11 @@ export default function MCPServersPage() {
                         uppercase={false}
                       />
                       {srv.tool_count > 0 && (
-                        <Chip label={`${srv.tool_count} tool${srv.tool_count !== 1 ? "s" : ""}`} size="small" uppercase={false} />
+                        <Chip
+                          label={`${srv.tool_count} tool${srv.tool_count !== 1 ? "s" : ""}`}
+                          size="small"
+                          uppercase={false}
+                        />
                       )}
                     </Stack>
                     <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
@@ -277,19 +279,20 @@ export default function MCPServersPage() {
                       {srv.slug && <span> &middot; /{srv.slug}</span>}
                     </Typography>
                     <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "2px" }}>
-                      {srv.created_by_name ? `Added by ${srv.created_by_name}` : "Added"} &middot; {displayFormattedDate(srv.created_at)}
+                      {srv.created_by_name ? `Added by ${srv.created_by_name}` : "Added"} &middot;{" "}
+                      {displayFormattedDate(srv.created_at)}
                     </Typography>
                   </Box>
                 </Stack>
-                <Stack direction="row" alignItems="center" gap="8px" onClick={(e) => e.stopPropagation()}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  gap="8px"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Tooltip title="Coming soon" arrow>
                     <span>
-                      <IconButton
-                        size="small"
-                        disabled
-                        sx={{ p: 0.5 }}
-                        aria-label="Discover tools"
-                      >
+                      <IconButton size="small" disabled sx={{ p: 0.5 }} aria-label="Discover tools">
                         <Search size={14} strokeWidth={1.5} color={palette.text.disabled} />
                       </IconButton>
                     </span>
@@ -299,11 +302,7 @@ export default function MCPServersPage() {
                     onChange={() => handleToggleActive(srv.id, srv.is_active)}
                     size="small"
                   />
-                  <IconButton
-                    size="small"
-                    onClick={() => openEditModal(srv)}
-                    sx={{ p: 0.5 }}
-                  >
+                  <IconButton size="small" onClick={() => openEditModal(srv)} sx={{ p: 0.5 }}>
                     <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                   </IconButton>
                   <IconButton
@@ -325,7 +324,11 @@ export default function MCPServersPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? "Edit server" : "Add MCP server"}
-        description={isEditing ? "Update this server's configuration." : "Register a new MCP-compatible tool server."}
+        description={
+          isEditing
+            ? "Update this server's configuration."
+            : "Register a new MCP-compatible tool server."
+        }
         onSubmit={handleSubmit}
         submitButtonText={isEditing ? "Save changes" : "Add server"}
         isSubmitting={isSubmitting}
@@ -424,7 +427,8 @@ export default function MCPServersPage() {
         maxWidth="400px"
       >
         <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-          Are you sure you want to delete "{deleteTarget?.name}"? This will permanently remove the server and all its registered tools. Agents referencing these tools will receive errors.
+          Are you sure you want to delete "{deleteTarget?.name}"? This will permanently remove the
+          server and all its registered tools. Agents referencing these tools will receive errors.
         </Typography>
       </StandardModal>
     </PageHeaderExtended>

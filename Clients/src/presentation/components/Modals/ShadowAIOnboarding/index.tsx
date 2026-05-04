@@ -13,14 +13,9 @@ import { text } from "../../../themes/palette";
 
 const STORAGE_KEY = "vw:shadow-ai-onboarding-dismissed";
 
-const StepContent: React.FC<{ title: string; detail: string }> = ({
-  title,
-  detail,
-}) => (
+const StepContent: React.FC<{ title: string; detail: string }> = ({ title, detail }) => (
   <Stack spacing={2.5}>
-    <Typography sx={{ fontSize: 15, fontWeight: 600, color: "#1c2130" }}>
-      {title}
-    </Typography>
+    <Typography sx={{ fontSize: 15, fontWeight: 600, color: "#1c2130" }}>{title}</Typography>
     <Typography sx={{ fontSize: 13, color: `${text.tertiary}`, lineHeight: 1.7 }}>
       {detail}
     </Typography>
@@ -62,10 +57,7 @@ interface ShadowAIOnboardingProps {
   onClose: () => void;
 }
 
-const ShadowAIOnboarding: React.FC<ShadowAIOnboardingProps> = ({
-  isOpen,
-  onClose,
-}) => (
+const ShadowAIOnboarding: React.FC<ShadowAIOnboardingProps> = ({ isOpen, onClose }) => (
   <OnboardingWizard
     isOpen={isOpen}
     onClose={onClose}

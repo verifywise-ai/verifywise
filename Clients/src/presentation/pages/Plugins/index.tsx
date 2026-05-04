@@ -51,7 +51,9 @@ const Plugins: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
-  const { plugins, loading, refetch } = usePlugins(selectedCategory === "all" ? undefined : selectedCategory);
+  const { plugins, loading, refetch } = usePlugins(
+    selectedCategory === "all" ? undefined : selectedCategory,
+  );
   const { uninstall, uninstalling } = usePluginInstallation();
   const [toast, setToast] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -65,22 +67,19 @@ const Plugins: React.FC = () => {
 
   // Refetch plugins when navigating back to this page
   React.useEffect(() => {
-    if (location.pathname.includes('/plugins') && !location.pathname.includes('/manage')) {
+    if (location.pathname.includes("/plugins") && !location.pathname.includes("/manage")) {
       refetch();
     }
   }, [location.pathname, refetch]);
 
-  const handleTabChange = useCallback(
-    (_event: React.SyntheticEvent, newValue: string) => {
-      setActiveTab(newValue);
-    },
-    []
-  );
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: string) => {
+    setActiveTab(newValue);
+  }, []);
 
   // Get current category config
   const currentCategory = useMemo(
     () => CATEGORIES.find((c) => c.id === selectedCategory) || CATEGORIES[0],
-    [selectedCategory]
+    [selectedCategory],
   );
 
   // Helper to check if a plugin is a framework plugin (based on category or tags)
@@ -89,8 +88,7 @@ const Plugins: React.FC = () => {
       (plugin.category as string) === "compliance" ||
       (plugin.tags || []).some(
         (tag) =>
-          tag.toLowerCase().includes("compliance") ||
-          tag.toLowerCase().includes("framework")
+          tag.toLowerCase().includes("compliance") || tag.toLowerCase().includes("framework"),
       )
     );
   }, []);
@@ -104,38 +102,38 @@ const Plugins: React.FC = () => {
       (p) =>
         p.name.toLowerCase().includes(lowerQuery) ||
         p.description.toLowerCase().includes(lowerQuery) ||
-        (p.tags || []).some((tag) => tag.toLowerCase().includes(lowerQuery))
+        (p.tags || []).some((tag) => tag.toLowerCase().includes(lowerQuery)),
     );
   }, [plugins, searchQuery, isFrameworkPlugin]);
 
   // Filter to show only installed plugins
   const installedPlugins = useMemo(
     () => plugins.filter((p) => p.installationStatus === PluginInstallationStatus.INSTALLED),
-    [plugins]
+    [plugins],
   );
 
   const frameworkPlugins = useMemo(
     () => plugins.filter((p) => isFrameworkPlugin(p)),
-    [plugins, isFrameworkPlugin]
+    [plugins, isFrameworkPlugin],
   );
 
   // Region flags mapping
   const regionFlags: Record<string, string> = {
-    "International": "🌐",
+    International: "🌐",
     "United States": "🇺🇸",
     "European Union": "🇪🇺",
-    "Canada": "🇨🇦",
+    Canada: "🇨🇦",
     "United Kingdom": "🇬🇧",
-    "Australia": "🇦🇺",
-    "Singapore": "🇸🇬",
-    "India": "🇮🇳",
-    "Japan": "🇯🇵",
-    "Brazil": "🇧🇷",
+    Australia: "🇦🇺",
+    Singapore: "🇸🇬",
+    India: "🇮🇳",
+    Japan: "🇯🇵",
+    Brazil: "🇧🇷",
     "United Arab Emirates": "🇦🇪",
     "Saudi Arabia": "🇸🇦",
-    "Qatar": "🇶🇦",
-    "Bahrain": "🇧🇭",
-    "Other": "📋",
+    Qatar: "🇶🇦",
+    Bahrain: "🇧🇭",
+    Other: "📋",
   };
 
   // Group frameworks by region (from plugin metadata)
@@ -182,12 +180,13 @@ const Plugins: React.FC = () => {
       } catch (err: unknown) {
         setToast({
           variant: "error",
-          body: err instanceof Error ? err.message : "Failed to uninstall plugin. Please try again.",
+          body:
+            err instanceof Error ? err.message : "Failed to uninstall plugin. Please try again.",
           visible: true,
         });
       }
     },
-    [uninstall, refetch]
+    [uninstall, refetch],
   );
 
   // Handle plugin management
@@ -203,7 +202,7 @@ const Plugins: React.FC = () => {
       }
       navigate(`/plugins/${plugin.key}/manage`);
     },
-    [navigate]
+    [navigate],
   );
 
   // Toggle region expansion (tracks collapsed regions - empty means all expanded)
@@ -260,7 +259,12 @@ const Plugins: React.FC = () => {
         <Box>
           <TabBar
             tabs={[
-              { label: "Marketplace", value: "marketplace", icon: "Store", tooltip: "Browse and install available plugins" },
+              {
+                label: "Marketplace",
+                value: "marketplace",
+                icon: "Store",
+                tooltip: "Browse and install available plugins",
+              },
               {
                 label: "My plugins",
                 value: "my-plugins",
@@ -304,19 +308,21 @@ const Plugins: React.FC = () => {
                           width: "16px",
                           "& svg": {
                             color: isSelected ? "brand.primary !important" : "text.icon !important",
-                            stroke: isSelected ? "brand.primary !important" : "text.icon !important",
+                            stroke: isSelected
+                              ? "brand.primary !important"
+                              : "text.icon !important",
                             transition: "color 0.2s ease, stroke 0.2s ease",
                           },
                           "& svg path": {
-                            stroke: isSelected ? "brand.primary !important" : "text.icon !important",
+                            stroke: isSelected
+                              ? "brand.primary !important"
+                              : "text.icon !important",
                           },
                         }}
                       >
                         <Icon size={16} strokeWidth={1.5} />
                       </Box>
-                      <Typography sx={categoryMenuText(isSelected)}>
-                        {category.name}
-                      </Typography>
+                      <Typography sx={categoryMenuText(isSelected)}>{category.name}</Typography>
                     </Box>
                   );
                 })}
@@ -342,9 +348,7 @@ const Plugins: React.FC = () => {
                       color: "brand.primary",
                       strokeWidth: 1.5,
                     })}
-                    <Typography sx={categoryHeaderTitle}>
-                      {currentCategory.name}
-                    </Typography>
+                    <Typography sx={categoryHeaderTitle}>{currentCategory.name}</Typography>
                   </Stack>
                   <Typography sx={categoryHeaderDescription}>
                     {currentCategory.description}
@@ -354,9 +358,7 @@ const Plugins: React.FC = () => {
                 {/* Plugin Cards Grid */}
                 {loading ? (
                   <Box sx={emptyStateContainer}>
-                    <Typography sx={emptyStateText}>
-                      Loading plugins...
-                    </Typography>
+                    <Typography sx={emptyStateText}>Loading plugins...</Typography>
                   </Box>
                 ) : filteredPlugins.length === 0 ? (
                   <Box sx={emptyStateContainer}>
@@ -373,8 +375,7 @@ const Plugins: React.FC = () => {
                           onUninstall={handleUninstall}
                           onManage={handleManage}
                           loading={
-                            !!(plugin.installationId &&
-                              uninstalling === plugin.installationId)
+                            !!(plugin.installationId && uninstalling === plugin.installationId)
                           }
                         />
                       </Box>
@@ -403,9 +404,7 @@ const Plugins: React.FC = () => {
             {/* Plugin Cards Grid */}
             {loading ? (
               <Box sx={emptyStateContainer}>
-                <Typography sx={emptyStateText}>
-                  Loading plugins...
-                </Typography>
+                <Typography sx={emptyStateText}>Loading plugins...</Typography>
               </Box>
             ) : installedPlugins.length === 0 ? (
               <EmptyState
@@ -437,12 +436,7 @@ const Plugins: React.FC = () => {
                       plugin={plugin}
                       onUninstall={handleUninstall}
                       onManage={handleManage}
-                      loading={
-                        !!(
-                          plugin.installationId &&
-                          uninstalling === plugin.installationId
-                        )
-                      }
+                      loading={!!(plugin.installationId && uninstalling === plugin.installationId)}
                     />
                   </Box>
                 ))}
@@ -457,60 +451,53 @@ const Plugins: React.FC = () => {
             {/* Framework Plugins by Region */}
             {loading ? (
               <Box sx={emptyStateContainer}>
-                <Typography sx={emptyStateText}>
-                  Loading framework plugins...
-                </Typography>
+                <Typography sx={emptyStateText}>Loading framework plugins...</Typography>
               </Box>
             ) : frameworksByRegion.length === 0 ? (
               <Box sx={emptyStateContainer}>
-                <Typography sx={emptyStateText}>
-                  No framework plugins available.
-                </Typography>
+                <Typography sx={emptyStateText}>No framework plugins available.</Typography>
               </Box>
             ) : (
-              frameworksByRegion.map(({ region, regionName, regionFlag, plugins: regionPlugins }) => {
-                const isExpanded = !collapsedRegions.has(region);
-                return (
-                  <Stack key={region} gap={0}>
-                    {/* Region Header - Clickable */}
-                    <Box onClick={() => toggleRegion(region)} sx={regionHeader(theme)}>
-                      <Box sx={regionChevron(theme, isExpanded)}>
-                        <ChevronDown size={18} strokeWidth={2} />
+              frameworksByRegion.map(
+                ({ region, regionName, regionFlag, plugins: regionPlugins }) => {
+                  const isExpanded = !collapsedRegions.has(region);
+                  return (
+                    <Stack key={region} gap={0}>
+                      {/* Region Header - Clickable */}
+                      <Box onClick={() => toggleRegion(region)} sx={regionHeader(theme)}>
+                        <Box sx={regionChevron(theme, isExpanded)}>
+                          <ChevronDown size={18} strokeWidth={2} />
+                        </Box>
+                        <Typography sx={regionFlagStyle}>{regionFlag}</Typography>
+                        <Typography sx={regionNameStyle(theme)}>{regionName}</Typography>
+                        <Typography sx={regionCountStyle(theme)}>
+                          ({regionPlugins.length})
+                        </Typography>
                       </Box>
-                      <Typography sx={regionFlagStyle}>
-                        {regionFlag}
-                      </Typography>
-                      <Typography sx={regionNameStyle(theme)}>
-                        {regionName}
-                      </Typography>
-                      <Typography sx={regionCountStyle(theme)}>
-                        ({regionPlugins.length})
-                      </Typography>
-                    </Box>
 
-                    {/* Region Plugins Grid - Collapsible */}
-                    <Collapse in={isExpanded} timeout={250} unmountOnExit>
-                      <Box sx={regionContent(theme)}>
-                        {regionPlugins.map((plugin) => (
-                          <Box key={plugin.key} sx={pluginCardWrapperThreeColumn}>
-                            <PluginCard
-                              plugin={plugin}
-                              onUninstall={handleUninstall}
-                              onManage={handleManage}
-                              loading={
-                                !!(
-                                  plugin.installationId &&
-                                  uninstalling === plugin.installationId
-                                )
-                              }
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    </Collapse>
-                  </Stack>
-                );
-              })
+                      {/* Region Plugins Grid - Collapsible */}
+                      <Collapse in={isExpanded} timeout={250} unmountOnExit>
+                        <Box sx={regionContent(theme)}>
+                          {regionPlugins.map((plugin) => (
+                            <Box key={plugin.key} sx={pluginCardWrapperThreeColumn}>
+                              <PluginCard
+                                plugin={plugin}
+                                onUninstall={handleUninstall}
+                                onManage={handleManage}
+                                loading={
+                                  !!(
+                                    plugin.installationId && uninstalling === plugin.installationId
+                                  )
+                                }
+                              />
+                            </Box>
+                          ))}
+                        </Box>
+                      </Collapse>
+                    </Stack>
+                  );
+                },
+              )
             )}
           </Stack>
         </TabPanel>

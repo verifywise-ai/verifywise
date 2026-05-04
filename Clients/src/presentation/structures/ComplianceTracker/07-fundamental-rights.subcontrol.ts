@@ -13,8 +13,7 @@ export const FundamentalRightsImpactAssessments = {
       subControls: [
         {
           id: 1,
-          title:
-            "We develop a comprehensive process for fundamental rights impact assessments.",
+          title: "We develop a comprehensive process for fundamental rights impact assessments.",
           description:
             "A structured assessment process identifies and mitigates risks to fundamental rights posed by AI systems.",
         },
@@ -51,8 +50,7 @@ export const FundamentalRightsImpactAssessments = {
       subControls: [
         {
           id: 1,
-          title:
-            "Identify all natural persons and groups potentially affected by AI system usage.",
+          title: "Identify all natural persons and groups potentially affected by AI system usage.",
           description:
             "Identifying impacted individuals and groups helps address potential risks and design systems responsibly.",
         },
@@ -127,8 +125,7 @@ export const FundamentalRightsImpactAssessments = {
       subControls: [
         {
           id: 1,
-          title:
-            "We document known or foreseeable risks to health, safety, or fundamental rights.",
+          title: "We document known or foreseeable risks to health, safety, or fundamental rights.",
           description:
             "Documenting risks provides transparency and helps stakeholders make informed decisions regarding system deployment.",
         },
@@ -141,8 +138,7 @@ export const FundamentalRightsImpactAssessments = {
       id: 8,
       icon: Checked,
       title: "Assessment Process Documentation",
-      description:
-        "Maintain documentation of the fundamental rights impact assessment process.",
+      description: "Maintain documentation of the fundamental rights impact assessment process.",
       subControls: [
         {
           id: 1,
@@ -179,8 +175,7 @@ export const FundamentalRightsImpactAssessments = {
       id: 10,
       icon: Checked,
       title: "Assessment Process Documentation",
-      description:
-        "Regularly evaluate bias and fairness issues related to AI systems.",
+      description: "Regularly evaluate bias and fairness issues related to AI systems.",
       subControls: [
         {
           id: 1,
@@ -191,8 +186,7 @@ export const FundamentalRightsImpactAssessments = {
         },
         {
           id: 2,
-          title:
-            "We ensure representative evaluations when using human subjects.",
+          title: "We ensure representative evaluations when using human subjects.",
           description:
             "Representative evaluations protect fairness and ensure that findings are applicable across relevant user groups.",
         },

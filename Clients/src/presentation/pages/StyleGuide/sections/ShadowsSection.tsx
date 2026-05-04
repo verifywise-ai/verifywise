@@ -114,16 +114,16 @@ const ShadowsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          VerifyWise uses a minimal shadow approach. Most components use borders
-          for definition, with shadows reserved for floating elements.
+          VerifyWise uses a minimal shadow approach. Most components use borders for definition,
+          with shadows reserved for floating elements.
         </Typography>
       </Box>
 
       {/* Shadow Scale */}
       <SpecSection title="Shadow scale">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          The application uses a flat design with borders as the primary visual separator.
-          Shadows are used sparingly for floating elements.
+          The application uses a flat design with borders as the primary visual separator. Shadows
+          are used sparingly for floating elements.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -179,9 +179,7 @@ const ShadowsSection: React.FC = () => {
                     >
                       {shadow.value}
                     </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: theme.palette.text.secondary }}
-                    >
+                    <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                       {shadow.usage}
                     </Typography>
                   </Box>
@@ -192,7 +190,16 @@ const ShadowsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Theme configuration
             </Typography>
             <SpecTable
@@ -204,7 +211,17 @@ const ShadowsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               When to use shadows
             </Typography>
             <SpecTable
@@ -309,7 +326,16 @@ const ShadowsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Border tokens (primary style)
             </Typography>
             <SpecTable
@@ -322,7 +348,17 @@ const ShadowsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Elevation levels
             </Typography>
             <Box
@@ -376,7 +412,7 @@ const ShadowsSection: React.FC = () => {
           {[
             "Use borders as the primary visual separator, not shadows",
             "Use theme.boxShadow for floating elements (dropdowns, modals)",
-            "Cards should use border only - boxShadow: \"none\"",
+            'Cards should use border only - boxShadow: "none"',
             "Add shadow on hover for interactive cards if needed",
             "Keep shadows subtle - VerifyWise uses a flat design",
             "MuiButton has disableElevation by default",
@@ -462,9 +498,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -486,9 +520,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -539,9 +571,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

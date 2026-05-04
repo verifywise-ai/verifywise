@@ -10,9 +10,7 @@
 
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
-import {
-  FK_MAPPINGS,
-} from "./migrationConfig";
+import { FK_MAPPINGS } from "./migrationConfig";
 
 // Key tables to always check (even if not in migration config)
 const KEY_TABLES = [
@@ -43,7 +41,7 @@ interface FkCheck {
 async function getSchemaTableNames(schema: string): Promise<string[]> {
   const rows = await sequelize.query<{ tablename: string }>(
     `SELECT tablename FROM pg_tables WHERE schemaname = :schema ORDER BY tablename`,
-    { replacements: { schema }, type: QueryTypes.SELECT }
+    { replacements: { schema }, type: QueryTypes.SELECT },
   );
   return rows.map((r) => r.tablename);
 }
@@ -51,7 +49,7 @@ async function getSchemaTableNames(schema: string): Promise<string[]> {
 async function getRowCount(schema: string, table: string): Promise<number> {
   const [result] = await sequelize.query<{ count: string }>(
     `SELECT COUNT(*) as count FROM "${schema}"."${table}"`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
   return parseInt(result.count, 10);
 }
@@ -61,7 +59,7 @@ async function tableExistsInSchema(schema: string, table: string): Promise<boole
     `SELECT EXISTS (
       SELECT 1 FROM pg_tables WHERE schemaname = :schema AND tablename = :table
     ) as exists`,
-    { replacements: { schema, table }, type: QueryTypes.SELECT }
+    { replacements: { schema, table }, type: QueryTypes.SELECT },
   );
   return rows[0].exists;
 }
@@ -70,7 +68,7 @@ async function checkOrphanedFks(
   schema: string,
   table: string,
   column: string,
-  referencedTable: string
+  referencedTable: string,
 ): Promise<number> {
   // Check if both tables exist in the schema
   const [tableExists, refExists] = await Promise.all([
@@ -86,7 +84,7 @@ async function checkOrphanedFks(
        AND NOT EXISTS (
          SELECT 1 FROM "${schema}"."${referencedTable}" r WHERE r.id = t."${column}"
        )`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
   return parseInt(rows[0].orphaned, 10);
 }
@@ -122,7 +120,7 @@ async function run() {
   console.log("  ROW COUNT COMPARISON");
   console.log("-".repeat(70));
   console.log(
-    `${"TABLE".padEnd(45)} ${"VERIFYWISE".padStart(10)} ${"PUBLIC".padStart(10)} ${"STATUS".padStart(8)}`
+    `${"TABLE".padEnd(45)} ${"VERIFYWISE".padStart(10)} ${"PUBLIC".padStart(10)} ${"STATUS".padStart(8)}`,
   );
   console.log("-".repeat(70));
 
@@ -165,7 +163,7 @@ async function run() {
 
     const pubStr = pubCount !== null ? String(pubCount) : "-";
     console.log(
-      `${table.padEnd(45)} ${String(vwCount).padStart(10)} ${pubStr.padStart(10)} ${status.padStart(8)}`
+      `${table.padEnd(45)} ${String(vwCount).padStart(10)} ${pubStr.padStart(10)} ${status.padStart(8)}`,
     );
 
     comparisons.push({
@@ -178,7 +176,7 @@ async function run() {
 
   console.log("-".repeat(70));
   console.log(
-    `Total tables checked: ${comparisons.length} | Mismatches: ${mismatches} | VW-only: ${verifyOnlyCount}`
+    `Total tables checked: ${comparisons.length} | Mismatches: ${mismatches} | VW-only: ${verifyOnlyCount}`,
   );
   console.log();
 
@@ -187,7 +185,7 @@ async function run() {
   console.log("  FOREIGN KEY INTEGRITY (verifywise schema)");
   console.log("-".repeat(70));
   console.log(
-    `${"TABLE".padEnd(35)} ${"COLUMN".padEnd(25)} ${"REFERENCES".padEnd(30)} ${"ORPHANED".padStart(8)}`
+    `${"TABLE".padEnd(35)} ${"COLUMN".padEnd(25)} ${"REFERENCES".padEnd(30)} ${"ORPHANED".padStart(8)}`,
   );
   console.log("-".repeat(70));
 
@@ -205,12 +203,17 @@ async function run() {
 
       const status = orphaned === 0 ? "OK" : `${orphaned}`;
       console.log(
-        `${table.padEnd(35)} ${column.padEnd(25)} ${referencedTable.padEnd(30)} ${status.padStart(8)}`
+        `${table.padEnd(35)} ${column.padEnd(25)} ${referencedTable.padEnd(30)} ${status.padStart(8)}`,
       );
 
       if (orphaned > 0) {
         totalOrphaned += orphaned;
-        fkIssues.push({ table, column, referenced_table: referencedTable, orphaned_count: orphaned });
+        fkIssues.push({
+          table,
+          column,
+          referenced_table: referencedTable,
+          orphaned_count: orphaned,
+        });
       }
     }
   }
@@ -228,8 +231,12 @@ async function run() {
   const fkPass = totalOrphaned === 0;
   const overallPass = rowCountPass && fkPass;
 
-  console.log(`Row count comparison:  ${rowCountPass ? "PASS" : "FAIL"} (${mismatches} mismatches)`);
-  console.log(`FK integrity:          ${fkPass ? "PASS" : "FAIL"} (${totalOrphaned} orphaned rows)`);
+  console.log(
+    `Row count comparison:  ${rowCountPass ? "PASS" : "FAIL"} (${mismatches} mismatches)`,
+  );
+  console.log(
+    `FK integrity:          ${fkPass ? "PASS" : "FAIL"} (${totalOrphaned} orphaned rows)`,
+  );
   console.log();
   console.log(`Overall result:        ${overallPass ? "PASS" : "FAIL"}`);
 
@@ -238,9 +245,7 @@ async function run() {
       console.log();
       console.log("Tables with row count differences:");
       for (const c of comparisons.filter((c) => !c.match)) {
-        console.log(
-          `  - ${c.table}: verifywise=${c.verifywise_count}, public=${c.public_count}`
-        );
+        console.log(`  - ${c.table}: verifywise=${c.verifywise_count}, public=${c.public_count}`);
       }
     }
     if (fkIssues.length > 0) {
@@ -248,7 +253,7 @@ async function run() {
       console.log("Tables with orphaned foreign keys:");
       for (const fk of fkIssues) {
         console.log(
-          `  - ${fk.table}.${fk.column} -> ${fk.referenced_table}: ${fk.orphaned_count} orphaned`
+          `  - ${fk.table}.${fk.column} -> ${fk.referenced_table}: ${fk.orphaned_count} orphaned`,
         );
       }
     }

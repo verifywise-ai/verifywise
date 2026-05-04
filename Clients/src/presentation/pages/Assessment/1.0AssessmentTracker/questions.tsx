@@ -21,21 +21,15 @@ const Questions = ({
 }: QuestionsProps) => {
   const [searchParams] = useSearchParams();
   const questionId = searchParams.get("questionId");
-  const [highlightedQuestionId, setHighlightedQuestionId] = useState<
-    number | null
-  >(null);
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const questionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
   const hasScrolledRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (
-      questionId &&
-      questionsData.length > 0 &&
-      hasScrolledRef.current !== questionId
-    ) {
+    if (questionId && questionsData.length > 0 && hasScrolledRef.current !== questionId) {
       const targetQuestionId = Number(questionId);
       const targetQuestion = questionsData.find(
-        (question: Question) => question.question_id === targetQuestionId
+        (question: Question) => question.question_id === targetQuestionId,
       );
 
       if (targetQuestion) {
@@ -63,16 +57,12 @@ const Questions = ({
 
   // Additional effect to handle cases where questionId exists but data loads later
   useEffect(() => {
-    if (
-      questionId &&
-      questionsData.length > 0 &&
-      hasScrolledRef.current !== questionId
-    ) {
+    if (questionId && questionsData.length > 0 && hasScrolledRef.current !== questionId) {
       // Retry scroll after a delay if data just became available
       const timeoutId = setTimeout(() => {
         const targetQuestionId = Number(questionId);
         const targetQuestion = questionsData.find(
-          (question: Question) => question.question_id === targetQuestionId
+          (question: Question) => question.question_id === targetQuestionId,
         );
 
         if (targetQuestion && questionRefs.current[targetQuestionId]) {
@@ -97,13 +87,9 @@ const Questions = ({
 
   return (
     <Stack mb={15}>
-      <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>
-        {subtopic.title}
-      </Typography>
+      <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>{subtopic.title}</Typography>
       {questionsData
-        .sort(
-          (a: Question, b: Question) => (a.order_no ?? 0) - (b.order_no ?? 0)
-        )
+        .sort((a: Question, b: Question) => (a.order_no ?? 0) - (b.order_no ?? 0))
         .map((question: Question) => (
           <div
             key={question.question_id}
@@ -114,13 +100,10 @@ const Questions = ({
             }}
             style={{
               backgroundColor:
-                highlightedQuestionId === question.question_id
-                  ? "#e3f5e6"
-                  : "inherit",
+                highlightedQuestionId === question.question_id ? "#e3f5e6" : "inherit",
               transition: "background-color 0.3s ease",
               borderRadius: "8px",
-              padding:
-                highlightedQuestionId === question.question_id ? "8px" : "0px",
+              padding: highlightedQuestionId === question.question_id ? "8px" : "0px",
             }}
           >
             <QuestionFrame

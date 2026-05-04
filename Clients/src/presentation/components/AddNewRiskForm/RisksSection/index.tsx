@@ -8,15 +8,7 @@ import React, {
   Dispatch,
   SetStateAction,
 } from "react";
-import {
-  Stack,
-  Typography,
-  useTheme,
-  SelectChangeEvent,
-  Autocomplete,
-  Box,
-  TextField,
-} from "@mui/material";
+import { Stack, Typography, useTheme, SelectChangeEvent, Box } from "@mui/material";
 import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
@@ -29,7 +21,7 @@ import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
 import styles from "../styles.module.css";
-import { getAutocompleteStyles as getCentralizedAutocompleteStyles } from "../../../utils/inputStyles";
+import AutoCompleteField from "../../Inputs/Autocomplete";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
@@ -44,7 +36,7 @@ const LAYOUT = {
   VERTICAL_GAP: 16,
   COMPACT_CONTENT_WIDTH: 970, // Account for scrollbar (~17px)
   get TOTAL_CONTENT_WIDTH() {
-    return (this.FIELD_WIDTH * 3) + (this.HORIZONTAL_GAP * 2); // 985px
+    return this.FIELD_WIDTH * 3 + this.HORIZONTAL_GAP * 2; // 985px
   },
 } as const;
 
@@ -96,12 +88,13 @@ const RiskSection: FC<RiskSectionProps> = ({
   compactMode = false,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled =
-    !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
   const fieldWidth = compactMode ? `${LAYOUT.COMPACT_FIELD_WIDTH}px` : FORM_CONSTANTS.FIELD_WIDTH;
-  const contentWidth = compactMode ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px` : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
+  const contentWidth = compactMode
+    ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px`
+    : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
 
   const formRowStyles = {
     display: "flex",
@@ -117,7 +110,9 @@ const RiskSection: FC<RiskSectionProps> = ({
   const [alert, setAlert] = useState<alertState | null>(null);
   const { users, loading: usersLoading } = useUsers();
   const { approvedProjects, isLoading: projectsLoading } = useProjects();
-  const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
+  const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({
+    listOfFrameworks: [],
+  });
 
   const validators = useMemo(
     () => ({
@@ -153,11 +148,10 @@ const RiskSection: FC<RiskSectionProps> = ({
         return "";
       },
     }),
-    []
+    [],
   );
 
-  const { errors, validateAll, clearFieldError } =
-    useFormValidation<RiskFormValues>(validators);
+  const { errors, validateAll, clearFieldError } = useFormValidation<RiskFormValues>(validators);
 
   useEffect(() => {
     if (validateRef) {
@@ -166,15 +160,14 @@ const RiskSection: FC<RiskSectionProps> = ({
   }, [validateRef, validateAll]);
 
   const handleOnSelectChange = useCallback(
-    (prop: keyof RiskFormValues) =>
-      (event: SelectChangeEvent<string | number>) => {
-        setRiskValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        clearFieldError(prop);
-      },
-    [setRiskValues, clearFieldError]
+    (prop: keyof RiskFormValues) => (event: SelectChangeEvent<string | number>) => {
+      setRiskValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      clearFieldError(prop);
+    },
+    [setRiskValues, clearFieldError],
   );
 
   const handleOnMultiselectChange = useCallback(
@@ -182,7 +175,7 @@ const RiskSection: FC<RiskSectionProps> = ({
       (
         _event: React.SyntheticEvent,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        newValue: any[]
+        newValue: any[],
       ) => {
         setRiskValues((prevValues) => ({
           ...prevValues,
@@ -190,28 +183,29 @@ const RiskSection: FC<RiskSectionProps> = ({
         }));
         clearFieldError(prop);
       },
-    [setRiskValues, clearFieldError]
+    [setRiskValues, clearFieldError],
   );
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof RiskFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRiskValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        clearFieldError(prop);
-      },
-    [setRiskValues, clearFieldError]
+    (prop: keyof RiskFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setRiskValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      clearFieldError(prop);
+    },
+    [setRiskValues, clearFieldError],
   );
 
   return (
     <Stack
       sx={{
-        ...(disableInternalScroll ? {} : {
-          minHeight: FORM_CONSTANTS.MIN_HEIGHT,
-          maxHeight: FORM_CONSTANTS.MAX_HEIGHT,
-        }),
+        ...(disableInternalScroll
+          ? {}
+          : {
+              minHeight: FORM_CONSTANTS.MIN_HEIGHT,
+              maxHeight: FORM_CONSTANTS.MAX_HEIGHT,
+            }),
         gap: 3,
       }}
     >
@@ -228,11 +222,13 @@ const RiskSection: FC<RiskSectionProps> = ({
         className={disableInternalScroll ? "AddNewRiskForm" : `AddNewRiskForm ${styles.popupBody}`}
         sx={{
           width: "100%",
-          ...(disableInternalScroll ? {} : {
-            maxHeight: FORM_CONSTANTS.CONTENT_MAX_HEIGHT,
-            overflowY: "auto",
-            overflowX: "hidden",
-          }),
+          ...(disableInternalScroll
+            ? {}
+            : {
+                maxHeight: FORM_CONSTANTS.CONTENT_MAX_HEIGHT,
+                overflowY: "auto",
+                overflowX: "hidden",
+              }),
         }}
       >
         {/* Risk Scope & Frameworks Section - Moved to top */}
@@ -257,12 +253,8 @@ const RiskSection: FC<RiskSectionProps> = ({
           <Stack direction="row" sx={{ gap: `${LAYOUT.HORIZONTAL_GAP}px` }}>
             {/* Applicable Use Cases */}
             <Stack sx={{ flex: 1 }}>
-              <Typography
-                sx={{ fontSize: theme.typography.fontSize, fontWeight: 500, mb: 1 }}
-              >
-                Applicable use cases
-              </Typography>
-              <Autocomplete
+              <AutoCompleteField
+                label="Applicable use cases"
                 multiple
                 readOnly={isEditingDisabled}
                 id="applicable-projects-input"
@@ -272,54 +264,40 @@ const RiskSection: FC<RiskSectionProps> = ({
                     ? []
                     : approvedProjects
                         .filter((project) => !project.is_organizational)
-                        .filter((project) =>
-                          riskValues.applicableProjects.includes(project.id)
-                        )
+                        .filter((project) => riskValues.applicableProjects.includes(project.id))
                 }
-                options={
-                  approvedProjects?.filter((project) => !project.is_organizational) || []
-                }
+                options={approvedProjects?.filter((project) => !project.is_organizational) || []}
                 getOptionLabel={(project) => project.project_title}
                 renderOption={(props, option) => {
                   const { key, ...optionProps } = props;
                   return (
                     <Box key={key} component="li" {...optionProps}>
-                      <Typography sx={{
-                        fontSize: FORM_STYLES.fontSize,
-                        color: theme.palette.text.primary
-                      }}>
+                      <Typography
+                        sx={{
+                          fontSize: FORM_STYLES.fontSize,
+                          color: theme.palette.text.primary,
+                        }}
+                      >
                         {option.project_title}
                       </Typography>
                     </Box>
                   );
                 }}
                 popupIcon={<GreyDownArrowIcon size={20} />}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={
-                      projectsLoading || !approvedProjects?.length
-                        ? "Loading use cases..."
-                        : approvedProjects?.filter((project) => !project.is_organizational && riskValues.applicableProjects.includes(project.id)).length > 0
-                        ? ""
-                        : "Select applicable use cases"
-                    }
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        paddingTop: `${FORM_STYLES.chipPadding} !important`,
-                        paddingBottom: `${FORM_STYLES.chipPadding} !important`,
-                      },
-                      "& ::placeholder": {
-                        fontSize: FORM_STYLES.fontSize,
-                      },
-                    }}
-                  />
-                )}
+                placeholder={
+                  projectsLoading || !approvedProjects?.length
+                    ? "Loading use cases..."
+                    : approvedProjects?.filter(
+                          (project) =>
+                            !project.is_organizational &&
+                            riskValues.applicableProjects.includes(project.id),
+                        ).length > 0
+                      ? ""
+                      : "Select applicable use cases"
+                }
                 onChange={handleOnMultiselectChange("applicableProjects")}
                 sx={{
-                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.applicableProjects }),
                   width: "100%",
-                  backgroundColor: theme.palette.background.main,
                   "& .MuiChip-root": {
                     borderRadius: "4px",
                     "& .MuiChip-deleteIcon": {
@@ -349,29 +327,14 @@ const RiskSection: FC<RiskSectionProps> = ({
                   },
                 }}
                 disabled={projectsLoading}
+                error={errors.applicableProjects}
               />
-              {errors.applicableProjects && (
-                <Typography
-                  sx={{
-                    color: theme.palette.error.main,
-                    fontSize: "12px",
-                    mt: 0.5,
-                    ml: 1.75,
-                  }}
-                >
-                  {errors.applicableProjects}
-                </Typography>
-              )}
             </Stack>
 
             {/* Applicable Frameworks */}
             <Stack sx={{ flex: 1 }}>
-              <Typography
-                sx={{ fontSize: theme.typography.fontSize, fontWeight: 500, mb: 1 }}
-              >
-                Applicable frameworks
-              </Typography>
-              <Autocomplete
+              <AutoCompleteField
+                label="Applicable frameworks"
                 multiple
                 readOnly={isEditingDisabled}
                 id="applicable-frameworks-input"
@@ -382,7 +345,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                     : frameworks
                         .filter((framework) => framework.is_organizational)
                         .filter((framework) =>
-                          riskValues.applicableFrameworks.includes(Number(framework.id))
+                          riskValues.applicableFrameworks.includes(Number(framework.id)),
                         )
                 }
                 options={frameworks?.filter((framework) => framework.is_organizational) || []}
@@ -391,42 +354,32 @@ const RiskSection: FC<RiskSectionProps> = ({
                   const { key, ...optionProps } = props;
                   return (
                     <Box key={key} component="li" {...optionProps}>
-                      <Typography sx={{
-                        fontSize: FORM_STYLES.fontSize,
-                        color: theme.palette.text.primary
-                      }}>
+                      <Typography
+                        sx={{
+                          fontSize: FORM_STYLES.fontSize,
+                          color: theme.palette.text.primary,
+                        }}
+                      >
                         {option.name}
                       </Typography>
                     </Box>
                   );
                 }}
                 popupIcon={<GreyDownArrowIcon size={20} />}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={
-                      frameworksLoading || !frameworks?.length
-                        ? "Loading frameworks..."
-                        : frameworks?.filter((framework) => framework.is_organizational && riskValues.applicableFrameworks.includes(Number(framework.id))).length > 0
-                        ? ""
-                        : "Select applicable frameworks"
-                    }
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        paddingTop: `${FORM_STYLES.chipPadding} !important`,
-                        paddingBottom: `${FORM_STYLES.chipPadding} !important`,
-                      },
-                      "& ::placeholder": {
-                        fontSize: FORM_STYLES.fontSize,
-                      },
-                    }}
-                  />
-                )}
+                placeholder={
+                  frameworksLoading || !frameworks?.length
+                    ? "Loading frameworks..."
+                    : frameworks?.filter(
+                          (framework) =>
+                            framework.is_organizational &&
+                            riskValues.applicableFrameworks.includes(Number(framework.id)),
+                        ).length > 0
+                      ? ""
+                      : "Select applicable frameworks"
+                }
                 onChange={handleOnMultiselectChange("applicableFrameworks")}
                 sx={{
-                  ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.applicableFrameworks }),
                   width: "100%",
-                  backgroundColor: theme.palette.background.main,
                   "& .MuiChip-root": {
                     borderRadius: "4px",
                     "& .MuiChip-deleteIcon": {
@@ -456,19 +409,8 @@ const RiskSection: FC<RiskSectionProps> = ({
                   },
                 }}
                 disabled={frameworksLoading}
+                error={errors.applicableFrameworks}
               />
-              {errors.applicableFrameworks && (
-                <Typography
-                  sx={{
-                    color: theme.palette.error.main,
-                    fontSize: "12px",
-                    mt: 0.5,
-                    ml: 1.75,
-                  }}
-                >
-                  {errors.applicableFrameworks}
-                </Typography>
-              )}
             </Stack>
           </Stack>
         </Stack>
@@ -498,8 +440,8 @@ const RiskSection: FC<RiskSectionProps> = ({
                   usersLoading || !users?.length
                     ? ""
                     : riskValues.actionOwner === 0
-                    ? ""
-                    : riskValues.actionOwner
+                      ? ""
+                      : riskValues.actionOwner
                 }
                 onChange={handleOnSelectChange("actionOwner")}
                 items={
@@ -519,11 +461,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 id="ai-lifecycle-phase-input"
                 label="AI lifecycle phase"
                 placeholder="Select phase"
-                value={
-                  riskValues.aiLifecyclePhase === 0
-                    ? ""
-                    : riskValues.aiLifecyclePhase
-                }
+                value={riskValues.aiLifecyclePhase === 0 ? "" : riskValues.aiLifecyclePhase}
                 onChange={handleOnSelectChange("aiLifecyclePhase")}
                 items={aiLifecyclePhase}
                 isRequired
@@ -535,7 +473,7 @@ const RiskSection: FC<RiskSectionProps> = ({
               />
             </Stack>
 
-            {/* Row 2 */ }
+            {/* Row 2 */}
             <Stack sx={formRowStyles}>
               <Field
                 id="risk-description-input"
@@ -550,110 +488,67 @@ const RiskSection: FC<RiskSectionProps> = ({
                 }}
                 disabled={isEditingDisabled}
               />
-              <Stack gap={theme.spacing(2)} sx={{ width: fieldWidth }}>
-                <Typography
-                  sx={{
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    color: theme.palette.text.secondary,
-                    margin: 0,
-                    height: "22px",
-                  }}
-                >
-                  Risk categories *
-                </Typography>
-                <Autocomplete
-                  multiple
-                  readOnly={isEditingDisabled}
-                  id="risk-categories-input"
-                  size="small"
-                  value={riskCategoryItems.filter((category) =>
-                    riskValues.riskCategory.includes(category._id)
-                  )}
-                  options={riskCategoryItems}
-                  getOptionLabel={(category) => `${category.name}`}
-                  renderOption={(props, option) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box key={key} component="li" {...optionProps}>
-                        <Typography sx={{ fontSize: FORM_STYLES.fontSize }}>
-                          {option.name}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  popupIcon={<GreyDownArrowIcon size={20} />}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Select risk categories"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          paddingTop: `${FORM_STYLES.chipPadding} !important`,
-                          paddingBottom: `${FORM_STYLES.chipPadding} !important`,
-                        },
-                        "& ::placeholder": {
-                          fontSize: FORM_STYLES.fontSize,
-                        },
-                      }}
-                    />
-                  )}
-                  onChange={handleOnMultiselectChange("riskCategory")}
-                  sx={{
-                    ...getCentralizedAutocompleteStyles(theme, { hasError: !!errors.riskCategory }),
-                    width: "100%",
-                    backgroundColor: theme.palette.background.main,
-                    "& .MuiChip-root": {
-                      borderRadius: "4px",
-                      "& .MuiChip-deleteIcon": {
-                        display:
-                          riskValues.riskCategory.length === 1
-                            ? "none"
-                            : "flex",
-                      },
+              <AutoCompleteField
+                label="Risk categories"
+                isRequired
+                multiple
+                readOnly={isEditingDisabled}
+                id="risk-categories-input"
+                size="small"
+                value={riskCategoryItems.filter((category) =>
+                  riskValues.riskCategory.includes(category._id),
+                )}
+                options={riskCategoryItems}
+                getOptionLabel={(category) => `${category.name}`}
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <Box key={key} component="li" {...optionProps}>
+                      <Typography sx={{ fontSize: FORM_STYLES.fontSize }}>{option.name}</Typography>
+                    </Box>
+                  );
+                }}
+                popupIcon={<GreyDownArrowIcon size={20} />}
+                placeholder="Select risk categories"
+                onChange={handleOnMultiselectChange("riskCategory")}
+                sx={{
+                  width: fieldWidth,
+                  "& .MuiChip-root": {
+                    borderRadius: "4px",
+                    "& .MuiChip-deleteIcon": {
+                      display: riskValues.riskCategory.length === 1 ? "none" : "flex",
                     },
-                  }}
-                  slotProps={{
-                    paper: {
-                      sx: {
-                        borderRadius: 2,
-                        boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.1)",
-                        border: `1px solid ${theme.palette.border?.light}`,
-                        "& .MuiAutocomplete-listbox": {
-                          "& .MuiAutocomplete-option": {
-                            fontSize: FORM_STYLES.fontSize,
-                            color: theme.palette.text.primary,
-                            padding: `8px ${FORM_STYLES.padding}`,
-                            "&:hover": {
-                              backgroundColor: theme.palette.background.accent,
-                            },
-                          },
-                          "& .MuiAutocomplete-option.Mui-focused": {
+                  },
+                }}
+                slotProps={{
+                  paper: {
+                    sx: {
+                      borderRadius: 2,
+                      boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.1)",
+                      border: `1px solid ${theme.palette.border?.light}`,
+                      "& .MuiAutocomplete-listbox": {
+                        "& .MuiAutocomplete-option": {
+                          fontSize: FORM_STYLES.fontSize,
+                          color: theme.palette.text.primary,
+                          padding: `8px ${FORM_STYLES.padding}`,
+                          "&:hover": {
                             backgroundColor: theme.palette.background.accent,
                           },
                         },
-                        "& .MuiAutocomplete-noOptions": {
-                          fontSize: FORM_STYLES.fontSize,
-                          color: theme.palette.text.tertiary,
-                          padding: `8px ${FORM_STYLES.padding}`,
+                        "& .MuiAutocomplete-option.Mui-focused": {
+                          backgroundColor: theme.palette.background.accent,
                         },
                       },
+                      "& .MuiAutocomplete-noOptions": {
+                        fontSize: FORM_STYLES.fontSize,
+                        color: theme.palette.text.tertiary,
+                        padding: `8px ${FORM_STYLES.padding}`,
+                      },
                     },
-                  }}
-                />
-                {errors.riskCategory && (
-                  <Typography
-                    sx={{
-                      color: theme.palette.error.main,
-                      fontSize: "12px",
-                      mt: 0.5,
-                      ml: 1.75,
-                    }}
-                  >
-                    {errors.riskCategory}
-                  </Typography>
-                )}
-              </Stack>
+                  },
+                }}
+                error={errors.riskCategory}
+              />
               <Field
                 id="potential-impact-input"
                 label="Potential impact"
@@ -671,14 +566,25 @@ const RiskSection: FC<RiskSectionProps> = ({
           </Stack>
         </Stack>
 
-        <Stack sx={{ gap: `${LAYOUT.HORIZONTAL_GAP}px`, mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+        <Stack
+          sx={{
+            gap: `${LAYOUT.HORIZONTAL_GAP}px`,
+            mt: `${LAYOUT.VERTICAL_GAP}px`,
+            width: contentWidth,
+          }}
+        >
           <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
             Calculate inherent risk level
           </Typography>
-          <Typography sx={{ fontSize: theme.typography.fontSize, color: theme.palette.text.tertiary, lineHeight: 1.5 }}>
-            The Risk Level is calculated by multiplying the Likelihood and
-            Severity scores. By assigning these scores, the risk level will be
-            determined based on your inputs.
+          <Typography
+            sx={{
+              fontSize: theme.typography.fontSize,
+              color: theme.palette.text.tertiary,
+              lineHeight: 1.5,
+            }}
+          >
+            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
+            assigning these scores, the risk level will be determined based on your inputs.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>

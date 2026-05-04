@@ -11,9 +11,7 @@ export class ISO27001ClauseStructModel {
     this.framework_id = data.framework_id;
   }
 
-  static createNewISO27001ClauseStruct(
-    data: ISO27001ClauseStructModel
-  ): ISO27001ClauseStructModel {
+  static createNewISO27001ClauseStruct(data: ISO27001ClauseStructModel): ISO27001ClauseStructModel {
     return new ISO27001ClauseStructModel(data);
   }
 }

@@ -28,7 +28,7 @@ describe("useAssessmentProgress", () => {
 
     const { result } = renderHook(
       () => useAssessmentProgress({ projectFrameworkId: 1, refreshKey: false }),
-      { wrapper: createWrapper() }
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -39,7 +39,7 @@ describe("useAssessmentProgress", () => {
   it("returns defaults when projectFrameworkId is 0", () => {
     const { result } = renderHook(
       () => useAssessmentProgress({ projectFrameworkId: 0, refreshKey: false }),
-      { wrapper: createWrapper() }
+      { wrapper: createWrapper() },
     );
 
     expect(result.current.assessmentProgress.totalQuestions).toBe(0);

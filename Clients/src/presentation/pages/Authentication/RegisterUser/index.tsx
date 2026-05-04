@@ -4,14 +4,8 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { Check } from "../../../components/Checks";
 import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
-import {
-  validatePassword,
-  validateForm,
-} from "../../../../application/validations/formValidation";
-import type {
-  FormValues,
-  FormErrors,
-} from "../../../../application/validations/formValidation";
+import { validatePassword, validateForm } from "../../../../application/validations/formValidation";
+import type { FormValues, FormErrors } from "../../../../application/validations/formValidation";
 import useRegisterUser from "../../../../application/hooks/useRegisterUser";
 import { useNavigate } from "react-router-dom";
 import { logEngine } from "../../../../application/tools/log.engine";
@@ -57,12 +51,10 @@ const RegisterUser: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Handle input field changes
-  const handleChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues({ ...values, [prop]: event.target.value });
-      setErrors({ ...errors, [prop]: "" });
-    };
+  const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [prop]: event.target.value });
+    setErrors({ ...errors, [prop]: "" });
+  };
 
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -81,11 +73,14 @@ const RegisterUser: React.FC = () => {
       setErrors(errors);
       setIsSubmitting(false);
     } else {
-      const { isSuccess, response } = await registerUser({
-        values,
-        user,
-        setIsSubmitting,
-      }, userToken);
+      const { isSuccess, response } = await registerUser(
+        {
+          values,
+          user,
+          setIsSubmitting,
+        },
+        userToken,
+      );
       if (isSuccess === 201) {
         setValues(initialState);
         setErrors({});
@@ -107,8 +102,7 @@ const RegisterUser: React.FC = () => {
 
         // Extract error message from server response
         let errorMessage = "Registration failed. Please check your information and try again.";
-        
-              
+
         if (response?.data) {
           errorMessage = response.data;
         } else if (response?.response?.data?.data) {
@@ -118,10 +112,10 @@ const RegisterUser: React.FC = () => {
         } else if (response?.message) {
           errorMessage = response.message;
         } else if (isSuccess === 409) {
-          errorMessage = "An account with this email address already exists. Please try logging in instead, or contact your administrator if you believe this is an error.";
+          errorMessage =
+            "An account with this email address already exists. Please try logging in instead, or contact your administrator if you believe this is an error.";
         }
-        
-      
+
         handleAlert({
           variant: "error",
           body: errorMessage,
@@ -194,9 +188,7 @@ const RegisterUser: React.FC = () => {
       )}
 
       {/* Toast component */}
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <Background
         style={{
           position: "absolute",
@@ -241,8 +233,8 @@ const RegisterUser: React.FC = () => {
                 color: "error.main",
               }}
             >
-              This invitation link is expired. You need to be invited again to
-              gain access to the dashboard
+              This invitation link is expired. You need to be invited again to gain access to the
+              dashboard
             </Typography>
           )}
 

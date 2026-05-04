@@ -24,7 +24,7 @@ export const configuringScorersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'LLM Evals ships with six built-in scorers that cover common evaluation needs. These are enabled by default and work well for most applications:',
+      text: 'LLM Evals enables a set of built-in scorers by default based on your use case. Single-turn experiments enable seven core scorers; chatbot experiments add six more conversational scorers on top. These cover common evaluation needs and work well for most applications:',
     },
     {
       type: 'heading',

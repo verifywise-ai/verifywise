@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  NotFoundException,
-} from "../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../exceptions/custom.exception";
 import { numberValidation } from "../validations/number.valid";
 
 // Mock sequelize-typescript
@@ -43,22 +40,18 @@ class TestTrainingRegistarModel {
     department: string,
     status: "Planned" | "In Progress" | "Completed" = "Planned",
     numberOfPeople: number,
-    description: string
+    description: string,
   ): Promise<TestTrainingRegistarModel> {
     // Validate required fields
     if (!training_name || training_name.trim().length === 0) {
-      throw new ValidationException(
-        "Training name is required",
-        "training_name",
-        training_name
-      );
+      throw new ValidationException("Training name is required", "training_name", training_name);
     }
 
     if (!numberValidation(numberOfPeople, 1)) {
       throw new ValidationException(
         "Number of people must be a positive integer",
         "numberOfPeople",
-        numberOfPeople
+        numberOfPeople,
       );
     }
 
@@ -68,7 +61,7 @@ class TestTrainingRegistarModel {
       throw new ValidationException(
         "Status must be one of: Planned, In Progress, Completed",
         "status",
-        status
+        status,
       );
     }
 
@@ -110,23 +103,13 @@ class TestTrainingRegistarModel {
   }
 
   // Static method to find training register by ID with validation
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TestTrainingRegistarModel> {
+  static async findByIdWithValidation(id: number): Promise<TestTrainingRegistarModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
-      throw new NotFoundException(
-        "Training register not found",
-        "TrainingRegister",
-        id
-      );
+      throw new NotFoundException("Training register not found", "TrainingRegister", id);
     }
 
     return new TestTrainingRegistarModel({
@@ -159,16 +142,15 @@ describe("TrainingRegistarModel", () => {
 
   describe("createNewTrainingRegister", () => {
     it("should create training register with valid data", async () => {
-      const training =
-        await TestTrainingRegistarModel.createNewTrainingRegister(
-          validTrainingData.training_name,
-          validTrainingData.duration,
-          validTrainingData.provider,
-          validTrainingData.department,
-          validTrainingData.status,
-          validTrainingData.numberOfPeople,
-          validTrainingData.description
-        );
+      const training = await TestTrainingRegistarModel.createNewTrainingRegister(
+        validTrainingData.training_name,
+        validTrainingData.duration,
+        validTrainingData.provider,
+        validTrainingData.department,
+        validTrainingData.status,
+        validTrainingData.numberOfPeople,
+        validTrainingData.description,
+      );
 
       expect(training).toBeInstanceOf(TestTrainingRegistarModel);
       expect(training.training_name).toBe("Security Training");
@@ -185,8 +167,8 @@ describe("TrainingRegistarModel", () => {
           validTrainingData.department,
           validTrainingData.status,
           validTrainingData.numberOfPeople,
-          validTrainingData.description
-        )
+          validTrainingData.description,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -199,8 +181,8 @@ describe("TrainingRegistarModel", () => {
           validTrainingData.department,
           validTrainingData.status,
           0,
-          validTrainingData.description
-        )
+          validTrainingData.description,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -253,8 +235,7 @@ describe("TrainingRegistarModel", () => {
 
   describe("findByIdWithValidation", () => {
     it("should find training register by valid ID", async () => {
-      const training =
-        await TestTrainingRegistarModel.findByIdWithValidation(1);
+      const training = await TestTrainingRegistarModel.findByIdWithValidation(1);
 
       expect(training).toBeInstanceOf(TestTrainingRegistarModel);
       expect(training.id).toBe(1);
@@ -262,15 +243,15 @@ describe("TrainingRegistarModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestTrainingRegistarModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestTrainingRegistarModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestTrainingRegistarModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestTrainingRegistarModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

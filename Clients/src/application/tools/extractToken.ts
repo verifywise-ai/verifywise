@@ -32,9 +32,7 @@ export interface DecodedToken {
  * @param token - The JWT token string to decode
  * @returns The decoded token payload or null if invalid
  */
-export const extractUserToken = (
-  token: string
-): DecodedToken | null => {
+export const extractUserToken = (token: string): DecodedToken | null => {
   if (!token) {
     return null;
   }

@@ -24,9 +24,7 @@ export async function getDashboardData(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res
-      .status(dashboard ? 200 : 204)
-      .json(STATUS_CODE[dashboard ? 200 : 204](dashboard));
+    return res.status(dashboard ? 200 : 204).json(STATUS_CODE[dashboard ? 200 : 204](dashboard));
   } catch (error) {
     await logFailure({
       eventType: "Read",

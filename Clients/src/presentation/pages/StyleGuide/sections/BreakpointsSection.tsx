@@ -67,11 +67,31 @@ const BreakpointsSection: React.FC = () => {
   };
 
   const breakpoints = [
-    { name: "xs", value: "0px", icon: <Smartphone size={16} />, description: "Extra small - Phones" },
-    { name: "sm", value: "600px", icon: <Smartphone size={16} />, description: "Small - Tablets portrait" },
-    { name: "md", value: "900px", icon: <Tablet size={16} />, description: "Medium - Tablets landscape" },
+    {
+      name: "xs",
+      value: "0px",
+      icon: <Smartphone size={16} />,
+      description: "Extra small - Phones",
+    },
+    {
+      name: "sm",
+      value: "600px",
+      icon: <Smartphone size={16} />,
+      description: "Small - Tablets portrait",
+    },
+    {
+      name: "md",
+      value: "900px",
+      icon: <Tablet size={16} />,
+      description: "Medium - Tablets landscape",
+    },
     { name: "lg", value: "1200px", icon: <Monitor size={16} />, description: "Large - Desktops" },
-    { name: "xl", value: "1536px", icon: <Monitor size={16} />, description: "Extra large - Wide screens" },
+    {
+      name: "xl",
+      value: "1536px",
+      icon: <Monitor size={16} />,
+      description: "Extra large - Wide screens",
+    },
   ];
 
   return (
@@ -103,16 +123,16 @@ const BreakpointsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          VerifyWise uses MUI's default breakpoint system. Use responsive sx props
-          and useMediaQuery for adaptive layouts.
+          VerifyWise uses MUI's default breakpoint system. Use responsive sx props and useMediaQuery
+          for adaptive layouts.
         </Typography>
       </Box>
 
       {/* Breakpoint Scale */}
       <SpecSection title="Breakpoint scale">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          MUI's default breakpoints are used throughout the application. These values
-          define when layouts should adapt.
+          MUI's default breakpoints are used throughout the application. These values define when
+          layouts should adapt.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -148,9 +168,7 @@ const BreakpointsSection: React.FC = () => {
                         },
                       }}
                     >
-                      <Box sx={{ color: theme.palette.text.tertiary }}>
-                        {bp.icon}
-                      </Box>
+                      <Box sx={{ color: theme.palette.text.tertiary }}>{bp.icon}</Box>
                       <Box
                         sx={{
                           width: 32,
@@ -177,9 +195,7 @@ const BreakpointsSection: React.FC = () => {
                       >
                         {bp.value}
                       </Typography>
-                      <Typography
-                        sx={{ fontSize: 12, color: theme.palette.text.tertiary }}
-                      >
+                      <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
                         {bp.description}
                       </Typography>
                       {/* Visual bar showing relative size */}
@@ -202,7 +218,16 @@ const BreakpointsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Breakpoint helpers
             </Typography>
             <SpecTable
@@ -215,7 +240,17 @@ const BreakpointsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Common breakpoint usage
             </Typography>
             <SpecTable
@@ -357,7 +392,16 @@ const BreakpointsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Responsive patterns
             </Typography>
             <SpecTable
@@ -423,7 +467,16 @@ const BreakpointsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               When to use each approach
             </Typography>
             <Box
@@ -436,7 +489,14 @@ const BreakpointsSection: React.FC = () => {
             >
               <Stack spacing="12px">
                 <Box>
-                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: "4px",
+                    }}
+                  >
                     Responsive sx prop
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
@@ -444,11 +504,19 @@ const BreakpointsSection: React.FC = () => {
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      mb: "4px",
+                    }}
+                  >
                     useMediaQuery
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
-                    For JS logic, conditional rendering, or prop changes. More flexible but causes re-renders.
+                    For JS logic, conditional rendering, or prop changes. More flexible but causes
+                    re-renders.
                   </Typography>
                 </Box>
               </Stack>
@@ -568,9 +636,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -592,9 +658,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -645,9 +709,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

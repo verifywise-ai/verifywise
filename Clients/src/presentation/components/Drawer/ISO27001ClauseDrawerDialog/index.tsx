@@ -27,7 +27,7 @@ import { FileData } from "../../../../domain/types/File";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
 import { Dayjs } from "dayjs";
-import { useState, useEffect, Suspense, lazy, useRef } from "react";
+import { useState, useEffect, useMemo, Suspense, lazy, useRef } from "react";
 import { CustomizableButton } from "../../button/customizable-button";
 import TabBar from "../../TabBar";
 import { text } from "../../../themes/palette";
@@ -42,12 +42,18 @@ import {
   updateEntityById,
   getEntityById,
 } from "../../../../application/repository/entity.repository";
-import { getFileById, attachFilesToEntity, getEntityFiles } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+  getEntityFiles,
+} from "../../../../application/repository/file.repository";
 import StandardModal from "../../Modals/StandardModal";
 import allowedRoles from "../../../../application/constants/permissions";
 import { FilePickerModal } from "../../FilePickerModal";
 import AuditRiskPopup from "../../RiskPopup/AuditRiskPopup";
-const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
+const LinkedRisksPopup = lazy(() =>
+  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
+);
 import { ISO27001GetSubClauseById } from "../../../../application/repository/subClause_iso.repository";
 import { RiskFormValues } from "../../../../domain/types/riskForm.types";
 
@@ -122,6 +128,18 @@ const VWISO27001ClauseDrawerDialog = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const memberOptions = useMemo(
+    () => [
+      { _id: "", name: "(none)" },
+      ...projectMembers.map((user) => ({
+        _id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        surname: user.surname,
+      })),
+    ],
+    [projectMembers],
+  );
   const theme = useTheme();
 
   // ========================================================================
@@ -162,24 +180,19 @@ const VWISO27001ClauseDrawerDialog = ({
 
   // Risk detail modal state
   const [isRiskDetailModalOpen, setIsRiskDetailModalOpen] = useState(false);
-  const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRiskObject | null>(
-    null
-  );
+  const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRiskObject | null>(null);
   const [riskFormData, setRiskFormData] = useState<RiskFormValues | undefined>(undefined);
   const onRiskSubmitRef = useRef<(() => void) | null>(null);
 
   // Audit status modal
-  const [auditedStatusModalOpen, setAuditedStatusModalOpen] =
-    useState<boolean>(false);
+  const [auditedStatusModalOpen, setAuditedStatusModalOpen] = useState<boolean>(false);
 
   // ========================================================================
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled =
-    !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
 
   // ========================================================================
   // TAB CONFIGURATION
@@ -267,8 +280,7 @@ const VWISO27001ClauseDrawerDialog = ({
       if (subClauseData) {
         const statusId = statusIdMap.get(subClauseData.status) || "0";
         setFormData({
-          implementation_description:
-            subClauseData.implementation_description || "",
+          implementation_description: subClauseData.implementation_description || "",
           status: statusId,
           owner: subClauseData.owner?.toString() || "",
           reviewer: subClauseData.reviewer?.toString() || "",
@@ -286,7 +298,7 @@ const VWISO27001ClauseDrawerDialog = ({
         // Load evidence files from both sources
         const allEvidenceFiles = await loadEvidenceFiles(
           subClauseData.evidence_links,
-          subClauseData.id
+          subClauseData.id,
         );
         setEvidenceFiles(allEvidenceFiles);
       }
@@ -309,9 +321,7 @@ const VWISO27001ClauseDrawerDialog = ({
     // Use provided riskIds or fall back to formData.risks + selectedRisks
     const allRiskIds = riskIds
       ? riskIds
-      : [...(formData.risks || []), ...selectedRisks].filter(
-          (id) => !deletedRisks.includes(id)
-        );
+      : [...(formData.risks || []), ...selectedRisks].filter((id) => !deletedRisks.includes(id));
 
     if (allRiskIds.length === 0) {
       setLinkedRiskObjects([]);
@@ -324,7 +334,7 @@ const VWISO27001ClauseDrawerDialog = ({
           routeUrl: `/projectRisks/${riskId}`,
         })
           .then((response) => response.data)
-          .catch(() => null)
+          .catch(() => null),
       );
 
       const riskResults = await Promise.all(riskPromises);
@@ -344,7 +354,10 @@ const VWISO27001ClauseDrawerDialog = ({
    * 2. file_entity_links table (new framework-agnostic approach)
    * Merges and deduplicates by file ID
    */
-  const loadEvidenceFiles = async (evidenceLinks: FileData[] | null | undefined, subclauseId: number) => {
+  const loadEvidenceFiles = async (
+    evidenceLinks: FileData[] | null | undefined,
+    subclauseId: number,
+  ) => {
     // Normalize evidence_links files
     const normalizedLinks: FileData[] = Array.isArray(evidenceLinks)
       ? evidenceLinks.map((file: any) => ({
@@ -362,11 +375,7 @@ const VWISO27001ClauseDrawerDialog = ({
     let linkedFiles: FileData[] = [];
     if (subclauseId) {
       try {
-        const response = await getEntityFiles(
-          "iso_27001",
-          "subclause",
-          subclauseId
-        );
+        const response = await getEntityFiles("iso_27001", "subclause", subclauseId);
         if (response && Array.isArray(response)) {
           linkedFiles = response.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
@@ -409,21 +418,19 @@ const VWISO27001ClauseDrawerDialog = ({
     }));
   };
 
-  const handleSelectChange =
-    (field: string) => (event: SelectChangeEvent<string | number>) => {
-      const value = event.target.value.toString();
-      if (
-        field === "status" &&
-        value === "6" &&
-        (selectedRisks.length > 0 ||
-          formData.risks.length > 0 ||
-          (formData.risks.length > 0 &&
-            deletedRisks.length === formData.risks.length))
-      ) {
-        setAuditedStatusModalOpen(true);
-      }
-      handleFieldChange(field, value);
-    };
+  const handleSelectChange = (field: string) => (event: SelectChangeEvent<string | number>) => {
+    const value = event.target.value.toString();
+    if (
+      field === "status" &&
+      value === "6" &&
+      (selectedRisks.length > 0 ||
+        formData.risks.length > 0 ||
+        (formData.risks.length > 0 && deletedRisks.length === formData.risks.length))
+    ) {
+      setAuditedStatusModalOpen(true);
+    }
+    handleFieldChange(field, value);
+  };
 
   // ========================================================================
   // EVENT HANDLERS - ALERTS
@@ -616,7 +623,7 @@ const VWISO27001ClauseDrawerDialog = ({
         // Update evidence files from both sources
         const allEvidenceFiles = await loadEvidenceFiles(
           subClauseData.evidence_links,
-          subClauseData.id
+          subClauseData.id,
         );
         setEvidenceFiles(allEvidenceFiles);
 
@@ -669,14 +676,8 @@ const VWISO27001ClauseDrawerDialog = ({
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append(
-        "implementation_description",
-        formData.implementation_description
-      );
-      formDataToSend.append(
-        "status",
-        idStatusMap.get(formData.status) || "Not started"
-      );
+      formDataToSend.append("implementation_description", formData.implementation_description);
+      formDataToSend.append("status", idStatusMap.get(formData.status) || "Not started");
       formDataToSend.append("owner", formData.owner);
       formDataToSend.append("reviewer", formData.reviewer);
       formDataToSend.append("approver", formData.approver);
@@ -741,8 +742,7 @@ const VWISO27001ClauseDrawerDialog = ({
         throw new Error(response.data?.message || "Failed to save clause");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An error occurred";
       handleAlert({
         variant: "error",
         body: errorMessage,
@@ -826,26 +826,15 @@ const VWISO27001ClauseDrawerDialog = ({
             <Typography fontSize={15} fontWeight={700}>
               {clause?.order_no + "." + (index + 1)} {displayData?.title}
             </Typography>
-            <CloseIcon
-              size={20}
-              onClick={onClose}
-              style={{ cursor: "pointer" }}
-            />
+            <CloseIcon size={20} onClick={onClose} style={{ cursor: "pointer" }} />
           </Stack>
           <Divider />
           <TabContext value={activeTab}>
             <Box sx={{ padding: "0 20px" }}>
-              <TabBar
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={handleTabChange}
-              />
+              <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
             </Box>
 
-            <TabPanel
-              value="details"
-              sx={{ padding: "15px 20px", gap: "15px" }}
-            >
+            <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
               <Stack gap="15px">
                 {/* Requirement Summary Panel */}
                 {displayData?.requirement_summary && (
@@ -867,72 +856,60 @@ const VWISO27001ClauseDrawerDialog = ({
                 )}
 
                 {/* Key Questions Panel */}
-                {displayData?.key_questions &&
-                  displayData.key_questions.length > 0 && (
-                    <Stack
-                      sx={{
-                        border: "1px solid #e8d5d5",
-                        padding: "12px",
-                        backgroundColor: "#fef5f5",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Typography
-                        fontSize={13}
-                        sx={{ marginBottom: "8px", fontWeight: 600 }}
-                      >
-                        Key Questions:
-                      </Typography>
-                      <Stack spacing={1}>
-                        {displayData.key_questions.map(
-                          (question: string, idx: number) => (
-                            <Typography
-                              key={idx}
-                              fontSize={12}
-                              color="#666"
-                              sx={{ pl: 1, position: "relative" }}
-                            >
-                              • {question}
-                            </Typography>
-                          )
-                        )}
-                      </Stack>
+                {displayData?.key_questions && displayData.key_questions.length > 0 && (
+                  <Stack
+                    sx={{
+                      border: "1px solid #e8d5d5",
+                      padding: "12px",
+                      backgroundColor: "#fef5f5",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                      Key Questions:
+                    </Typography>
+                    <Stack spacing={1}>
+                      {displayData.key_questions.map((question: string, idx: number) => (
+                        <Typography
+                          key={idx}
+                          fontSize={12}
+                          color="#666"
+                          sx={{ pl: 1, position: "relative" }}
+                        >
+                          • {question}
+                        </Typography>
+                      ))}
                     </Stack>
-                  )}
+                  </Stack>
+                )}
 
                 {/* Evidence Examples Panel */}
-                {displayData?.evidence_examples &&
-                  displayData.evidence_examples.length > 0 && (
-                    <Stack
-                      sx={{
-                        border: "1px solid #d5e8d5",
-                        padding: "12px",
-                        backgroundColor: "#f5fef5",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Typography
-                        fontSize={13}
-                        sx={{ marginBottom: "8px", fontWeight: 600 }}
-                      >
-                        Evidence Examples:
-                      </Typography>
-                      <Stack spacing={1}>
-                        {displayData.evidence_examples.map(
-                          (example: string, idx: number) => (
-                            <Typography
-                              key={idx}
-                              fontSize={12}
-                              color="#666"
-                              sx={{ pl: 1, position: "relative" }}
-                            >
-                              • {example}
-                            </Typography>
-                          )
-                        )}
-                      </Stack>
+                {displayData?.evidence_examples && displayData.evidence_examples.length > 0 && (
+                  <Stack
+                    sx={{
+                      border: "1px solid #d5e8d5",
+                      padding: "12px",
+                      backgroundColor: "#f5fef5",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                      Evidence Examples:
+                    </Typography>
+                    <Stack spacing={1}>
+                      {displayData.evidence_examples.map((example: string, idx: number) => (
+                        <Typography
+                          key={idx}
+                          fontSize={12}
+                          color="#666"
+                          sx={{ pl: 1, position: "relative" }}
+                        >
+                          • {example}
+                        </Typography>
+                      ))}
                     </Stack>
-                  )}
+                  </Stack>
+                )}
 
                 {/* Implementation Description */}
                 <Stack>
@@ -943,10 +920,7 @@ const VWISO27001ClauseDrawerDialog = ({
                     toolbar="full"
                     initialContent={formData.implementation_description}
                     onContentChange={(content) =>
-                      handleFieldChange(
-                        "implementation_description",
-                        content
-                      )
+                      handleFieldChange("implementation_description", content)
                     }
                     placeholder="Describe how this requirement is implemented..."
                     isEditable={!isEditingDisabled}
@@ -981,12 +955,7 @@ const VWISO27001ClauseDrawerDialog = ({
                   label="Owner:"
                   value={formData.owner || ""}
                   onChange={handleSelectChange("owner")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id.toString(),
-                    name: user.name,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder={"Select owner"}
                   disabled={isEditingDisabled}
@@ -998,12 +967,7 @@ const VWISO27001ClauseDrawerDialog = ({
                   label="Reviewer:"
                   value={formData.reviewer || ""}
                   onChange={handleSelectChange("reviewer")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id.toString(),
-                    name: user.name,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder={"Select reviewer"}
                   disabled={isEditingDisabled}
@@ -1015,12 +979,7 @@ const VWISO27001ClauseDrawerDialog = ({
                   label="Approver:"
                   value={formData.approver || ""}
                   onChange={handleSelectChange("approver")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id.toString(),
-                    name: user.name,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder={"Select approver"}
                   disabled={isEditingDisabled}
@@ -1044,9 +1003,7 @@ const VWISO27001ClauseDrawerDialog = ({
                   <Field
                     type="description"
                     value={formData.auditor_feedback}
-                    onChange={(e) =>
-                      handleFieldChange("auditor_feedback", e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                     sx={{
                       cursor: "text",
                       "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
@@ -1068,8 +1025,7 @@ const VWISO27001ClauseDrawerDialog = ({
                   Evidence files
                 </Typography>
                 <Typography variant="body2" color="text.tertiary">
-                  Upload evidence files to document compliance with this
-                  requirement.
+                  Upload evidence files to document compliance with this requirement.
                 </Typography>
 
                 {/* File Input */}
@@ -1092,9 +1048,7 @@ const VWISO27001ClauseDrawerDialog = ({
                     <Stack direction="row" spacing={1}>
                       <Button
                         variant="contained"
-                        onClick={() =>
-                          document.getElementById("evidence-file-input")?.click()
-                        }
+                        onClick={() => document.getElementById("evidence-file-input")?.click()}
                         disabled={isEditingDisabled}
                         sx={{
                           borderRadius: 2,
@@ -1109,9 +1063,7 @@ const VWISO27001ClauseDrawerDialog = ({
                             border: "1px solid #d0d5dd",
                           },
                         }}
-                        disableRipple={
-                          theme.components?.MuiButton?.defaultProps?.disableRipple
-                        }
+                        disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                       >
                         Upload new files
                       </Button>
@@ -1132,9 +1084,7 @@ const VWISO27001ClauseDrawerDialog = ({
                             border: "1px solid #3D62C3",
                           },
                         }}
-                        disableRipple={
-                          theme.components?.MuiButton?.defaultProps?.disableRipple
-                        }
+                        disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                       >
                         Attach existing files
                       </Button>
@@ -1167,12 +1117,7 @@ const VWISO27001ClauseDrawerDialog = ({
                 {evidenceFiles.length > 0 && (
                   <Stack spacing={1}>
                     {evidenceFiles
-                      .filter(
-                        (file) =>
-                          !deletedFilesIds.includes(
-                            parseInt(file.id.toString())
-                          )
-                      )
+                      .filter((file) => !deletedFilesIds.includes(parseInt(file.id.toString())))
                       .map((file) => (
                         <Box
                           key={file.id}
@@ -1211,9 +1156,7 @@ const VWISO27001ClauseDrawerDialog = ({
                               >
                                 {file.fileName}
                               </Typography>
-                              <Typography
-                                sx={{ fontSize: 11, color: "status.default.text" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "status.default.text" }}>
                                 {file.size ? `${((file.size || 0) / 1024).toFixed(1)} KB` : ""}
                                 {file.size && file.source ? " • " : ""}
                                 {file.source ? `Source: ${file.source}` : ""}
@@ -1225,10 +1168,7 @@ const VWISO27001ClauseDrawerDialog = ({
                               <IconButton
                                 size="small"
                                 onClick={() =>
-                                  handleDownloadFile(
-                                    file.id.toString(),
-                                    file.fileName
-                                  )
+                                  handleDownloadFile(file.id.toString(), file.fileName)
                                 }
                                 sx={{
                                   color: "text.tertiary",
@@ -1244,9 +1184,7 @@ const VWISO27001ClauseDrawerDialog = ({
                             <Tooltip title="Delete file">
                               <IconButton
                                 size="small"
-                                onClick={() =>
-                                  handleDeleteEvidenceFile(file.id.toString())
-                                }
+                                onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                                 disabled={isEditingDisabled}
                                 sx={{
                                   color: "text.tertiary",
@@ -1268,9 +1206,7 @@ const VWISO27001ClauseDrawerDialog = ({
                 {/* Pending Upload Files */}
                 {uploadFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>
                       Pending upload
                     </Typography>
                     {uploadFiles.map((file) => (
@@ -1309,9 +1245,7 @@ const VWISO27001ClauseDrawerDialog = ({
                               {file.fileName}
                             </Typography>
                             {file.size && (
-                              <Typography
-                                sx={{ fontSize: 11, color: "#B45309" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "#B45309" }}>
                                 {((file.size || 0) / 1024).toFixed(1)} KB
                               </Typography>
                             )}
@@ -1320,9 +1254,7 @@ const VWISO27001ClauseDrawerDialog = ({
                         <Tooltip title="Remove from queue">
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              handleDeleteUploadFile(file.id.toString())
-                            }
+                            onClick={() => handleDeleteUploadFile(file.id.toString())}
                             sx={{
                               color: "#92400E",
                               "&:hover": {
@@ -1342,9 +1274,7 @@ const VWISO27001ClauseDrawerDialog = ({
                 {/* Pending Attach Files */}
                 {pendingAttachFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}>
                       Pending attach
                     </Typography>
                     {pendingAttachFiles.map((file) => (
@@ -1405,26 +1335,27 @@ const VWISO27001ClauseDrawerDialog = ({
                 )}
 
                 {/* Empty State */}
-                {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
-                  <Box
-                    sx={{
-                      textAlign: "center",
-                      py: 4,
-                      color: "text.tertiary",
-                      border: `2px dashed ${theme.palette.border.dark}`,
-                      borderRadius: 1,
-                      backgroundColor: "background.accent",
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      No evidence files uploaded yet
-                    </Typography>
-                    <Typography variant="caption" color={text.disabled}>
-                      Click "Add evidence files" to upload documentation for
-                      this requirement
-                    </Typography>
-                  </Box>
-                )}
+                {evidenceFiles.length === 0 &&
+                  uploadFiles.length === 0 &&
+                  pendingAttachFiles.length === 0 && (
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 4,
+                        color: "text.tertiary",
+                        border: `2px dashed ${theme.palette.border.dark}`,
+                        borderRadius: 1,
+                        backgroundColor: "background.accent",
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        No evidence files uploaded yet
+                      </Typography>
+                      <Typography variant="caption" color={text.disabled}>
+                        Click "Add evidence files" to upload documentation for this requirement
+                      </Typography>
+                    </Box>
+                  )}
               </Stack>
             </TabPanel>
 
@@ -1435,8 +1366,8 @@ const VWISO27001ClauseDrawerDialog = ({
                   Linked risks
                 </Typography>
                 <Typography variant="body2" color="text.tertiary">
-                  Link risks from your risk database to track which risks are
-                  addressed by this requirement.
+                  Link risks from your risk database to track which risks are addressed by this
+                  requirement.
                 </Typography>
 
                 {/* Add/Remove Button */}
@@ -1458,9 +1389,7 @@ const VWISO27001ClauseDrawerDialog = ({
                         border: `1px solid ${theme.palette.border.dark}`,
                       },
                     }}
-                    disableRipple={
-                      theme.components?.MuiButton?.defaultProps?.disableRipple
-                    }
+                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                   >
                     Add/remove risks
                   </Button>
@@ -1517,9 +1446,7 @@ const VWISO27001ClauseDrawerDialog = ({
                               {risk.risk_name}
                             </Typography>
                             {risk.risk_level && (
-                              <Typography
-                                sx={{ fontSize: 11, color: "text.tertiary" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "text.tertiary" }}>
                                 Risk level: {risk.risk_level}
                               </Typography>
                             )}
@@ -1581,9 +1508,7 @@ const VWISO27001ClauseDrawerDialog = ({
                       backgroundColor: "background.accent",
                     }}
                   >
-                    <Typography sx={{ color: "text.tertiary" }}>
-                      No risks linked yet
-                    </Typography>
+                    <Typography sx={{ color: "text.tertiary" }}>No risks linked yet</Typography>
                   </Box>
                 )}
 
@@ -1694,9 +1619,7 @@ const VWISO27001ClauseDrawerDialog = ({
       </Dialog>
 
       {/* Alert */}
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
       {/* File Picker Modal for attaching existing files */}
       <FilePickerModal

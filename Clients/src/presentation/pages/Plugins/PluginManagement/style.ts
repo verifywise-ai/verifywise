@@ -22,8 +22,8 @@ export const pluginIconPlaceholder = (pluginKey: string, category?: string): SxP
     pluginKey === "risk-import"
       ? "rgba(16, 185, 129, 0.1)"
       : category === "data_management"
-      ? "rgba(139, 92, 246, 0.1)"
-      : "rgba(99, 102, 241, 0.1)",
+        ? "rgba(139, 92, 246, 0.1)"
+        : "rgba(99, 102, 241, 0.1)",
   borderRadius: "12px",
 });
 

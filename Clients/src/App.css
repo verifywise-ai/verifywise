@@ -9,18 +9,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #D0D5DD;
+  background-color: #d0d5dd;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #98A2B3;
+  background-color: #98a2b3;
 }
 
 /* Firefox support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #D0D5DD transparent;
+  scrollbar-color: #d0d5dd transparent;
 }
 
 body {
@@ -31,16 +31,16 @@ body {
 div.react-joyride {
   position: absolute !important;
   top: 0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
   z-index: 1000;
 }
 
 div.react-joyride > * {
   margin: 0;
-  padding:0;
+  padding: 0;
   box-sizing: border-box;
 }
 

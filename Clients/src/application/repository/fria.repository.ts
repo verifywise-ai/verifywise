@@ -14,10 +14,7 @@ export const friaRepository = {
     return response.data.data;
   },
 
-  updateRights: async (
-    friaId: number,
-    rights: Partial<FriaRight>[]
-  ) => {
+  updateRights: async (friaId: number, rights: Partial<FriaRight>[]) => {
     const response = await CustomAxios.put(`${BASE_URL}/${friaId}/rights`, {
       rights,
     });
@@ -25,29 +22,17 @@ export const friaRepository = {
   },
 
   addRiskItem: async (friaId: number, data: Partial<FriaRiskItem>) => {
-    const response = await CustomAxios.post(
-      `${BASE_URL}/${friaId}/risk-items`,
-      data
-    );
+    const response = await CustomAxios.post(`${BASE_URL}/${friaId}/risk-items`, data);
     return response.data.data;
   },
 
-  updateRiskItem: async (
-    friaId: number,
-    itemId: number,
-    data: Partial<FriaRiskItem>
-  ) => {
-    const response = await CustomAxios.patch(
-      `${BASE_URL}/${friaId}/risk-items/${itemId}`,
-      data
-    );
+  updateRiskItem: async (friaId: number, itemId: number, data: Partial<FriaRiskItem>) => {
+    const response = await CustomAxios.patch(`${BASE_URL}/${friaId}/risk-items/${itemId}`, data);
     return response.data.data;
   },
 
   deleteRiskItem: async (friaId: number, itemId: number) => {
-    const response = await CustomAxios.delete(
-      `${BASE_URL}/${friaId}/risk-items/${itemId}`
-    );
+    const response = await CustomAxios.delete(`${BASE_URL}/${friaId}/risk-items/${itemId}`);
     return response.data.data;
   },
 
@@ -57,16 +42,12 @@ export const friaRepository = {
   },
 
   linkModel: async (friaId: number, modelId: number) => {
-    const response = await CustomAxios.post(
-      `${BASE_URL}/${friaId}/models/${modelId}`
-    );
+    const response = await CustomAxios.post(`${BASE_URL}/${friaId}/models/${modelId}`);
     return response.data.data;
   },
 
   unlinkModel: async (friaId: number, modelId: number) => {
-    const response = await CustomAxios.delete(
-      `${BASE_URL}/${friaId}/models/${modelId}`
-    );
+    const response = await CustomAxios.delete(`${BASE_URL}/${friaId}/models/${modelId}`);
     return response.data.data;
   },
 
@@ -84,24 +65,20 @@ export const friaRepository = {
 
   getEvidence: async (friaId: number, section?: string) => {
     const params = section ? `?section=${section}` : "";
-    const response = await CustomAxios.get(
-      `${BASE_URL}/${friaId}/evidence${params}`
-    );
+    const response = await CustomAxios.get(`${BASE_URL}/${friaId}/evidence${params}`);
     return response.data.data;
   },
 
   linkEvidence: async (friaId: number, fileId: number, entityType: string) => {
-    const response = await CustomAxios.post(
-      `${BASE_URL}/${friaId}/evidence`,
-      { file_id: fileId, entity_type: entityType }
-    );
+    const response = await CustomAxios.post(`${BASE_URL}/${friaId}/evidence`, {
+      file_id: fileId,
+      entity_type: entityType,
+    });
     return response.data.data;
   },
 
   unlinkEvidence: async (friaId: number, linkId: number) => {
-    const response = await CustomAxios.delete(
-      `${BASE_URL}/${friaId}/evidence/${linkId}`
-    );
+    const response = await CustomAxios.delete(`${BASE_URL}/${friaId}/evidence/${linkId}`);
     return response.data.data;
   },
 };

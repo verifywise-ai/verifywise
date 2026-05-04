@@ -6,10 +6,10 @@ info:
     The VerifyWise API enables programmatic access to AI compliance management features including project management, risk assessments, vendor management, and compliance framework implementations (EU AI Act, ISO 42001, ISO 27001).
 
     ## Getting Started
-    
+
     ### 1. Authentication
     Most endpoints require JWT authentication. Follow these steps:
-    
+
     1. **Register a new user** (if needed):
        ```
        POST {baseUrl}/api/users/register
@@ -20,7 +20,7 @@ info:
          "password": "SecurePassword123!"
        }
        ```
-    
+
     2. **Login to receive tokens**:
        ```
        POST {baseUrl}/api/users/login
@@ -40,12 +40,12 @@ info:
          }
        }
        ```
-    
+
     3. **Use the access token** in subsequent requests:
        ```
        Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
        ```
-    
+
     4. **Refresh tokens** when access token expires:
        ```
        POST {baseUrl}/api/users/refresh-token
@@ -56,7 +56,7 @@ info:
 
     ### 3. Response Format
     All responses follow a consistent structure:
-    
+
     **Success Response:**
     ```json
     {
@@ -64,7 +64,7 @@ info:
       "data": {...}
     }
     ```
-    
+
     **Error Response:**
     ```json
     {
@@ -108,12 +108,12 @@ paths:
                   minLength: 8
                   example: "SecurePassword123!"
       responses:
-        '201':
+        "201":
           description: User registered successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /users/login:
     post:
@@ -133,7 +133,7 @@ paths:
                 password:
                   type: string
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -147,7 +147,7 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: '#/components/schemas/User'
+                        $ref: "#/components/schemas/User"
                       token:
                         type: string
 
@@ -162,7 +162,7 @@ paths:
             schema:
               type: object
       responses:
-        '200':
+        "200":
           description: Token refreshed successfully
           content:
             application/json:
@@ -182,12 +182,12 @@ paths:
       summary: Check if any user exists in the system
       tags: [Authentication]
       responses:
-        '200':
+        "200":
           description: User existence status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /users/{userId}:
     get:
@@ -202,7 +202,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: User details
           content:
             application/json:
@@ -212,7 +212,7 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/User'
+                    $ref: "#/components/schemas/User"
 
     patch:
       summary: Update user by ID
@@ -230,14 +230,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserUpdate'
+              $ref: "#/components/schemas/UserUpdate"
       responses:
-        '200':
+        "200":
           description: User updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete user by ID
@@ -251,12 +251,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: User deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /users/chng-pass/{userId}:
     patch:
@@ -285,12 +285,12 @@ paths:
                 newPassword:
                   type: string
       responses:
-        '200':
+        "200":
           description: Password changed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Organizations
   /organizations/{id}:
@@ -307,12 +307,12 @@ paths:
             type: integer
           description: Organization ID
       responses:
-        '200':
+        "200":
           description: Organization details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create organization
@@ -324,14 +324,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Organization'
+              $ref: "#/components/schemas/Organization"
       responses:
-        '201':
+        "201":
           description: Organization created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update organization
@@ -343,14 +343,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Organization'
+              $ref: "#/components/schemas/Organization"
       responses:
-        '200':
+        "200":
           description: Organization updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Projects
   /projects:
@@ -360,7 +360,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of projects
           content:
             application/json:
@@ -372,7 +372,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Project'
+                      $ref: "#/components/schemas/Project"
 
     post:
       summary: Create a new project
@@ -384,14 +384,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectCreate'
+              $ref: "#/components/schemas/ProjectCreate"
       responses:
-        '201':
+        "201":
           description: Project created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /projects/{id}:
     get:
@@ -406,7 +406,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Project details
           content:
             application/json:
@@ -416,7 +416,7 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/Project'
+                    $ref: "#/components/schemas/Project"
 
     patch:
       summary: Update project
@@ -434,14 +434,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectUpdate'
+              $ref: "#/components/schemas/ProjectUpdate"
       responses:
-        '200':
+        "200":
           description: Project updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete project
@@ -455,12 +455,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Project Risks
   /projectRisks:
@@ -474,14 +474,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectRisk'
+              $ref: "#/components/schemas/ProjectRisk"
       responses:
-        '201':
+        "201":
           description: Project risk created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /projectRisks/{id}:
     get:
@@ -496,12 +496,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project risk details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     put:
       summary: Update project risk
@@ -519,14 +519,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectRisk'
+              $ref: "#/components/schemas/ProjectRisk"
       responses:
-        '200':
+        "200":
           description: Project risk updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete project risk
@@ -540,12 +540,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project risk deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /projectRisks/by-projid/{projectId}:
     get:
@@ -560,7 +560,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project risks for the specified project
           content:
             application/json:
@@ -572,7 +572,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProjectRisk'
+                      $ref: "#/components/schemas/ProjectRisk"
 
   /projectRisks/by-projid/non-mitigated/{projectId}:
     get:
@@ -587,12 +587,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Non-mitigated project risks
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Project Scopes
   /projectScopes:
@@ -602,12 +602,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of project scopes
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create project scope
@@ -619,14 +619,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectScope'
+              $ref: "#/components/schemas/ProjectScope"
       responses:
-        '201':
+        "201":
           description: Project scope created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /projectScopes/{id}:
     get:
@@ -641,12 +641,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project scope details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     put:
       summary: Update project scope
@@ -664,14 +664,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectScope'
+              $ref: "#/components/schemas/ProjectScope"
       responses:
-        '200':
+        "200":
           description: Project scope updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete project scope
@@ -685,12 +685,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Project scope deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Vendors
   /vendors:
@@ -700,7 +700,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of vendors
           content:
             application/json:
@@ -712,7 +712,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Vendor'
+                      $ref: "#/components/schemas/Vendor"
 
     post:
       summary: Create a new vendor
@@ -724,14 +724,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VendorCreate'
+              $ref: "#/components/schemas/VendorCreate"
       responses:
-        '201':
+        "201":
           description: Vendor created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /vendors/{id}:
     get:
@@ -746,7 +746,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendor details
           content:
             application/json:
@@ -756,7 +756,7 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/Vendor'
+                    $ref: "#/components/schemas/Vendor"
 
     patch:
       summary: Update vendor
@@ -774,14 +774,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VendorUpdate'
+              $ref: "#/components/schemas/VendorUpdate"
       responses:
-        '200':
+        "200":
           description: Vendor updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete vendor
@@ -795,12 +795,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendor deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /vendors/project-id/{projectId}:
     get:
@@ -815,7 +815,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendors for the specified project
           content:
             application/json:
@@ -827,7 +827,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Vendor'
+                      $ref: "#/components/schemas/Vendor"
 
   # Vendor Risks
   /vendorRisks/all:
@@ -837,7 +837,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of all vendor risks
           content:
             application/json:
@@ -849,7 +849,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VendorRisk'
+                      $ref: "#/components/schemas/VendorRisk"
 
   /vendorRisks:
     post:
@@ -862,14 +862,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VendorRisk'
+              $ref: "#/components/schemas/VendorRisk"
       responses:
-        '201':
+        "201":
           description: Vendor risk created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /vendorRisks/{id}:
     get:
@@ -884,12 +884,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendor risk details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update vendor risk
@@ -907,14 +907,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VendorRisk'
+              $ref: "#/components/schemas/VendorRisk"
       responses:
-        '200':
+        "200":
           description: Vendor risk updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete vendor risk
@@ -928,12 +928,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendor risk deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /vendorRisks/by-projid/{projectId}:
     get:
@@ -948,7 +948,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Vendor risks for the specified project
           content:
             application/json:
@@ -960,7 +960,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VendorRisk'
+                      $ref: "#/components/schemas/VendorRisk"
 
   # Assessments
   /assessments:
@@ -974,14 +974,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Assessment'
+              $ref: "#/components/schemas/Assessment"
       responses:
-        '201':
+        "201":
           description: Assessment created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /assessments/{id}:
     patch:
@@ -1000,14 +1000,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Assessment'
+              $ref: "#/components/schemas/Assessment"
       responses:
-        '200':
+        "200":
           description: Assessment updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete assessment
@@ -1021,12 +1021,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Assessment deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /assessments/project/byid/{id}:
     get:
@@ -1041,12 +1041,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Assessment details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /assessments/getAnswaers/{assessmentId}:
     get:
@@ -1061,12 +1061,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Assessment answers
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Questions
   /questions/{id}:
@@ -1082,12 +1082,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Question details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update question
@@ -1105,14 +1105,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Question'
+              $ref: "#/components/schemas/Question"
       responses:
-        '200':
+        "200":
           description: Question updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete question
@@ -1126,12 +1126,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Question deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /questions:
     post:
@@ -1144,14 +1144,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Question'
+              $ref: "#/components/schemas/Question"
       responses:
-        '201':
+        "201":
           description: Question created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Subtopics
   /subtopics/{id}:
@@ -1167,12 +1167,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subtopic details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update subtopic
@@ -1190,14 +1190,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subtopic'
+              $ref: "#/components/schemas/Subtopic"
       responses:
-        '200':
+        "200":
           description: Subtopic updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete subtopic
@@ -1211,12 +1211,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subtopic deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /subtopics:
     post:
@@ -1229,14 +1229,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subtopic'
+              $ref: "#/components/schemas/Subtopic"
       responses:
-        '201':
+        "201":
           description: Subtopic created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Subcontrols
   /subcontrols/{id}:
@@ -1252,12 +1252,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subcontrol details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update subcontrol
@@ -1275,14 +1275,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subcontrol'
+              $ref: "#/components/schemas/Subcontrol"
       responses:
-        '200':
+        "200":
           description: Subcontrol updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete subcontrol
@@ -1296,12 +1296,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subcontrol deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /subcontrols:
     post:
@@ -1314,14 +1314,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subcontrol'
+              $ref: "#/components/schemas/Subcontrol"
       responses:
-        '201':
+        "201":
           description: Subcontrol created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Roles
   /roles:
@@ -1331,12 +1331,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of roles
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create role
@@ -1348,14 +1348,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Role'
+              $ref: "#/components/schemas/Role"
       responses:
-        '201':
+        "201":
           description: Role created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /roles/{id}:
     get:
@@ -1370,12 +1370,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Role details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     put:
       summary: Update role
@@ -1393,14 +1393,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Role'
+              $ref: "#/components/schemas/Role"
       responses:
-        '200':
+        "200":
           description: Role updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete role
@@ -1414,12 +1414,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Role deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Files
   /files:
@@ -1429,12 +1429,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of files
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /files/{id}:
     get:
@@ -1449,12 +1449,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: File details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Policies
   /policies:
@@ -1464,7 +1464,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of policies
           content:
             application/json:
@@ -1476,7 +1476,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Policy'
+                      $ref: "#/components/schemas/Policy"
 
     post:
       summary: Create policy
@@ -1488,9 +1488,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PolicyInput'
+              $ref: "#/components/schemas/PolicyInput"
       responses:
-        '201':
+        "201":
           description: Policy created successfully
           content:
             application/json:
@@ -1500,7 +1500,7 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/Policy'
+                    $ref: "#/components/schemas/Policy"
 
   /policies/{id}:
     put:
@@ -1519,14 +1519,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PolicyInput'
+              $ref: "#/components/schemas/PolicyInput"
       responses:
-        '200':
+        "200":
           description: Policy updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete policy
@@ -1540,12 +1540,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Policy deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /policies/tags:
     get:
@@ -1554,7 +1554,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of policy tags
           content:
             application/json:
@@ -1576,12 +1576,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of control categories
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create control category
@@ -1593,14 +1593,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ControlCategory'
+              $ref: "#/components/schemas/ControlCategory"
       responses:
-        '201':
+        "201":
           description: Control category created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /controlCategory/{id}:
     get:
@@ -1615,12 +1615,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control category details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update control category
@@ -1638,14 +1638,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ControlCategory'
+              $ref: "#/components/schemas/ControlCategory"
       responses:
-        '200':
+        "200":
           description: Control category updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete control category
@@ -1659,12 +1659,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control category deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /controlCategory/byprojectid/{projectId}:
     get:
@@ -1679,12 +1679,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control categories for the specified project
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Controls
   /controls/{id}:
@@ -1700,12 +1700,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete control
@@ -1719,12 +1719,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /controls:
     post:
@@ -1737,14 +1737,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Control'
+              $ref: "#/components/schemas/Control"
       responses:
-        '201':
+        "201":
           description: Control created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Model Risks
   /modelRisks:
@@ -1754,7 +1754,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of model risks
           content:
             application/json:
@@ -1766,13 +1766,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ModelRisk'
-        '204':
+                      $ref: "#/components/schemas/ModelRisk"
+        "204":
           description: No model risks found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create model risk
@@ -1784,9 +1784,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '201':
+        "201":
           description: Model risk created successfully
           content:
             application/json:
@@ -1796,13 +1796,13 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/ModelRisk'
-        '400':
+                    $ref: "#/components/schemas/ModelRisk"
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /modelRisks/{id}:
     get:
@@ -1818,7 +1818,7 @@ paths:
             type: integer
           description: Model risk ID
       responses:
-        '200':
+        "200":
           description: Model risk found
           content:
             application/json:
@@ -1828,13 +1828,13 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/ModelRisk'
-        '404':
+                    $ref: "#/components/schemas/ModelRisk"
+        "404":
           description: Model risk not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     put:
       summary: Update model risk
@@ -1853,9 +1853,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '200':
+        "200":
           description: Model risk updated successfully
           content:
             application/json:
@@ -1865,19 +1865,19 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/ModelRisk'
-        '400':
+                    $ref: "#/components/schemas/ModelRisk"
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Model risk not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     patch:
       summary: Update model risk (partial)
@@ -1896,9 +1896,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '200':
+        "200":
           description: Model risk updated successfully
           content:
             application/json:
@@ -1908,19 +1908,19 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/ModelRisk'
-        '400':
+                    $ref: "#/components/schemas/ModelRisk"
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Model risk not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete model risk
@@ -1935,24 +1935,24 @@ paths:
             type: integer
           description: Model risk ID
       responses:
-        '200':
+        "200":
           description: Model risk deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Model risk not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Model Inventory
   /modelInventory:
@@ -1962,7 +1962,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of model inventory entries
           content:
             application/json:
@@ -1974,13 +1974,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ModelInventory'
-        '204':
+                      $ref: "#/components/schemas/ModelInventory"
+        "204":
           description: No model inventory entries found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
     post:
       summary: Create model inventory entry
       tags: [Model Inventory]
@@ -1991,14 +1991,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelInventory'
+              $ref: "#/components/schemas/ModelInventory"
       responses:
-        '201':
+        "201":
           description: Model inventory entry created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /modelInventory/{id}:
     get:
@@ -2014,7 +2014,7 @@ paths:
             type: integer
           description: Model inventory entry ID
       responses:
-        '200':
+        "200":
           description: Model inventory entry found
           content:
             application/json:
@@ -2024,13 +2024,13 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/ModelInventory'
-        '204':
+                    $ref: "#/components/schemas/ModelInventory"
+        "204":
           description: Model inventory entry not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
     patch:
       summary: Update model inventory entry
       tags: [Model Inventory]
@@ -2048,20 +2048,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelInventory'
+              $ref: "#/components/schemas/ModelInventory"
       responses:
-        '200':
+        "200":
           description: Model inventory entry updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Model inventory entry not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
     delete:
       summary: Delete model inventory entry
       tags: [Model Inventory]
@@ -2075,18 +2075,18 @@ paths:
             type: integer
           description: Model inventory entry ID
       responses:
-        '200':
+        "200":
           description: Model inventory entry deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Model inventory entry not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Training
   /training:
@@ -2096,7 +2096,7 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of training records
           content:
             application/json:
@@ -2108,13 +2108,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Training'
-        '204':
+                      $ref: "#/components/schemas/Training"
+        "204":
           description: No training records found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create training registry entry
@@ -2126,20 +2126,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TrainingInput'
+              $ref: "#/components/schemas/TrainingInput"
       responses:
-        '201':
+        "201":
           description: Training registry entry created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
           description: Missing required fields
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /training/training-id/{id}:
     get:
@@ -2155,7 +2155,7 @@ paths:
             type: integer
           description: Training record ID
       responses:
-        '200':
+        "200":
           description: Training record details
           content:
             application/json:
@@ -2165,13 +2165,13 @@ paths:
                   message:
                     type: string
                   data:
-                    $ref: '#/components/schemas/Training'
-        '404':
+                    $ref: "#/components/schemas/Training"
+        "404":
           description: Training record not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /training/{id}:
     patch:
@@ -2191,26 +2191,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TrainingUpdate'
+              $ref: "#/components/schemas/TrainingUpdate"
       responses:
-        '202':
+        "202":
           description: Training record updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
           description: Missing required fields
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Training record not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete training record
@@ -2225,18 +2225,18 @@ paths:
             type: integer
           description: Training record ID
       responses:
-        '202':
+        "202":
           description: Training record deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Training record not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Frameworks
   /frameworks:
@@ -2246,12 +2246,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of frameworks
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /frameworks/toProject:
     post:
@@ -2271,12 +2271,12 @@ paths:
           schema:
             type: integer
       responses:
-        '201':
+        "201":
           description: Framework assigned to project successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # EU AI Act Endpoints
   /eu-ai-act/topics:
@@ -2286,12 +2286,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of assessment topics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/topicById:
     get:
@@ -2311,12 +2311,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Assessment topic details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/assessments/progress/{projectFrameworkId}:
     get:
@@ -2331,12 +2331,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Assessment progress details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/controlById:
     get:
@@ -2356,12 +2356,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/controlCategories:
     get:
@@ -2376,12 +2376,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Control categories
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/compliances/progress/{projectFrameworkId}:
     get:
@@ -2396,12 +2396,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Compliance progress details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/controls/byControlCategoryId/{controlCategoryId}:
     get:
@@ -2421,12 +2421,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Controls for the specified category
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/saveAnswer/{answerId}:
     patch:
@@ -2445,14 +2445,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Answer'
+              $ref: "#/components/schemas/Answer"
       responses:
-        '200':
+        "200":
           description: Answer updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /eu-ai-act/saveControls/{controlId}:
     patch:
@@ -2471,14 +2471,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Control'
+              $ref: "#/components/schemas/Control"
       responses:
-        '200':
+        "200":
           description: Control updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # ISO 27001 Endpoints
   /iso-27001/clauses/struct/byProjectId/{projectId}:
@@ -2494,12 +2494,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: ISO 27001 clause structure
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-27001/subClauses/byClauseId/{clauseId}:
     get:
@@ -2514,12 +2514,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Sub-clauses for the specified clause
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-27001/subClause/byId/{id}:
     get:
@@ -2539,12 +2539,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Sub-clause details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-27001/annexControl/byId/{id}:
     get:
@@ -2564,12 +2564,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Annex control details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-27001/saveClauses/{id}:
     post:
@@ -2588,14 +2588,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ISO27001Clause'
+              $ref: "#/components/schemas/ISO27001Clause"
       responses:
-        '200':
+        "200":
           description: ISO 27001 clauses saved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-27001/saveAnnexes/{id}:
     post:
@@ -2614,14 +2614,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ISO27001Annex'
+              $ref: "#/components/schemas/ISO27001Annex"
       responses:
-        '200':
+        "200":
           description: ISO 27001 annexes saved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # ISO 42001 Endpoints
   /iso-42001/subClause/byId/{id}:
@@ -2642,12 +2642,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: ISO 42001 sub-clause details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-42001/annexCategory/byId/{id}:
     get:
@@ -2667,12 +2667,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: ISO 42001 annex category details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-42001/saveClauses/{id}:
     post:
@@ -2691,14 +2691,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ISO42001Clause'
+              $ref: "#/components/schemas/ISO42001Clause"
       responses:
-        '200':
+        "200":
           description: ISO 42001 clauses saved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /iso-42001/saveAnnexes/{id}:
     post:
@@ -2717,14 +2717,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ISO42001Annex'
+              $ref: "#/components/schemas/ISO42001Annex"
       responses:
-        '200':
+        "200":
           description: ISO 42001 annexes saved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # AI Trust Centre
   /aiTrustCentre/overview:
@@ -2734,12 +2734,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: AI Trust Centre overview
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     put:
       summary: Update AI Trust Centre overview
@@ -2751,14 +2751,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AITrustCentreOverview'
+              $ref: "#/components/schemas/AITrustCentreOverview"
       responses:
-        '200':
+        "200":
           description: AI Trust Centre overview updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /aiTrustCentre/logo:
     post:
@@ -2777,12 +2777,12 @@ paths:
                   type: string
                   format: binary
       responses:
-        '200':
+        "200":
           description: Logo uploaded successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete AI Trust Centre logo
@@ -2790,12 +2790,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: Logo deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /aiTrustCentre/resources:
     get:
@@ -2804,12 +2804,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of AI Trust Centre resources
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create AI Trust Centre resource
@@ -2831,12 +2831,12 @@ paths:
                 description:
                   type: string
       responses:
-        '201':
+        "201":
           description: Resource created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /aiTrustCentre/resources/{resourceId}:
     put:
@@ -2865,12 +2865,12 @@ paths:
                 description:
                   type: string
       responses:
-        '200':
+        "200":
           description: Resource updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete AI Trust Centre resource
@@ -2884,12 +2884,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Resource deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /aiTrustCentre/subprocessors:
     get:
@@ -2898,12 +2898,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of subprocessors
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
       summary: Create AI Trust Centre subprocessor
@@ -2915,14 +2915,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+              $ref: "#/components/schemas/AITrustCentreSubprocessor"
       responses:
-        '201':
+        "201":
           description: Subprocessor created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /aiTrustCentre/subprocessors/{subprocessorId}:
     put:
@@ -2941,14 +2941,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+              $ref: "#/components/schemas/AITrustCentreSubprocessor"
       responses:
-        '200':
+        "200":
           description: Subprocessor updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
     delete:
       summary: Delete AI Trust Centre subprocessor
@@ -2962,12 +2962,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subprocessor deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Bias and Fairness
   /bias_and_fairness/upload:
@@ -2999,7 +2999,7 @@ paths:
                   type: string
                   description: Name of the sensitive attribute column
       responses:
-        '200':
+        "200":
           description: Upload initiated successfully
           content:
             application/json:
@@ -3028,7 +3028,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Upload status
           content:
             application/json:
@@ -3052,14 +3052,14 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '200':
+        "200":
           description: List of fairness metrics
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/FairnessMetric'
+                  $ref: "#/components/schemas/FairnessMetric"
 
   /bias_and_fairness/metrics/{id}:
     get:
@@ -3074,12 +3074,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Fairness metrics details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FairnessMetric'
+                $ref: "#/components/schemas/FairnessMetric"
 
     delete:
       summary: Delete fairness check
@@ -3093,12 +3093,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Fairness check deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Email Services
   /mail/invite:
@@ -3120,12 +3120,12 @@ paths:
                 invitationMessage:
                   type: string
       responses:
-        '200':
+        "200":
           description: Invitation email sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /mail/reset-password:
     post:
@@ -3142,12 +3142,12 @@ paths:
                   type: string
                   format: email
       responses:
-        '200':
+        "200":
           description: Password reset email sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # Demo Data
   /autoDrivers:
@@ -3157,12 +3157,12 @@ paths:
       security:
         - JWTAuth: []
       responses:
-        '201':
+        "201":
           description: Demo data created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
 components:
   securitySchemes:
@@ -3764,11 +3764,11 @@ components:
           type: string
           description: Name of the model risk
         riskCategory:
-          $ref: '#/components/schemas/ModelRiskCategory'
+          $ref: "#/components/schemas/ModelRiskCategory"
         riskLevel:
-          $ref: '#/components/schemas/ModelRiskLevel'
+          $ref: "#/components/schemas/ModelRiskLevel"
         status:
-          $ref: '#/components/schemas/ModelRiskStatus'
+          $ref: "#/components/schemas/ModelRiskStatus"
         owner:
           type: string
           description: Person responsible for managing the risk
@@ -3830,11 +3830,11 @@ components:
           description: Name of the model risk
           example: "Model accuracy decline"
         riskCategory:
-          $ref: '#/components/schemas/ModelRiskCategory'
+          $ref: "#/components/schemas/ModelRiskCategory"
         riskLevel:
-          $ref: '#/components/schemas/ModelRiskLevel'
+          $ref: "#/components/schemas/ModelRiskLevel"
         status:
-          $ref: '#/components/schemas/ModelRiskStatus'
+          $ref: "#/components/schemas/ModelRiskStatus"
         owner:
           type: string
           minLength: 1

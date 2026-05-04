@@ -25,10 +25,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     // Keywords for fast pre-filtering (from TruffleHog)
     keywords: [
-      "T3BlbkFJ",      // Base64 encoded "OpenAI" marker in keys
-      "sk-proj-",      // Project keys
-      "sk-svcacct-",   // Service account keys
-      "sk-admin-",     // Admin keys
+      "T3BlbkFJ", // Base64 encoded "OpenAI" marker in keys
+      "sk-proj-", // Project keys
+      "sk-svcacct-", // Service account keys
+      "sk-admin-", // Admin keys
       "openai",
       "OPENAI_API_KEY",
       "api.openai.com",
@@ -41,11 +41,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /import\s+.*\s+from\s+["']openai["']/,
         /import\s+OpenAI\s+from/,
       ],
-      dependencies: [
-        /^openai[=<>~!\s@]/m,
-        /"openai"\s*:/,
-        /'openai'\s*:/,
-      ],
+      dependencies: [/^openai[=<>~!\s@]/m, /"openai"\s*:/, /'openai'\s*:/],
       // Tiered API call detection (most reliable first)
       apiCalls: [
         // Tier 1: API URLs (MOST RELIABLE)
@@ -156,7 +152,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     documentationUrl: "https://ai.google.dev/docs",
     confidence: "high",
     keywords: [
-      "AIza",           // Google API key prefix
+      "AIza", // Google API key prefix
       "generativeai",
       "gemini",
       "GOOGLE_API_KEY",
@@ -211,22 +207,14 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Azure OpenAI Service client",
     documentationUrl: "https://learn.microsoft.com/azure/ai-services/openai",
     confidence: "high",
-    keywords: [
-      "azure",
-      "openai.azure.com",
-      "AZURE_OPENAI",
-      "AzureOpenAI",
-    ],
+    keywords: ["azure", "openai.azure.com", "AZURE_OPENAI", "AzureOpenAI"],
     patterns: {
       imports: [
         /^from\s+openai\s+import\s+AzureOpenAI/m,
         /import\s+.*AzureOpenAI.*from\s+["']openai["']/,
         /require\s*\(\s*["']@azure\/openai["']\s*\)/,
       ],
-      dependencies: [
-        /"@azure\/openai"\s*:/,
-        /'@azure\/openai'\s*:/,
-      ],
+      dependencies: [/"@azure\/openai"\s*:/, /'@azure\/openai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /\.openai\.azure\.com/,
@@ -259,8 +247,8 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: [
       "bedrock",
-      "AKIA",           // AWS Access Key prefix
-      "ABSK",           // Bedrock API key prefix
+      "AKIA", // AWS Access Key prefix
+      "ABSK", // Bedrock API key prefix
       "amazonaws.com",
       "AWS_ACCESS_KEY",
       "AWS_SECRET",
@@ -314,12 +302,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Cohere API for NLP and embeddings",
     documentationUrl: "https://docs.cohere.com",
     confidence: "high",
-    keywords: [
-      "cohere",
-      "COHERE_API_KEY",
-      "api.cohere.ai",
-      "api.cohere.com",
-    ],
+    keywords: ["cohere", "COHERE_API_KEY", "api.cohere.ai", "api.cohere.com"],
     minEntropy: 4.0, // Cohere keys need high entropy check
     patterns: {
       imports: [
@@ -328,11 +311,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']cohere-ai["']\s*\)/,
         /import\s+.*\s+from\s+["']cohere-ai["']/,
       ],
-      dependencies: [
-        /^cohere[=<>~!\s]/m,
-        /"cohere-ai"\s*:/,
-        /'cohere-ai'\s*:/,
-      ],
+      dependencies: [/^cohere[=<>~!\s]/m, /"cohere-ai"\s*:/, /'cohere-ai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.cohere\.ai/,
@@ -369,11 +348,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Mistral AI API client",
     documentationUrl: "https://docs.mistral.ai",
     confidence: "high",
-    keywords: [
-      "mistral",
-      "MISTRAL_API_KEY",
-      "api.mistral.ai",
-    ],
+    keywords: ["mistral", "MISTRAL_API_KEY", "api.mistral.ai"],
     patterns: {
       imports: [
         /^import\s+mistralai/m,
@@ -400,9 +375,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /mistral\.chat\.complete\s*\(/,
         /mistral\.chat\.stream\s*\(/,
       ],
-      secrets: [
-        /MISTRAL_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/MISTRAL_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -417,7 +390,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: [
       "replicate",
-      "r8_",              // Replicate API token prefix
+      "r8_", // Replicate API token prefix
       "REPLICATE_API_TOKEN",
       "api.replicate.com",
     ],
@@ -428,11 +401,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']replicate["']\s*\)/,
         /import\s+.*\s+from\s+["']replicate["']/,
       ],
-      dependencies: [
-        /^replicate[=<>~!\s]/m,
-        /"replicate"\s*:/,
-        /'replicate'\s*:/,
-      ],
+      dependencies: [/^replicate[=<>~!\s]/m, /"replicate"\s*:/, /'replicate'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.replicate\.com/,
@@ -461,8 +430,8 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     documentationUrl: "https://huggingface.co/docs/api-inference",
     confidence: "high",
     keywords: [
-      "hf_",              // HF token prefix
-      "api_org_",         // Org token prefix
+      "hf_", // HF token prefix
+      "api_org_", // Org token prefix
       "huggingface",
       "HF_TOKEN",
       "HUGGINGFACE",
@@ -517,7 +486,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: [
       "groq",
-      "gsk_",           // Groq API key prefix
+      "gsk_", // Groq API key prefix
       "GROQ_API_KEY",
       "api.groq.com",
     ],
@@ -528,11 +497,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']groq-sdk["']\s*\)/,
         /import\s+.*\s+from\s+["']groq-sdk["']/,
       ],
-      dependencies: [
-        /^groq[=<>~!\s]/m,
-        /"groq-sdk"\s*:/,
-        /'groq-sdk'\s*:/,
-      ],
+      dependencies: [/^groq[=<>~!\s]/m, /"groq-sdk"\s*:/, /'groq-sdk'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.groq\.com/,
@@ -561,12 +526,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Together AI platform for open-source models",
     documentationUrl: "https://docs.together.ai",
     confidence: "high",
-    keywords: [
-      "together",
-      "TOGETHER_API_KEY",
-      "api.together.xyz",
-      "api.together.ai",
-    ],
+    keywords: ["together", "TOGETHER_API_KEY", "api.together.xyz", "api.together.ai"],
     patterns: {
       imports: [
         /^import\s+together/m,
@@ -574,11 +534,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']together-ai["']\s*\)/,
         /import\s+.*\s+from\s+["']together-ai["']/,
       ],
-      dependencies: [
-        /^together[=<>~!\s]/m,
-        /"together-ai"\s*:/,
-        /'together-ai'\s*:/,
-      ],
+      dependencies: [/^together[=<>~!\s]/m, /"together-ai"\s*:/, /'together-ai'\s*:/],
       apiCalls: [
         // Tier 1: API URLs
         /api\.together\.xyz/,
@@ -592,9 +548,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /together\.chat\.completions\.create\s*\(/,
         /together\.Complete\.create\s*\(/,
       ],
-      secrets: [
-        /TOGETHER_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/TOGETHER_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -609,18 +563,13 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: [
       "perplexity",
-      "pplx-",            // Perplexity API key prefix
+      "pplx-", // Perplexity API key prefix
       "PERPLEXITY_API_KEY",
       "api.perplexity.ai",
     ],
     patterns: {
-      imports: [
-        /^import\s+perplexity/m,
-        /^from\s+perplexity\s+import/m,
-      ],
-      dependencies: [
-        /^perplexity[=<>~!\s]/m,
-      ],
+      imports: [/^import\s+perplexity/m, /^from\s+perplexity\s+import/m],
+      dependencies: [/^perplexity[=<>~!\s]/m],
       apiCalls: [
         // Tier 1: API URL
         /api\.perplexity\.ai/,
@@ -645,21 +594,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Fireworks AI inference platform",
     documentationUrl: "https://docs.fireworks.ai",
     confidence: "high",
-    keywords: [
-      "fireworks",
-      "FIREWORKS_API_KEY",
-      "api.fireworks.ai",
-    ],
+    keywords: ["fireworks", "FIREWORKS_API_KEY", "api.fireworks.ai"],
     patterns: {
-      imports: [
-        /^import\s+fireworks/m,
-        /^from\s+fireworks\s+import/m,
-      ],
-      dependencies: [
-        /^fireworks-ai[=<>~!\s]/m,
-        /"fireworks-ai"\s*:/,
-        /'fireworks-ai'\s*:/,
-      ],
+      imports: [/^import\s+fireworks/m, /^from\s+fireworks\s+import/m],
+      dependencies: [/^fireworks-ai[=<>~!\s]/m, /"fireworks-ai"\s*:/, /'fireworks-ai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.fireworks\.ai/,
@@ -668,9 +606,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /Fireworks\s*\(/,
         /fireworks\.client\s*\(/,
       ],
-      secrets: [
-        /FIREWORKS_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/FIREWORKS_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -683,26 +619,15 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "DeepSeek AI API",
     documentationUrl: "https://platform.deepseek.com/docs",
     confidence: "high",
-    keywords: [
-      "deepseek",
-      "DEEPSEEK_API_KEY",
-      "api.deepseek.com",
-    ],
+    keywords: ["deepseek", "DEEPSEEK_API_KEY", "api.deepseek.com"],
     patterns: {
-      imports: [
-        /^import\s+deepseek/m,
-        /^from\s+deepseek\s+import/m,
-      ],
-      dependencies: [
-        /^deepseek[=<>~!\s]/m,
-      ],
+      imports: [/^import\s+deepseek/m, /^from\s+deepseek\s+import/m],
+      dependencies: [/^deepseek[=<>~!\s]/m],
       apiCalls: [
         // Tier 1: API URL
         /api\.deepseek\.com/,
       ],
-      secrets: [
-        /DEEPSEEK_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/DEEPSEEK_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -715,28 +640,15 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "AI21 Labs Jurassic models API",
     documentationUrl: "https://docs.ai21.com",
     confidence: "high",
-    keywords: [
-      "ai21",
-      "AI21_API_KEY",
-      "api.ai21.com",
-    ],
+    keywords: ["ai21", "AI21_API_KEY", "api.ai21.com"],
     patterns: {
-      imports: [
-        /^import\s+ai21/m,
-        /^from\s+ai21\s+import/m,
-      ],
-      dependencies: [
-        /^ai21[=<>~!\s]/m,
-        /"ai21"\s*:/,
-        /'ai21'\s*:/,
-      ],
+      imports: [/^import\s+ai21/m, /^from\s+ai21\s+import/m],
+      dependencies: [/^ai21[=<>~!\s]/m, /"ai21"\s*:/, /'ai21'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.ai21\.com/,
       ],
-      secrets: [
-        /AI21_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/AI21_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -749,26 +661,15 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Cerebras fast inference API",
     documentationUrl: "https://docs.cerebras.ai",
     confidence: "high",
-    keywords: [
-      "cerebras",
-      "CEREBRAS_API_KEY",
-      "api.cerebras.ai",
-    ],
+    keywords: ["cerebras", "CEREBRAS_API_KEY", "api.cerebras.ai"],
     patterns: {
-      imports: [
-        /^import\s+cerebras/m,
-        /^from\s+cerebras\s+import/m,
-      ],
-      dependencies: [
-        /^cerebras-cloud-sdk[=<>~!\s]/m,
-      ],
+      imports: [/^import\s+cerebras/m, /^from\s+cerebras\s+import/m],
+      dependencies: [/^cerebras-cloud-sdk[=<>~!\s]/m],
       apiCalls: [
         // Tier 1: API URL
         /api\.cerebras\.ai/,
       ],
-      secrets: [
-        /CEREBRAS_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/CEREBRAS_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -781,23 +682,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "xAI API for Grok models",
     documentationUrl: "https://docs.x.ai",
     confidence: "high",
-    keywords: [
-      "xai",
-      "grok",
-      "xai-",
-      "XAI_API_KEY",
-      "api.x.ai",
-    ],
+    keywords: ["xai", "grok", "xai-", "XAI_API_KEY", "api.x.ai"],
     patterns: {
-      imports: [
-        /^import\s+xai/m,
-        /^from\s+xai\s+import/m,
-      ],
-      dependencies: [
-        /^xai[=<>~!\s]/m,
-        /"xai"\s*:/,
-        /'xai'\s*:/,
-      ],
+      imports: [/^import\s+xai/m, /^from\s+xai\s+import/m],
+      dependencies: [/^xai[=<>~!\s]/m, /"xai"\s*:/, /'xai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.x\.ai/,
@@ -834,11 +722,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']elevenlabs["']\s*\)/,
         /import\s+.*\s+from\s+["']elevenlabs["']/,
       ],
-      dependencies: [
-        /^elevenlabs[=<>~!\s]/m,
-        /"elevenlabs"\s*:/,
-        /'elevenlabs'\s*:/,
-      ],
+      dependencies: [/^elevenlabs[=<>~!\s]/m, /"elevenlabs"\s*:/, /'elevenlabs'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.elevenlabs\.io/,
@@ -870,12 +754,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "AssemblyAI speech-to-text and audio intelligence",
     documentationUrl: "https://www.assemblyai.com/docs",
     confidence: "high",
-    keywords: [
-      "assemblyai",
-      "assembly_ai",
-      "ASSEMBLYAI_API_KEY",
-      "api.assemblyai.com",
-    ],
+    keywords: ["assemblyai", "assembly_ai", "ASSEMBLYAI_API_KEY", "api.assemblyai.com"],
     patterns: {
       imports: [
         /^import\s+assemblyai/m,
@@ -883,11 +762,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']assemblyai["']\s*\)/,
         /import\s+.*\s+from\s+["']assemblyai["']/,
       ],
-      dependencies: [
-        /^assemblyai[=<>~!\s]/m,
-        /"assemblyai"\s*:/,
-        /'assemblyai'\s*:/,
-      ],
+      dependencies: [/^assemblyai[=<>~!\s]/m, /"assemblyai"\s*:/, /'assemblyai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.assemblyai\.com/,
@@ -918,11 +793,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Deepgram speech recognition and understanding",
     documentationUrl: "https://developers.deepgram.com",
     confidence: "high",
-    keywords: [
-      "deepgram",
-      "DEEPGRAM_API_KEY",
-      "api.deepgram.com",
-    ],
+    keywords: ["deepgram", "DEEPGRAM_API_KEY", "api.deepgram.com"],
     patterns: {
       imports: [
         /^import\s+deepgram/m,
@@ -930,11 +801,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']@deepgram\/sdk["']\s*\)/,
         /import\s+.*\s+from\s+["']@deepgram\/sdk["']/,
       ],
-      dependencies: [
-        /^deepgram-sdk[=<>~!\s]/m,
-        /"@deepgram\/sdk"\s*:/,
-        /'@deepgram\/sdk'\s*:/,
-      ],
+      dependencies: [/^deepgram-sdk[=<>~!\s]/m, /"@deepgram\/sdk"\s*:/, /'@deepgram\/sdk'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.deepgram\.com/,
@@ -966,13 +833,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Stability AI image generation (Stable Diffusion)",
     documentationUrl: "https://platform.stability.ai/docs",
     confidence: "high",
-    keywords: [
-      "stability",
-      "stable_diffusion",
-      "sk-",
-      "STABILITY_API_KEY",
-      "api.stability.ai",
-    ],
+    keywords: ["stability", "stable_diffusion", "sk-", "STABILITY_API_KEY", "api.stability.ai"],
     patterns: {
       imports: [
         /^import\s+stability_sdk/m,
@@ -1015,12 +876,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Clarifai AI platform for vision, NLP, and audio",
     documentationUrl: "https://docs.clarifai.com",
     confidence: "high",
-    keywords: [
-      "clarifai",
-      "CLARIFAI_PAT",
-      "CLARIFAI_API_KEY",
-      "api.clarifai.com",
-    ],
+    keywords: ["clarifai", "CLARIFAI_PAT", "CLARIFAI_API_KEY", "api.clarifai.com"],
     patterns: {
       imports: [
         /^import\s+clarifai/m,
@@ -1028,11 +884,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']clarifai["']\s*\)/,
         /import\s+.*\s+from\s+["']clarifai["']/,
       ],
-      dependencies: [
-        /^clarifai[=<>~!\s]/m,
-        /"clarifai"\s*:/,
-        /'clarifai'\s*:/,
-      ],
+      dependencies: [/^clarifai[=<>~!\s]/m, /"clarifai"\s*:/, /'clarifai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.clarifai\.com/,
@@ -1061,12 +913,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Databricks ML platform and Mosaic AI",
     documentationUrl: "https://docs.databricks.com",
     confidence: "high",
-    keywords: [
-      "databricks",
-      "dapi",
-      "DATABRICKS_TOKEN",
-      "DATABRICKS_HOST",
-    ],
+    keywords: ["databricks", "dapi", "DATABRICKS_TOKEN", "DATABRICKS_HOST"],
     patterns: {
       imports: [
         /^import\s+databricks/m,
@@ -1110,21 +957,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Modal serverless infrastructure for ML",
     documentationUrl: "https://modal.com/docs",
     confidence: "high",
-    keywords: [
-      "modal",
-      "MODAL_TOKEN",
-      "api.modal.com",
-    ],
+    keywords: ["modal", "MODAL_TOKEN", "api.modal.com"],
     patterns: {
-      imports: [
-        /^import\s+modal/m,
-        /^from\s+modal\s+import/m,
-      ],
-      dependencies: [
-        /^modal[=<>~!\s]/m,
-        /"modal"\s*:/,
-        /'modal'\s*:/,
-      ],
+      imports: [/^import\s+modal/m, /^from\s+modal\s+import/m],
+      dependencies: [/^modal[=<>~!\s]/m, /"modal"\s*:/, /'modal'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.modal\.com/,
@@ -1160,15 +996,8 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
       "api.smith.langchain.com",
     ],
     patterns: {
-      imports: [
-        /^from\s+langsmith\s+import/m,
-        /^import\s+langsmith/m,
-      ],
-      dependencies: [
-        /^langsmith[=<>~!\s]/m,
-        /"langsmith"\s*:/,
-        /'langsmith'\s*:/,
-      ],
+      imports: [/^from\s+langsmith\s+import/m, /^import\s+langsmith/m],
+      dependencies: [/^langsmith[=<>~!\s]/m, /"langsmith"\s*:/, /'langsmith'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.smith\.langchain\.com/,
@@ -1200,21 +1029,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "LangFuse open-source LLM observability",
     documentationUrl: "https://langfuse.com/docs",
     confidence: "high",
-    keywords: [
-      "langfuse",
-      "LANGFUSE_PUBLIC_KEY",
-      "LANGFUSE_SECRET_KEY",
-    ],
+    keywords: ["langfuse", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
     patterns: {
-      imports: [
-        /^from\s+langfuse\s+import/m,
-        /^import\s+langfuse/m,
-      ],
-      dependencies: [
-        /^langfuse[=<>~!\s]/m,
-        /"langfuse"\s*:/,
-        /'langfuse'\s*:/,
-      ],
+      imports: [/^from\s+langfuse\s+import/m, /^import\s+langfuse/m],
+      dependencies: [/^langfuse[=<>~!\s]/m, /"langfuse"\s*:/, /'langfuse'\s*:/],
       apiCalls: [
         // Tier 2: SDK instantiation
         /Langfuse\s*\(/,
@@ -1243,24 +1061,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Arize AI ML observability platform",
     documentationUrl: "https://docs.arize.com",
     confidence: "high",
-    keywords: [
-      "arize",
-      "phoenix",
-      "ARIZE_API_KEY",
-      "ARIZE_SPACE_KEY",
-    ],
+    keywords: ["arize", "phoenix", "ARIZE_API_KEY", "ARIZE_SPACE_KEY"],
     patterns: {
-      imports: [
-        /^from\s+arize\s+import/m,
-        /^import\s+arize/m,
-        /^from\s+phoenix\s+import/m,
-      ],
-      dependencies: [
-        /^arize[=<>~!\s]/m,
-        /"arize"\s*:/,
-        /'arize'\s*:/,
-        /^arize-phoenix[=<>~!\s]/m,
-      ],
+      imports: [/^from\s+arize\s+import/m, /^import\s+arize/m, /^from\s+phoenix\s+import/m],
+      dependencies: [/^arize[=<>~!\s]/m, /"arize"\s*:/, /'arize'\s*:/, /^arize-phoenix[=<>~!\s]/m],
       apiCalls: [
         // Tier 2: SDK instantiation
         /Client\s*\(\s*space_key/,
@@ -1286,22 +1090,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Weights & Biases ML experiment tracking",
     documentationUrl: "https://docs.wandb.ai",
     confidence: "medium",
-    keywords: [
-      "wandb",
-      "weights_and_biases",
-      "WANDB_API_KEY",
-      "api.wandb.ai",
-    ],
+    keywords: ["wandb", "weights_and_biases", "WANDB_API_KEY", "api.wandb.ai"],
     patterns: {
-      imports: [
-        /^import\s+wandb/m,
-        /^from\s+wandb\s+import/m,
-      ],
-      dependencies: [
-        /^wandb[=<>~!\s]/m,
-        /"wandb"\s*:/,
-        /'wandb'\s*:/,
-      ],
+      imports: [/^import\s+wandb/m, /^from\s+wandb\s+import/m],
+      dependencies: [/^wandb[=<>~!\s]/m, /"wandb"\s*:/, /'wandb'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.wandb\.ai/,
@@ -1330,22 +1122,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Unified API gateway for hundreds of AI models",
     documentationUrl: "https://openrouter.ai/docs",
     confidence: "high",
-    keywords: [
-      "openrouter",
-      "sk-or-",
-      "OPENROUTER_API_KEY",
-      "openrouter.ai",
-    ],
+    keywords: ["openrouter", "sk-or-", "OPENROUTER_API_KEY", "openrouter.ai"],
     patterns: {
-      imports: [
-        /^import\s+openrouter/m,
-        /^from\s+openrouter\s+import/m,
-      ],
-      dependencies: [
-        /^openrouter[=<>~!\s]/m,
-        /"openrouter"\s*:/,
-        /'openrouter'\s*:/,
-      ],
+      imports: [/^import\s+openrouter/m, /^from\s+openrouter\s+import/m],
+      dependencies: [/^openrouter[=<>~!\s]/m, /"openrouter"\s*:/, /'openrouter'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /openrouter\.ai\/api/,
@@ -1368,29 +1148,16 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "SambaNova enterprise AI inference platform",
     documentationUrl: "https://sambanova.ai/products/enterprise-ai",
     confidence: "high",
-    keywords: [
-      "sambanova",
-      "SAMBANOVA_API_KEY",
-      "api.sambanova.ai",
-    ],
+    keywords: ["sambanova", "SAMBANOVA_API_KEY", "api.sambanova.ai"],
     patterns: {
-      imports: [
-        /^import\s+sambanova/m,
-        /^from\s+sambanova\s+import/m,
-      ],
-      dependencies: [
-        /^sambanova[=<>~!\s]/m,
-        /"sambanova"\s*:/,
-        /'sambanova'\s*:/,
-      ],
+      imports: [/^import\s+sambanova/m, /^from\s+sambanova\s+import/m],
+      dependencies: [/^sambanova[=<>~!\s]/m, /"sambanova"\s*:/, /'sambanova'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.sambanova\.ai/,
         /fast-api\.snova\.ai/,
       ],
-      secrets: [
-        /SAMBANOVA_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/SAMBANOVA_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1403,29 +1170,16 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Lepton AI serverless platform for running AI models",
     documentationUrl: "https://www.lepton.ai/docs",
     confidence: "high",
-    keywords: [
-      "lepton",
-      "LEPTON_API_TOKEN",
-      "api.lepton.ai",
-    ],
+    keywords: ["lepton", "LEPTON_API_TOKEN", "api.lepton.ai"],
     patterns: {
-      imports: [
-        /^import\s+leptonai/m,
-        /^from\s+leptonai\s+import/m,
-      ],
-      dependencies: [
-        /^leptonai[=<>~!\s]/m,
-        /"leptonai"\s*:/,
-        /'leptonai'\s*:/,
-      ],
+      imports: [/^import\s+leptonai/m, /^from\s+leptonai\s+import/m],
+      dependencies: [/^leptonai[=<>~!\s]/m, /"leptonai"\s*:/, /'leptonai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /\.lepton\.ai/,
         /api\.lepton\.ai/,
       ],
-      secrets: [
-        /LEPTON_API_TOKEN\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/LEPTON_API_TOKEN\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1438,21 +1192,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Anyscale platform for scalable AI applications",
     documentationUrl: "https://docs.anyscale.com",
     confidence: "high",
-    keywords: [
-      "anyscale",
-      "ANYSCALE_API_KEY",
-      "api.anyscale.com",
-    ],
+    keywords: ["anyscale", "ANYSCALE_API_KEY", "api.anyscale.com"],
     patterns: {
-      imports: [
-        /^import\s+anyscale/m,
-        /^from\s+anyscale\s+import/m,
-      ],
-      dependencies: [
-        /^anyscale[=<>~!\s]/m,
-        /"anyscale"\s*:/,
-        /'anyscale'\s*:/,
-      ],
+      imports: [/^import\s+anyscale/m, /^from\s+anyscale\s+import/m],
+      dependencies: [/^anyscale[=<>~!\s]/m, /"anyscale"\s*:/, /'anyscale'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.anyscale\.com/,
@@ -1474,31 +1217,16 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Baseten platform for deploying ML models",
     documentationUrl: "https://docs.baseten.co",
     confidence: "high",
-    keywords: [
-      "baseten",
-      "BASETEN_API_KEY",
-      "api.baseten.co",
-    ],
+    keywords: ["baseten", "BASETEN_API_KEY", "api.baseten.co"],
     patterns: {
-      imports: [
-        /^import\s+baseten/m,
-        /^from\s+baseten\s+import/m,
-        /^import\s+truss/m,
-      ],
-      dependencies: [
-        /^baseten[=<>~!\s]/m,
-        /"baseten"\s*:/,
-        /'baseten'\s*:/,
-        /^truss[=<>~!\s]/m,
-      ],
+      imports: [/^import\s+baseten/m, /^from\s+baseten\s+import/m, /^import\s+truss/m],
+      dependencies: [/^baseten[=<>~!\s]/m, /"baseten"\s*:/, /'baseten'\s*:/, /^truss[=<>~!\s]/m],
       apiCalls: [
         // Tier 1: API URL
         /api\.baseten\.co/,
         /model-.*\.api\.baseten\.co/,
       ],
-      secrets: [
-        /BASETEN_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/BASETEN_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1511,23 +1239,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Voyage AI embedding models for search and RAG",
     documentationUrl: "https://docs.voyageai.com",
     confidence: "high",
-    keywords: [
-      "voyageai",
-      "voyage",
-      "pa-",
-      "VOYAGE_API_KEY",
-      "api.voyageai.com",
-    ],
+    keywords: ["voyageai", "voyage", "pa-", "VOYAGE_API_KEY", "api.voyageai.com"],
     patterns: {
-      imports: [
-        /^import\s+voyageai/m,
-        /^from\s+voyageai\s+import/m,
-      ],
-      dependencies: [
-        /^voyageai[=<>~!\s]/m,
-        /"voyageai"\s*:/,
-        /'voyageai'\s*:/,
-      ],
+      imports: [/^import\s+voyageai/m, /^from\s+voyageai\s+import/m],
+      dependencies: [/^voyageai[=<>~!\s]/m, /"voyageai"\s*:/, /'voyageai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.voyageai\.com/,
@@ -1549,24 +1264,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Jina AI embeddings and neural search",
     documentationUrl: "https://jina.ai/embeddings",
     confidence: "high",
-    keywords: [
-      "jina",
-      "jinaai",
-      "jina-",
-      "JINA_API_KEY",
-      "api.jina.ai",
-    ],
+    keywords: ["jina", "jinaai", "jina-", "JINA_API_KEY", "api.jina.ai"],
     patterns: {
-      imports: [
-        /^import\s+jina/m,
-        /^from\s+jina\s+import/m,
-      ],
-      dependencies: [
-        /^jina[=<>~!\s]/m,
-        /"jina"\s*:/,
-        /'jina'\s*:/,
-        /^jinaai[=<>~!\s]/m,
-      ],
+      imports: [/^import\s+jina/m, /^from\s+jina\s+import/m],
+      dependencies: [/^jina[=<>~!\s]/m, /"jina"\s*:/, /'jina'\s*:/, /^jinaai[=<>~!\s]/m],
       apiCalls: [
         // Tier 1: API URL
         /api\.jina\.ai/,
@@ -1590,23 +1291,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Unify AI intelligent LLM routing",
     documentationUrl: "https://unify.ai/docs",
     confidence: "high",
-    keywords: [
-      "unify",
-      "unifyai",
-      "UNIFY_KEY",
-      "api.unify.ai",
-    ],
+    keywords: ["unify", "unifyai", "UNIFY_KEY", "api.unify.ai"],
     patterns: {
-      imports: [
-        /^import\s+unify/m,
-        /^from\s+unify\s+import/m,
-        /^from\s+unifyai\s+import/m,
-      ],
-      dependencies: [
-        /^unifyai[=<>~!\s]/m,
-        /"unifyai"\s*:/,
-        /'unifyai'\s*:/,
-      ],
+      imports: [/^import\s+unify/m, /^from\s+unify\s+import/m, /^from\s+unifyai\s+import/m],
+      dependencies: [/^unifyai[=<>~!\s]/m, /"unifyai"\s*:/, /'unifyai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.unify\.ai/,
@@ -1627,31 +1315,16 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Writer AI enterprise generative AI platform",
     documentationUrl: "https://dev.writer.com",
     confidence: "high",
-    keywords: [
-      "writer",
-      "writerai",
-      "WRITER_API_KEY",
-      "api.writer.com",
-    ],
+    keywords: ["writer", "writerai", "WRITER_API_KEY", "api.writer.com"],
     patterns: {
-      imports: [
-        /^import\s+writer/m,
-        /^from\s+writer\s+import/m,
-        /^from\s+writerai\s+import/m,
-      ],
-      dependencies: [
-        /^writer-sdk[=<>~!\s]/m,
-        /"writer-sdk"\s*:/,
-        /'writer-sdk'\s*:/,
-      ],
+      imports: [/^import\s+writer/m, /^from\s+writer\s+import/m, /^from\s+writerai\s+import/m],
+      dependencies: [/^writer-sdk[=<>~!\s]/m, /"writer-sdk"\s*:/, /'writer-sdk'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.writer\.com/,
         /enterprise-api\.writer\.com/,
       ],
-      secrets: [
-        /WRITER_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/WRITER_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1668,11 +1341,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Pinecone vector database for similarity search",
     documentationUrl: "https://docs.pinecone.io",
     confidence: "high",
-    keywords: [
-      "pinecone",
-      "PINECONE_API_KEY",
-      "pinecone.io",
-    ],
+    keywords: ["pinecone", "PINECONE_API_KEY", "pinecone.io"],
     patterns: {
       imports: [
         /^import\s+pinecone/m,
@@ -1716,11 +1385,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Weaviate vector database with hybrid search",
     documentationUrl: "https://weaviate.io/developers/weaviate",
     confidence: "high",
-    keywords: [
-      "weaviate",
-      "WEAVIATE_API_KEY",
-      "weaviate.io",
-    ],
+    keywords: ["weaviate", "WEAVIATE_API_KEY", "weaviate.io"],
     patterns: {
       imports: [
         /^import\s+weaviate/m,
@@ -1766,12 +1431,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Qdrant vector similarity search engine",
     documentationUrl: "https://qdrant.tech/documentation",
     confidence: "high",
-    keywords: [
-      "qdrant",
-      "QDRANT_API_KEY",
-      "qdrant.io",
-      "qdrant.tech",
-    ],
+    keywords: ["qdrant", "QDRANT_API_KEY", "qdrant.io", "qdrant.tech"],
     patterns: {
       imports: [
         /^import\s+qdrant_client/m,
@@ -1815,12 +1475,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Milvus/Zilliz vector database for AI applications",
     documentationUrl: "https://milvus.io/docs",
     confidence: "high",
-    keywords: [
-      "milvus",
-      "zilliz",
-      "pymilvus",
-      "ZILLIZ_CLOUD",
-    ],
+    keywords: ["milvus", "zilliz", "pymilvus", "ZILLIZ_CLOUD"],
     patterns: {
       imports: [
         /^from\s+pymilvus\s+import/m,
@@ -1865,11 +1520,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Chroma AI-native embedding database",
     documentationUrl: "https://docs.trychroma.com",
     confidence: "high",
-    keywords: [
-      "chromadb",
-      "chroma",
-      "CHROMA_API_KEY",
-    ],
+    keywords: ["chromadb", "chroma", "CHROMA_API_KEY"],
     patterns: {
       imports: [
         /^import\s+chromadb/m,
@@ -1877,11 +1528,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /require\s*\(\s*["']chromadb["']\s*\)/,
         /import\s+.*\s+from\s+["']chromadb["']/,
       ],
-      dependencies: [
-        /^chromadb[=<>~!\s]/m,
-        /"chromadb"\s*:/,
-        /'chromadb'\s*:/,
-      ],
+      dependencies: [/^chromadb[=<>~!\s]/m, /"chromadb"\s*:/, /'chromadb'\s*:/],
       apiCalls: [
         // Tier 1: API URL (Chroma Cloud)
         /api\.trychroma\.com/,
@@ -1918,21 +1565,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Helicone LLM observability and monitoring",
     documentationUrl: "https://docs.helicone.ai",
     confidence: "high",
-    keywords: [
-      "helicone",
-      "HELICONE_API_KEY",
-      "helicone.ai",
-    ],
+    keywords: ["helicone", "HELICONE_API_KEY", "helicone.ai"],
     patterns: {
-      imports: [
-        /^from\s+helicone\s+import/m,
-        /^import\s+helicone/m,
-      ],
-      dependencies: [
-        /^helicone[=<>~!\s]/m,
-        /"helicone"\s*:/,
-        /'helicone'\s*:/,
-      ],
+      imports: [/^from\s+helicone\s+import/m, /^import\s+helicone/m],
+      dependencies: [/^helicone[=<>~!\s]/m, /"helicone"\s*:/, /'helicone'\s*:/],
       apiCalls: [
         // Tier 1: Proxy URL (how Helicone is commonly used)
         /oai\.helicone\.ai/,
@@ -1943,9 +1579,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /Helicone-Auth/,
         /helicone-auth/,
       ],
-      secrets: [
-        /HELICONE_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/HELICONE_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1958,21 +1592,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Braintrust AI evaluation and observability platform",
     documentationUrl: "https://www.braintrust.dev/docs",
     confidence: "high",
-    keywords: [
-      "braintrust",
-      "BRAINTRUST_API_KEY",
-      "braintrust.dev",
-    ],
+    keywords: ["braintrust", "BRAINTRUST_API_KEY", "braintrust.dev"],
     patterns: {
-      imports: [
-        /^from\s+braintrust\s+import/m,
-        /^import\s+braintrust/m,
-      ],
-      dependencies: [
-        /^braintrust[=<>~!\s]/m,
-        /"braintrust"\s*:/,
-        /'braintrust'\s*:/,
-      ],
+      imports: [/^from\s+braintrust\s+import/m, /^import\s+braintrust/m],
+      dependencies: [/^braintrust[=<>~!\s]/m, /"braintrust"\s*:/, /'braintrust'\s*:/],
       apiCalls: [
         // Tier 1: API URL / Proxy
         /api\.braintrust\.dev/,
@@ -1983,9 +1606,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         /braintrust\.Eval\s*\(/,
         /@braintrust\/logger/,
       ],
-      secrets: [
-        /BRAINTRUST_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/BRAINTRUST_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 
@@ -1998,21 +1619,10 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
     description: "Portkey AI gateway and observability",
     documentationUrl: "https://docs.portkey.ai",
     confidence: "high",
-    keywords: [
-      "portkey",
-      "PORTKEY_API_KEY",
-      "portkey.ai",
-    ],
+    keywords: ["portkey", "PORTKEY_API_KEY", "portkey.ai"],
     patterns: {
-      imports: [
-        /^from\s+portkey_ai\s+import/m,
-        /^import\s+portkey_ai/m,
-      ],
-      dependencies: [
-        /^portkey-ai[=<>~!\s]/m,
-        /"portkey-ai"\s*:/,
-        /'portkey-ai'\s*:/,
-      ],
+      imports: [/^from\s+portkey_ai\s+import/m, /^import\s+portkey_ai/m],
+      dependencies: [/^portkey-ai[=<>~!\s]/m, /"portkey-ai"\s*:/, /'portkey-ai'\s*:/],
       apiCalls: [
         // Tier 1: API URL
         /api\.portkey\.ai/,
@@ -2023,9 +1633,7 @@ export const CLOUD_PROVIDER_PATTERNS: DetectionPattern[] = [
         // Headers
         /x-portkey-api-key/,
       ],
-      secrets: [
-        /PORTKEY_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/,
-      ],
+      secrets: [/PORTKEY_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]+["']?/],
     },
   },
 ];

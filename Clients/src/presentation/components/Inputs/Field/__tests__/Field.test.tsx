@@ -25,9 +25,7 @@ describe("Field Component", () => {
   });
 
   it("shows custom optional label", () => {
-    renderWithProviders(
-      <Field label="Bio" isOptional optionalLabel="not required" />
-    );
+    renderWithProviders(<Field label="Bio" isOptional optionalLabel="not required" />);
 
     expect(screen.getByText("not required")).toBeInTheDocument();
   });
@@ -37,7 +35,7 @@ describe("Field Component", () => {
     const user = userEvent.setup();
 
     renderWithProviders(
-      <Field label="Name" value="" onChange={handleChange} placeholder="Type here" />
+      <Field label="Name" value="" onChange={handleChange} placeholder="Type here" />,
     );
 
     await user.type(screen.getByPlaceholderText("Type here"), "a");
@@ -45,57 +43,41 @@ describe("Field Component", () => {
   });
 
   it("renders password field with visibility toggle", () => {
-    renderWithProviders(
-      <Field type="password" label="Password" placeholder="Enter password" />
-    );
+    renderWithProviders(<Field type="password" label="Password" placeholder="Enter password" />);
 
     const input = screen.getByPlaceholderText("Enter password");
     expect(input).toHaveAttribute("type", "password");
-    expect(
-      screen.getByRole("button", { name: /toggle password visibility/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /toggle password visibility/i })).toBeInTheDocument();
   });
 
   it("toggles password visibility on icon click", async () => {
     const user = userEvent.setup();
-    renderWithProviders(
-      <Field type="password" label="Password" placeholder="Enter password" />
-    );
+    renderWithProviders(<Field type="password" label="Password" placeholder="Enter password" />);
 
     const input = screen.getByPlaceholderText("Enter password");
     expect(input).toHaveAttribute("type", "password");
 
-    await user.click(
-      screen.getByRole("button", { name: /toggle password visibility/i })
-    );
+    await user.click(screen.getByRole("button", { name: /toggle password visibility/i }));
     expect(input).toHaveAttribute("type", "text");
 
-    await user.click(
-      screen.getByRole("button", { name: /toggle password visibility/i })
-    );
+    await user.click(screen.getByRole("button", { name: /toggle password visibility/i }));
     expect(input).toHaveAttribute("type", "password");
   });
 
   it("renders URL field with http:// prefix", () => {
-    renderWithProviders(
-      <Field type="url" label="Website" placeholder="example.com" />
-    );
+    renderWithProviders(<Field type="url" label="Website" placeholder="example.com" />);
 
     expect(screen.getByText("http://")).toBeInTheDocument();
   });
 
   it("renders URL field with https:// prefix when https is true", () => {
-    renderWithProviders(
-      <Field type="url" label="Website" placeholder="example.com" https />
-    );
+    renderWithProviders(<Field type="url" label="Website" placeholder="example.com" https />);
 
     expect(screen.getByText("https://")).toBeInTheDocument();
   });
 
   it("displays error message when error prop is provided", () => {
-    renderWithProviders(
-      <Field label="Email" error="Invalid email format" />
-    );
+    renderWithProviders(<Field label="Email" error="Invalid email format" />);
 
     expect(screen.getByText("Invalid email format")).toBeInTheDocument();
   });
@@ -107,17 +89,13 @@ describe("Field Component", () => {
   });
 
   it("renders disabled input", () => {
-    renderWithProviders(
-      <Field label="Name" disabled placeholder="Disabled" />
-    );
+    renderWithProviders(<Field label="Name" disabled placeholder="Disabled" />);
 
     expect(screen.getByPlaceholderText("Disabled")).toBeDisabled();
   });
 
   it("renders description type as multiline textarea", () => {
-    renderWithProviders(
-      <Field type="description" label="Description" placeholder="Describe..." />
-    );
+    renderWithProviders(<Field type="description" label="Description" placeholder="Describe..." />);
 
     const textarea = screen.getByPlaceholderText("Describe...");
     expect(textarea.tagName.toLowerCase()).toBe("textarea");

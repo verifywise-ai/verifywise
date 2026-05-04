@@ -16,10 +16,7 @@ import {
   getAutomationExecutionStats,
 } from "../utils/automationExecutionLog.utils";
 
-export const getAllAutomationTriggers = async (
-  _req: Request,
-  res: Response
-) => {
+export const getAllAutomationTriggers = async (_req: Request, res: Response) => {
   try {
     const result = await getAllAutomationTriggersQuery();
     return res.status(200).json(STATUS_CODE[200](result));
@@ -29,11 +26,11 @@ export const getAllAutomationTriggers = async (
   }
 };
 
-export const getAllAutomationActionsByTriggerId = async (
-  req: Request,
-  res: Response
-) => {
-  const triggerId = parseInt(Array.isArray(req.params.triggerId) ? req.params.triggerId[0] : req.params.triggerId, 10);
+export const getAllAutomationActionsByTriggerId = async (req: Request, res: Response) => {
+  const triggerId = parseInt(
+    Array.isArray(req.params.triggerId) ? req.params.triggerId[0] : req.params.triggerId,
+    10,
+  );
   if (isNaN(triggerId)) {
     return res.status(400).json({ message: "Invalid trigger ID" });
   }
@@ -67,9 +64,7 @@ export const getAutomationById = async (req: Request, res: Response) => {
   try {
     const automation = await getAutomationByIdQuery(id, req.organizationId!);
     if (!automation) {
-      return res
-        .status(404)
-        .json(STATUS_CODE[404]({ message: "Automation not found" }));
+      return res.status(404).json(STATUS_CODE[404]({ message: "Automation not found" }));
     }
     return res.status(200).json(STATUS_CODE[200](automation));
   } catch (error) {
@@ -86,20 +81,13 @@ export const createAutomation = async (req: Request, res: Response) => {
     const actions = req.body.actions as Partial<ITenantAutomationAction>[];
     const params = JSON.parse(req.body.params || "{}") as Record<string, any>;
 
-    if (
-      !triggerId ||
-      !name ||
-      !Array.isArray(actions) ||
-      actions.length === 0
-    ) {
+    if (!triggerId || !name || !Array.isArray(actions) || actions.length === 0) {
       await transaction.rollback();
-      return res
-        .status(400)
-        .json(
-          STATUS_CODE[400]({
-            message: "Missing required fields: triggerId, name, actions",
-          })
-        );
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: "Missing required fields: triggerId, name, actions",
+        }),
+      );
     }
 
     // Fetch action types to validate send_email actions
@@ -126,7 +114,7 @@ export const createAutomation = async (req: Request, res: Response) => {
       actions,
       req.userId!,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -141,9 +129,7 @@ export const createAutomation = async (req: Request, res: Response) => {
 export const updateAutomation = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   if (isNaN(id)) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
   }
 
   const transaction = await sequelize.transaction();
@@ -182,7 +168,7 @@ export const updateAutomation = async (req: Request, res: Response) => {
       },
       actions,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -198,28 +184,18 @@ export const deleteAutomationById = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
   }
 
   const transaction = await sequelize.transaction();
   try {
-    const deleted = await deleteAutomationByIdQuery(
-      id,
-      req.organizationId!,
-      transaction
-    );
+    const deleted = await deleteAutomationByIdQuery(id, req.organizationId!, transaction);
     if (!deleted) {
       await transaction.rollback();
-      return res
-        .status(404)
-        .json(STATUS_CODE[404]({ message: "Automation not found" }));
+      return res.status(404).json(STATUS_CODE[404]({ message: "Automation not found" }));
     }
     await transaction.commit();
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]({ message: "Automation deleted successfully" }));
+    return res.status(200).json(STATUS_CODE[200]({ message: "Automation deleted successfully" }));
   } catch (error) {
     await transaction.rollback();
     console.error(`Error deleting automation with ID ${id}:`, error);
@@ -231,20 +207,30 @@ export const getAutomationHistory = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
   }
 
   try {
-    const limit = parseInt(Array.isArray(req.query.limit) ? String(req.query.limit[0]) : String(req.query.limit || '50'), 10) || 50;
-    const offset = parseInt(Array.isArray(req.query.offset) ? String(req.query.offset[0]) : String(req.query.offset || '0'), 10) || 0;
+    const limit =
+      parseInt(
+        Array.isArray(req.query.limit)
+          ? String(req.query.limit[0])
+          : String(req.query.limit || "50"),
+        10,
+      ) || 50;
+    const offset =
+      parseInt(
+        Array.isArray(req.query.offset)
+          ? String(req.query.offset[0])
+          : String(req.query.offset || "0"),
+        10,
+      ) || 0;
 
     const { logs, total } = await getAutomationExecutionLogs(
       id,
       limit,
       offset,
-      req.organizationId!
+      req.organizationId!,
     );
 
     // Map action_results to actions for frontend compatibility
@@ -259,7 +245,7 @@ export const getAutomationHistory = async (req: Request, res: Response) => {
         total,
         limit,
         offset,
-      })
+      }),
     );
   } catch (error) {
     console.error(`Error fetching automation history for ID ${id}:`, error);
@@ -271,9 +257,7 @@ export const getAutomationStats = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
   }
 
   try {

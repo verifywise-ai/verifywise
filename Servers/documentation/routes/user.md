@@ -23,25 +23,21 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Users**
-
   - Route: `/`
   - Handler: `getAllUsers`
   - Authentication: JWT (currently commented out)
 
 - **Get User by Email**
-
   - Route: `/by-email/:email`
   - Handler: `getUserByEmail`
   - Authentication: JWT
 
 - **Get User by ID**
-
   - Route: `/:id`
   - Handler: `getUserById`
   - Authentication: JWT (currently commented out)
 
 - **Check User Exists**
-
   - Route: `/check/exists`
   - Handler: `checkUserExists`
   - Authentication: None
@@ -54,13 +50,11 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### POST Routes
 
 - **Register User**
-
   - Route: `/register`
   - Handler: `createNewUser`
   - Authentication: None
 
 - **Login User**
-
   - Route: `/login`
   - Handler: `loginUser`
   - Authentication: None

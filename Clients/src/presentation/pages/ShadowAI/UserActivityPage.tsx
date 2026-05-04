@@ -62,8 +62,18 @@ interface UserDetailData {
 type ViewMode = "users" | "departments";
 
 const BASE_TABS = [
-  { label: "Users", value: "users", icon: "Users" as const, tooltip: "Individual user AI tool usage and risk scores" },
-  { label: "Departments", value: "departments", icon: "Building2" as const, tooltip: "AI usage aggregated by department" },
+  {
+    label: "Users",
+    value: "users",
+    icon: "Users" as const,
+    tooltip: "Individual user AI tool usage and risk scores",
+  },
+  {
+    label: "Departments",
+    value: "departments",
+    icon: "Building2" as const,
+    tooltip: "AI usage aggregated by department",
+  },
 ];
 
 const DEPT_PER_PAGE = 10;
@@ -89,76 +99,120 @@ export default function UserActivityPage() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   // ─── Sorting ───
-  const USERS_COLUMNS: SortableColumn[] = useMemo(() => [
-    { id: "user_email", label: "User" },
-    { id: "department", label: "Department" },
-    { id: "total_prompts", label: "Total prompts" },
-    { id: "risk_score", label: "Risk score", tooltip: "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%)." },
-  ], []);
-  const DEPT_COLUMNS: SortableColumn[] = useMemo(() => [
-    { id: "department", label: "Department" },
-    { id: "users", label: "Users" },
-    { id: "total_prompts", label: "Total prompts" },
-    { id: "top_tool", label: "Top tool" },
-    { id: "risk_score", label: "Risk score", tooltip: "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%)." },
-  ], []);
-  const DETAIL_TOOLS_COLUMNS: SortableColumn[] = useMemo(() => [
-    { id: "tool_name", label: "Tool" },
-    { id: "event_count", label: "Events" },
-    { id: "last_used", label: "Last used" },
-  ], []);
+  const USERS_COLUMNS: SortableColumn[] = useMemo(
+    () => [
+      { id: "user_email", label: "User" },
+      { id: "department", label: "Department" },
+      { id: "total_prompts", label: "Total prompts" },
+      {
+        id: "risk_score",
+        label: "Risk score",
+        tooltip:
+          "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%).",
+      },
+    ],
+    [],
+  );
+  const DEPT_COLUMNS: SortableColumn[] = useMemo(
+    () => [
+      { id: "department", label: "Department" },
+      { id: "users", label: "Users" },
+      { id: "total_prompts", label: "Total prompts" },
+      { id: "top_tool", label: "Top tool" },
+      {
+        id: "risk_score",
+        label: "Risk score",
+        tooltip:
+          "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%).",
+      },
+    ],
+    [],
+  );
+  const DETAIL_TOOLS_COLUMNS: SortableColumn[] = useMemo(
+    () => [
+      { id: "tool_name", label: "Tool" },
+      { id: "event_count", label: "Events" },
+      { id: "last_used", label: "Last used" },
+    ],
+    [],
+  );
 
   const { sortConfig: usersSortConfig, handleSort: handleUsersSort } =
     useTableSort("vw_shadow_ai_users_sort");
   const { sortConfig: deptSortConfig, handleSort: handleDeptSort } =
     useTableSort("vw_shadow_ai_depts_sort");
-  const { sortConfig: detailToolsSortConfig, handleSort: handleDetailToolsSort } =
-    useTableSort("vw_shadow_ai_detail_tools_sort");
-
-  const getUserValue = useCallback(
-    (row: ShadowAiUserActivity, key: string): string | number => {
-      switch (key) {
-        case "user_email": return row.user_email;
-        case "department": return row.department || "Unknown";
-        case "total_prompts": return row.total_prompts;
-        case "risk_score": return row.risk_score ?? 0;
-        default: return "";
-      }
-    }, []
+  const { sortConfig: detailToolsSortConfig, handleSort: handleDetailToolsSort } = useTableSort(
+    "vw_shadow_ai_detail_tools_sort",
   );
+
+  const getUserValue = useCallback((row: ShadowAiUserActivity, key: string): string | number => {
+    switch (key) {
+      case "user_email":
+        return row.user_email;
+      case "department":
+        return row.department || "Unknown";
+      case "total_prompts":
+        return row.total_prompts;
+      case "risk_score":
+        return row.risk_score ?? 0;
+      default:
+        return "";
+    }
+  }, []);
   const getDeptValue = useCallback(
     (row: ShadowAiDepartmentActivity, key: string): string | number => {
       switch (key) {
-        case "department": return row.department;
-        case "users": return row.users;
-        case "total_prompts": return row.total_prompts;
-        case "top_tool": return row.top_tool || "";
-        case "risk_score": return row.risk_score ?? 0;
-        default: return "";
+        case "department":
+          return row.department;
+        case "users":
+          return row.users;
+        case "total_prompts":
+          return row.total_prompts;
+        case "top_tool":
+          return row.top_tool || "";
+        case "risk_score":
+          return row.risk_score ?? 0;
+        default:
+          return "";
       }
-    }, []
+    },
+    [],
   );
   const getDetailToolValue = useCallback(
-    (row: { tool_name: string; event_count: number; last_used: string }, key: string): string | number => {
+    (
+      row: { tool_name: string; event_count: number; last_used: string },
+      key: string,
+    ): string | number => {
       switch (key) {
-        case "tool_name": return row.tool_name;
-        case "event_count": return row.event_count;
-        case "last_used": return new Date(row.last_used).getTime();
-        default: return "";
+        case "tool_name":
+          return row.tool_name;
+        case "event_count":
+          return row.event_count;
+        case "last_used":
+          return new Date(row.last_used).getTime();
+        default:
+          return "";
       }
-    }, []
+    },
+    [],
   );
 
   const sortedUsers = useSortedRows(users, usersSortConfig, getUserValue);
   const sortedDepts = useSortedRows(departments, deptSortConfig, getDeptValue);
   const sortedDetailTools = useSortedRows(
-    userDetail?.tools ?? [], detailToolsSortConfig, getDetailToolValue
+    userDetail?.tools ?? [],
+    detailToolsSortConfig,
+    getDetailToolValue,
   );
 
-  const tabs = useMemo(() => BASE_TABS.map((tab) => ({
-    ...tab,
-    count: tab.value === "users" ? totalUsers : totalDepartments,
-  })), [totalUsers, totalDepartments]);
+  const tabs = useMemo(
+    () =>
+      BASE_TABS.map((tab) => ({
+        ...tab,
+        count: tab.value === "users" ? totalUsers : totalDepartments,
+      })),
+    [totalUsers, totalDepartments],
+  );
 
   // Fetch counts for both tabs on mount
   useEffect(() => {
@@ -177,7 +231,9 @@ export default function UserActivityPage() {
       }
     };
     fetchCounts();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [period]);
 
   useEffect(() => {
@@ -211,7 +267,9 @@ export default function UserActivityPage() {
       }
     };
     fetchData();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [viewMode, page, period]);
 
   const handleUserClick = async (email: string) => {
@@ -241,17 +299,12 @@ export default function UserActivityPage() {
   // ─── Detail view ───
   if (selectedEmail) {
     return (
-      <PageHeaderExtended
-        title="User activity"
-        description={selectedEmail}
-      >
+      <PageHeaderExtended title="User activity" description={selectedEmail}>
         <Stack direction="row" alignItems="center" gap="8px">
           <IconButton onClick={handleBack} size="small">
             <ArrowLeft size={16} strokeWidth={1.5} />
           </IconButton>
-          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
-            {selectedEmail}
-          </Typography>
+          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{selectedEmail}</Typography>
         </Stack>
 
         {detailLoading ? (
@@ -288,9 +341,7 @@ export default function UserActivityPage() {
               />
             </Box>
 
-            <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
-              Tools used
-            </Typography>
+            <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Tools used</Typography>
             {userDetail.tools?.length > 0 ? (
               <TableContainer sx={singleTheme.tableStyles.primary.frame}>
                 <Table>
@@ -300,15 +351,19 @@ export default function UserActivityPage() {
                     onSort={handleDetailToolsSort}
                   />
                   <TableBody>
-                    {sortedDetailTools.map(
-                      (t) => (
-                        <TableRow key={t.tool_name} sx={singleTheme.tableStyles.primary.body.row}>
-                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{t.tool_name}</TableCell>
-                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{t.event_count}</TableCell>
-                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{new Date(t.last_used).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      )
-                    )}
+                    {sortedDetailTools.map((t) => (
+                      <TableRow key={t.tool_name} sx={singleTheme.tableStyles.primary.body.row}>
+                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                          {t.tool_name}
+                        </TableCell>
+                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                          {t.event_count}
+                        </TableCell>
+                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                          {new Date(t.last_used).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -345,249 +400,265 @@ export default function UserActivityPage() {
       helpArticlePath="shadow-ai/user-activity"
       tipBoxEntity="shadow-ai-user-activity"
     >
-    <TabContext value={viewMode}>
-
-      {/* Controls */}
-      <Stack sx={{ position: "relative" }}>
-        <TabBar
-          tabs={tabs}
-          activeTab={viewMode}
-          onChange={handleTabChange}
-        />
-        <Box sx={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
-          <Select
-            id="period-select"
-            value={period}
-            onChange={handlePeriodChange}
-            items={PERIOD_OPTIONS}
-            sx={{ width: 160 }}
-          />
-        </Box>
-      </Stack>
-
-      {/* Content */}
-      {loading ? (
-        <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
-      ) : !hasData ? (
-        <EmptyState
-          icon={Users}
-          message="No user activity detected yet. Activity will appear here once monitoring is connected."
-          showBorder
-        >
-          <EmptyStateTip
-            icon={Activity}
-            title="What gets tracked?"
-            description="User sessions, tool access frequency, and department-level usage patterns for AI tools."
-          />
-          <EmptyStateTip
-            icon={Building2}
-            title="Department-level insights"
-            description="See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals."
-          />
-          <EmptyStateTip
-            icon={TrendingUp}
-            title="Spot usage trends"
-            description="Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions."
-          />
-        </EmptyState>
-      ) : viewMode === "users" ? (
-        <TableContainer sx={singleTheme.tableStyles.primary.frame}>
-          <Table>
-            <SortableTableHead
-              columns={USERS_COLUMNS}
-              sortConfig={usersSortConfig}
-              onSort={handleUsersSort}
+      <TabContext value={viewMode}>
+        {/* Controls */}
+        <Stack sx={{ position: "relative" }}>
+          <TabBar tabs={tabs} activeTab={viewMode} onChange={handleTabChange} />
+          <Box sx={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
+            <Select
+              id="period-select"
+              value={period}
+              onChange={handlePeriodChange}
+              items={PERIOD_OPTIONS}
+              sx={{ width: 160 }}
             />
-            <TableBody>
-              {sortedUsers.map((u) => (
-                <TableRow key={u.user_email} sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }} onClick={() => handleUserClick(u.user_email)}>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Typography
+          </Box>
+        </Stack>
+
+        {/* Content */}
+        {loading ? (
+          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+        ) : !hasData ? (
+          <EmptyState
+            icon={Users}
+            message="No user activity detected yet. Activity will appear here once monitoring is connected."
+            showBorder
+          >
+            <EmptyStateTip
+              icon={Activity}
+              title="What gets tracked?"
+              description="User sessions, tool access frequency, and department-level usage patterns for AI tools."
+            />
+            <EmptyStateTip
+              icon={Building2}
+              title="Department-level insights"
+              description="See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals."
+            />
+            <EmptyStateTip
+              icon={TrendingUp}
+              title="Spot usage trends"
+              description="Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions."
+            />
+          </EmptyState>
+        ) : viewMode === "users" ? (
+          <TableContainer sx={singleTheme.tableStyles.primary.frame}>
+            <Table>
+              <SortableTableHead
+                columns={USERS_COLUMNS}
+                sortConfig={usersSortConfig}
+                onSort={handleUsersSort}
+              />
+              <TableBody>
+                {sortedUsers.map((u) => (
+                  <TableRow
+                    key={u.user_email}
+                    sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
+                    onClick={() => handleUserClick(u.user_email)}
+                  >
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          color: palette.brand.primary,
+                        }}
+                      >
+                        {u.user_email}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {u.department || "Unknown"}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {u.total_prompts}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {u.risk_score ?? 0}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow
+                  sx={{
+                    "& .MuiTableCell-root.MuiTableCell-footer": {
+                      paddingX: theme.spacing(8),
+                      paddingY: theme.spacing(4),
+                    },
+                  }}
+                >
+                  <TableCell
+                    sx={{
+                      paddingX: theme.spacing(2),
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    Showing {(page - 1) * 20 + 1} - {Math.min(page * 20, totalUsers)} of{" "}
+                    {totalUsers} users
+                  </TableCell>
+                  <TablePagination
+                    count={totalUsers}
+                    page={page - 1}
+                    onPageChange={(_e, newPage) => setPage(newPage + 1)}
+                    rowsPerPage={20}
+                    rowsPerPageOptions={[20]}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                    labelRowsPerPage=""
+                    labelDisplayedRows={({ page: p, count }) =>
+                      `Page ${p + 1} of ${Math.max(0, Math.ceil(count / 20))}`
+                    }
+                    slotProps={{
+                      select: {
+                        MenuProps: {
+                          keepMounted: true,
+                          PaperProps: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          },
+                          transformOrigin: { vertical: "bottom", horizontal: "left" },
+                          anchorOrigin: { vertical: "top", horizontal: "left" },
+                          sx: { mt: theme.spacing(-2) },
+                        },
+                        inputProps: { id: "pagination-dropdown" },
+                        IconComponent: SelectorVertical,
+                        sx: {
+                          ml: theme.spacing(4),
+                          mr: theme.spacing(12),
+                          minWidth: theme.spacing(20),
+                          textAlign: "left",
+                          "&.Mui-focused > div": {
+                            backgroundColor: theme.palette.background.main,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      mt: theme.spacing(6),
+                      color: theme.palette.text.secondary,
+                      "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
+                      "& .MuiSelect-select": {
+                        width: theme.spacing(10),
+                        borderRadius: theme.shape.borderRadius,
+                        border: `1px solid ${theme.palette.border.light}`,
+                        padding: theme.spacing(4),
+                      },
+                    }}
+                  />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </TableContainer>
+        ) : (
+          <TableContainer sx={singleTheme.tableStyles.primary.frame}>
+            <Table>
+              <SortableTableHead
+                columns={DEPT_COLUMNS}
+                sortConfig={deptSortConfig}
+                onSort={handleDeptSort}
+              />
+              <TableBody>
+                {sortedDepts
+                  .slice(deptPage * DEPT_PER_PAGE, (deptPage + 1) * DEPT_PER_PAGE)
+                  .map((d) => (
+                    <TableRow
+                      key={d.department}
                       sx={{
-                        fontSize: 13,
-                        color: palette.brand.primary,
+                        ...singleTheme.tableStyles.primary.body.row,
+                        "&:hover": { cursor: "default" },
                       }}
                     >
-                      {u.user_email}
-                    </Typography>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {d.department}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {d.users}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {d.total_prompts}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {d.top_tool || "—"}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {d.risk_score ?? 0}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow
+                  sx={{
+                    "& .MuiTableCell-root.MuiTableCell-footer": {
+                      paddingX: theme.spacing(8),
+                      paddingY: theme.spacing(4),
+                    },
+                  }}
+                >
+                  <TableCell
+                    sx={{
+                      paddingX: theme.spacing(2),
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    Showing {deptPage * DEPT_PER_PAGE + 1} -{" "}
+                    {Math.min((deptPage + 1) * DEPT_PER_PAGE, departments.length)} of{" "}
+                    {departments.length} departments
                   </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{u.department || "Unknown"}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{u.total_prompts}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{u.risk_score ?? 0}</TableCell>
+                  <TablePagination
+                    count={departments.length}
+                    page={deptPage}
+                    onPageChange={(_e, newPage) => setDeptPage(newPage)}
+                    rowsPerPage={DEPT_PER_PAGE}
+                    rowsPerPageOptions={[DEPT_PER_PAGE]}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                    labelRowsPerPage=""
+                    labelDisplayedRows={({ page: p, count }) =>
+                      `Page ${p + 1} of ${Math.max(0, Math.ceil(count / DEPT_PER_PAGE))}`
+                    }
+                    slotProps={{
+                      select: {
+                        MenuProps: {
+                          keepMounted: true,
+                          PaperProps: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          },
+                          transformOrigin: { vertical: "bottom", horizontal: "left" },
+                          anchorOrigin: { vertical: "top", horizontal: "left" },
+                          sx: { mt: theme.spacing(-2) },
+                        },
+                        inputProps: { id: "pagination-dropdown" },
+                        IconComponent: SelectorVertical,
+                        sx: {
+                          ml: theme.spacing(4),
+                          mr: theme.spacing(12),
+                          minWidth: theme.spacing(20),
+                          textAlign: "left",
+                          "&.Mui-focused > div": {
+                            backgroundColor: theme.palette.background.main,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      mt: theme.spacing(6),
+                      color: theme.palette.text.secondary,
+                      "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
+                      "& .MuiSelect-select": {
+                        width: theme.spacing(10),
+                        borderRadius: theme.shape.borderRadius,
+                        border: `1px solid ${theme.palette.border.light}`,
+                        padding: theme.spacing(4),
+                      },
+                    }}
+                  />
                 </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow
-                sx={{
-                  "& .MuiTableCell-root.MuiTableCell-footer": {
-                    paddingX: theme.spacing(8),
-                    paddingY: theme.spacing(4),
-                  },
-                }}
-              >
-                <TableCell
-                  sx={{
-                    paddingX: theme.spacing(2),
-                    fontSize: 12,
-                    opacity: 0.7,
-                  }}
-                >
-                  Showing {(page - 1) * 20 + 1} -{" "}
-                  {Math.min(page * 20, totalUsers)} of {totalUsers} users
-                </TableCell>
-                <TablePagination
-                  count={totalUsers}
-                  page={page - 1}
-                  onPageChange={(_e, newPage) => setPage(newPage + 1)}
-                  rowsPerPage={20}
-                  rowsPerPageOptions={[20]}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
-                  labelRowsPerPage=""
-                  labelDisplayedRows={({ page: p, count }) =>
-                    `Page ${p + 1} of ${Math.max(0, Math.ceil(count / 20))}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: {
-                        keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
-                        },
-                        transformOrigin: { vertical: "bottom", horizontal: "left" },
-                        anchorOrigin: { vertical: "top", horizontal: "left" },
-                        sx: { mt: theme.spacing(-2) },
-                      },
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: SelectorVertical,
-                      sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
-                        "&.Mui-focused > div": {
-                          backgroundColor: theme.palette.background.main,
-                        },
-                      },
-                    },
-                  }}
-                  sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
-                    "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
-                    "& .MuiSelect-select": {
-                      width: theme.spacing(10),
-                      borderRadius: theme.shape.borderRadius,
-                      border: `1px solid ${theme.palette.border.light}`,
-                      padding: theme.spacing(4),
-                    },
-                  }}
-                />
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </TableContainer>
-      ) : (
-        <TableContainer sx={singleTheme.tableStyles.primary.frame}>
-          <Table>
-            <SortableTableHead
-              columns={DEPT_COLUMNS}
-              sortConfig={deptSortConfig}
-              onSort={handleDeptSort}
-            />
-            <TableBody>
-              {sortedDepts
-                .slice(deptPage * DEPT_PER_PAGE, (deptPage + 1) * DEPT_PER_PAGE)
-                .map((d) => (
-                <TableRow key={d.department} sx={{ ...singleTheme.tableStyles.primary.body.row, "&:hover": { cursor: "default" } }}>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.department}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.users}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.total_prompts}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.top_tool || "—"}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.risk_score ?? 0}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow
-                sx={{
-                  "& .MuiTableCell-root.MuiTableCell-footer": {
-                    paddingX: theme.spacing(8),
-                    paddingY: theme.spacing(4),
-                  },
-                }}
-              >
-                <TableCell
-                  sx={{
-                    paddingX: theme.spacing(2),
-                    fontSize: 12,
-                    opacity: 0.7,
-                  }}
-                >
-                  Showing {deptPage * DEPT_PER_PAGE + 1} -{" "}
-                  {Math.min((deptPage + 1) * DEPT_PER_PAGE, departments.length)} of{" "}
-                  {departments.length} departments
-                </TableCell>
-                <TablePagination
-                  count={departments.length}
-                  page={deptPage}
-                  onPageChange={(_e, newPage) => setDeptPage(newPage)}
-                  rowsPerPage={DEPT_PER_PAGE}
-                  rowsPerPageOptions={[DEPT_PER_PAGE]}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
-                  labelRowsPerPage=""
-                  labelDisplayedRows={({ page: p, count }) =>
-                    `Page ${p + 1} of ${Math.max(0, Math.ceil(count / DEPT_PER_PAGE))}`
-                  }
-                  slotProps={{
-                    select: {
-                      MenuProps: {
-                        keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
-                        },
-                        transformOrigin: { vertical: "bottom", horizontal: "left" },
-                        anchorOrigin: { vertical: "top", horizontal: "left" },
-                        sx: { mt: theme.spacing(-2) },
-                      },
-                      inputProps: { id: "pagination-dropdown" },
-                      IconComponent: SelectorVertical,
-                      sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
-                        "&.Mui-focused > div": {
-                          backgroundColor: theme.palette.background.main,
-                        },
-                      },
-                    },
-                  }}
-                  sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
-                    "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
-                    "& .MuiSelect-select": {
-                      width: theme.spacing(10),
-                      borderRadius: theme.shape.borderRadius,
-                      border: `1px solid ${theme.palette.border.light}`,
-                      padding: theme.spacing(4),
-                    },
-                  }}
-                />
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </TableContainer>
-      )}
-    </TabContext>
+              </TableFooter>
+            </Table>
+          </TableContainer>
+        )}
+      </TabContext>
     </PageHeaderExtended>
   );
 }
-

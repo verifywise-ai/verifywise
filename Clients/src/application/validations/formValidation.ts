@@ -17,7 +17,7 @@ export interface FormValues {
   email: string;
   password: string;
   confirmPassword: string;
-  roleId?: number;  // Optional role property
+  roleId?: number; // Optional role property
   organizationId?: number; // Optional organization property
 }
 
@@ -72,7 +72,7 @@ export const validateForm = (values: FormValues): ValidationResult => {
     "Name",
     values.name,
     VALIDATION_RULES.NAME.min,
-    VALIDATION_RULES.NAME.max
+    VALIDATION_RULES.NAME.max,
   );
   if (!name.accepted) {
     newErrors.name = name.message;
@@ -83,7 +83,7 @@ export const validateForm = (values: FormValues): ValidationResult => {
     "Surname",
     values.surname,
     VALIDATION_RULES.NAME.min,
-    VALIDATION_RULES.NAME.max
+    VALIDATION_RULES.NAME.max,
   );
   if (!surname.accepted) {
     newErrors.surname = surname.message;
@@ -99,7 +99,7 @@ export const validateForm = (values: FormValues): ValidationResult => {
     false,
     false,
     false,
-    "email"
+    "email",
   );
   if (!email.accepted) {
     newErrors.email = email.message;
@@ -115,7 +115,7 @@ export const validateForm = (values: FormValues): ValidationResult => {
     true,
     true,
     true,
-    "password"
+    "password",
   );
   if (!password.accepted) {
     newErrors.password = password.message;
@@ -133,9 +133,7 @@ export const validateForm = (values: FormValues): ValidationResult => {
 };
 
 // Function to check Password based on the password input
-export const validatePassword = (
-  values: FormValues
-): PasswordValidationResult => {
+export const validatePassword = (values: FormValues): PasswordValidationResult => {
   return {
     length: values.password.length >= VALIDATION_RULES.PASSWORD.min,
     specialChar: PASSWORD_REGEX.test(values.password),
@@ -150,7 +148,7 @@ export const validatePassword = (
  * @returns Validation result containing isFormValid flag and any errors
  */
 export const validateOrganizationForm = (
-  values: OrganizationFormValues
+  values: OrganizationFormValues,
 ): OrganizationValidationResult => {
   const newErrors: OrganizationFormErrors = {};
 
@@ -159,7 +157,7 @@ export const validateOrganizationForm = (
     "Organization name",
     values.organizationName,
     VALIDATION_RULES.ORGANIZATION_NAME.min,
-    VALIDATION_RULES.ORGANIZATION_NAME.max
+    VALIDATION_RULES.ORGANIZATION_NAME.max,
   );
   if (!organizationName.accepted) {
     newErrors.organizationName = organizationName.message;

@@ -7,7 +7,10 @@ vi.mock("../../repository/featureSettings.repository", () => ({
 }));
 
 import { useFeatureSettings } from "../useFeatureSettings";
-import { getFeatureSettings, updateFeatureSettings } from "../../repository/featureSettings.repository";
+import {
+  getFeatureSettings,
+  updateFeatureSettings,
+} from "../../repository/featureSettings.repository";
 
 const mockGet = vi.mocked(getFeatureSettings);
 const mockUpdate = vi.mocked(updateFeatureSettings);

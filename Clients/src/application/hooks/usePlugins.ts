@@ -40,7 +40,7 @@ export function usePlugins(category?: string) {
               status: installation.status,
               installedAt: installation.installedAt,
             },
-          ])
+          ]),
         );
 
         // Merge installation status into marketplace plugins, normalizing optional array fields

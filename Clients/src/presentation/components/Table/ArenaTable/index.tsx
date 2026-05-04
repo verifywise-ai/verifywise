@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Typography } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useCallback } from "react";
 import { Swords, GitCompare, ListChecks, Trophy } from "lucide-react";
@@ -112,11 +105,7 @@ const ArenaTable: React.FC<ArenaTableProps> = ({
   return (
     <TableContainer>
       <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-        <StandardTableHead
-          columns={columns}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
+        <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>
             <TableRow>
@@ -141,7 +130,10 @@ const ArenaTable: React.FC<ArenaTableProps> = ({
           <TableBody>
             <TableRow>
               <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                <EmptyState icon={Swords} message="No arena battles found. Create a new battle to get started.">
+                <EmptyState
+                  icon={Swords}
+                  message="No arena battles found. Create a new battle to get started."
+                >
                   <EmptyStateTip
                     icon={GitCompare}
                     title="What is an arena battle?"

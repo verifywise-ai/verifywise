@@ -182,11 +182,13 @@ const EditUserModal = ({
             Joined
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            {target ? new Date(target.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }) : "—"}
+            {target
+              ? new Date(target.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "—"}
           </Typography>
         </Stack>
         <Stack spacing={0.5}>
@@ -203,11 +205,7 @@ const EditUserModal = ({
               : "Never"}
           </Typography>
         </Stack>
-        {error && (
-          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>
-            {error}
-          </Typography>
-        )}
+        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
       </Stack>
     </StandardModal>
   );
@@ -281,7 +279,10 @@ const InviteUserModal = ({
   return (
     <StandardModal
       isOpen={isOpen}
-      onClose={() => { resetForm(); onClose(); }}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
       title="Invite user"
       description="Send an invitation to a new user"
       submitButtonText="Send invite"
@@ -332,11 +333,7 @@ const InviteUserModal = ({
           getOptionValue={(item: { _id: string | number }) => item._id}
           sx={{ width: "100%" }}
         />
-        {error && (
-          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>
-            {error}
-          </Typography>
-        )}
+        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
       </Stack>
     </StandardModal>
   );
@@ -384,18 +381,12 @@ const AllUsers = () => {
 
   const orgOptions = useMemo(() => {
     const names = [...new Set(users.map((u) => u.organization_name).filter(Boolean))].sort();
-    return [
-      { _id: "all", name: "All Organizations" },
-      ...names.map((n) => ({ _id: n, name: n })),
-    ];
+    return [{ _id: "all", name: "All Organizations" }, ...names.map((n) => ({ _id: n, name: n }))];
   }, [users]);
 
   const roleFilterOptions = useMemo(() => {
     const roles = [...new Set(users.map((u) => u.role_name).filter(Boolean))].sort();
-    return [
-      { _id: "all", name: "All Roles" },
-      ...roles.map((r) => ({ _id: r, name: r })),
-    ];
+    return [{ _id: "all", name: "All Roles" }, ...roles.map((r) => ({ _id: r, name: r }))];
   }, [users]);
 
   const filteredUsers = useMemo(() => {
@@ -414,7 +405,7 @@ const AllUsers = () => {
           u.surname?.toLowerCase().includes(term) ||
           u.email?.toLowerCase().includes(term) ||
           u.organization_name?.toLowerCase().includes(term) ||
-          u.role_name?.toLowerCase().includes(term)
+          u.role_name?.toLowerCase().includes(term),
       );
     }
 
@@ -480,7 +471,7 @@ const AllUsers = () => {
           options={orgOptions}
           getOptionLabel={(opt) => opt.name}
           value={orgOptions.find((o) => o._id === filterOrg) || orgOptions[0]}
-          onChange={(_e, val) => setFilterOrg(val?._id as string ?? "all")}
+          onChange={(_e, val) => setFilterOrg((val?._id as string) ?? "all")}
           disableClearable={filterOrg === "all"}
           isOptionEqualToValue={(opt, val) => opt._id === val._id}
           sx={{ width: 220 }}
@@ -513,7 +504,10 @@ const AllUsers = () => {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: 13,
-                  backgroundColor: filterOrg !== "all" ? theme.palette.background.fill : theme.palette.background.main,
+                  backgroundColor:
+                    filterOrg !== "all"
+                      ? theme.palette.background.fill
+                      : theme.palette.background.main,
                   ...getSelectStyles(theme),
                 },
               }}
@@ -524,7 +518,9 @@ const AllUsers = () => {
           id="filter-role"
           value={filterRole}
           items={roleFilterOptions}
-          onChange={(e: SelectChangeEvent<string | number>) => setFilterRole(String(e.target.value))}
+          onChange={(e: SelectChangeEvent<string | number>) =>
+            setFilterRole(String(e.target.value))
+          }
           getOptionValue={(item: { _id: string | number }) => item._id}
           isFilterApplied={filterRole !== "all"}
           sx={{ width: 150 }}
@@ -533,17 +529,11 @@ const AllUsers = () => {
 
       {loading ? (
         <Box sx={{ py: 8, textAlign: "center" }}>
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            Loading users...
-          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>Loading users...</Typography>
         </Box>
       ) : filteredUsers.length === 0 ? (
         <EmptyState
-          message={
-            searchTerm
-              ? `No users match "${searchTerm}"`
-              : "No users found."
-          }
+          message={searchTerm ? `No users match "${searchTerm}"` : "No users found."}
           icon={UsersIcon}
           showBorder
         />
@@ -616,7 +606,9 @@ const AllUsers = () => {
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
                       <Typography sx={{ fontSize: 13 }}>
-                        {user.organization_name ? `${user.organization_name} (org:${user.organization_id})` : "—"}
+                        {user.organization_name
+                          ? `${user.organization_name} (org:${user.organization_id})`
+                          : "—"}
                       </Typography>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
@@ -647,7 +639,10 @@ const AllUsers = () => {
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(user); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(user);
+                        }}
                         sx={{
                           ...tableStyles.body.button,
                           color: "#dc2626",

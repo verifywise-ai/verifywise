@@ -1,10 +1,4 @@
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Accordion, AccordionDetails, AccordionSummary, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import VWISO42001AnnexDrawerDialog from "../../../components/Drawer/AnnexDrawerDialog";
@@ -95,12 +89,7 @@ const ISO42001Annex = ({
       }
     };
 
-  const handleControlClick = (
-    order: any,
-    annex: any,
-    control: any,
-    index: number
-  ) => {
+  const handleControlClick = (order: any, annex: any, control: any, index: number) => {
     setSelectedOrder(order);
     setSelectedAnnex(annex);
     setSelectedControl(control);
@@ -119,17 +108,11 @@ const ISO42001Annex = ({
     }
   };
 
-  const handleSaveSuccess = async (
-    success: boolean,
-    message?: string,
-    savedControlId?: number
-  ) => {
+  const handleSaveSuccess = async (success: boolean, message?: string, savedControlId?: number) => {
     // Show appropriate toast message
     handleAlert({
       variant: success ? "success" : "error",
-      body:
-        message ||
-        (success ? "Changes saved successfully" : "Failed to save changes"),
+      body: message || (success ? "Changes saved successfully" : "Failed to save changes"),
       setAlert,
     });
 
@@ -165,7 +148,7 @@ const ISO42001Annex = ({
               "A",
               annex,
               { ...response.data, id: response.data.annex_id },
-              parseInt(annexCategoryId)
+              parseInt(annexCategoryId),
             );
           }
         } catch (error) {
@@ -178,9 +161,7 @@ const ISO42001Annex = ({
 
   return (
     <Stack className="iso-42001-annex">
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       {
         <>
           <StatsCard
@@ -213,18 +194,17 @@ const ISO42001Annex = ({
                       .map((control, index) => ({ control, index }))
                       .filter(({ control }) => {
                         const statusMatches = statusFilter
-                          ? control.status?.toLowerCase() ===
-                            statusFilter.toLowerCase()
+                          ? control.status?.toLowerCase() === statusFilter.toLowerCase()
                           : true;
 
                         const applicabilityMatches =
                           applicabilityFilter?.toLowerCase() === "all"
                             ? true
                             : applicabilityFilter?.toLowerCase() === "true"
-                            ? control.is_applicable === true
-                            : applicabilityFilter?.toLowerCase() === "false"
-                            ? control.is_applicable === false
-                            : true;
+                              ? control.is_applicable === true
+                              : applicabilityFilter?.toLowerCase() === "false"
+                                ? control.is_applicable === false
+                                : true;
 
                         return statusMatches && applicabilityMatches;
                       })
@@ -232,12 +212,10 @@ const ISO42001Annex = ({
                       .map(({ control, index }) => (
                         <Stack
                           key={control.id}
-                          onClick={() =>
-                            handleControlClick("A", annex, control, index)
-                          }
+                          onClick={() => handleControlClick("A", annex, control, index)}
                           sx={styles.controlRow(
                             annex.annexCategories.length - 1 === index,
-                            flashingRowId === control.id
+                            flashingRowId === control.id,
                           )}
                         >
                           <Stack>

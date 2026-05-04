@@ -163,19 +163,11 @@ export class DatasetModel extends Model<DatasetModel> implements IDataset {
     }
 
     if (!this.description?.trim()) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        this.description
-      );
+      throw new ValidationException("Description is required", "description", this.description);
     }
 
     if (!this.version?.trim()) {
-      throw new ValidationException(
-        "Version is required",
-        "version",
-        this.version
-      );
+      throw new ValidationException("Version is required", "version", this.version);
     }
 
     if (!this.owner?.trim()) {
@@ -187,35 +179,23 @@ export class DatasetModel extends Model<DatasetModel> implements IDataset {
     }
 
     if (!this.function?.trim()) {
-      throw new ValidationException(
-        "Function is required",
-        "function",
-        this.function
-      );
+      throw new ValidationException("Function is required", "function", this.function);
     }
 
     if (!this.source?.trim()) {
-      throw new ValidationException(
-        "Source is required",
-        "source",
-        this.source
-      );
+      throw new ValidationException("Source is required", "source", this.source);
     }
 
     if (!this.classification) {
       throw new ValidationException(
         "Classification is required",
         "classification",
-        this.classification
+        this.classification,
       );
     }
 
     if (!this.status_date) {
-      throw new ValidationException(
-        "Status date is required",
-        "status_date",
-        this.status_date
-      );
+      throw new ValidationException("Status date is required", "status_date", this.status_date);
     }
   }
 
@@ -302,8 +282,10 @@ export class DatasetModel extends Model<DatasetModel> implements IDataset {
       preprocessing_steps: this.preprocessing_steps,
       documentation_data: this.documentation_data || [],
       is_demo: this.is_demo,
-      created_at: (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
-      updated_at: (this.updatedAt ?? this.updated_at)?.toISOString?.() || this.updatedAt || this.updated_at,
+      created_at:
+        (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
+      updated_at:
+        (this.updatedAt ?? this.updated_at)?.toISOString?.() || this.updatedAt || this.updated_at,
       models: dataValues.models || [],
       projects: dataValues.projects || [],
     };
@@ -351,13 +333,9 @@ export class DatasetModel extends Model<DatasetModel> implements IDataset {
   /**
    * Update an existing DatasetModel instance
    */
-  static updateDataset(
-    existingDataset: DatasetModel,
-    data: Partial<DatasetModel>
-  ): DatasetModel {
+  static updateDataset(existingDataset: DatasetModel, data: Partial<DatasetModel>): DatasetModel {
     if (data.name !== undefined) existingDataset.name = data.name;
-    if (data.description !== undefined)
-      existingDataset.description = data.description;
+    if (data.description !== undefined) existingDataset.description = data.description;
     if (data.version !== undefined) existingDataset.version = data.version;
     if (data.owner !== undefined) existingDataset.owner = data.owner;
     if (data.type !== undefined) existingDataset.type = data.type;
@@ -365,18 +343,13 @@ export class DatasetModel extends Model<DatasetModel> implements IDataset {
     if (data.source !== undefined) existingDataset.source = data.source;
     if (data.license !== undefined) existingDataset.license = data.license;
     if (data.format !== undefined) existingDataset.format = data.format;
-    if (data.classification !== undefined)
-      existingDataset.classification = data.classification;
-    if (data.contains_pii !== undefined)
-      existingDataset.contains_pii = data.contains_pii;
+    if (data.classification !== undefined) existingDataset.classification = data.classification;
+    if (data.contains_pii !== undefined) existingDataset.contains_pii = data.contains_pii;
     if (data.pii_types !== undefined) existingDataset.pii_types = data.pii_types;
     if (data.status !== undefined) existingDataset.status = data.status;
-    if (data.status_date !== undefined)
-      existingDataset.status_date = data.status_date;
-    if (data.known_biases !== undefined)
-      existingDataset.known_biases = data.known_biases;
-    if (data.bias_mitigation !== undefined)
-      existingDataset.bias_mitigation = data.bias_mitigation;
+    if (data.status_date !== undefined) existingDataset.status_date = data.status_date;
+    if (data.known_biases !== undefined) existingDataset.known_biases = data.known_biases;
+    if (data.bias_mitigation !== undefined) existingDataset.bias_mitigation = data.bias_mitigation;
     if (data.collection_method !== undefined)
       existingDataset.collection_method = data.collection_method;
     if (data.preprocessing_steps !== undefined)

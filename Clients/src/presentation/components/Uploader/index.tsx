@@ -41,7 +41,7 @@ export interface UploadFile {
   size: number;
   type: string;
   progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
+  status: "pending" | "uploading" | "completed" | "error";
   url?: string;
   error?: string;
 }
@@ -75,29 +75,29 @@ export interface UploaderProps {
 
 // Default file type configurations
 const DEFAULT_ACCEPTED_TYPES = [
-  'image/*',
-  '.pdf',
-  '.doc',
-  '.docx',
-  '.xls',
-  '.xlsx',
-  '.ppt',
-  '.pptx',
-  '.txt',
-  '.csv',
-  '.zip',
-  '.rar'
+  "image/*",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".txt",
+  ".csv",
+  ".zip",
+  ".rar",
 ];
 
 const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Utility functions
 const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
 // Delete modal button styles (matching uploader component patterns)
@@ -129,13 +129,13 @@ const generateFileId = (): string => {
 const isFileTypeAccepted = (file: File, acceptedTypes: string[]): boolean => {
   if (acceptedTypes.length === 0) return true;
 
-  return acceptedTypes.some(type => {
-    if (type.startsWith('.')) {
+  return acceptedTypes.some((type) => {
+    if (type.startsWith(".")) {
       return file.name.toLowerCase().endsWith(type.toLowerCase());
     }
-    if (type.includes('/*')) {
-      const mainType = type.split('/')[0];
-      return file.type.startsWith(mainType + '/');
+    if (type.includes("/*")) {
+      const mainType = type.split("/")[0];
+      return file.type.startsWith(mainType + "/");
     }
     return file.type === type;
   });
@@ -151,7 +151,7 @@ const Uploader: React.FC<UploaderProps> = ({
   onUploadError,
   sx,
   showPreview = true,
-  uploadUrl = '/api/upload',
+  uploadUrl = "/api/upload",
   uploadHeaders = {},
   customUploadHandler,
 }) => {
@@ -185,226 +185,245 @@ const Uploader: React.FC<UploaderProps> = ({
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    handleFiles(droppedFiles);
-  }, [files, maxFiles]);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      handleFiles(droppedFiles);
+    },
+    [files, maxFiles],
+  );
 
   // Handle file selection
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    handleFiles(selectedFiles);
-    // Reset input value to allow selecting the same file again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [files, maxFiles]);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = Array.from(e.target.files || []);
+      handleFiles(selectedFiles);
+      // Reset input value to allow selecting the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [files, maxFiles],
+  );
 
   // Get file icon based on type
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return ImageIcon;
-    if (type.includes('pdf')) return FileText;
+    if (type.startsWith("image/")) return ImageIcon;
+    if (type.includes("pdf")) return FileText;
     return DefaultFileIcon;
   };
 
   // Get status chip props
   const getStatusChip = (file: UploadFile) => {
     switch (file.status) {
-      case 'completed':
+      case "completed":
         return {
-          label: 'Completed',
+          label: "Completed",
           icon: CheckIcon,
-          backgroundColor: '#ECFDF3',
-          color: '#027A48',
+          backgroundColor: "#ECFDF3",
+          color: "#027A48",
         };
-      case 'uploading':
+      case "uploading":
         return {
           label: `Uploading ${file.progress}%`,
           icon: PendingIcon,
-          backgroundColor: '#F0F9FF',
-          color: '#026AA2',
+          backgroundColor: "#F0F9FF",
+          color: "#026AA2",
         };
-      case 'error':
+      case "error":
         return {
-          label: file.error || 'Failed',
+          label: file.error || "Failed",
           icon: ErrorIcon,
-          backgroundColor: '#FEF3F2',
-          color: '#DC2626',
+          backgroundColor: "#FEF3F2",
+          color: "#DC2626",
         };
       default:
         return {
-          label: 'Pending',
+          label: "Pending",
           icon: PendingIcon,
-          backgroundColor: 'background.accent',
-          color: 'status.default.text',
+          backgroundColor: "background.accent",
+          color: "status.default.text",
         };
     }
   };
 
   // Process files
-  const handleFiles = useCallback((newFiles: File[]) => {
-    const validFiles: File[] = [];
-    const errors: string[] = [];
+  const handleFiles = useCallback(
+    (newFiles: File[]) => {
+      const validFiles: File[] = [];
+      const errors: string[] = [];
 
-    // Check file limits and validation
-    newFiles.forEach(file => {
-      // Check file count limit
-      if (files.length + validFiles.length >= maxFiles) {
-        errors.push(`Maximum ${maxFiles} files allowed`);
-        return;
-      }
+      // Check file limits and validation
+      newFiles.forEach((file) => {
+        // Check file count limit
+        if (files.length + validFiles.length >= maxFiles) {
+          errors.push(`Maximum ${maxFiles} files allowed`);
+          return;
+        }
 
-      // Check file size
-      if (file.size > maxFileSize) {
-        errors.push(`${file.name} exceeds maximum size of ${formatFileSize(maxFileSize)}`);
-        return;
-      }
+        // Check file size
+        if (file.size > maxFileSize) {
+          errors.push(`${file.name} exceeds maximum size of ${formatFileSize(maxFileSize)}`);
+          return;
+        }
 
-      // Check file type
-      if (!isFileTypeAccepted(file, acceptedTypes)) {
-        errors.push(`${file.name} is not a supported file type`);
-        return;
-      }
+        // Check file type
+        if (!isFileTypeAccepted(file, acceptedTypes)) {
+          errors.push(`${file.name} is not a supported file type`);
+          return;
+        }
 
-      // Check for duplicates
-      const isDuplicate = files.some(existingFile =>
-        existingFile.name === file.name && existingFile.size === file.size
-      );
+        // Check for duplicates
+        const isDuplicate = files.some(
+          (existingFile) => existingFile.name === file.name && existingFile.size === file.size,
+        );
 
-      if (isDuplicate) {
-        errors.push(`${file.name} has already been added`);
-        return;
-      }
+        if (isDuplicate) {
+          errors.push(`${file.name} has already been added`);
+          return;
+        }
 
-      validFiles.push(file);
-    });
-
-    // Show errors if any
-    if (errors.length > 0) {
-      console.error('File validation errors:', errors);
-      // You could implement a toast/notification system here
-    }
-
-    // Add valid files
-    if (validFiles.length > 0) {
-      const uploadFiles: UploadFile[] = validFiles.map(file => ({
-        id: generateFileId(),
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        progress: 0,
-        status: 'uploading' as const,
-      }));
-
-      setFiles(prev => [...prev, ...uploadFiles]);
-
-      // Start upload for each file
-      uploadFiles.forEach(fileToUpload => {
-        uploadFile(fileToUpload);
+        validFiles.push(file);
       });
-    }
-  }, [files, maxFiles, maxFileSize, acceptedTypes]);
+
+      // Show errors if any
+      if (errors.length > 0) {
+        console.error("File validation errors:", errors);
+        // You could implement a toast/notification system here
+      }
+
+      // Add valid files
+      if (validFiles.length > 0) {
+        const uploadFiles: UploadFile[] = validFiles.map((file) => ({
+          id: generateFileId(),
+          file,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          progress: 0,
+          status: "uploading" as const,
+        }));
+
+        setFiles((prev) => [...prev, ...uploadFiles]);
+
+        // Start upload for each file
+        uploadFiles.forEach((fileToUpload) => {
+          uploadFile(fileToUpload);
+        });
+      }
+    },
+    [files, maxFiles, maxFileSize, acceptedTypes],
+  );
 
   // Upload file simulation
-  const uploadFile = useCallback(async (uploadFile: UploadFile) => {
-    try {
-      // Use custom upload handler if provided
-      if (customUploadHandler) {
-        const url = await customUploadHandler(uploadFile.file, (progress) => {
-          setFiles(prev => prev.map(f =>
-            f.id === uploadFile.id ? { ...f, progress } : f
-          ));
-          onUploadProgress?.(uploadFile, progress);
+  const uploadFile = useCallback(
+    async (uploadFile: UploadFile) => {
+      try {
+        // Use custom upload handler if provided
+        if (customUploadHandler) {
+          const url = await customUploadHandler(uploadFile.file, (progress) => {
+            setFiles((prev) => prev.map((f) => (f.id === uploadFile.id ? { ...f, progress } : f)));
+            onUploadProgress?.(uploadFile, progress);
+          });
+
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === uploadFile.id ? { ...f, status: "completed", progress: 100, url } : f,
+            ),
+          );
+
+          onUploadComplete?.([{ ...uploadFile, status: "completed", progress: 100, url }]);
+          return;
+        }
+
+        // Default XHR upload
+        const formData = new FormData();
+        formData.append("file", uploadFile.file);
+
+        // Create XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 100);
+
+            setFiles((prev) => prev.map((f) => (f.id === uploadFile.id ? { ...f, progress } : f)));
+
+            onUploadProgress?.(uploadFile, progress);
+          }
         });
 
-        setFiles(prev => prev.map(f =>
-          f.id === uploadFile.id
-            ? { ...f, status: 'completed', progress: 100, url }
-            : f
-        ));
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              const url = response.url || `${uploadUrl}/${uploadFile.id}`;
 
-        onUploadComplete?.([{ ...uploadFile, status: 'completed', progress: 100, url }]);
-        return;
-      }
-
-      // Default XHR upload
-      const formData = new FormData();
-      formData.append('file', uploadFile.file);
-
-      // Create XMLHttpRequest for progress tracking
-      const xhr = new XMLHttpRequest();
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const progress = Math.round((e.loaded / e.total) * 100);
-
-          setFiles(prev => prev.map(f =>
-            f.id === uploadFile.id ? { ...f, progress } : f
-          ));
-
-          onUploadProgress?.(uploadFile, progress);
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            const url = response.url || `${uploadUrl}/${uploadFile.id}`;
-
-            setFiles(prev => prev.map(f =>
-              f.id === uploadFile.id
-                ? { ...f, status: 'completed', progress: 100, url }
-                : f
-            ));
-          } catch {
-            // If JSON parsing fails, still mark as completed
-            setFiles(prev => prev.map(f =>
-              f.id === uploadFile.id
-                ? { ...f, status: 'completed', progress: 100, url: `${uploadUrl}/${uploadFile.id}` }
-                : f
-            ));
+              setFiles((prev) =>
+                prev.map((f) =>
+                  f.id === uploadFile.id ? { ...f, status: "completed", progress: 100, url } : f,
+                ),
+              );
+            } catch {
+              // If JSON parsing fails, still mark as completed
+              setFiles((prev) =>
+                prev.map((f) =>
+                  f.id === uploadFile.id
+                    ? {
+                        ...f,
+                        status: "completed",
+                        progress: 100,
+                        url: `${uploadUrl}/${uploadFile.id}`,
+                      }
+                    : f,
+                ),
+              );
+            }
+          } else {
+            throw new Error(`Upload failed with status ${xhr.status}`);
           }
-        } else {
-          throw new Error(`Upload failed with status ${xhr.status}`);
-        }
-      });
+        });
 
-      xhr.addEventListener('error', () => {
-        const error = 'Network error during upload';
-        setFiles(prev => prev.map(f =>
-          f.id === uploadFile.id
-            ? { ...f, status: 'error', error }
-            : f
-        ));
-        onUploadError?.(uploadFile, error);
-      });
+        xhr.addEventListener("error", () => {
+          const error = "Network error during upload";
+          setFiles((prev) =>
+            prev.map((f) => (f.id === uploadFile.id ? { ...f, status: "error", error } : f)),
+          );
+          onUploadError?.(uploadFile, error);
+        });
 
-      // Configure and send request
-      xhr.open('POST', uploadUrl, true);
+        // Configure and send request
+        xhr.open("POST", uploadUrl, true);
 
-      // Add headers
-      Object.entries(uploadHeaders).forEach(([key, value]) => {
-        xhr.setRequestHeader(key, value);
-      });
+        // Add headers
+        Object.entries(uploadHeaders).forEach(([key, value]) => {
+          xhr.setRequestHeader(key, value);
+        });
 
-      xhr.send(formData);
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      setFiles(prev => prev.map(f =>
-        f.id === uploadFile.id
-          ? { ...f, status: 'error', error: errorMessage }
-          : f
-      ));
-      onUploadError?.(uploadFile, errorMessage);
-    }
-  }, [uploadUrl, uploadHeaders, onUploadProgress, onUploadError, customUploadHandler, onUploadComplete]);
+        xhr.send(formData);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Upload failed";
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === uploadFile.id ? { ...f, status: "error", error: errorMessage } : f,
+          ),
+        );
+        onUploadError?.(uploadFile, errorMessage);
+      }
+    },
+    [
+      uploadUrl,
+      uploadHeaders,
+      onUploadProgress,
+      onUploadError,
+      customUploadHandler,
+      onUploadComplete,
+    ],
+  );
 
   // Handle file actions
   const handleDeleteFile = useCallback((file: UploadFile) => {
@@ -413,14 +432,14 @@ const Uploader: React.FC<UploaderProps> = ({
 
   const confirmDeleteFile = useCallback(() => {
     if (deleteModal.file) {
-      setFiles(prev => prev.filter(f => f.id !== deleteModal.file!.id));
+      setFiles((prev) => prev.filter((f) => f.id !== deleteModal.file!.id));
       setDeleteModal({ isOpen: false, file: null });
     }
   }, [deleteModal]);
 
   const handleDownloadFile = useCallback((file: UploadFile) => {
     if (file.url) {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = file.url;
       link.download = file.name;
       document.body.appendChild(link);
@@ -429,7 +448,7 @@ const Uploader: React.FC<UploaderProps> = ({
     } else {
       // Create object URL for local file
       const url = URL.createObjectURL(file.file);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = file.name;
       document.body.appendChild(link);
@@ -441,17 +460,17 @@ const Uploader: React.FC<UploaderProps> = ({
 
   const handlePreviewFile = useCallback((file: UploadFile) => {
     if (file.url) {
-      window.open(file.url, '_blank');
-    } else if (file.file.type.startsWith('image/')) {
+      window.open(file.url, "_blank");
+    } else if (file.file.type.startsWith("image/")) {
       const url = URL.createObjectURL(file.file);
-      window.open(url, '_blank');
+      window.open(url, "_blank");
       // Note: In a real app, you might want to revoke this URL after some time
     }
   }, []);
 
   // Save all uploaded files
   const handleSave = useCallback(() => {
-    const completedFiles = files.filter(f => f.status === 'completed');
+    const completedFiles = files.filter((f) => f.status === "completed");
     if (completedFiles.length > 0) {
       onUploadComplete?.(completedFiles);
     }
@@ -463,63 +482,62 @@ const Uploader: React.FC<UploaderProps> = ({
   }, []);
 
   // Check if all files are completed
-  const allCompleted = files.length > 0 && files.every(f => f.status === 'completed');
+  const allCompleted = files.length > 0 && files.every((f) => f.status === "completed");
 
   // Calculate overall progress
-  const overallProgress = files.length > 0
-    ? Math.round(files.reduce((sum, f) => sum + f.progress, 0) / files.length)
-    : 0;
+  const overallProgress =
+    files.length > 0 ? Math.round(files.reduce((sum, f) => sum + f.progress, 0) / files.length) : 0;
 
   // Modern drop zone styles
   const dropZoneStyles: SxProps<Theme> = {
-    position: 'relative',
-    borderRadius: '4px',
+    position: "relative",
+    borderRadius: "4px",
     background: isDragging
-      ? 'linear-gradient(135deg, rgba(19, 113, 91, 0.05) 0%, rgba(19, 113, 91, 0.1) 100%)'
-      : 'background.main',
-    border: `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : '#d0d5dd'}`,
-    boxShadow: 'none',
-    transition: 'all 0.2s ease',
-    cursor: 'pointer',
-    overflow: 'hidden',
-    minHeight: '200px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+      ? "linear-gradient(135deg, rgba(19, 113, 91, 0.05) 0%, rgba(19, 113, 91, 0.1) 100%)"
+      : "background.main",
+    border: `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : "#d0d5dd"}`,
+    boxShadow: "none",
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+    overflow: "hidden",
+    minHeight: "200px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 2,
     p: 4,
-    '&::before': {
+    "&::before": {
       content: '""',
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
       background: isDragging
-        ? 'linear-gradient(135deg, rgba(19, 113, 91, 0.03) 0%, rgba(19, 113, 91, 0.08) 100%)'
-        : 'transparent',
+        ? "linear-gradient(135deg, rgba(19, 113, 91, 0.03) 0%, rgba(19, 113, 91, 0.08) 100%)"
+        : "transparent",
       opacity: 0,
-      transition: 'opacity 0.2s ease',
+      transition: "opacity 0.2s ease",
     },
-    '&:hover': {
-      borderColor: '#5FA896',
-      backgroundColor: 'rgba(19, 113, 91, 0.02)',
-      '&::before': { opacity: 1 },
+    "&:hover": {
+      borderColor: "#5FA896",
+      backgroundColor: "rgba(19, 113, 91, 0.02)",
+      "&::before": { opacity: 1 },
     },
   };
 
   // Modern file card styles
   const fileCardStyles: SxProps<Theme> = {
-    borderRadius: '4px',
-    background: 'background.main',
+    borderRadius: "4px",
+    background: "background.main",
     border: `1px solid #EAECF0`,
-    boxShadow: 'none',
-    transition: 'all 0.2s ease',
-    overflow: 'hidden',
+    boxShadow: "none",
+    transition: "all 0.2s ease",
+    overflow: "hidden",
     mb: 2,
-    '&:hover': {
-      backgroundColor: 'rgba(19, 113, 91, 0.02)',
+    "&:hover": {
+      backgroundColor: "rgba(19, 113, 91, 0.02)",
     },
   };
 
@@ -528,14 +546,14 @@ const Uploader: React.FC<UploaderProps> = ({
       <Paper
         elevation={0}
         sx={{
-          width: '100%',
+          width: "100%",
           maxWidth: 800,
-          mx: 'auto',
-          borderRadius: '8px',
-          background: 'background.main',
+          mx: "auto",
+          borderRadius: "8px",
+          background: "background.main",
           border: `1px solid #EAECF0`,
-          boxShadow: 'none',
-          overflow: 'hidden',
+          boxShadow: "none",
+          overflow: "hidden",
           ...sx,
         }}
       >
@@ -553,21 +571,29 @@ const Uploader: React.FC<UploaderProps> = ({
               <UploadIcon size={20} />
             </Avatar>
             <Box flex={1}>
-              <Typography variant="body1" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.5, fontSize: '16px' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                  mb: 0.5,
+                  fontSize: "16px",
+                }}
+              >
                 Modern File Uploader
               </Typography>
-              <Typography variant="body2" color={text.secondary} sx={{ fontSize: '13px' }}>
+              <Typography variant="body2" color={text.secondary} sx={{ fontSize: "13px" }}>
                 Drag & drop files or click to browse • Max {formatFileSize(maxFileSize)} per file
               </Typography>
             </Box>
             {files.length > 0 && (
               <Chip
-                label={`${files.length} file${files.length !== 1 ? 's' : ''}`}
+                label={`${files.length} file${files.length !== 1 ? "s" : ""}`}
                 sx={{
                   backgroundColor: `${singleTheme.buttons.primary.contained.backgroundColor}10`,
                   color: singleTheme.buttons.primary.contained.backgroundColor,
                   fontWeight: 500,
-                  fontSize: '13px',
+                  fontSize: "13px",
                   height: 28,
                 }}
               />
@@ -587,7 +613,7 @@ const Uploader: React.FC<UploaderProps> = ({
             onClick={() => fileInputRef.current?.click()}
           >
             <Fade in timeout={200}>
-              <Box sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              <Box sx={{ position: "relative", zIndex: 1, textAlign: "center" }}>
                 <Avatar
                   sx={{
                     backgroundColor: isDragging
@@ -595,30 +621,44 @@ const Uploader: React.FC<UploaderProps> = ({
                       : `${singleTheme.buttons.primary.contained.backgroundColor}10`,
                     color: isDragging
                       ? singleTheme.buttons.primary.contained.backgroundColor
-                      : 'text.tertiary',
+                      : "text.tertiary",
                     width: 48,
                     height: 48,
                     mb: 2,
-                    mx: 'auto',
+                    mx: "auto",
                   }}
                 >
                   <UploadIcon size={24} />
                 </Avatar>
-                <Typography variant="body1" sx={{ fontWeight: 500, mb: 1, color: theme.palette.text.primary, fontSize: '16px' }}>
-                  {isDragging ? 'Drop files here' : (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    fontWeight: 500,
+                    mb: 1,
+                    color: theme.palette.text.primary,
+                    fontSize: "16px",
+                  }}
+                >
+                  {isDragging ? (
+                    "Drop files here"
+                  ) : (
                     <>
-                      <Typography component="span" color={singleTheme.buttons.primary.contained.backgroundColor} sx={{ fontWeight: 600 }}>
+                      <Typography
+                        component="span"
+                        color={singleTheme.buttons.primary.contained.backgroundColor}
+                        sx={{ fontWeight: 600 }}
+                      >
                         Click to upload
                       </Typography>
-                      {' or drag and drop'}
+                      {" or drag and drop"}
                     </>
                   )}
                 </Typography>
-                <Typography variant="body2" color={text.tertiary} sx={{ mb: 2, fontSize: '13px' }}>
-                  {multiple ? `Up to ${maxFiles} files` : 'Single file upload'}
+                <Typography variant="body2" color={text.tertiary} sx={{ mb: 2, fontSize: "13px" }}>
+                  {multiple ? `Up to ${maxFiles} files` : "Single file upload"}
                 </Typography>
-                <Typography variant="caption" color={status.default.text} sx={{ fontSize: '12px' }}>
-                  Supported formats: {acceptedTypes.slice(0, 4).join(', ')}
+                <Typography variant="caption" color={status.default.text} sx={{ fontSize: "12px" }}>
+                  Supported formats: {acceptedTypes.slice(0, 4).join(", ")}
                   {acceptedTypes.length > 4 && ` +${acceptedTypes.length - 4} more`}
                 </Typography>
               </Box>
@@ -627,9 +667,9 @@ const Uploader: React.FC<UploaderProps> = ({
               ref={fileInputRef}
               type="file"
               multiple={multiple}
-              accept={acceptedTypes.join(',')}
+              accept={acceptedTypes.join(",")}
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
             />
           </Box>
         </Box>
@@ -639,10 +679,18 @@ const Uploader: React.FC<UploaderProps> = ({
           <Fade in timeout={300}>
             <Box sx={{ px: 3, pb: 2 }}>
               <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-                <Typography variant="body2" color={text.secondary} sx={{ fontWeight: 500, fontSize: '13px' }}>
+                <Typography
+                  variant="body2"
+                  color={text.secondary}
+                  sx={{ fontWeight: 500, fontSize: "13px" }}
+                >
                   Overall Progress
                 </Typography>
-                <Typography variant="body2" color={singleTheme.buttons.primary.contained.backgroundColor} sx={{ fontWeight: 600, fontSize: '13px' }}>
+                <Typography
+                  variant="body2"
+                  color={singleTheme.buttons.primary.contained.backgroundColor}
+                  sx={{ fontWeight: 600, fontSize: "13px" }}
+                >
                   {overallProgress}%
                 </Typography>
               </Stack>
@@ -652,11 +700,11 @@ const Uploader: React.FC<UploaderProps> = ({
                 sx={{
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: 'background.hover',
-                  '& .MuiLinearProgress-bar': {
+                  backgroundColor: "background.hover",
+                  "& .MuiLinearProgress-bar": {
                     backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
                     borderRadius: 3,
-                    transition: 'all 0.2s ease',
+                    transition: "all 0.2s ease",
                   },
                 }}
               />
@@ -668,7 +716,10 @@ const Uploader: React.FC<UploaderProps> = ({
         {files.length > 0 && (
           <Fade in timeout={400}>
             <Box sx={{ px: 3, pb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary, fontSize: '16px' }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary, fontSize: "16px" }}
+              >
                 Files ({files.length})
               </Typography>
               <Stack spacing={2}>
@@ -679,25 +730,22 @@ const Uploader: React.FC<UploaderProps> = ({
 
                   return (
                     <Fade key={file.id} in timeout={300 + index * 100}>
-                      <Paper
-                        variant="outlined"
-                        sx={fileCardStyles}
-                      >
+                      <Paper variant="outlined" sx={fileCardStyles}>
                         <Box sx={{ p: 2 }}>
                           <Stack direction="row" alignItems="center" spacing={2}>
                             {/* File Icon */}
                             <Avatar
                               sx={{
-                                backgroundColor: file.type.startsWith('image/')
-                                  ? '#FEF3C7'
-                                  : file.type.includes('pdf')
-                                  ? '#DBEAFE'
-                                  : 'background.hover',
-                                color: file.type.startsWith('image/')
-                                  ? '#D97706'
-                                  : file.type.includes('pdf')
-                                  ? '#2563EB'
-                                  : 'status.default.text',
+                                backgroundColor: file.type.startsWith("image/")
+                                  ? "#FEF3C7"
+                                  : file.type.includes("pdf")
+                                    ? "#DBEAFE"
+                                    : "background.hover",
+                                color: file.type.startsWith("image/")
+                                  ? "#D97706"
+                                  : file.type.includes("pdf")
+                                    ? "#2563EB"
+                                    : "status.default.text",
                                 width: 40,
                                 height: 40,
                                 flexShrink: 0,
@@ -714,52 +762,59 @@ const Uploader: React.FC<UploaderProps> = ({
                                   fontWeight: 500,
                                   color: theme.palette.text.primary,
                                   mb: 0.5,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  fontSize: '13px',
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  fontSize: "13px",
                                 }}
                               >
                                 {file.name}
                               </Typography>
                               <Stack direction="row" alignItems="center" spacing={1}>
-                                <Typography variant="caption" color={text.tertiary} sx={{ fontSize: '12px' }}>
+                                <Typography
+                                  variant="caption"
+                                  color={text.tertiary}
+                                  sx={{ fontSize: "12px" }}
+                                >
                                   {formatFileSize(file.size)}
                                 </Typography>
-                                <Typography variant="caption" color={text.tertiary} sx={{ fontSize: '12px' }}>
+                                <Typography
+                                  variant="caption"
+                                  color={text.tertiary}
+                                  sx={{ fontSize: "12px" }}
+                                >
                                   •
                                 </Typography>
                                 <Chip
                                   label={statusChip.label}
                                   size="small"
-                                  icon={
-                                    <StatusIcon size={10} style={{ marginLeft: 2 }} />
-                                  }
+                                  icon={<StatusIcon size={10} style={{ marginLeft: 2 }} />}
                                   sx={{
                                     backgroundColor: statusChip.backgroundColor,
                                     color: statusChip.color,
                                     fontWeight: 500,
-                                    fontSize: '11px',
+                                    fontSize: "11px",
                                     height: 20,
-                                    '& .MuiChip-icon': {
-                                      fontSize: '10px',
+                                    "& .MuiChip-icon": {
+                                      fontSize: "10px",
                                     },
                                   }}
                                 />
                               </Stack>
 
                               {/* Progress Bar for Uploading Files */}
-                              {file.status === 'uploading' && (
-                                <Box sx={{ mt: 1.5, width: '100%' }}>
+                              {file.status === "uploading" && (
+                                <Box sx={{ mt: 1.5, width: "100%" }}>
                                   <LinearProgress
                                     variant="determinate"
                                     value={file.progress}
                                     sx={{
                                       height: 4,
                                       borderRadius: 2,
-                                      backgroundColor: 'background.hover',
-                                      '& .MuiLinearProgress-bar': {
-                                        backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
+                                      backgroundColor: "background.hover",
+                                      "& .MuiLinearProgress-bar": {
+                                        backgroundColor:
+                                          singleTheme.buttons.primary.contained.backgroundColor,
                                         borderRadius: 2,
                                       },
                                     }}
@@ -770,23 +825,26 @@ const Uploader: React.FC<UploaderProps> = ({
 
                             {/* Action Buttons */}
                             <Stack direction="row" spacing={1}>
-                              {showPreview && file.status === 'completed' && file.file.type.startsWith('image/') && (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handlePreviewFile(file)}
-                                  title="Preview"
-                                  sx={{
-                                    color: theme.palette.text.secondary,
-                                    '&:hover': {
-                                      backgroundColor: `${singleTheme.buttons.primary.contained.backgroundColor}10`,
-                                      color: singleTheme.buttons.primary.contained.backgroundColor,
-                                    },
-                                  }}
-                                >
-                                  <EyeIcon size={18} />
-                                </IconButton>
-                              )}
-                              {file.status === 'completed' && (
+                              {showPreview &&
+                                file.status === "completed" &&
+                                file.file.type.startsWith("image/") && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handlePreviewFile(file)}
+                                    title="Preview"
+                                    sx={{
+                                      color: theme.palette.text.secondary,
+                                      "&:hover": {
+                                        backgroundColor: `${singleTheme.buttons.primary.contained.backgroundColor}10`,
+                                        color:
+                                          singleTheme.buttons.primary.contained.backgroundColor,
+                                      },
+                                    }}
+                                  >
+                                    <EyeIcon size={18} />
+                                  </IconButton>
+                                )}
+                              {file.status === "completed" && (
                                 <Tooltip title={!isAdmin ? "Only admins can download files" : ""}>
                                   <span>
                                     <IconButton
@@ -795,10 +853,16 @@ const Uploader: React.FC<UploaderProps> = ({
                                       disabled={!isAdmin}
                                       title="Download"
                                       sx={{
-                                        color: !isAdmin ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                        '&:hover': {
-                                          backgroundColor: isAdmin ? `${singleTheme.buttons.primary.contained.backgroundColor}10` : 'transparent',
-                                          color: isAdmin ? singleTheme.buttons.primary.contained.backgroundColor : theme.palette.action.disabled,
+                                        color: !isAdmin
+                                          ? theme.palette.action.disabled
+                                          : theme.palette.text.secondary,
+                                        "&:hover": {
+                                          backgroundColor: isAdmin
+                                            ? `${singleTheme.buttons.primary.contained.backgroundColor}10`
+                                            : "transparent",
+                                          color: isAdmin
+                                            ? singleTheme.buttons.primary.contained.backgroundColor
+                                            : theme.palette.action.disabled,
                                         },
                                       }}
                                     >
@@ -813,7 +877,7 @@ const Uploader: React.FC<UploaderProps> = ({
                                 title="Delete"
                                 sx={{
                                   color: theme.palette.text.secondary,
-                                  '&:hover': {
+                                  "&:hover": {
                                     backgroundColor: `${singleTheme.buttons.error}10`,
                                     color: singleTheme.buttons.error,
                                   },
@@ -870,17 +934,17 @@ const Uploader: React.FC<UploaderProps> = ({
         >
           <Box
             sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
               width: 450,
-              bgcolor: '#FCFCFD',
+              bgcolor: "#FCFCFD",
               border: `1px solid #EAECF0`,
-              borderRadius: '4px',
-              boxShadow: 'none',
-              outline: 'none',
-              overflow: 'hidden',
+              borderRadius: "4px",
+              boxShadow: "none",
+              outline: "none",
+              overflow: "hidden",
             }}
           >
             {/* Content */}
@@ -889,7 +953,7 @@ const Uploader: React.FC<UploaderProps> = ({
                 id="delete-modal-title"
                 variant="body1"
                 sx={{
-                  fontSize: '16px',
+                  fontSize: "16px",
                   fontWeight: 600,
                   color: theme.palette.text.primary,
                   mb: 2,
@@ -902,13 +966,14 @@ const Uploader: React.FC<UploaderProps> = ({
                 id="delete-modal-description"
                 variant="body2"
                 sx={{
-                  fontSize: '13px',
-                  color: 'text.secondary',
+                  fontSize: "13px",
+                  color: "text.secondary",
                   mb: 2,
                   lineHeight: 1.5,
                 }}
               >
-                This action is non-recoverable and the file "{deleteModal.file?.name}" will be permanently removed.
+                This action is non-recoverable and the file "{deleteModal.file?.name}" will be
+                permanently removed.
               </Typography>
             </Box>
 
@@ -917,8 +982,8 @@ const Uploader: React.FC<UploaderProps> = ({
               sx={{
                 p: 3,
                 pt: 0,
-                display: 'flex',
-                justifyContent: 'flex-end',
+                display: "flex",
+                justifyContent: "flex-end",
                 gap: 2,
                 borderTop: `1px solid #EAECF0`,
               }}

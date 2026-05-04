@@ -16,9 +16,7 @@ const App = () => {
   const [isDialogOpen, setDialogOpen] = useState(false);
   const handleClose = () => setDialogOpen(false);
 
-  return (
-    <DeleteAccountConfirmation open={isDialogOpen} onClose={handleClose} />
-  );
+  return <DeleteAccountConfirmation open={isDialogOpen} onClose={handleClose} />;
 };
 ```
 

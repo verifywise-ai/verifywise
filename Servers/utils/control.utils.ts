@@ -4,23 +4,21 @@ import { createNewSubControlsQuery } from "./subControl.utils";
 import { QueryTypes, Transaction } from "sequelize";
 import { IControl } from "../domain.layer/interfaces/i.control";
 
-export const getAllControlsQuery = async (
-  organizationId: number
-): Promise<IControl[]> => {
+export const getAllControlsQuery = async (organizationId: number): Promise<IControl[]> => {
   const controls = await sequelize.query(
     `SELECT * FROM controls WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { organizationId },
       mapToModel: true,
       model: ControlModel,
-    }
+    },
   );
   return controls;
 };
 
 export const getControlByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControl | null> => {
   const result = await sequelize.query(
     `SELECT * FROM controls WHERE organization_id = :organizationId AND id = :id`,
@@ -28,14 +26,14 @@ export const getControlByIdQuery = async (
       mapToModel: true,
       model: ControlModel,
       replacements: { organizationId, id },
-    }
+    },
   );
   return result[0];
 };
 
 export const getAllControlsByControlGroupQuery = async (
   controlGroupId: any,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControl[]> => {
   const controls = await sequelize.query(
     `SELECT * FROM controls WHERE organization_id = :organizationId AND control_category_id = :control_category_id ORDER BY created_at DESC, id ASC`,
@@ -43,7 +41,7 @@ export const getAllControlsByControlGroupQuery = async (
       replacements: { organizationId, control_category_id: controlGroupId },
       mapToModel: true,
       model: ControlModel,
-    }
+    },
   );
   return controls;
 };
@@ -52,7 +50,7 @@ export const getControlByIdAndControlTitleAndControlDescriptionQuery = async (
   id: number,
   controlTitle: string,
   controlDescription: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControl | null> => {
   const result = await sequelize.query(
     `SELECT * FROM controls WHERE organization_id = :organizationId
@@ -68,7 +66,7 @@ export const getControlByIdAndControlTitleAndControlDescriptionQuery = async (
       },
       mapToModel: true,
       model: ControlModel,
-    }
+    },
   );
   return result[0];
 };
@@ -76,7 +74,7 @@ export const getControlByIdAndControlTitleAndControlDescriptionQuery = async (
 export const createNewControlQuery = async (
   control: Partial<ControlModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ControlModel> => {
   const result = await sequelize.query(
     `INSERT INTO controls (
@@ -107,7 +105,7 @@ export const createNewControlQuery = async (
       mapToModel: true,
       model: ControlModel,
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -116,7 +114,7 @@ export const updateControlByIdQuery = async (
   id: number,
   control: Partial<ControlModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ControlModel> => {
   const updateControl: Partial<Record<keyof ControlModel, any>> & { organizationId?: number } = {};
   const setClause = [
@@ -131,12 +129,8 @@ export const updateControlByIdQuery = async (
     "implementation_details",
   ]
     .filter((f) => {
-      if (
-        control[f as keyof ControlModel] !== undefined &&
-        control[f as keyof ControlModel]
-      ) {
-        updateControl[f as keyof ControlModel] =
-          control[f as keyof ControlModel];
+      if (control[f as keyof ControlModel] !== undefined && control[f as keyof ControlModel]) {
+        updateControl[f as keyof ControlModel] = control[f as keyof ControlModel];
         return true;
       }
       return false;
@@ -162,7 +156,7 @@ export const updateControlByIdQuery = async (
 export const deleteControlByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM controls WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -172,7 +166,7 @@ export const deleteControlByIdQuery = async (
       model: ControlModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -195,7 +189,7 @@ export const createNewControlsQuery = async (
   }[],
   enable_ai_data_insertion: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const createdControls = [];
   let query = `INSERT INTO controls(
@@ -214,7 +208,7 @@ export const createNewControlsQuery = async (
         order_no: controlStruct.order_no,
         control_category_id: controlCategoryId,
         implementation_details: enable_ai_data_insertion
-          ? controlStruct.implementation_details ?? null
+          ? (controlStruct.implementation_details ?? null)
           : null,
         status: enable_ai_data_insertion ? "Waiting" : null,
       },
@@ -229,7 +223,7 @@ export const createNewControlsQuery = async (
       controlStruct.subControls,
       enable_ai_data_insertion,
       organizationId,
-      transaction
+      transaction,
     );
     createdControls.push({ ...result[0].dataValues, subControls });
   }

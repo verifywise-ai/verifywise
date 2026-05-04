@@ -9,17 +9,12 @@ export default defineConfig({
   plugins: [react(), svgr()],
   resolve: {
     alias: {
-      "@user-guide-content": path.resolve(
-        __dirname,
-        "../shared/user-guide-content"
-      ),
+      "@user-guide-content": path.resolve(__dirname, "../shared/user-guide-content"),
     },
   },
   server: {
     host: "0.0.0.0",
-    port: process.env.VITE_APP_PORT
-      ? parseInt(process.env.VITE_APP_PORT)
-      : 5173,
+    port: process.env.VITE_APP_PORT ? parseInt(process.env.VITE_APP_PORT) : 5173,
     proxy: {
       // Forward all API requests to Node.js server which handles auth and proxies to FastAPI
       "/api": {
@@ -28,8 +23,8 @@ export default defineConfig({
         secure: false,
         timeout: 120000,
         configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.error('[vite proxy error]', err.message);
+          proxy.on("error", (err) => {
+            console.error("[vite proxy error]", err.message);
           });
         },
       },
@@ -114,7 +109,7 @@ export default defineConfig({
           functions: 10,
           lines: 10,
         },
-      }
+      },
     },
   },
 });

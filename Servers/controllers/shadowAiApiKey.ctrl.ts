@@ -39,9 +39,7 @@ export async function createApiKey(req: Request, res: Response) {
   try {
     // Check admin role
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
     const { label } = req.body;
@@ -52,7 +50,7 @@ export async function createApiKey(req: Request, res: Response) {
       keyHash,
       keyPrefix,
       label || null,
-      userId
+      userId,
     );
 
     await logSuccess({
@@ -69,7 +67,7 @@ export async function createApiKey(req: Request, res: Response) {
       STATUS_CODE[201]({
         ...apiKeyRecord,
         key, // Full key shown only once
-      })
+      }),
     );
   } catch (error) {
     await logFailure({
@@ -104,9 +102,7 @@ export async function listApiKeys(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
     const keys = await listApiKeysQuery(organizationId);
@@ -143,9 +139,7 @@ export async function revokeApiKey(req: Request, res: Response) {
   const functionName = "revokeApiKey";
   const userId = req.userId!;
   const organizationId = req.organizationId!;
-  const keyId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const keyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `revoking Shadow AI API key: ${keyId}`,
@@ -157,9 +151,7 @@ export async function revokeApiKey(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
     if (isNaN(keyId)) {
@@ -169,9 +161,7 @@ export async function revokeApiKey(req: Request, res: Response) {
     const revoked = await revokeApiKeyQuery(organizationId, keyId);
 
     if (!revoked) {
-      return res
-        .status(404)
-        .json(STATUS_CODE[404]("API key not found or already revoked"));
+      return res.status(404).json(STATUS_CODE[404]("API key not found or already revoked"));
     }
 
     // Clear the validation cache so revoked keys are immediately rejected
@@ -186,9 +176,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       organizationId,
     });
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("API key revoked successfully"));
+    return res.status(200).json(STATUS_CODE[200]("API key revoked successfully"));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -211,9 +199,7 @@ export async function deleteApiKey(req: Request, res: Response) {
   const functionName = "deleteApiKey";
   const userId = req.userId!;
   const organizationId = req.organizationId!;
-  const keyId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const keyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `permanently deleting Shadow AI API key: ${keyId}`,
@@ -225,9 +211,7 @@ export async function deleteApiKey(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
     }
 
     if (isNaN(keyId)) {
@@ -251,9 +235,7 @@ export async function deleteApiKey(req: Request, res: Response) {
       organizationId,
     });
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("API key permanently deleted"));
+    return res.status(200).json(STATUS_CODE[200]("API key permanently deleted"));
   } catch (error) {
     await logFailure({
       eventType: "Delete",

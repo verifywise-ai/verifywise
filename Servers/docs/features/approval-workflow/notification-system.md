@@ -95,10 +95,7 @@ The notification system delivers real-time approval workflow updates using Serve
 #### Connection Setup
 
 ```typescript
-export const streamNotifications = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const streamNotifications = async (req: Request, res: Response): Promise<void> => {
   const { userId, tenantId } = req;
 
   // Validate authentication
@@ -111,7 +108,7 @@ export const streamNotifications = async (
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");  // Disable nginx buffering
+  res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
 
   const connectionKey = `${tenantId}:${userId}`;
 
@@ -135,7 +132,7 @@ export const streamNotifications = async (
     } catch (error) {
       clearInterval(heartbeatInterval);
     }
-  }, 30000);  // Every 30 seconds
+  }, 30000); // Every 30 seconds
 
   // Cleanup on disconnect
   req.on("close", () => {
@@ -147,6 +144,7 @@ export const streamNotifications = async (
 ```
 
 **Key Points**:
+
 - Connection keyed by `${tenantId}:${userId}` for security
 - Heartbeat prevents timeout and detects disconnections
 - Auto-cleanup on connection close
@@ -177,10 +175,11 @@ export const getActiveConnections = (): number => {
 ```
 
 **Stale Connection Cleanup**:
+
 ```typescript
 setInterval(() => {
   const now = Date.now();
-  const staleThreshold = 3600000;  // 1 hour
+  const staleThreshold = 3600000; // 1 hour
 
   for (const [key, data] of connections.entries()) {
     if (now - data.connectedAt.getTime() > staleThreshold) {
@@ -188,7 +187,7 @@ setInterval(() => {
       connections.delete(key);
     }
   }
-}, 60000);  // Check every minute
+}, 60000); // Check every minute
 ```
 
 ---
@@ -203,14 +202,14 @@ setInterval(() => {
 export const sendNotification = async (
   tenantId: string,
   userId: number,
-  notification: Notification
+  notification: Notification,
 ): Promise<void> => {
   try {
     console.log(`📤 Publishing notification to Redis:`, {
       tenantId,
       userId,
       type: notification.type,
-      title: notification.title
+      title: notification.title,
     });
 
     // Publish to Redis - all server instances will receive
@@ -221,7 +220,7 @@ export const sendNotification = async (
         userId,
         notification,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     console.log(`✅ Notification published (${result} subscribers received)`);
@@ -239,14 +238,14 @@ export const notifyStepApprovers = async (
   tenantId: string,
   requestId: number,
   stepNumber: number,
-  requestName: string
+  requestName: string,
 ): Promise<void> => {
   try {
     // Get approvers for this step
     const approverIds = await getApproversForStep(tenantId, requestId, stepNumber);
 
     console.log(
-      `Notifying ${approverIds.length} approvers for Step ${stepNumber} of request: ${requestName}`
+      `Notifying ${approverIds.length} approvers for Step ${stepNumber} of request: ${requestName}`,
     );
 
     // Send notification to each approver
@@ -257,7 +256,7 @@ export const notifyStepApprovers = async (
         type: "approval_request",
         entityId: requestId,
         entityType: "use_case",
-      })
+      }),
     );
 
     await Promise.all(notificationPromises);
@@ -274,9 +273,11 @@ export const notifyStepApprovers = async (
 const getApproversForStep = async (
   tenantId: string,
   requestId: number,
-  stepNumber: number
+  stepNumber: number,
 ): Promise<number[]> => {
-  console.log(`🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${tenantId}`);
+  console.log(
+    `🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${tenantId}`,
+  );
 
   const approvers = (await sequelize.query(
     `SELECT DISTINCT asa.approver_id
@@ -290,10 +291,13 @@ const getApproversForStep = async (
     {
       replacements: { requestId, stepNumber },
       type: QueryTypes.SELECT,
-    }
+    },
   )) as Array<{ approver_id: number }>;
 
-  console.log(`✅ Found ${approvers.length} approvers:`, approvers.map(a => a.approver_id));
+  console.log(
+    `✅ Found ${approvers.length} approvers:`,
+    approvers.map((a) => a.approver_id),
+  );
   return approvers.map((a) => a.approver_id);
 };
 ```
@@ -339,7 +343,9 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
         const payload = JSON.parse(message);
         const { tenantId, userId, notification } = payload;
 
-        console.log(`📨 Processing notification for tenant=${tenantId}, user=${userId}, type=${notification?.type}`);
+        console.log(
+          `📨 Processing notification for tenant=${tenantId}, user=${userId}, type=${notification?.type}`,
+        );
 
         // SECURITY: Validate message format
         if (!tenantId || !userId || !notification) {
@@ -356,7 +362,7 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
           // SECURITY: Double-check tenant matches
           if (connectionData.tenantId !== tenantId) {
             console.error(
-              `Security: Tenant mismatch! Stored: ${connectionData.tenantId}, Message: ${tenantId}`
+              `Security: Tenant mismatch! Stored: ${connectionData.tenantId}, Message: ${tenantId}`,
             );
             return;
           }
@@ -364,26 +370,20 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
           // SECURITY: Verify userId matches
           if (connectionData.userId !== userId) {
             console.error(
-              `Security: User mismatch! Stored: ${connectionData.userId}, Message: ${userId}`
+              `Security: User mismatch! Stored: ${connectionData.userId}, Message: ${userId}`,
             );
             return;
           }
 
           // Safe to send notification
           try {
-            connectionData.response.write(
-              `data: ${JSON.stringify(notification)}\n\n`
-            );
-            console.log(
-              `📬 Notification delivered to ${connectionKey}: ${notification.type}`
-            );
+            connectionData.response.write(`data: ${JSON.stringify(notification)}\n\n`);
+            console.log(`📬 Notification delivered to ${connectionKey}: ${notification.type}`);
           } catch (error) {
             console.error(`Error sending notification to ${connectionKey}:`, error);
           }
         } else {
-          console.log(
-            `⚠️ No active connection for ${connectionKey} - user may not be online`
-          );
+          console.log(`⚠️ No active connection for ${connectionKey} - user may not be online`);
         }
       } catch (error) {
         console.error("Error processing notification message:", error);
@@ -429,10 +429,10 @@ const connect = useCallback(async () => {
 
     // Use fetch() instead of EventSource to send Authorization header
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Accept': 'text/event-stream',
+        Authorization: `Bearer ${authToken}`,
+        Accept: "text/event-stream",
       },
       signal: abortController.signal,
     });
@@ -442,7 +442,7 @@ const connect = useCallback(async () => {
     }
 
     if (!response.body) {
-      throw new Error('Response body is null');
+      throw new Error("Response body is null");
     }
 
     isConnectedRef.current = true;
@@ -451,7 +451,7 @@ const connect = useCallback(async () => {
     // Read the stream
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let buffer = "";
 
     // Process the stream
     while (true) {
@@ -466,21 +466,21 @@ const connect = useCallback(async () => {
       buffer += decoder.decode(value, { stream: true });
 
       // Process complete messages (separated by \n\n)
-      const messages = buffer.split('\n\n');
-      buffer = messages.pop() || '';  // Keep incomplete in buffer
+      const messages = buffer.split("\n\n");
+      buffer = messages.pop() || ""; // Keep incomplete in buffer
 
       for (const message of messages) {
         if (!message.trim()) continue;
 
         // Parse SSE message format
-        const lines = message.split('\n');
-        let data = '';
+        const lines = message.split("\n");
+        let data = "";
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            data = line.substring(6);  // Remove "data: " prefix
-          } else if (line.startsWith(':')) {
-            continue;  // Ignore comments (heartbeat)
+          if (line.startsWith("data: ")) {
+            data = line.substring(6); // Remove "data: " prefix
+          } else if (line.startsWith(":")) {
+            continue; // Ignore comments (heartbeat)
           }
         }
 
@@ -507,7 +507,7 @@ const connect = useCallback(async () => {
   } catch (error: any) {
     isConnectedRef.current = false;
 
-    if (error.name === 'AbortError') {
+    if (error.name === "AbortError") {
       console.log("🔌 SSE connection aborted");
       return;
     }
@@ -527,35 +527,38 @@ const connect = useCallback(async () => {
 #### Display Notification
 
 ```typescript
-const displayNotification = useCallback((notification: Notification) => {
-  // Skip "connected" type
-  if (notification.type === "connected") {
-    console.log("📡 SSE connection established");
-    return;
-  }
+const displayNotification = useCallback(
+  (notification: Notification) => {
+    // Skip "connected" type
+    if (notification.type === "connected") {
+      console.log("📡 SSE connection established");
+      return;
+    }
 
-  // Call onNotification callback if provided
-  if (onNotification) {
-    onNotification(notification);
-  }
+    // Call onNotification callback if provided
+    if (onNotification) {
+      onNotification(notification);
+    }
 
-  // Map notification types to alert variants
-  const alertVariants: Record<string, "success" | "info" | "warning" | "error"> = {
-    approval_request: "info",
-    approval_approved: "success",
-    approval_rejected: "error",
-    approval_complete: "success",
-  };
+    // Map notification types to alert variants
+    const alertVariants: Record<string, "success" | "info" | "warning" | "error"> = {
+      approval_request: "info",
+      approval_approved: "success",
+      approval_rejected: "error",
+      approval_complete: "success",
+    };
 
-  const variant = alertVariants[notification.type] || "info";
+    const variant = alertVariants[notification.type] || "info";
 
-  // Show alert
-  showAlert({
-    variant,
-    title: notification.title,
-    body: notification.message || "You have a new notification",
-  });
-}, [onNotification]);
+    // Show alert
+    showAlert({
+      variant,
+      title: notification.title,
+      body: notification.message || "You have a new notification",
+    });
+  },
+  [onNotification],
+);
 ```
 
 #### Auto-connect on Mount
@@ -632,7 +635,7 @@ Sent on connection establishment (not shown to user).
 
 ```typescript
 {
-  type: "connected"
+  type: "connected";
 }
 ```
 
@@ -643,14 +646,16 @@ Sent on connection establishment (not shown to user).
 ### Multi-Tenant Isolation
 
 **Connection Key**: `${tenantId}:${userId}`
+
 - Each tenant's users are isolated
 - Cannot receive notifications from other tenants
 
 **Double Validation**:
+
 ```typescript
 // When storing connection
 connections.set(connectionKey, {
-  tenantId: tenantId,  // Store for validation
+  tenantId: tenantId, // Store for validation
   userId: userId,
 });
 
@@ -668,11 +673,13 @@ if (connectionData.userId !== userId) {
 ### Authentication
 
 **JWT Required**: SSE endpoint requires valid JWT token
+
 - Middleware: `authenticateJWT`
 - Token validated before establishing connection
 - User ID and tenant ID extracted from token
 
 **Heartbeat Validation**:
+
 - Heartbeat keeps connection alive
 - If connection dies, automatically removed from map
 - User must re-authenticate to reconnect
@@ -684,6 +691,7 @@ if (connectionData.userId !== userId) {
 ### Redis Pub/Sub
 
 **Advantages**:
+
 - Single publish reaches all subscribers (O(1))
 - No polling required
 - Minimal memory overhead
@@ -698,12 +706,14 @@ if (connectionData.userId !== userId) {
 **Network**: ~100 bytes every 30 seconds (heartbeat)
 
 **Scaling**:
+
 - 1000 concurrent users ≈ 10-20 MB memory
 - Can scale to tens of thousands of concurrent connections per server
 
 ### Connection Cleanup
 
 **Automatic**:
+
 - When browser closes/refreshes
 - After 1 hour of inactivity (stale cleanup)
 - On server shutdown
@@ -741,7 +751,7 @@ SSE connection closed: tenantId:userId
 ### Check Active Connections
 
 ```typescript
-import { getActiveConnections } from './controllers/notification.ctrl';
+import { getActiveConnections } from "./controllers/notification.ctrl";
 
 console.log(`Active SSE connections: ${getActiveConnections()}`);
 ```
@@ -749,17 +759,17 @@ console.log(`Active SSE connections: ${getActiveConnections()}`);
 ### Test Notification
 
 ```typescript
-import { sendNotification } from './services/notification.service';
+import { sendNotification } from "./services/notification.service";
 
 await sendNotification(
-  "a4ayc80OGd",  // tenantId
-  2,             // userId
+  "a4ayc80OGd", // tenantId
+  2, // userId
   {
     title: "Test",
     message: "This is a test notification",
     type: "approval_request",
     entityId: 999,
-  }
+  },
 );
 ```
 
@@ -770,6 +780,7 @@ await sendNotification(
 ### User Not Receiving Notifications
 
 **Check**:
+
 1. User is logged in and SSE connected
    - Browser console: Look for "✅ SSE connection established"
    - Network tab: Check `/api/notifications/stream` is open
@@ -788,6 +799,7 @@ await sendNotification(
 ### Notifications Delayed
 
 **Check**:
+
 1. Transaction committed before notification?
    - Ensure `notifyStepApprovers()` called AFTER `transaction.commit()`
 
@@ -800,6 +812,7 @@ await sendNotification(
 ### Connection Drops
 
 **Check**:
+
 1. Heartbeat working?
    - Should see `: heartbeat\n\n` every 30 seconds
 

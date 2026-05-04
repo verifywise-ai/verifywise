@@ -167,7 +167,10 @@ describe("virtualFolder.repository", () => {
       const mockResponse = {
         data: {
           message: "Success",
-          data: [{ id: 1, name: "Root" }, { id: 2, name: "Child" }],
+          data: [
+            { id: 1, name: "Root" },
+            { id: 2, name: "Child" },
+          ],
         },
         status: 200,
         statusText: "OK",
@@ -179,7 +182,10 @@ describe("virtualFolder.repository", () => {
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith("/virtual-folders/2/path");
-      expect(result).toEqual([{ id: 1, name: "Root" }, { id: 2, name: "Child" }]);
+      expect(result).toEqual([
+        { id: 1, name: "Root" },
+        { id: 2, name: "Child" },
+      ]);
     });
 
     it("should throw APIError with folder ID in message when API call fails", async () => {
@@ -283,7 +289,9 @@ describe("virtualFolder.repository", () => {
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
       await expect(updateFolder(999, { name: "Test" })).rejects.toThrow(APIError);
-      await expect(updateFolder(999, { name: "Test" })).rejects.toThrow("Failed to update folder with ID 999");
+      await expect(updateFolder(999, { name: "Test" })).rejects.toThrow(
+        "Failed to update folder with ID 999",
+      );
     });
 
     it("should throw error without response for network errors", async () => {
@@ -291,7 +299,9 @@ describe("virtualFolder.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateFolder(1, { name: "Test" })).rejects.toThrow("Failed to update folder with ID 1");
+      await expect(updateFolder(1, { name: "Test" })).rejects.toThrow(
+        "Failed to update folder with ID 1",
+      );
     });
   });
 
@@ -439,7 +449,9 @@ describe("virtualFolder.repository", () => {
       const result = await assignFilesToFolder(1, [1, 2, 3]);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/virtual-folders/1/files", { file_ids: [1, 2, 3] });
+      expect(apiServices.post).toHaveBeenCalledWith("/virtual-folders/1/files", {
+        file_ids: [1, 2, 3],
+      });
       expect(result).toEqual({ assigned: 3 });
     });
 
@@ -454,7 +466,9 @@ describe("virtualFolder.repository", () => {
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
       await expect(assignFilesToFolder(1, [])).rejects.toThrow(APIError);
-      await expect(assignFilesToFolder(1, [])).rejects.toThrow("Failed to assign files to folder 1");
+      await expect(assignFilesToFolder(1, [])).rejects.toThrow(
+        "Failed to assign files to folder 1",
+      );
     });
 
     it("should throw error without response for network errors", async () => {
@@ -462,7 +476,9 @@ describe("virtualFolder.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(assignFilesToFolder(1, [1, 2])).rejects.toThrow("Failed to assign files to folder 1");
+      await expect(assignFilesToFolder(1, [1, 2])).rejects.toThrow(
+        "Failed to assign files to folder 1",
+      );
     });
   });
 
@@ -497,7 +513,9 @@ describe("virtualFolder.repository", () => {
       vi.mocked(apiServices.delete).mockRejectedValue(mockError);
 
       await expect(removeFileFromFolder(1, 999)).rejects.toThrow(APIError);
-      await expect(removeFileFromFolder(1, 999)).rejects.toThrow("Failed to remove file 999 from folder 1");
+      await expect(removeFileFromFolder(1, 999)).rejects.toThrow(
+        "Failed to remove file 999 from folder 1",
+      );
     });
 
     it("should throw error without response for network errors", async () => {
@@ -505,7 +523,9 @@ describe("virtualFolder.repository", () => {
 
       vi.mocked(apiServices.delete).mockRejectedValue(networkError);
 
-      await expect(removeFileFromFolder(1, 5)).rejects.toThrow("Failed to remove file 5 from folder 1");
+      await expect(removeFileFromFolder(1, 5)).rejects.toThrow(
+        "Failed to remove file 5 from folder 1",
+      );
     });
   });
 
@@ -591,7 +611,9 @@ describe("virtualFolder.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateFileFolders(1, [1, 2])).rejects.toThrow("Failed to update folders for file 1");
+      await expect(updateFileFolders(1, [1, 2])).rejects.toThrow(
+        "Failed to update folders for file 1",
+      );
     });
   });
 });

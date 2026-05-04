@@ -30,19 +30,19 @@ module.exports = {
     dialect: "postgres",
     schema: "verifywise",
     migrationStorageTableSchema: "verifywise",
-    ...(
-      process.env.DB_SSL === "true" ? {
-        dialectOptions: {
-          ssl: {
-            require: true,
-            rejectUnauthorized: process.env.REJECT_UNAUTHORIZED === "true",
+    ...(process.env.DB_SSL === "true"
+      ? {
+          dialectOptions: {
+            ssl: {
+              require: true,
+              rejectUnauthorized: process.env.REJECT_UNAUTHORIZED === "true",
+            },
           },
         }
-      } : {
-        dialectOptions: {
-          ssl: false,
-        }
-      }
-    ),
+      : {
+          dialectOptions: {
+            ssl: false,
+          },
+        }),
   },
 };

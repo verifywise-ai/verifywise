@@ -6,10 +6,7 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 /**
  * Get change history for a specific vendor with pagination support
  */
-export async function getVendorChangeHistoryById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getVendorChangeHistoryById(req: Request, res: Response): Promise<any> {
   const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   // Validate vendor ID
@@ -24,25 +21,20 @@ export async function getVendorChangeHistoryById(
     "processing",
     `fetching change history for vendor id: ${vendorId} (limit: ${limit}, offset: ${offset})`,
     "getVendorChangeHistoryById",
-    "vendorChangeHistory.ctrl.ts"
+    "vendorChangeHistory.ctrl.ts",
   );
   logger.debug(
-    `Fetching change history for vendor with id: ${vendorId} (limit: ${limit}, offset: ${offset})`
+    `Fetching change history for vendor with id: ${vendorId} (limit: ${limit}, offset: ${offset})`,
   );
 
   try {
-    const result = await getVendorChangeHistory(
-      vendorId,
-      req.organizationId!,
-      limit,
-      offset
-    );
+    const result = await getVendorChangeHistory(vendorId, req.organizationId!, limit, offset);
 
     logStructured(
       "successful",
       `change history retrieved for vendor id: ${vendorId} (${result.data.length} entries, hasMore: ${result.hasMore})`,
       "getVendorChangeHistoryById",
-      "vendorChangeHistory.ctrl.ts"
+      "vendorChangeHistory.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -51,7 +43,7 @@ export async function getVendorChangeHistoryById(
       "error",
       "failed to retrieve change history",
       "getVendorChangeHistoryById",
-      "vendorChangeHistory.ctrl.ts"
+      "vendorChangeHistory.ctrl.ts",
     );
     logger.error("Error in getVendorChangeHistoryById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

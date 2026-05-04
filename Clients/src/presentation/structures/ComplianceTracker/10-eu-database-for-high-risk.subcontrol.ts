@@ -13,8 +13,7 @@ export const EUdatabaseForHighRiskAI = {
       subControls: [
         {
           id: 1,
-          title:
-            "We engage with notified bodies or conduct internal conformity assessments.",
+          title: "We engage with notified bodies or conduct internal conformity assessments.",
           description:
             "Collaboration with notified bodies or conducting internal reviews ensures rigorous evaluation of AI system compliance.",
         },
@@ -32,8 +31,7 @@ export const EUdatabaseForHighRiskAI = {
       subControls: [
         {
           id: 1,
-          title:
-            "We establish processes to respond to national authority requests.",
+          title: "We establish processes to respond to national authority requests.",
           description:
             "Well-defined processes enable efficient and accurate responses to regulatory inquiries or audits.",
         },
@@ -75,8 +73,7 @@ export const EUdatabaseForHighRiskAI = {
       subControls: [
         {
           id: 1,
-          title:
-            "We ensure timely and accurate data entry into the EU database.",
+          title: "We ensure timely and accurate data entry into the EU database.",
           description:
             "Ensuring timely updates maintains regulatory compliance and fosters trust in system integrity and monitoring processes.",
         },

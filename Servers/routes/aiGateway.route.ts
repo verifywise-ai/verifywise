@@ -10,10 +10,8 @@ import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
 import authenticateJWT from "../middleware/auth.middleware";
 import express, { Request, Router } from "express";
 
-const AI_GATEWAY_URL =
-  process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
-const AI_GATEWAY_KEY =
-  process.env.AI_GATEWAY_INTERNAL_KEY || "";
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
 
 const jsonParser = express.json({ limit: "50mb" });
 
@@ -23,8 +21,8 @@ function aiGatewayRoutes() {
   const proxy = createProxyMiddleware({
     target: AI_GATEWAY_URL,
     changeOrigin: true,
-    timeout: 30_000,        // 30s — abort if AI Gateway doesn't respond
-    proxyTimeout: 30_000,   // 30s — abort if connection takes too long
+    timeout: 30_000, // 30s — abort if AI Gateway doesn't respond
+    proxyTimeout: 30_000, // 30s — abort if connection takes too long
     // /api/ai-gateway/* → /internal/*
     pathRewrite: { "^/": "/internal/" },
     on: {
@@ -36,12 +34,9 @@ function aiGatewayRoutes() {
 
         // Forward tenant context from JWT
         if (expressReq.organizationId) {
-          proxyReq.setHeader(
-            "x-organization-id",
-            expressReq.organizationId.toString()
-          );
+          proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }
-if (expressReq.userId) {
+        if (expressReq.userId) {
           proxyReq.setHeader("x-user-id", expressReq.userId.toString());
         }
         if (expressReq.role) {
@@ -55,7 +50,7 @@ if (expressReq.userId) {
         const errAny = err as any;
         console.error(
           `[AI Gateway Proxy] Error for ${req.url}:`,
-          errAny.message || errAny.code || errAny
+          errAny.message || errAny.code || errAny,
         );
         if (res && "writeHead" in res) {
           (res as any).writeHead(502, { "Content-Type": "application/json" });
@@ -63,7 +58,7 @@ if (expressReq.userId) {
             JSON.stringify({
               error: "AI Gateway proxy error",
               message: errAny.message || errAny.code || "Unknown error",
-            })
+            }),
           );
         }
       },

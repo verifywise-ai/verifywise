@@ -3,17 +3,10 @@ import { Box, Typography, Tooltip, Stack, useTheme } from "@mui/material";
 import { IRiskHeatMapProps } from "../../types/interfaces/i.risk";
 import { IHeatMapCell } from "../../../domain/interfaces/i.widget";
 
-const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
-  risks,
-  onRiskSelect,
-  selectedRisk,
-}) => {
+const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selectedRisk }) => {
   const theme = useTheme();
 
-  const getRiskLevelColor = (
-    riskLevel: number,
-    alpha: number = 0.8
-  ): string => {
+  const getRiskLevelColor = (riskLevel: number, alpha: number = 0.8): string => {
     if (riskLevel >= 16) return `rgba(198, 54, 34, ${alpha})`; // Very High - Dark Red
     if (riskLevel >= 12) return `rgba(214, 139, 97, ${alpha})`; // High - Orange Red
     if (riskLevel >= 8) return `rgba(214, 185, 113, ${alpha})`; // Medium - Orange
@@ -71,7 +64,6 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
 
         const riskLevel = likelihood * severity;
 
-
         row.push({
           likelihood,
           severity,
@@ -97,8 +89,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
   };
 
   const renderCell = (cell: IHeatMapCell) => {
-    const isSelected =
-      selectedRisk && cell.risks.some((r) => r.id === selectedRisk.id);
+    const isSelected = selectedRisk && cell.risks.some((r) => r.id === selectedRisk.id);
 
     return (
       <Tooltip
@@ -106,8 +97,8 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
         title={
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {getLikelihoodLabel(cell.likelihood)} Likelihood ×{" "}
-              {getSeverityLabel(cell.severity)} Severity
+              {getLikelihoodLabel(cell.likelihood)} Likelihood × {getSeverityLabel(cell.severity)}{" "}
+              Severity
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}>
               Risk Level: {cell.riskLevel}
@@ -150,10 +141,10 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
             "&:hover":
               cell.risks.length > 0
                 ? {
-                  transform: "scale(1.05)",
-                  boxShadow: theme.shadows[4],
-                  borderColor: "brand.primary",
-                }
+                    transform: "scale(1.05)",
+                    boxShadow: theme.shadows[4],
+                    borderColor: "brand.primary",
+                  }
                 : {},
           }}
           onClick={() => {
@@ -199,12 +190,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
         minHeight: "500px",
       }}
     >
-      <Stack
-        direction="row"
-        spacing={4}
-        alignItems="center"
-        sx={{ width: "100%" }}
-      >
+      <Stack direction="row" spacing={4} alignItems="center" sx={{ width: "100%" }}>
         {/* Main Heat Map */}
         <Box
           sx={{
@@ -249,12 +235,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
 
               <Stack spacing={1}>
                 {heatMapData.map((row, rowIndex) => (
-                  <Stack
-                    key={rowIndex}
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                  >
+                  <Stack key={rowIndex} direction="row" spacing={1} alignItems="center">
                     {/* Severity labels */}
                     <Box sx={{ minWidth: 80, textAlign: "right", pr: 1 }}>
                       <Typography
@@ -277,10 +258,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                   <Box sx={{ minWidth: 80 }} />
                   <Stack direction="row" spacing={1}>
                     {[1, 2, 3, 4, 5].map((likelihood) => (
-                      <Box
-                        key={likelihood}
-                        sx={{ width: { xs: 60, sm: 80 }, textAlign: "center" }}
-                      >
+                      <Box key={likelihood} sx={{ width: { xs: 60, sm: 80 }, textAlign: "center" }}>
                         <Typography
                           variant="caption"
                           sx={{ color: "status.default.text", fontWeight: 500 }}
@@ -305,10 +283,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                   pl: "130px", // Add 130px left padding to shift right
                 }}
               >
-                <Typography
-                  variant="subtitle2"
-                  sx={{ fontWeight: 600, color: "#4B5563" }}
-                >
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#4B5563" }}>
                   LIKELIHOOD
                 </Typography>
               </Box>
@@ -327,10 +302,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
             border: "1px solid status.default.border",
           }}
         >
-          <Typography
-            variant="subtitle2"
-            sx={{ color: "#374151", fontWeight: 600, mb: 2 }}
-          >
+          <Typography variant="subtitle2" sx={{ color: "#374151", fontWeight: 600, mb: 2 }}>
             Risk Levels
           </Typography>
           <Stack spacing={2}>
@@ -345,10 +317,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                 label: "Very high",
               },
             ].map((item, idx) => (
-              <Box
-                key={idx}
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
+              <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Box
                   sx={{
                     width: 16,
@@ -359,10 +328,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                   }}
                 />
                 <Stack>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "#374151", fontWeight: 500 }}
-                  >
+                  <Typography variant="caption" sx={{ color: "#374151", fontWeight: 500 }}>
                     {item.label}
                   </Typography>
                   <Typography
@@ -393,10 +359,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
           }}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <Typography
-              variant="caption"
-              sx={{ color: "status.default.text", fontWeight: 500 }}
-            >
+            <Typography variant="caption" sx={{ color: "status.default.text", fontWeight: 500 }}>
               Risk Level:
             </Typography>
             {[
@@ -410,10 +373,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                 label: "Very high",
               },
             ].map((item, idx) => (
-              <Box
-                key={idx}
-                sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-              >
+              <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Box
                   sx={{
                     width: 12,
@@ -423,10 +383,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({
                     border: "1px solid status.default.border",
                   }}
                 />
-                <Typography
-                  variant="caption"
-                  sx={{ color: "#4B5563", fontSize: "0.7rem" }}
-                >
+                <Typography variant="caption" sx={{ color: "#4B5563", fontSize: "0.7rem" }}>
                   {item.label}
                 </Typography>
               </Box>

@@ -15,17 +15,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Stack,
-  TextField,
-  Typography,
-  useTheme,
-} from "@mui/material";
-import {
-  Send as SendIcon,
-  Save as SaveIcon,
-} from "lucide-react";
+import { Box, Stack, TextField, Typography, useTheme } from "@mui/material";
+import { Send as SendIcon, Save as SaveIcon } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 
 interface NoteComposerProps {
@@ -67,8 +58,7 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
     onCancel?.();
   };
 
-  const isContentValid =
-    content.trim().length > 0 && content.length <= MAX_LENGTH;
+  const isContentValid = content.trim().length > 0 && content.length <= MAX_LENGTH;
   const isOverLimit = content.length > MAX_LENGTH;
 
   return (
@@ -139,9 +129,7 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
           <Typography
             sx={{
               fontSize: 11,
-              color: isOverLimit
-                ? theme.palette.error.main
-                : theme.palette.text.secondary,
+              color: isOverLimit ? theme.palette.error.main : theme.palette.text.secondary,
               fontWeight: isOverLimit ? 600 : 500,
               letterSpacing: "0.3px",
             }}
@@ -152,63 +140,59 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
           </Typography>
 
           {/* Action Buttons */}
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ alignItems: "center" }}
-          >
-          {isEditing && onCancel && (
-            <CustomizableButton
-              variant="outlined"
-              text="Cancel"
-              onClick={handleCancel}
-              isDisabled={isLoading}
-              sx={{
-                minWidth: "80px",
-                height: "34px",
-                border: "1px solid #d0d5dd",
-                color: "text.secondary",
-                "&:hover": {
-                  backgroundColor: "background.accent",
+          <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+            {isEditing && onCancel && (
+              <CustomizableButton
+                variant="outlined"
+                text="Cancel"
+                onClick={handleCancel}
+                isDisabled={isLoading}
+                sx={{
+                  minWidth: "80px",
+                  height: "34px",
                   border: "1px solid #d0d5dd",
-                },
-              }}
-            />
-          )}
+                  color: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "background.accent",
+                    border: "1px solid #d0d5dd",
+                  },
+                }}
+              />
+            )}
 
-          {isEditing ? (
-            <CustomizableButton
-              type="submit"
-              variant="contained"
-              text="Save"
-              isDisabled={!isContentValid || isLoading}
-              loading={isLoading}
-              icon={<SaveIcon size={16} />}
-              sx={{
-                backgroundColor: "brand.primary",
-                border: "1px solid brand.primary",
-                gap: 2,
-                width: "fit-content",
-                height: "34px",
-              }}
-            />
-          ) : (
-            <CustomizableButton
-              type="submit"
-              variant="contained"
-              text="Send"
-              isDisabled={!isContentValid || isLoading}
-              loading={isLoading}
-              icon={<SendIcon size={16} />}
-              sx={{
-                backgroundColor: "brand.primary",
-                border: "1px solid brand.primary",
-                gap: 2,
-                width: "fit-content",
-                height: "34px",
-              }}
-            />
-          )}
+            {isEditing ? (
+              <CustomizableButton
+                type="submit"
+                variant="contained"
+                text="Save"
+                isDisabled={!isContentValid || isLoading}
+                loading={isLoading}
+                icon={<SaveIcon size={16} />}
+                sx={{
+                  backgroundColor: "brand.primary",
+                  border: "1px solid brand.primary",
+                  gap: 2,
+                  width: "fit-content",
+                  height: "34px",
+                }}
+              />
+            ) : (
+              <CustomizableButton
+                type="submit"
+                variant="contained"
+                text="Send"
+                isDisabled={!isContentValid || isLoading}
+                loading={isLoading}
+                icon={<SendIcon size={16} />}
+                sx={{
+                  backgroundColor: "brand.primary",
+                  border: "1px solid brand.primary",
+                  gap: 2,
+                  width: "fit-content",
+                  height: "34px",
+                }}
+              />
+            )}
           </Stack>
         </Stack>
       </Stack>

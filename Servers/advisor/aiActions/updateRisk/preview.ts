@@ -68,14 +68,10 @@ export function renderUpdateRiskDiffPreview(
   // junction tables, not on the risk row, so we just note that they'll
   // be replaced rather than diffing the arrays.
   if (input.project_ids !== undefined) {
-    changes.push(
-      `projects replaced with [${input.project_ids.join(", ") || "none"}]`,
-    );
+    changes.push(`projects replaced with [${input.project_ids.join(", ") || "none"}]`);
   }
   if (input.framework_ids !== undefined) {
-    changes.push(
-      `frameworks replaced with [${input.framework_ids.join(", ") || "none"}]`,
-    );
+    changes.push(`frameworks replaced with [${input.framework_ids.join(", ") || "none"}]`);
   }
 
   if (changes.length === 0) {

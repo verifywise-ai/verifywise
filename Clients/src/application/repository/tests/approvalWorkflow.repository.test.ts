@@ -99,10 +99,7 @@ describe("Test Approval Workflow Repository", () => {
 
       const response = await createApprovalWorkflow({ body });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/approval-workflows",
-        body,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/approval-workflows", body);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -123,10 +120,7 @@ describe("Test Approval Workflow Repository", () => {
 
       const response = await updateApprovalWorkflow({ id: 101, body });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/approval-workflows/101",
-        body,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/approval-workflows/101", body);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -143,9 +137,7 @@ describe("Test Approval Workflow Repository", () => {
 
       const response = await deleteApprovalWorkflow({ id: 102 });
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/approval-workflows/102",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/approval-workflows/102");
       expect(response).toEqual(mockResponse);
     });
   });
@@ -171,10 +163,9 @@ describe("Test Approval Workflow Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-workflows?entity_type=use_case",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-workflows?entity_type=use_case", {
+        signal,
+      });
       expect(response).toEqual([
         { id: 1, entity_type: "use_case" },
         { id: 3, entity_type: "use_case" },
@@ -201,10 +192,9 @@ describe("Test Approval Workflow Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-workflows?entity_type=file",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-workflows?entity_type=file", {
+        signal,
+      });
       expect(response).toEqual([{ id: 4, entity_type: "file" }]);
     });
 
@@ -221,10 +211,9 @@ describe("Test Approval Workflow Repository", () => {
         entityType: "use_case",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-workflows?entity_type=use_case",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-workflows?entity_type=use_case", {
+        signal: undefined,
+      });
       expect(response).toEqual([]);
     });
 
@@ -241,10 +230,9 @@ describe("Test Approval Workflow Repository", () => {
         entityType: "file",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-workflows?entity_type=file",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-workflows?entity_type=file", {
+        signal: undefined,
+      });
       expect(response).toEqual([]);
     });
   });

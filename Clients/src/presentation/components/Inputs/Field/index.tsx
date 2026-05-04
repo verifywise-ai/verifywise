@@ -82,7 +82,7 @@ const Field = forwardRef(
       multiline: multilineProp,
       minRows,
     }: FieldProps,
-    ref: ForwardedRef<HTMLInputElement>
+    ref: ForwardedRef<HTMLInputElement>,
   ) => {
     const theme = useTheme();
 
@@ -107,15 +107,11 @@ const Field = forwardRef(
             color={theme.palette.text.secondary}
             fontWeight={500}
             fontSize={"13px"}
-            sx={{ margin: 0, height: '22px' }}
+            sx={{ margin: 0, height: "22px" }}
           >
             {label}
             {isRequired && (
-              <Typography
-                component="span"
-                ml={theme.spacing(1)}
-                color={theme.palette.error.text}
-              >
+              <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
                 *
               </Typography>
             )}
@@ -141,7 +137,7 @@ const Field = forwardRef(
           placeholder={placeholder}
           multiline={multilineProp || type === "description" || (rows !== undefined && rows > 1)}
           minRows={minRows}
-          rows={multilineProp ? undefined : (type === "description" ? (rows || 4) : (rows || 1))}
+          rows={multilineProp ? undefined : type === "description" ? rows || 4 : rows || 1}
           value={value}
           onInput={onInput as React.FormEventHandler<HTMLDivElement>}
           onChange={onChange}
@@ -231,7 +227,7 @@ const Field = forwardRef(
         )}
       </Stack>
     );
-  }
+  },
 );
 
 Field.displayName = "Field";

@@ -24,13 +24,7 @@
  * @module domain.layer/models/fileManager
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 

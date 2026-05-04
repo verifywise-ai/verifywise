@@ -88,9 +88,7 @@ export function LossCategoryBreakdown({
                     flexShrink: 0,
                   }}
                 />
-                <Typography sx={{ fontSize: 12, color: C.textSecondary }}>
-                  {c.label}
-                </Typography>
+                <Typography sx={{ fontSize: 12, color: C.textSecondary }}>{c.label}</Typography>
               </Stack>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: C.textPrimary }}>
                 {formatValue(c.value)} ({pct}%)

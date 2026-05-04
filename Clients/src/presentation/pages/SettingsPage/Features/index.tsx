@@ -32,9 +32,7 @@ const Features: React.FC = () => {
     <Stack sx={{ mt: 3, width: "100%" }}>
       <Stack sx={{ pt: theme.spacing(20) }}>
         <Box sx={{ mb: 3 }}>
-          <Typography
-            sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}
-          >
+          <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}>
             Features
           </Typography>
           <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
@@ -59,16 +57,19 @@ const Features: React.FC = () => {
               <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
                 Quantitative Risk Assessment
               </Typography>
-              <Typography
-                sx={{ fontSize: 13, color: theme.palette.text.secondary }}
-              >
+              <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                 {isQuantitative
                   ? "Enabled — risks include FAIR-based monetary estimates (ALE, residual risk, ROI)."
                   : "Disabled — risks use qualitative scoring only (severity, likelihood)."}
               </Typography>
               {!isAdmin && (
                 <Typography
-                  sx={{ fontSize: 12, color: theme.palette.text.secondary, mt: 0.5, fontStyle: "italic" }}
+                  sx={{
+                    fontSize: 12,
+                    color: theme.palette.text.secondary,
+                    mt: 0.5,
+                    fontStyle: "italic",
+                  }}
                 >
                   Only admins can change this setting.
                 </Typography>
@@ -98,14 +99,10 @@ const Features: React.FC = () => {
             }}
           >
             <Box>
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                Model Lifecycle
-              </Typography>
-              <Typography
-                sx={{ fontSize: 13, color: theme.palette.text.secondary }}
-              >
-                Model Lifecycle is now managed via the Plugins page. Install or
-                uninstall the "Model Lifecycle" plugin to control this feature.
+              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Model Lifecycle</Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
+                Model Lifecycle is now managed via the Plugins page. Install or uninstall the "Model
+                Lifecycle" plugin to control this feature.
               </Typography>
             </Box>
             <CustomizableButton

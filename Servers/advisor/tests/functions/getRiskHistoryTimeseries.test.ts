@@ -1,18 +1,9 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest
-} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import * as riskHistoryUtils from "../../../utils/history/riskHistory.utils";
 import { availableRiskTools } from "../../functions/riskFunctions";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
-import {
-  mockTimeseriesData,
-} from "../../mocks/mockRiskData";
-import { createMockTenant } from '../../mocks/mockTenant';
+import { mockTimeseriesData } from "../../mocks/mockRiskData";
+import { createMockTenant } from "../../mocks/mockTenant";
 
 const availableTools = {
   ...availableRiskTools,
@@ -24,13 +15,13 @@ jest.mock("../../../utils/history/riskHistory.utils");
 
 describe("Advisor Functions: getRiskHistoryTimeseries", () => {
   const mockTenant = createMockTenant();
-  
+
   beforeEach(() => {
-      jest.clearAllMocks();
+    jest.clearAllMocks();
   });
-  
+
   afterEach(() => {
-      jest.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   const getRiskHistoryTimeseries = availableTools["get_risk_history_timeseries"];
@@ -40,25 +31,25 @@ describe("Advisor Functions: getRiskHistoryTimeseries", () => {
 
     const result = await getRiskHistoryTimeseries(
       { parameter: "severity", timeframe: "7days" },
-      mockTenant
+      mockTenant,
     );
 
     expect(riskHistoryUtils.getTimeseriesForTimeframe).toHaveBeenCalledWith(
       "severity",
       "7days",
-      mockTenant
+      mockTenant,
     );
     expect(result).toEqual(mockTimeseriesData);
 
     const mitigrationResult = await getRiskHistoryTimeseries(
       { parameter: "mitigation_status", timeframe: "1month" },
-      mockTenant
+      mockTenant,
     );
 
     expect(riskHistoryUtils.getTimeseriesForTimeframe).toHaveBeenCalledWith(
       "mitigation_status",
       "1month",
-      mockTenant
+      mockTenant,
     );
     expect(mitigrationResult).toEqual(mockTimeseriesData);
   });
@@ -68,7 +59,7 @@ describe("Advisor Functions: getRiskHistoryTimeseries", () => {
 
     const result = await getRiskHistoryTimeseries(
       { parameter: "severity", timeframe: "7days" },
-      mockTenant
+      mockTenant,
     );
 
     expect(Array.isArray(result)).toBe(true);
@@ -76,10 +67,10 @@ describe("Advisor Functions: getRiskHistoryTimeseries", () => {
 
     // Check each data point has required structure
     result.forEach((dataPoint: any) => {
-      expect(dataPoint).toHaveProperty('timestamp');
-      expect(dataPoint).toHaveProperty('data');
+      expect(dataPoint).toHaveProperty("timestamp");
+      expect(dataPoint).toHaveProperty("data");
       expect(dataPoint.timestamp).toBeInstanceOf(Date);
-      expect(typeof dataPoint.data).toBe('object');
+      expect(typeof dataPoint.data).toBe("object");
     });
   });
 
@@ -88,7 +79,7 @@ describe("Advisor Functions: getRiskHistoryTimeseries", () => {
 
     const result = await getRiskHistoryTimeseries(
       { parameter: "severity", timeframe: "7days" },
-      mockTenant
+      mockTenant,
     );
 
     expect(result).toEqual([]);
@@ -100,7 +91,7 @@ describe("Advisor Functions: getRiskHistoryTimeseries", () => {
 
     const result = await getRiskHistoryTimeseries(
       { parameter: "severity", timeframe: "1month" },
-      mockTenant
+      mockTenant,
     );
 
     // Verify timestamps are in chronological order

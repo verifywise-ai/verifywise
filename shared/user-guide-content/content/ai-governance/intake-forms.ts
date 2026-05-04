@@ -531,7 +531,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The new entity starts in its default lifecycle state ("Under review" for use cases, "Pending" for models) and shows up in your governance dashboards right away.',
+      text: 'When you approve a submission (which transitions the *submission* status from PENDING to APPROVED), VerifyWise creates the entity. The new entity then starts in its own default lifecycle state ("Under review" for use cases, "Pending" for models) and shows up in your governance dashboards right away.',
     },
     {
       type: 'heading',

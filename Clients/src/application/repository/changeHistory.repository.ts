@@ -26,13 +26,13 @@ export const getEntityChangeHistory = async (
   entityType: EntityType,
   entityId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<ChangeHistoryResponse> => {
   try {
     // Convert entity_type to route format (e.g., "model_inventory" -> "model-inventory")
     const routeType = entityType.replace(/_/g, "-");
     const response = await apiServices.get(
-      `/${routeType}-change-history/${entityId}?limit=${limit}&offset=${offset}`
+      `/${routeType}-change-history/${entityId}?limit=${limit}&offset=${offset}`,
     );
     // API returns { message: "OK", data: { data: [...], hasMore: boolean, total: number } }
     return (response.data as any).data;

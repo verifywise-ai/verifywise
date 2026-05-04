@@ -25,8 +25,7 @@ const ReadyToSubscribeBox = () => {
           Ready to subscribe?
         </Typography>
         <Typography variant="subtitle1" sx={styles.description}>
-          Unlock the full potential of VerifyWise AI governance with our premium
-          features.
+          Unlock the full potential of VerifyWise AI governance with our premium features.
         </Typography>
         <Button sx={styles.button} onClick={handleClick}>
           View plans

@@ -119,18 +119,17 @@ const AvatarsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          User avatars with automatic initials fallback and size support.
-          Uses VWAvatar, the VerifyWise avatar component with built-in color generation and size support.
+          User avatars with automatic initials fallback and size support. Uses VWAvatar, the
+          VerifyWise avatar component with built-in color generation and size support.
         </Typography>
       </Box>
 
       {/* Basic Avatars */}
       <SpecSection title="Basic avatars">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          VWAvatar displays user initials when no image is provided. Pass a{" "}
-          <code>user</code> object with <code>firstname</code> and{" "}
-          <code>lastname</code>. The component derives initials and applies
-          theme-based colors automatically.
+          VWAvatar displays user initials when no image is provided. Pass a <code>user</code> object
+          with <code>firstname</code> and <code>lastname</code>. The component derives initials and
+          applies theme-based colors automatically.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -157,11 +156,7 @@ const AvatarsSection: React.FC = () => {
                 </Box>
               </ExampleWithCode>
 
-              <ExampleWithCode
-                label="Avatar sizes"
-                code={avatarSnippets.sizes}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Avatar sizes" code={avatarSnippets.sizes} onCopy={handleCopy}>
                 <Box
                   sx={{
                     display: "flex",
@@ -236,7 +231,16 @@ const AvatarsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Size reference
             </Typography>
             <SpecTable
@@ -248,7 +252,17 @@ const AvatarsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Props reference
             </Typography>
             <SpecTable
@@ -269,10 +283,9 @@ const AvatarsSection: React.FC = () => {
       {/* Color Generation */}
       <SpecSection title="Color generation">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          VWAvatar uses the theme's primary color for all initials avatars. Color
-          generation is handled internally — no utility function is needed in
-          consuming code. When a profile image is provided, the background becomes
-          transparent and the border adopts the primary color.
+          VWAvatar uses the theme's primary color for all initials avatars. Color generation is
+          handled internally — no utility function is needed in consuming code. When a profile image
+          is provided, the background becomes transparent and the border adopts the primary color.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -307,7 +320,16 @@ const AvatarsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               How colors work
             </Typography>
             <Box
@@ -340,8 +362,8 @@ const AvatarsSection: React.FC = () => {
       {/* Avatar Groups */}
       <SpecSection title="Avatar groups">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Wrap VWAvatar components inside MUI AvatarGroup to display multiple avatars
-          with automatic overlap and overflow handling.
+          Wrap VWAvatar components inside MUI AvatarGroup to display multiple avatars with automatic
+          overlap and overflow handling.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -439,7 +461,16 @@ const AvatarsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               AvatarGroup props
             </Typography>
             <SpecTable
@@ -451,7 +482,17 @@ const AvatarsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Group styling
             </Typography>
             <SpecTable
@@ -492,7 +533,7 @@ const AvatarsSection: React.FC = () => {
             "Use VWAvatar component (not raw MUI Avatar) for all user avatars",
             "VWAvatar handles color generation automatically from the theme — no manual stringToColor() needed",
             "Pass user as { firstname, lastname, pathToImage? } — never pass raw initials strings",
-            "Use size=\"small\" (32px) for compact lists, size=\"medium\" (64px) for profiles, size=\"large\" (128px) for hero displays",
+            'Use size="small" (32px) for compact lists, size="medium" (64px) for profiles, size="large" (128px) for hero displays',
             "Set showBorder={false} when composing into AvatarGroup to avoid double borders",
             "VWAvatar falls back to initials automatically when image fails to load",
             "Always provide meaningful alt text via the alt prop when the avatar context is not self-evident",
@@ -578,9 +619,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -602,9 +641,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -655,9 +692,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

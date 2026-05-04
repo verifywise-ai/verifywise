@@ -28,7 +28,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 
 const useIsDarkMode = () => {
   const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains("dark-mode")
+    document.documentElement.classList.contains("dark-mode"),
   );
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -178,11 +178,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             padding: "32px 32px 28px",
           }}
         >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <BadgeIcon size={18} color={isDark ? "#b52180" : "#4ADE80"} strokeWidth={2} />
@@ -283,19 +279,29 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     height: 40,
                     cursor: "pointer",
                     bgcolor: isActive
-                      ? isDark ? "rgba(181,33,128,0.12)" : "rgba(74,222,128,0.12)"
+                      ? isDark
+                        ? "rgba(181,33,128,0.12)"
+                        : "rgba(74,222,128,0.12)"
                       : isDone
-                      ? isDark ? "rgba(181,33,128,0.05)" : "rgba(74,222,128,0.05)"
-                      : "transparent",
+                        ? isDark
+                          ? "rgba(181,33,128,0.05)"
+                          : "rgba(74,222,128,0.05)"
+                        : "transparent",
                     borderRight:
                       i < steps.length - 1
-                        ? isDark ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"
+                        ? isDark
+                          ? "1px solid rgba(0,0,0,0.06)"
+                          : "1px solid rgba(255,255,255,0.06)"
                         : "none",
                     transition: "background-color 0.2s",
                     "&:hover": {
                       bgcolor: isActive
-                        ? isDark ? "rgba(181,33,128,0.12)" : "rgba(74,222,128,0.12)"
-                        : isDark ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)",
+                        ? isDark
+                          ? "rgba(181,33,128,0.12)"
+                          : "rgba(74,222,128,0.12)"
+                        : isDark
+                          ? "rgba(0,0,0,0.04)"
+                          : "rgba(255,255,255,0.04)",
                     },
                   }}
                 >
@@ -320,10 +326,16 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       fontSize: 13,
                       fontWeight: isActive ? 600 : isDone ? 500 : 400,
                       color: isDone
-                        ? isDark ? "#b52180" : "#4ADE80"
+                        ? isDark
+                          ? "#b52180"
+                          : "#4ADE80"
                         : isActive
-                        ? isDark ? "text.black" : "background.main"
-                        : isDark ? "#6b5c47" : "#94A3B8",
+                          ? isDark
+                            ? "text.black"
+                            : "background.main"
+                          : isDark
+                            ? "#6b5c47"
+                            : "#94A3B8",
                     }}
                   >
                     {s.label}
@@ -335,9 +347,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </Box>
 
         {/* ── Light body — renders step content (any ReactNode) ── */}
-        <Box sx={{ bgcolor: "background.main", padding: "32px" }}>
-          {steps[step]?.content}
-        </Box>
+        <Box sx={{ bgcolor: "background.main", padding: "32px" }}>{steps[step]?.content}</Box>
 
         {/* ── Footer ── */}
         <Stack

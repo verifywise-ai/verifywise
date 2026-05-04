@@ -15,13 +15,7 @@
  */
 
 import React from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  useTheme,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, useTheme, CircularProgress } from "@mui/material";
 import NoteItem from "./NoteItem";
 
 interface NotesListProps {
@@ -64,8 +58,7 @@ const NotesList: React.FC<NotesListProps> = ({
 
   // Sort notes by created_at in descending order (newest first)
   const sortedNotes = [...notesArray].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   if (isLoading) {

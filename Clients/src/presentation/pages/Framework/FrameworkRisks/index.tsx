@@ -38,7 +38,7 @@ const FrameworkRisks = ({
         throw error;
       }
     },
-    [getFrameworkId]
+    [getFrameworkId],
   );
 
   // Create the framework toggle as header content
@@ -57,10 +57,10 @@ const FrameworkRisks = ({
               height={34}
             />
           </Box>
-          <Stack sx={{pt: "8px"}}></Stack>
+          <Stack sx={{ pt: "8px" }}></Stack>
         </>
       ) : null,
-    [organizationalProject, filteredFrameworks, selectedFramework, onFrameworkSelect]
+    [organizationalProject, filteredFrameworks, selectedFramework, onFrameworkSelect],
   );
 
   return (

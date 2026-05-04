@@ -99,9 +99,7 @@ describe("policyFolder.repository", () => {
       const error = new Error("Internal Server Error");
       vi.mocked(CustomAxios.get).mockRejectedValue(error);
 
-      await expect(getPolicyFolders(1)).rejects.toThrow(
-        "Internal Server Error",
-      );
+      await expect(getPolicyFolders(1)).rejects.toThrow("Internal Server Error");
     });
 
     it("should return folders with nested structure", async () => {
@@ -141,9 +139,7 @@ describe("policyFolder.repository", () => {
 
       const result = await getPolicyIdsInFolder(1);
 
-      expect(CustomAxios.get).toHaveBeenCalledWith(
-        "/policies/folders/1/policies",
-      );
+      expect(CustomAxios.get).toHaveBeenCalledWith("/policies/folders/1/policies");
       expect(result).toEqual(mockPolicyIds);
       expect(result).toHaveLength(5);
     });
@@ -154,9 +150,7 @@ describe("policyFolder.repository", () => {
 
       const result = await getPolicyIdsInFolder(1);
 
-      expect(CustomAxios.get).toHaveBeenCalledWith(
-        "/policies/folders/1/policies",
-      );
+      expect(CustomAxios.get).toHaveBeenCalledWith("/policies/folders/1/policies");
       expect(result).toEqual([]);
     });
 
@@ -166,9 +160,7 @@ describe("policyFolder.repository", () => {
 
       await getPolicyIdsInFolder(25);
 
-      expect(CustomAxios.get).toHaveBeenCalledWith(
-        "/policies/folders/25/policies",
-      );
+      expect(CustomAxios.get).toHaveBeenCalledWith("/policies/folders/25/policies");
     });
 
     it("should handle single policy in folder", async () => {
@@ -192,9 +184,7 @@ describe("policyFolder.repository", () => {
       const error = new Error("Folder not found");
       vi.mocked(CustomAxios.get).mockRejectedValue(error);
 
-      await expect(getPolicyIdsInFolder(999)).rejects.toThrow(
-        "Folder not found",
-      );
+      await expect(getPolicyIdsInFolder(999)).rejects.toThrow("Folder not found");
     });
 
     it("should throw error with 403 forbidden", async () => {
@@ -281,18 +271,14 @@ describe("policyFolder.repository", () => {
       const error = new Error("Update failed");
       vi.mocked(CustomAxios.patch).mockRejectedValue(error);
 
-      await expect(updatePolicyFolders(1, [1, 2])).rejects.toThrow(
-        "Update failed",
-      );
+      await expect(updatePolicyFolders(1, [1, 2])).rejects.toThrow("Update failed");
     });
 
     it("should throw error with 404 status when policy not found", async () => {
       const error = new Error("Policy not found");
       vi.mocked(CustomAxios.patch).mockRejectedValue(error);
 
-      await expect(updatePolicyFolders(999, [1])).rejects.toThrow(
-        "Policy not found",
-      );
+      await expect(updatePolicyFolders(999, [1])).rejects.toThrow("Policy not found");
     });
 
     it("should throw error with 403 forbidden on update", async () => {
@@ -306,9 +292,7 @@ describe("policyFolder.repository", () => {
       const error = new Error("Invalid folder IDs");
       vi.mocked(CustomAxios.patch).mockRejectedValue(error);
 
-      await expect(updatePolicyFolders(1, [999, 1000])).rejects.toThrow(
-        "Invalid folder IDs",
-      );
+      await expect(updatePolicyFolders(1, [999, 1000])).rejects.toThrow("Invalid folder IDs");
     });
 
     it("should throw error with 409 conflict", async () => {
@@ -322,9 +306,7 @@ describe("policyFolder.repository", () => {
       const error = new Error("Internal Server Error");
       vi.mocked(CustomAxios.patch).mockRejectedValue(error);
 
-      await expect(updatePolicyFolders(1, [1, 2])).rejects.toThrow(
-        "Internal Server Error",
-      );
+      await expect(updatePolicyFolders(1, [1, 2])).rejects.toThrow("Internal Server Error");
     });
   });
 });

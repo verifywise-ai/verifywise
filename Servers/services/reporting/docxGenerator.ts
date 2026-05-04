@@ -60,7 +60,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
     new Paragraph({
       spacing: { before: 2400 },
       children: [],
-    })
+    }),
   );
 
   // Organization name (green, bold - matches PDF)
@@ -76,7 +76,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
           color: COLORS.primary,
         }),
       ],
-    })
+    }),
   );
 
   // Framework name + Report (main title - matches PDF)
@@ -92,7 +92,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
           color: COLORS.textPrimary,
         }),
       ],
-    })
+    }),
   );
 
   // Project title as subtitle (if not organizational - matches PDF)
@@ -108,7 +108,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
             color: COLORS.textSecondary,
           }),
         ],
-      })
+      }),
     );
   }
 
@@ -117,7 +117,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
     new Paragraph({
       spacing: { before: 800 },
       children: [],
-    })
+    }),
   );
 
   // Metadata section (matches PDF cover-meta)
@@ -139,7 +139,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
             color: COLORS.textPrimary,
           }),
         ],
-      })
+      }),
     );
 
     paragraphs.push(
@@ -159,7 +159,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
             color: COLORS.textPrimary,
           }),
         ],
-      })
+      }),
     );
   }
 
@@ -187,7 +187,7 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
           color: COLORS.textPrimary,
         }),
       ],
-    })
+    }),
   );
 
   // Prepared by
@@ -208,14 +208,14 @@ function createCoverPage(reportData: ReportData): Paragraph[] {
           color: COLORS.textPrimary,
         }),
       ],
-    })
+    }),
   );
 
   // Page break after cover
   paragraphs.push(
     new Paragraph({
       children: [new PageBreak()],
-    })
+    }),
   );
 
   return paragraphs;
@@ -241,7 +241,7 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
           color: COLORS.textPrimary,
         }),
       ],
-    })
+    }),
   );
 
   let sectionNum = 1;
@@ -257,12 +257,23 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   }
 
   // Compliance & Governance (lowercase to match PDF)
-  if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories) {
+  if (
+    sections.compliance ||
+    sections.assessment ||
+    sections.clausesAndAnnexes ||
+    sections.nistSubcategories
+  ) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Compliance & governance`));
   }
 
   // Organization (lowercase to match PDF)
-  if (sections.vendors || sections.models || sections.trainingRegistry || sections.policyManager || sections.incidentManagement) {
+  if (
+    sections.vendors ||
+    sections.models ||
+    sections.trainingRegistry ||
+    sections.policyManager ||
+    sections.incidentManagement
+  ) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Organization`));
   }
 
@@ -270,7 +281,7 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   paragraphs.push(
     new Paragraph({
       children: [new PageBreak()],
-    })
+    }),
   );
 
   return paragraphs;
@@ -388,7 +399,7 @@ function createTable(headers: string[], rows: string[][]): Table {
           }),
         ],
         verticalAlign: VerticalAlign.CENTER,
-      })
+      }),
   );
 
   const dataRows = rows.map(
@@ -397,10 +408,13 @@ function createTable(headers: string[], rows: string[][]): Table {
         children: row.map(
           (cell) =>
             new TableCell({
-              shading: rowIndex % 2 === 1 ? {
-                fill: COLORS.backgroundAlt,
-                type: ShadingType.CLEAR,
-              } : undefined,
+              shading:
+                rowIndex % 2 === 1
+                  ? {
+                      fill: COLORS.backgroundAlt,
+                      type: ShadingType.CLEAR,
+                    }
+                  : undefined,
               borders: {
                 top: borderStyle,
                 bottom: borderStyle,
@@ -419,9 +433,9 @@ function createTable(headers: string[], rows: string[][]): Table {
                 }),
               ],
               verticalAlign: VerticalAlign.CENTER,
-            })
+            }),
         ),
-      })
+      }),
   );
 
   return new Table({
@@ -478,7 +492,7 @@ function createAIAnalysisBox(
   content: string,
   label: string = "AI Analysis",
   borderColor: string = COLORS.primary,
-  bgColor: string = COLORS.aiBg
+  bgColor: string = COLORS.aiBg,
 ): Paragraph[] {
   return [
     new Paragraph({
@@ -532,9 +546,7 @@ function createAIAnalysisBox(
 /**
  * Create the Executive Summary section from AI summaries
  */
-function createExecutiveSummarySection(
-  aiSummaries: AISummaries
-): (Paragraph | Table)[] {
+function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
   if (!aiSummaries.executiveSummary) {
@@ -542,12 +554,7 @@ function createExecutiveSummarySection(
   }
 
   elements.push(createSectionHeader("Executive Summary"));
-  elements.push(
-    ...createAIAnalysisBox(
-      aiSummaries.executiveSummary,
-      "AI-Generated Analysis"
-    )
-  );
+  elements.push(...createAIAnalysisBox(aiSummaries.executiveSummary, "AI-Generated Analysis"));
 
   // Key Findings
   if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
@@ -565,7 +572,7 @@ function createExecutiveSummarySection(
               color: COLORS.textPrimary,
             }),
           ],
-        })
+        }),
       );
     });
   }
@@ -586,7 +593,7 @@ function createExecutiveSummarySection(
               color: COLORS.textPrimary,
             }),
           ],
-        })
+        }),
       );
     });
   }
@@ -614,8 +621,10 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.projectRisks) {
     elements.push(createSubsectionHeader("Use case risks"));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['projectRisks']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['projectRisks']));
+    if (reportData.aiSummaries?.sectionSummaries?.["projectRisks"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["projectRisks"]),
+      );
     }
 
     elements.push(
@@ -628,11 +637,18 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
             size: 22,
           }),
         ],
-      })
+      }),
     );
 
     if (sections.projectRisks.risks.length > 0) {
-      const headers = ["Risk Name", "Owner", "Severity", "Likelihood", "Mitigation Status", "Risk Level"];
+      const headers = [
+        "Risk Name",
+        "Owner",
+        "Severity",
+        "Likelihood",
+        "Mitigation Status",
+        "Risk Level",
+      ];
       const rows = sections.projectRisks.risks.map((risk) => [
         risk.name,
         risk.owner || "-",
@@ -652,8 +668,8 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.vendorRisks) {
     elements.push(createSubsectionHeader(`Vendor risks (${sections.vendorRisks.totalRisks})`));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['vendorRisks']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['vendorRisks']));
+    if (reportData.aiSummaries?.sectionSummaries?.["vendorRisks"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["vendorRisks"]));
     }
 
     if (sections.vendorRisks.risks.length > 0) {
@@ -676,8 +692,8 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.modelRisks) {
     elements.push(createSubsectionHeader(`Model risks (${sections.modelRisks.totalRisks})`));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['modelRisks']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['modelRisks']));
+    if (reportData.aiSummaries?.sectionSummaries?.["modelRisks"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["modelRisks"]));
     }
 
     if (sections.modelRisks.risks.length > 0) {
@@ -702,8 +718,8 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
         reportData.aiSummaries.riskHighlights,
         "Risk Highlights",
         COLORS.aiWarning,
-        COLORS.aiWarningBg
-      )
+        COLORS.aiWarningBg,
+      ),
     );
   }
 
@@ -720,7 +736,12 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   const { sections } = reportData;
   const elements: (Paragraph | Table)[] = [];
 
-  if (!sections.compliance && !sections.assessment && !sections.clausesAndAnnexes && !sections.nistSubcategories) {
+  if (
+    !sections.compliance &&
+    !sections.assessment &&
+    !sections.clausesAndAnnexes &&
+    !sections.nistSubcategories
+  ) {
     return [];
   }
 
@@ -730,8 +751,8 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   if (sections.compliance) {
     elements.push(createSubsectionHeader("Controls"));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['compliance']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['compliance']));
+    if (reportData.aiSummaries?.sectionSummaries?.["compliance"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["compliance"]));
     }
 
     elements.push(
@@ -744,7 +765,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             size: 22,
           }),
         ],
-      })
+      }),
     );
 
     if (sections.compliance.controls.length > 0) {
@@ -766,8 +787,8 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   if (sections.assessment) {
     elements.push(createSubsectionHeader("Assessment tracker"));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['assessment']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['assessment']));
+    if (reportData.aiSummaries?.sectionSummaries?.["assessment"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["assessment"]));
     }
 
     elements.push(
@@ -780,7 +801,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             size: 22,
           }),
         ],
-      })
+      }),
     );
 
     sections.assessment.topics.forEach((topic) => {
@@ -795,17 +816,13 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
               color: COLORS.textPrimary,
             }),
           ],
-        })
+        }),
       );
 
       topic.subtopics.forEach((subtopic) => {
         if (subtopic.questions.length > 0) {
           const headers = ["Question", "Answer", "Status"];
-          const rows = subtopic.questions.map((q) => [
-            q.question,
-            q.answer || "-",
-            q.status,
-          ]);
+          const rows = subtopic.questions.map((q) => [q.question, q.answer || "-", q.status]);
           elements.push(createTable(headers, rows));
           elements.push(createTableSpacing());
         }
@@ -817,8 +834,10 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   if (sections.clausesAndAnnexes) {
     elements.push(createSubsectionHeader("Clauses and annexes"));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['clausesAndAnnexes']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['clausesAndAnnexes']));
+    if (reportData.aiSummaries?.sectionSummaries?.["clausesAndAnnexes"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["clausesAndAnnexes"]),
+      );
     }
 
     // Clauses sub-header (matching PDF section-subtitle)
@@ -834,7 +853,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
               color: COLORS.textPrimary,
             }),
           ],
-        })
+        }),
       );
       const headers = ["Clause ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.clauses.map((clause) => [
@@ -859,7 +878,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
               color: COLORS.textPrimary,
             }),
           ],
-        })
+        }),
       );
       const headers = ["Annex ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.annexes.map((annex) => [
@@ -884,8 +903,10 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
   if (sections.nistSubcategories) {
     elements.push(createSubsectionHeader("NIST AI RMF subcategories"));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['nistSubcategories']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['nistSubcategories']));
+    if (reportData.aiSummaries?.sectionSummaries?.["nistSubcategories"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["nistSubcategories"]),
+      );
     }
 
     sections.nistSubcategories.functions.forEach((func) => {
@@ -901,7 +922,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
               color: COLORS.primary,
             }),
           ],
-        })
+        }),
       );
 
       func.categories.forEach((category) => {
@@ -917,7 +938,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
                 color: COLORS.textSecondary,
               }),
             ],
-          })
+          }),
         );
 
         if (category.subcategories.length > 0) {
@@ -927,9 +948,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             sub.subcategoryId,
             sub.name,
             sub.status || "-",
-            sub.risks && sub.risks.length > 0
-              ? sub.risks.map((r) => r.riskName).join(", ")
-              : "-",
+            sub.risks && sub.risks.length > 0 ? sub.risks.map((r) => r.riskName).join(", ") : "-",
           ]);
           elements.push(createTable(headers, rows));
           elements.push(createTableSpacing());
@@ -951,7 +970,13 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   const { sections } = reportData;
   const elements: (Paragraph | Table)[] = [];
 
-  if (!sections.vendors && !sections.models && !sections.trainingRegistry && !sections.policyManager && !sections.incidentManagement) {
+  if (
+    !sections.vendors &&
+    !sections.models &&
+    !sections.trainingRegistry &&
+    !sections.policyManager &&
+    !sections.incidentManagement
+  ) {
     return [];
   }
 
@@ -961,8 +986,8 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.models) {
     elements.push(createSubsectionHeader(`AI models (${sections.models.totalModels})`));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['models']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['models']));
+    if (reportData.aiSummaries?.sectionSummaries?.["models"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["models"]));
     }
 
     if (sections.models.models.length > 0) {
@@ -984,8 +1009,8 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
   if (sections.vendors) {
     elements.push(createSubsectionHeader(`Vendors (${sections.vendors.totalVendors})`));
 
-    if (reportData.aiSummaries?.sectionSummaries?.['vendors']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['vendors']));
+    if (reportData.aiSummaries?.sectionSummaries?.["vendors"]) {
+      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["vendors"]));
     }
 
     if (sections.vendors.vendors.length > 0) {
@@ -1006,10 +1031,14 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
 
   // Training Registry
   if (sections.trainingRegistry) {
-    elements.push(createSubsectionHeader(`Training registry (${sections.trainingRegistry.totalRecords})`));
+    elements.push(
+      createSubsectionHeader(`Training registry (${sections.trainingRegistry.totalRecords})`),
+    );
 
-    if (reportData.aiSummaries?.sectionSummaries?.['trainingRegistry']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['trainingRegistry']));
+    if (reportData.aiSummaries?.sectionSummaries?.["trainingRegistry"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["trainingRegistry"]),
+      );
     }
 
     if (sections.trainingRegistry.records.length > 0) {
@@ -1029,10 +1058,14 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
 
   // Policy Manager
   if (sections.policyManager) {
-    elements.push(createSubsectionHeader(`Policy manager (${sections.policyManager.totalPolicies})`));
+    elements.push(
+      createSubsectionHeader(`Policy manager (${sections.policyManager.totalPolicies})`),
+    );
 
-    if (reportData.aiSummaries?.sectionSummaries?.['policyManager']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['policyManager']));
+    if (reportData.aiSummaries?.sectionSummaries?.["policyManager"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["policyManager"]),
+      );
     }
 
     if (sections.policyManager.policies.length > 0) {
@@ -1053,14 +1086,26 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
 
   // Incident Management (matches PDF table headers)
   if (sections.incidentManagement) {
-    elements.push(createSubsectionHeader(`Incident management (${sections.incidentManagement.totalIncidents})`));
+    elements.push(
+      createSubsectionHeader(`Incident management (${sections.incidentManagement.totalIncidents})`),
+    );
 
-    if (reportData.aiSummaries?.sectionSummaries?.['incidentManagement']) {
-      elements.push(...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries['incidentManagement']));
+    if (reportData.aiSummaries?.sectionSummaries?.["incidentManagement"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["incidentManagement"]),
+      );
     }
 
     if (sections.incidentManagement.incidents.length > 0) {
-      const headers = ["Incident ID", "Title", "Type", "Severity", "Status", "Reported", "Assignee"];
+      const headers = [
+        "Incident ID",
+        "Title",
+        "Type",
+        "Severity",
+        "Status",
+        "Reported",
+        "Assignee",
+      ];
       const rows = sections.incidentManagement.incidents.map((incident) => [
         incident.incidentId,
         incident.title,
@@ -1123,9 +1168,7 @@ function createFooter(reportData: ReportData): Footer {
 /**
  * Generate DOCX from report data
  */
-export async function generateDOCX(
-  reportData: ReportData
-): Promise<ReportGenerationResult> {
+export async function generateDOCX(reportData: ReportData): Promise<ReportGenerationResult> {
   try {
     // Build document sections
     const coverPage = createCoverPage(reportData);
@@ -1190,8 +1233,7 @@ export async function generateDOCX(
       success: true,
       filename,
       content: buffer,
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     };
   } catch (error) {
     console.error("Error generating DOCX:", error);
@@ -1211,7 +1253,7 @@ export async function generateDOCX(
  */
 export async function generateDOCXWithCharts(
   reportData: ReportData,
-  _chartImages: Record<string, string>
+  _chartImages: Record<string, string>,
 ): Promise<ReportGenerationResult> {
   // For now, charts are not embedded in DOCX
   // This function exists for API compatibility

@@ -1,9 +1,9 @@
-import { 
+import {
   ReviewStatus,
   DataSensitivity,
   BusinessCriticality,
   PastIssues,
-  RegulatoryExposure
+  RegulatoryExposure,
 } from "../../../enums/status.enum";
 
 export class VendorModel {
@@ -21,7 +21,7 @@ export class VendorModel {
   is_demo?: boolean;
   created_at?: Date;
   projects?: number[];
-  
+
   // Vendor scorecard fields
   data_sensitivity?: DataSensitivity;
   business_criticality?: BusinessCriticality;

@@ -6,7 +6,7 @@ import { ApiResponse } from "../../domain/types/User";
  */
 export interface AdvisorMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   createdAt: string;
   chartData?: unknown;
@@ -93,9 +93,7 @@ export const getConversationByIdAPI = async (
   id: number,
 ): Promise<ApiResponse<ConversationEnvelope>> => {
   try {
-    const response = await apiServices.get(
-      `/advisor/conversations/${domain}/${id}`,
-    );
+    const response = await apiServices.get(`/advisor/conversations/${domain}/${id}`);
     return response as ApiResponse<ConversationEnvelope>;
   } catch (error) {
     rethrow(error);
@@ -110,10 +108,7 @@ export const createConversationAPI = async (
   domain: string,
 ): Promise<ApiResponse<ConversationEnvelope>> => {
   try {
-    const response = await apiServices.post(
-      `/advisor/conversations/${domain}`,
-      {},
-    );
+    const response = await apiServices.post(`/advisor/conversations/${domain}`, {});
     return response as ApiResponse<ConversationEnvelope>;
   } catch (error) {
     rethrow(error);
@@ -130,10 +125,7 @@ export const updateConversationAPI = async (
   messages: AdvisorMessage[],
 ): Promise<ApiResponse<ConversationEnvelope>> => {
   try {
-    const response = await apiServices.put(
-      `/advisor/conversations/${domain}/${id}`,
-      { messages },
-    );
+    const response = await apiServices.put(`/advisor/conversations/${domain}/${id}`, { messages });
     return response as ApiResponse<ConversationEnvelope>;
   } catch (error) {
     rethrow(error);
@@ -148,9 +140,7 @@ export const deleteConversationAPI = async (
   id: number,
 ): Promise<ApiResponse<void>> => {
   try {
-    const response = await apiServices.delete(
-      `/advisor/conversations/${domain}/${id}`,
-    );
+    const response = await apiServices.delete(`/advisor/conversations/${domain}/${id}`);
     return response as ApiResponse<void>;
   } catch (error) {
     rethrow(error);

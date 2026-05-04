@@ -15,7 +15,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, substantial modifications will be made to the high-risk AI system. Specifically, additional fine-tuning will be performed on the natural language processing models to improve contextual understanding. This will involve retraining the model with newly collected domain-specific data to enhance its accuracy and robustness in specific use cases."
+        answer:
+          "Yes, substantial modifications will be made to the high-risk AI system. Specifically, additional fine-tuning will be performed on the natural language processing models to improve contextual understanding. This will involve retraining the model with newly collected domain-specific data to enhance its accuracy and robustness in specific use cases.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The AI system is designed to solve the problem of automating customer support interactions for a large-scale e-commerce platform. It leverages natural language understanding (NLU) to efficiently respond to customer queries, reducing human workload and response time. Before deciding on AI, we also considered rule-based automation systems, but AI provided a more scalable and adaptable solution."
+        answer:
+          "The AI system is designed to solve the problem of automating customer support interactions for a large-scale e-commerce platform. It leverages natural language understanding (NLU) to efficiently respond to customer queries, reducing human workload and response time. Before deciding on AI, we also considered rule-based automation systems, but AI provided a more scalable and adaptable solution.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization conducted a thorough ethical review of the AI application, focusing on transparency, fairness, and privacy concerns. Key ethical considerations included ensuring that the AI did not perpetuate biases or discriminate against certain groups. We implemented bias mitigation strategies and ensured data privacy compliance through strong encryption and anonymization techniques."
+        answer:
+          "Our organization conducted a thorough ethical review of the AI application, focusing on transparency, fairness, and privacy concerns. Key ethical considerations included ensuring that the AI did not perpetuate biases or discriminate against certain groups. We implemented bias mitigation strategies and ensured data privacy compliance through strong encryption and anonymization techniques.",
       },
     ],
   },
@@ -63,7 +66,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We worked with an external AI development firm that specialized in NLP for automating customer support. They were involved in the initial design, model training, and deployment phases. Privacy impact assessments were conducted in collaboration with legal teams to ensure compliance with GDPR guidelines, and the firm provided documentation confirming their data handling practices."
+        answer:
+          "We worked with an external AI development firm that specialized in NLP for automating customer support. They were involved in the initial design, model training, and deployment phases. Privacy impact assessments were conducted in collaboration with legal teams to ensure compliance with GDPR guidelines, and the firm provided documentation confirming their data handling practices.",
       },
       {
         order_no: 2,
@@ -77,7 +81,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The primary risk identified was the potential for personal data leakage through model outputs. To mitigate this, we implemented strict access controls to the model, as well as automatic data anonymization processes during training. We also conducted a thorough audit of third-party data sources to ensure compliance with privacy regulations."
+        answer:
+          "The primary risk identified was the potential for personal data leakage through model outputs. To mitigate this, we implemented strict access controls to the model, as well as automatic data anonymization processes during training. We also conducted a thorough audit of third-party data sources to ensure compliance with privacy regulations.",
       },
       {
         order_no: 3,
@@ -91,7 +96,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We assessed the model using fairness audits, explainability techniques (such as SHAP values), and robustness testing to ensure that it performed consistently across diverse data sources. Specific risks identified included the potential for unbalanced training data leading to biased outputs. We mitigated these risks by using diverse and representative datasets during training and regularly testing the model for fairness."
+        answer:
+          "We assessed the model using fairness audits, explainability techniques (such as SHAP values), and robustness testing to ensure that it performed consistently across diverse data sources. Specific risks identified included the potential for unbalanced training data leading to biased outputs. We mitigated these risks by using diverse and representative datasets during training and regularly testing the model for fairness.",
       },
       {
         order_no: 4,
@@ -105,7 +111,8 @@ export const RiskManagementSystem = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "To address risks identified in the model assessment, we implemented a series of mitigation strategies, including the integration of fairness algorithms, continuous model monitoring, and regular retraining with updated data. These strategies have proven effective in maintaining model fairness and robustness. Additionally, we have established regular review meetings with our AI governance team to monitor the impact and adjust strategies as needed."
+        answer:
+          "To address risks identified in the model assessment, we implemented a series of mitigation strategies, including the integration of fairness algorithms, continuous model monitoring, and regular retraining with updated data. These strategies have proven effective in maintaining model fairness and robustness. Additionally, we have established regular review meetings with our AI governance team to monitor the impact and adjust strategies as needed.",
       },
     ],
   },

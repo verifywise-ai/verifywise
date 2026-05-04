@@ -58,12 +58,16 @@ export async function scanSafeTensorsFile(filePath: string): Promise<IModelScanR
       });
     }
 
-    const highestSeverity = findings.length > 0
-      ? findings.reduce((max, f) => {
-          const order = { critical: 0, high: 1, medium: 2, low: 3 };
-          return order[f.severity] < order[max] ? f.severity : max;
-        }, "low" as "critical" | "high" | "medium" | "low")
-      : null;
+    const highestSeverity =
+      findings.length > 0
+        ? findings.reduce(
+            (max, f) => {
+              const order = { critical: 0, high: 1, medium: 2, low: 3 };
+              return order[f.severity] < order[max] ? f.severity : max;
+            },
+            "low" as "critical" | "high" | "medium" | "low",
+          )
+        : null;
 
     return {
       filePath,
@@ -91,7 +95,7 @@ export async function scanSafeTensorsFile(filePath: string): Promise<IModelScanR
 async function validateSafeTensorsFile(filePath: string): Promise<ISafeTensorsValidationResult> {
   const warnings: string[] = [];
   const stats = await fs.promises.stat(filePath);
-  
+
   if (stats.size < 8) {
     return {
       isValid: false,
@@ -137,7 +141,7 @@ async function validateSafeTensorsFile(filePath: string): Promise<ISafeTensorsVa
     let tensorCount = 0;
     for (const key of Object.keys(header)) {
       if (key === "__metadata__") continue;
-      
+
       const tensorInfo = header[key] as Record<string, unknown>;
       if (!tensorInfo || typeof tensorInfo !== "object") {
         warnings.push("Invalid tensor entry: " + key);

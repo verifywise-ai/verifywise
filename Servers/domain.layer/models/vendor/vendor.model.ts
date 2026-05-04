@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IVendor } from "../../interfaces/i.vendor";
 import { numberValidation } from "../../validations/number.valid";
@@ -65,20 +59,11 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
   review_result?: string;
 
   @Column({
-    type: DataType.ENUM(
-      "Not started",
-      "In review",
-      "Reviewed",
-      "Requires follow-up"
-    ),
+    type: DataType.ENUM("Not started", "In review", "Reviewed", "Requires follow-up"),
     allowNull: true,
     defaultValue: "Not started",
   })
-  review_status?:
-    | "Not started"
-    | "In review"
-    | "Reviewed"
-    | "Requires follow-up";
+  review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up";
 
   @ForeignKey(() => UserModel)
   @Column({
@@ -113,12 +98,12 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
   @Column({
     type: DataType.ENUM(
       "None",
-      "Internal only", 
+      "Internal only",
       "Personally identifiable information (PII)",
       "Financial data",
       "Health data (e.g. HIPAA)",
       "Model weights or AI assets",
-      "Other sensitive data"
+      "Other sensitive data",
     ),
     allowNull: true,
   })
@@ -135,7 +120,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     type: DataType.ENUM(
       "Low (vendor supports non-core functions)",
       "Medium (affects operations but is replaceable)",
-      "High (critical to core services or products)"
+      "High (critical to core services or products)",
     ),
     allowNull: true,
   })
@@ -148,7 +133,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     type: DataType.ENUM(
       "None",
       "Minor incident (e.g. small delay, minor bug)",
-      "Major incident (e.g. data breach, legal issue)"
+      "Major incident (e.g. data breach, legal issue)",
     ),
     allowNull: true,
   })
@@ -166,7 +151,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       "ISO 27001",
       "EU AI act",
       "CCPA (california)",
-      "Other"
+      "Other",
     ),
     allowNull: true,
   })
@@ -199,36 +184,49 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     website: string,
     vendor_contact_person: string,
     review_result?: string,
-    review_status?:
-      | "Not started"
-      | "In review"
-      | "Reviewed"
-      | "Requires follow-up",
+    review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up",
     reviewer?: number,
     review_date?: Date,
     order_no?: number,
     is_demo: boolean = false,
     projects?: number[],
-    data_sensitivity?: "None" | "Internal only" | "Personally identifiable information (PII)" | "Financial data" | "Health data (e.g. HIPAA)" | "Model weights or AI assets" | "Other sensitive data",
-    business_criticality?: "Low (vendor supports non-core functions)" | "Medium (affects operations but is replaceable)" | "High (critical to core services or products)",
-    past_issues?: "None" | "Minor incident (e.g. small delay, minor bug)" | "Major incident (e.g. data breach, legal issue)",
-    regulatory_exposure?: "None" | "GDPR (EU)" | "HIPAA (US)" | "SOC 2" | "ISO 27001" | "EU AI act" | "CCPA (california)" | "Other",
-    risk_score?: number
+    data_sensitivity?:
+      | "None"
+      | "Internal only"
+      | "Personally identifiable information (PII)"
+      | "Financial data"
+      | "Health data (e.g. HIPAA)"
+      | "Model weights or AI assets"
+      | "Other sensitive data",
+    business_criticality?:
+      | "Low (vendor supports non-core functions)"
+      | "Medium (affects operations but is replaceable)"
+      | "High (critical to core services or products)",
+    past_issues?:
+      | "None"
+      | "Minor incident (e.g. small delay, minor bug)"
+      | "Major incident (e.g. data breach, legal issue)",
+    regulatory_exposure?:
+      | "None"
+      | "GDPR (EU)"
+      | "HIPAA (US)"
+      | "SOC 2"
+      | "ISO 27001"
+      | "EU AI act"
+      | "CCPA (california)"
+      | "Other",
+    risk_score?: number,
   ): Promise<VendorModel> {
     // Validate required fields
     if (!vendor_name || vendor_name.trim().length === 0) {
-      throw new ValidationException(
-        "Vendor name is required",
-        "vendor_name",
-        vendor_name
-      );
+      throw new ValidationException("Vendor name is required", "vendor_name", vendor_name);
     }
 
     if (!vendor_provides || vendor_provides.trim().length === 0) {
       throw new ValidationException(
         "Vendor provides is required",
         "vendor_provides",
-        vendor_provides
+        vendor_provides,
       );
     }
 
@@ -240,7 +238,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       throw new ValidationException(
         "Vendor contact person is required",
         "vendor_contact_person",
-        vendor_contact_person
+        vendor_contact_person,
       );
     }
 
@@ -251,16 +249,21 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       throw new ValidationException(
         "Valid assignee ID is required (must be >= 1)",
         "assignee",
-        assignee
+        assignee,
       );
     }
 
     // Reviewer is now optional - validate only if provided and positive
-    if (reviewer !== undefined && reviewer !== null && reviewer > 0 && !numberValidation(reviewer, 1)) {
+    if (
+      reviewer !== undefined &&
+      reviewer !== null &&
+      reviewer > 0 &&
+      !numberValidation(reviewer, 1)
+    ) {
       throw new ValidationException(
         "Valid reviewer ID is required (must be >= 1)",
         "reviewer",
-        reviewer
+        reviewer,
       );
     }
 
@@ -273,15 +276,15 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     vendor.assignee = assignee;
     vendor.website = website.trim();
     vendor.vendor_contact_person = vendor_contact_person.trim();
-    vendor.review_result = review_result ? review_result.trim() : '';
-    vendor.review_status = review_status || 'Not started';
+    vendor.review_result = review_result ? review_result.trim() : "";
+    vendor.review_status = review_status || "Not started";
     vendor.reviewer = reviewer && reviewer > 0 ? reviewer : null;
     vendor.review_date = review_date || new Date();
     vendor.order_no = order_no;
     vendor.is_demo = is_demo;
     vendor.created_at = new Date();
     vendor.projects = projects || [];
-    
+
     // Set scorecard fields
     vendor.data_sensitivity = data_sensitivity;
     vendor.business_criticality = business_criticality;
@@ -302,31 +305,45 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     website?: string;
     vendor_contact_person?: string;
     review_result?: string;
-    review_status?:
-      | "Not started"
-      | "In review"
-      | "Reviewed"
-      | "Requires follow-up";
+    review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up";
     reviewer?: number | null;
     review_date?: Date;
     order_no?: number;
     projects?: number[];
-    data_sensitivity?: "None" | "Internal only" | "Personally identifiable information (PII)" | "Financial data" | "Health data (e.g. HIPAA)" | "Model weights or AI assets" | "Other sensitive data";
-    business_criticality?: "Low (vendor supports non-core functions)" | "Medium (affects operations but is replaceable)" | "High (critical to core services or products)";
-    past_issues?: "None" | "Minor incident (e.g. small delay, minor bug)" | "Major incident (e.g. data breach, legal issue)";
-    regulatory_exposure?: "None" | "GDPR (EU)" | "HIPAA (US)" | "SOC 2" | "ISO 27001" | "EU AI act" | "CCPA (california)" | "Other";
+    data_sensitivity?:
+      | "None"
+      | "Internal only"
+      | "Personally identifiable information (PII)"
+      | "Financial data"
+      | "Health data (e.g. HIPAA)"
+      | "Model weights or AI assets"
+      | "Other sensitive data";
+    business_criticality?:
+      | "Low (vendor supports non-core functions)"
+      | "Medium (affects operations but is replaceable)"
+      | "High (critical to core services or products)";
+    past_issues?:
+      | "None"
+      | "Minor incident (e.g. small delay, minor bug)"
+      | "Major incident (e.g. data breach, legal issue)";
+    regulatory_exposure?:
+      | "None"
+      | "GDPR (EU)"
+      | "HIPAA (US)"
+      | "SOC 2"
+      | "ISO 27001"
+      | "EU AI act"
+      | "CCPA (california)"
+      | "Other";
     risk_score?: number;
   }): Promise<void> {
     // Validate vendor_name if provided
     if (updateData.vendor_name !== undefined) {
-      if (
-        !updateData.vendor_name ||
-        updateData.vendor_name.trim().length === 0
-      ) {
+      if (!updateData.vendor_name || updateData.vendor_name.trim().length === 0) {
         throw new ValidationException(
           "Vendor name is required",
           "vendor_name",
-          updateData.vendor_name
+          updateData.vendor_name,
         );
       }
       this.vendor_name = updateData.vendor_name.trim();
@@ -334,14 +351,11 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
 
     // Validate vendor_provides if provided
     if (updateData.vendor_provides !== undefined) {
-      if (
-        !updateData.vendor_provides ||
-        updateData.vendor_provides.trim().length === 0
-      ) {
+      if (!updateData.vendor_provides || updateData.vendor_provides.trim().length === 0) {
         throw new ValidationException(
           "Vendor provides is required",
           "vendor_provides",
-          updateData.vendor_provides
+          updateData.vendor_provides,
         );
       }
       this.vendor_provides = updateData.vendor_provides.trim();
@@ -350,11 +364,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     // Validate website if provided
     if (updateData.website !== undefined) {
       if (!updateData.website || updateData.website.trim().length === 0) {
-        throw new ValidationException(
-          "Website is required",
-          "website",
-          updateData.website
-        );
+        throw new ValidationException("Website is required", "website", updateData.website);
       }
       this.website = updateData.website.trim();
     }
@@ -368,7 +378,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
         throw new ValidationException(
           "Vendor contact person is required",
           "vendor_contact_person",
-          updateData.vendor_contact_person
+          updateData.vendor_contact_person,
         );
       }
       this.vendor_contact_person = updateData.vendor_contact_person.trim();
@@ -376,7 +386,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
 
     // Validate review_result if provided - now optional, allow empty values
     if (updateData.review_result !== undefined) {
-      this.review_result = updateData.review_result ? updateData.review_result.trim() : '';
+      this.review_result = updateData.review_result ? updateData.review_result.trim() : "";
     }
 
     // Validate assignee if provided
@@ -385,7 +395,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
         throw new ValidationException(
           "Valid assignee ID is required (must be >= 1)",
           "assignee",
-          updateData.assignee
+          updateData.assignee,
         );
       }
       this.assignee = updateData.assignee;
@@ -393,11 +403,15 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
 
     // Validate reviewer if provided - only validate if it's a positive number
     if (updateData.reviewer !== undefined) {
-      if (updateData.reviewer !== null && updateData.reviewer > 0 && !numberValidation(updateData.reviewer, 1)) {
+      if (
+        updateData.reviewer !== null &&
+        updateData.reviewer > 0 &&
+        !numberValidation(updateData.reviewer, 1)
+      ) {
         throw new ValidationException(
           "Valid reviewer ID is required (must be >= 1)",
           "reviewer",
-          updateData.reviewer
+          updateData.reviewer,
         );
       }
       this.reviewer = updateData.reviewer;
@@ -449,37 +463,26 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
    */
   async validateVendorData(): Promise<void> {
     if (!this.vendor_name || this.vendor_name.trim().length === 0) {
-      throw new ValidationException(
-        "Vendor name is required",
-        "vendor_name",
-        this.vendor_name
-      );
+      throw new ValidationException("Vendor name is required", "vendor_name", this.vendor_name);
     }
 
     if (!this.vendor_provides || this.vendor_provides.trim().length === 0) {
       throw new ValidationException(
         "Vendor provides is required",
         "vendor_provides",
-        this.vendor_provides
+        this.vendor_provides,
       );
     }
 
     if (!this.website || this.website.trim().length === 0) {
-      throw new ValidationException(
-        "Website is required",
-        "website",
-        this.website
-      );
+      throw new ValidationException("Website is required", "website", this.website);
     }
 
-    if (
-      !this.vendor_contact_person ||
-      this.vendor_contact_person.trim().length === 0
-    ) {
+    if (!this.vendor_contact_person || this.vendor_contact_person.trim().length === 0) {
       throw new ValidationException(
         "Vendor contact person is required",
         "vendor_contact_person",
-        this.vendor_contact_person
+        this.vendor_contact_person,
       );
     }
 
@@ -488,25 +491,22 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       throw new ValidationException(
         "Review result cannot be empty if provided",
         "review_result",
-        this.review_result
+        this.review_result,
       );
     }
 
     if (!this.assignee || !numberValidation(this.assignee, 1)) {
-      throw new ValidationException(
-        "Valid assignee ID is required",
-        "assignee",
-        this.assignee
-      );
+      throw new ValidationException("Valid assignee ID is required", "assignee", this.assignee);
     }
 
     // Reviewer is now optional - validate only if provided and not 0
-    if (this.reviewer !== undefined && this.reviewer !== null && this.reviewer > 0 && !numberValidation(this.reviewer, 1)) {
-      throw new ValidationException(
-        "Valid reviewer ID is required",
-        "reviewer",
-        this.reviewer
-      );
+    if (
+      this.reviewer !== undefined &&
+      this.reviewer !== null &&
+      this.reviewer > 0 &&
+      !numberValidation(this.reviewer, 1)
+    ) {
+      throw new ValidationException("Valid reviewer ID is required", "reviewer", this.reviewer);
     }
 
     // Order number validation removed as requested
@@ -527,7 +527,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       throw new BusinessLogicException(
         "Demo vendors cannot be modified",
         "DEMO_VENDOR_RESTRICTION",
-        { vendorId: this.id, vendorName: this.vendor_name }
+        { vendorId: this.id, vendorName: this.vendor_name },
       );
     }
     return true;
@@ -554,7 +554,6 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     return this.review_status === "Requires follow-up";
   }
 
- 
   /**
    * Get vendor summary for display
    */
@@ -608,11 +607,7 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
    */
   static async findByIdWithValidation(id: number): Promise<VendorModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const vendor = await VendorModel.findByPk(id);

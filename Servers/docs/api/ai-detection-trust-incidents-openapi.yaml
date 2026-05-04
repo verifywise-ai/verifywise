@@ -42,23 +42,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StartScanRequest'
+              $ref: "#/components/schemas/StartScanRequest"
       responses:
-        '201':
+        "201":
           description: Scan created and queued
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
           description: Validation error (missing/invalid fields)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
           description: Business logic error (e.g., scan already in progress)
-        '502':
+        "502":
           description: External service error (e.g., GitHub unreachable)
     get:
       tags: [AI Detection - Scans]
@@ -80,19 +80,19 @@ paths:
         - name: status
           in: query
           schema:
-            $ref: '#/components/schemas/ScanStatus'
+            $ref: "#/components/schemas/ScanStatus"
       responses:
-        '200':
+        "200":
           description: Paginated scan list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ScansResponse'
+                        $ref: "#/components/schemas/ScansResponse"
 
   /ai-detection/scans/active:
     get:
@@ -102,12 +102,12 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Active scan or null
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /ai-detection/scans/{scanId}:
     get:
@@ -116,20 +116,20 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Scan details with findings summary
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ScanResponse'
-        '404':
+                        $ref: "#/components/schemas/ScanResponse"
+        "404":
           description: Scan not found
     delete:
       tags: [AI Detection - Scans]
@@ -138,20 +138,20 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Scan deleted
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/DeleteScanResponse'
-        '404':
+                        $ref: "#/components/schemas/DeleteScanResponse"
+        "404":
           description: Scan not found
 
   /ai-detection/scans/{scanId}/status:
@@ -161,19 +161,19 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Scan status
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ScanStatusResponse'
+                        $ref: "#/components/schemas/ScanStatusResponse"
 
   /ai-detection/scans/{scanId}/findings:
     get:
@@ -182,7 +182,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
         - name: page
           in: query
           schema:
@@ -197,23 +197,23 @@ paths:
         - name: confidence
           in: query
           schema:
-            $ref: '#/components/schemas/ConfidenceLevel'
+            $ref: "#/components/schemas/ConfidenceLevel"
         - name: finding_type
           in: query
           schema:
-            $ref: '#/components/schemas/FindingType'
+            $ref: "#/components/schemas/FindingType"
       responses:
-        '200':
+        "200":
           description: Paginated findings
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/FindingsResponse'
+                        $ref: "#/components/schemas/FindingsResponse"
 
   /ai-detection/scans/{scanId}/security-findings:
     get:
@@ -222,7 +222,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
         - name: page
           in: query
           schema:
@@ -240,7 +240,7 @@ paths:
             type: string
             enum: [critical, high, medium, low]
       responses:
-        '200':
+        "200":
           description: Paginated security findings
 
   /ai-detection/scans/{scanId}/security-summary:
@@ -250,9 +250,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Security summary
 
   /ai-detection/scans/{scanId}/cancel:
@@ -263,22 +263,22 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Scan cancelled
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/CancelScanResponse'
-        '404':
+                        $ref: "#/components/schemas/CancelScanResponse"
+        "404":
           description: Scan not found
-        '422':
+        "422":
           description: Scan not in cancellable state
 
   /ai-detection/scans/{scanId}/findings/{findingId}/governance:
@@ -288,7 +288,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
         - name: findingId
           in: path
           required: true
@@ -299,19 +299,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateGovernanceStatusRequest'
+              $ref: "#/components/schemas/UpdateGovernanceStatusRequest"
       responses:
-        '200':
+        "200":
           description: Governance status updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/UpdateGovernanceStatusResponse'
+                        $ref: "#/components/schemas/UpdateGovernanceStatusResponse"
 
   /ai-detection/scans/{scanId}/governance-summary:
     get:
@@ -320,9 +320,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Governance summary
 
   /ai-detection/stats:
@@ -332,7 +332,7 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Statistics object
 
   /ai-detection/scans/{scanId}/export/ai-bom:
@@ -343,9 +343,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: AI-BOM JSON file
           headers:
             Content-Disposition:
@@ -355,7 +355,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /ai-detection/scans/{scanId}/dependency-graph:
     get:
@@ -364,19 +364,19 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Graph nodes, edges, and metadata
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/DependencyGraphResponse'
+                        $ref: "#/components/schemas/DependencyGraphResponse"
 
   /ai-detection/scans/{scanId}/compliance:
     get:
@@ -385,19 +385,19 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Compliance mappings, checklist, and summary
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ComplianceMappingResponse'
+                        $ref: "#/components/schemas/ComplianceMappingResponse"
 
   # ===========================================================================
   # AI DETECTION - RISK SCORING
@@ -410,19 +410,19 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Risk score data
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/RiskScoreResponse'
+                        $ref: "#/components/schemas/RiskScoreResponse"
 
   /ai-detection/scans/{scanId}/risk-score/recalculate:
     post:
@@ -432,20 +432,20 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/scanId'
+        - $ref: "#/components/parameters/scanId"
       responses:
-        '200':
+        "200":
           description: Recalculated risk score
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/RiskScoreResponse'
-        '422':
+                        $ref: "#/components/schemas/RiskScoreResponse"
+        "422":
           description: Scan not in completed status
 
   /ai-detection/risk-scoring/config:
@@ -455,17 +455,17 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Risk scoring config (or defaults if none set)
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/RiskScoringConfig'
+                        $ref: "#/components/schemas/RiskScoringConfig"
     patch:
       tags: [AI Detection - Risk Scoring]
       summary: Update risk scoring configuration
@@ -477,20 +477,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRiskScoringConfigRequest'
+              $ref: "#/components/schemas/UpdateRiskScoringConfigRequest"
       responses:
-        '200':
+        "200":
           description: Updated config
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/RiskScoringConfig'
-        '400':
+                        $ref: "#/components/schemas/RiskScoringConfig"
+        "400":
           description: Validation error (invalid weights, unknown keys)
 
   # ===========================================================================
@@ -516,17 +516,17 @@ paths:
             default: 20
             maximum: 100
       responses:
-        '200':
+        "200":
           description: Paginated repository list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/RepositoryListResponse'
+                        $ref: "#/components/schemas/RepositoryListResponse"
     post:
       tags: [AI Detection - Repositories]
       summary: Register a new repository
@@ -537,22 +537,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRepositoryRequest'
+              $ref: "#/components/schemas/CreateRepositoryRequest"
       responses:
-        '201':
+        "201":
           description: Repository registered
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Repository'
-        '400':
+                        $ref: "#/components/schemas/Repository"
+        "400":
           description: Validation error
-        '409':
+        "409":
           description: Repository already registered
 
   /ai-detection/repositories/{id}:
@@ -562,20 +562,20 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
       responses:
-        '200':
+        "200":
           description: Repository details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Repository'
-        '404':
+                        $ref: "#/components/schemas/Repository"
+        "404":
           description: Repository not found
     patch:
       tags: [AI Detection - Repositories]
@@ -583,26 +583,26 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRepositoryRequest'
+              $ref: "#/components/schemas/UpdateRepositoryRequest"
       responses:
-        '200':
+        "200":
           description: Repository updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Repository'
-        '404':
+                        $ref: "#/components/schemas/Repository"
+        "404":
           description: Repository not found
     delete:
       tags: [AI Detection - Repositories]
@@ -611,13 +611,13 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
       responses:
-        '200':
+        "200":
           description: Repository deleted
-        '404':
+        "404":
           description: Repository not found
-        '409':
+        "409":
           description: Scan in progress, cannot delete
 
   /ai-detection/repositories/{id}/scan:
@@ -627,17 +627,17 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
       responses:
-        '201':
+        "201":
           description: Scan triggered
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: Repository not found
-        '409':
+        "409":
           description: Scan already in progress for this repository
 
   /ai-detection/repositories/{id}/webhook-secret:
@@ -647,15 +647,15 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
       responses:
-        '200':
+        "200":
           description: New webhook secret generated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -663,7 +663,7 @@ paths:
                         properties:
                           webhook_secret:
                             type: string
-        '404':
+        "404":
           description: Repository not found
 
   /ai-detection/repositories/{id}/scans:
@@ -673,7 +673,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/repositoryId'
+        - $ref: "#/components/parameters/repositoryId"
         - name: page
           in: query
           schema:
@@ -686,17 +686,17 @@ paths:
             default: 20
             maximum: 100
       responses:
-        '200':
+        "200":
           description: Paginated scan history for this repository
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ScansResponse'
+                        $ref: "#/components/schemas/ScansResponse"
 
   # ===========================================================================
   # AI TRUST CENTRE
@@ -709,13 +709,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Full overview object with intro, compliance_badges, company_description, terms_and_contact, info
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -724,7 +724,7 @@ paths:
                           message:
                             type: string
                           overview:
-                            $ref: '#/components/schemas/AITrustCentreOverview'
+                            $ref: "#/components/schemas/AITrustCentreOverview"
     put:
       tags: [AI Trust Centre]
       summary: Update AI Trust Centre overview
@@ -735,15 +735,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AITrustCentreOverview'
+              $ref: "#/components/schemas/AITrustCentreOverview"
       responses:
-        '200':
+        "200":
           description: Overview updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -752,8 +752,8 @@ paths:
                           message:
                             type: string
                           overview:
-                            $ref: '#/components/schemas/AITrustCentreOverview'
-        '503':
+                            $ref: "#/components/schemas/AITrustCentreOverview"
+        "503":
           description: Database operation failed
 
   /ai-trust-centre/resources:
@@ -763,13 +763,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: List of resources with file info
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -780,7 +780,7 @@ paths:
                           resources:
                             type: array
                             items:
-                              $ref: '#/components/schemas/AITrustCentreResource'
+                              $ref: "#/components/schemas/AITrustCentreResource"
     post:
       tags: [AI Trust Centre]
       summary: Create an AI Trust Centre resource
@@ -803,15 +803,15 @@ paths:
                   type: string
                 visible:
                   type: string
-                  enum: ['true', 'false']
+                  enum: ["true", "false"]
       responses:
-        '201':
+        "201":
           description: Resource created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -820,8 +820,8 @@ paths:
                           message:
                             type: string
                           resource:
-                            $ref: '#/components/schemas/AITrustCentreResource'
-        '400':
+                            $ref: "#/components/schemas/AITrustCentreResource"
+        "400":
           description: File upload failed
 
   /ai-trust-centre/resources/{id}:
@@ -852,14 +852,14 @@ paths:
                   type: string
                 visible:
                   type: string
-                  enum: ['true', 'false']
+                  enum: ["true", "false"]
                 delete:
                   type: string
                   description: File ID to delete (required when uploading replacement)
       responses:
-        '200':
+        "200":
           description: Resource updated
-        '400':
+        "400":
           description: File validation error
     delete:
       tags: [AI Trust Centre]
@@ -873,9 +873,9 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Resource deleted
-        '503':
+        "503":
           description: Deletion failed
 
   /ai-trust-centre/subprocessors:
@@ -885,13 +885,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Subprocessor list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -902,7 +902,7 @@ paths:
                           subprocessors:
                             type: array
                             items:
-                              $ref: '#/components/schemas/AITrustCentreSubprocessor'
+                              $ref: "#/components/schemas/AITrustCentreSubprocessor"
     post:
       tags: [AI Trust Centre]
       summary: Create an AI Trust Centre subprocessor
@@ -913,15 +913,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSubprocessorRequest'
+              $ref: "#/components/schemas/CreateSubprocessorRequest"
       responses:
-        '201':
+        "201":
           description: Subprocessor created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -930,7 +930,7 @@ paths:
                           message:
                             type: string
                           subprocessor:
-                            $ref: '#/components/schemas/AITrustCentreSubprocessor'
+                            $ref: "#/components/schemas/AITrustCentreSubprocessor"
 
   /ai-trust-centre/subprocessors/{id}:
     put:
@@ -949,9 +949,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateSubprocessorRequest'
+              $ref: "#/components/schemas/UpdateSubprocessorRequest"
       responses:
-        '200':
+        "200":
           description: Subprocessor updated
     delete:
       tags: [AI Trust Centre]
@@ -965,9 +965,9 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Subprocessor deleted
-        '503':
+        "503":
           description: Deletion failed
 
   /ai-trust-centre/logo:
@@ -988,9 +988,9 @@ paths:
                   type: string
                   format: binary
       responses:
-        '200':
+        "200":
           description: Logo uploaded
-        '400':
+        "400":
           description: File upload failed
     delete:
       tags: [AI Trust Centre]
@@ -998,9 +998,9 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Logo deleted
-        '503':
+        "503":
           description: Deletion failed
 
   /ai-trust-centre/{hash}:
@@ -1016,13 +1016,13 @@ paths:
             type: string
           description: Organization tenant hash
       responses:
-        '200':
+        "200":
           description: Public trust centre page data
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1031,8 +1031,8 @@ paths:
                           message:
                             type: string
                           trustCentre:
-                            $ref: '#/components/schemas/AITrustCentrePublicPage'
-        '404':
+                            $ref: "#/components/schemas/AITrustCentrePublicPage"
+        "404":
           description: Organization not found
 
   /ai-trust-centre/{hash}/logo:
@@ -1046,13 +1046,13 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Logo data
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1068,7 +1068,7 @@ paths:
                                 format: byte
                               type:
                                 type: string
-        '404':
+        "404":
           description: Logo not found
 
   /ai-trust-centre/{hash}/resources/{id}:
@@ -1088,14 +1088,14 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: File binary
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        '404':
+        "404":
           description: Resource not found
 
   # ===========================================================================
@@ -1109,19 +1109,19 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Array of incidents
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Incident'
+                          $ref: "#/components/schemas/Incident"
     post:
       tags: [AI Incident Management]
       summary: Create a new incident
@@ -1132,20 +1132,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateIncidentRequest'
+              $ref: "#/components/schemas/CreateIncidentRequest"
       responses:
-        '201':
+        "201":
           description: Incident created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Incident'
-        '400':
+                        $ref: "#/components/schemas/Incident"
+        "400":
           description: Validation error
           content:
             application/json:
@@ -1176,22 +1176,22 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/incidentId'
+        - $ref: "#/components/parameters/incidentId"
       responses:
-        '200':
+        "200":
           description: Incident details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Incident'
-        '204':
+                        $ref: "#/components/schemas/Incident"
+        "204":
           description: Incident not found (no content)
-        '400':
+        "400":
           description: Invalid ID parameter
     patch:
       tags: [AI Incident Management]
@@ -1199,28 +1199,28 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/incidentId'
+        - $ref: "#/components/parameters/incidentId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateIncidentRequest'
+              $ref: "#/components/schemas/UpdateIncidentRequest"
       responses:
-        '200':
+        "200":
           description: Incident updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Incident'
-        '400':
+                        $ref: "#/components/schemas/Incident"
+        "400":
           description: Validation error
-        '404':
+        "404":
           description: Incident not found
     delete:
       tags: [AI Incident Management]
@@ -1228,13 +1228,13 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/incidentId'
+        - $ref: "#/components/parameters/incidentId"
       responses:
-        '200':
+        "200":
           description: Incident deleted
-        '400':
+        "400":
           description: Invalid ID parameter
-        '404':
+        "404":
           description: Incident not found
 
   /ai-incident-management/{id}/archive:
@@ -1244,22 +1244,22 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/incidentId'
+        - $ref: "#/components/parameters/incidentId"
       responses:
-        '200':
+        "200":
           description: Incident archived
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Incident'
-        '400':
+                        $ref: "#/components/schemas/Incident"
+        "400":
           description: Invalid ID parameter
-        '404':
+        "404":
           description: Incident not found
 
 # =============================================================================
@@ -1397,14 +1397,14 @@ components:
           description: GitHub repository URL
           example: https://github.com/owner/repo
         scan_mode:
-          $ref: '#/components/schemas/ScanMode'
+          $ref: "#/components/schemas/ScanMode"
         base_commit_sha:
           type: string
-          pattern: '^[0-9a-fA-F]{7,40}$'
+          pattern: "^[0-9a-fA-F]{7,40}$"
           description: Required for incremental scans
         head_commit_sha:
           type: string
-          pattern: '^[0-9a-fA-F]{7,40}$'
+          pattern: "^[0-9a-fA-F]{7,40}$"
           description: Required for incremental scans
 
     ScanStatusResponse:
@@ -1413,7 +1413,7 @@ components:
         id:
           type: integer
         status:
-          $ref: '#/components/schemas/ScanStatus'
+          $ref: "#/components/schemas/ScanStatus"
         progress:
           type: number
           format: float
@@ -1455,7 +1455,7 @@ components:
             repository_name:
               type: string
             status:
-              $ref: '#/components/schemas/ScanStatus'
+              $ref: "#/components/schemas/ScanStatus"
             findings_count:
               type: integer
             files_scanned:
@@ -1475,7 +1475,7 @@ components:
               type: string
               nullable: true
             triggered_by:
-              $ref: '#/components/schemas/TriggeredByUser'
+              $ref: "#/components/schemas/TriggeredByUser"
             risk_score:
               type: number
               nullable: true
@@ -1490,7 +1490,7 @@ components:
               format: date-time
               nullable: true
             scan_mode:
-              $ref: '#/components/schemas/ScanMode'
+              $ref: "#/components/schemas/ScanMode"
             base_commit_sha:
               type: string
               nullable: true
@@ -1507,7 +1507,7 @@ components:
               type: string
               format: date-time
         summary:
-          $ref: '#/components/schemas/ScanSummary'
+          $ref: "#/components/schemas/ScanSummary"
 
     ScanSummary:
       type: object
@@ -1540,7 +1540,7 @@ components:
         repository_name:
           type: string
         status:
-          $ref: '#/components/schemas/ScanStatus'
+          $ref: "#/components/schemas/ScanStatus"
         findings_count:
           type: integer
         files_scanned:
@@ -1557,7 +1557,7 @@ components:
           type: integer
           nullable: true
         triggered_by:
-          $ref: '#/components/schemas/TriggeredByUser'
+          $ref: "#/components/schemas/TriggeredByUser"
         risk_score:
           type: number
           nullable: true
@@ -1565,7 +1565,7 @@ components:
           type: string
           nullable: true
         scan_mode:
-          $ref: '#/components/schemas/ScanMode'
+          $ref: "#/components/schemas/ScanMode"
         baseline_scan_id:
           type: integer
           nullable: true
@@ -1582,9 +1582,9 @@ components:
         scans:
           type: array
           items:
-            $ref: '#/components/schemas/ScanListItem'
+            $ref: "#/components/schemas/ScanListItem"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     CancelScanResponse:
       type: object
@@ -1624,7 +1624,7 @@ components:
         id:
           type: integer
         finding_type:
-          $ref: '#/components/schemas/FindingType'
+          $ref: "#/components/schemas/FindingType"
         category:
           type: string
         name:
@@ -1632,9 +1632,9 @@ components:
         provider:
           type: string
         confidence:
-          $ref: '#/components/schemas/ConfidenceLevel'
+          $ref: "#/components/schemas/ConfidenceLevel"
         risk_level:
-          $ref: '#/components/schemas/RiskLevel'
+          $ref: "#/components/schemas/RiskLevel"
         description:
           type: string
           nullable: true
@@ -1646,9 +1646,9 @@ components:
         file_paths:
           type: array
           items:
-            $ref: '#/components/schemas/FilePath'
+            $ref: "#/components/schemas/FilePath"
         governance_status:
-          $ref: '#/components/schemas/GovernanceStatus'
+          $ref: "#/components/schemas/GovernanceStatus"
         governance_updated_at:
           type: string
           format: date-time
@@ -1663,7 +1663,7 @@ components:
           type: string
           nullable: true
         license_risk:
-          $ref: '#/components/schemas/LicenseRiskLevel'
+          $ref: "#/components/schemas/LicenseRiskLevel"
         license_source:
           type: string
           enum: [package, huggingface, pypi, npm, manual]
@@ -1678,7 +1678,7 @@ components:
           type: object
           nullable: true
         finding_status:
-          $ref: '#/components/schemas/FindingStatus'
+          $ref: "#/components/schemas/FindingStatus"
 
     FindingsResponse:
       type: object
@@ -1686,9 +1686,9 @@ components:
         findings:
           type: array
           items:
-            $ref: '#/components/schemas/Finding'
+            $ref: "#/components/schemas/Finding"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     UpdateGovernanceStatusRequest:
       type: object
@@ -1795,11 +1795,11 @@ components:
           type: integer
           nullable: true
         dimension_weights:
-          $ref: '#/components/schemas/DimensionWeights'
+          $ref: "#/components/schemas/DimensionWeights"
         vulnerability_scan_enabled:
           type: boolean
         vulnerability_types_enabled:
-          $ref: '#/components/schemas/VulnerabilityTypesEnabled'
+          $ref: "#/components/schemas/VulnerabilityTypesEnabled"
         updated_by:
           type: integer
           nullable: true
@@ -1817,11 +1817,11 @@ components:
           type: integer
           nullable: true
         dimension_weights:
-          $ref: '#/components/schemas/DimensionWeights'
+          $ref: "#/components/schemas/DimensionWeights"
         vulnerability_scan_enabled:
           type: boolean
         vulnerability_types_enabled:
-          $ref: '#/components/schemas/VulnerabilityTypesEnabled'
+          $ref: "#/components/schemas/VulnerabilityTypesEnabled"
 
     # =========================================================================
     # AI Detection - Dependency Graph & Compliance
@@ -2052,9 +2052,9 @@ components:
         repositories:
           type: array
           items:
-            $ref: '#/components/schemas/Repository'
+            $ref: "#/components/schemas/Repository"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     # =========================================================================
     # AI Trust Centre Schemas
@@ -2377,11 +2377,11 @@ components:
         ai_project:
           type: string
         type:
-          $ref: '#/components/schemas/IncidentType'
+          $ref: "#/components/schemas/IncidentType"
         severity:
-          $ref: '#/components/schemas/IncidentSeverity'
+          $ref: "#/components/schemas/IncidentSeverity"
         status:
-          $ref: '#/components/schemas/IncidentStatus'
+          $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
           format: date-time
@@ -2416,7 +2416,7 @@ components:
         archived:
           type: boolean
         approval_status:
-          $ref: '#/components/schemas/IncidentApprovalStatus'
+          $ref: "#/components/schemas/IncidentApprovalStatus"
         approved_by:
           type: string
           nullable: true
@@ -2452,11 +2452,11 @@ components:
         ai_project:
           type: string
         type:
-          $ref: '#/components/schemas/IncidentType'
+          $ref: "#/components/schemas/IncidentType"
         severity:
-          $ref: '#/components/schemas/IncidentSeverity'
+          $ref: "#/components/schemas/IncidentSeverity"
         status:
-          $ref: '#/components/schemas/IncidentStatus'
+          $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
           format: date-time
@@ -2466,7 +2466,7 @@ components:
         reporter:
           type: string
         approval_status:
-          $ref: '#/components/schemas/IncidentApprovalStatus'
+          $ref: "#/components/schemas/IncidentApprovalStatus"
         approved_by:
           type: string
         categories_of_harm:
@@ -2507,11 +2507,11 @@ components:
         ai_project:
           type: string
         type:
-          $ref: '#/components/schemas/IncidentType'
+          $ref: "#/components/schemas/IncidentType"
         severity:
-          $ref: '#/components/schemas/IncidentSeverity'
+          $ref: "#/components/schemas/IncidentSeverity"
         status:
-          $ref: '#/components/schemas/IncidentStatus'
+          $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
           format: date-time
@@ -2521,7 +2521,7 @@ components:
         reporter:
           type: string
         approval_status:
-          $ref: '#/components/schemas/IncidentApprovalStatus'
+          $ref: "#/components/schemas/IncidentApprovalStatus"
         approved_by:
           type: string
         categories_of_harm:

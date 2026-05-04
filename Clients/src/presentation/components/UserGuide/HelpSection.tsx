@@ -1,18 +1,18 @@
-import React from 'react';
-import { ExternalLink } from 'lucide-react';
-import { colors, typography, spacing, border } from './styles/theme';
-import './HelpSection.css';
+import React from "react";
+import { ExternalLink } from "lucide-react";
+import { colors, typography, spacing, border } from "./styles/theme";
+import "./HelpSection.css";
 
 const HelpSection: React.FC = () => {
   return (
     <div
       style={{
         padding: spacing.xl,
-        minHeight: '100%',
+        minHeight: "100%",
       }}
     >
       {/* Contact us */}
-      <div style={{ marginBottom: spacing['2xl'] }}>
+      <div style={{ marginBottom: spacing["2xl"] }}>
         <h2
           style={{
             fontFamily: typography.fontFamily.sans,
@@ -41,17 +41,17 @@ const HelpSection: React.FC = () => {
           href="mailto:support@verifywise.ai"
           className="help-button"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             gap: spacing.sm,
-            width: '100%',
+            width: "100%",
             padding: `${spacing.md} ${spacing.lg}`,
             backgroundColor: colors.background.white,
             border: border.default,
             borderRadius: border.radius,
-            textDecoration: 'none',
-            cursor: 'pointer',
+            textDecoration: "none",
+            cursor: "pointer",
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,
@@ -86,7 +86,8 @@ const HelpSection: React.FC = () => {
             marginBottom: spacing.md,
           }}
         >
-          Questions about features, how-tos, or use cases? Join our Discord community to connect with other users and get help.
+          Questions about features, how-tos, or use cases? Join our Discord community to connect
+          with other users and get help.
         </p>
         <a
           href="https://discord.com/invite/d3k3E4uEpR"
@@ -94,17 +95,17 @@ const HelpSection: React.FC = () => {
           rel="noopener noreferrer"
           className="help-button"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             gap: spacing.sm,
-            width: '100%',
+            width: "100%",
             padding: `${spacing.md} ${spacing.lg}`,
             backgroundColor: colors.background.white,
             border: border.default,
             borderRadius: border.radius,
-            textDecoration: 'none',
-            cursor: 'pointer',
+            textDecoration: "none",
+            cursor: "pointer",
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.base,
             fontWeight: typography.fontWeight.medium,

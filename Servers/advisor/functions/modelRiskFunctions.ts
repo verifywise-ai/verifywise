@@ -39,9 +39,7 @@ const fetchModelRisks = async (
     }
     if (params.owner) {
       risks = risks.filter(
-        (r) =>
-          r.owner &&
-          r.owner.toLowerCase().includes(params.owner!.toLowerCase()),
+        (r) => r.owner && r.owner.toLowerCase().includes(params.owner!.toLowerCase()),
       );
     }
 
@@ -130,8 +128,7 @@ const getModelRiskAnalytics = async (
 
     risks.forEach((risk) => {
       if (risk.risk_level) {
-        levelDistribution[risk.risk_level] =
-          (levelDistribution[risk.risk_level] || 0) + 1;
+        levelDistribution[risk.risk_level] = (levelDistribution[risk.risk_level] || 0) + 1;
       }
     });
 
@@ -143,8 +140,7 @@ const getModelRiskAnalytics = async (
 
     risks.forEach((risk) => {
       if (risk.status) {
-        statusDistribution[risk.status] =
-          (statusDistribution[risk.status] || 0) + 1;
+        statusDistribution[risk.status] = (statusDistribution[risk.status] || 0) + 1;
       }
     });
 
@@ -160,8 +156,7 @@ const getModelRiskAnalytics = async (
       .map(([owner, count]) => ({
         owner,
         count,
-        percentage:
-          totalRisks > 0 ? Math.round((count / totalRisks) * 100) : 0,
+        percentage: totalRisks > 0 ? Math.round((count / totalRisks) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -169,7 +164,11 @@ const getModelRiskAnalytics = async (
     const modelMap = new Map<number, { count: number; criticalCount: number; highCount: number }>();
     risks.forEach((risk) => {
       if (risk.model_id) {
-        const existing = modelMap.get(risk.model_id) || { count: 0, criticalCount: 0, highCount: 0 };
+        const existing = modelMap.get(risk.model_id) || {
+          count: 0,
+          criticalCount: 0,
+          highCount: 0,
+        };
         existing.count++;
         if (risk.risk_level === ModelRiskLevel.CRITICAL) {
           existing.criticalCount++;
@@ -256,41 +255,22 @@ const getModelRiskExecutiveSummary = async (
     const totalRisks = risks.length;
 
     // Count by level
-    const criticalRisks = risks.filter(
-      (r) => r.risk_level === ModelRiskLevel.CRITICAL,
-    ).length;
-    const highRisks = risks.filter(
-      (r) => r.risk_level === ModelRiskLevel.HIGH,
-    ).length;
-    const mediumRisks = risks.filter(
-      (r) => r.risk_level === ModelRiskLevel.MEDIUM,
-    ).length;
-    const lowRisks = risks.filter(
-      (r) => r.risk_level === ModelRiskLevel.LOW,
-    ).length;
+    const criticalRisks = risks.filter((r) => r.risk_level === ModelRiskLevel.CRITICAL).length;
+    const highRisks = risks.filter((r) => r.risk_level === ModelRiskLevel.HIGH).length;
+    const mediumRisks = risks.filter((r) => r.risk_level === ModelRiskLevel.MEDIUM).length;
+    const lowRisks = risks.filter((r) => r.risk_level === ModelRiskLevel.LOW).length;
 
     // Count by status
-    const openRisks = risks.filter(
-      (r) => r.status === ModelRiskStatus.OPEN,
-    ).length;
-    const inProgressRisks = risks.filter(
-      (r) => r.status === ModelRiskStatus.IN_PROGRESS,
-    ).length;
-    const resolvedRisks = risks.filter(
-      (r) => r.status === ModelRiskStatus.RESOLVED,
-    ).length;
-    const acceptedRisks = risks.filter(
-      (r) => r.status === ModelRiskStatus.ACCEPTED,
-    ).length;
+    const openRisks = risks.filter((r) => r.status === ModelRiskStatus.OPEN).length;
+    const inProgressRisks = risks.filter((r) => r.status === ModelRiskStatus.IN_PROGRESS).length;
+    const resolvedRisks = risks.filter((r) => r.status === ModelRiskStatus.RESOLVED).length;
+    const acceptedRisks = risks.filter((r) => r.status === ModelRiskStatus.ACCEPTED).length;
 
     // Top categories
     const categoryMap = new Map<string, number>();
     risks.forEach((risk) => {
       if (risk.risk_category) {
-        categoryMap.set(
-          risk.risk_category,
-          (categoryMap.get(risk.risk_category) || 0) + 1,
-        );
+        categoryMap.set(risk.risk_category, (categoryMap.get(risk.risk_category) || 0) + 1);
       }
     });
 
@@ -304,8 +284,7 @@ const getModelRiskExecutiveSummary = async (
     const risksNeedingAttention = risks
       .filter(
         (r) =>
-          (r.risk_level === ModelRiskLevel.CRITICAL ||
-            r.risk_level === ModelRiskLevel.HIGH) &&
+          (r.risk_level === ModelRiskLevel.CRITICAL || r.risk_level === ModelRiskLevel.HIGH) &&
           r.status !== ModelRiskStatus.RESOLVED,
       )
       .map((r) => {
@@ -354,9 +333,7 @@ const getModelRiskExecutiveSummary = async (
       resolved: resolvedRisks + acceptedRisks,
       total: totalRisks,
       percentage:
-        totalRisks > 0
-          ? Math.round(((resolvedRisks + acceptedRisks) / totalRisks) * 100)
-          : 0,
+        totalRisks > 0 ? Math.round(((resolvedRisks + acceptedRisks) / totalRisks) * 100) : 0,
     };
 
     return {

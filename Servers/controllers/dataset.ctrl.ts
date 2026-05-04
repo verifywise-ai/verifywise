@@ -28,56 +28,30 @@ import {
 } from "../utils/validations/datasetValidation.utils";
 
 export async function getAllDatasets(req: Request, res: Response) {
-  logStructured(
-    "processing",
-    "starting getAllDatasets",
-    "getAllDatasets",
-    "dataset.ctrl.ts"
-  );
+  logStructured("processing", "starting getAllDatasets", "getAllDatasets", "dataset.ctrl.ts");
   logger.debug("Fetching all datasets");
 
   try {
-    const datasets = (await getAllDatasetsQuery(
-      req.organizationId!
-    )) as unknown as DatasetModel[];
+    const datasets = (await getAllDatasetsQuery(req.organizationId!)) as unknown as DatasetModel[];
 
     if (datasets && datasets.length > 0) {
-      logStructured(
-        "successful",
-        "datasets found",
-        "getAllDatasets",
-        "dataset.ctrl.ts"
-      );
+      logStructured("successful", "datasets found", "getAllDatasets", "dataset.ctrl.ts");
       return res
         .status(200)
-        .json(
-          STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON()))
-        );
+        .json(STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON())));
     }
 
-    logStructured(
-      "successful",
-      "no datasets found",
-      "getAllDatasets",
-      "dataset.ctrl.ts"
-    );
+    logStructured("successful", "no datasets found", "getAllDatasets", "dataset.ctrl.ts");
     return res.status(200).json(STATUS_CODE[200](datasets));
   } catch (error) {
-    logStructured(
-      "error",
-      "failed to retrieve datasets",
-      "getAllDatasets",
-      "dataset.ctrl.ts"
-    );
+    logStructured("error", "failed to retrieve datasets", "getAllDatasets", "dataset.ctrl.ts");
     logger.error("Error in getAllDatasets:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
 export async function getDatasetById(req: Request, res: Response) {
-  const datasetId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const datasetId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   const idValidation = validateDatasetIdParam(datasetId);
   if (!idValidation.isValid) {
@@ -85,7 +59,7 @@ export async function getDatasetById(req: Request, res: Response) {
       "error",
       `Invalid dataset ID parameter: ${req.params.id}`,
       "getDatasetById",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -98,14 +72,14 @@ export async function getDatasetById(req: Request, res: Response) {
     "processing",
     `fetching dataset by id: ${datasetId}`,
     "getDatasetById",
-    "dataset.ctrl.ts"
+    "dataset.ctrl.ts",
   );
   logger.debug(`Looking up dataset with id: ${datasetId}`);
 
   try {
     const dataset = (await getDatasetByIdQuery(
       datasetId,
-      req.organizationId!
+      req.organizationId!,
     )) as unknown as DatasetModel;
 
     if (dataset) {
@@ -113,7 +87,7 @@ export async function getDatasetById(req: Request, res: Response) {
         "successful",
         `dataset found: ${datasetId}`,
         "getDatasetById",
-        "dataset.ctrl.ts"
+        "dataset.ctrl.ts",
       );
       return res.status(200).json(STATUS_CODE[200](dataset.toSafeJSON()));
     }
@@ -122,16 +96,11 @@ export async function getDatasetById(req: Request, res: Response) {
       "successful",
       `no dataset found: ${datasetId}`,
       "getDatasetById",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(204).json(STATUS_CODE[204](dataset));
   } catch (error) {
-    logStructured(
-      "error",
-      "failed to retrieve dataset",
-      "getDatasetById",
-      "dataset.ctrl.ts"
-    );
+    logStructured("error", "failed to retrieve dataset", "getDatasetById", "dataset.ctrl.ts");
     logger.error("Error in getDatasetById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -139,42 +108,36 @@ export async function getDatasetById(req: Request, res: Response) {
 
 export async function getDatasetsByModelId(req: Request, res: Response) {
   const modelId = parseInt(
-    Array.isArray(req.params.modelId)
-      ? req.params.modelId[0]
-      : req.params.modelId
+    Array.isArray(req.params.modelId) ? req.params.modelId[0] : req.params.modelId,
   );
 
   logStructured(
     "processing",
     `fetching datasets by model id: ${modelId}`,
     "getDatasetsByModelId",
-    "dataset.ctrl.ts"
+    "dataset.ctrl.ts",
   );
   logger.debug(`Looking up datasets with model id: ${modelId}`);
 
   try {
     const datasets = (await getDatasetsByModelIdQuery(
       modelId,
-      req.organizationId!
+      req.organizationId!,
     )) as unknown as DatasetModel[];
 
     logStructured(
       "successful",
       `datasets retrieved for model id: ${modelId}`,
       "getDatasetsByModelId",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
-    return res
-      .status(200)
-      .json(
-        STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON()))
-      );
+    return res.status(200).json(STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON())));
   } catch (error) {
     logStructured(
       "error",
       "failed to retrieve datasets by model id",
       "getDatasetsByModelId",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetsByModelId:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -183,42 +146,36 @@ export async function getDatasetsByModelId(req: Request, res: Response) {
 
 export async function getDatasetsByProjectId(req: Request, res: Response) {
   const projectId = parseInt(
-    Array.isArray(req.params.projectId)
-      ? req.params.projectId[0]
-      : req.params.projectId
+    Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId,
   );
 
   logStructured(
     "processing",
     `fetching datasets by project id: ${projectId}`,
     "getDatasetsByProjectId",
-    "dataset.ctrl.ts"
+    "dataset.ctrl.ts",
   );
   logger.debug(`Looking up datasets with project id: ${projectId}`);
 
   try {
     const datasets = (await getDatasetsByProjectIdQuery(
       projectId,
-      req.organizationId!
+      req.organizationId!,
     )) as unknown as DatasetModel[];
 
     logStructured(
       "successful",
       `datasets retrieved for project id: ${projectId}`,
       "getDatasetsByProjectId",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
-    return res
-      .status(200)
-      .json(
-        STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON()))
-      );
+    return res.status(200).json(STATUS_CODE[200](datasets.map((dataset) => dataset.toSafeJSON())));
   } catch (error) {
     logStructured(
       "error",
       "failed to retrieve datasets by project id",
       "getDatasetsByProjectId",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetsByProjectId:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -233,7 +190,7 @@ export async function createNewDataset(req: Request, res: Response) {
       "error",
       "Dataset creation validation failed",
       "createNewDataset",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -271,12 +228,7 @@ export async function createNewDataset(req: Request, res: Response) {
     projects,
   } = req.body;
 
-  logStructured(
-    "processing",
-    "starting createNewDataset",
-    "createNewDataset",
-    "dataset.ctrl.ts"
-  );
+  logStructured("processing", "starting createNewDataset", "createNewDataset", "dataset.ctrl.ts");
   logger.debug("Creating new dataset");
 
   let transaction: Transaction | null = null;
@@ -314,25 +266,15 @@ export async function createNewDataset(req: Request, res: Response) {
       req.organizationId!,
       models || [],
       projects || [],
-      transaction
+      transaction,
     );
 
     // Record creation in change history
-    await recordDatasetCreation(
-      savedDataset.id!,
-      req.userId,
-      req.organizationId!,
-      transaction
-    );
+    await recordDatasetCreation(savedDataset.id!, req.userId, req.organizationId!, transaction);
 
     await transaction.commit();
 
-    logStructured(
-      "successful",
-      "new dataset created",
-      "createNewDataset",
-      "dataset.ctrl.ts"
-    );
+    logStructured("successful", "new dataset created", "createNewDataset", "dataset.ctrl.ts");
     return res.status(201).json(STATUS_CODE[201](savedDataset.toSafeJSON()));
   } catch (error) {
     if (transaction) {
@@ -343,21 +285,14 @@ export async function createNewDataset(req: Request, res: Response) {
       }
     }
 
-    logStructured(
-      "error",
-      "failed to create new dataset",
-      "createNewDataset",
-      "dataset.ctrl.ts"
-    );
+    logStructured("error", "failed to create new dataset", "createNewDataset", "dataset.ctrl.ts");
     logger.error("Error in createNewDataset:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
 export async function updateDatasetById(req: Request, res: Response) {
-  const datasetId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const datasetId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   // Validate dataset ID
   const idValidation = validateDatasetIdParam(datasetId);
@@ -366,7 +301,7 @@ export async function updateDatasetById(req: Request, res: Response) {
       "error",
       `Invalid dataset ID parameter: ${req.params.id}`,
       "updateDatasetById",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -402,12 +337,7 @@ export async function updateDatasetById(req: Request, res: Response) {
     deleteProjects,
   } = req.body;
 
-  logStructured(
-    "processing",
-    "starting updateDatasetById",
-    "updateDatasetById",
-    "dataset.ctrl.ts"
-  );
+  logStructured("processing", "starting updateDatasetById", "updateDatasetById", "dataset.ctrl.ts");
   logger.debug("Updating dataset by id");
 
   let transaction: Transaction | null = null;
@@ -416,30 +346,22 @@ export async function updateDatasetById(req: Request, res: Response) {
     // Get existing dataset
     const currentDataset = (await getDatasetByIdQuery(
       datasetId,
-      req.organizationId!
+      req.organizationId!,
     )) as unknown as DatasetModel;
 
     if (!currentDataset) {
-      logStructured(
-        "successful",
-        "no dataset found",
-        "updateDatasetById",
-        "dataset.ctrl.ts"
-      );
+      logStructured("successful", "no dataset found", "updateDatasetById", "dataset.ctrl.ts");
       return res.status(404).json(STATUS_CODE[404]("Dataset not found"));
     }
 
     // Validate request body with existing data for business rules
-    const validationErrors = validateCompleteDatasetUpdate(
-      req.body,
-      currentDataset.toJSON()
-    );
+    const validationErrors = validateCompleteDatasetUpdate(req.body, currentDataset.toJSON());
     if (validationErrors.length > 0) {
       logStructured(
         "error",
         "Dataset update validation failed",
         "updateDatasetById",
-        "dataset.ctrl.ts"
+        "dataset.ctrl.ts",
       );
       return res.status(400).json({
         status: "error",
@@ -509,7 +431,7 @@ export async function updateDatasetById(req: Request, res: Response) {
       deleteModels || false,
       deleteProjects || false,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     // Record changes in change history
@@ -519,18 +441,13 @@ export async function updateDatasetById(req: Request, res: Response) {
         changes,
         req.userId,
         req.organizationId!,
-        transaction
+        transaction,
       );
     }
 
     await transaction.commit();
 
-    logStructured(
-      "successful",
-      "dataset updated",
-      "updateDatasetById",
-      "dataset.ctrl.ts"
-    );
+    logStructured("successful", "dataset updated", "updateDatasetById", "dataset.ctrl.ts");
     return res.status(200).json(STATUS_CODE[200](savedDataset.toSafeJSON()));
   } catch (error) {
     if (transaction) {
@@ -541,21 +458,14 @@ export async function updateDatasetById(req: Request, res: Response) {
       }
     }
 
-    logStructured(
-      "error",
-      "failed to update dataset",
-      "updateDatasetById",
-      "dataset.ctrl.ts"
-    );
+    logStructured("error", "failed to update dataset", "updateDatasetById", "dataset.ctrl.ts");
     logger.error("Error in updateDatasetById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
 export async function deleteDatasetById(req: Request, res: Response) {
-  const datasetId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const datasetId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   // Validate dataset ID
   const idValidation = validateDatasetIdParam(datasetId);
@@ -564,7 +474,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
       "error",
       `Invalid dataset ID parameter: ${req.params.id}`,
       "deleteDatasetById",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -573,12 +483,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
     });
   }
 
-  logStructured(
-    "processing",
-    "starting deleteDatasetById",
-    "deleteDatasetById",
-    "dataset.ctrl.ts"
-  );
+  logStructured("processing", "starting deleteDatasetById", "deleteDatasetById", "dataset.ctrl.ts");
   logger.debug("Deleting dataset by id");
 
   let transaction: Transaction | null = null;
@@ -587,16 +492,11 @@ export async function deleteDatasetById(req: Request, res: Response) {
     // Check if dataset exists
     const existingDataset = (await getDatasetByIdQuery(
       datasetId,
-      req.organizationId!
+      req.organizationId!,
     )) as unknown as DatasetModel;
 
     if (!existingDataset) {
-      logStructured(
-        "successful",
-        "no dataset found",
-        "deleteDatasetById",
-        "dataset.ctrl.ts"
-      );
+      logStructured("successful", "no dataset found", "deleteDatasetById", "dataset.ctrl.ts");
       return res.status(404).json(STATUS_CODE[404]("Dataset not found"));
     }
 
@@ -604,26 +504,14 @@ export async function deleteDatasetById(req: Request, res: Response) {
     transaction = await sequelize.transaction();
 
     // Record deletion in change history before deleting
-    await recordDatasetDeletion(
-      datasetId,
-      req.userId,
-      req.organizationId!,
-      transaction
-    );
+    await recordDatasetDeletion(datasetId, req.userId, req.organizationId!, transaction);
 
     await deleteDatasetByIdQuery(datasetId, req.organizationId!, transaction);
 
     await transaction.commit();
 
-    logStructured(
-      "successful",
-      "dataset deleted",
-      "deleteDatasetById",
-      "dataset.ctrl.ts"
-    );
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("Dataset deleted successfully"));
+    logStructured("successful", "dataset deleted", "deleteDatasetById", "dataset.ctrl.ts");
+    return res.status(200).json(STATUS_CODE[200]("Dataset deleted successfully"));
   } catch (error) {
     if (transaction) {
       try {
@@ -633,21 +521,14 @@ export async function deleteDatasetById(req: Request, res: Response) {
       }
     }
 
-    logStructured(
-      "error",
-      "failed to delete dataset",
-      "deleteDatasetById",
-      "dataset.ctrl.ts"
-    );
+    logStructured("error", "failed to delete dataset", "deleteDatasetById", "dataset.ctrl.ts");
     logger.error("Error in deleteDatasetById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
 export async function getDatasetHistory(req: Request, res: Response) {
-  const datasetId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+  const datasetId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   // Validate dataset ID
   const idValidation = validateDatasetIdParam(datasetId);
@@ -656,7 +537,7 @@ export async function getDatasetHistory(req: Request, res: Response) {
       "error",
       `Invalid dataset ID parameter: ${req.params.id}`,
       "getDatasetHistory",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -669,7 +550,7 @@ export async function getDatasetHistory(req: Request, res: Response) {
     "processing",
     `fetching dataset history for id: ${datasetId}`,
     "getDatasetHistory",
-    "dataset.ctrl.ts"
+    "dataset.ctrl.ts",
   );
   logger.debug(`Looking up dataset history with id: ${datasetId}`);
 
@@ -680,7 +561,7 @@ export async function getDatasetHistory(req: Request, res: Response) {
       "successful",
       `dataset history retrieved: ${datasetId}`,
       "getDatasetHistory",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     return res.status(200).json(STATUS_CODE[200](history));
   } catch (error) {
@@ -688,7 +569,7 @@ export async function getDatasetHistory(req: Request, res: Response) {
       "error",
       "failed to retrieve dataset history",
       "getDatasetHistory",
-      "dataset.ctrl.ts"
+      "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetHistory:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

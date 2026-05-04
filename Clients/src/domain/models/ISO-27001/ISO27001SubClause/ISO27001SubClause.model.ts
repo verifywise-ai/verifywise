@@ -29,9 +29,7 @@ export class ISO27001SubClauseModel {
     this.is_demo = data.is_demo;
   }
 
-  static createNewISO27001SubClause(
-    data: ISO27001SubClauseModel
-  ): ISO27001SubClauseModel {
+  static createNewISO27001SubClause(data: ISO27001SubClauseModel): ISO27001SubClauseModel {
     return new ISO27001SubClauseModel(data);
   }
 }

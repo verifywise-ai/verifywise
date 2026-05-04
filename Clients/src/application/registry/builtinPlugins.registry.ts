@@ -7,14 +7,17 @@
 
 import React from "react";
 
-const BUILTIN_PLUGINS: Record<string, Record<string, React.LazyExoticComponent<React.ComponentType<any>>>> = {
+const BUILTIN_PLUGINS: Record<
+  string,
+  Record<string, React.LazyExoticComponent<React.ComponentType<any>>>
+> = {
   // Note: model-lifecycle is now a fully remote plugin with its own UI bundle
   "dataset-bulk-upload": {
     BulkUploadButton: React.lazy(
-      () => import("../../presentation/pages/Datasets/BulkUpload/BulkUploadButton")
+      () => import("../../presentation/pages/Datasets/BulkUpload/BulkUploadButton"),
     ),
     BulkUploadModal: React.lazy(
-      () => import("../../presentation/pages/Datasets/BulkUpload/BulkUploadModal")
+      () => import("../../presentation/pages/Datasets/BulkUpload/BulkUploadModal"),
     ),
   },
 };
@@ -24,7 +27,7 @@ const BUILTIN_PLUGINS: Record<string, Record<string, React.LazyExoticComponent<R
  * Returns a map of componentName -> lazy-loaded component, or null if not a built-in plugin.
  */
 export function getBuiltinPluginComponents(
-  pluginKey: string
+  pluginKey: string,
 ): Record<string, React.ComponentType<any>> | null {
   return BUILTIN_PLUGINS[pluginKey] || null;
 }

@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Drawer,
-  Stack,
-  Typography,
-  Divider,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
 import { X } from "lucide-react";
 import Field from "../../Inputs/Field";
 import SelectComponent from "../../Inputs/Select";
@@ -59,7 +52,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       },
       primitive_type: (v: unknown) => (!v ? "Type is required." : ""),
     }),
-    []
+    [],
   );
   const { errors, validateAll, clearFieldError, resetErrors } =
     useFormValidation<typeof formData>(validators);
@@ -72,7 +65,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
         usersData.map((u: { id: number; name: string; surname: string }) => ({
           _id: String(u.id),
           name: `${u.name} ${u.surname}`.trim(),
-        }))
+        })),
       );
     } catch (error) {
       console.error("Failed to fetch users:", error);
@@ -130,7 +123,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       anchor="right"
       open={isOpen}
       onClose={handleClose}
-      PaperProps={{ sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" } }}
+      PaperProps={{
+        sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+      }}
     >
       {/* Header */}
       <Stack
@@ -202,9 +197,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           rows={2}
           placeholder="Any additional context about this agent"
           value={formData.notes}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, notes: e.target.value }))
-          }
+          onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
         />
       </Stack>
 
@@ -225,8 +218,12 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           isDisabled={isSubmitting}
         >
           {isSubmitting
-            ? isEditMode ? "Saving..." : "Adding..."
-            : isEditMode ? "Save changes" : "Add agent"}
+            ? isEditMode
+              ? "Saving..."
+              : "Adding..."
+            : isEditMode
+              ? "Save changes"
+              : "Add agent"}
         </CustomizableButton>
       </Stack>
     </Drawer>

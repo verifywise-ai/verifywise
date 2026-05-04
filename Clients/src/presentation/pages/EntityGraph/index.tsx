@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -11,25 +11,30 @@ import {
   BackgroundVariant,
   Panel,
   ReactFlowProvider,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { Box, Typography, Stack, ToggleButton, ToggleButtonGroup, LinearProgress } from '@mui/material';
-import { AlertTriangle, GitBranch } from 'lucide-react';
-import Toggle from '../../components/Inputs/Toggle';
-import Alert from '../../components/Alert';
-import SearchBox from '../../components/Search/SearchBox';
-import { fetchEntityGraphData, EntityGraphData } from '../../../application/repository/entityGraph.repository';
-import EntityNode from './EntityNode';
-import DetailSidebar, { EntityDetails } from './DetailSidebar';
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import {
-  entityColors,
-  VIEWPORT,
-  ENTITY_TYPE_CONFIG,
-  DEFAULT_VISIBLE_ENTITIES,
-} from './constants';
-import type { ExtendedNodeData } from './types';
-import { generateNodesAndEdges, getConnectedEntities } from './utils';
-import { useDebouncedSearch, useToastNotification, useFocusEntity } from './hooks';
+  Box,
+  Typography,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  LinearProgress,
+} from "@mui/material";
+import { AlertTriangle, GitBranch } from "lucide-react";
+import Toggle from "../../components/Inputs/Toggle";
+import Alert from "../../components/Alert";
+import SearchBox from "../../components/Search/SearchBox";
+import {
+  fetchEntityGraphData,
+  EntityGraphData,
+} from "../../../application/repository/entityGraph.repository";
+import EntityNode from "./EntityNode";
+import DetailSidebar, { EntityDetails } from "./DetailSidebar";
+import { entityColors, VIEWPORT, ENTITY_TYPE_CONFIG, DEFAULT_VISIBLE_ENTITIES } from "./constants";
+import type { ExtendedNodeData } from "./types";
+import { generateNodesAndEdges, getConnectedEntities } from "./utils";
+import { useDebouncedSearch, useToastNotification, useFocusEntity } from "./hooks";
 import {
   graphContainerStyle,
   loadingContainerSx,
@@ -51,7 +56,7 @@ import {
   colorDotSx,
   statsContainerSx,
   statsTextSx,
-} from './styles';
+} from "./styles";
 import { text, status } from "../../themes/palette";
 
 const nodeTypes = { entity: EntityNode };
@@ -89,11 +94,13 @@ const EntityGraphInner: React.FC = () => {
       try {
         setLoading(true);
         setLoadingProgress(0);
-        const data = await fetchEntityGraphData((loaded, total) => setLoadingProgress(Math.round((loaded / total) * 100)));
+        const data = await fetchEntityGraphData((loaded, total) =>
+          setLoadingProgress(Math.round((loaded / total) * 100)),
+        );
         setEntityData(data);
         setError(null);
       } catch (err) {
-        setError('Failed to load entity data');
+        setError("Failed to load entity data");
         console.error(err);
       } finally {
         setLoading(false);
@@ -105,8 +112,15 @@ const EntityGraphInner: React.FC = () => {
   // Update nodes and edges when data or filters change
   useEffect(() => {
     if (!entityData) return;
-    const { nodes: newNodes, edges: newEdges, entityLookup: newLookup } = generateNodesAndEdges(entityData, {
-      visibleEntities, showProblemsOnly, searchQuery: debouncedSearchQuery, visibleRelationships: [],
+    const {
+      nodes: newNodes,
+      edges: newEdges,
+      entityLookup: newLookup,
+    } = generateNodesAndEdges(entityData, {
+      visibleEntities,
+      showProblemsOnly,
+      searchQuery: debouncedSearchQuery,
+      visibleRelationships: [],
     });
     setNodes(newNodes);
     setEdges(newEdges);
@@ -117,32 +131,45 @@ const EntityGraphInner: React.FC = () => {
     if (v.length > 0) setVisibleEntities(v);
   }, []);
 
-  const handleProblemsToggle = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setShowProblemsOnly(checked);
-    showToastWithMessage({
-      title: checked ? 'Problems filter enabled' : 'Problems filter disabled',
-      body: checked
-        ? 'Showing only entities with issues: high-risk items, incomplete data, or compliance gaps.'
-        : 'Showing all entities regardless of their status.',
-    });
-  }, [showToastWithMessage]);
+  const handleProblemsToggle = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const checked = e.target.checked;
+      setShowProblemsOnly(checked);
+      showToastWithMessage({
+        title: checked ? "Problems filter enabled" : "Problems filter disabled",
+        body: checked
+          ? "Showing only entities with issues: high-risk items, incomplete data, or compliance gaps."
+          : "Showing all entities regardless of their status.",
+      });
+    },
+    [showToastWithMessage],
+  );
 
-  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    const data = node.data as ExtendedNodeData;
-    setSelectedEntity({
-      id: node.id,
-      entityType: data.entityType as EntityDetails['entityType'],
-      label: data.label, sublabel: data.sublabel, color: data.color,
-      status: data.status, riskLevel: data.riskLevel, rawData: data.rawData,
-      connectedEntities: getConnectedEntities(node.id, edges, entityLookup),
-    });
-  }, [edges, entityLookup]);
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      const data = node.data as ExtendedNodeData;
+      setSelectedEntity({
+        id: node.id,
+        entityType: data.entityType as EntityDetails["entityType"],
+        label: data.label,
+        sublabel: data.sublabel,
+        color: data.color,
+        status: data.status,
+        riskLevel: data.riskLevel,
+        rawData: data.rawData,
+        connectedEntities: getConnectedEntities(node.id, edges, entityLookup),
+      });
+    },
+    [edges, entityLookup],
+  );
 
-  const handleNavigateToEntity = useCallback((_: string, id: string) => {
-    const node = nodes.find(n => n.id === id);
-    if (node) handleNodeClick({} as React.MouseEvent, node);
-  }, [nodes, handleNodeClick]);
+  const handleNavigateToEntity = useCallback(
+    (_: string, id: string) => {
+      const node = nodes.find((n) => n.id === id);
+      if (node) handleNodeClick({} as React.MouseEvent, node);
+    },
+    [nodes, handleNodeClick],
+  );
 
   if (loading) {
     return (
@@ -162,13 +189,20 @@ const EntityGraphInner: React.FC = () => {
     );
   }
 
-  const hasNoData = entityData && !entityData.useCases?.length && !entityData.models?.length && !entityData.vendors?.length && !entityData.risks?.length;
+  const hasNoData =
+    entityData &&
+    !entityData.useCases?.length &&
+    !entityData.models?.length &&
+    !entityData.vendors?.length &&
+    !entityData.risks?.length;
   if (hasNoData) {
     return (
       <Box sx={emptyStateContainerSx}>
         <GitBranch size={48} color={text.disabled} />
         <Typography sx={emptyStateTitleSx}>No entities to display</Typography>
-        <Typography sx={emptyStateDescriptionSx}>Add use cases, models, or vendors to visualize compliance relationships.</Typography>
+        <Typography sx={emptyStateDescriptionSx}>
+          Add use cases, models, or vendors to visualize compliance relationships.
+        </Typography>
       </Box>
     );
   }
@@ -204,18 +238,27 @@ const EntityGraphInner: React.FC = () => {
         fitViewOptions={{ padding: VIEWPORT.FIT_VIEW_PADDING }}
         minZoom={VIEWPORT.MIN_ZOOM}
         maxZoom={VIEWPORT.MAX_ZOOM}
-        defaultEdgeOptions={{ type: 'smoothstep', animated: false }}
+        defaultEdgeOptions={{ type: "smoothstep", animated: false }}
       >
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(n) => (n.data as ExtendedNodeData)?.color || `${text.icon}`}
           maskColor="rgba(0,0,0,0.1)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={status.default.border} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color={status.default.border}
+        />
 
         <Panel position="top-left">
           <Stack sx={controlPanelSx}>
-            <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Search entities..." />
+            <SearchBox
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search entities..."
+            />
             <Box sx={problemsToggleRowSx}>
               <Box sx={problemsToggleLabelContainerSx}>
                 <AlertTriangle size={14} color="#f59e0b" />
@@ -240,12 +283,18 @@ const EntityGraphInner: React.FC = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={statsContainerSx}>
-              <Typography sx={statsTextSx}>Showing {nodes.length} entities, {edges.length} relationships</Typography>
+              <Typography sx={statsTextSx}>
+                Showing {nodes.length} entities, {edges.length} relationships
+              </Typography>
             </Box>
           </Stack>
         </Panel>
       </ReactFlow>
-      <DetailSidebar entity={selectedEntity} onClose={() => setSelectedEntity(null)} onNavigateToEntity={handleNavigateToEntity} />
+      <DetailSidebar
+        entity={selectedEntity}
+        onClose={() => setSelectedEntity(null)}
+        onNavigateToEntity={handleNavigateToEntity}
+      />
     </div>
   );
 };

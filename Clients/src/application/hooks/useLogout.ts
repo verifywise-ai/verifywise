@@ -4,7 +4,7 @@ import { clearAuthState } from "../redux/auth/authSlice";
 
 /**
  * Custom hook for handling user logout
- * 
+ *
  * @returns {Function} A function that handles the logout process
  */
 const useLogout = () => {
@@ -26,4 +26,4 @@ const useLogout = () => {
   return logout;
 };
 
-export default useLogout; 
+export default useLogout;

@@ -8,10 +8,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  * @param {any} data - The dataset data to be saved.
  * @returns {Promise<any>} The response from the API.
  */
-export async function createDataset(
-  routeUrl: string,
-  data: any
-): Promise<any> {
+export async function createDataset(routeUrl: string, data: any): Promise<any> {
   try {
     const response = await apiServices.post(routeUrl, data);
     return response.data;

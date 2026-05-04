@@ -36,14 +36,14 @@ function addTitleAndIndex(categories: any[]): NISTCategory[] {
  */
 export const getAllNISTAIRMFCategoriesByFunctionQuery = async (
   functionName: string,
-  _organizationId: number
+  _organizationId: number,
 ): Promise<NISTCategory[]> => {
   const [results] = await sequelize.query(
     `SELECT id, function, category_id, description, order_no
      FROM nist_ai_rmf_categories_struct
      WHERE function = :functionName
      ORDER BY order_no ASC, category_id ASC`,
-    { replacements: { functionName } }
+    { replacements: { functionName } },
   );
   return addTitleAndIndex(results);
 };
@@ -54,13 +54,13 @@ export const getAllNISTAIRMFCategoriesByFunctionQuery = async (
 export const getNISTAIRMFCategoryQuery = async (
   functionName: string,
   categoryId: number,
-  _organizationId: number
+  _organizationId: number,
 ): Promise<NISTCategory | null> => {
   const [results] = await sequelize.query(
     `SELECT id, function, category_id, description, order_no
      FROM nist_ai_rmf_categories_struct
      WHERE function = :functionName AND category_id = :categoryId`,
-    { replacements: { functionName, categoryId } }
+    { replacements: { functionName, categoryId } },
   );
   const categories = addTitleAndIndex(results);
   return categories[0] || null;
@@ -71,13 +71,13 @@ export const getNISTAIRMFCategoryQuery = async (
  */
 export const getNISTAIRMFCategoryByIdQuery = async (
   id: number,
-  _organizationId: number
+  _organizationId: number,
 ): Promise<NISTCategory | null> => {
   const [results] = await sequelize.query(
     `SELECT id, function, category_id, description, order_no
      FROM nist_ai_rmf_categories_struct
      WHERE id = :id`,
-    { replacements: { id } }
+    { replacements: { id } },
   );
   const categories = addTitleAndIndex(results);
   return categories[0] || null;
@@ -87,7 +87,7 @@ export const getNISTAIRMFCategoryByIdQuery = async (
  * Get all categories (all functions)
  */
 export const getAllNISTAIRMFCategoriesQuery = async (
-  _organizationId: number
+  _organizationId: number,
 ): Promise<NISTCategory[]> => {
   const [results] = await sequelize.query(
     `SELECT id, function, category_id, description, order_no
@@ -101,7 +101,7 @@ export const getAllNISTAIRMFCategoriesQuery = async (
          ELSE 5
        END,
        order_no ASC,
-       category_id ASC`
+       category_id ASC`,
   );
   return addTitleAndIndex(results);
 };
@@ -110,7 +110,7 @@ export const getAllNISTAIRMFCategoriesQuery = async (
 // Maps the old "title" parameter to function name
 export const getAllNISTAIRMFCategoriesBytitleQuery = async (
   title: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<NISTCategory[]> => {
   // Map old title format to function name (e.g., "Govern" -> "GOVERN")
   const functionName = title.toUpperCase();

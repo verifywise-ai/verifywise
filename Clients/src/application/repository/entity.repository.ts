@@ -1,8 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  GetRequestParams,
-  RequestParams,
-} from "../../domain/interfaces/i.requestParams";
+import { GetRequestParams, RequestParams } from "../../domain/interfaces/i.requestParams";
 import { apiServices } from "../../infrastructure/api/networkServices";
 
 /**
@@ -12,10 +9,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  * @returns {Promise<any>} A promise that resolves to the response data of the created user.
  * @throws Will throw an error if the user creation fails.
  */
-export async function createNewUser({
-  routeUrl,
-  body,
-}: RequestParams): Promise<any> {
+export async function createNewUser({ routeUrl, body }: RequestParams): Promise<any> {
   const response = await apiServices.post(routeUrl, body);
   return response;
 }
@@ -27,10 +21,7 @@ export async function createNewUser({
  * @returns {Promise<any>} A promise that resolves to the response data of the logged-in user.
  * @throws Will throw an error if the login fails.
  */
-export async function loginUser({
-  routeUrl,
-  body,
-}: RequestParams): Promise<any> {
+export async function loginUser({ routeUrl, body }: RequestParams): Promise<any> {
   try {
     const response = await apiServices.post(routeUrl, body);
     return response;
@@ -74,11 +65,7 @@ export async function getEntityById({
  * @returns {Promise<any>} The updated entity data.
  * @throws Will throw an error if the update operation fails.
  */
-export async function updateEntityById({
-  routeUrl,
-  body,
-  headers,
-}: RequestParams): Promise<any> {
+export async function updateEntityById({ routeUrl, body, headers }: RequestParams): Promise<any> {
   try {
     const response = await apiServices.patch(routeUrl, body, {
       headers: { ...headers },
@@ -96,9 +83,7 @@ export async function updateEntityById({
  * @returns {Promise<any>} The response data from the delete operation.
  * @throws Will throw an error if the delete operation fails.
  */
-export async function deleteEntityById({
-  routeUrl,
-}: RequestParams): Promise<any> {
+export async function deleteEntityById({ routeUrl }: RequestParams): Promise<any> {
   try {
     const response = await apiServices.delete(routeUrl);
     return response;
@@ -135,9 +120,7 @@ export async function getAllEntities({
  * @returns {Promise<any>} The response data indicating if a user exists.
  * @throws Will throw an error if the request fails.
  */
-export async function checkUserExists({
-  routeUrl,
-}: RequestParams): Promise<any> {
+export async function checkUserExists({ routeUrl }: RequestParams): Promise<any> {
   try {
     const response = await apiServices.get(routeUrl);
     return response.data;
@@ -175,9 +158,12 @@ export async function checkDemoDataExists(): Promise<boolean> {
     const projects = response.data as Array<{ project_title: string }>;
 
     // Check if any project has demo-specific titles
-    const demoProjectTitles = ["AI Compliance Checker", "Information Security & AI Governance Framework"];
+    const demoProjectTitles = [
+      "AI Compliance Checker",
+      "Information Security & AI Governance Framework",
+    ];
     const hasDemoProjects = projects.some((project) =>
-      demoProjectTitles.includes(project.project_title)
+      demoProjectTitles.includes(project.project_title),
     );
 
     return hasDemoProjects;
@@ -204,10 +190,7 @@ export async function deleteAutoDrivers(): Promise<any> {
   }
 }
 
-export async function resetPassword({
-  routeUrl,
-  body,
-}: RequestParams): Promise<any> {
+export async function resetPassword({ routeUrl, body }: RequestParams): Promise<any> {
   const response = await apiServices.post(routeUrl, body);
   return response;
 }
@@ -236,11 +219,7 @@ export async function getAllUsers(): Promise<any> {
  * @returns {Promise<any>} A promise that resolves returning the generated report.
  * @throws Will throw an error if the request fails.
  */
-export async function generateReport({
-  routeUrl,
-  body,
-  signal,
-}: RequestParams): Promise<any> {
+export async function generateReport({ routeUrl, body, signal }: RequestParams): Promise<any> {
   try {
     const response = await apiServices.post(routeUrl, body, {
       signal,
@@ -273,7 +252,7 @@ export const assignFrameworkToProject = async ({
   try {
     const response = await apiServices.post(
       `/frameworks/toProject?frameworkId=${frameworkId}&projectId=${projectId}`,
-      {}
+      {},
     );
 
     return {
@@ -309,5 +288,3 @@ export async function archiveIncidentById({
     throw error;
   }
 }
-
-

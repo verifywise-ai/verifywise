@@ -389,20 +389,23 @@ export interface FormCanvasHandle {
   scrollToBottom: () => void;
 }
 
-export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function FormCanvas({
-  fields,
-  selectedFieldId,
-  onSelectField,
-  onDeleteField,
-  onDuplicateField,
-  onMoveUp,
-  onMoveDown,
-  formName,
-  formDescription,
-  onNameChange,
-  onDescriptionChange,
-  collectContactInfo,
-}, ref) {
+export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function FormCanvas(
+  {
+    fields,
+    selectedFieldId,
+    onSelectField,
+    onDeleteField,
+    onDuplicateField,
+    onMoveUp,
+    onMoveDown,
+    formName,
+    formDescription,
+    onNameChange,
+    onDescriptionChange,
+    collectContactInfo,
+  },
+  ref,
+) {
   const theme = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -461,7 +464,9 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
             {onNameChange ? (
               <EditableFormTitle value={formName} onChange={onNameChange} />
             ) : (
-              <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "18px" }}>
+              <Typography
+                sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "18px" }}
+              >
                 {formName || "Untitled form"}
               </Typography>
             )}

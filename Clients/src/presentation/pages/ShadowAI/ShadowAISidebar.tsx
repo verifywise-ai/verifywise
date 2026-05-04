@@ -64,18 +64,19 @@ export default function ShadowAISidebar({
     },
   ];
 
-  const recentSections: RecentSection[] = recentTools.length > 0
-    ? [
-        {
-          title: "Recent tools",
-          items: recentTools.map((tool) => ({
-            id: tool.id.toString(),
-            name: tool.name,
-            onClick: () => onToolClick?.(tool.id),
-          })),
-        },
-      ]
-    : [];
+  const recentSections: RecentSection[] =
+    recentTools.length > 0
+      ? [
+          {
+            title: "Recent tools",
+            items: recentTools.map((tool) => ({
+              id: tool.id.toString(),
+              name: tool.name,
+              onClick: () => onToolClick?.(tool.id),
+            })),
+          },
+        ]
+      : [];
 
   const isItemActive = (item: SidebarMenuItem): boolean => {
     return item.value === activeTab || item.id === activeTab;

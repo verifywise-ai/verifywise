@@ -1,11 +1,11 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   createVendorRisk,
   updateVendorRisk,
   deleteVendorRisk,
-  getVendorRiskById
-} from '../repository/vendorRisk.repository';
-import { vendorRiskQueryKeys } from './useVendorRisks';
+  getVendorRiskById,
+} from "../repository/vendorRisk.repository";
+import { vendorRiskQueryKeys } from "./useVendorRisks";
 
 // Hook to create a new vendor risk
 export const useCreateVendorRisk = () => {
@@ -58,7 +58,7 @@ export const useDeleteVendorRisk = () => {
 // Hook to fetch a single vendor risk by ID
 export const useVendorRisk = (id: number) => {
   return useQuery({
-    queryKey: [...vendorRiskQueryKeys.all, 'detail', id],
+    queryKey: [...vendorRiskQueryKeys.all, "detail", id],
     queryFn: async () => {
       const response = await getVendorRiskById({ id });
       return response?.data;
@@ -68,4 +68,3 @@ export const useVendorRisk = (id: number) => {
     gcTime: 10 * 60 * 1000,
   });
 };
-

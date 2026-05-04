@@ -8,11 +8,7 @@ export interface IVendor {
   website: string; // won't get any values, will be filled by user
   vendor_contact_person: string; // won't get any values, will be filled by user
   review_result?: string; // optional field, can be filled by user
-  review_status?:
-    | "Not started"
-    | "In review"
-    | "Reviewed"
-    | "Requires follow-up"; // optional field, can be filled by user
+  review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up"; // optional field, can be filled by user
   reviewer?: number | null; // optional field, can be filled by user
   review_date?: Date; // optional field, can be filled by user
   created_at?: Date;

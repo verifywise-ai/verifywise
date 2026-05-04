@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  Suspense,
-  lazy,
-} from "react";
+import React, { useState, useMemo, useCallback, Suspense, lazy } from "react";
 import {
   Button,
   SelectChangeEvent,
@@ -72,17 +66,14 @@ interface CreateProjectFormProps {
  * @returns {JSX.Element} The rendered component.
  */
 
-export function CreateProjectForm({
-  closePopup,
-  onNewProject,
-}: CreateProjectFormProps) {
+export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFormProps) {
   const theme = useTheme();
   const { userRoleName } = useAuth();
   const [values, setValues] = useState<CreateProjectFormValues>(initialState);
   const [errors, setErrors] = useState<CreateProjectFormErrors>({});
   const { users } = useUsers();
   const authState = useSelector(
-    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth
+    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
   );
   const [memberRequired, setMemberRequired] = useState<boolean>(false);
   const handleDateChange = useCallback((newDate: Dayjs | null) => {
@@ -95,38 +86,31 @@ export function CreateProjectForm({
   }, []);
 
   const handleOnSelectChange = useCallback(
-    (prop: keyof CreateProjectFormValues) =>
-      (event: SelectChangeEvent<string | number>) => {
-        setValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        setErrors((prevErrors: CreateProjectFormErrors) => ({ ...prevErrors, [prop]: "" }));
-      },
-    []
+    (prop: keyof CreateProjectFormValues) => (event: SelectChangeEvent<string | number>) => {
+      setValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      setErrors((prevErrors: CreateProjectFormErrors) => ({ ...prevErrors, [prop]: "" }));
+    },
+    [],
   );
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof CreateProjectFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        setErrors((prevErrors: CreateProjectFormErrors) => ({ ...prevErrors, [prop]: "" }));
-      },
-    []
+    (prop: keyof CreateProjectFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      setErrors((prevErrors: CreateProjectFormErrors) => ({ ...prevErrors, [prop]: "" }));
+    },
+    [],
   );
 
   const validateForm = (): boolean => {
     const newErrors: CreateProjectFormErrors = {};
 
-    const projectTitle = checkStringValidation(
-      "Use case title",
-      values.project_title,
-      1,
-      64
-    );
+    const projectTitle = checkStringValidation("Use case title", values.project_title, 1, 64);
     if (!projectTitle.accepted) {
       newErrors.projectTitle = projectTitle.message;
     }
@@ -138,10 +122,7 @@ export function CreateProjectForm({
     if (!startDate.accepted) {
       newErrors.startDate = startDate.message;
     }
-    const addTeamMember = selectValidation(
-      "Team members",
-      values.members.length
-    );
+    const addTeamMember = selectValidation("Team members", values.members.length);
     if (!addTeamMember.accepted) {
       newErrors.members = addTeamMember.message;
       setMemberRequired(true);
@@ -152,14 +133,14 @@ export function CreateProjectForm({
     }
     const riskClassification = selectValidation(
       "AI risk classification",
-      values.ai_risk_classification
+      values.ai_risk_classification,
     );
     if (!riskClassification.accepted) {
       newErrors.riskClassification = riskClassification.message;
     }
     const typeOfHighRiskRole = selectValidation(
       "Type of high risk role",
-      values.type_of_high_risk_role
+      values.type_of_high_risk_role,
     );
     if (!typeOfHighRiskRole.accepted) {
       newErrors.typeOfHighRiskRole = typeOfHighRiskRole.message;
@@ -185,10 +166,10 @@ export function CreateProjectForm({
         body: {
           ...values,
           type_of_high_risk_role: highRiskRoleItems.find(
-            (item) => item._id === values.type_of_high_risk_role
+            (item) => item._id === values.type_of_high_risk_role,
           )?.name,
           ai_risk_classification: riskClassificationItems.find(
-            (item) => item._id === values.ai_risk_classification
+            (item) => item._id === values.ai_risk_classification,
           )?.name,
           last_updated: values.start_date,
           last_updated_by: userInfo?.id,
@@ -218,7 +199,7 @@ export function CreateProjectForm({
       { _id: 3, name: AiRiskClassification.LIMITED_RISK },
       { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
     ],
-    []
+    [],
   );
 
   const highRiskRoleItems = useMemo(
@@ -226,20 +207,14 @@ export function CreateProjectForm({
       { _id: 1, name: HighRiskRole.DEPLOYER },
       { _id: 2, name: HighRiskRole.PROVIDER },
     ],
-    []
+    [],
   );
 
-  const fieldStyle = useMemo(
-    () => createProjectFormStyles.fieldStyle(theme),
-    [theme]
-  );
+  const fieldStyle = useMemo(() => createProjectFormStyles.fieldStyle(theme), [theme]);
 
   const handleOnMultiSelect = useCallback(
     (prop: keyof CreateProjectFormValues) =>
-      (
-        _event: React.SyntheticEvent,
-        newValue: CreateProjectFormUserModel[]
-      ) => {
+      (_event: React.SyntheticEvent, newValue: CreateProjectFormUserModel[]) => {
         setValues((prevValues) => ({
           ...prevValues,
           [prop]: newValue,
@@ -247,7 +222,7 @@ export function CreateProjectForm({
         setMemberRequired(false);
         setErrors((prevErrors: CreateProjectFormErrors) => ({ ...prevErrors, members: "" }));
       },
-    []
+    [],
   );
 
   return (
@@ -291,11 +266,7 @@ export function CreateProjectForm({
                 id="risk-classification-input"
                 label="AI risk classification"
                 placeholder="Select an option"
-                value={
-                  values.ai_risk_classification === 0
-                    ? ""
-                    : values.ai_risk_classification
-                }
+                value={values.ai_risk_classification === 0 ? "" : values.ai_risk_classification}
                 onChange={handleOnSelectChange("ai_risk_classification")}
                 items={riskClassificationItems}
                 sx={createProjectFormStyles.selectStyle(theme)}
@@ -308,11 +279,7 @@ export function CreateProjectForm({
                 id="type-of-high-risk-role-input"
                 label="Type of high risk role"
                 placeholder="Select an option"
-                value={
-                  values.type_of_high_risk_role === 0
-                    ? ""
-                    : values.type_of_high_risk_role
-                }
+                value={values.type_of_high_risk_role === 0 ? "" : values.type_of_high_risk_role}
                 onChange={handleOnSelectChange("type_of_high_risk_role")}
                 items={highRiskRoleItems}
                 sx={createProjectFormStyles.selectStyle(theme)}
@@ -328,9 +295,7 @@ export function CreateProjectForm({
               </Typography>
               <Autocomplete
                 multiple
-                readOnly={
-                  !allowedRoles.projects.editTeamMembers.includes(userRoleName)
-                }
+                readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
                 id="users-input"
                 size="small"
                 value={values.members}
@@ -338,9 +303,7 @@ export function CreateProjectForm({
                   users
                     ?.filter(
                       (user) =>
-                        !values.members.some(
-                          (selectedUser) => selectedUser._id === user.id
-                        )
+                        !values.members.some((selectedUser) => selectedUser._id === user.id),
                     )
                     .map(
                       (user) =>
@@ -349,31 +312,23 @@ export function CreateProjectForm({
                           name: user.name,
                           surname: user.surname,
                           email: user.email,
-                        } satisfies CreateProjectFormUserModel)
+                        }) satisfies CreateProjectFormUserModel,
                     ) || []
                 }
                 noOptionsText={
-                  values.members.length === users?.length
-                    ? "All members selected"
-                    : "No options"
+                  values.members.length === users?.length ? "All members selected" : "No options"
                 }
                 onChange={handleOnMultiSelect("members")}
                 getOptionLabel={(user) => `${user.name} ${user.surname}`}
                 renderOption={(props, option) => {
                   const userEmail =
-                    option.email.length > 30
-                      ? `${option.email.slice(0, 30)}...`
-                      : option.email;
+                    option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
                   return (
                     <Box component="li" {...props}>
-                      <Typography
-                        sx={createProjectFormStyles.autocompleteOptionText}
-                      >
+                      <Typography sx={createProjectFormStyles.autocompleteOptionText}>
                         {option.name} {option.surname}
                       </Typography>
-                      <Typography
-                        sx={createProjectFormStyles.autocompleteEmailText}
-                      >
+                      <Typography sx={createProjectFormStyles.autocompleteEmailText}>
                         {userEmail}
                       </Typography>
                     </Box>
@@ -396,10 +351,7 @@ export function CreateProjectForm({
                 slotProps={createProjectFormStyles.autocompleteSlotProps}
               />
               {memberRequired && (
-                <Typography
-                  variant="caption"
-                  sx={createProjectFormStyles.errorText}
-                >
+                <Typography variant="caption" sx={createProjectFormStyles.errorText}>
                   {errors.members}
                 </Typography>
               )}
@@ -408,11 +360,7 @@ export function CreateProjectForm({
               <Suspense fallback={<div>Loading...</div>}>
                 <DatePicker
                   label="Start date"
-                  date={
-                    values.start_date
-                      ? dayjs(values.start_date)
-                      : dayjs(new Date())
-                  }
+                  date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
                   handleDateChange={handleDateChange}
                   sx={createProjectFormStyles.datePicker}
                   isRequired
@@ -437,9 +385,7 @@ export function CreateProjectForm({
         <Button
           type="submit"
           variant="contained"
-          disableRipple={
-            theme.components?.MuiButton?.defaultProps?.disableRipple
-          }
+          disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
           sx={createProjectFormStyles.submitButton}
         >
           Create use case

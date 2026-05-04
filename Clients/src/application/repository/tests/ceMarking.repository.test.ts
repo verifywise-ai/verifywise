@@ -42,9 +42,7 @@ describe("Test CE Marking Repository", () => {
     it("should call ceMarkingService.getCEMarking with projectId and return result", async () => {
       const projectId = "proj-1";
       const mockData = { projectId, declarationStatus: "draft" };
-      vi.mocked(ceMarkingService.getCEMarking).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.getCEMarking).mockResolvedValue(mockData as any);
 
       const response = await getCEMarking(projectId);
 
@@ -58,16 +56,11 @@ describe("Test CE Marking Repository", () => {
       const projectId = "proj-1";
       const payload = { declarationStatus: "signed" };
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateCEMarking).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateCEMarking).mockResolvedValue(mockData as any);
 
       const response = await updateCEMarking(projectId, payload as any);
 
-      expect(ceMarkingService.updateCEMarking).toHaveBeenCalledWith(
-        projectId,
-        payload,
-      );
+      expect(ceMarkingService.updateCEMarking).toHaveBeenCalledWith(projectId, payload);
       expect(response).toEqual(mockData);
     });
   });
@@ -84,9 +77,7 @@ describe("Test CE Marking Repository", () => {
         completedDate: "2026-02-26",
       };
       const mockData = { id: stepId, ...stepData };
-      vi.mocked(ceMarkingService.updateConformityStep).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateConformityStep).mockResolvedValue(mockData as any);
 
       const response = await updateConformityStep(projectId, stepId, stepData);
 
@@ -108,15 +99,14 @@ describe("Test CE Marking Repository", () => {
         annexIIICategory: "annex-1",
       };
       const mockData = { success: true };
-      vi.mocked(
-        ceMarkingService.updateClassificationAndScope,
-      ).mockResolvedValue(mockData as any);
+      vi.mocked(ceMarkingService.updateClassificationAndScope).mockResolvedValue(mockData as any);
 
       const response = await updateClassificationAndScope(projectId, payload);
 
-      expect(
-        ceMarkingService.updateClassificationAndScope,
-      ).toHaveBeenCalledWith(projectId, payload);
+      expect(ceMarkingService.updateClassificationAndScope).toHaveBeenCalledWith(
+        projectId,
+        payload,
+      );
       expect(response).toEqual(mockData);
     });
   });
@@ -131,16 +121,11 @@ describe("Test CE Marking Repository", () => {
         declarationDocument: "doc-url",
       };
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateDeclaration).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateDeclaration).mockResolvedValue(mockData as any);
 
       const response = await updateDeclaration(projectId, payload);
 
-      expect(ceMarkingService.updateDeclaration).toHaveBeenCalledWith(
-        projectId,
-        payload,
-      );
+      expect(ceMarkingService.updateDeclaration).toHaveBeenCalledWith(projectId, payload);
       expect(response).toEqual(mockData);
     });
   });
@@ -155,16 +140,11 @@ describe("Test CE Marking Repository", () => {
         euRecordUrl: "https://eu-record.test/1",
       };
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateRegistration).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateRegistration).mockResolvedValue(mockData as any);
 
       const response = await updateRegistration(projectId, payload);
 
-      expect(ceMarkingService.updateRegistration).toHaveBeenCalledWith(
-        projectId,
-        payload,
-      );
+      expect(ceMarkingService.updateRegistration).toHaveBeenCalledWith(projectId, payload);
       expect(response).toEqual(mockData);
     });
   });
@@ -172,9 +152,7 @@ describe("Test CE Marking Repository", () => {
   describe("getAllPolicies", () => {
     it("should call ceMarkingService.getAllPolicies and return result", async () => {
       const mockData = [{ id: 1, name: "Policy A" }];
-      vi.mocked(ceMarkingService.getAllPolicies).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.getAllPolicies).mockResolvedValue(mockData as any);
 
       const response = await getAllPolicies();
 
@@ -186,9 +164,7 @@ describe("Test CE Marking Repository", () => {
   describe("getAllEvidences", () => {
     it("should call ceMarkingService.getAllEvidences and return result", async () => {
       const mockData = [{ id: 10, filename: "evidence.pdf" }];
-      vi.mocked(ceMarkingService.getAllEvidences).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.getAllEvidences).mockResolvedValue(mockData as any);
 
       const response = await getAllEvidences();
 
@@ -200,9 +176,7 @@ describe("Test CE Marking Repository", () => {
   describe("getAllIncidents", () => {
     it("should call ceMarkingService.getAllIncidents and return result", async () => {
       const mockData = [{ id: 20, title: "Incident A" }];
-      vi.mocked(ceMarkingService.getAllIncidents).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.getAllIncidents).mockResolvedValue(mockData as any);
 
       const response = await getAllIncidents();
 
@@ -216,16 +190,11 @@ describe("Test CE Marking Repository", () => {
       const projectId = "proj-1";
       const policyIds = [1, 2, 3];
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateLinkedPolicies).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateLinkedPolicies).mockResolvedValue(mockData as any);
 
       const response = await updateLinkedPolicies(projectId, policyIds);
 
-      expect(ceMarkingService.updateLinkedPolicies).toHaveBeenCalledWith(
-        projectId,
-        policyIds,
-      );
+      expect(ceMarkingService.updateLinkedPolicies).toHaveBeenCalledWith(projectId, policyIds);
       expect(response).toEqual(mockData);
     });
   });
@@ -235,16 +204,11 @@ describe("Test CE Marking Repository", () => {
       const projectId = "proj-1";
       const evidenceIds = [11, 12];
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateLinkedEvidences).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateLinkedEvidences).mockResolvedValue(mockData as any);
 
       const response = await updateLinkedEvidences(projectId, evidenceIds);
 
-      expect(ceMarkingService.updateLinkedEvidences).toHaveBeenCalledWith(
-        projectId,
-        evidenceIds,
-      );
+      expect(ceMarkingService.updateLinkedEvidences).toHaveBeenCalledWith(projectId, evidenceIds);
       expect(response).toEqual(mockData);
     });
   });
@@ -254,16 +218,11 @@ describe("Test CE Marking Repository", () => {
       const projectId = "proj-1";
       const incidentIds = [21, 22];
       const mockData = { success: true };
-      vi.mocked(ceMarkingService.updateLinkedIncidents).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(ceMarkingService.updateLinkedIncidents).mockResolvedValue(mockData as any);
 
       const response = await updateLinkedIncidents(projectId, incidentIds);
 
-      expect(ceMarkingService.updateLinkedIncidents).toHaveBeenCalledWith(
-        projectId,
-        incidentIds,
-      );
+      expect(ceMarkingService.updateLinkedIncidents).toHaveBeenCalledWith(projectId, incidentIds);
       expect(response).toEqual(mockData);
     });
   });

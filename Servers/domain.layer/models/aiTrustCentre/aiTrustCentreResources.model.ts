@@ -7,7 +7,10 @@ import { FileModel } from "../file/file.model";
   timestamps: true,
   underscored: true,
 })
-export class AITrustCenterResourcesModel extends Model<AITrustCenterResourcesModel> implements IAITrustCentreResources {
+export class AITrustCenterResourcesModel
+  extends Model<AITrustCenterResourcesModel>
+  implements IAITrustCentreResources
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -52,5 +55,4 @@ export class AITrustCenterResourcesModel extends Model<AITrustCenterResourcesMod
     allowNull: false,
   })
   updated_at?: Date;
-
 }

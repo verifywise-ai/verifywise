@@ -67,10 +67,7 @@ describe("getDashboardDataQuery", () => {
   it("should call getAllProjectsQuery with userId, role, and organizationId", async () => {
     await getDashboardDataQuery(organizationId, userId, role);
 
-    expect(mockGetAllProjects).toHaveBeenCalledWith(
-      { userId, role },
-      organizationId
-    );
+    expect(mockGetAllProjects).toHaveBeenCalledWith({ userId, role }, organizationId);
   });
 
   it("should query trainings count from tenant schema", async () => {
@@ -87,7 +84,7 @@ describe("getDashboardDataQuery", () => {
     // Verify query uses organization_id filter
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining("trainingregistar WHERE organization_id"),
-      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) }),
     );
   });
 
@@ -104,7 +101,7 @@ describe("getDashboardDataQuery", () => {
     expect(result!.models).toBe(4);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining("model_inventories WHERE organization_id"),
-      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) }),
     );
   });
 
@@ -121,7 +118,7 @@ describe("getDashboardDataQuery", () => {
     expect(result!.reports).toBe(3);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining("files AS f WHERE"),
-      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) })
+      expect.objectContaining({ replacements: expect.objectContaining({ organizationId }) }),
     );
   });
 
@@ -134,7 +131,11 @@ describe("getDashboardDataQuery", () => {
         if (sql.includes("due_date < CURRENT_DATE")) {
           return [[{ count: "2" }], 0] as any; // overdue
         }
-        if (sql.includes("due_date >= CURRENT_DATE") && sql.includes("INTERVAL '7 days'") && !sql.includes("> CURRENT_DATE + INTERVAL")) {
+        if (
+          sql.includes("due_date >= CURRENT_DATE") &&
+          sql.includes("INTERVAL '7 days'") &&
+          !sql.includes("> CURRENT_DATE + INTERVAL")
+        ) {
           return [[{ count: "5" }], 0] as any; // due soon
         }
         if (sql.includes("> CURRENT_DATE + INTERVAL")) {
@@ -162,11 +163,7 @@ describe("getDashboardDataQuery", () => {
 
     expect(result!.projects).toBe(2);
     expect(result!.projects_list).toHaveLength(2);
-    expect(mockGetDataFromProviders).toHaveBeenCalledWith(
-      "use-cases",
-      organizationId,
-      sequelize
-    );
+    expect(mockGetDataFromProviders).toHaveBeenCalledWith("use-cases", organizationId, sequelize);
   });
 
   it("should continue gracefully when plugin fetch fails", async () => {

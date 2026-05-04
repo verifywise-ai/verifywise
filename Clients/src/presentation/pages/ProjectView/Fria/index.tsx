@@ -1,10 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import {
-  Box,
-  Stack,
-  CircularProgress,
-  Typography,
-} from "@mui/material";
+import { Box, Stack, CircularProgress, Typography } from "@mui/material";
 import {
   AlertTriangle,
   Send,
@@ -101,7 +96,7 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
           }
         }
       },
-      { threshold: 0.3, rootMargin: "-100px 0px -60% 0px" }
+      { threshold: 0.3, rootMargin: "-100px 0px -60% 0px" },
     );
 
     // Small delay to ensure refs are populated after render
@@ -139,8 +134,8 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
     assessment.risk_score > 70
       ? "High risk — review required"
       : assessment.risk_score > 40
-      ? "Moderate risk level"
-      : "Low risk level";
+        ? "Moderate risk level"
+        : "Low risk level";
 
   return (
     <Stack spacing={0} gap="16px">
@@ -188,14 +183,10 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
           </Typography>
         )}
         {!isSaving && lastSaveStatus === "saved" && (
-          <Typography sx={{ fontSize: 12, color: "#13715B", mr: "8px" }}>
-            Saved
-          </Typography>
+          <Typography sx={{ fontSize: 12, color: "#13715B", mr: "8px" }}>Saved</Typography>
         )}
         {!isSaving && lastSaveStatus === "error" && (
-          <Typography sx={{ fontSize: 12, color: "error.main", mr: "8px" }}>
-            Save failed
-          </Typography>
+          <Typography sx={{ fontSize: 12, color: "error.main", mr: "8px" }}>Save failed</Typography>
         )}
         <CustomizableButton
           text="Version history"
@@ -208,10 +199,7 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
           text="Save snapshot"
           variant="contained"
           onClick={() => setShowSubmitModal(true)}
-          disabled={
-            isSaving ||
-            assessment.status === "approved"
-          }
+          disabled={isSaving || assessment.status === "approved"}
           startIcon={<Send size={14} />}
           sx={{ height: 34 }}
         />
@@ -357,7 +345,8 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
       >
         <Stack spacing={0} gap="16px">
           <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.5 }}>
-            This will save a snapshot of the current assessment so you can refer back to it later. Your changes are already auto-saved as you type.
+            This will save a snapshot of the current assessment so you can refer back to it later.
+            Your changes are already auto-saved as you type.
           </Typography>
           <Field
             id="submit-reason"
@@ -380,11 +369,7 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
         fitContent
       >
         <Box sx={{ mx: "-12px", mb: "-12px" }}>
-          <FriaVersionHistory
-            friaId={assessment.id}
-            currentVersion={assessment.version}
-            inline
-          />
+          <FriaVersionHistory friaId={assessment.id} currentVersion={assessment.version} inline />
         </Box>
       </StandardModal>
     </Stack>

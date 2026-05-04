@@ -1,19 +1,12 @@
 import { useState, useEffect } from "react";
-import {
-  Box,
-  IconButton,
-  Typography,
-} from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { Plus, Trash2, Download } from "lucide-react";
 import Field from "../../../../components/Inputs/Field";
 import Select from "../../../../components/Inputs/Select";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
-import {
-  FriaAssessment,
-  FriaRiskItem,
-} from "../../../../../application/hooks/useFria";
+import { FriaAssessment, FriaRiskItem } from "../../../../../application/hooks/useFria";
 import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaRiskImportModal from "../FriaRiskImportModal";
 import FriaSectionCard from "../FriaSectionCard";
@@ -62,15 +55,9 @@ function RiskRow({
   isSaving: boolean;
   projectRiskOptions: ProjectRiskOption[];
 }) {
-  const [riskDescription, setRiskDescription] = useState(
-    item.risk_description ?? ""
-  );
-  const [existingControls, setExistingControls] = useState(
-    item.existing_controls ?? ""
-  );
-  const [furtherAction, setFurtherAction] = useState(
-    item.further_action ?? ""
-  );
+  const [riskDescription, setRiskDescription] = useState(item.risk_description ?? "");
+  const [existingControls, setExistingControls] = useState(item.existing_controls ?? "");
+  const [furtherAction, setFurtherAction] = useState(item.further_action ?? "");
 
   const handleTextBlur =
     (field: keyof FriaRiskItem, currentVal: string, originalVal: string | null) => () => {
@@ -233,7 +220,7 @@ function SpecificRisksSection({
                 _id: String(r.id),
                 name: r.risk_name || r.title || `Risk #${r.id}`,
               }))
-            : []
+            : [],
         );
       } catch {
         setProjectRiskOptions([]);
@@ -242,12 +229,8 @@ function SpecificRisksSection({
     fetchRisks();
   }, [assessment.project_id]);
 
-  const [riskScenarios, setRiskScenarios] = useState(
-    assessment.risk_scenarios ?? ""
-  );
-  const [providerInfoUsed, setProviderInfoUsed] = useState(
-    assessment.provider_info_used ?? ""
-  );
+  const [riskScenarios, setRiskScenarios] = useState(assessment.risk_scenarios ?? "");
+  const [providerInfoUsed, setProviderInfoUsed] = useState(assessment.provider_info_used ?? "");
 
   const handleRiskScenariosBlur = () => {
     if (riskScenarios !== (assessment.risk_scenarios ?? "")) {
@@ -268,14 +251,26 @@ function SpecificRisksSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)(e)–(f)
           </a>{" "}
-          requires identifying specific risks to health, safety, and fundamental rights, and describing measures to mitigate those risks.{" "}
-          <a href={`${EU_ACT_LINK}#art_9`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          requires identifying specific risks to health, safety, and fundamental rights, and
+          describing measures to mitigate those risks.{" "}
+          <a
+            href={`${EU_ACT_LINK}#art_9`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 9
           </a>{" "}
-          (risk management system) provides the broader framework for identifying and addressing AI-related risks.
+          (risk management system) provides the broader framework for identifying and addressing
+          AI-related risks.
         </>
       }
     >
@@ -304,7 +299,14 @@ function SpecificRisksSection({
       />
 
       <Box>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "8px",
+          }}
+        >
           <Typography
             sx={{
               fontSize: 13,

@@ -1,8 +1,7 @@
 export const Explainability = [
   {
     id: 1,
-    title:
-      "Transparency obligations for providers and users of certain AI systems",
+    title: "Transparency obligations for providers and users of certain AI systems",
     questions: [
       {
         id: 1,

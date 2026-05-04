@@ -105,7 +105,9 @@ const AIDepGraphModal: React.FC<AIDepGraphModalProps> = ({
             </Typography>
             {repositoryName && (
               <>
-                <Typography sx={{ color: "text.secondary", fontSize: theme.typography.body2.fontSize }}>
+                <Typography
+                  sx={{ color: "text.secondary", fontSize: theme.typography.body2.fontSize }}
+                >
                   •
                 </Typography>
                 <Typography

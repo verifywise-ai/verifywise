@@ -25,9 +25,7 @@ export class AITrustCenterInfoModel {
     this.subprocessor_visible = data.subprocessor_visible;
   }
 
-  static createNewAITrustCenterInfo(
-    data: AITrustCenterInfoModel
-  ): AITrustCenterInfoModel {
+  static createNewAITrustCenterInfo(data: AITrustCenterInfoModel): AITrustCenterInfoModel {
     return new AITrustCenterInfoModel(data);
   }
 }

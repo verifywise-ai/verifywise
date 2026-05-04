@@ -10,7 +10,10 @@ import {
  * Extends domain props with MUI-specific styling
  * Overrides unknown types from domain with React.ReactNode
  */
-export interface CustomizableButtonProps extends Omit<CustomizableButtonCoreProps, 'icon' | 'startIcon' | 'endIcon' | 'children' | 'loadingIndicator' | 'onClick'> {
+export interface CustomizableButtonProps extends Omit<
+  CustomizableButtonCoreProps,
+  "icon" | "startIcon" | "endIcon" | "children" | "loadingIndicator" | "onClick"
+> {
   /** Icon element (overrides domain unknown type) */
   icon?: React.ReactNode;
   /** Icon to display at the start of the button */

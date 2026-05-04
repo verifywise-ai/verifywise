@@ -1,9 +1,6 @@
 import { IControlCategory } from "../../interfaces/i.controlCategory";
 
-export const ControlCategories = (
-  projectId1: number,
-  projectId2: number
-): IControlCategory[] => {
+export const ControlCategories = (projectId1: number, projectId2: number): IControlCategory[] => {
   return [
     { order_no: 1, title: "AI literacy", project_id: projectId1 },
     {
@@ -38,8 +35,7 @@ export const ControlCategories = (
     },
     {
       order_no: 8,
-      title:
-        "Transparency obligations for providers and users of certain AI systems",
+      title: "Transparency obligations for providers and users of certain AI systems",
       project_id: projectId1,
     },
     { order_no: 9, title: "Registration", project_id: projectId1 },
@@ -97,8 +93,7 @@ export const ControlCategories = (
     },
     {
       order_no: 8,
-      title:
-        "Transparency obligations for providers and users of certain AI systems",
+      title: "Transparency obligations for providers and users of certain AI systems",
       project_id: projectId2,
     },
     { order_no: 9, title: "Registration", project_id: projectId2 },

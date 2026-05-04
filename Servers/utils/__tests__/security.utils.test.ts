@@ -95,7 +95,7 @@ describe("security.utils", () => {
       "should accept valid resource type: %s",
       (type) => {
         expect(isValidResourceType(type)).toBe(true);
-      }
+      },
     );
 
     it("should reject unknown resource types", () => {
@@ -107,45 +107,36 @@ describe("security.utils", () => {
 
   describe("sanitizeErrorMessage", () => {
     it("should return original message when no sensitive patterns found", () => {
-      expect(sanitizeErrorMessage(new Error("Something went wrong"))).toBe(
-        "Something went wrong"
-      );
+      expect(sanitizeErrorMessage(new Error("Something went wrong"))).toBe("Something went wrong");
     });
 
     it("should sanitize messages containing file paths", () => {
-      expect(
-        sanitizeErrorMessage(new Error("Error at /home/user/app/file.ts"))
-      ).toBe("An error occurred");
+      expect(sanitizeErrorMessage(new Error("Error at /home/user/app/file.ts"))).toBe(
+        "An error occurred",
+      );
     });
 
     it("should sanitize messages containing SQL references", () => {
-      expect(
-        sanitizeErrorMessage(new Error("column 'password' does not exist"))
-      ).toBe("An error occurred");
-      expect(
-        sanitizeErrorMessage(new Error("relation users does not exist"))
-      ).toBe("An error occurred");
+      expect(sanitizeErrorMessage(new Error("column 'password' does not exist"))).toBe(
+        "An error occurred",
+      );
+      expect(sanitizeErrorMessage(new Error("relation users does not exist"))).toBe(
+        "An error occurred",
+      );
     });
 
     it("should sanitize messages containing sensitive words", () => {
-      expect(
-        sanitizeErrorMessage(new Error("Invalid password format"))
-      ).toBe("An error occurred");
-      expect(
-        sanitizeErrorMessage(new Error("token verification failed"))
-      ).toBe("An error occurred");
-      expect(
-        sanitizeErrorMessage(new Error("secret key is missing"))
-      ).toBe("An error occurred");
+      expect(sanitizeErrorMessage(new Error("Invalid password format"))).toBe("An error occurred");
+      expect(sanitizeErrorMessage(new Error("token verification failed"))).toBe(
+        "An error occurred",
+      );
+      expect(sanitizeErrorMessage(new Error("secret key is missing"))).toBe("An error occurred");
     });
 
     it("should use custom default message", () => {
-      expect(
-        sanitizeErrorMessage(
-          new Error("table not found"),
-          "Operation failed"
-        )
-      ).toBe("Operation failed");
+      expect(sanitizeErrorMessage(new Error("table not found"), "Operation failed")).toBe(
+        "Operation failed",
+      );
     });
 
     it("should truncate long messages to 200 chars", () => {
@@ -165,9 +156,7 @@ describe("security.utils", () => {
     });
 
     it("should throw for invalid identifiers", () => {
-      expect(() => safeSQLIdentifier("users; DROP")).toThrow(
-        "Invalid SQL identifier"
-      );
+      expect(() => safeSQLIdentifier("users; DROP")).toThrow("Invalid SQL identifier");
       expect(() => safeSQLIdentifier("")).toThrow("Invalid SQL identifier");
     });
   });

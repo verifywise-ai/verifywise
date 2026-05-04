@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 
 /**
  * Super-Admin Role Migration
@@ -15,49 +15,62 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
-      console.log('🚀 Adding SuperAdmin role...');
+      console.log("🚀 Adding SuperAdmin role...");
 
       // 1. Insert SuperAdmin role
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         INSERT INTO verifywise.roles (id, name, description)
         VALUES (5, 'SuperAdmin', 'System-level administrator with cross-org access.')
         ON CONFLICT (id) DO NOTHING;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // Reset sequence to cover new role
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         SELECT setval('verifywise.roles_id_seq', GREATEST((SELECT MAX(id) FROM verifywise.roles), 5));
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // 2. Make organization_id nullable on users
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         ALTER TABLE verifywise.users ALTER COLUMN organization_id DROP NOT NULL;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // 3. Partial unique index — only one super-admin allowed
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_superadmin_unique
         ON verifywise.users (role_id) WHERE role_id = 5;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // 4. Seed super-admin user from env vars
       const email = process.env.SUPERADMIN_EMAIL;
       const password = process.env.SUPERADMIN_PASSWORD;
 
-      const [[{ count }]] = await queryInterface.sequelize.query(`
+      const [[{ count }]] = await queryInterface.sequelize.query(
+        `
         SELECT COUNT(*) AS count FROM verifywise.organizations;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       if (count <= 0 && (!email || !password)) {
         throw new Error(
-          'SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD environment variables are required. ' +
-          'Set them in your .env file and re-run the migration.'
+          "SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD environment variables are required. " +
+            "Set them in your .env file and re-run the migration.",
         );
       } else {
         if (password && password.length < 8) {
-          throw new Error(
-            'SUPERADMIN_PASSWORD must be at least 8 characters.'
-          );
+          throw new Error("SUPERADMIN_PASSWORD must be at least 8 characters.");
         }
       }
 
@@ -65,23 +78,26 @@ module.exports = {
         const passwordHash = await bcrypt.hash(password, 10);
 
         // Insert super-admin (ON CONFLICT on the partial unique index)
-        await queryInterface.sequelize.query(`
+        await queryInterface.sequelize.query(
+          `
           INSERT INTO verifywise.users (name, surname, email, password_hash, role_id, organization_id, created_at, last_login, is_demo)
           VALUES ('Super', 'Admin', :email, :passwordHash, 5, NULL, NOW(), NOW(), false)
           ON CONFLICT ((role_id)) WHERE role_id = 5 DO NOTHING;
-        `, {
-          replacements: { email, passwordHash },
-          transaction,
-        });
+        `,
+          {
+            replacements: { email, passwordHash },
+            transaction,
+          },
+        );
 
         console.log(`✅ Super-admin user seeded with email: ${email}`);
       }
 
       await transaction.commit();
-      console.log('✅ SuperAdmin role migration completed!');
+      console.log("✅ SuperAdmin role migration completed!");
     } catch (error) {
       await transaction.rollback();
-      console.error('❌ SuperAdmin migration failed:', error);
+      console.error("❌ SuperAdmin migration failed:", error);
       throw error;
     }
   },
@@ -90,33 +106,45 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
-      console.log('🔄 Rolling back SuperAdmin role...');
+      console.log("🔄 Rolling back SuperAdmin role...");
 
       // Delete super-admin user
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         DELETE FROM verifywise.users WHERE role_id = 5;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // Drop partial unique index
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         DROP INDEX IF EXISTS verifywise.idx_users_superadmin_unique;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // Restore NOT NULL on organization_id (set any NULLs first)
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         ALTER TABLE verifywise.users ALTER COLUMN organization_id SET NOT NULL;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       // Delete SuperAdmin role
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         DELETE FROM verifywise.roles WHERE id = 5;
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
       await transaction.commit();
-      console.log('✅ SuperAdmin role rollback completed!');
+      console.log("✅ SuperAdmin role rollback completed!");
     } catch (error) {
       await transaction.rollback();
-      console.error('❌ SuperAdmin rollback failed:', error);
+      console.error("❌ SuperAdmin rollback failed:", error);
       throw error;
     }
   },

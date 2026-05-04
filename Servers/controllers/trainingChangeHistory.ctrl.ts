@@ -1,19 +1,12 @@
 import { Request, Response } from "express";
 import { getEntityChangeHistory } from "../utils/changeHistory.base.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 /**
  * Get change history for a specific training with pagination support
  */
-export async function getTrainingChangeHistoryById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getTrainingChangeHistoryById(req: Request, res: Response): Promise<any> {
   const trainingId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   if (isNaN(trainingId) || trainingId <= 0) {
@@ -37,7 +30,7 @@ export async function getTrainingChangeHistoryById(
       trainingId,
       req.organizationId!,
       limit,
-      offset
+      offset,
     );
 
     await logSuccess({

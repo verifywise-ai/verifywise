@@ -58,37 +58,12 @@ var sanitizeConfig = {
     "span",
     "div",
   ],
-  ALLOWED_ATTR: [
-    "href",
-    "title",
-    "alt",
-    "src",
-    "class",
-    "id",
-    "style",
-    "target",
-    "rel",
-  ],
+  ALLOWED_ATTR: ["href", "title", "alt", "src", "class", "id", "style", "target", "rel"],
   ALLOWED_URI_REGEXP:
     /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+\.\-]+(?:[^a-z+\.\-:]|$))/i,
   ADD_ATTR: ["target"],
-  FORBID_TAGS: [
-    "script",
-    "object",
-    "embed",
-    "iframe",
-    "form",
-    "input",
-    "button",
-  ],
-  FORBID_ATTR: [
-    "onerror",
-    "onload",
-    "onclick",
-    "onmouseover",
-    "onfocus",
-    "onblur",
-  ],
+  FORBID_TAGS: ["script", "object", "embed", "iframe", "form", "input", "button"],
+  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
 };
 // Test XSS prevention
 console.log("Testing XSS Attack Vectors:");
@@ -100,7 +75,7 @@ xssAttackVectors.forEach(function (attack, index) {
     ""
       .concat(index + 1, ". ")
       .concat(isBlocked ? "✅ BLOCKED" : "❌ ALLOWED", ": ")
-      .concat(attack)
+      .concat(attack),
   );
   if (isBlocked) {
     console.log("   Sanitized: ".concat(sanitized));
@@ -117,7 +92,7 @@ safeHtml.forEach(function (html, index) {
     ""
       .concat(index + 1, ". ")
       .concat(isPreserved ? "✅ PRESERVED" : "❌ MODIFIED", ": ")
-      .concat(html)
+      .concat(html),
   );
   if (!isPreserved) {
     console.log("   Sanitized: ".concat(sanitized));

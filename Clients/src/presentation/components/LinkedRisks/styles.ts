@@ -7,14 +7,14 @@ export const textfieldStyle = {
 };
 
 export const styles = {
-  textBase : {
-    fontSize: "13px", 
-    color: `${text.tertiary}`
+  textBase: {
+    fontSize: "13px",
+    color: `${text.tertiary}`,
   },
-  textTitle : {
-    fontSize: 16, 
-    color: `${text.secondary}`, 
-    fontWeight: "bold"
+  textTitle: {
+    fontSize: 16,
+    color: `${text.secondary}`,
+    fontWeight: "bold",
   },
   container: {
     width: "100%",
@@ -23,24 +23,24 @@ export const styles = {
     borderRadius: "4px",
     gap: 10,
     justifyContent: "space-between",
-    minHeight: "520px"
+    minHeight: "520px",
   },
   headingSection: {
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
-    width: '100%',
-    marginBottom: "20px"
+    width: "100%",
+    marginBottom: "20px",
   },
   searchInputWrapper: {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: "24px"
+    marginBottom: "24px",
   },
   clearIconStyle: {
-    color: `${text.muted}`, 
-    cursor: "pointer"
+    color: `${text.muted}`,
+    cursor: "pointer",
   },
   CustomizableButton: {
     width: { xs: "100%", sm: 160 },
@@ -50,8 +50,8 @@ export const styles = {
     gap: 2,
   },
   cancelBtn: {
-    fontSize: "13px", 
+    fontSize: "13px",
     color: `${text.tertiary}`,
-    marginRight: "27px"
-  }
-}
+    marginRight: "27px",
+  },
+};

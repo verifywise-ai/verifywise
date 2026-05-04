@@ -76,7 +76,8 @@ const BUILTIN_PLUGINS: BuiltinPlugin[] = [
       },
       {
         name: "Auto Metadata Extraction",
-        description: "Automatically extract column names, row counts, and format from uploaded files",
+        description:
+          "Automatically extract column names, row counts, and format from uploaded files",
         displayOrder: 2,
       },
       {

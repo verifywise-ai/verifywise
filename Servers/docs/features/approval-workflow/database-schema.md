@@ -3,12 +3,14 @@
 ## Overview
 
 The approval workflow system uses 6 main tables organized into two categories:
+
 1. **Workflow Templates** (3 tables): Define reusable workflow configurations
 2. **Approval Requests** (3 tables): Track active approval processes
 
 ## Multi-Tenancy
 
 All tables are created within tenant-specific schemas:
+
 ```sql
 CREATE TABLE "${tenantId}".approval_workflows (...);
 ```
@@ -34,6 +36,7 @@ CREATE TABLE approval_workflows (
 ```
 
 **Columns**:
+
 - `id`: Unique workflow identifier
 - `workflow_title`: Human-readable name (e.g., "Use Case Approval")
 - `entity`: Entity type ID (1 = use_case, 2 = policy, etc.)
@@ -41,11 +44,13 @@ CREATE TABLE approval_workflows (
 - `updated_at`: Last modification time
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_approval_workflows_entity ON approval_workflows(entity);
 ```
 
 **Example Data**:
+
 ```sql
 id | workflow_title           | entity | created_at
 ---+-------------------------+--------+------------
@@ -71,6 +76,7 @@ CREATE TABLE approval_workflow_steps (
 ```
 
 **Columns**:
+
 - `id`: Unique step identifier
 - `workflow_id`: Parent workflow (FK)
 - `step_number`: Order of execution (1, 2, 3, ...)
@@ -81,6 +87,7 @@ CREATE TABLE approval_workflow_steps (
 - `created_at`: When step was created
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_workflow_steps_workflow_id ON approval_workflow_steps(workflow_id);
 CREATE INDEX idx_workflow_steps_step_number ON approval_workflow_steps(step_number);
@@ -88,6 +95,7 @@ CREATE UNIQUE INDEX idx_workflow_steps_unique ON approval_workflow_steps(workflo
 ```
 
 **Example Data**:
+
 ```sql
 id | workflow_id | step_number | step_name            | requires_all_approvers
 ---+-------------+-------------+----------------------+-----------------------
@@ -112,12 +120,14 @@ CREATE TABLE approval_step_approvers (
 ```
 
 **Columns**:
+
 - `id`: Unique record identifier
 - `workflow_step_id`: Which workflow step (FK)
 - `approver_id`: User ID who can approve (FK)
 - `created_at`: When approver was added
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_step_approvers_workflow_step ON approval_step_approvers(workflow_step_id);
 CREATE INDEX idx_step_approvers_approver ON approval_step_approvers(approver_id);
@@ -125,6 +135,7 @@ CREATE UNIQUE INDEX idx_step_approvers_unique ON approval_step_approvers(workflo
 ```
 
 **Example Data**:
+
 ```sql
 id | workflow_step_id | approver_id
 ---+------------------+------------
@@ -161,6 +172,7 @@ CREATE TABLE approval_requests (
 ```
 
 **Columns**:
+
 - `id`: Unique request identifier
 - `request_name`: Display name (e.g., "Use Case: Q1 Campaign")
 - `workflow_id`: Which workflow template is being used (FK)
@@ -178,6 +190,7 @@ CREATE TABLE approval_requests (
 - `updated_at`: Last modification time
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_approval_requests_workflow ON approval_requests(workflow_id);
 CREATE INDEX idx_approval_requests_entity ON approval_requests(entity_id, entity_type);
@@ -187,6 +200,7 @@ CREATE INDEX idx_approval_requests_current_step ON approval_requests(current_ste
 ```
 
 **Example Data**:
+
 ```sql
 id | request_name              | workflow_id | entity_id | status  | current_step | requested_by
 ---+---------------------------+-------------+-----------+---------+--------------+-------------
@@ -215,6 +229,7 @@ CREATE TABLE approval_request_steps (
 ```
 
 **Columns**:
+
 - `id`: Unique step instance identifier
 - `request_id`: Parent approval request (FK)
 - `step_number`: Step order (copied from workflow)
@@ -228,6 +243,7 @@ CREATE TABLE approval_request_steps (
 - `created_at`: When record was created
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_request_steps_request ON approval_request_steps(request_id);
 CREATE INDEX idx_request_steps_step_number ON approval_request_steps(step_number);
@@ -236,6 +252,7 @@ CREATE UNIQUE INDEX idx_request_steps_unique ON approval_request_steps(request_i
 ```
 
 **Example Data**:
+
 ```sql
 id | request_id | step_number | step_name         | status    | date_completed
 ---+------------+-------------+-------------------+-----------+----------------
@@ -263,6 +280,7 @@ CREATE TABLE approval_request_step_approvals (
 ```
 
 **Columns**:
+
 - `id`: Unique approval record identifier
 - `request_step_id`: Which step instance (FK)
 - `approver_id`: User who needs to approve (FK)
@@ -275,6 +293,7 @@ CREATE TABLE approval_request_step_approvals (
 - `created_at`: When record was created
 
 **Indexes**:
+
 ```sql
 CREATE INDEX idx_step_approvals_request_step ON approval_request_step_approvals(request_step_id);
 CREATE INDEX idx_step_approvals_approver ON approval_request_step_approvals(approver_id);
@@ -283,6 +302,7 @@ CREATE UNIQUE INDEX idx_step_approvals_unique ON approval_request_step_approvals
 ```
 
 **Example Data**:
+
 ```sql
 id | request_step_id | approver_id | approval_result | comments      | approved_at
 ---+-----------------+-------------+-----------------+---------------+-------------
@@ -301,6 +321,7 @@ id | request_step_id | approver_id | approval_result | comments      | approved_
 Modified to support deferred framework creation.
 
 **Added Columns**:
+
 ```sql
 ALTER TABLE projects ADD COLUMN approval_workflow_id INTEGER REFERENCES approval_workflows(id);
 ALTER TABLE projects ADD COLUMN pending_frameworks JSONB;
@@ -308,11 +329,13 @@ ALTER TABLE projects ADD COLUMN enable_ai_data_insertion BOOLEAN DEFAULT false;
 ```
 
 **Columns**:
+
 - `approval_workflow_id`: Assigned workflow (NULL if no approval required)
 - `pending_frameworks`: Framework IDs to create after approval (e.g., `[1, 2]`)
 - `enable_ai_data_insertion`: Whether to enable AI data insertion for frameworks
 
 **Example**:
+
 ```sql
 id | project_title    | approval_workflow_id | pending_frameworks | enable_ai_data_insertion
 ---+------------------+----------------------+--------------------+------------------------
@@ -321,6 +344,7 @@ id | project_title    | approval_workflow_id | pending_frameworks | enable_ai_da
 ```
 
 **Flow**:
+
 1. Create project with `pending_frameworks = [1, 2]`
 2. Create approval request
 3. Wait for approvals...

@@ -60,4 +60,3 @@ export enum Severity {
   Major = 4,
   Catastrophic = 5,
 }
-

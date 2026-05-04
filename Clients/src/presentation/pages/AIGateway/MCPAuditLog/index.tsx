@@ -59,7 +59,9 @@ export default function MCPAuditLogPage() {
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [stats, setStats] = useState<AuditStats | null>(null);
-  const [toolStats, setToolStats] = useState<{ tool_name: string; count: number; avg_latency_ms: number }[]>([]);
+  const [toolStats, setToolStats] = useState<
+    { tool_name: string; count: number; avg_latency_ms: number }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState("7");
   const [page, setPage] = useState(1);
@@ -100,7 +102,7 @@ export default function MCPAuditLogPage() {
         setLoading(false);
       }
     },
-    [filterTool, filterStatus]
+    [filterTool, filterStatus],
   );
 
   useEffect(() => {
@@ -151,10 +153,35 @@ export default function MCPAuditLogPage() {
         <>
           {stats && (
             <Stack direction="row" spacing={2} sx={{ px: 3, pt: 2.5 }}>
-              <StatCard title="Total Calls" value={stats.total_calls} Icon={BarChart3} tooltip="Total tool invocations in the selected period" />
-              <StatCard title="Error Rate" value={stats.total_calls > 0 ? `${((stats.error_count / stats.total_calls) * 100).toFixed(1)}%` : "0%"} Icon={AlertTriangle} highlight={stats.error_count > 0} tooltip="Percentage of tool calls that failed" />
-              <StatCard title="Avg Latency" value={`${Math.round(stats.avg_latency_ms || 0)}ms`} Icon={Clock} tooltip="Average round-trip time for tool calls" />
-              <StatCard title="Unique Tools" value={stats.unique_tools} Icon={Wrench} tooltip="Number of distinct tools called" />
+              <StatCard
+                title="Total Calls"
+                value={stats.total_calls}
+                Icon={BarChart3}
+                tooltip="Total tool invocations in the selected period"
+              />
+              <StatCard
+                title="Error Rate"
+                value={
+                  stats.total_calls > 0
+                    ? `${((stats.error_count / stats.total_calls) * 100).toFixed(1)}%`
+                    : "0%"
+                }
+                Icon={AlertTriangle}
+                highlight={stats.error_count > 0}
+                tooltip="Percentage of tool calls that failed"
+              />
+              <StatCard
+                title="Avg Latency"
+                value={`${Math.round(stats.avg_latency_ms || 0)}ms`}
+                Icon={Clock}
+                tooltip="Average round-trip time for tool calls"
+              />
+              <StatCard
+                title="Unique Tools"
+                value={stats.unique_tools}
+                Icon={Wrench}
+                tooltip="Number of distinct tools called"
+              />
             </Stack>
           )}
 
@@ -163,15 +190,31 @@ export default function MCPAuditLogPage() {
               <Box sx={{ ...cardSx, flex: 1 }}>
                 <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
                   <Typography sx={sectionTitleSx}>Top 10 tools by calls</Typography>
-                  <MuiTooltip title="Most frequently invoked tools in the selected period, ranked by total call count" arrow placement="top">
-                    <Box sx={{ display: "flex", alignItems: "center", cursor: "help" }}><Info size={14} color={palette.text.disabled} /></Box>
+                  <MuiTooltip
+                    title="Most frequently invoked tools in the selected period, ranked by total call count"
+                    arrow
+                    placement="top"
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", cursor: "help" }}>
+                      <Info size={14} color={palette.text.disabled} />
+                    </Box>
                   </MuiTooltip>
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
-                    <XAxis dataKey="tool_name" tick={{ fontSize: 11, fill: "#888" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#888" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <XAxis
+                      dataKey="tool_name"
+                      tick={{ fontSize: 11, fill: "#888" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#888" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
                     <Tooltip contentStyle={chartTooltipStyle} />
                     <Bar dataKey="count" name="Calls" fill="#5C8A7D" radius={[3, 3, 0, 0]} />
                   </BarChart>
@@ -180,17 +223,41 @@ export default function MCPAuditLogPage() {
               <Box sx={{ ...cardSx, flex: 1 }}>
                 <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
                   <Typography sx={sectionTitleSx}>Avg latency — top 10 tools</Typography>
-                  <MuiTooltip title="Average round-trip time per tool call, helping identify slow or bottlenecked tools" arrow placement="top">
-                    <Box sx={{ display: "flex", alignItems: "center", cursor: "help" }}><Info size={14} color={palette.text.disabled} /></Box>
+                  <MuiTooltip
+                    title="Average round-trip time per tool call, helping identify slow or bottlenecked tools"
+                    arrow
+                    placement="top"
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", cursor: "help" }}>
+                      <Info size={14} color={palette.text.disabled} />
+                    </Box>
                   </MuiTooltip>
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
-                    <XAxis dataKey="tool_name" tick={{ fontSize: 11, fill: "#888" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#888" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}ms`} />
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(value) => [`${Math.round(Number(value))}ms`, "Avg Latency"]} />
-                    <Bar dataKey="avg_latency_ms" name="Avg Latency" fill="#7986CB" radius={[3, 3, 0, 0]} />
+                    <XAxis
+                      dataKey="tool_name"
+                      tick={{ fontSize: 11, fill: "#888" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#888" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${v}ms`}
+                    />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      formatter={(value) => [`${Math.round(Number(value))}ms`, "Avg Latency"]}
+                    />
+                    <Bar
+                      dataKey="avg_latency_ms"
+                      name="Avg Latency"
+                      fill="#7986CB"
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -199,10 +266,21 @@ export default function MCPAuditLogPage() {
 
           <Stack direction="row" spacing={2} sx={{ px: 3, pt: 3, pb: 1.5 }} alignItems="flex-end">
             <Box sx={{ width: 240 }}>
-              <Field label="Filter by tool" placeholder="e.g. greet" value={filterTool} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterTool(e.target.value)} />
+              <Field
+                label="Filter by tool"
+                placeholder="e.g. greet"
+                value={filterTool}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterTool(e.target.value)}
+              />
             </Box>
             <Box sx={{ width: 180 }}>
-              <Select id="mcp-audit-status-filter" label="Status" items={STATUS_ITEMS} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as string)} />
+              <Select
+                id="mcp-audit-status-filter"
+                label="Status"
+                items={STATUS_ITEMS}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as string)}
+              />
             </Box>
           </Stack>
 
@@ -210,9 +288,13 @@ export default function MCPAuditLogPage() {
 
           <Stack spacing={1.5} sx={{ px: 3, pb: 3 }}>
             {loading ? (
-              <Typography color="text.secondary" sx={{ py: 2 }}>Loading...</Typography>
+              <Typography color="text.secondary" sx={{ py: 2 }}>
+                Loading...
+              </Typography>
             ) : noFilterResults ? (
-              <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>No results matching the current filters.</Typography>
+              <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
+                No results matching the current filters.
+              </Typography>
             ) : (
               <>
                 {logs.map((log) => {
@@ -220,28 +302,88 @@ export default function MCPAuditLogPage() {
                   return (
                     <Box key={log.id} sx={cardSx}>
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 600, fontSize: 14, fontFamily: "monospace", minWidth: 120 }}>{log.tool_name}</Typography>
-                          <Chip label={log.result_status.replace("_", " ")} backgroundColor={colors.bg} textColor={colors.text} />
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 60 }}>{log.latency_ms}ms</Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.result_summary || "—"}</Typography>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={2}
+                          sx={{ flex: 1, minWidth: 0 }}
+                        >
+                          <Typography
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: 14,
+                              fontFamily: "monospace",
+                              minWidth: 120,
+                            }}
+                          >
+                            {log.tool_name}
+                          </Typography>
+                          <Chip
+                            label={log.result_status.replace("_", " ")}
+                            backgroundColor={colors.bg}
+                            textColor={colors.text}
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 60 }}>
+                            {log.latency_ms}ms
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {log.result_summary || "—"}
+                          </Typography>
                         </Stack>
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ ml: 2, flexShrink: 0 }}>
-                          <Typography variant="body2" color="text.tertiary" sx={{ fontSize: 12 }}>{log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}</Typography>
-                          <Typography variant="body2" color="text.disabled" sx={{ fontSize: 12, whiteSpace: "nowrap" }}>{displayFormattedDate(log.created_at)}</Typography>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={2}
+                          sx={{ ml: 2, flexShrink: 0 }}
+                        >
+                          <Typography variant="body2" color="text.tertiary" sx={{ fontSize: 12 }}>
+                            {log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.disabled"
+                            sx={{ fontSize: 12, whiteSpace: "nowrap" }}
+                          >
+                            {displayFormattedDate(log.created_at)}
+                          </Typography>
                         </Stack>
                       </Stack>
                     </Box>
                   );
                 })}
                 {total > 0 && (
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 2 }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ pt: 2 }}
+                  >
                     <Typography variant="body2" color="text.secondary">
-                      Showing {((page - 1) * PAGE_SIZE) + 1}&ndash;{Math.min(page * PAGE_SIZE, total)} of {total}
+                      Showing {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, total)}{" "}
+                      of {total}
                     </Typography>
                     <Stack direction="row" spacing={1}>
-                      <CustomizableButton text="Previous" onClick={() => setPage(p => p - 1)} variant="outlined" disabled={page <= 1} />
-                      <CustomizableButton text="Next" onClick={() => setPage(p => p + 1)} variant="outlined" disabled={page * PAGE_SIZE >= total} />
+                      <CustomizableButton
+                        text="Previous"
+                        onClick={() => setPage((p) => p - 1)}
+                        variant="outlined"
+                        disabled={page <= 1}
+                      />
+                      <CustomizableButton
+                        text="Next"
+                        onClick={() => setPage((p) => p + 1)}
+                        variant="outlined"
+                        disabled={page * PAGE_SIZE >= total}
+                      />
                     </Stack>
                   </Stack>
                 )}

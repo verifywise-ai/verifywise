@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, useRef, lazy } from "react";
+import React, { useState, useEffect, useMemo, Suspense, useRef, lazy } from "react";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { Box, IconButton, Tooltip } from "@mui/material";
@@ -6,7 +6,14 @@ import { TabContext, TabPanel } from "@mui/lab";
 import { Button, CircularProgress, SelectChangeEvent, useTheme } from "@mui/material";
 import { Stack } from "@mui/material";
 import { Divider, Drawer, Typography } from "@mui/material";
-import { X as CloseIcon, Save as SaveIcon, Trash2 as DeleteIcon, Eye as ViewIcon, Download as DownloadIcon, FileText as FileIcon } from "lucide-react";
+import {
+  X as CloseIcon,
+  Save as SaveIcon,
+  Trash2 as DeleteIcon,
+  Eye as ViewIcon,
+  Download as DownloadIcon,
+  FileText as FileIcon,
+} from "lucide-react";
 
 import Field from "../../Inputs/Field";
 import RichTextEditor from "../../RichTextEditor";
@@ -22,12 +29,12 @@ import { text } from "../../../themes/palette";
 
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
-import {
-  NISTAIRMFDrawerProps,
-  NISTAIRMFStatus,
-} from "../../../pages/Framework/NIST-AI-RMF/types";
+import { NISTAIRMFDrawerProps, NISTAIRMFStatus } from "../../../pages/Framework/NIST-AI-RMF/types";
 import { AlertProps } from "../../../types/alert.types";
-import { updateEntityById, getEntityById } from "../../../../application/repository/entity.repository";
+import {
+  updateEntityById,
+  getEntityById,
+} from "../../../../application/repository/entity.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
@@ -64,6 +71,18 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const memberOptions = useMemo(
+    () => [
+      { _id: "" as string | number, name: "(none)" },
+      ...projectMembers.map((user) => ({
+        _id: user.id as string | number,
+        name: `${user.name}`,
+        email: user.email,
+        surname: user.surname,
+      })),
+    ],
+    [projectMembers],
+  );
   const [activeTab, setActiveTab] = useState("details");
 
   // Risk linking state
@@ -82,10 +101,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   const { userRoleName, userId } = useAuth();
   const { users } = useUsers();
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled =
-    !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
 
   // Filter users to only show project members
   useEffect(() => {
@@ -210,8 +227,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
         reviewer: subcategory.reviewer?.toString() || "",
         approver: subcategory.approver?.toString() || "",
         auditor_feedback: subcategory.auditor_feedback || "",
-        implementation_description:
-          subcategory.implementation_description || "",
+        implementation_description: subcategory.implementation_description || "",
         tags: subcategory.tags || [],
       });
 
@@ -298,10 +314,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
     });
   };
 
-  const handleEvidenceFileDownload = async (
-    fileId: string,
-    fileName: string
-  ) => {
+  const handleEvidenceFileDownload = async (fileId: string, fileName: string) => {
     try {
       // Use /files/:id endpoint for evidence files (not file-manager)
       // This avoids project access checks since evidence files are linked to subcategories
@@ -353,18 +366,13 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
 
       // Add form fields
       formDataToSend.append("status", formData.status);
-      formDataToSend.append(
-        "implementation_description",
-        formData.implementation_description
-      );
+      formDataToSend.append("implementation_description", formData.implementation_description);
       formDataToSend.append("auditor_feedback", formData.auditor_feedback);
       formDataToSend.append("tags", JSON.stringify(formData.tags));
 
-      if (formData.owner) formDataToSend.append("owner", formData.owner);
-      if (formData.reviewer)
-        formDataToSend.append("reviewer", formData.reviewer);
-      if (formData.approver)
-        formDataToSend.append("approver", formData.approver);
+      formDataToSend.append("owner", formData.owner || "");
+      formDataToSend.append("reviewer", formData.reviewer || "");
+      formDataToSend.append("approver", formData.approver || "");
       if (date) formDataToSend.append("due_date", date.toISOString());
 
       // Add file handling fields (ISO pattern)
@@ -432,23 +440,15 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
           }
         }
 
-        onSaveSuccess?.(
-          true,
-          "Subcategory updated successfully",
-          subcategory.id
-        );
+        onSaveSuccess?.(true, "Subcategory updated successfully", subcategory.id);
         // Don't close the drawer - user can continue editing or close manually with X
       } else {
-        throw new Error(
-          response.data?.message || "Failed to update subcategory"
-        );
+        throw new Error(response.data?.message || "Failed to update subcategory");
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to update subcategory";
+        err.response?.data?.message || err.message || "Failed to update subcategory";
       setAlert({
         variant: "error",
         body: errorMessage,
@@ -562,9 +562,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
               }}
             >
               <CircularProgress />
-              <Typography sx={{ mt: 2 }}>
-                Loading subcategory data...
-              </Typography>
+              <Typography sx={{ mt: 2 }}>Loading subcategory data...</Typography>
             </Stack>
           )}
 
@@ -597,11 +595,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
               {/* Tabs */}
               <TabContext value={activeTab}>
                 <Box sx={{ padding: "0 20px" }}>
-                  <TabBar
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onChange={handleTabChange}
-                  />
+                  <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
                 </Box>
 
                 {/* Description Section - Details Tab */}
@@ -628,10 +622,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                         toolbar="full"
                         initialContent={formData.implementation_description}
                         onContentChange={(content) =>
-                          handleFieldChange(
-                            "implementation_description",
-                            content
-                          )
+                          handleFieldChange("implementation_description", content)
                         }
                         placeholder="Enter implementation details and how this subcategory is being addressed..."
                         isEditable={!isEditingDisabled}
@@ -661,12 +652,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       label="Owner:"
                       value={formData.owner ? parseInt(formData.owner) : ""}
                       onChange={handleSelectChange("owner")}
-                      items={projectMembers.map((user) => ({
-                        _id: user.id,
-                        name: `${user.name}`,
-                        email: user.email,
-                        surname: user.surname,
-                      }))}
+                      items={memberOptions}
                       sx={inputStyles}
                       placeholder={"Select owner"}
                       disabled={isEditingDisabled}
@@ -675,16 +661,9 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                     <Select
                       id="Reviewer"
                       label="Reviewer:"
-                      value={
-                        formData.reviewer ? parseInt(formData.reviewer) : ""
-                      }
+                      value={formData.reviewer ? parseInt(formData.reviewer) : ""}
                       onChange={handleSelectChange("reviewer")}
-                      items={projectMembers.map((user) => ({
-                        _id: user.id,
-                        name: `${user.name}`,
-                        email: user.email,
-                        surname: user.surname,
-                      }))}
+                      items={memberOptions}
                       sx={inputStyles}
                       placeholder={"Select reviewer"}
                       disabled={isEditingDisabled}
@@ -693,16 +672,9 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                     <Select
                       id="Approver"
                       label="Approver:"
-                      value={
-                        formData.approver ? parseInt(formData.approver) : ""
-                      }
+                      value={formData.approver ? parseInt(formData.approver) : ""}
                       onChange={handleSelectChange("approver")}
-                      items={projectMembers.map((user) => ({
-                        _id: user.id,
-                        name: `${user.name}`,
-                        email: user.email,
-                        surname: user.surname,
-                      }))}
+                      items={memberOptions}
                       sx={inputStyles}
                       placeholder={"Select approver"}
                       disabled={isEditingDisabled}
@@ -725,9 +697,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       <Field
                         type="description"
                         value={formData.auditor_feedback}
-                        onChange={(e) =>
-                          handleFieldChange("auditor_feedback", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                         sx={{
                           cursor: "text",
                           "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
@@ -814,9 +784,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                             backgroundColor: "background.main",
                             color: "text.secondary",
                           }}
-                          disableRipple={
-                            theme.components?.MuiButton?.defaultProps?.disableRipple
-                          }
+                          disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                         >
                           Add evidence files
                         </Button>
@@ -918,10 +886,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                 <IconButton
                                   size="small"
                                   onClick={() => {
-                                    handleEvidenceFileDownload(
-                                      file.id,
-                                      file.fileName
-                                    );
+                                    handleEvidenceFileDownload(file.id, file.fileName);
                                   }}
                                   sx={{
                                     color: "text.tertiary",
@@ -937,9 +902,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                               <Tooltip title="Delete file">
                                 <IconButton
                                   size="small"
-                                  onClick={() =>
-                                    handleDeleteEvidenceFile(file.id)
-                                  }
+                                  onClick={() => handleDeleteEvidenceFile(file.id)}
                                   disabled={isEditingDisabled}
                                   sx={{
                                     color: "text.tertiary",
@@ -1056,8 +1019,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                           No evidence files uploaded yet
                         </Typography>
                         <Typography variant="caption" color={text.disabled}>
-                          Click "Add evidence files" to upload documentation for
-                          this subcategory
+                          Click "Add evidence files" to upload documentation for this subcategory
                         </Typography>
                       </Box>
                     )}
@@ -1071,8 +1033,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       Linked risks
                     </Typography>
                     <Typography variant="body2" color="text.tertiary">
-                      Link risks from your risk database to this subcategory to
-                      track which risks are being addressed by this implementation.
+                      Link risks from your risk database to this subcategory to track which risks
+                      are being addressed by this implementation.
                     </Typography>
 
                     <Stack direction="row" spacing={2} alignItems="center">
@@ -1087,9 +1049,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                           backgroundColor: "background.main",
                           color: "text.secondary",
                         }}
-                        disableRipple={
-                          theme.components?.MuiButton?.defaultProps?.disableRipple
-                        }
+                        disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                         onClick={() => setIsLinkedRisksModalOpen(true)}
                         disabled={isEditingDisabled}
                       >
@@ -1226,27 +1186,25 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       </Stack>
                     )}
 
-                    {currentRisks.length === 0 &&
-                      selectedRisks.length === 0 && (
-                        <Box
-                          sx={{
-                            textAlign: "center",
-                            py: 4,
-                            color: "text.tertiary",
-                            border: `2px dashed ${theme.palette.border.dark}`,
-                            borderRadius: 1,
-                            backgroundColor: "background.accent",
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            No risks linked yet
-                          </Typography>
-                          <Typography variant="caption" color={text.disabled}>
-                            Click "Add/remove risks" to link risks from your
-                            risk database
-                          </Typography>
-                        </Box>
-                      )}
+                    {currentRisks.length === 0 && selectedRisks.length === 0 && (
+                      <Box
+                        sx={{
+                          textAlign: "center",
+                          py: 4,
+                          color: "text.tertiary",
+                          border: `2px dashed ${theme.palette.border.dark}`,
+                          borderRadius: 1,
+                          backgroundColor: "background.accent",
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          No risks linked yet
+                        </Typography>
+                        <Typography variant="caption" color={text.disabled}>
+                          Click "Add/remove risks" to link risks from your risk database
+                        </Typography>
+                      </Box>
+                    )}
                   </Stack>
                 </TabPanel>
 
@@ -1259,7 +1217,6 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                     />
                   </Suspense>
                 </TabPanel>
-
               </TabContext>
 
               {/* Linked Risks Modal */}
@@ -1309,9 +1266,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
       </Drawer>
 
       {/* Alert Component */}
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
       {/* Risk Detail Modal */}
       <StandardModal

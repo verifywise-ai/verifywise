@@ -11,8 +11,18 @@ vi.mock("../../repository/share.repository", () => ({
   deleteShareLink: vi.fn(),
 }));
 
-import { useShareLinks, useShareLinkByToken, useCreateShareLink, useDeleteShareLink } from "../useShare";
-import { getShareLinksForResource, getShareLinkByToken, createShareLink, deleteShareLink } from "../../repository/share.repository";
+import {
+  useShareLinks,
+  useShareLinkByToken,
+  useCreateShareLink,
+  useDeleteShareLink,
+} from "../useShare";
+import {
+  getShareLinksForResource,
+  getShareLinkByToken,
+  createShareLink,
+  deleteShareLink,
+} from "../../repository/share.repository";
 
 const mockGetLinks = vi.mocked(getShareLinksForResource);
 const mockGetByToken = vi.mocked(getShareLinkByToken);
@@ -51,7 +61,9 @@ describe("useShareLinkByToken", () => {
   it("fetches a share link by token", async () => {
     mockGetByToken.mockResolvedValue({ data: { id: 1, resource_type: "project" } });
 
-    const { result } = renderHook(() => useShareLinkByToken("abc123"), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useShareLinkByToken("abc123"), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ id: 1, resource_type: "project" });

@@ -39,7 +39,10 @@ function parseCSVRow(line: string): string[] {
   const result: string[] = [];
   let i = 0;
   while (i <= line.length) {
-    if (i === line.length) { result.push(""); break; }
+    if (i === line.length) {
+      result.push("");
+      break;
+    }
     if (line[i] === '"') {
       let value = "";
       i++; // skip opening quote
@@ -58,9 +61,9 @@ function parseCSVRow(line: string): string[] {
         }
       }
       result.push(value.trim());
-      if (i < line.length && line[i] === ',') i++; // skip delimiter
+      if (i < line.length && line[i] === ",") i++; // skip delimiter
     } else {
-      const next = line.indexOf(',', i);
+      const next = line.indexOf(",", i);
       if (next === -1) {
         result.push(line.substring(i).trim());
         break;
@@ -74,7 +77,11 @@ function parseCSVRow(line: string): string[] {
 
 /** Escape HTML entities to prevent XSS in rendered text. */
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 interface NewBiasAuditModalProps {
@@ -181,10 +188,46 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
   // Context-aware labels based on selected preset
   const systemLabel = (() => {
-    if (!selectedPresetId) return { step: "AI system", heading: "AI system information", description: "Provide details about the AI system being audited", field: "System name", reviewLabel: "System name" };
-    if (selectedPresetId === "nyc_ll144") return { step: "AEDT", heading: "AEDT information", description: "Provide details about the automated employment decision tool being audited", field: "AEDT name", reviewLabel: "AEDT name" };
-    if (["eeoc_guidelines", "california_feha", "illinois_hb3773", "new_jersey", "singapore_wfa", "texas_traiga"].includes(selectedPresetId)) return { step: "AI tool", heading: "AI hiring tool information", description: "Provide details about the AI-assisted hiring tool being audited", field: "Tool name", reviewLabel: "Tool name" };
-    return { step: "AI system", heading: "AI system information", description: "Provide details about the AI system being audited", field: "System name", reviewLabel: "System name" };
+    if (!selectedPresetId)
+      return {
+        step: "AI system",
+        heading: "AI system information",
+        description: "Provide details about the AI system being audited",
+        field: "System name",
+        reviewLabel: "System name",
+      };
+    if (selectedPresetId === "nyc_ll144")
+      return {
+        step: "AEDT",
+        heading: "AEDT information",
+        description: "Provide details about the automated employment decision tool being audited",
+        field: "AEDT name",
+        reviewLabel: "AEDT name",
+      };
+    if (
+      [
+        "eeoc_guidelines",
+        "california_feha",
+        "illinois_hb3773",
+        "new_jersey",
+        "singapore_wfa",
+        "texas_traiga",
+      ].includes(selectedPresetId)
+    )
+      return {
+        step: "AI tool",
+        heading: "AI hiring tool information",
+        description: "Provide details about the AI-assisted hiring tool being audited",
+        field: "Tool name",
+        reviewLabel: "Tool name",
+      };
+    return {
+      step: "AI system",
+      heading: "AI system information",
+      description: "Provide details about the AI system being audited",
+      field: "System name",
+      reviewLabel: "System name",
+    };
   })();
 
   // Step 2: system metadata
@@ -213,11 +256,18 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [presetsError, setPresetsError] = useState<string | null>(null);
-  const [alert, setAlert] = useState<{ show: boolean; variant: "success" | "error" | "info"; title: string; body: string } | null>(null);
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    variant: "success" | "error" | "info";
+    title: string;
+    body: string;
+  } | null>(null);
   const presetRequestIdRef = useRef(0);
 
   // Model inventory link
-  const [modelInventories, setModelInventories] = useState<Array<{ id: number; provider: string; model: string; version: string; status: string }>>([]);
+  const [modelInventories, setModelInventories] = useState<
+    Array<{ id: number; provider: string; model: string; version: string; status: string }>
+  >([]);
   const [selectedModelInventoryId, setSelectedModelInventoryId] = useState<number | null>(null);
 
   // Load presets on modal open
@@ -349,13 +399,9 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         smallSampleExclusion: smallSampleExclusion,
         outcomeColumn: metric === "selection_rate" ? outcomeColumn : "",
         scoreColumn: metric === "scoring_rate" ? scoreColumn : undefined,
-        predictionColumn:
-          metric === "fairness_metrics" ? predictionColumn : undefined,
-        groundTruthColumn:
-          metric === "fairness_metrics" ? groundTruthColumn : undefined,
-        columnMapping: Object.fromEntries(
-          Object.entries(columnMapping).filter(([, v]) => v)
-        ),
+        predictionColumn: metric === "fairness_metrics" ? predictionColumn : undefined,
+        groundTruthColumn: metric === "fairness_metrics" ? groundTruthColumn : undefined,
+        columnMapping: Object.fromEntries(Object.entries(columnMapping).filter(([, v]) => v)),
         systemName: aedtName,
         systemDescription: aedtDescription,
         dataSource: dataSourceDescription,
@@ -507,7 +553,6 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
           ))}
         </Box>
       )}
-
     </Stack>
   );
 
@@ -588,309 +633,386 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
     const categories = Object.values(fullPreset?.categories || {});
     const requiredCategories = categories.filter((c) => c.groups && c.groups.length > 0);
     const categoryNames = requiredCategories.map((c) => c.label);
-    const exampleGroups = requiredCategories.length > 0
-      ? requiredCategories[0].groups.slice(0, 2).join(", ") + (requiredCategories[0].groups.length > 2 ? ", ..." : "")
-      : "";
+    const exampleGroups =
+      requiredCategories.length > 0
+        ? requiredCategories[0].groups.slice(0, 2).join(", ") +
+          (requiredCategories[0].groups.length > 2 ? ", ..." : "")
+        : "";
 
     return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
-          Upload applicant data
-        </Typography>
-        <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: 2 }}>
-          Upload a CSV file where each row represents one applicant. The file must include demographic columns and a binary outcome column.
-        </Typography>
-      </Box>
-
-      {/* Metric mode selector */}
-      <Box>
-        <Stack direction="row" alignItems="center" spacing={0.5} mb={1}>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
-            Audit metric
+      <Stack spacing={3}>
+        <Box>
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
+            Upload applicant data
           </Typography>
-          <VWTooltip
-            content="The metric determines what your CSV needs to contain. Selection rate works for binary hire/reject decisions. Scoring rate is for tools that output a continuous score — it compares how often each group scores above the overall median. Fairness metrics compute TPR, FPR, and equalized odds from model predictions vs. ground truth."
-            placement="top"
-            maxWidth={320}
-          >
-            <Box sx={{ display: "flex", cursor: "help" }}>
-              <Info size={14} strokeWidth={1.5} color={palette.text.accent} />
-            </Box>
-          </VWTooltip>
-        </Stack>
-        <Select
-          id="metric-mode"
-          value={metric}
-          onChange={(e) => setMetric(e.target.value as BiasAuditMetric)}
-          items={[
-            { _id: "selection_rate", name: "Selection rate (binary outcome)" },
-            { _id: "scoring_rate", name: "Scoring rate (continuous score, LL144 compliant)" },
-            { _id: "fairness_metrics", name: "Fairness metrics (prediction + ground truth)" },
-          ]}
-        />
-      </Box>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: 2 }}>
+            Upload a CSV file where each row represents one applicant. The file must include
+            demographic columns and a binary outcome column.
+          </Typography>
+        </Box>
 
-      {/* Data requirements */}
-      <Box sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px", p: "12px", backgroundColor: palette.background.accent }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
-          Required columns
-        </Typography>
-        <Stack spacing={0.75}>
-          {categoryNames.map((name) => (
-            <Stack key={name} direction="row" spacing={1} alignItems="center">
-              <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                <strong>{name}</strong> — demographic group for each applicant{name === categoryNames[0] && exampleGroups ? ` (e.g., ${exampleGroups})` : ""}
-              </Typography>
-            </Stack>
-          ))}
-          {metric === "selection_rate" && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                <strong>Outcome</strong> — binary result column (1/yes/selected = selected, 0/no = not selected)
-              </Typography>
-            </Stack>
-          )}
-          {metric === "scoring_rate" && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                <strong>Score</strong> — numeric column. Impact ratio is computed from the rate at which each group scores above the overall median.
-              </Typography>
-            </Stack>
-          )}
-          {metric === "fairness_metrics" && (
-            <>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+        {/* Metric mode selector */}
+        <Box>
+          <Stack direction="row" alignItems="center" spacing={0.5} mb={1}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
+              Audit metric
+            </Typography>
+            <VWTooltip
+              content="The metric determines what your CSV needs to contain. Selection rate works for binary hire/reject decisions. Scoring rate is for tools that output a continuous score — it compares how often each group scores above the overall median. Fairness metrics compute TPR, FPR, and equalized odds from model predictions vs. ground truth."
+              placement="top"
+              maxWidth={320}
+            >
+              <Box sx={{ display: "flex", cursor: "help" }}>
+                <Info size={14} strokeWidth={1.5} color={palette.text.accent} />
+              </Box>
+            </VWTooltip>
+          </Stack>
+          <Select
+            id="metric-mode"
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as BiasAuditMetric)}
+            items={[
+              { _id: "selection_rate", name: "Selection rate (binary outcome)" },
+              { _id: "scoring_rate", name: "Scoring rate (continuous score, LL144 compliant)" },
+              { _id: "fairness_metrics", name: "Fairness metrics (prediction + ground truth)" },
+            ]}
+          />
+        </Box>
+
+        {/* Data requirements */}
+        <Box
+          sx={{
+            border: `1px solid ${palette.border.dark}`,
+            borderRadius: "4px",
+            p: "12px",
+            backgroundColor: palette.background.accent,
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
+            Required columns
+          </Typography>
+          <Stack spacing={0.75}>
+            {categoryNames.map((name) => (
+              <Stack key={name} direction="row" spacing={1} alignItems="center">
+                <Box
+                  sx={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: "50%",
+                    backgroundColor: palette.brand.primary,
+                    flexShrink: 0,
+                  }}
+                />
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                  <strong>Prediction</strong> — binary column with what the model predicted
+                  <strong>{name}</strong> — demographic group for each applicant
+                  {name === categoryNames[0] && exampleGroups ? ` (e.g., ${exampleGroups})` : ""}
                 </Typography>
               </Stack>
+            ))}
+            {metric === "selection_rate" && (
               <Stack direction="row" spacing={1} alignItems="center">
-                <Box sx={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: palette.brand.primary, flexShrink: 0 }} />
+                <Box
+                  sx={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: "50%",
+                    backgroundColor: palette.brand.primary,
+                    flexShrink: 0,
+                  }}
+                />
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                  <strong>Ground truth</strong> — binary column with the actual correct answer
+                  <strong>Outcome</strong> — binary result column (1/yes/selected = selected, 0/no =
+                  not selected)
                 </Typography>
               </Stack>
-            </>
-          )}
-        </Stack>
-        <Typography sx={{ fontSize: 11, color: palette.text.accent, mt: 1.5 }}>
-          Column names don't need to match exactly — you'll map them in the next section after uploading.
-        </Typography>
-      </Box>
-
-      {/* File upload area */}
-      <Box
-        sx={{
-          border: `2px dashed ${palette.border.dark}`,
-          borderRadius: "4px",
-          p: 4,
-          textAlign: "center",
-          cursor: "pointer",
-          "&:hover": { borderColor: palette.brand.primary, backgroundColor: palette.background.accent },
-          position: "relative",
-        }}
-        onClick={() => document.getElementById("csv-upload-input")?.click()}
-      >
-        <input
-          id="csv-upload-input"
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-          style={{ display: "none" }}
-        />
-        {csvFile ? (
-          <Stack alignItems="center" spacing={1}>
-            <FileSpreadsheet size={32} color={palette.brand.primary} strokeWidth={1.5} />
-            <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary }}>
-              {csvFile.name}
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              {csvHeaders.length} columns detected
-            </Typography>
+            )}
+            {metric === "scoring_rate" && (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box
+                  sx={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: "50%",
+                    backgroundColor: palette.brand.primary,
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  <strong>Score</strong> — numeric column. Impact ratio is computed from the rate at
+                  which each group scores above the overall median.
+                </Typography>
+              </Stack>
+            )}
+            {metric === "fairness_metrics" && (
+              <>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: "50%",
+                      backgroundColor: palette.brand.primary,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                    <strong>Prediction</strong> — binary column with what the model predicted
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: "50%",
+                      backgroundColor: palette.brand.primary,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                    <strong>Ground truth</strong> — binary column with the actual correct answer
+                  </Typography>
+                </Stack>
+              </>
+            )}
           </Stack>
-        ) : (
-          <Stack alignItems="center" spacing={1}>
-            <Upload size={32} color={palette.text.accent} strokeWidth={1.5} />
-            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-              Click to upload CSV file
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: palette.text.accent }}>
-              Comma-separated values with demographic columns
-            </Typography>
-          </Stack>
-        )}
-      </Box>
-
-      {/* Column mapping */}
-      {csvFile && csvHeaders.length > 0 && (
-        <Stack spacing="8px" mt={3}>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
-            Column mapping
+          <Typography sx={{ fontSize: 11, color: palette.text.accent, mt: 1.5 }}>
+            Column names don't need to match exactly — you'll map them in the next section after
+            uploading.
           </Typography>
+        </Box>
 
-          {Object.entries(fullPreset?.categories || {})
-            .sort(([, a], [, b]) => {
-              // Show categories with groups first (required), then optional ones
-              const aRequired = a.groups && a.groups.length > 0;
-              const bRequired = b.groups && b.groups.length > 0;
-              if (aRequired && !bRequired) return -1;
-              if (!aRequired && bRequired) return 1;
-              return 0;
-            })
-            .map(([key, cat]) => {
-              const isOptional = !cat.groups || cat.groups.length === 0;
-              return (
-                <Stack key={key} direction="row" alignItems="center" spacing={2}>
-                  <Typography sx={{ fontSize: 13, color: isOptional ? palette.text.accent : palette.text.tertiary, minWidth: 140 }}>
-                    {cat.label}{isOptional ? " (optional)" : ""}
+        {/* File upload area */}
+        <Box
+          sx={{
+            border: `2px dashed ${palette.border.dark}`,
+            borderRadius: "4px",
+            p: 4,
+            textAlign: "center",
+            cursor: "pointer",
+            "&:hover": {
+              borderColor: palette.brand.primary,
+              backgroundColor: palette.background.accent,
+            },
+            position: "relative",
+          }}
+          onClick={() => document.getElementById("csv-upload-input")?.click()}
+        >
+          <input
+            id="csv-upload-input"
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          {csvFile ? (
+            <Stack alignItems="center" spacing={1}>
+              <FileSpreadsheet size={32} color={palette.brand.primary} strokeWidth={1.5} />
+              <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary }}>
+                {csvFile.name}
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                {csvHeaders.length} columns detected
+              </Typography>
+            </Stack>
+          ) : (
+            <Stack alignItems="center" spacing={1}>
+              <Upload size={32} color={palette.text.accent} strokeWidth={1.5} />
+              <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                Click to upload CSV file
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: palette.text.accent }}>
+                Comma-separated values with demographic columns
+              </Typography>
+            </Stack>
+          )}
+        </Box>
+
+        {/* Column mapping */}
+        {csvFile && csvHeaders.length > 0 && (
+          <Stack spacing="8px" mt={3}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
+              Column mapping
+            </Typography>
+
+            {Object.entries(fullPreset?.categories || {})
+              .sort(([, a], [, b]) => {
+                // Show categories with groups first (required), then optional ones
+                const aRequired = a.groups && a.groups.length > 0;
+                const bRequired = b.groups && b.groups.length > 0;
+                if (aRequired && !bRequired) return -1;
+                if (!aRequired && bRequired) return 1;
+                return 0;
+              })
+              .map(([key, cat]) => {
+                const isOptional = !cat.groups || cat.groups.length === 0;
+                return (
+                  <Stack key={key} direction="row" alignItems="center" spacing={2}>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        color: isOptional ? palette.text.accent : palette.text.tertiary,
+                        minWidth: 140,
+                      }}
+                    >
+                      {cat.label}
+                      {isOptional ? " (optional)" : ""}
+                    </Typography>
+                    <Select
+                      id={`mapping-${key}`}
+                      value={columnMapping[key] || ""}
+                      onChange={(e) => handleColumnMappingChange(key, String(e.target.value))}
+                      items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                      placeholder={isOptional ? "Not available" : `Select column for ${cat.label}`}
+                      sx={{ flex: 1 }}
+                    />
+                  </Stack>
+                );
+              })}
+
+            {metric === "selection_rate" && (
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                  Outcome column
+                </Typography>
+                <Select
+                  id="outcome-column"
+                  value={outcomeColumn}
+                  onChange={(e) => setOutcomeColumn(String(e.target.value))}
+                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                  placeholder="Select outcome column"
+                  sx={{ flex: 1 }}
+                />
+              </Stack>
+            )}
+
+            {metric === "scoring_rate" && (
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                  Score column
+                </Typography>
+                <Select
+                  id="score-column"
+                  value={scoreColumn}
+                  onChange={(e) => setScoreColumn(String(e.target.value))}
+                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                  placeholder="Select numeric score column"
+                  sx={{ flex: 1 }}
+                />
+              </Stack>
+            )}
+
+            {metric === "fairness_metrics" && (
+              <>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                    Prediction column
                   </Typography>
                   <Select
-                    id={`mapping-${key}`}
-                    value={columnMapping[key] || ""}
-                    onChange={(e) =>
-                      handleColumnMappingChange(key, String(e.target.value))
-                    }
+                    id="prediction-column"
+                    value={predictionColumn}
+                    onChange={(e) => setPredictionColumn(String(e.target.value))}
                     items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-                    placeholder={isOptional ? "Not available" : `Select column for ${cat.label}`}
+                    placeholder="Select prediction column"
                     sx={{ flex: 1 }}
                   />
                 </Stack>
-              );
-            })}
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
+                    Ground truth column
+                  </Typography>
+                  <Select
+                    id="ground-truth-column"
+                    value={groundTruthColumn}
+                    onChange={(e) => setGroundTruthColumn(String(e.target.value))}
+                    items={csvHeaders.map((h) => ({ _id: h, name: h }))}
+                    placeholder="Select ground truth column"
+                    sx={{ flex: 1 }}
+                  />
+                </Stack>
+              </>
+            )}
+          </Stack>
+        )}
 
-          {metric === "selection_rate" && (
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
-                Outcome column
-              </Typography>
-              <Select
-                id="outcome-column"
-                value={outcomeColumn}
-                onChange={(e) => setOutcomeColumn(String(e.target.value))}
-                items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-                placeholder="Select outcome column"
-                sx={{ flex: 1 }}
-              />
-            </Stack>
-          )}
-
-          {metric === "scoring_rate" && (
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
-                Score column
-              </Typography>
-              <Select
-                id="score-column"
-                value={scoreColumn}
-                onChange={(e) => setScoreColumn(String(e.target.value))}
-                items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-                placeholder="Select numeric score column"
-                sx={{ flex: 1 }}
-              />
-            </Stack>
-          )}
-
-          {metric === "fairness_metrics" && (
-            <>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
-                  Prediction column
-                </Typography>
-                <Select
-                  id="prediction-column"
-                  value={predictionColumn}
-                  onChange={(e) => setPredictionColumn(String(e.target.value))}
-                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-                  placeholder="Select prediction column"
-                  sx={{ flex: 1 }}
-                />
-              </Stack>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
-                  Ground truth column
-                </Typography>
-                <Select
-                  id="ground-truth-column"
-                  value={groundTruthColumn}
-                  onChange={(e) => setGroundTruthColumn(String(e.target.value))}
-                  items={csvHeaders.map((h) => ({ _id: h, name: h }))}
-                  placeholder="Select ground truth column"
-                  sx={{ flex: 1 }}
-                />
-              </Stack>
-            </>
-          )}
-        </Stack>
-      )}
-
-      {/* CSV preview */}
-      {csvPreview.length > 0 && (
-        <Box mt={3}>
-          <Typography
-            sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 2 }}
-          >
-            Data preview
-          </Typography>
-          <Box
-            sx={{
-              border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
-              overflow: "auto",
-            }}
-          >
-            <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <Box component="thead">
-                <Box component="tr" sx={{ backgroundColor: palette.background.accent }}>
-                  {csvHeaders.map((header, idx) => (
+        {/* CSV preview */}
+        {csvPreview.length > 0 && (
+          <Box mt={3}>
+            <Typography
+              sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 2 }}
+            >
+              Data preview
+            </Typography>
+            <Box
+              sx={{
+                border: `1px solid ${palette.border.dark}`,
+                borderRadius: "4px",
+                overflow: "auto",
+              }}
+            >
+              <Box
+                component="table"
+                sx={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
+              >
+                <Box component="thead">
+                  <Box component="tr" sx={{ backgroundColor: palette.background.accent }}>
+                    {csvHeaders.map((header, idx) => (
+                      <Box
+                        component="th"
+                        key={idx}
+                        sx={{
+                          py: 1,
+                          px: 1.5,
+                          textAlign: "left",
+                          fontWeight: 600,
+                          color: palette.text.secondary,
+                          borderBottom: `1px solid ${palette.border.dark}`,
+                        }}
+                      >
+                        {header}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {csvPreview.map((row, rowIdx) => (
                     <Box
-                      component="th"
-                      key={idx}
+                      component="tr"
+                      key={rowIdx}
                       sx={{
-                        py: 1,
-                        px: 1.5,
-                        textAlign: "left",
-                        fontWeight: 600,
-                        color: palette.text.secondary,
-                        borderBottom: `1px solid ${palette.border.dark}`,
+                        borderBottom:
+                          rowIdx < csvPreview.length - 1
+                            ? `1px solid ${palette.border.light}`
+                            : "none",
                       }}
                     >
-                      {header}
+                      {row.map((cell, cellIdx) => (
+                        <Box
+                          component="td"
+                          key={cellIdx}
+                          sx={{
+                            py: 1,
+                            px: 1.5,
+                            color: palette.text.tertiary,
+                            fontSize: 12,
+                            maxWidth: 200,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {escapeHtml(cell)}
+                        </Box>
+                      ))}
                     </Box>
                   ))}
                 </Box>
               </Box>
-              <Box component="tbody">
-                {csvPreview.map((row, rowIdx) => (
-                  <Box
-                    component="tr"
-                    key={rowIdx}
-                    sx={{
-                      borderBottom: rowIdx < csvPreview.length - 1 ? `1px solid ${palette.border.light}` : "none",
-                    }}
-                  >
-                    {row.map((cell, cellIdx) => (
-                      <Box
-                        component="td"
-                        key={cellIdx}
-                        sx={{ py: 1, px: 1.5, color: palette.text.tertiary, fontSize: 12, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                      >
-                        {escapeHtml(cell)}
-                      </Box>
-                    ))}
-                  </Box>
-                ))}
-              </Box>
             </Box>
           </Box>
-        </Box>
-      )}
-    </Stack>
-  );
+        )}
+      </Stack>
+    );
   };
 
   // Step 4: Review & run
@@ -913,16 +1035,12 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
       {/* Summary */}
       <Box sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px", p: "8px" }}>
-        <Typography
-          sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}
-        >
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
           Summary
         </Typography>
         <Stack spacing={1}>
           <Stack direction="row" justifyContent="space-between">
-            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-              Framework
-            </Typography>
+            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Framework</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary, fontWeight: 500 }}>
               {fullPreset?.name}
             </Typography>
@@ -931,9 +1049,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
               {systemLabel.reviewLabel}
             </Typography>
-            <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
-              {aedtName}
-            </Typography>
+            <Typography sx={{ fontSize: 13, color: palette.text.primary }}>{aedtName}</Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between">
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Dataset</Typography>
@@ -942,9 +1058,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             </Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between">
-            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-              Categories
-            </Typography>
+            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Categories</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
               {Object.keys(fullPreset?.categories || {}).length}
             </Typography>
@@ -960,7 +1074,9 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         <Stack direction="row" spacing={2}>
           <Stack sx={{ flex: 1 }} spacing={0.5}>
             <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>Threshold (4/5ths rule)</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
+                Threshold (4/5ths rule)
+              </Typography>
               <VWTooltip
                 content="Groups with an impact ratio below this threshold are flagged for adverse impact. The standard 4/5ths rule uses 0.80, meaning a group's selection rate must be at least 80% of the highest group's rate."
                 placement="top"
@@ -983,7 +1099,9 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
           </Stack>
           <Stack sx={{ flex: 1 }} spacing={0.5}>
             <Stack direction="row" alignItems="center" spacing={0.5}>
-              <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>Small sample exclusion %</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
+                Small sample exclusion %
+              </Typography>
               <VWTooltip
                 content="Groups representing less than this percentage of total applicants are excluded from impact ratio calculations. This prevents statistically unreliable results from very small groups. Default is 2%."
                 placement="top"
@@ -1021,37 +1139,32 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
   return (
     <>
-    <StepperModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="New bias audit"
-      steps={[
-        "Compliance framework",
-        systemLabel.step,
-        "Demographic data",
-        "Review & run",
-      ]}
-      activeStep={activeStep}
-      onNext={() => setActiveStep((prev) => prev + 1)}
-      onBack={() => setActiveStep((prev) => prev - 1)}
-      onSubmit={handleSubmit}
-      canProceed={canProceed}
-      isSubmitting={isSubmitting}
-      submitButtonText="Run audit"
-      maxWidth="900px"
-    >
-      {renderStepContent()}
-    </StepperModal>
+      <StepperModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="New bias audit"
+        steps={["Compliance framework", systemLabel.step, "Demographic data", "Review & run"]}
+        activeStep={activeStep}
+        onNext={() => setActiveStep((prev) => prev + 1)}
+        onBack={() => setActiveStep((prev) => prev - 1)}
+        onSubmit={handleSubmit}
+        canProceed={canProceed}
+        isSubmitting={isSubmitting}
+        submitButtonText="Run audit"
+        maxWidth="900px"
+      >
+        {renderStepContent()}
+      </StepperModal>
 
-    {alert?.show && (
-      <VWAlert
-        variant={alert.variant}
-        title={alert.title}
-        body={alert.body}
-        isToast
-        onClick={() => setAlert(null)}
-      />
-    )}
+      {alert?.show && (
+        <VWAlert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body}
+          isToast
+          onClick={() => setAlert(null)}
+        />
+      )}
     </>
   );
 };

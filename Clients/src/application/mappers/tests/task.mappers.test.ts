@@ -1,14 +1,7 @@
 import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
-import {
-  TaskAssigneeModel,
-  TaskModel,
-} from "../../../domain/models/Common/task/task.model";
+import { TaskAssigneeModel, TaskModel } from "../../../domain/models/Common/task/task.model";
 import * as task from "../task.mapper";
-import {
-  ITaskBuilder,
-  TaskAssigneeBuilder,
-  TaskResponseBuilder,
-} from "./mocks/task.mappers.mocks";
+import { ITaskBuilder, TaskAssigneeBuilder, TaskResponseBuilder } from "./mocks/task.mappers.mocks";
 
 const {
   mapPriority,
@@ -95,12 +88,8 @@ describe("Test task mappers functions", () => {
       expect(result.priority).toBe(mapPriority(dto.priority));
       expect(result.status).toBe(mapStatus(dto.status));
       expect(result.categories).toBe(dto.categories);
-      expect(result.created_at).toStrictEqual(
-        new Date(dto.created_at as string),
-      );
-      expect(result.updated_at).toStrictEqual(
-        new Date(dto.updated_at as string),
-      );
+      expect(result.created_at).toStrictEqual(new Date(dto.created_at as string));
+      expect(result.updated_at).toStrictEqual(new Date(dto.updated_at as string));
       expect(result.creator_name).toBe(dto.creator_name);
       expect(result.assignees?.length).toBe(dto.assignees?.length);
       dto.assignees?.forEach((assigneeDto, index) => {
@@ -108,9 +97,7 @@ describe("Test task mappers functions", () => {
         expect(assignee.user_id).toBe(assigneeDto.user_id);
         expect(assignee.user_name).toBe(assigneeDto.user_name);
         expect(assignee.user_avatar).toBe(assigneeDto.user_avatar);
-        expect(assignee.assigned_at).toStrictEqual(
-          new Date(assigneeDto.assigned_at as string),
-        );
+        expect(assignee.assigned_at).toStrictEqual(new Date(assigneeDto.assigned_at as string));
       });
       expect(result.isOverdue).toBe(dto.isOverdue);
     });
@@ -149,12 +136,8 @@ describe("Test task mappers functions", () => {
       expect(result.priority).toBe(mapPriority(dto.priority));
       expect(result.status).toBe(mapStatus(dto.status));
       expect(result.categories).toBe(dto.categories);
-      expect(result.created_at).toStrictEqual(
-        new Date(dto.created_at as string),
-      );
-      expect(result.updated_at).toStrictEqual(
-        new Date(dto.updated_at as string),
-      );
+      expect(result.created_at).toStrictEqual(new Date(dto.created_at as string));
+      expect(result.updated_at).toStrictEqual(new Date(dto.updated_at as string));
       expect(result.creator_name).toBe(dto.creator_name);
       expect(result.assignees?.length).toBe(dto.assignees?.length);
       dto.assignees?.forEach((assigneeDto, index) => {
@@ -162,9 +145,7 @@ describe("Test task mappers functions", () => {
         expect(assignee.user_id).toBe(assigneeDto.user_id);
         expect(assignee.user_name).toBe(assigneeDto.user_name);
         expect(assignee.user_avatar).toBe(assigneeDto.user_avatar);
-        expect(assignee.assigned_at).toStrictEqual(
-          new Date(assigneeDto.assigned_at as string),
-        );
+        expect(assignee.assigned_at).toStrictEqual(new Date(assigneeDto.assigned_at as string));
       });
       expect(result.isOverdue).toBe(dto.isOverdue);
     });
@@ -222,9 +203,7 @@ describe("Test task mappers functions", () => {
       expect(result.priority).toBe(taskModel.priority);
       expect(result.status).toBe(taskModel.status);
       expect(result.categories).toBe(taskModel.categories);
-      expect(result.assignees).toHaveLength(
-        taskModel.assignees?.length as number,
-      );
+      expect(result.assignees).toHaveLength(taskModel.assignees?.length as number);
     });
     it("should return an empty string for title if it is undefined", () => {
       const taskModel = new ITaskBuilder().withoutTitle().build();
@@ -249,9 +228,7 @@ describe("Test task mappers functions", () => {
     it("should return an array of ids for the assignees", () => {
       const taskModel = new ITaskBuilder().build();
       const result = task.mapTaskToCreateDTO(taskModel);
-      expect(result.assignees).toHaveLength(
-        taskModel.assignees?.length as number,
-      );
+      expect(result.assignees).toHaveLength(taskModel.assignees?.length as number);
       taskModel.assignees?.forEach((assignee, index) => {
         expect(result.assignees![index]).toBe(assignee.user_id);
       });
@@ -267,16 +244,12 @@ describe("Test task mappers functions", () => {
       expect(result.priority).toBe(taskModel.priority);
       expect(result.status).toBe(taskModel.status);
       expect(result.categories).toBe(taskModel.categories);
-      expect(result.assignees).toHaveLength(
-        taskModel.assignees?.length as number,
-      );
+      expect(result.assignees).toHaveLength(taskModel.assignees?.length as number);
     });
     it("should return an array of ids for the assignees", () => {
       const taskModel = new ITaskBuilder().build();
       const result = task.mapTaskToUpdateDTO(taskModel);
-      expect(result.assignees).toHaveLength(
-        taskModel.assignees?.length as number,
-      );
+      expect(result.assignees).toHaveLength(taskModel.assignees?.length as number);
       taskModel.assignees?.forEach((assignee, index) => {
         expect(result.assignees![index]).toBe(assignee.user_id);
       });

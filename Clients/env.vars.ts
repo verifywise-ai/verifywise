@@ -8,5 +8,5 @@ export const ENV_VARs = {
   IS_MULTI_TENANT: import.meta.env.VITE_IS_MULTI_TENANT === "true",
   CLIENT_ID: import.meta.env.VITE_SLACK_CLIENT_ID ?? "9505327005334.9509956753907",
   SLACK_URL: import.meta.env.VITE_SLACK_URL ?? "https://slack.com/oauth/v2/authorize",
-  IS_SLACK_VISIBLE: import.meta.env.VITE_IS_SLACK_VISIBLE ?? "true"
+  IS_SLACK_VISIBLE: import.meta.env.VITE_IS_SLACK_VISIBLE ?? "true",
 };

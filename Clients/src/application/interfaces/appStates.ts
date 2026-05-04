@@ -115,4 +115,15 @@ interface InputValues {
   [key: string]: unknown;
 }
 
-export type { DashboardState, AppState, AlertState, UIValues, AuthValues, InputValues, Vendor, User, Project, FrameworkValues };
+export type {
+  DashboardState,
+  AppState,
+  AlertState,
+  UIValues,
+  AuthValues,
+  InputValues,
+  Vendor,
+  User,
+  Project,
+  FrameworkValues,
+};

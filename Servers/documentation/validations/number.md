@@ -19,11 +19,7 @@ The function has no external dependencies and is implemented in TypeScript.
 ## Function Signature
 
 ```typescript
-function numberValidation(
-  value: string | number,
-  min?: number,
-  max?: number
-): boolean;
+function numberValidation(value: string | number, min?: number, max?: number): boolean;
 ```
 
 ### Parameters
@@ -41,7 +37,6 @@ function numberValidation(
 The function performs the following validations:
 
 1. For number type inputs:
-
    - Checks if the value is within the specified range (if provided)
 
 2. For string type inputs:

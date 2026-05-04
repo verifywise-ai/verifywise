@@ -28,8 +28,7 @@ export const Improvement: Partial<SubClauseStructISO & SubClauseISO>[] = [
   {
     title: "Continual improvement",
     order_no: 2,
-    summary:
-      "Continually improve the suitability, adequacy, and effectiveness of the AIMS.",
+    summary: "Continually improve the suitability, adequacy, and effectiveness of the AIMS.",
     questions: [
       "How does the organization use results to drive improvement?",
       "Is there evidence of ongoing efforts?",

@@ -35,40 +35,30 @@ router.get(
   "/clauses/struct/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
-  getAllClausesStructForProject
+  getAllClausesStructForProject,
 );
 router.get("/annexes", authenticateJWT, getAllAnnexes);
 router.get(
   "/annexes/struct/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
-  getAllAnnexesStructForProject
+  getAllAnnexesStructForProject,
 );
 
-router.get(
-  "/clauses/byProjectId/:id",
-  authenticateJWT,
-  validateId("id"),
-  getClausesByProjectId
-);
-router.get(
-  "/annexes/byProjectId/:id",
-  authenticateJWT,
-  validateId("id"),
-  getAnnexesByProjectId
-);
+router.get("/clauses/byProjectId/:id", authenticateJWT, validateId("id"), getClausesByProjectId);
+router.get("/annexes/byProjectId/:id", authenticateJWT, validateId("id"), getAnnexesByProjectId);
 
 router.get(
   "/subClauses/byClauseId/:id",
   authenticateJWT,
   validateId("id"),
-  getSubClausesByClauseId
+  getSubClausesByClauseId,
 );
 router.get(
   "/annexCategories/byAnnexId/:id",
   authenticateJWT,
   validateId("id"),
-  getAnnexCategoriesByAnnexId
+  getAnnexCategoriesByAnnexId,
 );
 
 router.get(
@@ -76,96 +66,56 @@ router.get(
   authenticateJWT,
   validateId("id"),
   validateId("projectFrameworkId"),
-  getSubClauseById
+  getSubClauseById,
 );
 // Get all risks linked to a specific ISO 42001 subclause
-router.get(
-  "/subclauses/:id/risks",
-  authenticateJWT,
-  validateId("id"),
-  getSubClauseRisks
-);
+router.get("/subclauses/:id/risks", authenticateJWT, validateId("id"), getSubClauseRisks);
 // Get all risks linked to a specific ISO 42001 annex category
-router.get(
-  "/annexCategories/:id/risks",
-  authenticateJWT,
-  validateId("id"),
-  getAnnexCategoryRisks
-);
+router.get("/annexCategories/:id/risks", authenticateJWT, validateId("id"), getAnnexCategoryRisks);
 router.get(
   "/annexCategory/byId/:id",
   authenticateJWT,
   validateId("id"),
   validateId("projectFrameworkId"),
-  getAnnexCategoryById
+  getAnnexCategoryById,
 );
 
 // calcation endpoints
-router.get(
-  "/clauses/progress/:id",
-  authenticateJWT,
-  validateId("id"),
-  getProjectClausesProgress
-);
-router.get(
-  "/annexes/progress/:id",
-  authenticateJWT,
-  validateId("id"),
-  getProjectAnnxesProgress
-);
+router.get("/clauses/progress/:id", authenticateJWT, validateId("id"), getProjectClausesProgress);
+router.get("/annexes/progress/:id", authenticateJWT, validateId("id"), getProjectAnnxesProgress);
 
-router.get(
-  "/all/clauses/progress",
-  authenticateJWT,
-  getAllProjectsClausesProgress
-);
-router.get(
-  "/all/annexes/progress",
-  authenticateJWT,
-  getAllProjectsAnnxesProgress
-);
+router.get("/all/clauses/progress", authenticateJWT, getAllProjectsClausesProgress);
+router.get("/all/annexes/progress", authenticateJWT, getAllProjectsAnnxesProgress);
 
 // assignment endpoints
 router.get(
   "/clauses/assignments/:id",
   authenticateJWT,
   validateId("id"),
-  getProjectClausesAssignments
+  getProjectClausesAssignments,
 );
 router.get(
   "/annexes/assignments/:id",
   authenticateJWT,
   validateId("id"),
-  getProjectAnnexesAssignments
+  getProjectAnnexesAssignments,
 );
 
-router.patch(
-  "/saveClauses/:id",
-  authenticateJWT,
-  validateId("id"),
-  upload.any(),
-  saveClauses
-);
+router.patch("/saveClauses/:id", authenticateJWT, validateId("id"), upload.any(), saveClauses);
 
-router.patch(
-  "/saveAnnexes/:id",
-  authenticateJWT,
-  validateId("id"),
-  upload.any(),
-  saveAnnexes
-);
+router.patch("/saveAnnexes/:id", authenticateJWT, validateId("id"), upload.any(), saveAnnexes);
 
 router.delete(
   "/clauses/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
-  deleteManagementSystemClauses
+  deleteManagementSystemClauses,
 );
 router.delete(
   "/annexes/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
-  deleteReferenceControls
+  deleteReferenceControls,
 );
 
 export default router;

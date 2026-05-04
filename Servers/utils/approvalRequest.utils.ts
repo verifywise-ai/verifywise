@@ -3,14 +3,18 @@ import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
-import { ApprovalRequestStatus, ApprovalStepStatus, ApprovalResult } from "../domain.layer/enums/approval-workflow.enum";
+import {
+  ApprovalRequestStatus,
+  ApprovalStepStatus,
+  ApprovalResult,
+} from "../domain.layer/enums/approval-workflow.enum";
 import { executeAiAction } from "../advisor/aiActions";
 
 /**
  * Notification info to be sent after transaction commits
  */
 export interface NotificationInfo {
-  type: 'step_approvers' | 'requester_approved' | 'requester_rejected';
+  type: "step_approvers" | "requester_approved" | "requester_rejected";
   organizationId: number;
   requestId: number;
   requesterId?: number;
@@ -36,7 +40,7 @@ export const createApprovalRequestQuery = async (
   },
   workflowSteps: ApprovalWorkflowStepModel[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ApprovalRequestModel> => {
   // Create request
   const [request] = await sequelize.query(
@@ -58,7 +62,7 @@ export const createApprovalRequestQuery = async (
       mapToModel: true,
       model: ApprovalRequestModel,
       transaction,
-    }
+    },
   );
 
   // Create request steps from workflow steps
@@ -74,17 +78,20 @@ export const createApprovalRequestQuery = async (
           request_id: (request as any).id,
           step_number: workflowStep.step_number,
           step_name: workflowStep.step_name,
-          status: workflowStep.step_number === 1 ? ApprovalStepStatus.PENDING : ApprovalStepStatus.PENDING,
+          status:
+            workflowStep.step_number === 1
+              ? ApprovalStepStatus.PENDING
+              : ApprovalStepStatus.PENDING,
         },
         mapToModel: true,
         model: ApprovalRequestStepModel,
         transaction,
-      }
+      },
     );
 
     // Create approval records for each approver
     // Get approvers from the Sequelize model properly
-    const approvers = workflowStep.get ? workflowStep.get('approvers') : workflowStep.approvers;
+    const approvers = workflowStep.get ? workflowStep.get("approvers") : workflowStep.approvers;
 
     if (approvers && approvers.length > 0) {
       for (const approver of approvers) {
@@ -100,7 +107,7 @@ export const createApprovalRequestQuery = async (
               approval_result: ApprovalResult.PENDING,
             },
             transaction,
-          }
+          },
         );
       }
     }
@@ -115,7 +122,7 @@ export const createApprovalRequestQuery = async (
 export const getPendingApprovalsQuery = async (
   userId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<any[]> => {
   const requests = await sequelize.query(
     `SELECT DISTINCT
@@ -145,7 +152,7 @@ export const getPendingApprovalsQuery = async (
       },
       type: "SELECT",
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   return requests as any[];
@@ -157,7 +164,7 @@ export const getPendingApprovalsQuery = async (
 export const getMyApprovalRequestsQuery = async (
   userId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<any[]> => {
   const requests = await sequelize.query(
     `SELECT * FROM approval_requests
@@ -170,7 +177,7 @@ export const getMyApprovalRequestsQuery = async (
       mapToModel: true,
       model: ApprovalRequestModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   return requests as any[];
@@ -182,7 +189,7 @@ export const getMyApprovalRequestsQuery = async (
 export const getApprovalRequestByIdQuery = async (
   requestId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<any | null> => {
   // Get approval request with project/use-case/file details and workflow info
   const [requestData] = await sequelize.query(
@@ -229,7 +236,7 @@ export const getApprovalRequestByIdQuery = async (
       replacements: { organizationId, requestId },
       type: "SELECT",
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   if (!requestData) {
@@ -249,7 +256,7 @@ export const getApprovalRequestByIdQuery = async (
       mapToModel: true,
       model: ApprovalRequestStepModel,
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   // Load approvals for each step
@@ -264,7 +271,7 @@ export const getApprovalRequestByIdQuery = async (
         replacements: { organizationId, stepId: (step as any).id },
         type: "SELECT",
         ...(transaction && { transaction }),
-      }
+      },
     );
     (step as any).approvals = approvals;
   }
@@ -283,7 +290,7 @@ export const processApprovalQuery = async (
   approvalResult: ApprovalResult,
   comments: string | undefined,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<NotificationInfo | null> => {
   // Get current request
   const [request] = await sequelize.query(
@@ -293,7 +300,7 @@ export const processApprovalQuery = async (
       mapToModel: true,
       model: ApprovalRequestModel,
       transaction,
-    }
+    },
   );
 
   if (!request) {
@@ -312,7 +319,7 @@ export const processApprovalQuery = async (
       mapToModel: true,
       model: ApprovalRequestStepModel,
       transaction,
-    }
+    },
   );
 
   if (!requestStep) {
@@ -337,7 +344,7 @@ export const processApprovalQuery = async (
         comments: comments || null,
       },
       transaction,
-    }
+    },
   );
 
   // Get the workflow step to check requires_all_approvers
@@ -358,14 +365,14 @@ export const processApprovalQuery = async (
       },
       type: "SELECT",
       transaction,
-    }
+    },
   );
 
   const requiresAllApprovers = workflowStep ? (workflowStep as any).requires_all_approvers : true;
 
   // Get ALL approvals for this step AFTER the update
   // Query them directly instead of using COUNT to avoid transaction visibility issues
-  const allApprovals = await sequelize.query(
+  const allApprovals = (await sequelize.query(
     `SELECT approver_id, approval_result
      FROM approval_request_step_approvals
      WHERE organization_id = :organizationId
@@ -377,19 +384,23 @@ export const processApprovalQuery = async (
       },
       type: "SELECT",
       transaction,
-    }
-  ) as any[];
+    },
+  )) as any[];
 
   // Count in code instead of SQL to ensure we see the updated values
-  const pendingCount = allApprovals.filter((a: any) => a.approval_result === ApprovalResult.PENDING).length;
-  const approvedCount = allApprovals.filter((a: any) => a.approval_result === ApprovalResult.APPROVED).length;
+  const pendingCount = allApprovals.filter(
+    (a: any) => a.approval_result === ApprovalResult.PENDING,
+  ).length;
+  const approvedCount = allApprovals.filter(
+    (a: any) => a.approval_result === ApprovalResult.APPROVED,
+  ).length;
 
   const hasPending = pendingCount > 0;
   const hasApproved = approvedCount > 0;
 
   // Determine if step should be completed based on requires_all_approvers setting
   const shouldComplete = requiresAllApprovers
-    ? !hasPending  // All approvers must respond
+    ? !hasPending // All approvers must respond
     : hasApproved; // At least one approver must approve
 
   // If rejected, mark step and request as rejected
@@ -405,7 +416,7 @@ export const processApprovalQuery = async (
           status: ApprovalStepStatus.REJECTED,
         },
         transaction,
-      }
+      },
     );
 
     await sequelize.query(
@@ -419,7 +430,7 @@ export const processApprovalQuery = async (
           status: ApprovalRequestStatus.REJECTED,
         },
         transaction,
-      }
+      },
     );
 
     // ===== FILE STATUS UPDATE AFTER REJECTION =====
@@ -435,13 +446,13 @@ export const processApprovalQuery = async (
         {
           replacements: { organizationId, entityId },
           transaction,
-        }
+        },
       );
     }
 
     // Return notification info for requester rejection
     return {
-      type: 'requester_rejected',
+      type: "requester_rejected",
       organizationId,
       requestId,
       requesterId: (request as any).requested_by,
@@ -461,7 +472,7 @@ export const processApprovalQuery = async (
           status: ApprovalStepStatus.COMPLETED,
         },
         transaction,
-      }
+      },
     );
 
     // Check if there are more steps
@@ -471,7 +482,7 @@ export const processApprovalQuery = async (
         replacements: { organizationId, requestId },
         type: "SELECT",
         transaction,
-      }
+      },
     );
 
     const stepCount = parseInt((totalSteps[0] as any).count, 10);
@@ -489,12 +500,12 @@ export const processApprovalQuery = async (
             nextStep: currentStep + 1,
           },
           transaction,
-        }
+        },
       );
 
       // Return notification info for next step approvers AND requester progress update
       return {
-        type: 'step_approvers',
+        type: "step_approvers",
         organizationId,
         requestId,
         requesterId: (request as any).requested_by,
@@ -516,12 +527,12 @@ export const processApprovalQuery = async (
             status: ApprovalRequestStatus.APPROVED,
           },
           transaction,
-        }
+        },
       );
 
       // Store notification info to be sent after transaction commits
       const notificationInfo: NotificationInfo = {
-        type: 'requester_approved',
+        type: "requester_approved",
         organizationId,
         requestId,
         requesterId: (request as any).requested_by,
@@ -543,7 +554,7 @@ export const processApprovalQuery = async (
             replacements: { organizationId, entityId },
             type: "SELECT",
             transaction,
-          }
+          },
         );
 
         if (projectData && (projectData as any).pending_frameworks) {
@@ -569,7 +580,7 @@ export const processApprovalQuery = async (
                   framework_id: frameworkId,
                 },
                 transaction,
-              }
+              },
             );
 
             // Create framework-specific records
@@ -578,28 +589,28 @@ export const processApprovalQuery = async (
                 entityId,
                 enableAiDataInsertion,
                 organizationId,
-                transaction
+                transaction,
               );
             } else if (frameworkId === 2) {
               await createISOFrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
                 organizationId,
-                transaction
+                transaction,
               );
             } else if (frameworkId === 3) {
               await createISO27001FrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
                 organizationId,
-                transaction
+                transaction,
               );
             } else if (frameworkId === 4) {
               await createNISTAI_RMFFrameworkQuery(
                 entityId,
                 enableAiDataInsertion,
                 organizationId,
-                transaction
+                transaction,
               );
             }
           }
@@ -612,7 +623,7 @@ export const processApprovalQuery = async (
             {
               replacements: { organizationId, entityId },
               transaction,
-            }
+            },
           );
         }
       }
@@ -627,7 +638,7 @@ export const processApprovalQuery = async (
           {
             replacements: { organizationId, entityId },
             transaction,
-          }
+          },
         );
       }
 
@@ -655,7 +666,7 @@ export const processApprovalQuery = async (
 export const withdrawApprovalRequestQuery = async (
   requestId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE approval_requests
@@ -668,7 +679,7 @@ export const withdrawApprovalRequestQuery = async (
         status: ApprovalRequestStatus.WITHDRAWN,
       },
       transaction,
-    }
+    },
   );
 };
 
@@ -679,7 +690,7 @@ export const getPendingApprovalRequestIdQuery = async (
   entityId: number,
   entityType: string,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<number | null> => {
   const results = await sequelize.query(
     `SELECT id
@@ -698,7 +709,7 @@ export const getPendingApprovalRequestIdQuery = async (
       },
       type: "SELECT",
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   if (results && results.length > 0) {
@@ -714,7 +725,7 @@ export const hasPendingApprovalQuery = async (
   entityId: number,
   entityType: string,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<boolean> => {
   const results = await sequelize.query(
     `SELECT COUNT(*) as count
@@ -732,7 +743,7 @@ export const hasPendingApprovalQuery = async (
       },
       type: "SELECT",
       ...(transaction && { transaction }),
-    }
+    },
   );
 
   const count = parseInt((results[0] as any).count, 10);
@@ -747,9 +758,9 @@ export const getApprovalStatusQuery = async (
   entityId: number,
   entityType: string,
   organizationId: number,
-  transaction: Transaction | null = null
-): Promise<'pending' | 'rejected' | null> => {
-  const results = await sequelize.query(
+  transaction: Transaction | null = null,
+): Promise<"pending" | "rejected" | null> => {
+  const results = (await sequelize.query(
     `SELECT status
      FROM approval_requests
      WHERE organization_id = :organizationId
@@ -768,8 +779,8 @@ export const getApprovalStatusQuery = async (
       },
       type: "SELECT",
       ...(transaction && { transaction }),
-    }
-  ) as any[];
+    },
+  )) as any[];
 
   if (results.length === 0 || !results[0]) {
     return null;
@@ -777,9 +788,9 @@ export const getApprovalStatusQuery = async (
 
   const status = (results[0] as any).status;
   if (status === ApprovalRequestStatus.PENDING) {
-    return 'pending';
+    return "pending";
   } else if (status === ApprovalRequestStatus.REJECTED) {
-    return 'rejected';
+    return "rejected";
   }
 
   return null;
@@ -792,13 +803,13 @@ export const getApprovalStatusQuery = async (
 export const rejectApprovalRequestOnEntityDelete = async (
   approvalRequestId: number,
   organizationId: number,
-  reason: string = "The associated entity has been deleted."
+  reason: string = "The associated entity has been deleted.",
 ): Promise<NotificationInfo | null> => {
   const transaction = await sequelize.transaction();
 
   try {
     // Get the approval request
-    const [request] = await sequelize.query(
+    const [request] = (await sequelize.query(
       `SELECT id, request_name, requested_by, status
        FROM approval_requests
        WHERE organization_id = :organizationId AND id = :requestId`,
@@ -806,8 +817,8 @@ export const rejectApprovalRequestOnEntityDelete = async (
         replacements: { organizationId, requestId: approvalRequestId },
         type: "SELECT",
         transaction,
-      }
-    ) as any[];
+      },
+    )) as any[];
 
     if (!request || request.status !== ApprovalRequestStatus.PENDING) {
       await transaction.rollback();
@@ -826,7 +837,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
           requestId: approvalRequestId,
         },
         transaction,
-      }
+      },
     );
 
     // Update all pending steps to Rejected
@@ -842,7 +853,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
           pendingStatus: ApprovalStepStatus.PENDING,
         },
         transaction,
-      }
+      },
     );
 
     // Update all pending step approvals with the rejection reason
@@ -862,7 +873,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
           pendingStatus: ApprovalResult.PENDING,
         },
         transaction,
-      }
+      },
     );
 
     await transaction.commit();
@@ -871,7 +882,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
 
     // Return notification info to notify the requester
     return {
-      type: 'requester_rejected',
+      type: "requester_rejected",
       organizationId,
       requestId: approvalRequestId,
       requesterId: request.requested_by,

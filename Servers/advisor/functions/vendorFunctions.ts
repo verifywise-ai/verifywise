@@ -38,8 +38,7 @@ const fetchVendors = async (
     if (params.vendor_name) {
       vendors = vendors.filter(
         (v) =>
-          v.vendor_name &&
-          v.vendor_name.toLowerCase().includes(params.vendor_name!.toLowerCase()),
+          v.vendor_name && v.vendor_name.toLowerCase().includes(params.vendor_name!.toLowerCase()),
       );
     }
 
@@ -82,7 +81,7 @@ const fetchVendorRisks = async (
   let risks: IVendorRisk[] = [];
 
   try {
-    risks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
+    risks = (await getAllVendorRisksAllProjectsQuery(organizationId, "active")) as IVendorRisk[];
 
     // Apply filters
     if (params.vendorId) {
@@ -155,7 +154,10 @@ const getVendorAnalytics = async (
 ): Promise<VendorAnalytics> => {
   try {
     const vendors = await getAllVendorsQuery(organizationId);
-    const vendorRisks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
+    const vendorRisks = (await getAllVendorRisksAllProjectsQuery(
+      organizationId,
+      "active",
+    )) as IVendorRisk[];
 
     const totalVendors = vendors.length;
     const totalVendorRisks = vendorRisks.length;
@@ -308,17 +310,19 @@ const getVendorExecutiveSummary = async (
 ): Promise<VendorExecutiveSummary> => {
   try {
     const vendors = await getAllVendorsQuery(organizationId);
-    const vendorRisks = await getAllVendorRisksAllProjectsQuery(organizationId, "active") as IVendorRisk[];
+    const vendorRisks = (await getAllVendorRisksAllProjectsQuery(
+      organizationId,
+      "active",
+    )) as IVendorRisk[];
 
     const totalVendors = vendors.length;
 
     // Count by review status
-    const reviewedVendors = vendors.filter(
-      (v) => v.review_status === "Reviewed",
-    ).length;
+    const reviewedVendors = vendors.filter((v) => v.review_status === "Reviewed").length;
 
     const pendingReviewVendors = vendors.filter(
-      (v) => !v.review_status || v.review_status === "Not started" || v.review_status === "In review",
+      (v) =>
+        !v.review_status || v.review_status === "Not started" || v.review_status === "In review",
     ).length;
 
     const vendorsRequiringFollowUp = vendors.filter(
@@ -383,8 +387,7 @@ const getVendorExecutiveSummary = async (
     const reviewProgress = {
       completed: reviewedVendors,
       total: totalVendors,
-      percentage:
-        totalVendors > 0 ? Math.round((reviewedVendors / totalVendors) * 100) : 0,
+      percentage: totalVendors > 0 ? Math.round((reviewedVendors / totalVendors) * 100) : 0,
     };
 
     return {

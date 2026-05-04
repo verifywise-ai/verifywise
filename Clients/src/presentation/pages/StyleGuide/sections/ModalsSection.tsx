@@ -1,5 +1,17 @@
 import React, { useState } from "react";
-import { Box, Stack, Typography, useTheme, Divider, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Drawer } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  Divider,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Drawer,
+} from "@mui/material";
 import { Copy, X } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import CodeBlock from "../components/CodeBlock";
@@ -209,18 +221,58 @@ const ModalsSection: React.FC = () => {
       {/* Modal Specifications */}
       <SpecSection title="Modal specifications">
         <SpecGrid>
-          <SpecCard title="Background" value="#FCFCFD" note="theme.palette.background.modal" onCopy={handleCopy} />
-          <SpecCard title="Border" value="1px solid #eaecf0" note="theme.palette.border.light" onCopy={handleCopy} />
+          <SpecCard
+            title="Background"
+            value="#FCFCFD"
+            note="theme.palette.background.modal"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Border"
+            value="1px solid #eaecf0"
+            note="theme.palette.border.light"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Border radius" value="4px" note="Standard radius" onCopy={handleCopy} />
-          <SpecCard title="Shadow" value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)" note="theme.boxShadow" onCopy={handleCopy} />
-          <SpecCard title="Header padding" value="16px 20px" note="Title section" onCopy={handleCopy} />
+          <SpecCard
+            title="Shadow"
+            value="0px 4px 24px -4px rgba(16, 24, 40, 0.08)"
+            note="theme.boxShadow"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Header padding"
+            value="16px 20px"
+            note="Title section"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Content padding" value="20px" note="Body section" onCopy={handleCopy} />
-          <SpecCard title="Footer padding" value="16px 20px" note="Actions section" onCopy={handleCopy} />
-          <SpecCard title="Title font" value="16px / 600" note="fontSize / fontWeight" onCopy={handleCopy} />
+          <SpecCard
+            title="Footer padding"
+            value="16px 20px"
+            note="Actions section"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Title font"
+            value="16px / 600"
+            note="fontSize / fontWeight"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Max width" value="600px" note="Standard dialog" onCopy={handleCopy} />
           <SpecCard title="Close icon" value="20px" note="X icon size" onCopy={handleCopy} />
-          <SpecCard title="Button gap" value="8px" note="Between action buttons" onCopy={handleCopy} />
-          <SpecCard title="Backdrop" value="rgba(0,0,0,0.5)" note="Overlay opacity" onCopy={handleCopy} />
+          <SpecCard
+            title="Button gap"
+            value="8px"
+            note="Between action buttons"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Backdrop"
+            value="rgba(0,0,0,0.5)"
+            note="Overlay opacity"
+            onCopy={handleCopy}
+          />
         </SpecGrid>
       </SpecSection>
 
@@ -253,7 +305,13 @@ const ModalsSection: React.FC = () => {
           />
         </Box>
 
-        <Box sx={{ borderRadius: "4px", overflow: "hidden", border: `1px solid ${theme.palette.border.light}` }}>
+        <Box
+          sx={{
+            borderRadius: "4px",
+            overflow: "hidden",
+            border: `1px solid ${theme.palette.border.light}`,
+          }}
+        >
           <CodeBlock code={modalCodeSnippet} language="tsx" onCopy={handleCopy} />
         </Box>
       </SpecSection>
@@ -263,7 +321,8 @@ const ModalsSection: React.FC = () => {
       {/* Modal Pattern */}
       <SpecSection title="StandardModal pattern">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          VerifyWise uses a StandardModal component with useStandardModal hook for consistent modal behavior.
+          VerifyWise uses a StandardModal component with useStandardModal hook for consistent modal
+          behavior.
         </Typography>
 
         <SpecTable
@@ -296,7 +355,14 @@ const ModalsSection: React.FC = () => {
           <SpecCard title="Footer height" value="~68px" note="With buttons" onCopy={handleCopy} />
         </SpecGrid>
 
-        <Box sx={{ mt: "24px", borderRadius: "4px", overflow: "hidden", border: `1px solid ${theme.palette.border.light}` }}>
+        <Box
+          sx={{
+            mt: "24px",
+            borderRadius: "4px",
+            overflow: "hidden",
+            border: `1px solid ${theme.palette.border.light}`,
+          }}
+        >
           <CodeBlock code={drawerCodeSnippet} language="tsx" onCopy={handleCopy} />
         </Box>
       </SpecSection>
@@ -319,9 +385,24 @@ const ModalsSection: React.FC = () => {
             },
           }}
         >
-          <ModalSizeCard size="sm" width="400px" usage="Confirmations, simple forms" onCopy={handleCopy} />
-          <ModalSizeCard size="md" width="600px" usage="Standard forms, details" onCopy={handleCopy} />
-          <ModalSizeCard size="lg" width="800px" usage="Complex forms, tables" onCopy={handleCopy} />
+          <ModalSizeCard
+            size="sm"
+            width="400px"
+            usage="Confirmations, simple forms"
+            onCopy={handleCopy}
+          />
+          <ModalSizeCard
+            size="md"
+            width="600px"
+            usage="Standard forms, details"
+            onCopy={handleCopy}
+          />
+          <ModalSizeCard
+            size="lg"
+            width="800px"
+            usage="Complex forms, tables"
+            onCopy={handleCopy}
+          />
         </Box>
       </SpecSection>
 
@@ -536,9 +617,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -565,9 +644,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}

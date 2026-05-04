@@ -6,10 +6,7 @@
 
 import { sequelize } from "../database/db";
 import { Transaction } from "sequelize";
-import {
-  IShadowAiTool,
-  ShadowAiToolStatus,
-} from "../domain.layer/interfaces/i.shadowAi";
+import { IShadowAiTool, ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
 /**
  * Get all tools for an organization with optional filtering.
@@ -21,7 +18,7 @@ export async function getAllToolsQuery(
     sort?: string;
     page?: number;
     limit?: number;
-  }
+  },
 ): Promise<{ tools: IShadowAiTool[]; total: number }> {
   const page = options?.page || 1;
   const limit = options?.limit || 20;
@@ -53,12 +50,12 @@ export async function getAllToolsQuery(
      ${whereClause}
      ORDER BY ${sortColumn}
      LIMIT :limit OFFSET :offset`,
-    { replacements }
+    { replacements },
   );
 
   const [countResult] = await sequelize.query(
     `SELECT COUNT(*) as total FROM shadow_ai_tools ${whereClause}`,
-    { replacements }
+    { replacements },
   );
 
   return {
@@ -72,11 +69,11 @@ export async function getAllToolsQuery(
  */
 export async function getToolByIdQuery(
   organizationId: number,
-  toolId: number
+  toolId: number,
 ): Promise<IShadowAiTool | null> {
   const [rows] = await sequelize.query(
     `SELECT * FROM shadow_ai_tools WHERE organization_id = :organizationId AND id = :toolId`,
-    { replacements: { organizationId, toolId } }
+    { replacements: { organizationId, toolId } },
   );
 
   const tools = rows as IShadowAiTool[];
@@ -88,7 +85,7 @@ export async function getToolByIdQuery(
  */
 export async function getToolDepartmentsQuery(
   organizationId: number,
-  toolId: number
+  toolId: number,
 ): Promise<Array<{ department: string; user_count: number; event_count: number }>> {
   const [rows] = await sequelize.query(
     `SELECT
@@ -101,7 +98,7 @@ export async function getToolDepartmentsQuery(
        AND event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY department
      ORDER BY event_count DESC`,
-    { replacements: { organizationId, toolId } }
+    { replacements: { organizationId, toolId } },
   );
 
   return rows as any[];
@@ -113,7 +110,7 @@ export async function getToolDepartmentsQuery(
 export async function getToolTopUsersQuery(
   organizationId: number,
   toolId: number,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<Array<{ user_email: string; event_count: number; last_used: string }>> {
   const [rows] = await sequelize.query(
     `SELECT
@@ -127,7 +124,7 @@ export async function getToolTopUsersQuery(
      GROUP BY user_email
      ORDER BY event_count DESC
      LIMIT :limit`,
-    { replacements: { organizationId, toolId, limit } }
+    { replacements: { organizationId, toolId, limit } },
   );
 
   return rows as any[];
@@ -140,7 +137,7 @@ export async function updateToolStatusQuery(
   organizationId: number,
   toolId: number,
   status: ShadowAiToolStatus,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiTool | null> {
   const [rows] = await sequelize.query(
     `UPDATE shadow_ai_tools
@@ -150,7 +147,7 @@ export async function updateToolStatusQuery(
     {
       replacements: { organizationId, toolId, status },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   const tools = rows as IShadowAiTool[];
@@ -165,7 +162,7 @@ export async function linkToolToModelInventoryQuery(
   toolId: number,
   modelInventoryId: number,
   riskEntryId?: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   await sequelize.query(
     `UPDATE shadow_ai_tools
@@ -181,6 +178,6 @@ export async function linkToolToModelInventoryQuery(
         riskEntryId: riskEntryId || null,
       },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 }

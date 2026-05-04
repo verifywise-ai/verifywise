@@ -80,9 +80,7 @@ describe("Test Audit Ledger Repository", () => {
 
       await getAuditLedger({ limit: 10, offset: 20 });
 
-      expect(CustomAxios.get).toHaveBeenCalledWith(
-        "/audit-ledger?limit=10&offset=20",
-      );
+      expect(CustomAxios.get).toHaveBeenCalledWith("/audit-ledger?limit=10&offset=20");
     });
 
     it("should append entity_type and entry_type as query params when provided", async () => {
@@ -143,9 +141,7 @@ describe("Test Audit Ledger Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(CustomAxios.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(CustomAxios.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getAuditLedger()).rejects.toThrow("Network timeout");
     });
@@ -217,9 +213,7 @@ describe("Test Audit Ledger Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(CustomAxios.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(CustomAxios.get).mockRejectedValue(new Error("Connection refused"));
 
       await expect(verifyAuditLedger()).rejects.toThrow("Connection refused");
     });

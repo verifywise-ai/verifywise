@@ -22,7 +22,7 @@ async function getAllOrganizationIds(): Promise<number[]> {
   const [rows] = await sequelize.query(
     `SELECT DISTINCT organization_id
      FROM shadow_ai_events
-     ORDER BY organization_id`
+     ORDER BY organization_id`,
   );
 
   return (rows as any[]).map((r) => r.organization_id);
@@ -38,7 +38,8 @@ export async function runDailyRollup(): Promise<void> {
 
   for (const organizationId of orgIds) {
     try {
-      await sequelize.query(`
+      await sequelize.query(
+        `
         INSERT INTO shadow_ai_daily_rollups
           (organization_id, rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events)
         SELECT
@@ -58,7 +59,9 @@ export async function runDailyRollup(): Promise<void> {
           total_events = EXCLUDED.total_events,
           post_events = EXCLUDED.post_events,
           blocked_events = EXCLUDED.blocked_events
-      `, { replacements: { organizationId } });
+      `,
+        { replacements: { organizationId } },
+      );
 
       logger.debug(`✅ Daily rollup completed for organization ${organizationId}`);
     } catch (error) {
@@ -77,7 +80,8 @@ export async function runMonthlyRollup(): Promise<void> {
 
   for (const organizationId of orgIds) {
     try {
-      await sequelize.query(`
+      await sequelize.query(
+        `
         INSERT INTO shadow_ai_monthly_rollups
           (organization_id, rollup_month, tool_id, department, unique_users, total_events, post_events, blocked_events)
         SELECT
@@ -99,7 +103,9 @@ export async function runMonthlyRollup(): Promise<void> {
           total_events = EXCLUDED.total_events,
           post_events = EXCLUDED.post_events,
           blocked_events = EXCLUDED.blocked_events
-      `, { replacements: { organizationId } });
+      `,
+        { replacements: { organizationId } },
+      );
 
       logger.debug(`✅ Monthly rollup completed for organization ${organizationId}`);
     } catch (error) {
@@ -128,10 +134,12 @@ export async function purgeOldEvents(): Promise<void> {
           `DELETE FROM shadow_ai_events
            WHERE organization_id = :organizationId
              AND event_timestamp < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_events_days } }
+          { replacements: { organizationId, days: settings.retention_events_days } },
         );
         if ((eventCount as number) > 0) {
-          logger.debug(`✅ Purged ${eventCount} events older than ${settings.retention_events_days}d for organization ${organizationId}`);
+          logger.debug(
+            `✅ Purged ${eventCount} events older than ${settings.retention_events_days}d for organization ${organizationId}`,
+          );
         }
       }
 
@@ -141,10 +149,12 @@ export async function purgeOldEvents(): Promise<void> {
           `DELETE FROM shadow_ai_daily_rollups
            WHERE organization_id = :organizationId
              AND rollup_date < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_daily_rollups_days } }
+          { replacements: { organizationId, days: settings.retention_daily_rollups_days } },
         );
         if ((rollupCount as number) > 0) {
-          logger.debug(`✅ Purged ${rollupCount} daily rollups older than ${settings.retention_daily_rollups_days}d for organization ${organizationId}`);
+          logger.debug(
+            `✅ Purged ${rollupCount} daily rollups older than ${settings.retention_daily_rollups_days}d for organization ${organizationId}`,
+          );
         }
       }
 
@@ -154,10 +164,12 @@ export async function purgeOldEvents(): Promise<void> {
           `DELETE FROM shadow_ai_alert_history
            WHERE organization_id = :organizationId
              AND fired_at < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_alert_history_days } }
+          { replacements: { organizationId, days: settings.retention_alert_history_days } },
         );
         if ((alertCount as number) > 0) {
-          logger.debug(`✅ Purged ${alertCount} alert records older than ${settings.retention_alert_history_days}d for organization ${organizationId}`);
+          logger.debug(
+            `✅ Purged ${alertCount} alert records older than ${settings.retention_alert_history_days}d for organization ${organizationId}`,
+          );
         }
       }
     } catch (error) {

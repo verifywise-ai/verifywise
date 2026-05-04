@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Vendors**
-
   - Route: `/`
   - Handler: `getAllVendors`
   - Authentication: JWT (currently commented out)

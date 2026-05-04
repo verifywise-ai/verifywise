@@ -27,11 +27,7 @@ import {
 } from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import {
-  tableRowHoverStyle,
-  tableRowDeletingStyle,
-  loadingContainerStyle,
-} from "./style";
+import { tableRowHoverStyle, tableRowDeletingStyle, loadingContainerStyle } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
@@ -60,9 +56,7 @@ const TABLE_COLUMNS: StandardColumn[] = [
   { id: "actions", label: "", sortable: false },
 ];
 
-const TooltipCell: React.FC<{ value: string | null | undefined }> = ({
-  value,
-}) => {
+const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) => {
   const displayValue = value || "-";
   const shouldShowTooltip = displayValue.length > 24;
 
@@ -75,15 +69,11 @@ const TooltipCell: React.FC<{ value: string | null | undefined }> = ({
   );
 };
 
-const StatusBadge: React.FC<{ status: ModelInventoryStatus }> = ({
-  status,
-}) => {
+const StatusBadge: React.FC<{ status: ModelInventoryStatus }> = ({ status }) => {
   return <Chip label={status} />;
 };
 
-const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({
-  assessment,
-}) => {
+const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({ assessment }) => {
   return <Chip label={assessment ? "Yes" : "No"} />;
 };
 
@@ -140,7 +130,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       if (!visibleColumns || visibleColumns.size === 0) return true;
       return visibleColumns.has(columnId);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   // Create a mapping of user IDs to user names
@@ -152,13 +142,15 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     return map;
   }, [users]);
 
-  const isDeletingAllowed =
-    allowedRoles.modelInventory?.delete?.includes(userRoleName);
+  const isDeletingAllowed = allowedRoles.modelInventory?.delete?.includes(userRoleName);
 
   // Get risk count for a specific model
-  const getModelRiskCount = useCallback((modelId: number) => {
-    return modelRisks.filter(risk => risk.model_id === modelId).length;
-  }, [modelRisks]);
+  const getModelRiskCount = useCallback(
+    (modelId: number) => {
+      return modelRisks.filter((risk) => risk.model_id === modelId).length;
+    },
+    [modelRisks],
+  );
 
   // Status order for sorting
   const getStatusOrder = useCallback((status: ModelInventoryStatus) => {
@@ -226,7 +218,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       if (aValue > bValue) return 1;
       return 0;
     },
-    [userMap, getModelRiskCount, getStatusOrder]
+    [userMap, getModelRiskCount, getStatusOrder],
   );
 
   const {
@@ -247,13 +239,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     sortComparator,
   });
 
-  const openModelRisksDialog = useCallback(
-    (modelId: number, modelName: string) => {
-      setSelectedModel({ id: modelId, name: modelName });
-      setShowModelRisks(true);
-    },
-    []
-  );
+  const openModelRisksDialog = useCallback((modelId: number, modelName: string) => {
+    setSelectedModel({ id: modelId, name: modelName });
+    setShowModelRisks(true);
+  }, []);
 
   const closeModelRisksDialog = useCallback(() => {
     setShowModelRisks(false);
@@ -267,7 +256,9 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
           sortedRows
             .slice(
               hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination ? Math.min(sortedRows.length, 100) : validPage * rowsPerPage + rowsPerPage
+              hidePagination
+                ? Math.min(sortedRows.length, 100)
+                : validPage * rowsPerPage + rowsPerPage,
             )
             .map((modelInventory) => (
               <TableRow
@@ -275,8 +266,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
                   ...tableRowHoverStyle,
-                  ...(deletingId === modelInventory.id?.toString() &&
-                    tableRowDeletingStyle),
+                  ...(deletingId === modelInventory.id?.toString() && tableRowDeletingStyle),
                   ...(flashRowId === modelInventory.id && {
                     backgroundColor: singleTheme.flashColors.background,
                     "& td": {
@@ -301,7 +291,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "provider" ? singleTheme.tableColors.sortedColumnFirst : undefined,
+                      backgroundColor:
+                        sortConfig.key === "provider"
+                          ? singleTheme.tableColors.sortedColumnFirst
+                          : undefined,
                     }}
                   >
                     <TooltipCell value={modelInventory.provider} />
@@ -312,7 +305,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "model" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "model"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
                     <TooltipCell value={modelInventory.model} />
@@ -323,7 +319,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "version" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "version"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
                     <TooltipCell value={modelInventory.version} />
@@ -334,12 +333,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "approver" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "approver"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
-                    <TooltipCell
-                      value={userMap.get(modelInventory.approver?.toString() ?? "")}
-                    />
+                    <TooltipCell value={userMap.get(modelInventory.approver?.toString() ?? "")} />
                   </TableCell>
                 )}
                 {isColVisible("security_assessment") && (
@@ -347,12 +347,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "security_assessment" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "security_assessment"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
-                    <SecurityAssessmentBadge
-                      assessment={modelInventory.security_assessment}
-                    />
+                    <SecurityAssessmentBadge assessment={modelInventory.security_assessment} />
                   </TableCell>
                 )}
                 {isColVisible("risks") && (
@@ -360,7 +361,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "risks" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "risks"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
                     {(() => {
@@ -371,7 +375,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                             e.stopPropagation();
                             openModelRisksDialog(
                               modelInventory.id || 0,
-                              modelInventory.model || ""
+                              modelInventory.model || "",
                             );
                           }}
                           showIcon={false}
@@ -391,7 +395,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "status"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
                     <StatusBadge status={modelInventory.status} />
@@ -402,7 +409,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
                       whiteSpace: "nowrap",
-                      backgroundColor: sortConfig.key === "status_date" ? singleTheme.tableColors.sortedColumn : undefined,
+                      backgroundColor:
+                        sortConfig.key === "status_date"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
                     }}
                   >
                     <TooltipCell
@@ -440,9 +450,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     {isDeletingAllowed && (
                       <CustomIconButton
                         id={modelInventory.id || 0}
-                        onDelete={() =>
-                          onDelete?.(modelInventory.id?.toString() || "")
-                        }
+                        onDelete={() => onDelete?.(modelInventory.id?.toString() || "")}
                         onEdit={() => {
                           onEdit?.(modelInventory.id?.toString() || "");
                         }}
@@ -453,19 +461,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                         entityId={modelInventory.id}
                         checkForRisks={
                           onCheckModelHasRisks
-                            ? () =>
-                                onCheckModelHasRisks(
-                                  modelInventory.id?.toString() || "0"
-                                )
+                            ? () => onCheckModelHasRisks(modelInventory.id?.toString() || "0")
                             : undefined
                         }
                         onDeleteWithRisks={
                           onDelete
                             ? (deleteRisks: boolean) =>
-                                onDelete(
-                                  modelInventory.id?.toString() || "",
-                                  deleteRisks
-                                )
+                                onDelete(modelInventory.id?.toString() || "", deleteRisks)
                             : undefined
                         }
                       />
@@ -476,11 +478,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
             ))
         ) : (
           <TableRow>
-            <TableCell
-              colSpan={visibleTableColumns.length}
-              align="center"
-              sx={{ py: 4 }}
-            >
+            <TableCell colSpan={visibleTableColumns.length} align="center" sx={{ py: 4 }}>
               No model inventory data available.
             </TableCell>
           </TableRow>
@@ -504,16 +502,12 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       flashRowId,
       isColVisible,
       visibleTableColumns,
-    ]
+    ],
   );
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={loadingContainerStyle(theme)}
-      >
+      <Stack alignItems="center" justifyContent="center" sx={loadingContainerStyle(theme)}>
         <Typography>Loading...</Typography>
       </Stack>
     );
@@ -521,7 +515,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState icon={Cpu} message="No models registered yet. Maintain a complete inventory of all AI models your organization uses.">
+      <EmptyState
+        icon={Cpu}
+        message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+      >
         <EmptyStateTip
           icon={Layers}
           title="What counts as a model?"

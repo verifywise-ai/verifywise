@@ -5,12 +5,7 @@ interface RiskBadgeProps {
 }
 
 export default function RiskBadge({ score }: RiskBadgeProps) {
-  const color =
-    score >= 70
-      ? "#DC2626"
-      : score >= 40
-        ? "#F59E0B"
-        : "#10B981";
+  const color = score >= 70 ? "#DC2626" : score >= 40 ? "#F59E0B" : "#10B981";
 
   return (
     <Box
@@ -33,9 +28,7 @@ export default function RiskBadge({ score }: RiskBadgeProps) {
           backgroundColor: color,
         }}
       />
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color }}>
-        {score}
-      </Typography>
+      <Typography sx={{ fontSize: 12, fontWeight: 500, color }}>{score}</Typography>
     </Box>
   );
 }

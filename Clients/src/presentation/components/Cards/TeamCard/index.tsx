@@ -29,11 +29,13 @@ export function TeamCard({
         </Box>
       )}
       <Typography sx={infoCardTitleStyle}>{title}</Typography>
-      {members.length !== 0 ?
+      {members.length !== 0 ? (
         <Typography sx={descCardbodyStyle}>{members.join(", ")}</Typography>
-      :
-        <Typography sx={descCardbodyStyle}>No members have been assigned to the use case</Typography>
-      }
+      ) : (
+        <Typography sx={descCardbodyStyle}>
+          No members have been assigned to the use case
+        </Typography>
+      )}
     </Stack>
   );
 }

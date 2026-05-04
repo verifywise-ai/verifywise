@@ -42,9 +42,7 @@ export function StepProgressDialog({
     if (open) {
       setInternalStep(0);
       timerRef.current = setInterval(() => {
-        setInternalStep((prev) =>
-          prev < steps.length - 1 ? prev + 1 : prev
-        );
+        setInternalStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
       }, interval);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -114,9 +112,7 @@ export function StepProgressDialog({
         <Typography sx={{ fontSize: "12px", color: text.accent }}>
           Step {activeStep + 1} of {steps.length}
         </Typography>
-        <Typography sx={{ fontSize: "12px", color: text.accent }}>
-          {step.progress}%
-        </Typography>
+        <Typography sx={{ fontSize: "12px", color: text.accent }}>{step.progress}%</Typography>
       </Box>
     </Dialog>
   );

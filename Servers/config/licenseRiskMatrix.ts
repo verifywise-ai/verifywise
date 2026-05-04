@@ -9,12 +9,7 @@
 export type LicenseRisk = "high" | "medium" | "low" | "unknown";
 
 // License category
-export type LicenseCategory =
-  | "permissive"
-  | "copyleft"
-  | "proprietary"
-  | "research"
-  | "unknown";
+export type LicenseCategory = "permissive" | "copyleft" | "proprietary" | "research" | "unknown";
 
 // License information structure
 export interface LicenseInfo {
@@ -41,7 +36,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
   // ============================================================================
   // Permissive Licenses (Low Risk)
   // ============================================================================
-  "MIT": {
+  MIT: {
     spdxId: "MIT",
     name: "MIT License",
     risk: "low",
@@ -77,7 +72,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     allowsCommercialUse: true,
     requiresShareAlike: false,
   },
-  "ISC": {
+  ISC: {
     spdxId: "ISC",
     name: "ISC License",
     risk: "low",
@@ -86,7 +81,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     allowsCommercialUse: true,
     requiresShareAlike: false,
   },
-  "Unlicense": {
+  Unlicense: {
     spdxId: "Unlicense",
     name: "The Unlicense",
     risk: "low",
@@ -104,7 +99,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     allowsCommercialUse: true,
     requiresShareAlike: false,
   },
-  "WTFPL": {
+  WTFPL: {
     spdxId: "WTFPL",
     name: "Do What The F*ck You Want To Public License",
     risk: "low",
@@ -113,7 +108,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     allowsCommercialUse: true,
     requiresShareAlike: false,
   },
-  "Zlib": {
+  Zlib: {
     spdxId: "Zlib",
     name: "zlib License",
     risk: "low",
@@ -122,7 +117,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     allowsCommercialUse: true,
     requiresShareAlike: false,
   },
-  "PostgreSQL": {
+  PostgreSQL: {
     spdxId: "PostgreSQL",
     name: "PostgreSQL License",
     risk: "low",
@@ -262,7 +257,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
   // ============================================================================
   // Proprietary / Restrictive Model Licenses
   // ============================================================================
-  "OpenRAIL": {
+  OpenRAIL: {
     spdxId: "OpenRAIL",
     name: "Open RAIL License",
     risk: "medium",
@@ -282,7 +277,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     requiresShareAlike: false,
     notes: "Model-specific RAIL with behavioral restrictions",
   },
-  "Llama2": {
+  Llama2: {
     spdxId: "Llama2",
     name: "Llama 2 Community License",
     risk: "medium",
@@ -292,7 +287,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     requiresShareAlike: false,
     notes: "Commercial use allowed; 700M MAU threshold requires license",
   },
-  "Llama3": {
+  Llama3: {
     spdxId: "Llama3",
     name: "Llama 3 Community License",
     risk: "medium",
@@ -302,7 +297,7 @@ export const LICENSE_RISK_MATRIX: Record<string, LicenseInfo> = {
     requiresShareAlike: false,
     notes: "Similar to Llama 2; check MAU restrictions",
   },
-  "Gemma": {
+  Gemma: {
     spdxId: "Gemma",
     name: "Gemma Terms of Use",
     risk: "medium",
@@ -324,41 +319,41 @@ export function normalizeLicenseId(license: string): string {
 
   // Common variations mapping
   const variations: Record<string, string> = {
-    "mit": "MIT",
+    mit: "MIT",
     "apache 2.0": "Apache-2.0",
     "apache-2": "Apache-2.0",
-    "apache2": "Apache-2.0",
-    "apache": "Apache-2.0",
+    apache2: "Apache-2.0",
+    apache: "Apache-2.0",
     "bsd-2": "BSD-2-Clause",
     "bsd-3": "BSD-3-Clause",
-    "bsd": "BSD-3-Clause",
+    bsd: "BSD-3-Clause",
     "gpl-2": "GPL-2.0",
     "gpl-3": "GPL-3.0",
-    "gpl2": "GPL-2.0",
-    "gpl3": "GPL-3.0",
-    "gpl": "GPL-3.0",
+    gpl2: "GPL-2.0",
+    gpl3: "GPL-3.0",
+    gpl: "GPL-3.0",
     "lgpl-2.1": "LGPL-2.1",
     "lgpl-3": "LGPL-3.0",
-    "lgpl": "LGPL-3.0",
+    lgpl: "LGPL-3.0",
     "agpl-3": "AGPL-3.0",
-    "agpl": "AGPL-3.0",
+    agpl: "AGPL-3.0",
     "mpl-2": "MPL-2.0",
-    "mpl": "MPL-2.0",
-    "cc0": "CC0-1.0",
+    mpl: "MPL-2.0",
+    cc0: "CC0-1.0",
     "cc-by": "CC-BY-4.0",
     "cc-by-4": "CC-BY-4.0",
     "cc-by-sa": "CC-BY-SA-4.0",
     "cc-by-nc": "CC-BY-NC-4.0",
     "cc-by-nc-sa": "CC-BY-NC-SA-4.0",
-    "unlicense": "Unlicense",
+    unlicense: "Unlicense",
     "public domain": "Unlicense",
-    "openrail": "OpenRAIL",
+    openrail: "OpenRAIL",
     "openrail-m": "OpenRAIL-M",
     "llama 2": "Llama2",
-    "llama2": "Llama2",
+    llama2: "Llama2",
     "llama 3": "Llama3",
-    "llama3": "Llama3",
-    "gemma": "Gemma",
+    llama3: "Llama3",
+    gemma: "Gemma",
   };
 
   const lowerNormalized = normalized.toLowerCase();

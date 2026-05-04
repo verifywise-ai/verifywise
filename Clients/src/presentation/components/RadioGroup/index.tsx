@@ -9,11 +9,7 @@ interface RadioProps {
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const RadioComponent: React.FC<RadioProps> = ({
-  values,
-  defaultValue,
-  onChange,
-}) => {
+const RadioComponent: React.FC<RadioProps> = ({ values, defaultValue, onChange }) => {
   return (
     <FormControl>
       <RadioGroup

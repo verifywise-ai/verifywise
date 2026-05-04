@@ -54,7 +54,9 @@ export const AIGatewaySidebarProvider: FC<{ children: ReactNode }> = ({ children
       }
     };
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

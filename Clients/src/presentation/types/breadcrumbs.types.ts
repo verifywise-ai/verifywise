@@ -10,7 +10,7 @@ import {
  * Extends domain props with MUI-specific styling
  * Overrides unknown types from domain with React.ReactNode
  */
-export interface BreadcrumbsProps extends Omit<BreadcrumbsCoreProps, 'separator'> {
+export interface BreadcrumbsProps extends Omit<BreadcrumbsCoreProps, "separator"> {
   /** Custom separator icon (overrides domain unknown type) */
   separator?: React.ReactNode;
   /** Custom styles using MUI's sx prop */
@@ -30,7 +30,10 @@ export interface PageBreadcrumbsProps extends PageBreadcrumbsCoreProps {
  * Presentation adapter for BreadcrumbItem
  * Overrides unknown types from domain with React.ReactNode
  */
-export interface BreadcrumbItemPresentation extends Omit<import("../../domain/types/breadcrumbs.types").BreadcrumbItem, 'icon'> {
+export interface BreadcrumbItemPresentation extends Omit<
+  import("../../domain/types/breadcrumbs.types").BreadcrumbItem,
+  "icon"
+> {
   /** Icon to display (overrides domain unknown type) */
   icon?: React.ReactNode;
 }

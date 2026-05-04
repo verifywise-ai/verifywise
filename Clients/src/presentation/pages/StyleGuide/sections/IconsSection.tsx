@@ -1,5 +1,13 @@
 import React, { useState, useMemo } from "react";
-import { Box, Stack, Typography, useTheme, Snackbar, TextField, InputAdornment } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  Snackbar,
+  TextField,
+  InputAdornment,
+} from "@mui/material";
 import { Copy, Search } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import CodeBlock from "../components/CodeBlock";
@@ -8,33 +16,104 @@ import { status } from "../../../themes/palette";
 // Common icons used throughout VerifyWise
 const COMMON_ICONS = [
   // Navigation & UI
-  "ChevronDown", "ChevronUp", "ChevronLeft", "ChevronRight",
-  "ChevronsLeft", "ChevronsRight", "ArrowLeft", "ArrowRight",
-  "X", "Check", "Plus", "Minus", "MoreHorizontal", "MoreVertical",
-  "Menu", "Search", "Filter", "Settings", "Home",
+  "ChevronDown",
+  "ChevronUp",
+  "ChevronLeft",
+  "ChevronRight",
+  "ChevronsLeft",
+  "ChevronsRight",
+  "ArrowLeft",
+  "ArrowRight",
+  "X",
+  "Check",
+  "Plus",
+  "Minus",
+  "MoreHorizontal",
+  "MoreVertical",
+  "Menu",
+  "Search",
+  "Filter",
+  "Settings",
+  "Home",
   // Actions
-  "Edit", "Trash2", "Copy", "Download", "Upload", "Save",
-  "Share", "Link", "ExternalLink", "Eye", "EyeOff",
-  "Lock", "Unlock", "RefreshCw", "RotateCcw",
+  "Edit",
+  "Trash2",
+  "Copy",
+  "Download",
+  "Upload",
+  "Save",
+  "Share",
+  "Link",
+  "ExternalLink",
+  "Eye",
+  "EyeOff",
+  "Lock",
+  "Unlock",
+  "RefreshCw",
+  "RotateCcw",
   // Status & Feedback
-  "AlertCircle", "AlertTriangle", "CheckCircle", "XCircle",
-  "Info", "HelpCircle", "Bell", "BellOff",
+  "AlertCircle",
+  "AlertTriangle",
+  "CheckCircle",
+  "XCircle",
+  "Info",
+  "HelpCircle",
+  "Bell",
+  "BellOff",
   // Content
-  "File", "FileText", "Folder", "FolderOpen", "Image",
-  "Calendar", "Clock", "Mail", "MessageSquare", "MessageCircle",
+  "File",
+  "FileText",
+  "Folder",
+  "FolderOpen",
+  "Image",
+  "Calendar",
+  "Clock",
+  "Mail",
+  "MessageSquare",
+  "MessageCircle",
   // Users & People
-  "User", "Users", "UserPlus", "UserMinus", "UserCircle",
+  "User",
+  "Users",
+  "UserPlus",
+  "UserMinus",
+  "UserCircle",
   // Data & Charts
-  "BarChart", "PieChart", "TrendingUp", "TrendingDown", "Activity",
+  "BarChart",
+  "PieChart",
+  "TrendingUp",
+  "TrendingDown",
+  "Activity",
   // Objects
-  "Box", "Package", "Shield", "ShieldCheck", "Flag",
-  "Tag", "Bookmark", "Star", "Heart", "ThumbsUp",
+  "Box",
+  "Package",
+  "Shield",
+  "ShieldCheck",
+  "Flag",
+  "Tag",
+  "Bookmark",
+  "Star",
+  "Heart",
+  "ThumbsUp",
   // Layout
-  "Layout", "LayoutGrid", "LayoutList", "Layers", "Grid",
-  "Table", "Table2", "Columns", "Rows",
+  "Layout",
+  "LayoutGrid",
+  "LayoutList",
+  "Layers",
+  "Grid",
+  "Table",
+  "Table2",
+  "Columns",
+  "Rows",
   // Misc
-  "Loader", "Loader2", "Zap", "Target", "Crosshair",
-  "Globe", "MapPin", "Navigation", "Compass",
+  "Loader",
+  "Loader2",
+  "Zap",
+  "Target",
+  "Crosshair",
+  "Globe",
+  "MapPin",
+  "Navigation",
+  "Compass",
 ];
 
 const iconSnippets = {
@@ -89,7 +168,7 @@ const IconsSection: React.FC = () => {
   const filteredIcons = useMemo(() => {
     if (!searchQuery.trim()) return COMMON_ICONS;
     const query = searchQuery.toLowerCase();
-    return COMMON_ICONS.filter(name => name.toLowerCase().includes(query));
+    return COMMON_ICONS.filter((name) => name.toLowerCase().includes(query));
   }, [searchQuery]);
 
   return (
@@ -121,8 +200,8 @@ const IconsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          VerifyWise uses lucide-react for all icons. This catalog shows commonly
-          used icons with their import names. Click any icon to copy its import.
+          VerifyWise uses lucide-react for all icons. This catalog shows commonly used icons with
+          their import names. Click any icon to copy its import.
         </Typography>
       </Box>
 
@@ -166,7 +245,9 @@ const IconsSection: React.FC = () => {
           }}
         >
           {filteredIcons.map((iconName) => {
-            const IconComponent = (LucideIcons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[iconName];
+            const IconComponent = (
+              LucideIcons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>
+            )[iconName];
             if (!IconComponent) return null;
             return (
               <Box
@@ -206,7 +287,14 @@ const IconsSection: React.FC = () => {
         </Box>
 
         {filteredIcons.length === 0 && (
-          <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, textAlign: "center", py: "40px" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: theme.palette.text.tertiary,
+              textAlign: "center",
+              py: "40px",
+            }}
+          >
             No icons found matching "{searchQuery}"
           </Typography>
         )}
@@ -217,11 +305,7 @@ const IconsSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Basic usage"
-                code={iconSnippets.basic}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Basic usage" code={iconSnippets.basic} onCopy={handleCopy}>
                 <Box
                   sx={{
                     display: "flex",
@@ -234,15 +318,27 @@ const IconsSection: React.FC = () => {
                 >
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.User size={16} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>16px</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      16px
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.Settings size={20} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>20px</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      20px
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.Bell size={24} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>24px</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      24px
+                    </Typography>
                   </Box>
                 </Box>
               </ExampleWithCode>
@@ -264,19 +360,35 @@ const IconsSection: React.FC = () => {
                 >
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.CheckCircle size={20} color={status.success.text} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Success</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      Success
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.AlertCircle size={20} color={status.error.text} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Error</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      Error
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.AlertTriangle size={20} color="#795548" />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Warning</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      Warning
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
                     <LucideIcons.Info size={20} color="#1565C0" />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>Info</Typography>
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      Info
+                    </Typography>
                   </Box>
                 </Box>
               </ExampleWithCode>
@@ -297,16 +409,40 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User size={24} strokeWidth={1.5} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>1.5</Typography>
+                    <LucideIcons.User
+                      size={24}
+                      strokeWidth={1.5}
+                      color={theme.palette.text.secondary}
+                    />
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      1.5
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User size={24} strokeWidth={2} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>2 (default)</Typography>
+                    <LucideIcons.User
+                      size={24}
+                      strokeWidth={2}
+                      color={theme.palette.text.secondary}
+                    />
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      2 (default)
+                    </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User size={24} strokeWidth={2.5} color={theme.palette.text.secondary} />
-                    <Typography sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}>2.5</Typography>
+                    <LucideIcons.User
+                      size={24}
+                      strokeWidth={2.5}
+                      color={theme.palette.text.secondary}
+                    />
+                    <Typography
+                      sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
+                    >
+                      2.5
+                    </Typography>
                   </Box>
                 </Box>
               </ExampleWithCode>
@@ -314,7 +450,16 @@ const IconsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Size reference
             </Typography>
             <SpecTable
@@ -329,7 +474,17 @@ const IconsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Color tokens
             </Typography>
             <SpecTable
@@ -344,7 +499,17 @@ const IconsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Common props
             </Typography>
             <SpecTable
@@ -366,11 +531,7 @@ const IconsSection: React.FC = () => {
           The TabBar component accepts icon names as strings and renders them automatically.
         </Typography>
 
-        <ExampleWithCode
-          label="Icon in TabBar"
-          code={iconSnippets.tabBarIcon}
-          onCopy={handleCopy}
-        >
+        <ExampleWithCode label="Icon in TabBar" code={iconSnippets.tabBarIcon} onCopy={handleCopy}>
           <Box
             sx={{
               p: "16px",
@@ -379,7 +540,8 @@ const IconsSection: React.FC = () => {
             }}
           >
             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-              Pass icon name as string: <code>icon: "User"</code> → renders <LucideIcons.User size={14} style={{ verticalAlign: "middle" }} />
+              Pass icon name as string: <code>icon: "User"</code> → renders{" "}
+              <LucideIcons.User size={14} style={{ verticalAlign: "middle" }} />
             </Typography>
           </Box>
         </ExampleWithCode>
@@ -407,7 +569,7 @@ const IconsSection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Always import icons individually: import { User } from \"lucide-react\"",
+            'Always import icons individually: import { User } from "lucide-react"',
             "Use 16px for buttons, 18px for navigation, 20-24px for headers",
             "Default strokeWidth is 2 - use 1.5 for lighter icons",
             "Use theme.palette colors for consistency",
@@ -495,9 +657,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -519,9 +679,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -572,9 +730,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

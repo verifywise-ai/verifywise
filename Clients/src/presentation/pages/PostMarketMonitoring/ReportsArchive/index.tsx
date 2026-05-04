@@ -62,7 +62,7 @@ const ReportsArchive: React.FC = () => {
       setAlert({ variant, body, title, isToast: true, visible: true });
       setTimeout(() => setAlert(null), 3000);
     },
-    []
+    [],
   );
 
   // Load reports
@@ -104,31 +104,28 @@ const ReportsArchive: React.FC = () => {
   }, [loadReports]);
 
   // Handle page change
-  const handleChangePage = useCallback(
-    (_: unknown, newPage: number) => {
-      setPage(newPage);
-    },
-    []
-  );
+  const handleChangePage = useCallback((_: unknown, newPage: number) => {
+    setPage(newPage);
+  }, []);
 
   // Handle rows per page change
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   // Handle download
-  const handleDownload = useCallback(async (reportId: number) => {
-    try {
-      await pmmService.downloadReport(reportId);
-    } catch (error) {
-      console.error("Error downloading report:", error);
-      showAlert("error", "Failed to download report. Please try again.");
-    }
-  }, [showAlert]);
+  const handleDownload = useCallback(
+    async (reportId: number) => {
+      try {
+        await pmmService.downloadReport(reportId);
+      } catch (error) {
+        console.error("Error downloading report:", error);
+        showAlert("error", "Failed to download report. Please try again.");
+      }
+    },
+    [showAlert],
+  );
 
   // Reset filters
   const handleResetFilters = useCallback(() => {
@@ -204,27 +201,19 @@ const ReportsArchive: React.FC = () => {
             {/* Date range */}
             <Stack direction="row" alignItems="center" spacing={1}>
               <Calendar size={16} color={theme.palette.other.icon} />
-              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
-                From:
-              </Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>From:</Typography>
               <DatePicker
                 label=""
                 date={startDate ? dayjs(startDate) : null}
-                handleDateChange={(date: Dayjs | null) =>
-                  setStartDate(date?.toISOString() || "")
-                }
+                handleDateChange={(date: Dayjs | null) => setStartDate(date?.toISOString() || "")}
                 sx={{ width: 140 }}
                 disabled={isLoading}
               />
-              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
-                To:
-              </Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>To:</Typography>
               <DatePicker
                 label=""
                 date={endDate ? dayjs(endDate) : null}
-                handleDateChange={(date: Dayjs | null) =>
-                  setEndDate(date?.toISOString() || "")
-                }
+                handleDateChange={(date: Dayjs | null) => setEndDate(date?.toISOString() || "")}
                 sx={{ width: 140 }}
                 disabled={isLoading}
               />
@@ -315,15 +304,11 @@ const ReportsArchive: React.FC = () => {
                           {report.project_title}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={tableCellStyle}>
-                        #{report.cycle_number}
-                      </TableCell>
+                      <TableCell sx={tableCellStyle}>#{report.cycle_number}</TableCell>
                       <TableCell sx={tableCellStyle}>
                         {dayjs(report.completed_at).format("MMM D, YYYY")}
                       </TableCell>
-                      <TableCell sx={tableCellStyle}>
-                        {report.completed_by_name || "-"}
-                      </TableCell>
+                      <TableCell sx={tableCellStyle}>{report.completed_by_name || "-"}</TableCell>
                       <TableCell sx={tableCellStyle} align="center">
                         {report.has_flagged_concerns ? (
                           <Flag size={16} color={theme.palette.status.error.text} />
@@ -365,10 +350,9 @@ const ReportsArchive: React.FC = () => {
               rowsPerPageOptions={[5, 10, 25, 50]}
               sx={{
                 borderTop: `1px solid ${theme.palette.border.light}`,
-                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-                  {
-                    fontSize: 13,
-                  },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+                  fontSize: 13,
+                },
               }}
             />
           </>

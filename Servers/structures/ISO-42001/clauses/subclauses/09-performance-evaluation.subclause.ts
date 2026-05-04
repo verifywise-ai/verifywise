@@ -1,9 +1,7 @@
 import { SubClauseISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseISO.model";
 import { SubClauseStructISO } from "../../../../domain.layer/frameworks/ISO-42001/subClauseStructISO.model";
 
-export const PerformanceEvaluation: Partial<
-  SubClauseStructISO & SubClauseISO
->[] = [
+export const PerformanceEvaluation: Partial<SubClauseStructISO & SubClauseISO>[] = [
   {
     title: "Monitoring, measurement, analysis, and evaluation",
     order_no: 1,

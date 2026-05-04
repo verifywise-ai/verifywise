@@ -24,7 +24,7 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
       if (!visibleColumns || visibleColumns.size === 0) return true;
       return visibleColumns.has(key);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const handleRemoveReport = async (reportId: number) => {
@@ -64,45 +64,49 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                 <TableCell
                   sx={{
                     ...cellStyle,
-                    backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("file") || sortConfig.key.toLowerCase().includes("name")) ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig?.key &&
+                      (sortConfig.key.toLowerCase().includes("file") ||
+                        sortConfig.key.toLowerCase().includes("name"))
+                        ? "#e8e8e8"
+                        : "#fafafa",
                   }}
                 >
                   {row.filename ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {row.filename}
-                    {row.filename.includes("_AI_") && (
-                      <Chip
-                        label="AI"
-                        size="small"
-                        icon={
-                          <Sparkles
-                            size={10}
-                            color={brand.primary}
-                            style={{ marginLeft: 6 }}
-                          />
-                        }
-                        sx={{
-                          fontSize: "10px",
-                          height: "20px",
-                          backgroundColor: `${brand.primaryLight}`,
-                          color: `${brand.primary}`,
-                          fontWeight: 600,
-                          "& .MuiChip-label": { px: 0.5 },
-                          "& .MuiChip-icon": { marginRight: "-2px" },
-                        }}
-                      />
-                    )}
-                  </Box>
-                ) : (
-                  "-"
-                )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {row.filename}
+                      {row.filename.includes("_AI_") && (
+                        <Chip
+                          label="AI"
+                          size="small"
+                          icon={
+                            <Sparkles size={10} color={brand.primary} style={{ marginLeft: 6 }} />
+                          }
+                          sx={{
+                            fontSize: "10px",
+                            height: "20px",
+                            backgroundColor: `${brand.primaryLight}`,
+                            color: `${brand.primary}`,
+                            fontWeight: 600,
+                            "& .MuiChip-label": { px: 0.5 },
+                            "& .MuiChip-icon": { marginRight: "-2px" },
+                          }}
+                        />
+                      )}
+                    </Box>
+                  ) : (
+                    "-"
+                  )}
                 </TableCell>
               )}
               {isColumnVisible("typeOfReport") && (
                 <TableCell
                   sx={{
                     ...cellStyle,
-                    backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("source") ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig?.key && sortConfig.key.toLowerCase().includes("source")
+                        ? `${background.surface}`
+                        : "inherit",
                   }}
                 >
                   {row.source ? formatSource(row.source) : "-"}
@@ -112,7 +116,10 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                 <TableCell
                   sx={{
                     ...cellStyle,
-                    backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("project") ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig?.key && sortConfig.key.toLowerCase().includes("project")
+                        ? `${background.surface}`
+                        : "inherit",
                   }}
                 >
                   {row.project_title ? row.project_title : "-"}
@@ -122,19 +129,26 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                 <TableCell
                   sx={{
                     ...cellStyle,
-                    backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("date") || sortConfig.key.toLowerCase().includes("upload") || sortConfig.key.toLowerCase().includes("time")) ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig?.key &&
+                      (sortConfig.key.toLowerCase().includes("date") ||
+                        sortConfig.key.toLowerCase().includes("upload") ||
+                        sortConfig.key.toLowerCase().includes("time"))
+                        ? `${background.surface}`
+                        : "inherit",
                   }}
                 >
-                  {row.uploaded_time
-                    ? displayFormattedDate(row.uploaded_time.toString())
-                    : "NA"}
+                  {row.uploaded_time ? displayFormattedDate(row.uploaded_time.toString()) : "NA"}
                 </TableCell>
               )}
               {isColumnVisible("generatedBy") && (
                 <TableCell
                   sx={{
                     ...cellStyle,
-                    backgroundColor: sortConfig?.key && sortConfig.key.toLowerCase().includes("uploader") ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig?.key && sortConfig.key.toLowerCase().includes("uploader")
+                        ? `${background.surface}`
+                        : "inherit",
                   }}
                 >
                   {row.uploader_name ? row.uploader_name : "-"}{" "}
@@ -146,14 +160,21 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
                     ...styles.setting,
-                    backgroundColor: sortConfig?.key && (sortConfig.key.toLowerCase().includes("action") || sortConfig.key.toLowerCase().includes("setting")) ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig?.key &&
+                      (sortConfig.key.toLowerCase().includes("action") ||
+                        sortConfig.key.toLowerCase().includes("setting"))
+                        ? `${background.surface}`
+                        : "inherit",
                   }}
                 >
                   <IconButton
                     id={row.id}
                     type="report"
                     onMouseEvent={() => handleEditRisk()}
-                    onDelete={() => { handleRemoveReport(row.id); }}
+                    onDelete={() => {
+                      handleRemoveReport(row.id);
+                    }}
                     onEdit={() => {}}
                     onDownload={() => handleDownload(row.id, row.filename)}
                     warningTitle="Remove this report?"

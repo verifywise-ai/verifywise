@@ -26,11 +26,7 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-  logSuccess,
-} from "../utils/logger/logHelper";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import {
   isValidEntityType,
   isValidEntityId,
@@ -58,7 +54,7 @@ export class EntityGraphAnnotationsService {
     userId: number,
     entityType: string,
     entityId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphAnnotationsModel> {
     logProcessing({
       description: "Starting EntityGraphAnnotationsService.saveAnnotation",
@@ -75,17 +71,13 @@ export class EntityGraphAnnotationsService {
         throw new ValidationException(
           contentValidation.error || "Invalid content",
           "content",
-          content
+          content,
         );
       }
       const sanitizedContent = contentValidation.sanitized;
 
       if (!userId || userId < 1) {
-        throw new ValidationException(
-          "Valid user ID is required",
-          "userId",
-          userId
-        );
+        throw new ValidationException("Valid user ID is required", "userId", userId);
       }
 
       // Validate entityType against whitelist
@@ -93,17 +85,13 @@ export class EntityGraphAnnotationsService {
         throw new ValidationException(
           "Invalid entity type. Must be one of: useCase, model, risk, vendor, control, evidence, framework, user",
           "entityType",
-          entityType
+          entityType,
         );
       }
 
       // Validate entityId format
       if (!isValidEntityId(entityId)) {
-        throw new ValidationException(
-          "Invalid entity ID format",
-          "entityId",
-          entityId
-        );
+        throw new ValidationException("Invalid entity ID format", "entityId", entityId);
       }
 
       // Create annotation model
@@ -112,7 +100,7 @@ export class EntityGraphAnnotationsService {
         userId,
         entityType,
         entityId,
-        organizationId
+        organizationId,
       );
 
       // Upsert to database
@@ -153,7 +141,7 @@ export class EntityGraphAnnotationsService {
    */
   static async getAnnotations(
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphAnnotationsModel[]> {
     logProcessing({
       description: "Starting EntityGraphAnnotationsService.getAnnotations",
@@ -164,10 +152,7 @@ export class EntityGraphAnnotationsService {
     });
 
     try {
-      const annotations = await getAnnotationsByUserQuery(
-        userId,
-        organizationId
-      );
+      const annotations = await getAnnotationsByUserQuery(userId, organizationId);
 
       await logSuccess({
         eventType: "Read",
@@ -208,33 +193,20 @@ export class EntityGraphAnnotationsService {
     userId: number,
     entityType: string,
     entityId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphAnnotationsModel | null> {
     try {
       // Validate entityType against whitelist
       if (!isValidEntityType(entityType)) {
-        throw new ValidationException(
-          "Invalid entity type",
-          "entityType",
-          entityType
-        );
+        throw new ValidationException("Invalid entity type", "entityType", entityType);
       }
 
       // Validate entityId format
       if (!isValidEntityId(entityId)) {
-        throw new ValidationException(
-          "Invalid entity ID format",
-          "entityId",
-          entityId
-        );
+        throw new ValidationException("Invalid entity ID format", "entityId", entityId);
       }
 
-      return await getAnnotationByEntityQuery(
-        userId,
-        entityType,
-        entityId,
-        organizationId
-      );
+      return await getAnnotationByEntityQuery(userId, entityType, entityId, organizationId);
     } catch (error) {
       throw error;
     }
@@ -254,7 +226,7 @@ export class EntityGraphAnnotationsService {
   static async deleteAnnotation(
     annotationId: number,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphAnnotationsService.deleteAnnotation for ID ${annotationId}`,
@@ -277,15 +249,12 @@ export class EntityGraphAnnotationsService {
         throw new BusinessLogicException(
           "Only the annotation owner can delete this annotation",
           "ANNOTATION_DELETE_FORBIDDEN",
-          { annotationId, userId }
+          { annotationId, userId },
         );
       }
 
       // Delete from database
-      const deleteCount = await deleteAnnotationByIdQuery(
-        annotationId,
-        organizationId
-      );
+      const deleteCount = await deleteAnnotationByIdQuery(annotationId, organizationId);
 
       if (deleteCount === 0) {
         throw new Error(`Failed to delete annotation with ID ${annotationId}`);
@@ -330,7 +299,7 @@ export class EntityGraphAnnotationsService {
     userId: number,
     entityType: string,
     entityId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphAnnotationsService.deleteAnnotationByEntity for ${entityType}:${entityId}`,
@@ -343,20 +312,12 @@ export class EntityGraphAnnotationsService {
     try {
       // Validate entityType against whitelist
       if (!isValidEntityType(entityType)) {
-        throw new ValidationException(
-          "Invalid entity type",
-          "entityType",
-          entityType
-        );
+        throw new ValidationException("Invalid entity type", "entityType", entityType);
       }
 
       // Validate entityId format
       if (!isValidEntityId(entityId)) {
-        throw new ValidationException(
-          "Invalid entity ID format",
-          "entityId",
-          entityId
-        );
+        throw new ValidationException("Invalid entity ID format", "entityId", entityId);
       }
 
       await deleteAnnotationByEntityQuery(userId, entityType, entityId, organizationId);

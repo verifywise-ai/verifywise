@@ -16,12 +16,7 @@
 import express from "express";
 const router = express.Router();
 
-import {
-  createNote,
-  getNotes,
-  updateNote,
-  deleteNote,
-} from "../controllers/notes.ctrl";
+import { createNote, getNotes, updateNote, deleteNote } from "../controllers/notes.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
 

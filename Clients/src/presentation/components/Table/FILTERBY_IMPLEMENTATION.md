@@ -5,6 +5,7 @@ This document provides a comprehensive guide for implementing the FilterBy compo
 ## Overview
 
 The FilterBy component is a flexible, cascading filter system that replaces multiple dropdown filters with a single unified UI. It supports:
+
 - Multiple filter conditions (up to 4)
 - AND/OR logic between conditions
 - Three column types: `text`, `select`, `date`
@@ -29,32 +30,35 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 ### 2. Define Filter Columns
 
 ```typescript
-const filterColumns: FilterColumn[] = useMemo(() => [
-  // Text column - supports: is, is_not, contains, does_not_contain, is_empty, is_not_empty
-  {
-    id: 'name',
-    label: 'Name',
-    type: 'text' as const,
-  },
+const filterColumns: FilterColumn[] = useMemo(
+  () => [
+    // Text column - supports: is, is_not, contains, does_not_contain, is_empty, is_not_empty
+    {
+      id: "name",
+      label: "Name",
+      type: "text" as const,
+    },
 
-  // Select column - supports: is, is_not, is_empty, is_not_empty
-  {
-    id: 'status',
-    label: 'Status',
-    type: 'select' as const,
-    options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' },
-    ],
-  },
+    // Select column - supports: is, is_not, is_empty, is_not_empty
+    {
+      id: "status",
+      label: "Status",
+      type: "select" as const,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+    },
 
-  // Date column - supports: in_1_day, in_7_days, in_2_weeks, in_30_days, is_today, is_past, is_empty, is_not_empty
-  {
-    id: 'created_at',
-    label: 'Created date',
-    type: 'date' as const,
-  },
-], []);
+    // Date column - supports: in_1_day, in_7_days, in_2_weeks, in_30_days, is_today, is_past, is_empty, is_not_empty
+    {
+      id: "created_at",
+      label: "Created date",
+      type: "date" as const,
+    },
+  ],
+  [],
+);
 ```
 
 ### 3. Create Field Value Getter Function
@@ -65,17 +69,17 @@ This function extracts the value from your data model for a given field ID:
 const getFieldValue = useCallback(
   (item: YourDataType, fieldId: string): string | number | Date | null | undefined => {
     switch (fieldId) {
-      case 'name':
+      case "name":
         return item.name;
-      case 'status':
+      case "status":
         return item.status;
-      case 'created_at':
+      case "created_at":
         return item.created_at;
       default:
         return null;
     }
   },
-  []
+  [],
 );
 ```
 
@@ -330,22 +334,23 @@ const getUniqueApprovers = useCallback(() => {
     .sort()
     .map((approverId) => {
       const user = users.find((u) => u.id.toString() === approverId);
-      const userName = user
-        ? `${user.name} ${user.surname}`.trim()
-        : `User ${approverId}`;
+      const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${approverId}`;
       return { value: approverId, label: userName };
     });
 }, [data, users]);
 
 // Use in filter columns
-const filterColumns: FilterColumn[] = useMemo(() => [
-  {
-    id: 'approver',
-    label: 'Approver',
-    type: 'select' as const,
-    options: getUniqueApprovers(),
-  },
-], [getUniqueApprovers]);
+const filterColumns: FilterColumn[] = useMemo(
+  () => [
+    {
+      id: "approver",
+      label: "Approver",
+      type: "select" as const,
+      options: getUniqueApprovers(),
+    },
+  ],
+  [getUniqueApprovers],
+);
 ```
 
 ## Integration with Other Features
@@ -396,7 +401,7 @@ const filteredData = useMemo(() => {
   }
 
   return filterByResults.filter((item) =>
-    item.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 }, [filterData, data, searchTerm]);
 ```
@@ -420,11 +425,13 @@ FilterBy → GroupBy → Search
 ```
 
 This provides a consistent user experience across all tables in the application:
+
 1. **FilterBy** - Primary filtering mechanism (leftmost)
 2. **GroupBy** - Group/organize the filtered results
 3. **Search** - Quick text search within filtered/grouped results (rightmost in left section)
 
 Example layout:
+
 ```typescript
 <Stack direction="row" spacing={2} alignItems="center">
     <FilterBy
@@ -448,6 +455,7 @@ Example layout:
 ## Removing Old Dropdowns
 
 When implementing FilterBy, remove:
+
 1. Individual filter dropdown components
 2. Related state variables (e.g., `statusFilter`, `categoryFilter`)
 3. Individual filter change handlers
@@ -471,13 +479,16 @@ Replace with the unified FilterBy pattern shown above.
 ## Troubleshooting
 
 **Filters not working:**
+
 - Check that `fieldId` in getFieldValue matches `id` in filterColumns
 - Ensure getFieldValue returns the correct type (string for select columns)
 
 **Dynamic options not updating:**
+
 - Add data dependency to useMemo for filterColumns
 - Ensure the dynamic getter function is in the dependency array
 
 **Date filters not matching:**
+
 - Ensure date fields return Date objects or valid date strings
 - Check timezone handling if dates seem off by a day

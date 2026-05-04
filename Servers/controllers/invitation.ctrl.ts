@@ -11,10 +11,7 @@ import { sendInviteEmail } from "../utils/inviteEmail.utils";
  * GET /api/invitations
  * Returns all pending invitations for the authenticated user's organization.
  */
-export const getInvitations = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getInvitations = async (req: Request, res: Response): Promise<Response> => {
   try {
     const organizationId = req.organizationId!;
     const invitations = await getInvitationsByTenantQuery(organizationId);
@@ -29,10 +26,7 @@ export const getInvitations = async (
  * DELETE /api/invitations/:id
  * Revoke a pending invitation.
  */
-export const revokeInvitation = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const revokeInvitation = async (req: Request, res: Response): Promise<Response> => {
   try {
     const id = parseInt(req.params.id as string, 10);
     const organizationId = req.organizationId!;
@@ -57,10 +51,7 @@ export const revokeInvitation = async (
  * POST /api/invitations/:id/resend
  * Resend an invitation email with a fresh token and updated expiry.
  */
-export const resendInvitation = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const resendInvitation = async (req: Request, res: Response): Promise<Response> => {
   try {
     const id = parseInt(req.params.id as string, 10);
     const organizationId = req.organizationId!;

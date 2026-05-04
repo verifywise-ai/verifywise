@@ -153,10 +153,9 @@ describe("Test Control EU Act Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/eu-ai-act/compliances/progress/44",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/eu-ai-act/compliances/progress/44", {
+        signal,
+      });
       expect(response).toEqual(mockData);
     });
   });
@@ -174,11 +173,9 @@ describe("Test Control EU Act Repository", () => {
         headers,
       });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/eu-ai-act/saveControls/88",
-        body,
-        { headers: { "X-Test": "yes" } },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/eu-ai-act/saveControls/88", body, {
+        headers: { "X-Test": "yes" },
+      });
       expect(response).toEqual(mockResponse);
     });
 

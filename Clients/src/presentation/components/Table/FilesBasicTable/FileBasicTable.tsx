@@ -60,10 +60,7 @@ const truncateFileName = (name: string, maxLength = 40): string => {
 };
 
 // Helper function to match column name with sort key
-const getSortMatchForColumn = (
-  columnName: string,
-  sortConfig?: SortConfig
-): boolean => {
+const getSortMatchForColumn = (columnName: string, sortConfig?: SortConfig): boolean => {
   if (!sortConfig?.key || !columnName) return false;
 
   const sortKey = sortConfig.key.toLowerCase().trim();
@@ -96,8 +93,7 @@ const SortableTableHead: React.FC<{
   return (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -136,8 +132,7 @@ const SortableTableHead: React.FC<{
                   variant="body2"
                   sx={{
                     fontWeight: 500,
-                    color:
-                      sortConfig.key === col.name ? "primary.main" : "inherit",
+                    color: sortConfig.key === col.name ? "primary.main" : "inherit",
                     textTransform: "uppercase",
                   }}
                 >
@@ -148,21 +143,16 @@ const SortableTableHead: React.FC<{
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === col.name
-                          ? "primary.main"
-                          : "text.disabled",
+                      color: sortConfig.key === col.name ? "primary.main" : "text.disabled",
                     }}
                   >
-                    {sortConfig.key === col.name &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === col.name &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== col.name && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === col.name && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === col.name && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== col.name && <ChevronsUpDown size={16} />}
                   </Box>
                 )}
               </Box>
@@ -175,7 +165,15 @@ const SortableTableHead: React.FC<{
 };
 
 // Default visible columns (all columns)
-const ALL_COLUMN_KEYS = ["file", "upload_date", "uploader", "source", "version", "status", "action"] as const;
+const ALL_COLUMN_KEYS = [
+  "file",
+  "upload_date",
+  "uploader",
+  "source",
+  "version",
+  "status",
+  "action",
+] as const;
 
 const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   data,
@@ -193,9 +191,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("evidences", DEFAULT_ROWS_PER_PAGE)
+    getPaginationRowCount("evidences", DEFAULT_ROWS_PER_PAGE),
   );
-
 
   const [showLinkedPoliciesToEvidence, setShowLinkedPoliciesToEvidence] = useState(false);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<number | null>(null);
@@ -224,15 +221,12 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("evidences", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    setPaginationRowCount("evidences", newRowsPerPage);
+    setPage(0);
+  }, []);
 
   // Sorting handlers
   const handleSort = useCallback((columnId: string) => {
@@ -315,42 +309,39 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
 
   const paginatedRows = hidePagination
     ? sortedBodyData
-    : sortedBodyData.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-      );
+    : sortedBodyData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const handleRowClick = (item: FileModel, event: React.MouseEvent) => {
     event.stopPropagation();
     switch (item.source) {
       case "Assessment tracker group":
         navigateToNewTab(
-          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&topicId=${item.parentId}&questionId=${item.metaId}`
+          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&topicId=${item.parentId}&questionId=${item.metaId}`,
         );
         break;
       case "Compliance tracker group":
         navigateToNewTab(
-          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&controlId=${item.parentId}&subControlId=${item.metaId}&isEvidence=${item.isEvidence}`
+          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&controlId=${item.parentId}&subControlId=${item.metaId}&isEvidence=${item.isEvidence}`,
         );
         break;
       case "Management system clauses group":
         navigateToNewTab(
-          `/framework?frameworkName=iso-42001&clauseId=${item.parentId}&subClauseId=${item.metaId}`
+          `/framework?frameworkName=iso-42001&clauseId=${item.parentId}&subClauseId=${item.metaId}`,
         );
         break;
       case "Main clauses group":
         navigateToNewTab(
-          `/framework?frameworkName=iso-27001&clause27001Id=${item.parentId}&subClause27001Id=${item.metaId}`
+          `/framework?frameworkName=iso-27001&clause27001Id=${item.parentId}&subClause27001Id=${item.metaId}`,
         );
         break;
       case "Reference controls group":
         navigateToNewTab(
-          `/framework?frameworkName=iso-42001&annexId=${item.parentId}&annexCategoryId=${item.metaId}`
+          `/framework?frameworkName=iso-42001&annexId=${item.parentId}&annexCategoryId=${item.metaId}`,
         );
         break;
       case "Annex controls group":
         navigateToNewTab(
-          `/framework?frameworkName=iso-27001&annex27001Id=${item.parentId}&annexControl27001Id=${item.metaId}`
+          `/framework?frameworkName=iso-27001&annex27001Id=${item.parentId}&annexControl27001Id=${item.metaId}`,
         );
         break;
       default:
@@ -374,11 +365,11 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         return false;
       }
     },
-    [onFileDeleted]
+    [onFileDeleted],
   );
 
   const handleViewLinkedPolicies = async (evidenceId: number) => {
-    setSelectedEvidenceId(evidenceId)
+    setSelectedEvidenceId(evidenceId);
     setShowLinkedPoliciesToEvidence(true);
   };
 
@@ -386,11 +377,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     <>
       <TableContainer id={table}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
-          <SortableTableHead
-            columns={data.cols}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-          />
+          <SortableTableHead columns={data.cols} sortConfig={sortConfig} onSort={handleSort} />
           <TableBody>
             {paginatedRows.map((row) => {
               // Track column index for sort highlighting (only visible columns)
@@ -411,7 +398,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[colIndex++]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "#e8e8e8"
                           : "#fafafa",
@@ -440,7 +427,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[colIndex++]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "background.surface"
                           : "inherit",
@@ -456,7 +443,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[colIndex++]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "background.surface"
                           : "inherit",
@@ -466,59 +453,57 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                     </TableCell>
                   )}
                   {/* Source column */}
-                  {visibleColumnKeys.includes("source") && (() => {
-                    const isLinked = [
-                      "Assessment tracker group",
-                      "Compliance tracker group",
-                      "Management system clauses group",
-                      "Main clauses group",
-                      "Reference controls group",
-                      "Annex controls group",
-                    ].includes(row.source || "");
-                    return (
-                      <TableCell
-                        sx={{
-                          ...singleTheme.tableStyles.primary.body.cell,
-                          backgroundColor: getSortMatchForColumn(
-                            data.cols[colIndex++]?.name,
-                            sortConfig
-                          )
-                            ? "background.surface"
-                            : "inherit",
-                        }}
-                      >
-                        {isLinked ? (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "flex-end",
-                              gap: "4px",
-                              textDecoration: "underline",
-                              "& svg": { visibility: "hidden" },
-                              "&:hover": {
-                                cursor: "pointer",
-                                "& svg": { visibility: "visible" },
-                              },
-                            }}
-                            onClick={(event) => handleRowClick(row, event)}
-                          >
-                            {row.source === "Compliance tracker group"
-                              ? "Requirements tracker group"
-                              : row.source === "Assessment tracker group"
-                              ? "Controls tracker group"
-                              : row.source}
-                          </Box>
-                        ) : (
-                          <Typography
-                            variant="body2"
-                            sx={{ color: "text.muted", fontSize: 13 }}
-                          >
-                            Not linked
-                          </Typography>
-                        )}
-                      </TableCell>
-                    );
-                  })()}
+                  {visibleColumnKeys.includes("source") &&
+                    (() => {
+                      const isLinked = [
+                        "Assessment tracker group",
+                        "Compliance tracker group",
+                        "Management system clauses group",
+                        "Main clauses group",
+                        "Reference controls group",
+                        "Annex controls group",
+                      ].includes(row.source || "");
+                      return (
+                        <TableCell
+                          sx={{
+                            ...singleTheme.tableStyles.primary.body.cell,
+                            backgroundColor: getSortMatchForColumn(
+                              data.cols[colIndex++]?.name,
+                              sortConfig,
+                            )
+                              ? "background.surface"
+                              : "inherit",
+                          }}
+                        >
+                          {isLinked ? (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "flex-end",
+                                gap: "4px",
+                                textDecoration: "underline",
+                                "& svg": { visibility: "hidden" },
+                                "&:hover": {
+                                  cursor: "pointer",
+                                  "& svg": { visibility: "visible" },
+                                },
+                              }}
+                              onClick={(event) => handleRowClick(row, event)}
+                            >
+                              {row.source === "Compliance tracker group"
+                                ? "Requirements tracker group"
+                                : row.source === "Assessment tracker group"
+                                  ? "Controls tracker group"
+                                  : row.source}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: "text.muted", fontSize: 13 }}>
+                              Not linked
+                            </Typography>
+                          )}
+                        </TableCell>
+                      );
+                    })()}
                   {/* Version column */}
                   {visibleColumnKeys.includes("version") && (
                     <TableCell
@@ -526,7 +511,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[colIndex++]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "background.surface"
                           : "inherit",
@@ -552,14 +537,16 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[colIndex++]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "background.surface"
                           : "inherit",
                       }}
                     >
                       <Chip
-                        label={((row as any).reviewStatus || "draft").replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase())}
+                        label={((row as any).reviewStatus || "draft")
+                          .replace(/_/g, " ")
+                          .replace(/^\w/, (c: string) => c.toUpperCase())}
                         uppercase={false}
                       />
                     </TableCell>
@@ -572,7 +559,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         minWidth: "50px",
                         backgroundColor: getSortMatchForColumn(
                           data.cols[data.cols.length - 1]?.name,
-                          sortConfig
+                          sortConfig,
                         )
                           ? "background.surface"
                           : "inherit",
@@ -582,12 +569,12 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         id={Number(row.id)}
                         type="report"
                         onEdit={() => {}}
-                        onDownload={() =>
-                          handleDownload(row.id, row.fileName)
-                        }
+                        onDownload={() => handleDownload(row.id, row.fileName)}
                         onDelete={createDeleteHandler(row.id)}
                         openLinkedPolicies={() => handleViewLinkedPolicies(Number(row.id!))}
-                        onAssignToFolder={onAssignToFolder ? () => onAssignToFolder(Number(row.id)) : undefined}
+                        onAssignToFolder={
+                          onAssignToFolder ? () => onAssignToFolder(Number(row.id)) : undefined
+                        }
                         onPreview={onPreview ? () => onPreview(row.id) : undefined}
                         onEditMetadata={onEditMetadata ? () => onEditMetadata(row.id) : undefined}
                         onViewHistory={onViewHistory ? () => onViewHistory(row.id) : undefined}
@@ -619,11 +606,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   }}
                 >
                   Showing {page * rowsPerPage + 1} -
-                  {Math.min(
-                    page * rowsPerPage + rowsPerPage,
-                    sortedBodyData.length
-                  )}{" "}
-                  of {sortedBodyData.length} items
+                  {Math.min(page * rowsPerPage + rowsPerPage, sortedBodyData.length)} of{" "}
+                  {sortedBodyData.length} items
                 </TableCell>
                 <TablePagination
                   count={sortedBodyData.length}
@@ -632,9 +616,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 20, 25]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={
-                    TablePaginationActions as React.ComponentType<any>
-                  }
+                  ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                   labelRowsPerPage="Rows per page"
                   sx={{ mt: theme.spacing(6) }}
                 />
@@ -644,18 +626,16 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         </Table>
       </TableContainer>
 
-      {
-        showLinkedPoliciesToEvidence && (
-          <ProjectRiskLinkedPolicies 
-            type = "evidence"
-            evidenceId = {selectedEvidenceId}
-            isOpen = {showLinkedPoliciesToEvidence}
-            onClose={() => {
-              setShowLinkedPoliciesToEvidence(false);
-            }}/>
-  
-        )
-      }
+      {showLinkedPoliciesToEvidence && (
+        <ProjectRiskLinkedPolicies
+          type="evidence"
+          evidenceId={selectedEvidenceId}
+          isOpen={showLinkedPoliciesToEvidence}
+          onClose={() => {
+            setShowLinkedPoliciesToEvidence(false);
+          }}
+        />
+      )}
     </>
   );
 };

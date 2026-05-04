@@ -30,7 +30,7 @@ const handleError = (error: any) => {
       // Extract the most specific error message available
       let errorMessage = error.message; // fallback
 
-      if (error.response?.data?.data && typeof error.response.data.data === 'string') {
+      if (error.response?.data?.data && typeof error.response.data.data === "string") {
         // Validation errors from STATUS_CODE[400] put the specific message in data.data
         errorMessage = error.response.data.data;
       } else if (error.response?.data?.message) {
@@ -41,20 +41,16 @@ const handleError = (error: any) => {
         errorMessage = error.response.data.error;
       }
 
-      return new CustomException(
-        errorMessage,
-        error.response?.status,
-        error.response?.data
-      );
+      return new CustomException(errorMessage, error.response?.status, error.response?.data);
     } else {
       return new CustomException(
         error.message || "An unknown error occurred",
         undefined,
-        undefined
+        undefined,
       );
     }
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.error("Error in handleError:", e);
     }
     throw e;
@@ -62,13 +58,8 @@ const handleError = (error: any) => {
 };
 
 // Logging function - only logs in development mode
-const logRequest = (
-  method: string,
-  endpoint: string,
-  params?: any,
-  data?: any
-) => {
-  if (process.env.NODE_ENV === 'development') {
+const logRequest = (method: string, endpoint: string, params?: any, data?: any) => {
+  if (process.env.NODE_ENV === "development") {
     console.log(`[API Request] ${method.toUpperCase()} ${endpoint}`, {
       params,
       data,
@@ -77,12 +68,10 @@ const logRequest = (
 };
 
 const logResponse = (method: string, endpoint: string, response: any) => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     console.table(
-      `[API Response] ${method.toUpperCase()} ${endpoint} ${
-        response.data.message
-      }`,
-      response.status
+      `[API Response] ${method.toUpperCase()} ${endpoint} ${response.data.message}`,
+      response.status,
     );
   }
 };
@@ -96,10 +85,7 @@ export const apiServices = {
    * @param {RequestParams} [params={}] - Optional query parameters to include in the request.
    * @returns {Promise<ApiResponse<T>>} - A promise that resolves to the API response.
    */
-  async get<T>(
-    endpoint: string,
-    params: RequestParams = {}
-  ): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, params: RequestParams = {}): Promise<ApiResponse<T>> {
     // Extract special config options that should not be query params
     const { signal, responseType, ...queryParams } = params;
 
@@ -135,7 +121,7 @@ export const apiServices = {
   async post<T>(
     endpoint: string,
     data: any = {},
-    config: RequestParams = {}
+    config: RequestParams = {},
   ): Promise<ApiResponse<T>> {
     logRequest("post", endpoint, undefined, data);
     try {
@@ -165,7 +151,7 @@ export const apiServices = {
   async patch<T>(
     endpoint: string,
     data: any = {},
-    config: RequestParams = {}
+    config: RequestParams = {},
   ): Promise<ApiResponse<T>> {
     logRequest("patch", endpoint, undefined, data);
     try {
@@ -194,7 +180,7 @@ export const apiServices = {
   async put<T>(
     endpoint: string,
     data: any = {},
-    config: RequestParams = {}
+    config: RequestParams = {},
   ): Promise<ApiResponse<T>> {
     logRequest("put", endpoint, undefined, data);
     try {
@@ -219,10 +205,7 @@ export const apiServices = {
    * @param {RequestParams} [config={}] - Optional configuration for the request.
    * @returns {Promise<ApiResponse<T>>} - A promise that resolves to the API response.
    */
-  async delete<T>(
-    endpoint: string,
-    config: RequestParams = {}
-  ): Promise<ApiResponse<T>> {
+  async delete<T>(endpoint: string, config: RequestParams = {}): Promise<ApiResponse<T>> {
     logRequest("delete", endpoint);
     try {
       const response = await CustomAxios.delete(endpoint, config);

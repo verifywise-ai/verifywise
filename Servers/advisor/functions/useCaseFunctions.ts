@@ -20,7 +20,7 @@ const getAllProjects = async (organizationId: number) => {
 
 const fetchUseCases = async (
   params: FetchUseCasesParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<any[]> => {
   try {
     let projects = await getAllProjects(organizationId);
@@ -31,7 +31,7 @@ const fetchUseCases = async (
     }
     if (params.ai_risk_classification) {
       projects = projects.filter(
-        (p: any) => p.ai_risk_classification === params.ai_risk_classification
+        (p: any) => p.ai_risk_classification === params.ai_risk_classification,
       );
     }
 
@@ -56,14 +56,14 @@ const fetchUseCases = async (
   } catch (error) {
     logger.error("Error fetching use cases:", error);
     throw new Error(
-      `Failed to fetch use cases: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch use cases: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getUseCaseAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const projects = await getAllProjects(organizationId);
@@ -102,33 +102,29 @@ const getUseCaseAnalytics = async (
   } catch (error) {
     logger.error("Error getting use case analytics:", error);
     throw new Error(
-      `Failed to get use case analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get use case analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getUseCaseExecutiveSummary = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const projects = await getAllProjects(organizationId);
     const total = projects.length;
 
     const activeCount = projects.filter(
-      (p: any) => p.status === "Active" || p.status === "In Progress"
+      (p: any) => p.status === "Active" || p.status === "In Progress",
     ).length;
-    const draftCount = projects.filter(
-      (p: any) => p.status === "Draft"
-    ).length;
-    const completedCount = projects.filter(
-      (p: any) => p.status === "Completed"
-    ).length;
+    const draftCount = projects.filter((p: any) => p.status === "Draft").length;
+    const completedCount = projects.filter((p: any) => p.status === "Completed").length;
 
     const highRiskCount = projects.filter(
       (p: any) =>
         p.ai_risk_classification === "High risk" ||
-        p.ai_risk_classification === "Unacceptable risk"
+        p.ai_risk_classification === "Unacceptable risk",
     ).length;
 
     // Get risk counts for each project (parallelized to avoid N+1)
@@ -137,20 +133,19 @@ const getUseCaseExecutiveSummary = async (
       projectsToCheck.map((project: any) =>
         calculateProjectRisks(project.id, organizationId).then((rows) => ({
           project,
-          totalRisks: rows.reduce(
-            (sum, row) => sum + parseInt(String(row.count), 10),
-            0
-          ),
-        }))
-      )
+          totalRisks: rows.reduce((sum, row) => sum + parseInt(String(row.count), 10), 0),
+        })),
+      ),
     );
 
     const projectRiskSummaries = riskResults
       .filter(
-        (r): r is PromiseFulfilledResult<{
+        (
+          r,
+        ): r is PromiseFulfilledResult<{
           project: any;
           totalRisks: number;
-        }> => r.status === "fulfilled" && r.value.totalRisks > 0
+        }> => r.status === "fulfilled" && r.value.totalRisks > 0,
       )
       .map((r) => ({
         id: r.value.project.id,
@@ -172,7 +167,7 @@ const getUseCaseExecutiveSummary = async (
   } catch (error) {
     logger.error("Error getting use case executive summary:", error);
     throw new Error(
-      `Failed to get use case executive summary: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get use case executive summary: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

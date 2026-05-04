@@ -6,17 +6,14 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  *
  * @param {string} routeUrl - The API route URL.
  * @param {any} data - The incident management data to be saved.
-  * @returns {Promise<any>} The response from the API.
+ * @returns {Promise<any>} The response from the API.
  */
-export async function createIncidentManagement(
-    routeUrl: string,
-    data: any
-): Promise<any> {
-    try {
-        const response = await apiServices.post(routeUrl, data);
-        return response.data;
-    } catch (error) {
-        console.error("Error creating incident management:", error);
-        throw error;
-    }
+export async function createIncidentManagement(routeUrl: string, data: any): Promise<any> {
+  try {
+    const response = await apiServices.post(routeUrl, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating incident management:", error);
+    throw error;
+  }
 }

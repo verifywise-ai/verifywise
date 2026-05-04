@@ -25,14 +25,7 @@ const MyComponent = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  return (
-    <EventsTable
-      data={events}
-      users={users}
-      isLoading={isLoading}
-      paginated={true}
-    />
-  );
+  return <EventsTable data={events} users={users} isLoading={isLoading} paginated={true} />;
 };
 ```
 

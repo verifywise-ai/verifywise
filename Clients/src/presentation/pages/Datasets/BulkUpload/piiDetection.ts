@@ -62,8 +62,7 @@ export function detectPiiInHeaders(headers: string[]): PiiDetectionResult {
   for (const header of headers) {
     const normalized = header.toLowerCase().trim();
     const isPii = PII_KEYWORDS.some(
-      (keyword) =>
-        normalized.includes(keyword) || normalized === keyword
+      (keyword) => normalized.includes(keyword) || normalized === keyword,
     );
     if (isPii) {
       piiColumns.push(header);

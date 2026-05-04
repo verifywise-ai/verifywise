@@ -48,16 +48,8 @@ export function BenefitsScene({ frame }: { frame: number }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {BENEFITS.map((benefit, i) => {
-          const itemOpacity = interpolate(
-            frame,
-            [20 + i * 10, 35 + i * 10],
-            [0, 1]
-          );
-          const itemX = interpolate(
-            frame,
-            [20 + i * 10, 35 + i * 10],
-            [-20, 0]
-          );
+          const itemOpacity = interpolate(frame, [20 + i * 10, 35 + i * 10], [0, 1]);
+          const itemX = interpolate(frame, [20 + i * 10, 35 + i * 10], [-20, 0]);
 
           return (
             <div

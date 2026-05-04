@@ -49,15 +49,24 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import palette from "../../../themes/palette";
 import {
-  useCardSx, useGatewayModels, ProviderIcon,
-  extractVars, extractPromptRefs, resolveMessageVariables,
-  getLabelVariant, streamPromptTest,
+  useCardSx,
+  useGatewayModels,
+  ProviderIcon,
+  extractVars,
+  extractPromptRefs,
+  resolveMessageVariables,
+  getLabelVariant,
+  streamPromptTest,
 } from "../shared";
 import VersionDiffModal from "./VersionDiffModal";
 import ComparePanel from "./ComparePanel";
 import TestDatasetPanel from "./TestDatasetPanel";
 
-interface Message { role: string; content: string; _id?: string }
+interface Message {
+  role: string;
+  content: string;
+  _id?: string;
+}
 
 /** Sortable wrapper for a message block */
 function SortableMessageBlock({
@@ -98,7 +107,11 @@ function SortableMessageBlock({
           bgcolor: "#F9FAFB",
         }}
       >
-        <Box {...attributes} {...listeners} sx={{ cursor: "grab", display: "flex", alignItems: "center" }}>
+        <Box
+          {...attributes}
+          {...listeners}
+          sx={{ cursor: "grab", display: "flex", alignItems: "center" }}
+        >
           <GripVertical size={14} strokeWidth={1.5} color={palette.border.dark} />
         </Box>
         <select
@@ -184,7 +197,10 @@ interface PromptData {
   published_version: number | null;
 }
 
-interface ChatMessage { role: "user" | "assistant"; content: string }
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
 
 type TestTab = "chat" | "compare" | "test-set";
 
@@ -200,7 +216,9 @@ export default function PromptEditorPage() {
   const assignId = () => `msg-${idCounter.current++}`;
 
   // Editor state
-  const [messages, setMessages] = useState<Message[]>([{ role: "system", content: "", _id: "msg-0" }]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "system", content: "", _id: "msg-0" },
+  ]);
   const [model, setModel] = useState("");
   const [config, setConfig] = useState<Record<string, any>>({});
   const { providers: gwProviders, getModelsForProvider: gwModelsFor } = useGatewayModels();
@@ -241,7 +259,11 @@ export default function PromptEditorPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [lastMetrics, setLastMetrics] = useState<{ latency?: number; tokens?: number; cost?: number } | null>(null);
+  const [lastMetrics, setLastMetrics] = useState<{
+    latency?: number;
+    tokens?: number;
+    cost?: number;
+  } | null>(null);
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -249,7 +271,7 @@ export default function PromptEditorPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const detectedVars = useMemo(() => extractVars(messages), [messages]);
@@ -259,7 +281,7 @@ export default function PromptEditorPage() {
     setMessages(
       v.content?.length
         ? v.content.map((m) => ({ ...m, _id: assignId() }))
-        : [{ role: "system", content: "", _id: assignId() }]
+        : [{ role: "system", content: "", _id: assignId() }],
     );
     setModel(v.model || "");
     setConfig(v.config || {});
@@ -282,17 +304,29 @@ export default function PromptEditorPage() {
       setEndpoints((endpointsRes?.data?.endpoints || []).filter((e: any) => e.is_active));
       setLabels(labelsRes?.data?.labels || labelsRes?.data?.data || []);
       if (vers.length > 0) loadVersionIntoEditor(vers[0]);
-    } catch { /* silently handle */ }
-    finally { setLoading(false); }
+    } catch {
+      /* silently handle */
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  useEffect(() => { loadPrompt(); }, [loadPrompt]);
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages]);
-  useEffect(() => { return () => { chatAbortRef.current?.abort(); }; }, []);
+  useEffect(() => {
+    loadPrompt();
+  }, [loadPrompt]);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+  useEffect(() => {
+    return () => {
+      chatAbortRef.current?.abort();
+    };
+  }, []);
 
   // ─── Editor actions ─────────────────────────────────────────────────
 
-  const addMessage = () => setMessages((p) => [...p, { role: "user", content: "", _id: assignId() }]);
+  const addMessage = () =>
+    setMessages((p) => [...p, { role: "user", content: "", _id: assignId() }]);
 
   const updateMessage = (index: number, field: "role" | "content", value: string) => {
     setMessages((p) => p.map((m, i) => (i === index ? { ...m, [field]: value } : m)));
@@ -304,20 +338,26 @@ export default function PromptEditorPage() {
     if (!id || msgs.length === 0) return;
     setIsSaving(true);
     try {
-      const res = await apiServices.post<Record<string, any>>(`/ai-gateway/prompts/${id}/versions`, {
-        content: msgs,
-        model: model || null,
-        config: Object.keys(config).length > 0 ? config : null,
-        commit_message: commitMsg || null,
-      });
+      const res = await apiServices.post<Record<string, any>>(
+        `/ai-gateway/prompts/${id}/versions`,
+        {
+          content: msgs,
+          model: model || null,
+          config: Object.keys(config).length > 0 ? config : null,
+          commit_message: commitMsg || null,
+        },
+      );
       const newVer = res?.data?.version || res?.data?.data;
       if (newVer) {
         setCurrentVersion(newVer.version);
         setCurrentStatus("draft");
         setVersions((prev) => [newVer, ...prev]);
       }
-    } catch { /* silently handle */ }
-    finally { setIsSaving(false); }
+    } catch {
+      /* silently handle */
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -357,20 +397,24 @@ export default function PromptEditorPage() {
   const publishVersion = async (versionNumber: number) => {
     if (!id) return;
     try {
-      const res = await apiServices.post<Record<string, any>>(`/ai-gateway/prompts/${id}/versions/${versionNumber}/publish`);
+      const res = await apiServices.post<Record<string, any>>(
+        `/ai-gateway/prompts/${id}/versions/${versionNumber}/publish`,
+      );
       const published = res?.data?.version || res?.data?.data;
       if (published) {
         setVersions((prev) =>
           prev.map((v) =>
             v.version === published.version
               ? { ...v, status: "published", published_at: published.published_at }
-              : { ...v, status: "draft", published_at: null }
-          )
+              : { ...v, status: "draft", published_at: null },
+          ),
         );
-        setPrompt((p) => p ? { ...p, published_version: published.version } : p);
+        setPrompt((p) => (p ? { ...p, published_version: published.version } : p));
         if (versionNumber === currentVersion) setCurrentStatus("published");
       }
-    } catch { /* silently handle */ }
+    } catch {
+      /* silently handle */
+    }
   };
 
   const handlePublish = async () => {
@@ -399,15 +443,22 @@ export default function PromptEditorPage() {
   const handleAssignLabel = async () => {
     if (!id || !labelVersionId || !newLabelName.trim()) return;
     try {
-      await apiServices.put(`/ai-gateway/prompts/${id}/labels/${newLabelName.trim().toLowerCase()}`, {
-        version_id: labelVersionId,
-      });
+      await apiServices.put(
+        `/ai-gateway/prompts/${id}/labels/${newLabelName.trim().toLowerCase()}`,
+        {
+          version_id: labelVersionId,
+        },
+      );
       // Refresh labels
-      const labelsRes = await apiServices.get<Record<string, any>>(`/ai-gateway/prompts/${id}/labels`);
+      const labelsRes = await apiServices.get<Record<string, any>>(
+        `/ai-gateway/prompts/${id}/labels`,
+      );
       setLabels(labelsRes?.data?.labels || labelsRes?.data?.data || []);
       setIsLabelModalOpen(false);
       setNewLabelName("");
-    } catch { /* silently handle */ }
+    } catch {
+      /* silently handle */
+    }
   };
 
   const handleRemoveLabel = async (labelName: string, e: React.MouseEvent) => {
@@ -416,7 +467,9 @@ export default function PromptEditorPage() {
     try {
       await apiServices.delete(`/ai-gateway/prompts/${id}/labels/${labelName}`);
       setLabels((prev) => prev.filter((l) => l.label_name !== labelName));
-    } catch { /* silently handle */ }
+    } catch {
+      /* silently handle */
+    }
   };
 
   const openLabelModal = (versionId: number, e: React.MouseEvent) => {
@@ -468,7 +521,10 @@ export default function PromptEditorPage() {
       setLastMetrics({ latency: result.latency, tokens: result.tokens, cost: result.cost });
     } catch (err: any) {
       if (err?.name !== "AbortError") {
-        setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message || "Connection failed"}` }]);
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${err.message || "Connection failed"}` },
+        ]);
       }
     } finally {
       setIsSending(false);
@@ -480,7 +536,10 @@ export default function PromptEditorPage() {
     return (
       <Box sx={{ p: "16px" }}>
         <Typography>Prompt not found.</Typography>
-        <CustomizableButton text="Back to prompts" onClick={() => navigate("/ai-gateway/prompts")} />
+        <CustomizableButton
+          text="Back to prompts"
+          onClick={() => navigate("/ai-gateway/prompts")}
+        />
       </Box>
     );
   }
@@ -494,26 +553,42 @@ export default function PromptEditorPage() {
   return (
     <PageHeaderExtended
       title={
-        <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
-          {prompt.name}
-          {currentVersion && <Chip label={`v${currentVersion}`} variant="info" />}
-          <Chip label={currentStatus === "published" ? "Published" : "Draft"} />
-          {currentLabels.map((l) => (
-            <Chip
-              key={l.label_name}
-              label={l.label_name}
-              variant={getLabelVariant(l.label_name)}
-            />
-          ))}
-        </Stack> as any
+        (
+          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+            {prompt.name}
+            {currentVersion && <Chip label={`v${currentVersion}`} variant="info" />}
+            <Chip label={currentStatus === "published" ? "Published" : "Draft"} />
+            {currentLabels.map((l) => (
+              <Chip
+                key={l.label_name}
+                label={l.label_name}
+                variant={getLabelVariant(l.label_name)}
+              />
+            ))}
+          </Stack>
+        ) as any
       }
-      description={prompt.description || "Edit prompt messages, test with variables, and publish versions."}
+      description={
+        prompt.description || "Edit prompt messages, test with variables, and publish versions."
+      }
       tipBoxEntity="ai-gateway-prompts"
       helpArticlePath="ai-gateway/prompts"
       actionButton={
         <Stack direction="row" alignItems="center" gap="8px">
-          <CustomizableButton text="Save draft" onClick={handleSave} isDisabled={isSaving} variant="outlined" sx={{ height: 34 }} />
-          <CustomizableButton text="Publish" icon={<Upload size={14} strokeWidth={1.5} />} onClick={handlePublish} isDisabled={isPublishing || !currentVersion} sx={{ height: 34 }} />
+          <CustomizableButton
+            text="Save draft"
+            onClick={handleSave}
+            isDisabled={isSaving}
+            variant="outlined"
+            sx={{ height: 34 }}
+          />
+          <CustomizableButton
+            text="Publish"
+            icon={<Upload size={14} strokeWidth={1.5} />}
+            onClick={handlePublish}
+            isDisabled={isPublishing || !currentVersion}
+            sx={{ height: 34 }}
+          />
           <IconButton size="small" onClick={() => setIsHistoryOpen(true)}>
             <History size={16} strokeWidth={1.5} />
           </IconButton>
@@ -521,13 +596,31 @@ export default function PromptEditorPage() {
       }
     >
       {/* ─── Split panel ───────────────────────────────────────────── */}
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden", border: `1px solid ${palette.border.light}`, borderRadius: "4px" }}>
+      <Box
+        sx={{
+          display: "flex",
+          flex: 1,
+          overflow: "hidden",
+          border: `1px solid ${palette.border.light}`,
+          borderRadius: "4px",
+        }}
+      >
         {/* ─── LEFT: Editor ──────────────────────────────────────── */}
-        <Box sx={{ width: "50%", borderRight: `1px solid ${palette.border.light}`, overflow: "auto", p: "16px" }}>
+        <Box
+          sx={{
+            width: "50%",
+            borderRight: `1px solid ${palette.border.light}`,
+            overflow: "auto",
+            p: "16px",
+          }}
+        >
           {/* Section header */}
-          <Typography fontSize={13} fontWeight={500} color="text.secondary" mb="4px">Messages</Typography>
+          <Typography fontSize={13} fontWeight={500} color="text.secondary" mb="4px">
+            Messages
+          </Typography>
           <Typography fontSize={13} color="text.tertiary" mb="16px">
-            Define the message sequence sent to the model. Drag to reorder, use {"{{variables}}"} for dynamic values, and @prompt:slug to compose prompts.
+            Define the message sequence sent to the model. Drag to reorder, use {"{{variables}}"}{" "}
+            for dynamic values, and @prompt:slug to compose prompts.
           </Typography>
 
           {/* Model + config */}
@@ -544,7 +637,10 @@ export default function PromptEditorPage() {
             />
             <IconButton
               size="small"
-              onClick={() => { setTempConfig({ ...config }); setIsConfigOpen(true); }}
+              onClick={() => {
+                setTempConfig({ ...config });
+                setIsConfigOpen(true);
+              }}
               sx={{ mb: "4px" }}
             >
               <Settings2 size={16} strokeWidth={1.5} />
@@ -552,8 +648,15 @@ export default function PromptEditorPage() {
           </Box>
 
           {/* Message blocks — drag-droppable */}
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={messages.map((m) => m._id || "")} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={messages.map((m) => m._id || "")}
+              strategy={verticalListSortingStrategy}
+            >
               <Stack spacing="16px">
                 {messages.map((msg, idx) => (
                   <SortableMessageBlock
@@ -573,31 +676,54 @@ export default function PromptEditorPage() {
           {/* Add message */}
           <Box
             onClick={addMessage}
-            sx={{ mt: "16px", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "primary.main", "&:hover": { textDecoration: "underline" } }}
+            sx={{
+              mt: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              cursor: "pointer",
+              color: "primary.main",
+              "&:hover": { textDecoration: "underline" },
+            }}
           >
             <Plus size={14} strokeWidth={1.5} />
-            <Typography fontSize={13} fontWeight={500}>Add message</Typography>
+            <Typography fontSize={13} fontWeight={500}>
+              Add message
+            </Typography>
           </Box>
 
           {/* Detected variables */}
           {detectedVars.length > 0 && (
             <Box sx={{ mt: "16px" }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <Typography fontSize={12} color="text.secondary" fontWeight={500}>Variables:</Typography>
+                <Typography fontSize={12} color="text.secondary" fontWeight={500}>
+                  Variables:
+                </Typography>
                 {detectedVars.map((v) => (
                   <Chip key={v} label={`{{${v}}}`} variant="info" />
                 ))}
               </Box>
               <Typography fontSize={11} color="text.disabled" mt="4px">
-                Variables are replaced with values at request time. Set values in the test panel on the right.
+                Variables are replaced with values at request time. Set values in the test panel on
+                the right.
               </Typography>
             </Box>
           )}
 
           {/* Feature 4: Prompt references */}
           {detectedRefs.length > 0 && (
-            <Box sx={{ mt: "16px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <Typography fontSize={12} color="text.secondary" fontWeight={500}>Includes:</Typography>
+            <Box
+              sx={{
+                mt: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
+              }}
+            >
+              <Typography fontSize={12} color="text.secondary" fontWeight={500}>
+                Includes:
+              </Typography>
               {detectedRefs.map((ref) => (
                 <Box
                   key={ref}
@@ -618,7 +744,9 @@ export default function PromptEditorPage() {
                   }}
                 >
                   <Link2 size={11} strokeWidth={1.5} color="#0284C7" />
-                  <Typography fontSize={11} color="#0284C7" fontWeight={500}>@{ref}</Typography>
+                  <Typography fontSize={11} color="#0284C7" fontWeight={500}>
+                    @{ref}
+                  </Typography>
                 </Box>
               ))}
             </Box>
@@ -628,7 +756,13 @@ export default function PromptEditorPage() {
         {/* ─── RIGHT: Test panel ─────────────────────────────────── */}
         <Box sx={{ width: "50%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* Tab toggle: Chat | Compare | Test set */}
-          <Box sx={{ display: "flex", borderBottom: `1px solid ${palette.border.light}`, flexShrink: 0 }}>
+          <Box
+            sx={{
+              display: "flex",
+              borderBottom: `1px solid ${palette.border.light}`,
+              flexShrink: 0,
+            }}
+          >
             {(["chat", "compare", "test-set"] as TestTab[]).map((tab) => (
               <Box
                 key={tab}
@@ -654,28 +788,43 @@ export default function PromptEditorPage() {
           {testTab === "chat" && (
             <>
               {/* Endpoint selector + variables */}
-              <Box sx={{ p: "16px", borderBottom: `1px solid ${palette.border.light}`, flexShrink: 0 }}>
+              <Box
+                sx={{ p: "16px", borderBottom: `1px solid ${palette.border.light}`, flexShrink: 0 }}
+              >
                 <Select
                   id="prompt-endpoint-select"
                   label="Test endpoint"
                   value={selectedEndpoint}
                   onChange={(e) => setSelectedEndpoint(e.target.value as string)}
-                  items={endpoints.map((e: any) => ({ _id: e.slug, name: `${e.display_name} (${e.slug})` }))}
+                  items={endpoints.map((e: any) => ({
+                    _id: e.slug,
+                    name: `${e.display_name} (${e.slug})`,
+                  }))}
                   placeholder="Select endpoint"
                   sx={{ width: "100%" }}
                 />
-                <Typography fontSize={11} color="text.disabled" mt="4px" mb={detectedVars.length > 0 ? "16px" : 0}>
-                  Pick an endpoint to route test requests through. The model and API key come from the endpoint configuration.
+                <Typography
+                  fontSize={11}
+                  color="text.disabled"
+                  mt="4px"
+                  mb={detectedVars.length > 0 ? "16px" : 0}
+                >
+                  Pick an endpoint to route test requests through. The model and API key come from
+                  the endpoint configuration.
                 </Typography>
                 {detectedVars.length > 0 && (
                   <Stack spacing="8px">
-                    <Typography fontSize={12} fontWeight={600} color="text.secondary">Variables</Typography>
+                    <Typography fontSize={12} fontWeight={600} color="text.secondary">
+                      Variables
+                    </Typography>
                     {detectedVars.map((v) => (
                       <Field
                         key={v}
                         label={v}
                         value={variableValues[v] || ""}
-                        onChange={(e) => setVariableValues((prev) => ({ ...prev, [v]: e.target.value }))}
+                        onChange={(e) =>
+                          setVariableValues((prev) => ({ ...prev, [v]: e.target.value }))
+                        }
                         placeholder={`Value for {{${v}}}`}
                       />
                     ))}
@@ -687,15 +836,29 @@ export default function PromptEditorPage() {
               <Box sx={{ flex: 1, overflow: "auto", p: "16px" }}>
                 {chatMessages.length === 0 && (
                   <Box sx={{ textAlign: "center", py: "64px" }}>
-                    <Typography fontSize={13} color="text.secondary" fontWeight={500}>Send a message to test this prompt</Typography>
-                    <Typography fontSize={12} color="text.disabled" mt="8px" sx={{ maxWidth: 320, mx: "auto" }}>
-                      Your message blocks above will be prepended as context. Type a user message below and the model will respond using your prompt template.
+                    <Typography fontSize={13} color="text.secondary" fontWeight={500}>
+                      Send a message to test this prompt
+                    </Typography>
+                    <Typography
+                      fontSize={12}
+                      color="text.disabled"
+                      mt="8px"
+                      sx={{ maxWidth: 320, mx: "auto" }}
+                    >
+                      Your message blocks above will be prepended as context. Type a user message
+                      below and the model will respond using your prompt template.
                     </Typography>
                   </Box>
                 )}
                 <Stack spacing="8px">
                   {chatMessages.map((cm, idx) => (
-                    <Box key={idx} sx={{ display: "flex", justifyContent: cm.role === "user" ? "flex-end" : "flex-start" }}>
+                    <Box
+                      key={idx}
+                      sx={{
+                        display: "flex",
+                        justifyContent: cm.role === "user" ? "flex-end" : "flex-start",
+                      }}
+                    >
                       <Box
                         sx={{
                           maxWidth: "85%",
@@ -719,19 +882,54 @@ export default function PromptEditorPage() {
 
               {/* Metrics */}
               {lastMetrics && (
-                <Box sx={{ px: "16px", py: "8px", borderTop: `1px solid ${palette.border.light}`, display: "flex", gap: "16px", flexShrink: 0 }}>
-                  {lastMetrics.latency != null && <Typography fontSize={11} color="text.secondary">{lastMetrics.latency}ms</Typography>}
-                  {(lastMetrics.tokens ?? 0) > 0 && <Typography fontSize={11} color="text.secondary">{lastMetrics.tokens} tokens</Typography>}
-                  {(lastMetrics.cost ?? 0) > 0 && <Typography fontSize={11} color="text.secondary">${lastMetrics.cost!.toFixed(4)}</Typography>}
+                <Box
+                  sx={{
+                    px: "16px",
+                    py: "8px",
+                    borderTop: `1px solid ${palette.border.light}`,
+                    display: "flex",
+                    gap: "16px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {lastMetrics.latency != null && (
+                    <Typography fontSize={11} color="text.secondary">
+                      {lastMetrics.latency}ms
+                    </Typography>
+                  )}
+                  {(lastMetrics.tokens ?? 0) > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      {lastMetrics.tokens} tokens
+                    </Typography>
+                  )}
+                  {(lastMetrics.cost ?? 0) > 0 && (
+                    <Typography fontSize={11} color="text.secondary">
+                      ${lastMetrics.cost!.toFixed(4)}
+                    </Typography>
+                  )}
                 </Box>
               )}
 
               {/* Chat input */}
-              <Box sx={{ display: "flex", gap: "8px", p: "16px", borderTop: `1px solid ${palette.border.light}`, bgcolor: "background.paper", flexShrink: 0 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: "8px",
+                  p: "16px",
+                  borderTop: `1px solid ${palette.border.light}`,
+                  bgcolor: "background.paper",
+                  flexShrink: 0,
+                }}
+              >
                 <TextareaAutosize
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendTest(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendTest();
+                    }
+                  }}
                   placeholder="Type a message..."
                   minRows={1}
                   maxRows={4}
@@ -797,14 +995,20 @@ export default function PromptEditorPage() {
         onClose={() => setIsConfigOpen(false)}
         title="Model parameters"
         description="Fine-tune how the model generates responses."
-        onSubmit={() => { setConfig(tempConfig); setIsConfigOpen(false); }}
+        onSubmit={() => {
+          setConfig(tempConfig);
+          setIsConfigOpen(false);
+        }}
         submitButtonText="Apply"
       >
         <Stack spacing="16px">
           <Box>
-            <Typography fontSize={13} fontWeight={500} mb="4px">Temperature: {tempConfig.temperature ?? 1.0}</Typography>
+            <Typography fontSize={13} fontWeight={500} mb="4px">
+              Temperature: {tempConfig.temperature ?? 1.0}
+            </Typography>
             <Typography fontSize={12} color="text.secondary" mb="8px">
-              Controls randomness. Lower values (0.0) make responses more focused and deterministic. Higher values (2.0) make output more random and creative.
+              Controls randomness. Lower values (0.0) make responses more focused and deterministic.
+              Higher values (2.0) make output more random and creative.
             </Typography>
             <Slider
               value={tempConfig.temperature ?? 1.0}
@@ -820,24 +1024,36 @@ export default function PromptEditorPage() {
             <Field
               label="Max tokens"
               value={String(tempConfig.max_tokens ?? "")}
-              onChange={(e) => setTempConfig((p) => ({ ...p, max_tokens: e.target.value ? parseInt(e.target.value) : undefined }))}
+              onChange={(e) =>
+                setTempConfig((p) => ({
+                  ...p,
+                  max_tokens: e.target.value ? parseInt(e.target.value) : undefined,
+                }))
+              }
               placeholder="e.g. 4096"
               type="number"
             />
             <Typography fontSize={12} color="text.secondary" mt="4px">
-              Maximum number of tokens to generate in the response. Higher values allow longer outputs but increase cost and latency.
+              Maximum number of tokens to generate in the response. Higher values allow longer
+              outputs but increase cost and latency.
             </Typography>
           </Box>
           <Box>
             <Field
               label="Top P"
               value={String(tempConfig.top_p ?? "")}
-              onChange={(e) => setTempConfig((p) => ({ ...p, top_p: e.target.value ? parseFloat(e.target.value) : undefined }))}
+              onChange={(e) =>
+                setTempConfig((p) => ({
+                  ...p,
+                  top_p: e.target.value ? parseFloat(e.target.value) : undefined,
+                }))
+              }
               placeholder="0.0 - 1.0"
               type="number"
             />
             <Typography fontSize={12} color="text.secondary" mt="4px">
-              Nucleus sampling. The model considers tokens with top_p cumulative probability. Lower values (e.g. 0.1) make output more focused. Use either temperature or top P, not both.
+              Nucleus sampling. The model considers tokens with top_p cumulative probability. Lower
+              values (e.g. 0.1) make output more focused. Use either temperature or top P, not both.
             </Typography>
           </Box>
         </Stack>
@@ -846,7 +1062,10 @@ export default function PromptEditorPage() {
       {/* ─── Commit message modal (Feature 6) ──────────────────────── */}
       <StandardModal
         isOpen={isCommitModalOpen}
-        onClose={() => { setIsCommitModalOpen(false); pendingSaveRef.current = null; }}
+        onClose={() => {
+          setIsCommitModalOpen(false);
+          pendingSaveRef.current = null;
+        }}
         title="Save version"
         description="Optionally describe what changed in this version."
         onSubmit={handleCommitSave}
@@ -906,14 +1125,24 @@ export default function PromptEditorPage() {
       >
         <Box sx={{ padding: "16px", height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Header */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "8px" }}>
-            <Typography fontSize={15} fontWeight={600}>Version history</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: "8px",
+            }}
+          >
+            <Typography fontSize={15} fontWeight={600}>
+              Version history
+            </Typography>
             <IconButton size="small" onClick={() => setIsHistoryOpen(false)}>
               <X size={16} strokeWidth={1.5} />
             </IconButton>
           </Box>
           <Typography fontSize={12} color="text.secondary" mb="16px">
-            Each save creates a new version. Publish a version to make it active on bound endpoints. Click any version to load it into the editor.
+            Each save creates a new version. Publish a version to make it active on bound endpoints.
+            Click any version to load it into the editor.
           </Typography>
 
           {/* Versions list */}
@@ -923,26 +1152,47 @@ export default function PromptEditorPage() {
               return (
                 <Box
                   key={v.id}
-                  onClick={() => { loadVersionIntoEditor(v); setIsHistoryOpen(false); }}
+                  onClick={() => {
+                    loadVersionIntoEditor(v);
+                    setIsHistoryOpen(false);
+                  }}
                   sx={{
                     p: "16px",
                     cursor: "pointer",
                     borderRadius: "4px",
-                    border: v.version === currentVersion
-                      ? "1px solid #13715B"
-                      : `1px solid ${palette.border.light}`,
+                    border:
+                      v.version === currentVersion
+                        ? "1px solid #13715B"
+                        : `1px solid ${palette.border.light}`,
                     bgcolor: v.version === currentVersion ? "#F6FEF9" : "background.paper",
-                    "&:hover": { bgcolor: v.version === currentVersion ? "#ECFDF3" : "action.hover" },
+                    "&:hover": {
+                      bgcolor: v.version === currentVersion ? "#ECFDF3" : "action.hover",
+                    },
                     transition: "background-color 150ms ease",
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mb: "4px", flexWrap: "wrap" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      mb: "4px",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <Chip label={`v${v.version}`} variant="info" />
                     <Chip label={v.status === "published" ? "Published" : "Draft"} />
                     {versionLabels.map((l) => (
-                      <Box key={l.label_name} sx={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                      <Box
+                        key={l.label_name}
+                        sx={{ display: "inline-flex", alignItems: "center", gap: "2px" }}
+                      >
                         <Chip label={l.label_name} variant={getLabelVariant(l.label_name)} />
-                        <IconButton size="small" onClick={(e) => handleRemoveLabel(l.label_name, e)} sx={{ p: 0, width: 14, height: 14 }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleRemoveLabel(l.label_name, e)}
+                          sx={{ p: 0, width: 14, height: 14 }}
+                        >
                           <X size={10} strokeWidth={2} />
                         </IconButton>
                       </Box>
@@ -962,14 +1212,20 @@ export default function PromptEditorPage() {
                   </Typography>
                   {/* Feature 6: Commit message */}
                   {v.commit_message && (
-                    <Typography fontSize={11} color="text.secondary" sx={{ fontStyle: "italic", mt: "2px" }}>
+                    <Typography
+                      fontSize={11}
+                      color="text.secondary"
+                      sx={{ fontStyle: "italic", mt: "2px" }}
+                    >
                       {v.commit_message}
                     </Typography>
                   )}
                   {v.model && (
                     <Box sx={{ display: "flex", alignItems: "center", gap: "4px", mt: "4px" }}>
                       <ProviderIcon provider={v.model.split("/")[0] || ""} size={12} />
-                      <Typography fontSize={11} color="text.secondary">{v.model}</Typography>
+                      <Typography fontSize={11} color="text.secondary">
+                        {v.model}
+                      </Typography>
                     </Box>
                   )}
                   {/* Action buttons: Compare + Add label */}

@@ -198,14 +198,13 @@ export default function EvalsSidebar({
 
   // Build project selector config - always show if we have a change handler
   // This allows users to select a project or create one even when on the projects list page
-  const projectSelectorConfig: ProjectSelectorConfig | undefined =
-    onProjectChange
-      ? {
+  const projectSelectorConfig: ProjectSelectorConfig | undefined = onProjectChange
+    ? {
         currentProject: currentProject || null,
         allProjects,
         onProjectChange,
       }
-      : undefined;
+    : undefined;
 
   return (
     <SidebarShell

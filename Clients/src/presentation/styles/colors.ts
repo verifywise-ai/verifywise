@@ -69,9 +69,18 @@ export const DASHBOARD_COLORS = {
 export const DEADLINE_COLORS = {
   overdue: { color: DASHBOARD_COLORS.overdue, bgColor: DASHBOARD_COLORS.overdueBackground },
   today: { color: DASHBOARD_COLORS.dueToday, bgColor: DASHBOARD_COLORS.dueTodayBackground },
-  thisWeek: { color: DASHBOARD_COLORS.dueThisWeek, bgColor: DASHBOARD_COLORS.dueThisWeekBackground },
-  nextWeek: { color: DASHBOARD_COLORS.dueNextWeek, bgColor: DASHBOARD_COLORS.dueNextWeekBackground },
-  thisMonth: { color: DASHBOARD_COLORS.dueThisMonth, bgColor: DASHBOARD_COLORS.dueThisMonthBackground },
+  thisWeek: {
+    color: DASHBOARD_COLORS.dueThisWeek,
+    bgColor: DASHBOARD_COLORS.dueThisWeekBackground,
+  },
+  nextWeek: {
+    color: DASHBOARD_COLORS.dueNextWeek,
+    bgColor: DASHBOARD_COLORS.dueNextWeekBackground,
+  },
+  thisMonth: {
+    color: DASHBOARD_COLORS.dueThisMonth,
+    bgColor: DASHBOARD_COLORS.dueThisMonthBackground,
+  },
   later: { color: DASHBOARD_COLORS.dueLater, bgColor: DASHBOARD_COLORS.dueLaterBackground },
   noDueDate: { color: DASHBOARD_COLORS.noDueDate, bgColor: DASHBOARD_COLORS.noDueDateBackground },
 } as const;

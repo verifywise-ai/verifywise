@@ -56,7 +56,7 @@ export const policyManagementContent: ArticleContent = {
           description: 'Your organization\'s custom policies. Create, edit, and manage policies that define your AI governance standards.',
         },
         {
-          icon: 'FileText',
+          icon: 'ShieldHalf',
           title: 'Policy templates',
           description: 'Pre-built templates covering common AI governance topics. Use templates as starting points for your own policies.',
         },

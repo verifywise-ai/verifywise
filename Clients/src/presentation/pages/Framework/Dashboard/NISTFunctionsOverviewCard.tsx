@@ -1,12 +1,6 @@
 import { Box, Typography, Stack, CircularProgress } from "@mui/material";
 import { useEffect, useState } from "react";
-import {
-  Shield,
-  Map,
-  Gauge,
-  Settings,
-  ChevronRight,
-} from "lucide-react";
+import { Shield, Map, Gauge, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getStatusColor } from "../../ISO/style";
@@ -46,13 +40,16 @@ interface FunctionData {
 
 // Icon mappings for NIST AI RMF functions
 const NIST_FUNCTION_ICONS: { [key: string]: LucideIcon } = {
-  "govern": Shield,
-  "map": Map,
-  "measure": Gauge,
-  "manage": Settings,
+  govern: Shield,
+  map: Map,
+  measure: Gauge,
+  manage: Settings,
 };
 
-const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctionsOverviewCardProps) => {
+const NISTFunctionsOverviewCard = ({
+  frameworksData,
+  onNavigate,
+}: NISTFunctionsOverviewCardProps) => {
   const [loading, setLoading] = useState(true);
   const [functionsData, setFunctionsData] = useState<FunctionData[]>([]);
 
@@ -67,7 +64,7 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
 
         // Find NIST AI RMF framework
         const nistFramework = frameworksData.find((framework) =>
-          framework.frameworkName.toLowerCase().includes("nist ai rmf")
+          framework.frameworkName.toLowerCase().includes("nist ai rmf"),
         );
 
         if (!nistFramework) {
@@ -181,9 +178,11 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
   // Helper function to render a single function card
   const renderFunctionCard = (func: FunctionData) => {
     const IconComponent = func.icon;
-    const allSubcategories = func.categories.flatMap(cat => cat.subcategories);
-    const implementedCount = allSubcategories.filter(sub => sub.status === "Implemented").length;
-    const assignedCount = allSubcategories.filter(sub => sub.owner !== null && sub.owner !== undefined).length;
+    const allSubcategories = func.categories.flatMap((cat) => cat.subcategories);
+    const implementedCount = allSubcategories.filter((sub) => sub.status === "Implemented").length;
+    const assignedCount = allSubcategories.filter(
+      (sub) => sub.owner !== null && sub.owner !== undefined,
+    ).length;
 
     const handleCardClick = () => {
       if (onNavigate) {
@@ -313,10 +312,10 @@ const NISTFunctionsOverviewCard = ({ frameworksData, onNavigate }: NISTFunctions
   };
 
   // Get functions by type for 2x2 grid layout
-  const governFunc = functionsData.find(f => f.function?.toLowerCase() === "govern");
-  const mapFunc = functionsData.find(f => f.function?.toLowerCase() === "map");
-  const measureFunc = functionsData.find(f => f.function?.toLowerCase() === "measure");
-  const manageFunc = functionsData.find(f => f.function?.toLowerCase() === "manage");
+  const governFunc = functionsData.find((f) => f.function?.toLowerCase() === "govern");
+  const mapFunc = functionsData.find((f) => f.function?.toLowerCase() === "map");
+  const measureFunc = functionsData.find((f) => f.function?.toLowerCase() === "measure");
+  const manageFunc = functionsData.find((f) => f.function?.toLowerCase() === "manage");
 
   return (
     <Stack spacing={0}>

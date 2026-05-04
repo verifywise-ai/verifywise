@@ -74,12 +74,9 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
   }, [fileId]);
 
   // Fetch change history for this file
-  const {
-    data: historyData,
-    isLoading: loadingHistory,
-  } = useEntityChangeHistory(
+  const { data: historyData, isLoading: loadingHistory } = useEntityChangeHistory(
     isOpen ? "file" : undefined,
-    isOpen ? numericFileId : undefined
+    isOpen ? numericFileId : undefined,
   );
 
   const history = useMemo(() => {
@@ -102,10 +99,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
     });
 
     return Object.values(groups).sort((a, b) => {
-      return (
-        new Date(b[0].changed_at).getTime() -
-        new Date(a[0].changed_at).getTime()
-      );
+      return new Date(b[0].changed_at).getTime() - new Date(a[0].changed_at).getTime();
     });
   }, [history]);
 
@@ -239,9 +233,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
               mb: 2,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#B42318" }}>
-              {versionsError}
-            </Typography>
+            <Typography sx={{ fontSize: 12, color: "#B42318" }}>{versionsError}</Typography>
           </Box>
         ) : versions.length === 0 ? (
           <Box
@@ -400,9 +392,10 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
           <Stack spacing={1.5}>
             {groupedHistory.map((group) => {
               const entry = group[0];
-              const userName = entry.user_name && entry.user_surname
-                ? `${entry.user_name} ${entry.user_surname}`
-                : entry.user_email || "Unknown user";
+              const userName =
+                entry.user_name && entry.user_surname
+                  ? `${entry.user_name} ${entry.user_surname}`
+                  : entry.user_email || "Unknown user";
 
               return (
                 <Box
@@ -414,7 +407,12 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                     border: "1px solid #F2F4F7",
                   }}
                 >
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ mb: 0.5 }}
+                  >
                     <Typography sx={{ fontSize: 12, fontWeight: 500, color: "text.secondary" }}>
                       {userName}
                     </Typography>
@@ -457,11 +455,11 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                               {change.old_value}
                             </Typography>
                           )}
-                          {change.old_value && change.old_value !== "-" &&
-                            change.new_value && change.new_value !== "-" && (
-                              <Typography sx={{ fontSize: 10, color: "text.muted" }}>
-                                →
-                              </Typography>
+                          {change.old_value &&
+                            change.old_value !== "-" &&
+                            change.new_value &&
+                            change.new_value !== "-" && (
+                              <Typography sx={{ fontSize: 10, color: "text.muted" }}>→</Typography>
                             )}
                           {change.new_value && change.new_value !== "-" && (
                             <Typography

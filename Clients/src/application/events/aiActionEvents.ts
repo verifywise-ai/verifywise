@@ -13,14 +13,14 @@
  */
 
 export const AI_ACTION_EVENTS = {
-  COMPLETED: 'aiAction:completed',
+  COMPLETED: "aiAction:completed",
 } as const;
 
 export interface AiActionCompletedDetail {
   /** Tool name from the approval payload — e.g. `agent_create_risk`. */
   toolName?: string;
   /** Final approval status. Listeners typically only act on `approved`. */
-  status?: 'approved' | 'rejected';
+  status?: "approved" | "rejected";
 }
 
 /**
@@ -28,9 +28,7 @@ export interface AiActionCompletedDetail {
  * after the approve/reject API call succeeds.
  */
 export function dispatchAiActionCompleted(detail?: AiActionCompletedDetail) {
-  window.dispatchEvent(
-    new CustomEvent(AI_ACTION_EVENTS.COMPLETED, { detail }),
-  );
+  window.dispatchEvent(new CustomEvent(AI_ACTION_EVENTS.COMPLETED, { detail }));
 }
 
 /**

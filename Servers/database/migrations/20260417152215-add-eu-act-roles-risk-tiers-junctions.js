@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Creates the reference tables and category-level junction tables that link
@@ -26,28 +26,38 @@ module.exports = {
     const t = await queryInterface.sequelize.transaction();
     try {
       // 1. Reference tables ------------------------------------------------
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.eu_act_roles (
           id   SERIAL PRIMARY KEY,
           name TEXT UNIQUE NOT NULL
         );
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.eu_act_risk_tiers (
           id   SERIAL PRIMARY KEY,
           name TEXT UNIQUE NOT NULL
         );
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
       // 2. Seed reference values ------------------------------------------
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         INSERT INTO verifywise.eu_act_roles (name) VALUES
           ('Provider'), ('Deployer')
         ON CONFLICT (name) DO NOTHING;
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         INSERT INTO verifywise.eu_act_risk_tiers (name) VALUES
           ('Prohibited'),
           ('High risk'),
@@ -56,10 +66,13 @@ module.exports = {
           ('GPAI'),
           ('General Risk')
         ON CONFLICT (name) DO NOTHING;
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
       // 3. Category-level junction tables ---------------------------------
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.controlcategories_struct_eu__roles (
           control_category_id INTEGER NOT NULL
             REFERENCES verifywise.controlcategories_struct_eu(id) ON DELETE CASCADE,
@@ -67,9 +80,12 @@ module.exports = {
             REFERENCES verifywise.eu_act_roles(id) ON DELETE CASCADE,
           PRIMARY KEY (control_category_id, role_id)
         );
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.controlcategories_struct_eu__risk_tiers (
           control_category_id INTEGER NOT NULL
             REFERENCES verifywise.controlcategories_struct_eu(id) ON DELETE CASCADE,
@@ -77,17 +93,23 @@ module.exports = {
             REFERENCES verifywise.eu_act_risk_tiers(id) ON DELETE CASCADE,
           PRIMARY KEY (control_category_id, risk_tier_id)
         );
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
       // 4. Populate junctions from the ControlCategories struct ------------
-      const { ControlCategories } = require('../../dist/structures/EU-AI-Act/compliance-tracker/controlCategories.struct');
+      const {
+        ControlCategories,
+      } = require("../../dist/structures/EU-AI-Act/compliance-tracker/controlCategories.struct");
 
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks WHERE name = 'EU AI Act' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[eu-act-junctions] EU AI Act framework not found — skipping junction population');
+        console.warn(
+          "[eu-act-junctions] EU AI Act framework not found — skipping junction population",
+        );
         await t.commit();
         return;
       }
@@ -102,7 +124,7 @@ module.exports = {
           {
             transaction: t,
             replacements: { frameworkId: framework.id, order_no: category.order_no },
-          }
+          },
         );
         if (!catRow?.id) continue;
 
@@ -115,7 +137,7 @@ module.exports = {
             {
               transaction: t,
               replacements: { catId: catRow.id, roleName },
-            }
+            },
           );
         }
 
@@ -128,13 +150,13 @@ module.exports = {
             {
               transaction: t,
               replacements: { catId: catRow.id, tierName },
-            }
+            },
           );
         }
       }
 
       await t.commit();
-      console.log('[eu-act-junctions] junction tables created and populated');
+      console.log("[eu-act-junctions] junction tables created and populated");
     } catch (err) {
       await t.rollback();
       throw err;
@@ -142,8 +164,12 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query(`DROP TABLE IF EXISTS verifywise.controlcategories_struct_eu__risk_tiers;`);
-    await queryInterface.sequelize.query(`DROP TABLE IF EXISTS verifywise.controlcategories_struct_eu__roles;`);
+    await queryInterface.sequelize.query(
+      `DROP TABLE IF EXISTS verifywise.controlcategories_struct_eu__risk_tiers;`,
+    );
+    await queryInterface.sequelize.query(
+      `DROP TABLE IF EXISTS verifywise.controlcategories_struct_eu__roles;`,
+    );
     await queryInterface.sequelize.query(`DROP TABLE IF EXISTS verifywise.eu_act_risk_tiers;`);
     await queryInterface.sequelize.query(`DROP TABLE IF EXISTS verifywise.eu_act_roles;`);
   },

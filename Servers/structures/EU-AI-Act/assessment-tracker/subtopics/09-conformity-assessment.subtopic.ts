@@ -15,7 +15,8 @@ export const ConformityAssessment = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization has defined a set of core values that prioritize transparency, fairness, accountability, and ethical considerations in AI development. These values are documented in our AI policy and are overseen by the AI Ethics Committee, which ensures that all AI systems align with these principles throughout their lifecycle."
+        answer:
+          "Our organization has defined a set of core values that prioritize transparency, fairness, accountability, and ethical considerations in AI development. These values are documented in our AI policy and are overseen by the AI Ethics Committee, which ensures that all AI systems align with these principles throughout their lifecycle.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const ConformityAssessment = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our governance framework includes a dedicated AI governance board that reviews all AI projects. It is responsible for assessing risks, ensuring compliance with our organizational values, and conducting regular audits to track the implementation of ethical guidelines. We use a set of predefined metrics to evaluate if the AI systems maintain fairness, accountability, and transparency."
+        answer:
+          "Our governance framework includes a dedicated AI governance board that reviews all AI projects. It is responsible for assessing risks, ensuring compliance with our organizational values, and conducting regular audits to track the implementation of ethical guidelines. We use a set of predefined metrics to evaluate if the AI systems maintain fairness, accountability, and transparency.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const ConformityAssessment = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We have established an annual self-assessment process to ensure that our AI systems remain compliant with certification standards. If any operational changes occur that could affect our certification status, we promptly notify the relevant certifying bodies. This proactive approach helps us maintain the integrity of our AI certifications."
+        answer:
+          "We have established an annual self-assessment process to ensure that our AI systems remain compliant with certification standards. If any operational changes occur that could affect our certification status, we promptly notify the relevant certifying bodies. This proactive approach helps us maintain the integrity of our AI certifications.",
       },
     ],
   },

@@ -11,9 +11,7 @@ export class ClauseStructISO42001Model {
     this.framework_id = data.framework_id;
   }
 
-  static createNewClauseStructISO42001(
-    data: ClauseStructISO42001Model
-  ): ClauseStructISO42001Model {
+  static createNewClauseStructISO42001(data: ClauseStructISO42001Model): ClauseStructISO42001Model {
     return new ClauseStructISO42001Model(data);
   }
 }

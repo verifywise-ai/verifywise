@@ -19,12 +19,7 @@ type VendorRisk = {
   vendor_name: string;
   risk_name: string;
   owner: string;
-  risk_level:
-    | "No risk"
-    | "Low risk"
-    | "Medium risk"
-    | "High risk"
-    | "Very high risk";
+  risk_level: "No risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   review_date: Date;
 };
 ```

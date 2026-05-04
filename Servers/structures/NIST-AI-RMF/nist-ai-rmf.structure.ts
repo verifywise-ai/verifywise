@@ -133,8 +133,7 @@ export const NIST_AI_RMF_Structure = {
         {
           title: "GOVERN",
           index: 5,
-          description:
-            "Processes are in place for robust engagement with relevant AI actors.",
+          description: "Processes are in place for robust engagement with relevant AI actors.",
           subcategories: [
             {
               title: "GOVERN",
@@ -209,8 +208,7 @@ export const NIST_AI_RMF_Structure = {
             {
               title: "MAP",
               index: 5,
-              description:
-                "Organizational risk tolerances are determined and documented.",
+              description: "Organizational risk tolerances are determined and documented.",
             },
             {
               title: "MAP",
@@ -328,14 +326,12 @@ export const NIST_AI_RMF_Structure = {
     {
       title: "MEASURE",
       type: NISTAIMRFFunctionType.MEASURE,
-      description:
-        "This function defines how AI risks and trustworthiness are evaluated.",
+      description: "This function defines how AI risks and trustworthiness are evaluated.",
       categories: [
         {
           title: "MEASURE",
           index: 1,
-          description:
-            "Appropriate methods and metrics are identified and applied.",
+          description: "Appropriate methods and metrics are identified and applied.",
           subcategories: [
             {
               title: "MEASURE",
@@ -360,8 +356,7 @@ export const NIST_AI_RMF_Structure = {
         {
           title: "MEASURE",
           index: 2,
-          description:
-            "AI systems are evaluated for trustworthy characteristics.",
+          description: "AI systems are evaluated for trustworthy characteristics.",
           subcategories: [
             {
               title: "MEASURE",
@@ -446,8 +441,7 @@ export const NIST_AI_RMF_Structure = {
         {
           title: "MEASURE",
           index: 3,
-          description:
-            "Mechanisms for tracking identified AI risks over time are in place.",
+          description: "Mechanisms for tracking identified AI risks over time are in place.",
           subcategories: [
             {
               title: "MEASURE",
@@ -472,8 +466,7 @@ export const NIST_AI_RMF_Structure = {
         {
           title: "MEASURE",
           index: 4,
-          description:
-            "Feedback about efficacy of measurement is gathered and assessed.",
+          description: "Feedback about efficacy of measurement is gathered and assessed.",
           subcategories: [
             {
               title: "MEASURE",
@@ -500,8 +493,7 @@ export const NIST_AI_RMF_Structure = {
     {
       title: "MANAGE",
       type: NISTAIMRFFunctionType.MANAGE,
-      description:
-        "This function specifies how identified risks are addressed.",
+      description: "This function specifies how identified risks are addressed.",
       categories: [
         {
           title: "MANAGE",
@@ -570,8 +562,7 @@ export const NIST_AI_RMF_Structure = {
         {
           title: "MANAGE",
           index: 3,
-          description:
-            "AI risks and benefits from third-party entities are managed.",
+          description: "AI risks and benefits from third-party entities are managed.",
           subcategories: [
             {
               title: "MANAGE",

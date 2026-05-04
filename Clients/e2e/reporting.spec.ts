@@ -7,14 +7,10 @@ test.describe("Reporting", () => {
     await expect(page).toHaveURL(/\/reporting/);
 
     // Page should show reporting-related content
-    await expect(
-      page.getByText(/report/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/report/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/reporting");
     await page.waitForLoadState("domcontentloaded");
 
@@ -37,9 +33,7 @@ test.describe("Reporting", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("report options or empty state is visible", async ({
-    authedPage: page,
-  }) => {
+  test("report options or empty state is visible", async ({ authedPage: page }) => {
     await page.goto("/reporting");
 
     const content = page
@@ -61,7 +55,12 @@ test.describe("Reporting", () => {
       .or(page.getByRole("button", { name: /generate.*report/i }))
       .or(page.getByRole("button", { name: /create.*report/i }));
 
-    if (!(await generateBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await generateBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -87,7 +86,12 @@ test.describe("Reporting", () => {
       .locator('[data-joyride-id="generate-report-button"]')
       .or(page.getByRole("button", { name: /generate.*report/i }));
 
-    if (!(await generateBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await generateBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -96,23 +100,32 @@ test.describe("Reporting", () => {
     await page.waitForTimeout(500);
 
     // Check for key form elements
-    const projectSelect = page
-      .getByText(/use case/i)
-      .or(page.getByText(/project/i));
-    const formatSelect = page
-      .getByText(/format/i)
-      .or(page.getByText(/pdf/i));
-    const reportNameField = page
-      .getByText(/report name/i)
-      .or(page.getByPlaceholder(/name/i));
+    const projectSelect = page.getByText(/use case/i).or(page.getByText(/project/i));
+    const formatSelect = page.getByText(/format/i).or(page.getByText(/pdf/i));
+    const reportNameField = page.getByText(/report name/i).or(page.getByPlaceholder(/name/i));
 
-    if (await projectSelect.first().isVisible().catch(() => false)) {
+    if (
+      await projectSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(projectSelect.first()).toBeVisible();
     }
-    if (await formatSelect.first().isVisible().catch(() => false)) {
+    if (
+      await formatSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(formatSelect.first()).toBeVisible();
     }
-    if (await reportNameField.first().isVisible().catch(() => false)) {
+    if (
+      await reportNameField
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(reportNameField.first()).toBeVisible();
     }
 
@@ -132,17 +145,12 @@ test.describe("Reporting", () => {
     await expect(reportsList.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("export menu on report row offers download", async ({
-    authedPage: page,
-  }) => {
+  test("export menu on report row offers download", async ({ authedPage: page }) => {
     await page.goto("/reporting");
     await page.waitForTimeout(2000);
 
     // Look for existing report rows
-    const reportRow = page
-      .getByRole("row")
-      .nth(1)
-      .or(page.locator("tr").nth(1));
+    const reportRow = page.getByRole("row").nth(1).or(page.locator("tr").nth(1));
 
     if (!(await reportRow.isVisible().catch(() => false))) {
       test.skip();
@@ -155,7 +163,12 @@ test.describe("Reporting", () => {
       .or(page.locator('[aria-label*="download" i]'))
       .or(page.locator('[aria-label*="export" i]'));
 
-    if (await downloadBtn.first().isVisible().catch(() => false)) {
+    if (
+      await downloadBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       // Just verify it exists, don't actually download
       await expect(downloadBtn.first()).toBeVisible();
     }

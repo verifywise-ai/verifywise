@@ -234,12 +234,7 @@ export const validateSecurityAssessment = (value: any): ValidationResult => {
  * Validates model inventory status field
  */
 export const validateModelInventoryStatus = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "Model inventory status",
-    MODEL_INVENTORY_STATUS_ENUM,
-    true
-  );
+  return validateEnum(value, "Model inventory status", MODEL_INVENTORY_STATUS_ENUM, true);
 };
 
 /**
@@ -312,9 +307,7 @@ export const updateModelInventorySchema = {
 /**
  * Validates a complete model inventory object for creation
  */
-export const validateCompleteModelInventory = (
-  data: any
-): ValidationError[] => {
+export const validateCompleteModelInventory = (data: any): ValidationError[] => {
   return validateSchema(data, createModelInventorySchema);
 };
 
@@ -328,9 +321,7 @@ export const validateUpdateModelInventory = (data: any): ValidationError[] => {
 /**
  * Business rule validation for model inventory creation
  */
-export const validateModelInventoryCreationBusinessRules = (
-  data: any
-): ValidationError[] => {
+export const validateModelInventoryCreationBusinessRules = (data: any): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Validate version format (should follow semantic versioning)
@@ -349,14 +340,7 @@ export const validateModelInventoryCreationBusinessRules = (
   // Validate provider and model consistency
   if (data.provider && data.model) {
     const providerModelCombinations = {
-      OpenAI: [
-        "gpt-3.5-turbo",
-        "gpt-4",
-        "gpt-4-turbo",
-        "dall-e",
-        "whisper",
-        "text-embedding",
-      ],
+      OpenAI: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "dall-e", "whisper", "text-embedding"],
       Anthropic: ["claude-3", "claude-2", "claude-instant"],
       Google: ["gemini", "palm", "bard", "vertex-ai"],
       Microsoft: ["copilot", "azure-openai"],
@@ -368,14 +352,10 @@ export const validateModelInventoryCreationBusinessRules = (
     };
 
     const validModels =
-      providerModelCombinations[
-        data.provider as keyof typeof providerModelCombinations
-      ];
+      providerModelCombinations[data.provider as keyof typeof providerModelCombinations];
     if (
       validModels &&
-      !validModels.some((validModel) =>
-        data.model.toLowerCase().includes(validModel.toLowerCase())
-      )
+      !validModels.some((validModel) => data.model.toLowerCase().includes(validModel.toLowerCase()))
     ) {
       errors.push({
         field: "model",
@@ -400,11 +380,7 @@ export const validateModelInventoryCreationBusinessRules = (
   // Security assessment is no longer required for any status
 
   // Validate capabilities selection
-  if (
-    data.capabilities &&
-    Array.isArray(data.capabilities) &&
-    data.capabilities.length > 0
-  ) {
+  if (data.capabilities && Array.isArray(data.capabilities) && data.capabilities.length > 0) {
     // Check for logical capability combinations
     const hasVision = data.capabilities.includes("Vision");
     const hasMultimodal = data.capabilities.includes("Multimodal");
@@ -432,18 +408,14 @@ export const validateModelInventoryCreationBusinessRules = (
       if (modalityCount < 2) {
         errors.push({
           field: "capabilities",
-          message:
-            "Multimodal models should have capabilities for at least 2 different modalities",
+          message: "Multimodal models should have capabilities for at least 2 different modalities",
           code: "INSUFFICIENT_MULTIMODAL_CAPABILITIES",
         });
       }
     }
 
     // Validate common capability combinations
-    if (
-      data.capabilities.includes("Object Detection") &&
-      !data.capabilities.includes("Vision")
-    ) {
+    if (data.capabilities.includes("Object Detection") && !data.capabilities.includes("Vision")) {
       errors.push({
         field: "capabilities",
         message: "Object Detection requires Vision capability",
@@ -462,10 +434,7 @@ export const validateModelInventoryCreationBusinessRules = (
       });
     }
 
-    if (
-      data.capabilities.includes("Speech Recognition") &&
-      !data.capabilities.includes("Audio")
-    ) {
+    if (data.capabilities.includes("Speech Recognition") && !data.capabilities.includes("Audio")) {
       errors.push({
         field: "capabilities",
         message: "Speech Recognition requires Audio capability",
@@ -473,10 +442,7 @@ export const validateModelInventoryCreationBusinessRules = (
       });
     }
 
-    if (
-      data.capabilities.includes("Text-to-Speech") &&
-      !data.capabilities.includes("Audio")
-    ) {
+    if (data.capabilities.includes("Text-to-Speech") && !data.capabilities.includes("Audio")) {
       errors.push({
         field: "capabilities",
         message: "Text-to-Speech requires Audio capability",
@@ -503,7 +469,7 @@ export const validateModelInventoryCreationBusinessRules = (
       "Forecasting",
     ];
     const hasPrimaryCapability = data.capabilities.some((cap: string) =>
-      primaryCapabilities.includes(cap)
+      primaryCapabilities.includes(cap),
     );
     if (!hasPrimaryCapability) {
       errors.push({
@@ -536,7 +502,7 @@ export const validateModelInventoryCreationBusinessRules = (
  */
 export const validateModelInventoryUpdateBusinessRules = (
   data: any,
-  existingData?: any
+  existingData?: any,
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -582,7 +548,7 @@ export const validateModelInventoryUpdateBusinessRules = (
     }
 
     const invalidTransition = invalidTransitions.find(
-      (t) => t.from === existingData.status && t.to === data.status
+      (t) => t.from === existingData.status && t.to === data.status,
     );
 
     if (invalidTransition) {
@@ -618,8 +584,7 @@ export const validateModelInventoryUpdateBusinessRules = (
     ) {
       errors.push({
         field: "is_demo",
-        message:
-          "Cannot mark approved model as demo without changing status first",
+        message: "Cannot mark approved model as demo without changing status first",
         code: "APPROVED_TO_DEMO_INVALID",
       });
     }
@@ -631,9 +596,7 @@ export const validateModelInventoryUpdateBusinessRules = (
 /**
  * Complete validation for model inventory creation with business rules
  */
-export const validateCompleteModelInventoryCreation = (
-  data: any
-): ValidationError[] => {
+export const validateCompleteModelInventoryCreation = (data: any): ValidationError[] => {
   const validationErrors = validateCompleteModelInventory(data);
   const businessErrors = validateModelInventoryCreationBusinessRules(data);
 
@@ -645,13 +608,10 @@ export const validateCompleteModelInventoryCreation = (
  */
 export const validateCompleteModelInventoryUpdate = (
   data: any,
-  existingData?: any
+  existingData?: any,
 ): ValidationError[] => {
   const validationErrors = validateUpdateModelInventory(data);
-  const businessErrors = validateModelInventoryUpdateBusinessRules(
-    data,
-    existingData
-  );
+  const businessErrors = validateModelInventoryUpdateBusinessRules(data, existingData);
 
   return [...validationErrors, ...businessErrors];
 };

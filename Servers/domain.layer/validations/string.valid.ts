@@ -11,7 +11,7 @@ export function stringValidation(
   value: string | null | undefined,
   minLength?: number,
   maxLength?: number,
-  allowEmpty = false
+  allowEmpty = false,
 ): boolean {
   if (value === null || value === undefined) {
     return allowEmpty;
@@ -26,7 +26,7 @@ export function stringValidation(
   }
 
   const length = value.length;
-  
+
   if (minLength !== undefined && length < minLength) {
     return false;
   }

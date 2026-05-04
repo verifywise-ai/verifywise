@@ -8,7 +8,7 @@ export async function getAllRoles({
   const response = await apiServices.get("/roles", {
     signal,
   });
-  return  response.data
+  return response.data;
 }
 
 export async function getRoleById({
@@ -21,34 +21,20 @@ export async function getRoleById({
   const response = await apiServices.get(`/roles/${id}`, {
     signal,
   });
-  return response.data
+  return response.data;
 }
 
-export async function createRole({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createRole({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/roles", body);
-  return response
+  return response;
 }
 
-export async function updateRole({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateRole({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.put(`/roles/${id}`, body);
-  return response
+  return response;
 }
 
-export async function deleteRole({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteRole({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/roles/${id}`);
-  return response
+  return response;
 }

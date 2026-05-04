@@ -45,8 +45,7 @@ export const getAllAutomations = () => automationsService.getAll();
 /**
  * Get a single automation by ID
  */
-export const getAutomation = (id: string | number) =>
-  automationsService.getById(id);
+export const getAutomation = (id: string | number) => automationsService.getById(id);
 
 /**
  * Create a new automation
@@ -57,16 +56,13 @@ export const createAutomation = (payload: CreateAutomationPayload) =>
 /**
  * Update an existing automation
  */
-export const updateAutomation = (
-  id: string | number,
-  payload: UpdateAutomationPayload
-) => automationsService.update(id, payload);
+export const updateAutomation = (id: string | number, payload: UpdateAutomationPayload) =>
+  automationsService.update(id, payload);
 
 /**
  * Delete an automation
  */
-export const deleteAutomation = (id: string | number) =>
-  automationsService.delete(id);
+export const deleteAutomation = (id: string | number) => automationsService.delete(id);
 
 // ==================== Triggers ====================
 
@@ -90,7 +86,7 @@ export const getActionsByTriggerId = (triggerId: number) =>
  */
 export const getAutomationHistory = (
   automationId: string | number,
-  params?: { limit?: number; offset?: number }
+  params?: { limit?: number; offset?: number },
 ) => automationsService.getHistory(automationId, params);
 
 /**

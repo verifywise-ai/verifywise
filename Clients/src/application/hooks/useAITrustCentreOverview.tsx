@@ -89,24 +89,21 @@ export const useAITrustCentreOverview = (): UseAITrustCentreOverviewReturn => {
     }
   }, []);
 
-  const updateOverview = useCallback(
-    async (overviewData: Partial<AITrustCentreOverviewData>) => {
-      setLoading(true);
-      setError(null);
-      try {
-        await updateAITrustCentreOverview(overviewData);
-        // Don't refetch immediately - let the component handle the state update
-        // await fetchOverview();
-      } catch (err: any) {
-        setError(err.message || "Failed to update AI Trust Centre overview");
-        console.error("Error updating AI Trust Centre overview:", err);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const updateOverview = useCallback(async (overviewData: Partial<AITrustCentreOverviewData>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await updateAITrustCentreOverview(overviewData);
+      // Don't refetch immediately - let the component handle the state update
+      // await fetchOverview();
+    } catch (err: any) {
+      setError(err.message || "Failed to update AI Trust Centre overview");
+      console.error("Error updating AI Trust Centre overview:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Fetch data on mount
   useEffect(() => {

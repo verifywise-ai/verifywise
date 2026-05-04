@@ -29,12 +29,9 @@ export function renderDeleteRiskDetailedPreview(
   const name = currentRisk.risk_name ?? `#${input.risk_id}`;
   const qualifiers: string[] = [];
   if (currentRisk.severity) qualifiers.push(currentRisk.severity);
-  if (currentRisk.mitigation_status)
-    qualifiers.push(currentRisk.mitigation_status);
+  if (currentRisk.mitigation_status) qualifiers.push(currentRisk.mitigation_status);
 
-  const qualifierText = qualifiers.length
-    ? ` (${qualifiers.join("; ")})`
-    : "";
+  const qualifierText = qualifiers.length ? ` (${qualifiers.join("; ")})` : "";
 
   const reasonSuffix = input.reason ? ` — reason: "${input.reason}"` : "";
 

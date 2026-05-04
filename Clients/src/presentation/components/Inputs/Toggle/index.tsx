@@ -7,13 +7,7 @@ import { getToggleStyles } from "./styles";
  */
 function Toggle(props: SwitchProps) {
   const theme = useTheme();
-  return (
-    <Switch
-      disableRipple
-      {...props}
-      sx={getToggleStyles(theme)}
-    />
-  );
+  return <Switch disableRipple {...props} sx={getToggleStyles(theme)} />;
 }
 
 export default Toggle;

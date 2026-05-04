@@ -47,39 +47,39 @@ paths:
                   description: File source label
                   default: File Manager
       responses:
-        '201':
+        "201":
           description: File uploaded successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/FileUploadResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '413':
+                        $ref: "#/components/schemas/FileUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
           description: File size exceeds 30MB
-        '415':
+        "415":
           description: Unsupported file type
     get:
       tags: [File Manager]
       summary: List all files
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
       responses:
-        '200':
+        "200":
           description: Paginated file list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/FileListResponse'
+                        $ref: "#/components/schemas/FileListResponse"
 
   /file-manager/search:
     get:
@@ -92,36 +92,36 @@ paths:
           schema:
             type: string
           description: Search query
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
       responses:
-        '200':
+        "200":
           description: Search results with snippets
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/FileSearchResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                        $ref: "#/components/schemas/FileSearchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /file-manager/with-metadata:
     get:
       tags: [File Manager]
       summary: List files with full metadata
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
       responses:
-        '200':
+        "200":
           description: Files with metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /file-manager/highlighted:
     get:
@@ -139,16 +139,16 @@ paths:
             type: integer
             default: 7
       responses:
-        '200':
+        "200":
           description: Categorized file IDs
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/HighlightedFiles'
+                        $ref: "#/components/schemas/HighlightedFiles"
 
   /file-manager/{id}:
     get:
@@ -156,113 +156,113 @@ paths:
       summary: Download a file
       description: Admin only. Returns file binary with download headers.
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: File binary content
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [File Manager]
       summary: Delete a file
       description: Admin, Reviewer, or Editor only.
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: File deleted
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /file-manager/{id}/metadata:
     get:
       tags: [File Manager]
       summary: Get file metadata
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: File metadata
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/FileMetadata'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/FileMetadata"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       tags: [File Manager]
       summary: Update file metadata
       description: Admin, Reviewer, or Editor only.
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateFileMetadataRequest'
+              $ref: "#/components/schemas/UpdateFileMetadataRequest"
       responses:
-        '200':
+        "200":
           description: Updated metadata
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/FileMetadata'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/FileMetadata"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /file-manager/{id}/versions:
     get:
       tags: [File Manager]
       summary: Get file version history
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: List of file versions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /file-manager/{id}/preview:
     get:
       tags: [File Manager]
       summary: Preview file content (limited to 5MB)
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: File content for inline display
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '413':
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
           description: File too large for preview
 
   # ===========================================================================
@@ -273,18 +273,18 @@ paths:
       tags: [Virtual Folders]
       summary: Get all folders (flat list with file counts)
       responses:
-        '200':
+        "200":
           description: List of folders
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/VirtualFolder'
+                          $ref: "#/components/schemas/VirtualFolder"
     post:
       tags: [Virtual Folders]
       summary: Create a new folder
@@ -294,23 +294,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateFolderRequest'
+              $ref: "#/components/schemas/CreateFolderRequest"
       responses:
-        '201':
+        "201":
           description: Folder created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/VirtualFolder'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
+                        $ref: "#/components/schemas/VirtualFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
           description: Duplicate folder name in same parent
 
   /virtual-folders/tree:
@@ -318,159 +318,159 @@ paths:
       tags: [Virtual Folders]
       summary: Get folder tree (hierarchical structure)
       responses:
-        '200':
+        "200":
           description: Hierarchical folder tree
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /virtual-folders/uncategorized:
     get:
       tags: [Virtual Folders]
       summary: Get files not assigned to any folder
       responses:
-        '200':
+        "200":
           description: List of uncategorized files
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /virtual-folders/{id}:
     get:
       tags: [Virtual Folders]
       summary: Get folder by ID
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       responses:
-        '200':
+        "200":
           description: Folder details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/VirtualFolder'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/VirtualFolder"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       tags: [Virtual Folders]
       summary: Update a folder
       description: Admin or Editor only. System folders cannot be modified.
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateFolderRequest'
+              $ref: "#/components/schemas/UpdateFolderRequest"
       responses:
-        '200':
+        "200":
           description: Folder updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/VirtualFolder'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
+                        $ref: "#/components/schemas/VirtualFolder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
           description: Duplicate folder name
     delete:
       tags: [Virtual Folders]
       summary: Delete a folder (cascades children and mappings)
       description: Admin or Editor only. System folders cannot be deleted.
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       responses:
-        '200':
+        "200":
           description: Folder deleted
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: object
                         properties:
                           deleted:
                             type: boolean
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /virtual-folders/{id}/path:
     get:
       tags: [Virtual Folders]
       summary: Get folder breadcrumb path (root to folder)
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       responses:
-        '200':
+        "200":
           description: Array of folder path segments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /virtual-folders/{id}/files:
     get:
       tags: [Virtual Folders]
       summary: Get files in a folder
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       responses:
-        '200':
+        "200":
           description: List of files in the folder
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [Virtual Folders]
       summary: Assign files to a folder
       description: Admin or Editor only.
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignFilesRequest'
+              $ref: "#/components/schemas/AssignFilesRequest"
       responses:
-        '200':
+        "200":
           description: Files assigned
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: object
                         properties:
                           assigned:
                             type: integer
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /virtual-folders/{id}/files/{fileId}:
     delete:
@@ -478,20 +478,20 @@ paths:
       summary: Remove a file from a folder
       description: Admin or Editor only.
       parameters:
-        - $ref: '#/components/parameters/FolderId'
+        - $ref: "#/components/parameters/FolderId"
         - name: fileId
           in: path
           required: true
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: File removed from folder
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: object
@@ -504,20 +504,20 @@ paths:
       tags: [Virtual Folders]
       summary: Get all folders a file belongs to
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       responses:
-        '200':
+        "200":
           description: List of folders for the file
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
     patch:
       tags: [Virtual Folders]
       summary: Bulk update file folder assignments
       description: Admin or Editor only.
       parameters:
-        - $ref: '#/components/parameters/FileId'
+        - $ref: "#/components/parameters/FileId"
       requestBody:
         required: true
         content:
@@ -532,12 +532,12 @@ paths:
                     type: integer
                   description: Complete set of folder IDs to assign (replaces existing)
       responses:
-        '200':
+        "200":
           description: Updated folder assignments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   # ===========================================================================
   # PLUGINS
@@ -553,18 +553,18 @@ paths:
             type: string
           description: Filter by category
       responses:
-        '200':
+        "200":
           description: List of plugins
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Plugin'
+                          $ref: "#/components/schemas/Plugin"
 
   /plugins/marketplace/search:
     get:
@@ -578,20 +578,20 @@ paths:
             type: string
           description: Search query
       responses:
-        '200':
+        "200":
           description: Matching plugins
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Plugin'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                          $ref: "#/components/schemas/Plugin"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /plugins/marketplace/{key}:
     get:
@@ -603,33 +603,33 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^[a-z0-9-]+$'
+            pattern: "^[a-z0-9-]+$"
       responses:
-        '200':
+        "200":
           description: Plugin details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/Plugin'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/Plugin"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /plugins/categories:
     get:
       tags: [Plugins]
       summary: Get plugin categories
       responses:
-        '200':
+        "200":
           description: List of categories
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
@@ -650,39 +650,39 @@ paths:
               properties:
                 pluginKey:
                   type: string
-                  pattern: '^[a-z0-9-]+$'
+                  pattern: "^[a-z0-9-]+$"
                   description: Plugin key to install
       responses:
-        '201':
+        "201":
           description: Plugin installed
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PluginInstallation'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                        $ref: "#/components/schemas/PluginInstallation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /plugins/installations:
     get:
       tags: [Plugins]
       summary: Get installed plugins for organization
       responses:
-        '200':
+        "200":
           description: List of installed plugins
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/PluginInstallation'
+                          $ref: "#/components/schemas/PluginInstallation"
 
   /plugins/installations/{id}:
     delete:
@@ -696,10 +696,10 @@ paths:
             type: integer
           description: Installation ID
       responses:
-        '200':
+        "200":
           description: Plugin uninstalled
-        '403':
-          $ref: '#/components/responses/Forbidden'
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /plugins/installations/{id}/configuration:
     put:
@@ -725,16 +725,16 @@ paths:
                   additionalProperties: true
                   description: Plugin-specific configuration key-value pairs
       responses:
-        '200':
+        "200":
           description: Configuration updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /plugins/{key}/test-connection:
     post:
@@ -746,7 +746,7 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^[a-z0-9-]+$'
+            pattern: "^[a-z0-9-]+$"
       requestBody:
         required: true
         content:
@@ -759,16 +759,16 @@ paths:
                   type: object
                   additionalProperties: true
       responses:
-        '200':
+        "200":
           description: Connection test result
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ConnectionTestResult'
+                        $ref: "#/components/schemas/ConnectionTestResult"
 
   # ===========================================================================
   # SHADOW AI
@@ -787,36 +787,36 @@ paths:
                   type: string
                   description: Optional label for the key
       responses:
-        '201':
+        "201":
           description: API key created (full key shown only once)
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ApiKeyCreateResponse'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                        $ref: "#/components/schemas/ApiKeyCreateResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     get:
       tags: [Shadow AI - API Keys]
       summary: List all API keys (Admin only)
       responses:
-        '200':
+        "200":
           description: List of API keys (no full key values)
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/ApiKeyRecord'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                          $ref: "#/components/schemas/ApiKeyRecord"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /shadow-ai/api-keys/{id}:
     delete:
@@ -829,12 +829,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Key revoked
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/api-keys/{id}/permanent:
     delete:
@@ -847,89 +847,89 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Key permanently deleted
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/insights/summary:
     get:
       tags: [Shadow AI - Insights]
       summary: Get insights summary
       parameters:
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
       responses:
-        '200':
+        "200":
           description: Summary statistics
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/InsightsSummary'
+                        $ref: "#/components/schemas/InsightsSummary"
 
   /shadow-ai/insights/tools-by-events:
     get:
       tags: [Shadow AI - Insights]
       summary: Get tools ranked by event count
       parameters:
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
         - name: limit
           in: query
           schema:
             type: integer
             default: 6
       responses:
-        '200':
+        "200":
           description: Tools by events
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/insights/tools-by-users:
     get:
       tags: [Shadow AI - Insights]
       summary: Get tools ranked by unique user count
       parameters:
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
         - name: limit
           in: query
           schema:
             type: integer
             default: 6
       responses:
-        '200':
+        "200":
           description: Tools by users
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/insights/users-by-department:
     get:
       tags: [Shadow AI - Insights]
       summary: Get user counts by department
       parameters:
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
       responses:
-        '200':
+        "200":
           description: Users by department
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/insights/trend:
     get:
       tags: [Shadow AI - Insights]
       summary: Get usage trend data
       parameters:
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
         - name: granularity
           in: query
           schema:
@@ -937,19 +937,19 @@ paths:
             enum: [daily, weekly, monthly]
             default: daily
       responses:
-        '200':
+        "200":
           description: Trend data points
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/users:
     get:
       tags: [Shadow AI - Users]
       summary: Get user activity list
       parameters:
-        - $ref: '#/components/parameters/Page'
+        - $ref: "#/components/parameters/Page"
         - name: limit
           in: query
           schema:
@@ -966,12 +966,12 @@ paths:
             type: string
           description: Filter by department
       responses:
-        '200':
+        "200":
           description: Paginated user activity
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/users/{email}/activity:
     get:
@@ -984,30 +984,30 @@ paths:
           schema:
             type: string
             format: email
-        - $ref: '#/components/parameters/Period'
+        - $ref: "#/components/parameters/Period"
       responses:
-        '200':
+        "200":
           description: User detail with tool usage
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/UserDetail'
+                        $ref: "#/components/schemas/UserDetail"
 
   /shadow-ai/departments:
     get:
       tags: [Shadow AI - Users]
       summary: Get department activity summary
       responses:
-        '200':
+        "200":
           description: Department activity data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/tools:
     get:
@@ -1017,24 +1017,24 @@ paths:
         - name: status
           in: query
           schema:
-            $ref: '#/components/schemas/ShadowAiToolStatus'
+            $ref: "#/components/schemas/ShadowAiToolStatus"
         - name: sort
           in: query
           schema:
             type: string
-        - $ref: '#/components/parameters/Page'
+        - $ref: "#/components/parameters/Page"
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
       responses:
-        '200':
+        "200":
           description: Paginated tool list
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/tools/{id}:
     get:
@@ -1047,18 +1047,18 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Tool details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ShadowAiToolDetail'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/ShadowAiToolDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/tools/{id}/status:
     patch:
@@ -1079,16 +1079,16 @@ paths:
               required: [status]
               properties:
                 status:
-                  $ref: '#/components/schemas/ShadowAiToolStatus'
+                  $ref: "#/components/schemas/ShadowAiToolStatus"
       responses:
-        '200':
+        "200":
           description: Status updated
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/tools/{id}/start-governance:
     post:
@@ -1106,42 +1106,42 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StartGovernanceRequest'
+              $ref: "#/components/schemas/StartGovernanceRequest"
       responses:
-        '201':
+        "201":
           description: Governance started
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/StartGovernanceResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/StartGovernanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/rules:
     get:
       tags: [Shadow AI - Rules]
       summary: Get all rules
       responses:
-        '200':
+        "200":
           description: List of rules
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/ShadowAiRule'
+                          $ref: "#/components/schemas/ShadowAiRule"
     post:
       tags: [Shadow AI - Rules]
       summary: Create a rule (Admin/Editor only)
@@ -1150,29 +1150,29 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleRequest'
+              $ref: "#/components/schemas/CreateRuleRequest"
       responses:
-        '201':
+        "201":
           description: Rule created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ShadowAiRule'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                        $ref: "#/components/schemas/ShadowAiRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /shadow-ai/rules/alert-history:
     get:
       tags: [Shadow AI - Rules]
       summary: Get alert history
       parameters:
-        - $ref: '#/components/parameters/Page'
+        - $ref: "#/components/parameters/Page"
         - name: limit
           in: query
           schema:
@@ -1184,12 +1184,12 @@ paths:
             type: integer
           description: Filter by rule ID
       responses:
-        '200':
+        "200":
           description: Paginated alert history
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
 
   /shadow-ai/rules/{id}:
     patch:
@@ -1206,22 +1206,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRuleRequest'
+              $ref: "#/components/schemas/UpdateRuleRequest"
       responses:
-        '200':
+        "200":
           description: Rule updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ShadowAiRule'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/ShadowAiRule"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [Shadow AI - Rules]
       summary: Delete a rule (Admin/Editor only)
@@ -1232,32 +1232,32 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Rule deleted
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/config/syslog:
     get:
       tags: [Shadow AI - Configuration]
       summary: Get syslog configurations (Admin only)
       responses:
-        '200':
+        "200":
           description: Syslog configs
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/SyslogConfig'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                          $ref: "#/components/schemas/SyslogConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
       tags: [Shadow AI - Configuration]
       summary: Create syslog configuration (Admin only)
@@ -1266,22 +1266,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSyslogConfigRequest'
+              $ref: "#/components/schemas/CreateSyslogConfigRequest"
       responses:
-        '201':
+        "201":
           description: Config created
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/SyslogConfig'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                        $ref: "#/components/schemas/SyslogConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /shadow-ai/config/syslog/{id}:
     patch:
@@ -1297,24 +1297,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateSyslogConfigRequest'
+              $ref: "#/components/schemas/UpdateSyslogConfigRequest"
       responses:
-        '200':
+        "200":
           description: Config updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/SyslogConfig'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/SyslogConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [Shadow AI - Configuration]
       summary: Delete syslog configuration (Admin only)
@@ -1325,28 +1325,28 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Config deleted
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/settings:
     get:
       tags: [Shadow AI - Configuration]
       summary: Get settings (rate limiting & data retention)
       responses:
-        '200':
+        "200":
           description: Current settings
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ShadowAiSettings'
+                        $ref: "#/components/schemas/ShadowAiSettings"
     patch:
       tags: [Shadow AI - Configuration]
       summary: Update settings (Admin only)
@@ -1355,20 +1355,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateSettingsRequest'
+              $ref: "#/components/schemas/UpdateSettingsRequest"
       responses:
-        '200':
+        "200":
           description: Settings updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/ShadowAiSettings'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                        $ref: "#/components/schemas/ShadowAiSettings"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   # ===========================================================================
   # POST-MARKET MONITORING
@@ -1384,18 +1384,18 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: PMM configuration
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMConfig'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/PMMConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/config:
     post:
@@ -1406,21 +1406,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMConfigCreateRequest'
+              $ref: "#/components/schemas/PMMConfigCreateRequest"
       responses:
-        '201':
+        "201":
           description: Config created with default questions
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMConfig'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
+                        $ref: "#/components/schemas/PMMConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
           description: Configuration already exists for this project
 
   /pmm/config/{configId}:
@@ -1438,20 +1438,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMConfigUpdateRequest'
+              $ref: "#/components/schemas/PMMConfigUpdateRequest"
       responses:
-        '200':
+        "200":
           description: Config updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMConfig'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/PMMConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [Post-Market Monitoring]
       summary: Delete PMM config
@@ -1462,10 +1462,10 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Config deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/config/{configId}/questions:
     get:
@@ -1478,18 +1478,18 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: List of questions
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/PMMQuestion'
+                          $ref: "#/components/schemas/PMMQuestion"
     post:
       tags: [Post-Market Monitoring]
       summary: Add a question to config
@@ -1504,38 +1504,38 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMQuestionCreate'
+              $ref: "#/components/schemas/PMMQuestionCreate"
       responses:
-        '201':
+        "201":
           description: Question added
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMQuestion'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                        $ref: "#/components/schemas/PMMQuestion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /pmm/org/questions:
     get:
       tags: [Post-Market Monitoring]
       summary: Get global organization questions (config_id = null)
       responses:
-        '200':
+        "200":
           description: Organization-level questions
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/PMMQuestion'
+                          $ref: "#/components/schemas/PMMQuestion"
 
   /pmm/questions/{questionId}:
     put:
@@ -1552,22 +1552,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMQuestionUpdate'
+              $ref: "#/components/schemas/PMMQuestionUpdate"
       responses:
-        '200':
+        "200":
           description: Question updated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMQuestion'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/PMMQuestion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [Post-Market Monitoring]
       summary: Delete a question
@@ -1578,10 +1578,10 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Question deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/questions/reorder:
     post:
@@ -1606,10 +1606,10 @@ paths:
                       display_order:
                         type: integer
       responses:
-        '200':
+        "200":
           description: Questions reordered
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /pmm/active-cycle/{projectId}:
     get:
@@ -1622,17 +1622,17 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Active cycle details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMCycle'
-        '404':
+                        $ref: "#/components/schemas/PMMCycle"
+        "404":
           description: No active monitoring cycle
 
   /pmm/cycles/{cycleId}:
@@ -1646,18 +1646,18 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Cycle details
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMCycle'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/PMMCycle"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/cycles/{cycleId}/responses:
     get:
@@ -1670,20 +1670,20 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: List of responses
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/PMMResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                          $ref: "#/components/schemas/PMMResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [Post-Market Monitoring]
       summary: Save responses (partial save)
@@ -1698,19 +1698,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMSaveResponsesRequest'
+              $ref: "#/components/schemas/PMMSaveResponsesRequest"
       responses:
-        '200':
+        "200":
           description: Responses saved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
           description: Cycle is already completed
 
   /pmm/cycles/{cycleId}/submit:
@@ -1727,21 +1727,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PMMSaveResponsesRequest'
+              $ref: "#/components/schemas/PMMSaveResponsesRequest"
       responses:
-        '200':
+        "200":
           description: Cycle submitted and report generated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMSubmitCycleResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
+                        $ref: "#/components/schemas/PMMSubmitCycleResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
           description: Cycle is already completed
 
   /pmm/cycles/{cycleId}/flag:
@@ -1767,12 +1767,12 @@ paths:
                 response_value:
                   type: string
       responses:
-        '200':
+        "200":
           description: Concern flagged
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/cycles/{cycleId}/reassign:
     post:
@@ -1795,12 +1795,12 @@ paths:
                 stakeholder_id:
                   type: integer
       responses:
-        '200':
+        "200":
           description: Stakeholder reassigned
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/reports:
     get:
@@ -1830,7 +1830,7 @@ paths:
           schema:
             type: boolean
             default: false
-        - $ref: '#/components/parameters/Page'
+        - $ref: "#/components/parameters/Page"
         - name: limit
           in: query
           schema:
@@ -1838,16 +1838,16 @@ paths:
             default: 10
             maximum: 100
       responses:
-        '200':
+        "200":
           description: Paginated reports
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMReportsResponse'
+                        $ref: "#/components/schemas/PMMReportsResponse"
 
   /pmm/reports/{reportId}/download:
     get:
@@ -1860,10 +1860,10 @@ paths:
           schema:
             type: integer
       responses:
-        '302':
+        "302":
           description: Redirect to file download endpoint
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /pmm/projects/{projectId}/start-cycle:
     post:
@@ -1876,20 +1876,20 @@ paths:
           schema:
             type: integer
       responses:
-        '201':
+        "201":
           description: New cycle started
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: '#/components/schemas/PMMCycle'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                        $ref: "#/components/schemas/PMMCycle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
   securitySchemes:
@@ -1941,19 +1941,19 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
       description: Insufficient permissions
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
     ApiResponse:
@@ -2008,9 +2008,9 @@ components:
         files:
           type: array
           items:
-            $ref: '#/components/schemas/FileListItem'
+            $ref: "#/components/schemas/FileListItem"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     FileListItem:
       type: object
@@ -2058,7 +2058,7 @@ components:
               rank:
                 type: number
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     FileMetadata:
       type: object
@@ -2342,7 +2342,7 @@ components:
         domain:
           type: string
         status:
-          $ref: '#/components/schemas/ShadowAiToolStatus'
+          $ref: "#/components/schemas/ShadowAiToolStatus"
         first_seen:
           type: string
           format: date-time

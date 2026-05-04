@@ -72,7 +72,7 @@ const Users = () => {
         u.name.toLowerCase().includes(term) ||
         u.surname?.toLowerCase().includes(term) ||
         u.email.toLowerCase().includes(term) ||
-        u.role_name?.toLowerCase().includes(term)
+        u.role_name?.toLowerCase().includes(term),
     );
   }, [users, searchTerm]);
 
@@ -121,10 +121,7 @@ const Users = () => {
     <PageHeaderExtended
       title="Users"
       description={`Manage users for organization #${orgId}`}
-      breadcrumbItems={[
-        { label: "Organizations", path: "/super-admin" },
-        { label: "Users" },
-      ]}
+      breadcrumbItems={[{ label: "Organizations", path: "/super-admin" }, { label: "Users" }]}
       actionButton={
         <Button
           variant="contained"
@@ -150,9 +147,7 @@ const Users = () => {
           onChange={setSearchTerm}
           sx={{ maxWidth: 320 }}
         />
-        <Typography
-          sx={{ fontSize: "13px", color: "text.secondary", whiteSpace: "nowrap" }}
-        >
+        <Typography sx={{ fontSize: "13px", color: "text.secondary", whiteSpace: "nowrap" }}>
           {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}
         </Typography>
       </Stack>
@@ -160,9 +155,7 @@ const Users = () => {
       {/* Table */}
       {loading ? (
         <Box sx={{ py: 8, textAlign: "center" }}>
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            Loading users...
-          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>Loading users...</Typography>
         </Box>
       ) : filteredUsers.length === 0 ? (
         <EmptyState
@@ -290,7 +283,10 @@ const Users = () => {
       {/* Invite User Modal */}
       <StandardModal
         isOpen={inviteOpen}
-        onClose={() => { setInviteOpen(false); setInviteError(""); }}
+        onClose={() => {
+          setInviteOpen(false);
+          setInviteError("");
+        }}
         title="Invite User"
         description="Send an invitation email to a new user"
         submitButtonText="Send Invite"
@@ -346,9 +342,7 @@ const Users = () => {
             </select>
           </Stack>
           {inviteError && (
-            <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>
-              {inviteError}
-            </Typography>
+            <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{inviteError}</Typography>
           )}
         </Stack>
       </StandardModal>

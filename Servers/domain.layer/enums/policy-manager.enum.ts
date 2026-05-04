@@ -1,5 +1,5 @@
 export enum LinkedObjectType {
-    CONTROL = "control",
-    RISK = "risk",
-    EVIDENCE = "evidence",
+  CONTROL = "control",
+  RISK = "risk",
+  EVIDENCE = "evidence",
 }

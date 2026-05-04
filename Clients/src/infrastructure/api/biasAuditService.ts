@@ -97,10 +97,7 @@ export interface CategoryTableResult {
   highest_rate: number | null;
 }
 
-export type BiasAuditMetric =
-  | "selection_rate"
-  | "scoring_rate"
-  | "fairness_metrics";
+export type BiasAuditMetric = "selection_rate" | "scoring_rate" | "fairness_metrics";
 
 export interface ScoreDistributionBin {
   lower: number;
@@ -228,90 +225,67 @@ class BiasAuditService {
   }
 
   async getPreset(presetId: string): Promise<BiasAuditPreset> {
-    const res = await CustomAxios.get(
-      `/deepeval/bias-audits/presets/${presetId}`
-    );
+    const res = await CustomAxios.get(`/deepeval/bias-audits/presets/${presetId}`);
     return (res.data as { preset: BiasAuditPreset }).preset;
   }
 
   // Audits
   async runAudit(
     dataset: File,
-    config: CreateBiasAuditConfig
+    config: CreateBiasAuditConfig,
   ): Promise<{ auditId: string; status: string }> {
     const formData = new FormData();
     formData.append("dataset", dataset);
     formData.append("config_json", JSON.stringify(config));
     formData.append("org_id", config.orgId);
 
-    const res = await CustomAxios.post(
-      "/deepeval/bias-audits/run",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const res = await CustomAxios.post("/deepeval/bias-audits/run", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data as { auditId: string; status: string };
   }
 
-  async getStatus(
-    auditId: string
-  ): Promise<{ auditId: string; status: string; error?: string }> {
-    const res = await CustomAxios.get(
-      `/deepeval/bias-audits/${auditId}/status`
-    );
+  async getStatus(auditId: string): Promise<{ auditId: string; status: string; error?: string }> {
+    const res = await CustomAxios.get(`/deepeval/bias-audits/${auditId}/status`);
     return res.data as { auditId: string; status: string; error?: string };
   }
 
   async getResults(auditId: string): Promise<BiasAuditDetailResponse> {
-    const res = await CustomAxios.get(
-      `/deepeval/bias-audits/${auditId}/results`
-    );
+    const res = await CustomAxios.get(`/deepeval/bias-audits/${auditId}/results`);
     return res.data as BiasAuditDetailResponse;
   }
 
-  async listAudits(params?: {
-    org_id?: string;
-    project_id?: string;
-  }): Promise<BiasAuditSummary[]> {
+  async listAudits(params?: { org_id?: string; project_id?: string }): Promise<BiasAuditSummary[]> {
     const res = await CustomAxios.get("/deepeval/bias-audits", { params });
     return (res.data as { audits: BiasAuditSummary[] }).audits;
   }
 
-  async deleteAudit(
-    auditId: string
-  ): Promise<{ message: string; auditId: string }> {
-    const res = await CustomAxios.delete(
-      `/deepeval/bias-audits/${auditId}`
-    );
+  async deleteAudit(auditId: string): Promise<{ message: string; auditId: string }> {
+    const res = await CustomAxios.delete(`/deepeval/bias-audits/${auditId}`);
     return res.data as { message: string; auditId: string };
   }
 
   async updateAuditName(
     auditId: string,
-    systemName: string
+    systemName: string,
   ): Promise<{ auditId: string; systemName: string }> {
-    const res = await CustomAxios.patch(
-      `/deepeval/bias-audits/${auditId}`,
-      { systemName }
-    );
+    const res = await CustomAxios.patch(`/deepeval/bias-audits/${auditId}`, { systemName });
     return res.data as { auditId: string; systemName: string };
   }
 
   async downloadReport(auditId: string): Promise<Blob> {
-    const res = await CustomAxios.get(
-      `/deepeval/bias-audits/${auditId}/report.pdf`,
-      { responseType: "blob" }
-    );
+    const res = await CustomAxios.get(`/deepeval/bias-audits/${auditId}/report.pdf`, {
+      responseType: "blob",
+    });
     return res.data as Blob;
   }
 
   async parseHeaders(dataset: File): Promise<string[]> {
     const formData = new FormData();
     formData.append("dataset", dataset);
-    const res = await CustomAxios.post(
-      "/deepeval/bias-audits/parse-headers",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const res = await CustomAxios.post("/deepeval/bias-audits/parse-headers", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return (res.data as { headers: string[] }).headers;
   }
 }

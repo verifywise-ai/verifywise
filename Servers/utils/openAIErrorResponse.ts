@@ -10,7 +10,7 @@ export function openAIError(
   status: number,
   message: string,
   type: string,
-  code: string
+  code: string,
 ) {
   return res.status(status).json({
     error: { message, type, code },

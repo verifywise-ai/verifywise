@@ -9,7 +9,10 @@ import { AutomationActionModel } from "../automationAction/automationAction.mode
   timestamps: true,
   underscored: true,
 })
-export class AutomationTriggerActionModel extends Model<AutomationTriggerActionModel> implements IAutomationTriggerAction {
+export class AutomationTriggerActionModel
+  extends Model<AutomationTriggerActionModel>
+  implements IAutomationTriggerAction
+{
   @ForeignKey(() => AutomationTriggerModel)
   @Column({
     type: DataType.INTEGER,
@@ -49,7 +52,7 @@ export class AutomationTriggerActionModel extends Model<AutomationTriggerActionM
    */
   static async createNewTriggerAction(
     trigger_id: number,
-    action_id: number
+    action_id: number,
   ): Promise<AutomationTriggerActionModel> {
     // Validate required fields
     if (!trigger_id) {
@@ -80,7 +83,7 @@ export class AutomationTriggerActionModel extends Model<AutomationTriggerActionM
       throw new ValidationException(
         "This trigger-action association already exists",
         "trigger_action",
-        { trigger_id, action_id }
+        { trigger_id, action_id },
       );
     }
 
@@ -156,7 +159,7 @@ export class AutomationTriggerActionModel extends Model<AutomationTriggerActionM
    */
   static async bulkCreateAssociations(
     trigger_id: number,
-    action_ids: number[]
+    action_ids: number[],
   ): Promise<AutomationTriggerActionModel[]> {
     // Verify trigger exists
     const trigger = await AutomationTriggerModel.findByPk(trigger_id);
@@ -170,7 +173,11 @@ export class AutomationTriggerActionModel extends Model<AutomationTriggerActionM
       // Verify action exists
       const action = await AutomationActionModel.findByPk(action_id);
       if (!action) {
-        throw new ValidationException(`Action with ID ${action_id} not found`, "action_id", action_id);
+        throw new ValidationException(
+          `Action with ID ${action_id} not found`,
+          "action_id",
+          action_id,
+        );
       }
 
       // Check if association already exists
@@ -205,8 +212,8 @@ export class AutomationTriggerActionModel extends Model<AutomationTriggerActionM
       action_id: this.action_id,
       trigger: this.trigger?.toJSON(),
       action: this.action?.toJSON(),
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

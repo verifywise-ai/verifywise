@@ -65,7 +65,7 @@ export default function FilePreviewAndMetadata({
         padding: "0 14px",
       },
     }),
-    [theme.palette.background.main]
+    [theme.palette.background.main],
   );
 
   const handleApplyBatch = () => {
@@ -244,12 +244,7 @@ export default function FilePreviewAndMetadata({
             <Stack spacing={2}>
               {/* Skip toggle */}
               <FormControlLabel
-                control={
-                  <Toggle
-                    checked={analysis.skipped}
-                    onChange={() => onToggleSkip(index)}
-                  />
-                }
+                control={<Toggle checked={analysis.skipped} onChange={() => onToggleSkip(index)} />}
                 label={
                   <Typography
                     sx={{
@@ -365,9 +360,7 @@ export default function FilePreviewAndMetadata({
                         label="Name"
                         placeholder="Dataset name"
                         value={analysis.metadata.name}
-                        onChange={(e) =>
-                          onUpdateMetadata(index, { name: e.target.value })
-                        }
+                        onChange={(e) => onUpdateMetadata(index, { name: e.target.value })}
                         width="50%"
                         sx={fieldStyle}
                       />
@@ -376,9 +369,7 @@ export default function FilePreviewAndMetadata({
                         label="Version"
                         placeholder="e.g., 1.0"
                         value={analysis.metadata.version}
-                        onChange={(e) =>
-                          onUpdateMetadata(index, { version: e.target.value })
-                        }
+                        onChange={(e) => onUpdateMetadata(index, { version: e.target.value })}
                         width="50%"
                         sx={fieldStyle}
                       />
@@ -391,9 +382,7 @@ export default function FilePreviewAndMetadata({
                       type="description"
                       placeholder="Describe the dataset and its purpose"
                       value={analysis.metadata.description}
-                      onChange={(e) =>
-                        onUpdateMetadata(index, { description: e.target.value })
-                      }
+                      onChange={(e) => onUpdateMetadata(index, { description: e.target.value })}
                       width="100%"
                       sx={fieldStyle}
                       rows={2}
@@ -442,9 +431,7 @@ export default function FilePreviewAndMetadata({
                         label="Owner"
                         placeholder="e.g., Data Science Team"
                         value={analysis.metadata.owner}
-                        onChange={(e) =>
-                          onUpdateMetadata(index, { owner: e.target.value })
-                        }
+                        onChange={(e) => onUpdateMetadata(index, { owner: e.target.value })}
                         width="50%"
                         sx={fieldStyle}
                       />
@@ -453,9 +440,7 @@ export default function FilePreviewAndMetadata({
                         label="Source"
                         placeholder="e.g., Internal CRM"
                         value={analysis.metadata.source}
-                        onChange={(e) =>
-                          onUpdateMetadata(index, { source: e.target.value })
-                        }
+                        onChange={(e) => onUpdateMetadata(index, { source: e.target.value })}
                         width="50%"
                         sx={fieldStyle}
                       />
@@ -495,9 +480,7 @@ export default function FilePreviewAndMetadata({
                         label="PII types"
                         placeholder="e.g., Names, Email addresses, Phone numbers"
                         value={analysis.metadata.pii_types}
-                        onChange={(e) =>
-                          onUpdateMetadata(index, { pii_types: e.target.value })
-                        }
+                        onChange={(e) => onUpdateMetadata(index, { pii_types: e.target.value })}
                         width="100%"
                         sx={fieldStyle}
                         helperText="Comma-separated column names containing PII"

@@ -102,7 +102,7 @@ export const datasetsContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       title: 'PII auto-detection',
-      text: 'During bulk upload, the system checks column headers against 49 known PII keywords (email, ssn, phone, salary, credit_card, etc.). If any match, the dataset is automatically flagged as containing PII. You can override this in the review step.',
+      text: 'During bulk upload, the system checks column headers against 40 known PII keywords (email, ssn, phone, salary, credit_card, etc.). If any match, the dataset is automatically flagged as containing PII. You can override this in the review step.',
     },
     {
       type: 'heading',

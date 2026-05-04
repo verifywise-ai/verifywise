@@ -100,9 +100,9 @@ describe("organization.repository", () => {
       const mockError = new Error("Network error");
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(
-        GetMyOrganization({ routeUrl: "/organizations/1" }),
-      ).rejects.toThrow("Network error");
+      await expect(GetMyOrganization({ routeUrl: "/organizations/1" })).rejects.toThrow(
+        "Network error",
+      );
       expect(apiServices.get).toHaveBeenCalledOnce();
     });
 
@@ -112,9 +112,9 @@ describe("organization.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(
-        GetMyOrganization({ routeUrl: "/organizations/999" }),
-      ).rejects.toEqual(mockError);
+      await expect(GetMyOrganization({ routeUrl: "/organizations/999" })).rejects.toEqual(
+        mockError,
+      );
     });
 
     it("should handle 500 server error", async () => {
@@ -123,9 +123,7 @@ describe("organization.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(
-        GetMyOrganization({ routeUrl: "/organizations/1" }),
-      ).rejects.toEqual(mockError);
+      await expect(GetMyOrganization({ routeUrl: "/organizations/1" })).rejects.toEqual(mockError);
     });
   });
 
@@ -147,10 +145,7 @@ describe("organization.repository", () => {
         body: mockOrganizationData,
       });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/organizations",
-        mockOrganizationData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/organizations", mockOrganizationData);
       expect(result).toEqual(mockResponse);
     });
 
@@ -168,10 +163,7 @@ describe("organization.repository", () => {
         body: mockOrganizationData,
       });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        customUrl,
-        mockOrganizationData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(customUrl, mockOrganizationData);
       expect(result).toEqual(mockResponse);
     });
 
@@ -235,13 +227,9 @@ describe("organization.repository", () => {
         body: updatedData,
       });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/organizations",
-        updatedData,
-        {
-          headers: {},
-        },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/organizations", updatedData, {
+        headers: {},
+      });
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -282,13 +270,9 @@ describe("organization.repository", () => {
         headers: customHeaders,
       });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/organizations",
-        updatedData,
-        {
-          headers: customHeaders,
-        },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/organizations", updatedData, {
+        headers: customHeaders,
+      });
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -493,9 +477,7 @@ describe("organization.repository", () => {
       const mockError = new Error("Failed to update onboarding status");
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(updateOnboardingStatus(1)).rejects.toThrow(
-        "Failed to update onboarding status",
-      );
+      await expect(updateOnboardingStatus(1)).rejects.toThrow("Failed to update onboarding status");
     });
 
     it("should handle 404 error when organization not found", async () => {

@@ -14,10 +14,7 @@ import {
 
 const FILE_NAME = "featureSettings.ctrl.ts";
 
-export async function getFeatureSettings(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getFeatureSettings(req: Request, res: Response): Promise<any> {
   const fn = "getFeatureSettings";
   const userId = req.userId!;
   const organizationId = req.organizationId!;
@@ -58,10 +55,7 @@ export async function getFeatureSettings(
   }
 }
 
-export async function updateFeatureSettings(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateFeatureSettings(req: Request, res: Response): Promise<any> {
   const fn = "updateFeatureSettings";
   const userId = req.userId!;
   const organizationId = req.organizationId!;
@@ -76,35 +70,21 @@ export async function updateFeatureSettings(
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can manage feature settings"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can manage feature settings"));
     }
 
     const { lifecycle_enabled, audit_ledger_enabled } = req.body;
 
-    if (
-      lifecycle_enabled !== undefined &&
-      typeof lifecycle_enabled !== "boolean"
-    ) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]("lifecycle_enabled must be a boolean"));
+    if (lifecycle_enabled !== undefined && typeof lifecycle_enabled !== "boolean") {
+      return res.status(400).json(STATUS_CODE[400]("lifecycle_enabled must be a boolean"));
     }
 
-    if (
-      audit_ledger_enabled !== undefined &&
-      typeof audit_ledger_enabled !== "boolean"
-    ) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]("audit_ledger_enabled must be a boolean"));
+    if (audit_ledger_enabled !== undefined && typeof audit_ledger_enabled !== "boolean") {
+      return res.status(400).json(STATUS_CODE[400]("audit_ledger_enabled must be a boolean"));
     }
 
     if (lifecycle_enabled === undefined && audit_ledger_enabled === undefined) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]("No valid fields to update"));
+      return res.status(400).json(STATUS_CODE[400]("No valid fields to update"));
     }
 
     const updated = await updateFeatureSettingsQuery(organizationId, {

@@ -27,7 +27,7 @@
 }
 
 .article-link-item:hover .link-title {
-  color: #13715B;
+  color: #13715b;
 }
 
 .article-link-item .arrow-icon {
@@ -36,5 +36,5 @@
 
 .article-link-item:hover .arrow-icon {
   transform: translateX(4px);
-  color: #13715B;
+  color: #13715b;
 }

@@ -31,21 +31,27 @@ const useRegisterUser = () => {
     setIsSubmitting(false);
   };
 
-  const registerUser = async ({
-    values,
-    user,
-    setIsSubmitting,
-  }: {
-    values: FormValues;
-    user: RegisterUser;
-    setIsSubmitting: (value: boolean) => void;
-  }, userToken: string | null) => {
+  const registerUser = async (
+    {
+      values,
+      user,
+      setIsSubmitting,
+    }: {
+      values: FormValues;
+      user: RegisterUser;
+      setIsSubmitting: (value: boolean) => void;
+    },
+    userToken: string | null,
+  ) => {
     try {
-       const response = await createNewUser({
-        userData: { ...values, role_id: user.roleId || 1 },
-      }, {
-        Authorization: `Bearer ${userToken || ""}`,
-      });
+      const response = await createNewUser(
+        {
+          userData: { ...values, role_id: user.roleId || 1 },
+        },
+        {
+          Authorization: `Bearer ${userToken || ""}`,
+        },
+      );
       handleApiResponse({ response, user, setIsSubmitting });
       return {
         isSuccess: response.status,
@@ -54,9 +60,7 @@ const useRegisterUser = () => {
     } catch (error: any) {
       logEngine({
         type: "error",
-        message: `An error occurred: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: `An error occurred: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
       setIsSubmitting(false);
       return {

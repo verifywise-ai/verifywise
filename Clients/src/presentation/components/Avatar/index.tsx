@@ -55,9 +55,7 @@ const AvatarComponent = ({ src, small, sx }: AvatarProps) => {
   return (
     <MuiAvatar
       alt={`${user.firstName} ${user.lastName}`}
-      src={
-        src ? src : user?.avatarImage ? image : "../../assets/imgs/profile.jpg"
-      }
+      src={src ? src : user?.avatarImage ? image : "../../assets/imgs/profile.jpg"}
       sx={{
         fontSize: small ? theme.typography.body1.fontSize : theme.typography.h6.fontSize,
         color: theme.palette.common.white,

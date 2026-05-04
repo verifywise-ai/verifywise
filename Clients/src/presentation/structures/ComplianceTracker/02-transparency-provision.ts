@@ -8,13 +8,11 @@ export const TransparencyProvision = {
       id: 1,
       icon: Exclamation,
       title: "Intended Use Description",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       subControls: [
         {
           id: 1,
-          title:
-            "We provide detailed descriptions of the AI system's intended use.",
+          title: "We provide detailed descriptions of the AI system's intended use.",
           description:
             "Describing intended use prevents misuse, aligning AI deployment with specified legal and ethical boundaries.",
         },
@@ -27,8 +25,7 @@ export const TransparencyProvision = {
       id: 2,
       icon: Checked,
       title: "Technical Documentation Review",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       subControls: [
         {
           id: 1,
@@ -76,8 +73,7 @@ export const TransparencyProvision = {
         },
         {
           id: 2,
-          title:
-            "We define and document forbidden uses and foresee potential misuse.",
+          title: "We define and document forbidden uses and foresee potential misuse.",
           description:
             "Defining forbidden uses helps anticipate misuse and mitigate risks proactively for safe AI applications.",
         },
@@ -90,8 +86,7 @@ export const TransparencyProvision = {
       id: 5,
       icon: Checked,
       title: "Dataset Description",
-      description:
-        "Describe training, validation, and testing datasets used in AI systems.",
+      description: "Describe training, validation, and testing datasets used in AI systems.",
       subControls: [
         {
           id: 1,
@@ -108,8 +103,7 @@ export const TransparencyProvision = {
       id: 6,
       icon: Checked,
       title: "Mitigation Strategies and Bias Testing",
-      description:
-        "Explain mitigation strategies and document bias testing results.",
+      description: "Explain mitigation strategies and document bias testing results.",
       subControls: [
         {
           id: 1,
@@ -131,8 +125,7 @@ export const TransparencyProvision = {
       subControls: [
         {
           id: 1,
-          title:
-            "We provide accuracy metrics, robustness, and cybersecurity information.",
+          title: "We provide accuracy metrics, robustness, and cybersecurity information.",
           description:
             "Providing metrics ensures systems meet robustness and security criteria while fostering trust through transparency.",
         },

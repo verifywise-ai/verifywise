@@ -7,12 +7,9 @@ interface BulkUploadButtonProps {
   onTriggerModal?: (componentName: string) => void;
 }
 
-export default function BulkUploadButton({
-  onTriggerModal,
-}: BulkUploadButtonProps) {
+export default function BulkUploadButton({ onTriggerModal }: BulkUploadButtonProps) {
   const { userRoleName } = useAuth();
-  const isDisabled =
-    !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
 
   return (
     <CustomizableButton

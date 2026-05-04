@@ -102,9 +102,7 @@ interface AddNewMegaDropdownProps {
   buttonLabel?: string;
 }
 
-const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
-  buttonLabel = "Add new",
-}) => {
+const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "Add new" }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -201,7 +199,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
               onKeyDown={(e: React.KeyboardEvent) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   handleItemClick(item);
                 }

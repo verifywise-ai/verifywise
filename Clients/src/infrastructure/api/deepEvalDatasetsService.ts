@@ -51,15 +51,22 @@ export type DatasetPromptRecord = SingleTurnPrompt | MultiTurnConversation;
 
 // Type guards
 export function isSingleTurnPrompt(record: DatasetPromptRecord): record is SingleTurnPrompt {
-  return 'prompt' in record && typeof record.prompt === 'string';
+  return "prompt" in record && typeof record.prompt === "string";
 }
 
-export function isMultiTurnConversation(record: DatasetPromptRecord): record is MultiTurnConversation {
-  return 'turns' in record && Array.isArray(record.turns);
+export function isMultiTurnConversation(
+  record: DatasetPromptRecord,
+): record is MultiTurnConversation {
+  return "turns" in record && Array.isArray(record.turns);
 }
 
 class DeepEvalDatasetsService {
-  async uploadDataset(file: File, datasetType: DatasetType = "chatbot", turnType: TurnType = "single-turn", orgId?: string): Promise<UploadDatasetResponse> {
+  async uploadDataset(
+    file: File,
+    datasetType: DatasetType = "chatbot",
+    turnType: TurnType = "single-turn",
+    orgId?: string,
+  ): Promise<UploadDatasetResponse> {
     // org_id is required by the backend - fetch current org if not provided
     let finalOrgId = orgId;
     if (!finalOrgId) {
@@ -77,11 +84,11 @@ class DeepEvalDatasetsService {
         }
       }
     }
-    
+
     if (!finalOrgId) {
       throw new Error("No organization available. Please create an organization first.");
     }
-    
+
     const form = new FormData();
     form.append("dataset", file);
     form.append("dataset_type", datasetType);
@@ -103,14 +110,40 @@ class DeepEvalDatasetsService {
     return res.data as { path: string; prompts: DatasetPromptRecord[] };
   }
 
-  async listUploads(): Promise<{ uploads: { name: string; path: string; size: number; modifiedAt: number }[] }> {
+  async listUploads(): Promise<{
+    uploads: { name: string; path: string; size: number; modifiedAt: number }[];
+  }> {
     const res = await CustomAxios.get("/deepeval/datasets/uploads");
-    return res.data as { uploads: { name: string; path: string; size: number; modifiedAt: number }[] };
+    return res.data as {
+      uploads: { name: string; path: string; size: number; modifiedAt: number }[];
+    };
   }
 
-  async listMy(): Promise<{ datasets: { id: number; name: string; path: string; size: number; promptCount: number; createdAt: string; datasetType?: DatasetType; turnType?: TurnType }[] }> {
+  async listMy(): Promise<{
+    datasets: {
+      id: number;
+      name: string;
+      path: string;
+      size: number;
+      promptCount: number;
+      createdAt: string;
+      datasetType?: DatasetType;
+      turnType?: TurnType;
+    }[];
+  }> {
     const res = await CustomAxios.get("/deepeval/datasets/user");
-    return res.data as { datasets: { id: number; name: string; path: string; size: number; promptCount: number; createdAt: string; datasetType?: DatasetType; turnType?: TurnType }[] };
+    return res.data as {
+      datasets: {
+        id: number;
+        name: string;
+        path: string;
+        size: number;
+        promptCount: number;
+        createdAt: string;
+        datasetType?: DatasetType;
+        turnType?: TurnType;
+      }[];
+    };
   }
 
   async deleteDatasets(paths: string[]): Promise<{ message: string; deleted: number }> {

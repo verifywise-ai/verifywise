@@ -55,7 +55,9 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
         const payload = JSON.parse(message);
         const { organizationId, userId, notification } = payload;
 
-        console.log(`📨 Processing notification for tenant=${organizationId}, user=${userId}, type=${notification?.type}`);
+        console.log(
+          `📨 Processing notification for tenant=${organizationId}, user=${userId}, type=${notification?.type}`,
+        );
 
         // SECURITY: Validate message format
         if (!organizationId || !userId || !notification) {
@@ -72,7 +74,7 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
           // SECURITY: Double-check tenant matches stored connection
           if (connectionData.organizationId !== organizationId) {
             console.error(
-              `Security: Tenant mismatch! Stored: ${connectionData.organizationId}, Message: ${organizationId}`
+              `Security: Tenant mismatch! Stored: ${connectionData.organizationId}, Message: ${organizationId}`,
             );
             return;
           }
@@ -80,33 +82,29 @@ export const setupNotificationSubscriber = async (): Promise<void> => {
           // SECURITY: Verify userId matches
           if (connectionData.userId !== userId) {
             console.error(
-              `Security: User mismatch! Stored: ${connectionData.userId}, Message: ${userId}`
+              `Security: User mismatch! Stored: ${connectionData.userId}, Message: ${userId}`,
             );
             return;
           }
 
           // Safe to send notification
           try {
-            connectionData.response.write(
-              `data: ${JSON.stringify(notification)}\n\n`
-            );
-            console.log(
-              `📬 Notification delivered to ${connectionKey}: ${notification.type}`
-            );
+            connectionData.response.write(`data: ${JSON.stringify(notification)}\n\n`);
+            console.log(`📬 Notification delivered to ${connectionKey}: ${notification.type}`);
           } catch (error) {
             console.error(`Error sending notification to ${connectionKey}:`, error);
           }
         } else {
-          console.log(
-            `⚠️ No active connection for ${connectionKey} - user may not be online`
-          );
+          console.log(`⚠️ No active connection for ${connectionKey} - user may not be online`);
         }
       } catch (error) {
         console.error("Error processing notification message:", error);
       }
     });
 
-    console.log("📬 Notification subscriber subscribed to approval-notifications and in-app-notifications channels");
+    console.log(
+      "📬 Notification subscriber subscribed to approval-notifications and in-app-notifications channels",
+    );
   } catch (error) {
     console.error("❌ Failed to setup notification subscriber:", error);
     throw error;

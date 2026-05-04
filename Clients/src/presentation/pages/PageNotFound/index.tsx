@@ -31,9 +31,7 @@ function PageNotFound() {
           gap: theme.spacing(20),
         }}
       >
-        <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-          404 | Page not found
-        </Typography>
+        <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>404 | Page not found</Typography>
         <Stack
           sx={{
             display: "flex",
@@ -47,9 +45,7 @@ function PageNotFound() {
           }}
         >
           <LeftArrowLong size={16} />
-          <Typography sx={{ height: 22, fontSize: 13, fontWeight: 500 }}>
-            Back to home
-          </Typography>
+          <Typography sx={{ height: 22, fontSize: 13, fontWeight: 500 }}>Back to home</Typography>
         </Stack>
       </Stack>
     </div>

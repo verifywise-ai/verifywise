@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { FriaStatus, FriaRiskLevel } from "../../enums/fria-status.enum";
 import { IFriaAssessment, IFriaAssessmentJSON } from "../../interfaces/i.fria";
@@ -14,10 +8,7 @@ import { IFriaAssessment, IFriaAssessmentJSON } from "../../interfaces/i.fria";
   timestamps: true,
   underscored: true,
 })
-export class FriaAssessmentModel
-  extends Model<FriaAssessmentModel>
-  implements IFriaAssessment
-{
+export class FriaAssessmentModel extends Model<FriaAssessmentModel> implements IFriaAssessment {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

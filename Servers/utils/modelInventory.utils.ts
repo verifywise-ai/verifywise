@@ -18,7 +18,7 @@ export const getAllModelInventoriesQuery = async (organizationId: number) => {
       replacements: { organizationId },
       mapToModel: true,
       model: ModelInventoryModel,
-    }
+    },
   );
   for (const model of modelInventories) {
     (model.dataValues as any).projects = [];
@@ -27,7 +27,7 @@ export const getAllModelInventoriesQuery = async (organizationId: number) => {
       `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
       {
         replacements: { organizationId, model_inventory_id: model.id },
-      }
+      },
     )) as [IModelInventoryProjectFramework[], number];
     for (const pf of projectFrameworks[0]) {
       if (pf.project_id && pf.framework_id) {
@@ -47,7 +47,7 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
       replacements: { organizationId },
       mapToModel: true,
       model: ModelInventoryModel,
-    }
+    },
   );
   for (const model of modelInventory) {
     (model.dataValues as any).projects = [];
@@ -56,7 +56,7 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
       `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
       {
         replacements: { organizationId, model_inventory_id: model.id },
-      }
+      },
     )) as [IModelInventoryProjectFramework[], number];
     for (const pf of projectFrameworks[0]) {
       if (pf.project_id && pf.framework_id) {
@@ -69,17 +69,14 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
   return modelInventory;
 };
 
-export const getModelInventoryByIdQuery = async (
-  id: number,
-  organizationId: number
-) => {
+export const getModelInventoryByIdQuery = async (id: number, organizationId: number) => {
   const modelInventory = await sequelize.query(
     `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: ModelInventoryModel,
-    }
+    },
   );
 
   if (!modelInventory.length) return null;
@@ -90,7 +87,7 @@ export const getModelInventoryByIdQuery = async (
     `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
     {
       replacements: { organizationId, model_inventory_id: model.id },
-    }
+    },
   )) as [IModelInventoryProjectFramework[], number];
   for (const pf of projectFrameworks[0]) {
     if (pf.project_id && pf.framework_id) {
@@ -103,10 +100,7 @@ export const getModelInventoryByIdQuery = async (
   return model;
 };
 
-export const getModelByProjectIdQuery = async (
-  projectId: number,
-  organizationId: number
-) => {
+export const getModelByProjectIdQuery = async (projectId: number, organizationId: number) => {
   const modelInventories = await sequelize.query(
     `SELECT mi.* FROM model_inventories mi
       JOIN model_inventories_projects_frameworks mipf
@@ -116,15 +110,12 @@ export const getModelByProjectIdQuery = async (
       replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: ModelInventoryModel,
-    }
+    },
   );
   return modelInventories;
 };
 
-export const getModelByFrameworkIdQuery = async (
-  frameworkId: number,
-  organizationId: number
-) => {
+export const getModelByFrameworkIdQuery = async (frameworkId: number, organizationId: number) => {
   const modelInventories = await sequelize.query(
     `SELECT mi.* FROM model_inventories mi
       JOIN model_inventories_projects_frameworks mipf
@@ -134,7 +125,7 @@ export const getModelByFrameworkIdQuery = async (
       replacements: { organizationId, framework_id: frameworkId },
       mapToModel: true,
       model: ModelInventoryModel,
-    }
+    },
   );
   return modelInventories;
 };
@@ -144,7 +135,7 @@ export const createNewModelInventoryQuery = async (
   organizationId: number,
   projects: number[],
   frameworks: number[],
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const created_at = new Date();
 
@@ -170,9 +161,7 @@ export const createNewModelInventoryQuery = async (
           biases: modelInventory.biases,
           limitations: modelInventory.limitations,
           hosting_provider: modelInventory.hosting_provider,
-          security_assessment_data: JSON.stringify(
-            modelInventory.security_assessment_data || []
-          ),
+          security_assessment_data: JSON.stringify(modelInventory.security_assessment_data || []),
           is_demo: modelInventory.is_demo,
           created_at: created_at,
           updated_at: created_at,
@@ -180,7 +169,7 @@ export const createNewModelInventoryQuery = async (
         mapToModel: true,
         model: ModelInventoryModel,
         transaction,
-      }
+      },
     );
 
     const createdModel = result[0];
@@ -198,7 +187,7 @@ export const createNewModelInventoryQuery = async (
             project_id: projectId,
           },
           transaction,
-        }
+        },
       )) as [IModelInventoryProjectFramework[], number];
       if (result[0].length > 0) {
         (createdModel.dataValues as any).projects.push(projectId);
@@ -211,7 +200,7 @@ export const createNewModelInventoryQuery = async (
         {
           replacements: { organization_id: organizationId, framework_id: frameworkId },
           transaction,
-        }
+        },
       )) as [{ project_id: number }[], number];
       const result = (await sequelize.query(
         `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
@@ -224,7 +213,7 @@ export const createNewModelInventoryQuery = async (
             framework_id: frameworkId,
           },
           transaction,
-        }
+        },
       )) as [IModelInventoryProjectFramework[], number];
       if (result[0].length > 0) {
         (createdModel.dataValues as any).frameworks.push(frameworkId);
@@ -238,7 +227,7 @@ export const createNewModelInventoryQuery = async (
         a.id AS automation_id,
         aa.*
       FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_added' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction }
+      { replacements: { organization_id: organizationId }, transaction },
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -269,9 +258,7 @@ export const createNewModelInventoryQuery = async (
           organizationId,
         });
       } else {
-        console.warn(
-          `No matching trigger found for key: ${automation["trigger_key"]}`
-        );
+        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
       }
     }
 
@@ -298,7 +285,7 @@ export const updateModelInventoryByIdQuery = async (
   deleteProjects: boolean,
   deleteFrameworks: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const updated_at = new Date();
   const oldModel = await getModelInventoryByIdQuery(id, organizationId);
@@ -326,14 +313,12 @@ export const updateModelInventoryByIdQuery = async (
           biases: modelInventory.biases,
           limitations: modelInventory.limitations,
           hosting_provider: modelInventory.hosting_provider,
-          security_assessment_data: JSON.stringify(
-            modelInventory.security_assessment_data || []
-          ),
+          security_assessment_data: JSON.stringify(modelInventory.security_assessment_data || []),
           is_demo: modelInventory.is_demo,
           updated_at,
         },
         transaction,
-      }
+      },
     );
 
     // Then fetch the updated record
@@ -344,7 +329,7 @@ export const updateModelInventoryByIdQuery = async (
         mapToModel: true,
         model: ModelInventoryModel,
         transaction,
-      }
+      },
     );
     const updatedModel = result[0];
     (updatedModel.dataValues as any).projects = [];
@@ -357,7 +342,7 @@ export const updateModelInventoryByIdQuery = async (
         {
           replacements: { organization_id: organizationId, model_inventory_id: id },
           transaction,
-        }
+        },
       );
 
       // Then, insert new associations
@@ -372,7 +357,7 @@ export const updateModelInventoryByIdQuery = async (
               project_id: projectId,
             },
             transaction,
-          }
+          },
         )) as [IModelInventoryProjectFramework[], number];
         if (result[0].length > 0) {
           (updatedModel.dataValues as any).projects.push(projectId);
@@ -387,7 +372,7 @@ export const updateModelInventoryByIdQuery = async (
         {
           replacements: { organization_id: organizationId, model_inventory_id: id },
           transaction,
-        }
+        },
       );
 
       // Then, insert new associations
@@ -397,7 +382,7 @@ export const updateModelInventoryByIdQuery = async (
           {
             replacements: { organization_id: organizationId, framework_id: frameworkId },
             transaction,
-          }
+          },
         )) as [{ project_id: number }[], number];
 
         const result = (await sequelize.query(
@@ -411,7 +396,7 @@ export const updateModelInventoryByIdQuery = async (
               framework_id: frameworkId,
             },
             transaction,
-          }
+          },
         )) as [IModelInventoryProjectFramework[], number];
         if (result[0].length > 0) {
           (updatedModel.dataValues as any).frameworks.push(frameworkId);
@@ -426,7 +411,7 @@ export const updateModelInventoryByIdQuery = async (
         a.id AS automation_id,
         aa.*
       FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction }
+      { replacements: { organization_id: organizationId }, transaction },
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -441,10 +426,7 @@ export const updateModelInventoryByIdQuery = async (
         const params = automation.params!;
 
         // Build replacements
-        const replacements = buildModelUpdateReplacements(
-          oldModel,
-          updatedModel
-        );
+        const replacements = buildModelUpdateReplacements(oldModel, updatedModel);
 
         // Replace variables in subject and body
         const processedParams = {
@@ -460,9 +442,7 @@ export const updateModelInventoryByIdQuery = async (
           organizationId,
         });
       } else {
-        console.warn(
-          `No matching trigger found for key: ${automation["trigger_key"]}`
-        );
+        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
       }
     }
 
@@ -487,7 +467,7 @@ export const deleteModelInventoryByIdQuery = async (
   id: number,
   deleteRisks: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   try {
     if (deleteRisks) {
@@ -497,7 +477,7 @@ export const deleteModelInventoryByIdQuery = async (
         {
           replacements: { organization_id: organizationId, id },
           transaction,
-        }
+        },
       );
     }
 
@@ -506,7 +486,7 @@ export const deleteModelInventoryByIdQuery = async (
       {
         replacements: { organization_id: organizationId, id },
         transaction,
-      }
+      },
     )) as [ModelInventoryModel[], number];
     const deletedModel = result[0][0];
     const automations = (await sequelize.query(
@@ -516,7 +496,7 @@ export const deleteModelInventoryByIdQuery = async (
         a.id AS automation_id,
         aa.*
       FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction }
+      { replacements: { organization_id: organizationId }, transaction },
     )) as [
       (TenantAutomationActionModel & {
         trigger_key: string;
@@ -547,9 +527,7 @@ export const deleteModelInventoryByIdQuery = async (
           organizationId,
         });
       } else {
-        console.warn(
-          `No matching trigger found for key: ${automation["trigger_key"]}`
-        );
+        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
       }
     }
 

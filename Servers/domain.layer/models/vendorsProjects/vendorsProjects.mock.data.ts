@@ -6,7 +6,7 @@ export const vendorsProjects = (
   vendorId3: number,
   vendorId4: number,
   projectId1: number,
-  projectId2: number
+  projectId2: number,
 ): IVendorsProjects[] => {
   return [
     { vendor_id: vendorId1, project_id: projectId1 },

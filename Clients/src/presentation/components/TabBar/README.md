@@ -120,6 +120,7 @@ const MyPage = () => {
 All icons from [Lucide React](https://lucide.dev/icons/) are available. Just pass the icon name as a string:
 
 **Common Icons:**
+
 - `User` - User profile
 - `Lock` - Password/security
 - `Users` - Team/group
@@ -138,28 +139,28 @@ All icons from [Lucide React](https://lucide.dev/icons/) are available. Just pas
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `tabs` | `TabItem[]` | ✅ Yes | - | Array of tab configurations |
-| `activeTab` | `string` | ✅ Yes | - | Currently active tab value |
-| `onChange` | `(event, value) => void` | ✅ Yes | - | Handler for tab changes |
-| `tabListSx` | `object` | No | - | Custom styles for tab list |
-| `tabSx` | `object` | No | - | Custom styles for tabs |
-| `disableRipple` | `boolean` | No | `true` | Disable ripple effect |
-| `indicatorColor` | `string` | No | `"#13715B"` | Active tab indicator color |
-| `dataJoyrideId` | `string` | No | - | ID for page tours |
+| Prop             | Type                     | Required | Default     | Description                 |
+| ---------------- | ------------------------ | -------- | ----------- | --------------------------- |
+| `tabs`           | `TabItem[]`              | ✅ Yes   | -           | Array of tab configurations |
+| `activeTab`      | `string`                 | ✅ Yes   | -           | Currently active tab value  |
+| `onChange`       | `(event, value) => void` | ✅ Yes   | -           | Handler for tab changes     |
+| `tabListSx`      | `object`                 | No       | -           | Custom styles for tab list  |
+| `tabSx`          | `object`                 | No       | -           | Custom styles for tabs      |
+| `disableRipple`  | `boolean`                | No       | `true`      | Disable ripple effect       |
+| `indicatorColor` | `string`                 | No       | `"#13715B"` | Active tab indicator color  |
+| `dataJoyrideId`  | `string`                 | No       | -           | ID for page tours           |
 
 ### TabItem Interface
 
 ```typescript
 interface TabItem {
-  label: string;           // Tab label text
-  value: string;           // Unique tab identifier
-  icon?: string;           // Lucide icon name
-  count?: number;          // Badge count
-  isLoading?: boolean;     // Show loading state
-  disabled?: boolean;      // Disable the tab
-  content?: ReactNode;     // Tab panel content
+  label: string; // Tab label text
+  value: string; // Unique tab identifier
+  icon?: string; // Lucide icon name
+  count?: number; // Badge count
+  isLoading?: boolean; // Show loading state
+  disabled?: boolean; // Disable the tab
+  content?: ReactNode; // Tab panel content
 }
 ```
 
@@ -201,7 +202,7 @@ import { createTabLabelWithCount } from "../../utils/tabUtils";
   </Box>
   <TabPanel value="profile">...</TabPanel>
   <TabPanel value="password">...</TabPanel>
-</TabContext>
+</TabContext>;
 ```
 
 ### After (New Approach)
@@ -216,7 +217,7 @@ import TabBar from "../../components/TabBar";
   ]}
   activeTab={activeTab}
   onChange={handleTabChange}
-/>
+/>;
 ```
 
 **Result:** 80% less code, no manual imports, consistent styling! 🎉
@@ -232,6 +233,7 @@ import TabBar from "../../components/TabBar";
 ## Questions?
 
 See existing implementations in:
+
 - `/src/presentation/pages/AITrustCenter/index.tsx`
 - `/src/presentation/pages/SettingsPage/index.tsx`
 - `/src/presentation/pages/Vendors/index.tsx`

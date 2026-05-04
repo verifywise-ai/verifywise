@@ -1,8 +1,4 @@
-import {
-  DatasetStatus,
-  DatasetType,
-  DataClassification,
-} from "../enums/dataset.enum";
+import { DatasetStatus, DatasetType, DataClassification } from "../enums/dataset.enum";
 import { IModelInventory } from "./i.modelInventory";
 
 export interface IDataset {
@@ -59,6 +55,7 @@ export interface DatasetTableProps {
   deletingId?: string | null;
   hidePagination?: boolean;
   flashRowId?: number | string | null;
+  visibleColumns?: Set<string>;
 }
 
 export interface NewDatasetFormValues {

@@ -65,29 +65,36 @@ export function StatusTileCards({
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Stack className="vw-status-tile-cards" sx={{ ...projectRisksCard, ...(isSmall ? { gap: "10px" } : {}) }}>
+      <Stack
+        className="vw-status-tile-cards"
+        sx={{ ...projectRisksCard, ...(isSmall ? { gap: "10px" } : {}) }}
+      >
         {items.map((item) => (
-          <Tooltip
-            key={item.key}
-            title={getTooltip(item)}
-            arrow
-            placement="top"
-          >
+          <Tooltip key={item.key} title={getTooltip(item)} arrow placement="top">
             <Stack
               className="vw-status-tile"
               sx={{
                 ...projectRisksTileCard,
                 ...sizeOverrides,
                 color: item.color,
-                border: selectedKey === item.key ? `1px solid ${item.color}` : `1px solid ${borderPalette.dark}`,
+                border:
+                  selectedKey === item.key
+                    ? `1px solid ${item.color}`
+                    : `1px solid ${borderPalette.dark}`,
                 cursor: onCardClick ? "pointer" : "default",
                 background: selectedKey === item.key ? "rgba(146, 247, 224, 0.08)" : undefined,
                 ...cardSx,
               }}
               onClick={() => onCardClick?.(item.key)}
             >
-              <Typography sx={{ ...projectRisksTileCardKey, ...(isSmall ? { fontSize: 11 } : {}) }}>{item.label}</Typography>
-              <Typography sx={{ ...projectRisksTileCardvalue, ...(isSmall ? { fontSize: 22 } : {}) }}>{item.count}</Typography>
+              <Typography sx={{ ...projectRisksTileCardKey, ...(isSmall ? { fontSize: 11 } : {}) }}>
+                {item.label}
+              </Typography>
+              <Typography
+                sx={{ ...projectRisksTileCardvalue, ...(isSmall ? { fontSize: 22 } : {}) }}
+              >
+                {item.count}
+              </Typography>
             </Stack>
           </Tooltip>
         ))}

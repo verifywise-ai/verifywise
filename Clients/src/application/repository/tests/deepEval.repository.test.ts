@@ -279,10 +279,7 @@ describe("Test DeepEval Repository – Datasets", () => {
 
   it("deleteDatasets delegates with paths array", () => {
     deleteDatasets(["a.csv", "b.csv"]);
-    expect(mockDatasetsService.deleteDatasets).toHaveBeenCalledWith([
-      "a.csv",
-      "b.csv",
-    ]);
+    expect(mockDatasetsService.deleteDatasets).toHaveBeenCalledWith(["a.csv", "b.csv"]);
   });
 });
 
@@ -338,11 +335,7 @@ describe("Test DeepEval Repository – Organizations", () => {
 
   it("updateOrg delegates with orgId, name and memberIds", () => {
     updateOrg("o1", "New Name", [3]);
-    expect(mockOrgsService.updateOrg).toHaveBeenCalledWith(
-      "o1",
-      "New Name",
-      [3],
-    );
+    expect(mockOrgsService.updateOrg).toHaveBeenCalledWith("o1", "New Name", [3]);
   });
 
   it("deleteOrg delegates with orgId", () => {
@@ -462,18 +455,13 @@ describe("Test DeepEval Repository – Metrics", () => {
 describe("Test DeepEval Repository – Model Validation", () => {
   it("validateModel delegates with modelName and provider", () => {
     validateModel("gpt-4", "openai");
-    expect(mockModelValidationService.validateModel).toHaveBeenCalledWith(
-      "gpt-4",
-      "openai",
-    );
+    expect(mockModelValidationService.validateModel).toHaveBeenCalledWith("gpt-4", "openai");
   });
 
   it("validateModelForExperiment delegates with config", () => {
     const config = { model: "gpt-4" };
     validateModelForExperiment(config);
-    expect(
-      mockExperimentsService.validateModelForExperiment,
-    ).toHaveBeenCalledWith(config);
+    expect(mockExperimentsService.validateModelForExperiment).toHaveBeenCalledWith(config);
   });
 });
 
@@ -495,9 +483,7 @@ describe("Test DeepEval Repository – Experiments", () => {
   it("getAllExperiments delegates with params", () => {
     const params = { projectId: "p1" } as any;
     getAllExperiments(params);
-    expect(mockExperimentsService.getAllExperiments).toHaveBeenCalledWith(
-      params,
-    );
+    expect(mockExperimentsService.getAllExperiments).toHaveBeenCalledWith(params);
   });
 
   it("getExperiment delegates with experimentId", () => {
@@ -508,19 +494,13 @@ describe("Test DeepEval Repository – Experiments", () => {
   it("updateExperiment delegates with experimentId and data", () => {
     const data = { name: "Updated" } as any;
     updateExperiment("e1", data);
-    expect(mockExperimentsService.updateExperiment).toHaveBeenCalledWith(
-      "e1",
-      data,
-    );
+    expect(mockExperimentsService.updateExperiment).toHaveBeenCalledWith("e1", data);
   });
 
   it("updateExperimentStatus delegates with experimentId and data", () => {
     const data = { status: "running" } as any;
     updateExperimentStatus("e1", data);
-    expect(mockExperimentsService.updateExperimentStatus).toHaveBeenCalledWith(
-      "e1",
-      data,
-    );
+    expect(mockExperimentsService.updateExperimentStatus).toHaveBeenCalledWith("e1", data);
   });
 
   it("deleteExperiment delegates with experimentId", () => {
@@ -535,18 +515,12 @@ describe("Test DeepEval Repository – Monitoring", () => {
   it("getMonitorDashboard delegates with projectId and params", () => {
     const params = { from: "2026-01-01" } as any;
     getMonitorDashboard("p1", params);
-    expect(mockMonitoringService.getDashboard).toHaveBeenCalledWith(
-      "p1",
-      params,
-    );
+    expect(mockMonitoringService.getDashboard).toHaveBeenCalledWith("p1", params);
   });
 
   it("getMonitorDashboard delegates with projectId only", () => {
     getMonitorDashboard("p1");
-    expect(mockMonitoringService.getDashboard).toHaveBeenCalledWith(
-      "p1",
-      undefined,
-    );
+    expect(mockMonitoringService.getDashboard).toHaveBeenCalledWith("p1", undefined);
   });
 });
 

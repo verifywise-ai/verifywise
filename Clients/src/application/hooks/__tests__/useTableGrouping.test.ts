@@ -20,14 +20,14 @@ describe("useTableGrouping", () => {
 
   it("returns null when groupByField is null", () => {
     const { result } = renderHook(() =>
-      useTableGrouping({ data, groupByField: null, sortOrder: "asc", getGroupKey })
+      useTableGrouping({ data, groupByField: null, sortOrder: "asc", getGroupKey }),
     );
     expect(result.current).toBeNull();
   });
 
   it("groups items by field", () => {
     const { result } = renderHook(() =>
-      useTableGrouping({ data, groupByField: "category", sortOrder: "asc", getGroupKey })
+      useTableGrouping({ data, groupByField: "category", sortOrder: "asc", getGroupKey }),
     );
     expect(result.current).not.toBeNull();
     expect(result.current!.map((g) => g.group)).toEqual(["A", "B", "C"]);
@@ -36,7 +36,7 @@ describe("useTableGrouping", () => {
 
   it("sorts groups in descending order", () => {
     const { result } = renderHook(() =>
-      useTableGrouping({ data, groupByField: "category", sortOrder: "desc", getGroupKey })
+      useTableGrouping({ data, groupByField: "category", sortOrder: "desc", getGroupKey }),
     );
     expect(result.current!.map((g) => g.group)).toEqual(["C", "B", "A"]);
   });
@@ -44,7 +44,12 @@ describe("useTableGrouping", () => {
   it("handles multi-key grouping (array return)", () => {
     const multiKeyGetter = (item: TestItem, _field: string) => [item.category, item.status];
     const { result } = renderHook(() =>
-      useTableGrouping({ data, groupByField: "multi", sortOrder: "asc", getGroupKey: multiKeyGetter })
+      useTableGrouping({
+        data,
+        groupByField: "multi",
+        sortOrder: "asc",
+        getGroupKey: multiKeyGetter,
+      }),
     );
     expect(result.current!.some((g) => g.group === "active")).toBe(true);
     expect(result.current!.some((g) => g.group === "A")).toBe(true);

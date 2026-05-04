@@ -1,11 +1,4 @@
-import React, {
-  useState,
-  lazy,
-  Suspense,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, lazy, Suspense, useEffect, useCallback, useMemo } from "react";
 import { Stack, Box } from "@mui/material";
 const ReportTable = lazy(() => import("../../../components/Table/ReportTable"));
 import { TITLE_OF_COLUMNS } from "./constants";
@@ -22,10 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { GetMyOrganization } from "../../../../application/repository/organization.repository";
 import { GroupBy } from "../../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import { FilterBy, FilterColumn } from "../../../components/Table/FilterBy";
 import { useFilterBy } from "../../../../application/hooks/useFilterBy";
@@ -122,7 +112,7 @@ const Reports: React.FC<ReportsProps> = ({
         alwaysVisible: true,
       },
     ],
-    []
+    [],
   );
 
   const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
@@ -157,12 +147,8 @@ const Reports: React.FC<ReportsProps> = ({
   }, [fetchOrganization]);
 
   // Function to transform project title based on framework_id
-  const transformProjectTitle = (
-    report: GeneratedReports
-  ): GeneratedReports => {
-    const project = projects.find(
-      (p) => p.id.toString() === report.project_id?.toString()
-    );
+  const transformProjectTitle = (report: GeneratedReports): GeneratedReports => {
+    const project = projects.find((p) => p.id.toString() === report.project_id?.toString());
     if (project && project.framework?.some((f) => f.framework_id !== 1)) {
       return {
         ...report,
@@ -216,9 +202,7 @@ const Reports: React.FC<ReportsProps> = ({
     });
     return Array.from(projectIds)
       .map((projectId) => {
-        const project = projects.find(
-          (p: Project) => p.id.toString() === projectId
-        );
+        const project = projects.find((p: Project) => p.id.toString() === projectId);
         return {
           value: projectId,
           label: project?.project_title || `Project ${projectId}`,
@@ -245,8 +229,7 @@ const Reports: React.FC<ReportsProps> = ({
   const getUniqueGenerators = useCallback(() => {
     const generators = new Set<string>();
     generatedReports.forEach((report) => {
-      const generatorName = `${report.uploader_name || ""} ${report.uploader_surname || ""
-        }`.trim();
+      const generatorName = `${report.uploader_name || ""} ${report.uploader_surname || ""}`.trim();
       if (generatorName) {
         generators.add(generatorName);
       }
@@ -291,15 +274,12 @@ const Reports: React.FC<ReportsProps> = ({
         type: "date" as const,
       },
     ],
-    [getUniqueTypes, getUniqueProjects, getUniqueGenerators]
+    [getUniqueTypes, getUniqueProjects, getUniqueGenerators],
   );
 
   // FilterBy - Field value getter
   const getReportFieldValue = useCallback(
-    (
-      item: GeneratedReports,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: GeneratedReports, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "filename":
           return item.filename;
@@ -308,22 +288,19 @@ const Reports: React.FC<ReportsProps> = ({
         case "project_id":
           return item.project_id?.toString();
         case "generated_by":
-          return `${item.uploader_name || ""} ${item.uploader_surname || ""
-            }`.trim();
+          return `${item.uploader_name || ""} ${item.uploader_surname || ""}`.trim();
         case "uploaded_time":
           return item.uploaded_time;
         default:
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook
-  const {
-    filterData: filterReportData,
-    handleFilterChange: handleReportFilterChange,
-  } = useFilterBy<GeneratedReports>(getReportFieldValue);
+  const { filterData: filterReportData, handleFilterChange: handleReportFilterChange } =
+    useFilterBy<GeneratedReports>(getReportFieldValue);
 
   // Filter reports using FilterBy and search
   const filteredReports = useMemo(() => {
@@ -332,33 +309,25 @@ const Reports: React.FC<ReportsProps> = ({
     // Apply search filter
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter((report) =>
-        report.filename?.toLowerCase().includes(query)
-      );
+      result = result.filter((report) => report.filename?.toLowerCase().includes(query));
     }
 
     return result;
   }, [filterReportData, generatedReports, searchTerm]);
 
   // Define how to get the group key for each report
-  const getReportGroupKey = useCallback(
-    (report: GeneratedReports, field: string): string => {
-      switch (field) {
-        case "type":
-          return report.type || "Unknown";
-        case "project":
-          return report.project_title || "Unknown";
-        case "generated_by":
-          return (
-            `${report.uploader_name || ""} ${report.uploader_surname || ""
-              }`.trim() || "Unknown"
-          );
-        default:
-          return "Other";
-      }
-    },
-    []
-  );
+  const getReportGroupKey = useCallback((report: GeneratedReports, field: string): string => {
+    switch (field) {
+      case "type":
+        return report.type || "Unknown";
+      case "project":
+        return report.project_title || "Unknown";
+      case "generated_by":
+        return `${report.uploader_name || ""} ${report.uploader_surname || ""}`.trim() || "Unknown";
+      default:
+        return "Other";
+    }
+  }, []);
 
   // Apply transform and then grouping to filtered reports
   const transformedReports = filteredReports.map(transformProjectTitle);
@@ -397,10 +366,7 @@ const Reports: React.FC<ReportsProps> = ({
         sx={{ marginBottom: "16px", marginTop: "0px !important" }}
       >
         <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <FilterBy
-            columns={reportFilterColumns}
-            onFilterChange={handleReportFilterChange}
-          />
+          <FilterBy columns={reportFilterColumns} onFilterChange={handleReportFilterChange} />
           <GroupBy
             options={[
               { id: "type", label: "Report type" },
@@ -425,12 +391,11 @@ const Reports: React.FC<ReportsProps> = ({
         {generateReportButton}
       </Stack>
       {loadingProjects || loadingReports ? (
-        <CustomizableSkeleton
-          variant="rectangular"
-          sx={reportTablePlaceholder}
-        />
+        <CustomizableSkeleton variant="rectangular" sx={reportTablePlaceholder} />
       ) : (
-        <Suspense fallback={<CustomizableSkeleton variant="rectangular" sx={reportTablePlaceholder} />}>
+        <Suspense
+          fallback={<CustomizableSkeleton variant="rectangular" sx={reportTablePlaceholder} />}
+        >
           <GroupedTableView
             groupedData={groupedReports}
             ungroupedData={transformedReports}

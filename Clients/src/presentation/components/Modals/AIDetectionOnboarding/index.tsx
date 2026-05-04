@@ -12,14 +12,9 @@ import { text } from "../../../themes/palette";
 
 const STORAGE_KEY = "vw:ai-detection-onboarding-dismissed";
 
-const StepContent: React.FC<{ title: string; detail: string }> = ({
-  title,
-  detail,
-}) => (
+const StepContent: React.FC<{ title: string; detail: string }> = ({ title, detail }) => (
   <Stack spacing={2.5}>
-    <Typography sx={{ fontSize: 15, fontWeight: 600, color: "#1c2130" }}>
-      {title}
-    </Typography>
+    <Typography sx={{ fontSize: 15, fontWeight: 600, color: "#1c2130" }}>{title}</Typography>
     <Typography sx={{ fontSize: 13, color: `${text.tertiary}`, lineHeight: 1.7 }}>
       {detail}
     </Typography>
@@ -61,10 +56,7 @@ interface AIDetectionOnboardingProps {
   onClose: () => void;
 }
 
-const AIDetectionOnboarding: React.FC<AIDetectionOnboardingProps> = ({
-  isOpen,
-  onClose,
-}) => (
+const AIDetectionOnboarding: React.FC<AIDetectionOnboardingProps> = ({ isOpen, onClose }) => (
   <OnboardingWizard
     isOpen={isOpen}
     onClose={onClose}

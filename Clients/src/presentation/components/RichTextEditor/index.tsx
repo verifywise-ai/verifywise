@@ -1,5 +1,13 @@
 import React, { useEffect, useCallback } from "react";
-import { Box, Tooltip, IconButton, Stack, useTheme, Select as MuiSelect, MenuItem } from "@mui/material";
+import {
+  Box,
+  Tooltip,
+  IconButton,
+  Stack,
+  useTheme,
+  Select as MuiSelect,
+  MenuItem,
+} from "@mui/material";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -94,11 +102,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
     autofocus: false,
     immediatelyRender: true,
     editable: isEditable,
-    onUpdate: ({
-      editor,
-    }: {
-      editor: NonNullable<ReturnType<typeof useEditor>>;
-    }) => {
+    onUpdate: ({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) => {
       onContentChange?.(editor.getHTML());
     },
   });
@@ -133,7 +137,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
       if (!editor || !isEditable) return;
       fn();
     },
-    [editor, isEditable]
+    [editor, isEditable],
   );
 
   // Build toolbar items based on variant
@@ -178,16 +182,14 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
           key: "ul",
           title: "Bullet list",
           icon: <List size={ICON_SIZE} />,
-          action: () =>
-            run(() => editor.chain().focus().toggleBulletList().run()),
+          action: () => run(() => editor.chain().focus().toggleBulletList().run()),
           isActive: editor.isActive("bulletList"),
         },
         {
           key: "ol",
           title: "Numbered list",
           icon: <ListOrdered size={ICON_SIZE} />,
-          action: () =>
-            run(() => editor.chain().focus().toggleOrderedList().run()),
+          action: () => run(() => editor.chain().focus().toggleOrderedList().run()),
           isActive: editor.isActive("orderedList"),
         },
       ]
@@ -200,40 +202,35 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             key: "underline",
             title: "Underline",
             icon: <UnderlineIcon size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleUnderline().run()),
+            action: () => run(() => editor.chain().focus().toggleUnderline().run()),
             isActive: editor.isActive("underline"),
           },
           {
             key: "superscript",
             title: "Superscript",
             icon: <SuperscriptIcon size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleSuperscript().run()),
+            action: () => run(() => editor.chain().focus().toggleSuperscript().run()),
             isActive: editor.isActive("superscript"),
           },
           {
             key: "subscript",
             title: "Subscript",
             icon: <SubscriptIcon size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleSubscript().run()),
+            action: () => run(() => editor.chain().focus().toggleSubscript().run()),
             isActive: editor.isActive("subscript"),
           },
           {
             key: "highlight",
             title: "Highlight",
             icon: <Highlighter size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleHighlight().run()),
+            action: () => run(() => editor.chain().focus().toggleHighlight().run()),
             isActive: editor.isActive("highlight"),
           },
           {
             key: "code",
             title: "Code block",
             icon: <Code size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleCodeBlock().run()),
+            action: () => run(() => editor.chain().focus().toggleCodeBlock().run()),
             isActive: editor.isActive("codeBlock"),
             dividerAfter: true,
           },
@@ -241,38 +238,33 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             key: "blockquote",
             title: "Blockquote",
             icon: <Quote size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().toggleBlockquote().run()),
+            action: () => run(() => editor.chain().focus().toggleBlockquote().run()),
             isActive: editor.isActive("blockquote"),
           },
           {
             key: "hr",
             title: "Horizontal rule",
             icon: <Minus size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().setHorizontalRule().run()),
+            action: () => run(() => editor.chain().focus().setHorizontalRule().run()),
             dividerAfter: true,
           },
           {
             key: "align-left",
             title: "Align left",
             icon: <AlignLeft size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().setTextAlign("left").run()),
+            action: () => run(() => editor.chain().focus().setTextAlign("left").run()),
           },
           {
             key: "align-center",
             title: "Align center",
             icon: <AlignCenter size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().setTextAlign("center").run()),
+            action: () => run(() => editor.chain().focus().setTextAlign("center").run()),
           },
           {
             key: "align-right",
             title: "Align right",
             icon: <AlignRight size={ICON_SIZE} />,
-            action: () =>
-              run(() => editor.chain().focus().setTextAlign("right").run()),
+            action: () => run(() => editor.chain().focus().setTextAlign("right").run()),
             dividerAfter: true,
           },
           {
@@ -287,11 +279,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                 }
                 const url = window.prompt("Enter URL:");
                 if (url) {
-                  editor
-                    .chain()
-                    .focus()
-                    .setLink({ href: url })
-                    .run();
+                  editor.chain().focus().setLink({ href: url }).run();
                 }
               }),
             isActive: editor.isActive("link"),
@@ -302,11 +290,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             icon: <TableIcon size={ICON_SIZE} />,
             action: () =>
               run(() =>
-                editor
-                  .chain()
-                  .focus()
-                  .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                  .run()
+                editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
               ),
           },
         ]
@@ -336,9 +320,13 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             <MuiSelect
               size="small"
               value={
-                editor.isActive("heading", { level: 1 }) ? "h1" :
-                editor.isActive("heading", { level: 2 }) ? "h2" :
-                editor.isActive("heading", { level: 3 }) ? "h3" : "p"
+                editor.isActive("heading", { level: 1 })
+                  ? "h1"
+                  : editor.isActive("heading", { level: 2 })
+                    ? "h2"
+                    : editor.isActive("heading", { level: 3 })
+                      ? "h3"
+                      : "p"
               }
               onChange={(e) => {
                 const val = e.target.value;
@@ -355,12 +343,28 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                 "& .MuiSelect-select": { py: "4px" },
               }}
             >
-              <MenuItem value="p" sx={{ fontSize: 12 }}>Text</MenuItem>
-              <MenuItem value="h1" sx={{ fontSize: 12 }}>Header 1</MenuItem>
-              <MenuItem value="h2" sx={{ fontSize: 12 }}>Header 2</MenuItem>
-              <MenuItem value="h3" sx={{ fontSize: 12 }}>Header 3</MenuItem>
+              <MenuItem value="p" sx={{ fontSize: 12 }}>
+                Text
+              </MenuItem>
+              <MenuItem value="h1" sx={{ fontSize: 12 }}>
+                Header 1
+              </MenuItem>
+              <MenuItem value="h2" sx={{ fontSize: 12 }}>
+                Header 2
+              </MenuItem>
+              <MenuItem value="h3" sx={{ fontSize: 12 }}>
+                Header 3
+              </MenuItem>
             </MuiSelect>
-            <Box sx={{ width: "1px", height: "28px", backgroundColor: borderPalette.light, mx: "2px", alignSelf: "center" }} />
+            <Box
+              sx={{
+                width: "1px",
+                height: "28px",
+                backgroundColor: borderPalette.light,
+                mx: "2px",
+                alignSelf: "center",
+              }}
+            />
           </>
         )}
         {allItems.map(({ key, title, icon, action, isActive, dividerAfter }) => (
@@ -374,13 +378,9 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                   sx={{
                     padding: "6px",
                     borderRadius: "3px",
-                    backgroundColor: isActive
-                      ? "#E0F7FA"
-                      : "transparent",
+                    backgroundColor: isActive ? "#E0F7FA" : "transparent",
                     border: "1px solid",
-                    borderColor: isActive
-                      ? theme.palette.primary.main
-                      : "transparent",
+                    borderColor: isActive ? theme.palette.primary.main : "transparent",
                     "&:hover": {
                       backgroundColor: theme.palette.action.hover,
                     },
@@ -442,34 +442,100 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             }}
           >
             {[
-              { key: "addRowBefore", title: "Add row above", icon: <Plus size={14} />, action: () => editor.chain().focus().addRowBefore().run() },
-              { key: "addRowAfter", title: "Add row below", icon: <Rows3 size={14} />, action: () => editor.chain().focus().addRowAfter().run() },
-              { key: "deleteRow", title: "Delete row", icon: <X size={14} />, action: () => editor.chain().focus().deleteRow().run(), separator: true },
-              { key: "addColBefore", title: "Add column left", icon: <Plus size={14} />, action: () => editor.chain().focus().addColumnBefore().run() },
-              { key: "addColAfter", title: "Add column right", icon: <Columns3 size={14} />, action: () => editor.chain().focus().addColumnAfter().run() },
-              { key: "deleteCol", title: "Delete column", icon: <X size={14} />, action: () => editor.chain().focus().deleteColumn().run(), separator: true },
-              { key: "deleteTable", title: "Delete table", icon: <Trash2 size={14} />, action: () => editor.chain().focus().deleteTable().run(), danger: true },
-            ].map(({ key, title, icon, action, separator, danger }: { key: string; title: string; icon: React.ReactNode; action: () => void; separator?: boolean; danger?: boolean }) => (
-              <React.Fragment key={key}>
-                <Tooltip title={title} placement="top" arrow>
-                  <IconButton
-                    onMouseDown={(e) => { e.preventDefault(); action(); }}
-                    size="small"
-                    sx={{
-                      padding: "5px",
-                      borderRadius: "4px",
-                      color: danger ? "#dc2626" : "#374151",
-                      "&:hover": { backgroundColor: danger ? "#fef2f2" : theme.palette.action.hover },
-                    }}
-                  >
-                    {icon}
-                  </IconButton>
-                </Tooltip>
-                {separator && (
-                  <Box sx={{ width: "1px", height: "20px", backgroundColor: borderPalette.light, mx: "2px" }} />
-                )}
-              </React.Fragment>
-            ))}
+              {
+                key: "addRowBefore",
+                title: "Add row above",
+                icon: <Plus size={14} />,
+                action: () => editor.chain().focus().addRowBefore().run(),
+              },
+              {
+                key: "addRowAfter",
+                title: "Add row below",
+                icon: <Rows3 size={14} />,
+                action: () => editor.chain().focus().addRowAfter().run(),
+              },
+              {
+                key: "deleteRow",
+                title: "Delete row",
+                icon: <X size={14} />,
+                action: () => editor.chain().focus().deleteRow().run(),
+                separator: true,
+              },
+              {
+                key: "addColBefore",
+                title: "Add column left",
+                icon: <Plus size={14} />,
+                action: () => editor.chain().focus().addColumnBefore().run(),
+              },
+              {
+                key: "addColAfter",
+                title: "Add column right",
+                icon: <Columns3 size={14} />,
+                action: () => editor.chain().focus().addColumnAfter().run(),
+              },
+              {
+                key: "deleteCol",
+                title: "Delete column",
+                icon: <X size={14} />,
+                action: () => editor.chain().focus().deleteColumn().run(),
+                separator: true,
+              },
+              {
+                key: "deleteTable",
+                title: "Delete table",
+                icon: <Trash2 size={14} />,
+                action: () => editor.chain().focus().deleteTable().run(),
+                danger: true,
+              },
+            ].map(
+              ({
+                key,
+                title,
+                icon,
+                action,
+                separator,
+                danger,
+              }: {
+                key: string;
+                title: string;
+                icon: React.ReactNode;
+                action: () => void;
+                separator?: boolean;
+                danger?: boolean;
+              }) => (
+                <React.Fragment key={key}>
+                  <Tooltip title={title} placement="top" arrow>
+                    <IconButton
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        action();
+                      }}
+                      size="small"
+                      sx={{
+                        padding: "5px",
+                        borderRadius: "4px",
+                        color: danger ? "#dc2626" : "#374151",
+                        "&:hover": {
+                          backgroundColor: danger ? "#fef2f2" : theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      {icon}
+                    </IconButton>
+                  </Tooltip>
+                  {separator && (
+                    <Box
+                      sx={{
+                        width: "1px",
+                        height: "20px",
+                        backgroundColor: borderPalette.light,
+                        mx: "2px",
+                      }}
+                    />
+                  )}
+                </React.Fragment>
+              ),
+            )}
           </Box>
         </BubbleMenu>
       )}

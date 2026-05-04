@@ -1,10 +1,7 @@
 import React from "react";
 import { ToggleButton, ToggleButtonGroup, useTheme, Tooltip } from "@mui/material";
 
-import {
-  LayoutGrid as ViewModuleIcon,
-  List as TableRowsIcon,
-} from "lucide-react";
+import { LayoutGrid as ViewModuleIcon, List as TableRowsIcon } from "lucide-react";
 import { IViewMode } from "../../types/toggle.types";
 import { IViewToggleProps } from "../../types/toggle.types";
 
@@ -29,10 +26,7 @@ const ViewToggle: React.FC<IViewToggleProps> = ({
   sx,
 }) => {
   const theme = useTheme();
-  const handleViewChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newView: IViewMode | null
-  ) => {
+  const handleViewChange = (_event: React.MouseEvent<HTMLElement>, newView: IViewMode | null) => {
     if (newView !== null) {
       onViewChange(newView);
     }

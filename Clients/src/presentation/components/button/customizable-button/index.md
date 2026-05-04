@@ -70,11 +70,7 @@ import CustomizableButton from "./components/Button/CustomizableButton";
 import CustomizableButton from "./components/Button/CustomizableButton";
 
 function MyComponent() {
-  return (
-    <CustomizableButton onClick={() => console.log("Clicked!")}>
-      Click Me
-    </CustomizableButton>
-  );
+  return <CustomizableButton onClick={() => console.log("Clicked!")}>Click Me</CustomizableButton>;
 }
 ```
 
@@ -86,11 +82,7 @@ import SaveIcon from "@mui/icons-material/Save";
 
 function MyComponent() {
   return (
-    <CustomizableButton
-      variant="contained"
-      startIcon={<SaveIcon />}
-      onClick={handleSave}
-    >
+    <CustomizableButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave}>
       Save Document
     </CustomizableButton>
   );
@@ -115,11 +107,7 @@ function MyComponent() {
   };
 
   return (
-    <CustomizableButton
-      loading={loading}
-      onClick={handleSubmit}
-      variant="contained"
-    >
+    <CustomizableButton loading={loading} onClick={handleSubmit} variant="contained">
       Submit Form
     </CustomizableButton>
   );
@@ -189,12 +177,7 @@ function MyForm() {
     <form onSubmit={handleSubmit}>
       {/* Form fields */}
 
-      <CustomizableButton
-        type="submit"
-        variant="contained"
-        loading={isSubmitting}
-        fullWidth
-      >
+      <CustomizableButton type="submit" variant="contained" loading={isSubmitting} fullWidth>
         Submit Form
       </CustomizableButton>
 
@@ -248,11 +231,7 @@ function MyComponent() {
   return (
     <Stack spacing={2}>
       {/* Start icon */}
-      <CustomizableButton
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={handleAdd}
-      >
+      <CustomizableButton variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
         Add Item
       </CustomizableButton>
 
@@ -413,7 +392,7 @@ const handleClick = useCallback(
   (event: React.MouseEvent<HTMLButtonElement>) => {
     // Handle click with error boundary
   },
-  [onClick, loading, isDisabled]
+  [onClick, loading, isDisabled],
 );
 ```
 
@@ -473,20 +452,11 @@ import CustomizableButton from "./components/Button/CustomizableButton";
 function ModalActions() {
   return (
     <Stack direction="row" spacing={2} justifyContent="flex-end">
-      <CustomizableButton
-        variant="outlined"
-        onClick={handleCancel}
-        isDisabled={loading}
-      >
+      <CustomizableButton variant="outlined" onClick={handleCancel} isDisabled={loading}>
         Cancel
       </CustomizableButton>
 
-      <CustomizableButton
-        variant="contained"
-        onClick={handleSave}
-        loading={loading}
-        type="submit"
-      >
+      <CustomizableButton variant="contained" onClick={handleSave} loading={loading} type="submit">
         Save Changes
       </CustomizableButton>
     </Stack>
@@ -558,24 +528,14 @@ function IconButton() {
 // Before
 import { Button } from "@mui/material";
 
-<Button
-  variant="contained"
-  color="primary"
-  onClick={handleClick}
-  disabled={loading}
->
+<Button variant="contained" color="primary" onClick={handleClick} disabled={loading}>
   {loading ? "Loading..." : "Submit"}
 </Button>;
 
 // After
 import CustomizableButton from "./components/Button/CustomizableButton";
 
-<CustomizableButton
-  variant="contained"
-  color="primary"
-  onClick={handleClick}
-  loading={loading}
->
+<CustomizableButton variant="contained" color="primary" onClick={handleClick} loading={loading}>
   Submit
 </CustomizableButton>;
 ```

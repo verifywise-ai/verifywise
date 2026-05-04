@@ -31,9 +31,7 @@ export class SubClauseISO42001Model {
     this.is_demo = data.is_demo;
   }
 
-  static createNewSubClauseISO42001(
-    data: SubClauseISO42001Model
-  ): SubClauseISO42001Model {
+  static createNewSubClauseISO42001(data: SubClauseISO42001Model): SubClauseISO42001Model {
     return new SubClauseISO42001Model(data);
   }
 }

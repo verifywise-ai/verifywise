@@ -156,7 +156,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Team tab lets admins and editors manage users in your organization.',
+      text: 'The Team tab lets admins manage users in your organization.',
     },
     {
       type: 'heading',
@@ -173,7 +173,7 @@ export const userManagementContent: ArticleContent = {
       items: [
         { bold: 'Name', text: 'The user\'s full name' },
         { bold: 'Email', text: 'The user\'s email address' },
-        { bold: 'Role', text: 'The user\'s assigned role (Admin, Reviewer, Editor or Auditor)' },
+        { bold: 'Role', text: 'The user\'s assigned role (Admin, Reviewer, Editor, Auditor; Super Admin where applicable)' },
         { bold: 'Action', text: 'Delete button to remove the user' },
       ],
     },

@@ -38,7 +38,7 @@ export const recordUseCaseChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "use_case",
@@ -49,7 +49,7 @@ export const recordUseCaseChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -62,7 +62,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "use_case",
@@ -70,7 +70,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -82,15 +82,9 @@ export const getUseCaseChangeHistory = async (
   useCaseId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "use_case",
-    useCaseId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("use_case", useCaseId, organizationId, limit, offset);
 };
 
 /**
@@ -99,7 +93,7 @@ export const getUseCaseChangeHistory = async (
  */
 export const trackUseCaseChanges = async (
   oldModel: IProjectAttributes,
-  newModel: Partial<IProjectAttributes>
+  newModel: Partial<IProjectAttributes>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("use_case", oldModel, newModel);
 };
@@ -113,7 +107,7 @@ export const recordUseCaseCreation = async (
   changedByUserId: number,
   organizationId: number,
   useCaseData: Partial<IProjectAttributes>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "use_case",
@@ -121,7 +115,7 @@ export const recordUseCaseCreation = async (
     changedByUserId,
     organizationId,
     useCaseData,
-    transaction
+    transaction,
   );
 };
 
@@ -133,13 +127,7 @@ export const recordUseCaseDeletion = async (
   useCaseId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
-  return recordEntityDeletion(
-    "use_case",
-    useCaseId,
-    changedByUserId,
-    organizationId,
-    transaction
-  );
+  return recordEntityDeletion("use_case", useCaseId, changedByUserId, organizationId, transaction);
 };

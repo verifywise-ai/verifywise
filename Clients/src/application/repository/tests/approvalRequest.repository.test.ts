@@ -63,10 +63,7 @@ describe("Test Approval Request Repository", () => {
 
       const response = await getMyApprovalRequests({ signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-requests/my-requests",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-requests/my-requests", { signal });
       expect(response).toEqual(mockResponse.data);
     });
 
@@ -81,10 +78,9 @@ describe("Test Approval Request Repository", () => {
 
       const response = await getMyApprovalRequests();
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-requests/my-requests",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-requests/my-requests", {
+        signal: undefined,
+      });
       expect(response).toEqual(mockResponse.data);
     });
   });
@@ -102,10 +98,9 @@ describe("Test Approval Request Repository", () => {
 
       const response = await getPendingApprovals({ signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-requests/pending-approvals",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-requests/pending-approvals", {
+        signal,
+      });
       expect(response).toEqual(mockResponse.data);
     });
 
@@ -120,10 +115,9 @@ describe("Test Approval Request Repository", () => {
 
       const response = await getPendingApprovals();
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/approval-requests/pending-approvals",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/approval-requests/pending-approvals", {
+        signal: undefined,
+      });
       expect(response).toEqual(mockResponse.data);
     });
   });
@@ -198,10 +192,7 @@ describe("Test Approval Request Repository", () => {
 
       const response = await approveRequest({ id: 100, body });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/approval-requests/100/approve",
-        body,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/approval-requests/100/approve", body);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -219,10 +210,7 @@ describe("Test Approval Request Repository", () => {
 
       const response = await rejectRequest({ id: 101, body });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/approval-requests/101/reject",
-        body,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/approval-requests/101/reject", body);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -239,10 +227,7 @@ describe("Test Approval Request Repository", () => {
 
       const response = await withdrawRequest({ id: 102 });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/approval-requests/102/withdraw",
-        {},
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/approval-requests/102/withdraw", {});
       expect(response).toEqual(mockResponse);
     });
   });

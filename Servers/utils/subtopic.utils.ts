@@ -4,23 +4,21 @@ import { createNewQuestionsQuery } from "./question.utils";
 import { QueryTypes, Transaction } from "sequelize";
 import { ISubtopic } from "../domain.layer/interfaces/i.subtopic";
 
-export const getAllSubtopicsQuery = async (
-  organizationId: number
-): Promise<ISubtopic[]> => {
+export const getAllSubtopicsQuery = async (organizationId: number): Promise<ISubtopic[]> => {
   const subtopics = await sequelize.query(
     `SELECT * FROM subtopics WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { organizationId },
       mapToModel: true,
       model: SubtopicModel,
-    }
+    },
   );
   return subtopics;
 };
 
 export const getSubtopicByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ISubtopic | null> => {
   const result = await sequelize.query(
     `SELECT * FROM subtopics WHERE organization_id = :organizationId AND id = :id`,
@@ -28,7 +26,7 @@ export const getSubtopicByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: SubtopicModel,
-    }
+    },
   );
   return result[0];
 };
@@ -36,7 +34,7 @@ export const getSubtopicByIdQuery = async (
 export const createNewSubtopicQuery = async (
   subtopic: SubtopicModel,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SubtopicModel> => {
   const result = await sequelize.query(
     `INSERT INTO subtopics (organization_id, topic_id, title) VALUES (:organizationId, :topic_id, :title) RETURNING *`,
@@ -46,7 +44,7 @@ export const createNewSubtopicQuery = async (
       model: SubtopicModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -55,17 +53,14 @@ export const updateSubtopicByIdQuery = async (
   id: number,
   subtopic: Partial<SubtopicModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SubtopicModel | null> => {
-  const updateSubTopic: Partial<Record<keyof SubtopicModel, any>> & { organizationId?: number } = {};
+  const updateSubTopic: Partial<Record<keyof SubtopicModel, any>> & { organizationId?: number } =
+    {};
   const setClause = ["title"]
     .filter((f) => {
-      if (
-        subtopic[f as keyof SubtopicModel] !== undefined &&
-        subtopic[f as keyof SubtopicModel]
-      ) {
-        updateSubTopic[f as keyof SubtopicModel] =
-          subtopic[f as keyof SubtopicModel];
+      if (subtopic[f as keyof SubtopicModel] !== undefined && subtopic[f as keyof SubtopicModel]) {
+        updateSubTopic[f as keyof SubtopicModel] = subtopic[f as keyof SubtopicModel];
         return true;
       }
       return false;
@@ -92,7 +87,7 @@ export const updateSubtopicByIdQuery = async (
 export const deleteSubtopicByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM subtopics WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -102,14 +97,14 @@ export const deleteSubtopicByIdQuery = async (
       model: SubtopicModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
 
 export const getSubTopicByTopicIdQuery = async (
   topicId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ISubtopic[]> => {
   const result = await sequelize.query(
     `SELECT * FROM subtopics WHERE organization_id = :organizationId AND topic_id = :topic_id ORDER BY created_at DESC, id ASC`,
@@ -117,7 +112,7 @@ export const getSubTopicByTopicIdQuery = async (
       replacements: { organizationId, topic_id: topicId },
       mapToModel: true,
       model: SubtopicModel,
-    }
+    },
   );
   return result;
 };
@@ -143,7 +138,7 @@ export const createNewSubTopicsQuery = async (
   }[],
   enable_ai_data_insertion: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const createdSubTopics = [];
   let query = `INSERT INTO subtopics(organization_id, topic_id, title, order_no) VALUES (:organizationId, :topic_id, :title, :order_no) RETURNING *;`;
@@ -165,7 +160,7 @@ export const createNewSubTopicsQuery = async (
       subTopicStruct.questions,
       enable_ai_data_insertion,
       organizationId,
-      transaction
+      transaction,
     );
     createdSubTopics.push({ ...result[0].dataValues, questions });
   }

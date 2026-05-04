@@ -14,7 +14,7 @@ import authenticateJWT from "../middleware/auth.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllVendors);
-router.get("/project-id/:id", authenticateJWT, getVendorByProjectId)
+router.get("/project-id/:id", authenticateJWT, getVendorByProjectId);
 router.get("/:id", authenticateJWT, getVendorById);
 
 // POST, PUT, DELETE requests

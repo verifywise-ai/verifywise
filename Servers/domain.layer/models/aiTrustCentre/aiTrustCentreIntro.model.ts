@@ -1,14 +1,17 @@
 import { IAITrustCentreOverview } from "../../interfaces/i.aiTrustCentreOverview";
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 
-type IAITrustCentreOverviewIntro = IAITrustCentreOverview["intro"]
+type IAITrustCentreOverviewIntro = IAITrustCentreOverview["intro"];
 
 @Table({
   tableName: "ai_trust_center_intro",
   timestamps: true,
   underscored: true,
 })
-export class AITrustCenterIntroModel extends Model<AITrustCenterIntroModel> implements IAITrustCentreOverviewIntro {
+export class AITrustCenterIntroModel
+  extends Model<AITrustCenterIntroModel>
+  implements IAITrustCentreOverviewIntro
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

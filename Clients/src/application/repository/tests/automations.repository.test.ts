@@ -103,9 +103,7 @@ describe("Test Automations Repository", () => {
   describe("getTriggers", () => {
     it("should call automationsService.getTriggers and return result", async () => {
       const mockData = [{ id: 1, key: "vendor_review_date" }];
-      vi.mocked(automationsService.getTriggers).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(automationsService.getTriggers).mockResolvedValue(mockData as any);
 
       const response = await getTriggers();
 
@@ -118,15 +116,11 @@ describe("Test Automations Repository", () => {
     it("should call automationsService.getActionsByTriggerId with triggerId and return result", async () => {
       const triggerId = 5;
       const mockData = [{ id: 2, key: "send_email" }];
-      vi.mocked(automationsService.getActionsByTriggerId).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(automationsService.getActionsByTriggerId).mockResolvedValue(mockData as any);
 
       const response = await getActionsByTriggerId(triggerId);
 
-      expect(automationsService.getActionsByTriggerId).toHaveBeenCalledWith(
-        triggerId,
-      );
+      expect(automationsService.getActionsByTriggerId).toHaveBeenCalledWith(triggerId);
       expect(response).toEqual(mockData);
     });
   });
@@ -139,16 +133,11 @@ describe("Test Automations Repository", () => {
         items: [{ id: 1, status: "success" }],
         total: 1,
       };
-      vi.mocked(automationsService.getHistory).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(automationsService.getHistory).mockResolvedValue(mockData as any);
 
       const response = await getAutomationHistory(automationId, params);
 
-      expect(automationsService.getHistory).toHaveBeenCalledWith(
-        automationId,
-        params,
-      );
+      expect(automationsService.getHistory).toHaveBeenCalledWith(automationId, params);
       expect(response).toEqual(mockData);
     });
 
@@ -158,16 +147,11 @@ describe("Test Automations Repository", () => {
         items: [],
         total: 0,
       };
-      vi.mocked(automationsService.getHistory).mockResolvedValue(
-        mockData as any,
-      );
+      vi.mocked(automationsService.getHistory).mockResolvedValue(mockData as any);
 
       const response = await getAutomationHistory(automationId);
 
-      expect(automationsService.getHistory).toHaveBeenCalledWith(
-        automationId,
-        undefined,
-      );
+      expect(automationsService.getHistory).toHaveBeenCalledWith(automationId, undefined);
       expect(response).toEqual(mockData);
     });
   });

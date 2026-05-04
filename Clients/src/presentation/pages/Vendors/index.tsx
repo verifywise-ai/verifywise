@@ -5,14 +5,7 @@ import { Box, SelectChangeEvent, Stack, useTheme, Fade } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import TableWithPlaceholder from "../../components/Table/WithPlaceholder/index";
 import RiskTable from "../../components/Table/RisksTable";
-import {
-  Suspense,
-  useEffect,
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import AddNewVendor from "../../components/Modals/NewVendor";
 import { useSelector } from "react-redux";
 import { extractUserToken } from "../../../application/tools/extractToken";
@@ -36,10 +29,7 @@ import useVendorRisks from "../../../application/hooks/useVendorRisks";
 import Select from "../../components/Inputs/Select";
 import allowedRoles from "../../../application/constants/permissions";
 import SearchBox from "../../components/Search/SearchBox";
-import {
-  useVendors,
-  useDeleteVendor,
-} from "../../../application/hooks/useVendors";
+import { useVendors, useDeleteVendor } from "../../../application/hooks/useVendors";
 import { useProjects } from "../../../application/hooks/useProjects";
 import { useDeleteVendorRisk } from "../../../application/hooks/useVendorRiskMutations";
 import { getVendorById } from "../../../application/repository/vendor.repository";
@@ -50,18 +40,11 @@ import { ExistingRisk } from "../../../domain/interfaces/i.vendor";
 import TabBar from "../../components/TabBar";
 import { ReviewStatus } from "../../../domain/enums/status.enum";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import {
-  FilterBy,
-  FilterColumn,
-  FilterCondition,
-} from "../../components/Table/FilterBy";
+import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
@@ -69,8 +52,22 @@ import { Project } from "../../../domain/types/Project";
 // Constants
 const REDIRECT_DELAY_MS = 2000;
 
-type VendorColumnKey = "vendor_name" | "assignee" | "review_status" | "risk" | "scorecard" | "review_date" | "actions";
-type VendorRiskColumnKey = "risk_description" | "vendor_name" | "project_titles" | "action_owner" | "risk_severity" | "risk_level" | "actions";
+type VendorColumnKey =
+  | "vendor_name"
+  | "assignee"
+  | "review_status"
+  | "risk"
+  | "scorecard"
+  | "review_date"
+  | "actions";
+type VendorRiskColumnKey =
+  | "risk_description"
+  | "vendor_name"
+  | "project_titles"
+  | "action_owner"
+  | "risk_severity"
+  | "risk_level"
+  | "actions";
 
 const VENDOR_TABLE_COLUMNS: ColumnConfig<VendorColumnKey>[] = [
   { key: "vendor_name", label: "Name", defaultVisible: true, alwaysVisible: true },
@@ -106,14 +103,10 @@ const Vendors = () => {
   const userRoleName = userToken?.roleName || "";
   const { users } = useUsers();
 
-  const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(
-    null
-  );
+  const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<ExistingRisk | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<
-    "active" | "deleted" | "all"
-  >("active");
+  const [filterStatus, setFilterStatus] = useState<"active" | "deleted" | "all">("active");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [risksSearchTerm, setRisksSearchTerm] = useState<string>("");
 
@@ -163,16 +156,12 @@ const Vendors = () => {
   } = useVendors({
     projectId: selectedProjectId,
   });
-  const {
-    vendorRisksSummary,
-    refetchVendorRisks,
-    vendorRisks,
-    loadingVendorRisks,
-  } = useVendorRisks({
-    projectId: selectedProjectId?.toString(),
-    vendorId: "all",
-    filter: filterStatus,
-  });
+  const { vendorRisksSummary, refetchVendorRisks, vendorRisks, loadingVendorRisks } =
+    useVendorRisks({
+      projectId: selectedProjectId?.toString(),
+      vendorId: "all",
+      filter: filterStatus,
+    });
 
   // FilterBy - Dynamic options generators for Vendors tab
   const getUniqueVendorAssignees = useCallback(() => {
@@ -186,9 +175,7 @@ const Vendors = () => {
       .sort()
       .map((assigneeId) => {
         const user = users.find((u) => u.id.toString() === assigneeId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${assigneeId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${assigneeId}`;
         return { value: assigneeId, label: userName };
       });
   }, [vendors, users]);
@@ -204,9 +191,7 @@ const Vendors = () => {
       .sort()
       .map((reviewerId) => {
         const user = users.find((u) => u.id.toString() === reviewerId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${reviewerId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${reviewerId}`;
         return { value: reviewerId, label: userName };
       });
   }, [vendors, users]);
@@ -279,15 +264,12 @@ const Vendors = () => {
         type: "date" as const,
       },
     ],
-    [projects, getUniqueVendorAssignees, getUniqueVendorReviewers]
+    [projects, getUniqueVendorAssignees, getUniqueVendorReviewers],
   );
 
   // FilterBy - Field value getter for Vendors tab
   const getVendorFieldValue = useCallback(
-    (
-      item: VendorModel,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: VendorModel, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "project_id":
           // Vendors can belong to multiple projects - check if selected project is in the array
@@ -311,27 +293,19 @@ const Vendors = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook for Vendors tab
-  const {
-    filterData: filterVendorData,
-    handleFilterChange: handleVendorFilterChangeBase,
-  } = useFilterBy<VendorModel>(getVendorFieldValue);
+  const { filterData: filterVendorData, handleFilterChange: handleVendorFilterChangeBase } =
+    useFilterBy<VendorModel>(getVendorFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter
   const handleVendorFilterChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
       // Extract project_id from conditions
-      const projectCondition = conditions.find(
-        (c) => c.columnId === "project_id"
-      );
-      if (
-        projectCondition &&
-        projectCondition.operator === "is" &&
-        projectCondition.value
-      ) {
+      const projectCondition = conditions.find((c) => c.columnId === "project_id");
+      if (projectCondition && projectCondition.operator === "is" && projectCondition.value) {
         setSelectedProjectId(projectCondition.value);
       } else {
         setSelectedProjectId("all");
@@ -339,7 +313,7 @@ const Vendors = () => {
       // Pass to base handler for client-side filtering
       handleVendorFilterChangeBase(conditions, logic);
     },
-    [handleVendorFilterChangeBase]
+    [handleVendorFilterChangeBase],
   );
 
   // FilterBy - Dynamic options generators for Vendor Risks tab
@@ -353,9 +327,7 @@ const Vendors = () => {
     return Array.from(vendorIds)
       .sort()
       .map((vendorId) => {
-        const vendor = vendors.find(
-          (v: VendorModel) => v.id?.toString() === vendorId
-        );
+        const vendor = vendors.find((v: VendorModel) => v.id?.toString() === vendorId);
         const vendorName = vendor ? vendor.vendor_name : `Vendor ${vendorId}`;
         return { value: vendorId, label: vendorName };
       });
@@ -372,9 +344,7 @@ const Vendors = () => {
       .sort()
       .map((ownerId) => {
         const user = users.find((u) => u.id.toString() === ownerId);
-        const userName = user
-          ? `${user.name} ${user.surname}`.trim()
-          : `User ${ownerId}`;
+        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${ownerId}`;
         return { value: ownerId, label: userName };
       });
   }, [vendorRisks, users]);
@@ -432,7 +402,7 @@ const Vendors = () => {
         options: getUniqueRiskActionOwners(),
       },
     ],
-    [projects, getUniqueRiskVendors, getUniqueRiskActionOwners]
+    [projects, getUniqueRiskVendors, getUniqueRiskActionOwners],
   );
 
   // FilterBy - Field value getter for Vendor Risks tab
@@ -455,41 +425,27 @@ const Vendors = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook for Vendor Risks tab
-  const {
-    filterData: filterVendorRiskData,
-    handleFilterChange: handleVendorRiskFilterChangeBase,
-  } = useFilterBy<any>(getVendorRiskFieldValue);
+  const { filterData: filterVendorRiskData, handleFilterChange: handleVendorRiskFilterChangeBase } =
+    useFilterBy<any>(getVendorRiskFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter for vendor risks
   const handleVendorRiskFilterChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
       // Extract project_id from conditions
-      const projectCondition = conditions.find(
-        (c) => c.columnId === "project_id"
-      );
-      if (
-        projectCondition &&
-        projectCondition.operator === "is" &&
-        projectCondition.value
-      ) {
+      const projectCondition = conditions.find((c) => c.columnId === "project_id");
+      if (projectCondition && projectCondition.operator === "is" && projectCondition.value) {
         setSelectedProjectId(projectCondition.value);
       } else {
         setSelectedProjectId("all");
       }
 
       // Sync selected risk level card with filter conditions
-      const riskLevelCondition = conditions.find(
-        (c) => c.columnId === "risk_level"
-      );
-      if (
-        riskLevelCondition &&
-        riskLevelCondition.operator === "is" &&
-        riskLevelCondition.value
-      ) {
+      const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
+      if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
         setSelectedRiskLevel(riskLevelCondition.value);
       } else {
         setSelectedRiskLevel(null);
@@ -498,7 +454,7 @@ const Vendors = () => {
       // Pass to base handler for client-side filtering
       handleVendorRiskFilterChangeBase(conditions, logic);
     },
-    [handleVendorRiskFilterChangeBase]
+    [handleVendorRiskFilterChangeBase],
   );
 
   // Handle risk card click to filter vendor risks by risk level
@@ -530,7 +486,7 @@ const Vendors = () => {
 
   // Auto-dismiss info alert after 3 seconds with fade animation
   useEffect(() => {
-    if (alert && alert.variant === 'info') {
+    if (alert && alert.variant === "info") {
       setShowAlert(true);
       const timer = setTimeout(() => {
         setShowAlert(false);
@@ -547,8 +503,7 @@ const Vendors = () => {
   });
 
   const isCreatingDisabled =
-    !allowedRoles.vendors.create.includes(userRoleName) ||
-    projects.length === 0;
+    !allowedRoles.vendors.create.includes(userRoleName) || projects.length === 0;
   const isDeletingAllowed = allowedRoles.vendors.delete.includes(userRoleName);
 
   const openAddNewVendor = () => {
@@ -647,14 +602,7 @@ const Vendors = () => {
     // Dependencies: location.state triggers the effect when openCreateModal is passed via navigation
     // navigate, location.pathname are needed for state clearing
     // isRisksTab, vendors.length, isVendorsLoading determine which modal to open or if validation is needed
-  }, [
-    location.state,
-    navigate,
-    location.pathname,
-    isRisksTab,
-    vendors.length,
-    isVendorsLoading,
-  ]);
+  }, [location.state, navigate, location.pathname, isRisksTab, vendors.length, isVendorsLoading]);
 
   const handleDeleteVendor = async (vendorId?: number) => {
     if (!vendorId) {
@@ -838,7 +786,7 @@ const Vendors = () => {
 
   const handleFilterStatusChange = (
     event: SelectChangeEvent<string | number>,
-    _child: React.ReactNode
+    _child: React.ReactNode,
   ) => {
     const status = event.target.value as "active" | "deleted" | "all";
     setFilterStatus(status);
@@ -878,9 +826,7 @@ const Vendors = () => {
     // Then apply search filter
     if (risksSearchTerm.trim()) {
       const query = risksSearchTerm.toLowerCase();
-      filtered = filtered.filter((risk) =>
-        risk.risk_description?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((risk) => risk.risk_description?.toLowerCase().includes(query));
     }
 
     return filtered;
@@ -895,15 +841,9 @@ const Vendors = () => {
     if (searchQuery) {
       filtered = filtered.filter(
         (vendor: VendorModel) =>
-          vendor.vendor_name
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          vendor.vendor_provides
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          vendor.vendor_contact_person
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          vendor.vendor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          vendor.vendor_provides.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          vendor.vendor_contact_person.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -911,10 +851,7 @@ const Vendors = () => {
   }, [filterVendorData, vendors, searchQuery]);
 
   // Define how to get the group key for each vendor
-  const getVendorGroupKey = (
-    vendor: VendorModel,
-    field: string
-  ): string | string[] => {
+  const getVendorGroupKey = (vendor: VendorModel, field: string): string | string[] => {
     const statusMap: Record<ReviewStatus, string> = {
       [ReviewStatus.NotStarted]: "Not started",
       [ReviewStatus.InReview]: "In review",
@@ -955,10 +892,7 @@ const Vendors = () => {
   });
 
   // Define how to get the group key for each vendor risk
-  const getVendorRiskGroupKey = (
-    risk: any,
-    field: string
-  ): string | string[] => {
+  const getVendorRiskGroupKey = (risk: any, field: string): string | string[] => {
     switch (field) {
       case "risk_severity":
         return risk.risk_severity || "Unknown";
@@ -1036,9 +970,7 @@ const Vendors = () => {
       const vendor = vendors.find((v) => v.id === risk.vendor_id);
       const vendorName = vendor ? vendor.vendor_name : "-";
 
-      const actionOwnerUser = users.find(
-        (user) => user.id === risk.action_owner
-      );
+      const actionOwnerUser = users.find((user) => user.id === risk.action_owner);
       const actionOwnerName = actionOwnerUser
         ? `${actionOwnerUser.name} ${actionOwnerUser.surname}`
         : "-";
@@ -1058,34 +990,49 @@ const Vendors = () => {
   return (
     <PageHeaderExtended
       title={value === "1" ? "Vendor list" : "Vendor risks list"}
-
       description={
         value === "1"
           ? "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here."
           : "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here."
       }
-      helpArticlePath={
-        value === "1" ? "risk-management/vendor-management" : undefined
-      }
+      helpArticlePath={value === "1" ? "risk-management/vendor-management" : undefined}
       tipBoxEntity="vendors"
       summaryCards={
         value !== "1" &&
         (loadingVendorRisks || isVendorsLoading ? (
-          <CustomizableSkeleton
-            variant="rectangular"
-            width="50%"
-            height={100}
-          />
+          <CustomizableSkeleton variant="rectangular" width="50%" height={100} />
         ) : (
           <StatusTileCards
-            items={[
-              { key: "Total", label: "Total", count: vendorRisksSummary.total, color: "#4B5563" },
-              { key: "Very high", label: "Very high", count: vendorRisksSummary.veryHighRisks, color: "#C63622" },
-              { key: "High", label: "High", count: vendorRisksSummary.highRisks, color: "#D68B61" },
-              { key: "Medium", label: "Medium", count: vendorRisksSummary.mediumRisks, color: "#D6B971" },
-              { key: "Low", label: "Low", count: vendorRisksSummary.lowRisks, color: "#52AB43" },
-              { key: "Very low", label: "Very low", count: vendorRisksSummary.veryLowRisks, color: "#B8D39C" },
-            ] satisfies StatusTileItem[]}
+            items={
+              [
+                { key: "Total", label: "Total", count: vendorRisksSummary.total, color: "#4B5563" },
+                {
+                  key: "Very high",
+                  label: "Very high",
+                  count: vendorRisksSummary.veryHighRisks,
+                  color: "#C63622",
+                },
+                {
+                  key: "High",
+                  label: "High",
+                  count: vendorRisksSummary.highRisks,
+                  color: "#D68B61",
+                },
+                {
+                  key: "Medium",
+                  label: "Medium",
+                  count: vendorRisksSummary.mediumRisks,
+                  color: "#D6B971",
+                },
+                { key: "Low", label: "Low", count: vendorRisksSummary.lowRisks, color: "#52AB43" },
+                {
+                  key: "Very low",
+                  label: "Very low",
+                  count: vendorRisksSummary.veryLowRisks,
+                  color: "#B8D39C",
+                },
+              ] satisfies StatusTileItem[]
+            }
             onCardClick={(key) => {
               if (key === "Total" || key === selectedRiskLevel) {
                 handleRiskCardClick("");
@@ -1103,7 +1050,7 @@ const Vendors = () => {
         alert && (
           <Suspense fallback={<div>Loading...</div>}>
             <Fade in={showAlert} timeout={300}>
-              <Box sx={{ position: 'fixed' }}>
+              <Box sx={{ position: "fixed" }}>
                 <Alert
                   variant={alert.variant}
                   title={alert.title}
@@ -1121,7 +1068,6 @@ const Vendors = () => {
       }
     >
       <TabContext value={value}>
-
         <Box sx={{ mt: 2 }}>
           <TabBar
             tabs={[
@@ -1147,227 +1093,219 @@ const Vendors = () => {
             dataJoyrideId="vendor-list-tab"
           />
         </Box>
-          {isVendorsLoading && value === "1" ? (
-            <CustomizableSkeleton
-              variant="rectangular"
-              width={"15%"}
-              height={35}
-              sx={{ alignSelf: "flex-end" }}
-            />
-          ) : (
-            value === "1" && (
-              <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Stack direction="row" gap={2} alignItems="center">
-                    <FilterBy
-                      columns={vendorFilterColumns}
-                      onFilterChange={handleVendorFilterChange}
-                    />
-                    <GroupBy
-                      options={[
-                        { id: "review_status", label: "Status" },
-                        { id: "assignee", label: "Assignee" },
-                        { id: "reviewer", label: "Reviewer" },
-                        { id: "data_sensitivity", label: "Data sensitivity" },
-                        {
-                          id: "business_criticality",
-                          label: "Business criticality",
-                        },
-                      ]}
-                      onGroupChange={handleGroupChange}
-                    />
-                    <ColumnSelector
-                      columns={allVendorColumns}
-                      visibleColumns={vendorVisibleColumns}
-                      onToggleColumn={toggleVendorColumn}
-                      onResetToDefaults={resetVendorColumns}
-                    />
-                    <SearchBox
-                      placeholder="Search vendors..."
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      fullWidth={false}
-                    />
-                  </Stack>
-                  <Stack direction="row" gap="8px" alignItems="center">
-                    <ExportMenu
-                      data={exportData}
-                      columns={exportColumns}
-                      filename="vendors"
-                      title="Vendor List"
-                    />
-                    <div data-joyride-id="add-new-vendor" ref={refs[0]}>
-                      <CustomizableButton
-                        variant="contained"
-                        text="Add new vendor"
-                        sx={{
-                          backgroundColor: "brand.primary",
-                          border: "1px solid brand.primary",
-                          gap: 2,
-                        }}
-                        icon={<AddCircleOutlineIcon size={16} />}
-                        onClick={() => {
-                          openAddNewVendor();
-                          setSelectedVendor(null);
-                        }}
-                        isDisabled={isCreatingDisabled}
-                      />
-                    </div>
-                  </Stack>
-                </Stack>
-              </Stack>
-            )
-          )}
-
-          {(loadingVendorRisks || isVendorsLoading) && value !== "1" ? (
-            <CustomizableSkeleton
-              variant="rectangular"
-              width={"15%"}
-              height={35}
-              sx={{ alignSelf: "flex-end" }}
-            />
-          ) : (
-            value !== "1" && (
-              <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Stack direction="row" gap={2} alignItems="center">
-                    <Select
-                      id="filter-status"
-                      value={filterStatus}
-                      items={[
-                        { _id: "active", name: "Active only" },
-                        { _id: "all", name: "Active + deleted" },
-                        { _id: "deleted", name: "Deleted only" },
-                      ]}
-                      onChange={handleFilterStatusChange}
-                      sx={{
-                        width: "160px",
-                        minHeight: "34px",
-                        borderRadius: theme.shape.borderRadius,
-                      }}
-                    />
-                    <FilterBy
-                      columns={vendorRiskFilterColumns}
-                      onFilterChange={handleVendorRiskFilterChange}
-                    />
-                    <GroupBy
-                      options={[
-                        { id: "risk_severity", label: "Risk severity" },
-                        { id: "risk_level", label: "Risk level" },
-                        { id: "vendor_name", label: "Vendor" },
-                        { id: "action_owner", label: "Action owner" },
-                      ]}
-                      onGroupChange={handleGroupChangeRisk}
-                    />
-                    <ColumnSelector
-                      columns={allVendorRiskColumns}
-                      visibleColumns={vendorRiskVisibleColumns}
-                      onToggleColumn={toggleVendorRiskColumn}
-                      onResetToDefaults={resetVendorRiskColumns}
-                    />
-                    <SearchBox
-                      placeholder="Search risks..."
-                      value={risksSearchTerm}
-                      onChange={setRisksSearchTerm}
-                      inputProps={{ "aria-label": "Search risks" }}
-                      fullWidth={false}
-                    />
-                  </Stack>
-                  <Stack direction="row" gap="8px" alignItems="center">
-                    <ExportMenu
-                      data={vendorRisksExportData}
-                      columns={vendorRisksExportColumns}
-                      filename="vendor-risks"
-                      title="Vendor Risks"
-                    />
-                    <Box data-joyride-id="add-vendor-risk-button">
-                      <CustomizableButton
-                        variant="contained"
-                        text="Add new risk"
-                        sx={{
-                          backgroundColor: "brand.primary",
-                          border: "1px solid brand.primary",
-                          gap: 2,
-                        }}
-                        icon={<AddCircleOutlineIcon size={16} />}
-                        onClick={() => {
-                          setSelectedRisk(null);
-                          handleRiskModal();
-                        }}
-                        isDisabled={isCreatingDisabled}
-                      />
-                    </Box>
-                  </Stack>
-                </Stack>
-              </Stack>
-            )
-          )}
-
-          {isVendorsLoading && value === "1" ? (
-            <CustomizableSkeleton
-              height={"20vh"}
-              minHeight={"20vh"}
-              minWidth={260}
-              width={"100%"}
-              maxWidth={"100%"}
-              variant="rectangular"
-            />
-          ) : (
-            <TabPanel value="1" sx={tabPanelStyle}>
-              <GroupedTableView
-                groupedData={groupedVendors}
-                ungroupedData={filteredVendors}
-                renderTable={(data, options) => (
-                  <TableWithPlaceholder
-                    vendors={data}
-                    users={users}
-                    onDelete={handleDeleteVendor}
-                    onEdit={handleEditVendor}
-                    hidePagination={options?.hidePagination}
-                    vendorRisks={vendorRisks}
+        {isVendorsLoading && value === "1" ? (
+          <CustomizableSkeleton
+            variant="rectangular"
+            width={"15%"}
+            height={35}
+            sx={{ alignSelf: "flex-end" }}
+          />
+        ) : (
+          value === "1" && (
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" gap={2} alignItems="center">
+                  <FilterBy
+                    columns={vendorFilterColumns}
+                    onFilterChange={handleVendorFilterChange}
+                  />
+                  <GroupBy
+                    options={[
+                      { id: "review_status", label: "Status" },
+                      { id: "assignee", label: "Assignee" },
+                      { id: "reviewer", label: "Reviewer" },
+                      { id: "data_sensitivity", label: "Data sensitivity" },
+                      {
+                        id: "business_criticality",
+                        label: "Business criticality",
+                      },
+                    ]}
+                    onGroupChange={handleGroupChange}
+                  />
+                  <ColumnSelector
+                    columns={allVendorColumns}
                     visibleColumns={vendorVisibleColumns}
+                    onToggleColumn={toggleVendorColumn}
+                    onResetToDefaults={resetVendorColumns}
                   />
-                )}
-              />
-            </TabPanel>
-          )}
-          {(loadingVendorRisks || isVendorsLoading) && value !== "1" ? (
-            <CustomizableSkeleton
-              height={"20vh"}
-              minHeight={"20vh"}
-              minWidth={260}
-              width={"100%"}
-              maxWidth={"100%"}
-              variant="rectangular"
-            />
-          ) : (
-            <TabPanel value="2" sx={tabPanelStyle}>
-              <GroupedTableView
-                groupedData={groupedVendorRisks}
-                ungroupedData={filteredVendorRisks}
-                renderTable={(data, options) => (
-                  <RiskTable
-                    users={users}
-                    vendors={vendors}
-                    vendorRisks={data}
-                    onDelete={handleDeleteRisk}
-                    onEdit={handleEditRisk}
-                    isDeletingAllowed={isDeletingAllowed}
-                    hidePagination={options?.hidePagination}
+                  <SearchBox
+                    placeholder="Search vendors..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    fullWidth={false}
+                  />
+                </Stack>
+                <Stack direction="row" gap="8px" alignItems="center">
+                  <ExportMenu
+                    data={exportData}
+                    columns={exportColumns}
+                    filename="vendors"
+                    title="Vendor List"
+                  />
+                  <div data-joyride-id="add-new-vendor" ref={refs[0]}>
+                    <CustomizableButton
+                      variant="contained"
+                      text="Add new vendor"
+                      sx={{
+                        backgroundColor: "brand.primary",
+                        border: "1px solid brand.primary",
+                        gap: 2,
+                      }}
+                      icon={<AddCircleOutlineIcon size={16} />}
+                      onClick={() => {
+                        openAddNewVendor();
+                        setSelectedVendor(null);
+                      }}
+                      isDisabled={isCreatingDisabled}
+                    />
+                  </div>
+                </Stack>
+              </Stack>
+            </Stack>
+          )
+        )}
+
+        {(loadingVendorRisks || isVendorsLoading) && value !== "1" ? (
+          <CustomizableSkeleton
+            variant="rectangular"
+            width={"15%"}
+            height={35}
+            sx={{ alignSelf: "flex-end" }}
+          />
+        ) : (
+          value !== "1" && (
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" gap={2} alignItems="center">
+                  <Select
+                    id="filter-status"
+                    value={filterStatus}
+                    items={[
+                      { _id: "active", name: "Active only" },
+                      { _id: "all", name: "Active + deleted" },
+                      { _id: "deleted", name: "Deleted only" },
+                    ]}
+                    onChange={handleFilterStatusChange}
+                    sx={{
+                      width: "160px",
+                      minHeight: "34px",
+                      borderRadius: theme.shape.borderRadius,
+                    }}
+                  />
+                  <FilterBy
+                    columns={vendorRiskFilterColumns}
+                    onFilterChange={handleVendorRiskFilterChange}
+                  />
+                  <GroupBy
+                    options={[
+                      { id: "risk_severity", label: "Risk severity" },
+                      { id: "risk_level", label: "Risk level" },
+                      { id: "vendor_name", label: "Vendor" },
+                      { id: "action_owner", label: "Action owner" },
+                    ]}
+                    onGroupChange={handleGroupChangeRisk}
+                  />
+                  <ColumnSelector
+                    columns={allVendorRiskColumns}
                     visibleColumns={vendorRiskVisibleColumns}
+                    onToggleColumn={toggleVendorRiskColumn}
+                    onResetToDefaults={resetVendorRiskColumns}
                   />
-                )}
-              />
-            </TabPanel>
-          )}
+                  <SearchBox
+                    placeholder="Search risks..."
+                    value={risksSearchTerm}
+                    onChange={setRisksSearchTerm}
+                    inputProps={{ "aria-label": "Search risks" }}
+                    fullWidth={false}
+                  />
+                </Stack>
+                <Stack direction="row" gap="8px" alignItems="center">
+                  <ExportMenu
+                    data={vendorRisksExportData}
+                    columns={vendorRisksExportColumns}
+                    filename="vendor-risks"
+                    title="Vendor Risks"
+                  />
+                  <Box data-joyride-id="add-vendor-risk-button">
+                    <CustomizableButton
+                      variant="contained"
+                      text="Add new risk"
+                      sx={{
+                        backgroundColor: "brand.primary",
+                        border: "1px solid brand.primary",
+                        gap: 2,
+                      }}
+                      icon={<AddCircleOutlineIcon size={16} />}
+                      onClick={() => {
+                        setSelectedRisk(null);
+                        handleRiskModal();
+                      }}
+                      isDisabled={isCreatingDisabled}
+                    />
+                  </Box>
+                </Stack>
+              </Stack>
+            </Stack>
+          )
+        )}
+
+        {isVendorsLoading && value === "1" ? (
+          <CustomizableSkeleton
+            height={"20vh"}
+            minHeight={"20vh"}
+            minWidth={260}
+            width={"100%"}
+            maxWidth={"100%"}
+            variant="rectangular"
+          />
+        ) : (
+          <TabPanel value="1" sx={tabPanelStyle}>
+            <GroupedTableView
+              groupedData={groupedVendors}
+              ungroupedData={filteredVendors}
+              renderTable={(data, options) => (
+                <TableWithPlaceholder
+                  vendors={data}
+                  users={users}
+                  onDelete={handleDeleteVendor}
+                  onEdit={handleEditVendor}
+                  hidePagination={options?.hidePagination}
+                  vendorRisks={vendorRisks}
+                  visibleColumns={vendorVisibleColumns}
+                />
+              )}
+            />
+          </TabPanel>
+        )}
+        {(loadingVendorRisks || isVendorsLoading) && value !== "1" ? (
+          <CustomizableSkeleton
+            height={"20vh"}
+            minHeight={"20vh"}
+            minWidth={260}
+            width={"100%"}
+            maxWidth={"100%"}
+            variant="rectangular"
+          />
+        ) : (
+          <TabPanel value="2" sx={tabPanelStyle}>
+            <GroupedTableView
+              groupedData={groupedVendorRisks}
+              ungroupedData={filteredVendorRisks}
+              renderTable={(data, options) => (
+                <RiskTable
+                  users={users}
+                  vendors={vendors}
+                  vendorRisks={data}
+                  onDelete={handleDeleteRisk}
+                  onEdit={handleEditRisk}
+                  isDeletingAllowed={isDeletingAllowed}
+                  hidePagination={options?.hidePagination}
+                  visibleColumns={vendorRiskVisibleColumns}
+                />
+              )}
+            />
+          </TabPanel>
+        )}
       </TabContext>
 
       <AddNewVendor
@@ -1389,9 +1327,7 @@ const Vendors = () => {
         existingRisk={selectedRisk}
         vendors={vendors}
       />
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
 
       <PageTour
         steps={VendorsSteps}

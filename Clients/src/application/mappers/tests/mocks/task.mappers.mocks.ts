@@ -40,10 +40,7 @@ const taskResponse: TaskResponseDTO = {
   created_at: "2024-06-10T09:00:00Z",
   updated_at: "2024-06-12T11:00:00Z",
   creator_name: "Jane Smith",
-  assignees: [
-    new TaskAssigneeBuilder(1).build(),
-    new TaskAssigneeBuilder(2).build(),
-  ],
+  assignees: [new TaskAssigneeBuilder(1).build(), new TaskAssigneeBuilder(2).build()],
   isOverdue: false,
 };
 

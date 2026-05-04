@@ -59,7 +59,7 @@ class TestEntityGraphViewsModel {
     name: string,
     userId: number,
     organizationId: number,
-    config: EntityGraphViewConfig
+    config: EntityGraphViewConfig,
   ): Promise<TestEntityGraphViewsModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
@@ -134,7 +134,7 @@ describe("EntityGraphViewsModel", () => {
         validViewData.name,
         validViewData.userId,
         validViewData.organizationId,
-        validViewData.config
+        validViewData.config,
       );
 
       expect(view).toBeInstanceOf(TestEntityGraphViewsModel);
@@ -151,7 +151,7 @@ describe("EntityGraphViewsModel", () => {
         "  My View  ",
         validViewData.userId,
         validViewData.organizationId,
-        validViewData.config
+        validViewData.config,
       );
 
       expect(view.name).toBe("My View");
@@ -162,7 +162,7 @@ describe("EntityGraphViewsModel", () => {
         validViewData.name,
         validViewData.userId,
         validViewData.organizationId,
-        {}
+        {},
       );
 
       expect(view.config).toEqual({});
@@ -185,7 +185,7 @@ describe("EntityGraphViewsModel", () => {
         validViewData.name,
         validViewData.userId,
         validViewData.organizationId,
-        fullConfig
+        fullConfig,
       );
 
       expect(view.config).toEqual(fullConfig);
@@ -201,7 +201,7 @@ describe("EntityGraphViewsModel", () => {
         validViewData.name,
         validViewData.userId,
         validViewData.organizationId,
-        configWithNullQuery
+        configWithNullQuery,
       );
 
       expect(view.config.query).toBeNull();
@@ -213,8 +213,8 @@ describe("EntityGraphViewsModel", () => {
           "",
           validViewData.userId,
           validViewData.organizationId,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("View name is required");
     });
 
@@ -224,8 +224,8 @@ describe("EntityGraphViewsModel", () => {
           "   ",
           validViewData.userId,
           validViewData.organizationId,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("View name is required");
     });
 
@@ -236,8 +236,8 @@ describe("EntityGraphViewsModel", () => {
           longName,
           validViewData.userId,
           validViewData.organizationId,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("View name cannot exceed 100 characters");
     });
 
@@ -247,8 +247,8 @@ describe("EntityGraphViewsModel", () => {
           validViewData.name,
           0,
           validViewData.organizationId,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -258,8 +258,8 @@ describe("EntityGraphViewsModel", () => {
           validViewData.name,
           -1,
           validViewData.organizationId,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -269,8 +269,8 @@ describe("EntityGraphViewsModel", () => {
           validViewData.name,
           validViewData.userId,
           0,
-          validViewData.config
-        )
+          validViewData.config,
+        ),
       ).rejects.toThrow("Valid organization ID is required");
     });
 
@@ -280,8 +280,8 @@ describe("EntityGraphViewsModel", () => {
           validViewData.name,
           validViewData.userId,
           validViewData.organizationId,
-          null as any
-        )
+          null as any,
+        ),
       ).rejects.toThrow("Valid config object is required");
     });
 
@@ -291,8 +291,8 @@ describe("EntityGraphViewsModel", () => {
           validViewData.name,
           validViewData.userId,
           validViewData.organizationId,
-          "not-an-object" as any
-        )
+          "not-an-object" as any,
+        ),
       ).rejects.toThrow("Valid config object is required");
     });
   });

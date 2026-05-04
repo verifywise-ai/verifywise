@@ -38,6 +38,8 @@ export const taskManagementContent: ArticleContent = {
         { bold: 'Open', text: 'Task has been created but work has not begun' },
         { bold: 'In progress', text: 'Task is actively being worked on' },
         { bold: 'Completed', text: 'Task has been finished successfully' },
+        { bold: 'Overdue', text: 'Task is past its due date and not yet completed' },
+        { bold: 'Deleted', text: 'Task has been removed (soft-deleted) and is hidden from default views' },
       ],
     },
     {
@@ -94,7 +96,7 @@ export const taskManagementContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Clear ownership', text: 'Always assign a single person responsible for each task' },
+        { bold: 'Clear ownership', text: 'Tasks support multiple assignees (up to 20). When you have several, designate one as the primary owner so accountability is clear' },
         { bold: 'Realistic deadlines', text: 'Set achievable due dates to maintain team morale and trust' },
         { bold: 'Regular reviews', text: 'Review task progress regularly to identify blockers early' },
         { bold: 'Link to projects', text: 'Connect tasks to relevant projects for better traceability' },

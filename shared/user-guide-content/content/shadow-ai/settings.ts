@@ -116,7 +116,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send events via `POST /api/v1/shadow-ai/events` with a JSON request body containing an `events` array. Authenticate using the `X-API-Key` header with a valid API key.',
+      text: 'Send events via `POST /v1/shadow-ai/events` with a JSON request body containing an `events` array. Authenticate using the `X-API-Key` header with a valid API key.',
     },
     {
       type: 'code',

@@ -31,7 +31,7 @@ import { QueryTypes } from "sequelize";
  */
 export async function createGapRulesQuery(
   gapRules: EntityGraphGapRulesModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphGapRulesModel> {
   try {
     const result = await sequelize.query(
@@ -48,16 +48,10 @@ export async function createGapRulesQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
-    if (
-      result &&
-      Array.isArray(result) &&
-      result[0] &&
-      Array.isArray(result[0]) &&
-      result[0][0]
-    ) {
+    if (result && Array.isArray(result) && result[0] && Array.isArray(result[0]) && result[0][0]) {
       const row = result[0][0];
       gapRules.id = row.id;
       gapRules.created_at = row.created_at;
@@ -84,7 +78,7 @@ export async function createGapRulesQuery(
  */
 export async function getGapRulesByUserQuery(
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphGapRulesModel | null> {
   try {
     const result = await sequelize.query(
@@ -95,7 +89,7 @@ export async function getGapRulesByUserQuery(
       {
         replacements: { user_id: userId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -104,8 +98,7 @@ export async function getGapRulesByUserQuery(
         id: row.id,
         user_id: row.user_id,
         organization_id: row.organization_id,
-        rules:
-          typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
+        rules: typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -128,7 +121,7 @@ export async function getGapRulesByUserQuery(
  */
 export async function getGapRulesByIdQuery(
   gapRulesId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphGapRulesModel | null> {
   try {
     const result = await sequelize.query(
@@ -139,7 +132,7 @@ export async function getGapRulesByIdQuery(
       {
         replacements: { id: gapRulesId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -148,8 +141,7 @@ export async function getGapRulesByIdQuery(
         id: row.id,
         user_id: row.user_id,
         organization_id: row.organization_id,
-        rules:
-          typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
+        rules: typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -174,7 +166,7 @@ export async function getGapRulesByIdQuery(
 export async function updateGapRulesQuery(
   gapRulesId: number,
   rules: GapRule[],
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphGapRulesModel | null> {
   try {
     const updatedAt = new Date();
@@ -191,7 +183,7 @@ export async function updateGapRulesQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     // Fetch the updated gap rules
@@ -215,7 +207,7 @@ export async function updateGapRulesQuery(
  */
 export async function upsertGapRulesQuery(
   gapRules: EntityGraphGapRulesModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphGapRulesModel> {
   try {
     const result = await sequelize.query(
@@ -234,23 +226,16 @@ export async function upsertGapRulesQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
-    if (
-      result &&
-      Array.isArray(result) &&
-      result[0] &&
-      Array.isArray(result[0]) &&
-      result[0][0]
-    ) {
+    if (result && Array.isArray(result) && result[0] && Array.isArray(result[0]) && result[0][0]) {
       const row = result[0][0];
       return new EntityGraphGapRulesModel({
         id: row.id,
         user_id: row.user_id,
         organization_id: row.organization_id,
-        rules:
-          typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
+        rules: typeof row.rules === "string" ? JSON.parse(row.rules) : row.rules,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -273,7 +258,7 @@ export async function upsertGapRulesQuery(
  */
 export async function deleteGapRulesQuery(
   gapRulesId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -283,7 +268,7 @@ export async function deleteGapRulesQuery(
       {
         replacements: { id: gapRulesId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return Array.isArray(result) && result.length > 0 ? 1 : 0;
@@ -303,7 +288,7 @@ export async function deleteGapRulesQuery(
  */
 export async function deleteGapRulesByUserQuery(
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -313,14 +298,12 @@ export async function deleteGapRulesByUserQuery(
       {
         replacements: { user_id: userId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return Array.isArray(result) && result.length > 0 ? 1 : 0;
   } catch (error) {
-    throw new Error(
-      `Failed to delete gap rules by user: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to delete gap rules by user: ${(error as Error).message}`);
   }
 }
 

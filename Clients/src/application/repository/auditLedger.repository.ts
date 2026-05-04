@@ -43,7 +43,7 @@ interface GetAuditLedgerParams {
 }
 
 export async function getAuditLedger(
-  params: GetAuditLedgerParams = {}
+  params: GetAuditLedgerParams = {},
 ): Promise<AuditLedgerResponse> {
   const query = new URLSearchParams();
   if (params.limit !== undefined) query.set("limit", String(params.limit));
@@ -52,7 +52,7 @@ export async function getAuditLedger(
   if (params.entry_type) query.set("entry_type", String(params.entry_type));
 
   const response = await CustomAxios.get(
-    `/audit-ledger${query.toString() ? `?${query.toString()}` : ""}`
+    `/audit-ledger${query.toString() ? `?${query.toString()}` : ""}`,
   );
   return response.data.data;
 }

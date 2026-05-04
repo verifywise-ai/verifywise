@@ -5,20 +5,18 @@
  * Integrates with the existing notification system.
  */
 
-import {
-  sendInAppNotification,
-  sendBulkInAppNotifications,
-} from "./inAppNotification.service";
+import { sendInAppNotification, sendBulkInAppNotifications } from "./inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
-import {
-  IShadowAiRule,
-  ShadowAiTriggerType,
-} from "../domain.layer/interfaces/i.shadowAi";
+import { IShadowAiRule, ShadowAiTriggerType } from "../domain.layer/interfaces/i.shadowAi";
 import {
   NotificationType,
   NotificationEntityType,
 } from "../domain.layer/interfaces/i.notification";
-import { insertAlertHistoryQuery, getActiveRulesQuery, getRecentAlertKeys } from "../utils/shadowAiRules.utils";
+import {
+  insertAlertHistoryQuery,
+  getActiveRulesQuery,
+  getRecentAlertKeys,
+} from "../utils/shadowAiRules.utils";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
 
@@ -51,16 +49,13 @@ interface AlertContext {
 export async function processTriggeredRules(
   organizationId: number,
   rules: IShadowAiRule[],
-  context: AlertContext
+  context: AlertContext,
 ): Promise<void> {
   for (const rule of rules) {
     try {
       await sendRuleAlert(organizationId, rule, context);
     } catch (error) {
-      logger.error(
-        `Failed to process alert for rule ${rule.id}:`,
-        error
-      );
+      logger.error(`Failed to process alert for rule ${rule.id}:`, error);
     }
   }
 }
@@ -71,10 +66,9 @@ export async function processTriggeredRules(
 async function sendRuleAlert(
   organizationId: number,
   rule: IShadowAiRule,
-  context: AlertContext
+  context: AlertContext,
 ): Promise<void> {
-  const triggerLabel =
-    TRIGGER_LABELS[rule.trigger_type] || rule.trigger_type;
+  const triggerLabel = TRIGGER_LABELS[rule.trigger_type] || rule.trigger_type;
   const description = buildAlertDescription(rule, context);
   const firedAt = new Date().toISOString();
 
@@ -129,7 +123,7 @@ async function sendRuleAlert(
         created_by: 0, // system
       },
       true,
-      emailConfig
+      emailConfig,
     );
   } else {
     await sendBulkInAppNotifications(
@@ -146,7 +140,7 @@ async function sendRuleAlert(
         created_by: 0,
       },
       true,
-      emailConfig
+      emailConfig,
     );
   }
 }
@@ -154,10 +148,7 @@ async function sendRuleAlert(
 /**
  * Build human-readable description for the alert.
  */
-function buildAlertDescription(
-  rule: IShadowAiRule,
-  context: AlertContext
-): string {
+function buildAlertDescription(rule: IShadowAiRule, context: AlertContext): string {
   switch (rule.trigger_type) {
     case "new_tool_detected":
       return `A new AI tool "${context.toolName || "Unknown"}" has been detected in your organization.`;
@@ -195,7 +186,7 @@ export interface BatchContext {
  */
 export async function evaluateRulesForBatch(
   organizationId: number,
-  batch: BatchContext
+  batch: BatchContext,
 ): Promise<void> {
   let rules: IShadowAiRule[];
   try {
@@ -211,14 +202,17 @@ export async function evaluateRulesForBatch(
 
   // Pre-fetch tool data for risk_score and usage_threshold checks (single query)
   const toolIds = [...batch.toolEventCounts.keys()];
-  let toolDataMap = new Map<number, { name: string; risk_score: number | null; total_events: number; status: string }>();
+  let toolDataMap = new Map<
+    number,
+    { name: string; risk_score: number | null; total_events: number; status: string }
+  >();
   if (toolIds.length > 0) {
     try {
       const [toolRows] = await sequelize.query(
         `SELECT id, name, risk_score, total_events, status
          FROM shadow_ai_tools
          WHERE organization_id = :organizationId AND id IN (:toolIds)`,
-        { replacements: { organizationId, toolIds } }
+        { replacements: { organizationId, toolIds } },
       );
       for (const t of toolRows as any[]) {
         toolDataMap.set(t.id, {
@@ -246,7 +240,13 @@ export async function evaluateRulesForBatch(
            WHERE organization_id = :organizationId
            ORDER BY id DESC LIMIT :recentLimit
          )`,
-        { replacements: { organizationId, emails: batchEmails, recentLimit: batchEmails.length * 10 } }
+        {
+          replacements: {
+            organizationId,
+            emails: batchEmails,
+            recentLimit: batchEmails.length * 10,
+          },
+        },
       );
       for (const r of userRows as any[]) {
         existingEmails.add(r.user_email);
@@ -392,7 +392,7 @@ export async function evaluateRulesForBatch(
   // Per-batch alert cap — hard safety net
   if (triggered.length > MAX_ALERTS_PER_BATCH) {
     logger.warn(
-      `Alert cap reached: ${triggered.length} alerts truncated to ${MAX_ALERTS_PER_BATCH} for org ${organizationId}`
+      `Alert cap reached: ${triggered.length} alerts truncated to ${MAX_ALERTS_PER_BATCH} for org ${organizationId}`,
     );
     triggered.length = MAX_ALERTS_PER_BATCH;
   }

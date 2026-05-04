@@ -24,7 +24,9 @@ describe("useRoles", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("fetches roles", async () => {
-    mockGetEntity.mockResolvedValue({ data: [{ id: 1, name: "Admin", description: "Full access" }] });
+    mockGetEntity.mockResolvedValue({
+      data: [{ id: 1, name: "Admin", description: "Full access" }],
+    });
 
     const { result } = renderHook(() => useRoles(), { wrapper: createWrapper() });
 

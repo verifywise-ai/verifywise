@@ -17,11 +17,7 @@ interface EnhancedTooltipProps {
  * Opens on hover, closes on mouse leave or explicit close button click.
  * Supports keyboard activation via Enter/Space on the trigger element.
  */
-export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({
-  children,
-  title,
-  content,
-}) => {
+export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({ children, title, content }) => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -162,8 +158,7 @@ export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({
               width: 100,
               height: 100,
               borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(19, 113, 91, 0.2) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(19, 113, 91, 0.2) 0%, transparent 70%)",
               pointerEvents: "none",
             }}
           />

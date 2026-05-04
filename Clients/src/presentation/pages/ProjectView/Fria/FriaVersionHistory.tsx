@@ -80,10 +80,18 @@ const FIELD_LABELS: Record<string, string> = {
 
 // Fields to skip in diff (metadata, IDs)
 const SKIP_FIELDS = new Set([
-  "id", "project_id", "organization_id", "version",
-  "created_by", "updated_by", "created_at", "updated_at",
-  "created_by_name", "updated_by_name",
-  "project_title", "organization_name",
+  "id",
+  "project_id",
+  "organization_id",
+  "version",
+  "created_by",
+  "updated_by",
+  "created_at",
+  "updated_at",
+  "created_by_name",
+  "updated_by_name",
+  "project_title",
+  "organization_name",
 ]);
 
 // Fields that contain ISO date strings
@@ -108,7 +116,7 @@ function formatValue(value: unknown, fieldKey?: string): string {
 
 function computeDiffs(
   oldAssessment: Record<string, unknown> | null,
-  newAssessment: Record<string, unknown>
+  newAssessment: Record<string, unknown>,
 ): FieldDiff[] {
   const diffs: FieldDiff[] = [];
 
@@ -139,14 +147,16 @@ function computeDiffs(
 
 function computeRightsDiffs(
   oldRights: Record<string, unknown>[] | null,
-  newRights: Record<string, unknown>[]
+  newRights: Record<string, unknown>[],
 ): FieldDiff[] {
   const diffs: FieldDiff[] = [];
 
   for (const newRight of newRights) {
     const key = newRight.right_key as string;
     const title = (newRight.right_title as string) || key;
-    const oldRight = oldRights?.find((r) => r.right_key === key) as Record<string, unknown> | undefined;
+    const oldRight = oldRights?.find((r) => r.right_key === key) as
+      | Record<string, unknown>
+      | undefined;
 
     const newFlagged = Boolean(newRight.flagged);
     const oldFlagged = oldRight ? Boolean(oldRight.flagged) : false;
@@ -188,7 +198,11 @@ function formatTimestamp(iso: string): string {
   return `${day} ${month} ${year}, ${hh}:${mm}`;
 }
 
-const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVersionHistoryProps) => {
+const FriaVersionHistory = ({
+  friaId,
+  currentVersion,
+  inline = false,
+}: FriaVersionHistoryProps) => {
   const theme = useTheme();
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -231,12 +245,15 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
     const currentIndex = sortedVersions.findIndex((v) => v.id === snapshot.id);
     const previousSnapshot = currentIndex > 0 ? sortedVersions[currentIndex - 1] : null;
 
-    const previousAssessment = previousSnapshot?.snapshot_data?.assessment as Record<string, unknown> | null ?? null;
+    const previousAssessment =
+      (previousSnapshot?.snapshot_data?.assessment as Record<string, unknown> | null) ?? null;
     const assessmentDiffs = computeDiffs(previousAssessment, assessment);
 
     // Rights diffs
     const newRights = (snapshot.snapshot_data.rights || []) as Record<string, unknown>[];
-    const oldRights = (previousSnapshot?.snapshot_data?.rights || null) as Record<string, unknown>[] | null;
+    const oldRights = (previousSnapshot?.snapshot_data?.rights || null) as
+      | Record<string, unknown>[]
+      | null;
     const rightsDiffs = computeRightsDiffs(oldRights, newRights);
 
     // Risk items count change
@@ -263,7 +280,9 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
       return (
         <Box sx={{ padding: "12px" }}>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-            {isFirstVersion ? "Initial snapshot with no fields filled." : "No changes from previous version."}
+            {isFirstVersion
+              ? "Initial snapshot with no fields filled."
+              : "No changes from previous version."}
           </Typography>
         </Box>
       );
@@ -273,15 +292,42 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
       <Table size="small" sx={{ "& td, & th": { borderColor: "#e0e4e9" } }}>
         <TableHead>
           <TableRow sx={{ backgroundColor: "#fff" }}>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "6px 12px", width: "30%" }}>
+            <TableCell
+              sx={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                textTransform: "uppercase",
+                padding: "6px 12px",
+                width: "30%",
+              }}
+            >
               Field
             </TableCell>
             {!isFirstVersion && (
-              <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "6px 12px", width: "35%" }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  padding: "6px 12px",
+                  width: "35%",
+                }}
+              >
                 Previous
               </TableCell>
             )}
-            <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "6px 12px", width: isFirstVersion ? "70%" : "35%" }}>
+            <TableCell
+              sx={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                textTransform: "uppercase",
+                padding: "6px 12px",
+                width: isFirstVersion ? "70%" : "35%",
+              }}
+            >
               {isFirstVersion ? "Value" : "Updated"}
             </TableCell>
           </TableRow>
@@ -289,7 +335,15 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
         <TableBody>
           {diffs.map((diff) => (
             <TableRow key={diff.field}>
-              <TableCell sx={{ fontSize: 12, color: theme.palette.text.primary, padding: "6px 12px", fontWeight: 500, verticalAlign: "top" }}>
+              <TableCell
+                sx={{
+                  fontSize: 12,
+                  color: theme.palette.text.primary,
+                  padding: "6px 12px",
+                  fontWeight: 500,
+                  verticalAlign: "top",
+                }}
+              >
                 {diff.label}
               </TableCell>
               {!isFirstVersion && (
@@ -339,9 +393,7 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
 
       {error && (
         <Box sx={{ padding: "16px" }}>
-          <Typography sx={{ fontSize: 13, color: theme.palette.error.main }}>
-            {error}
-          </Typography>
+          <Typography sx={{ fontSize: 13, color: theme.palette.error.main }}>{error}</Typography>
         </Box>
       )}
 
@@ -362,16 +414,48 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
                 borderTop: inline ? "none" : "1px solid #d0d5dd",
               }}
             >
-              <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "8px 16px" }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  padding: "8px 16px",
+                }}
+              >
                 Version
               </TableCell>
-              <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "8px 16px" }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  padding: "8px 16px",
+                }}
+              >
                 Note
               </TableCell>
-              <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "8px 16px" }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  padding: "8px 16px",
+                }}
+              >
                 Saved by
               </TableCell>
-              <TableCell sx={{ fontSize: 11, fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", padding: "8px 16px" }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  padding: "8px 16px",
+                }}
+              >
                 Date
               </TableCell>
               <TableCell sx={{ width: 36, padding: "8px" }} />
@@ -402,22 +486,39 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
                           uppercase={false}
                         />
                         {isCurrent && (
-                          <Chip
-                            label="Current"
-                            variant="success"
-                            size="small"
-                            uppercase={false}
-                          />
+                          <Chip label="Current" variant="success" size="small" uppercase={false} />
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ fontSize: 13, color: theme.palette.text.primary, padding: "10px 16px", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <TableCell
+                      sx={{
+                        fontSize: 13,
+                        color: theme.palette.text.primary,
+                        padding: "10px 16px",
+                        maxWidth: 300,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {v.snapshot_reason || "—"}
                     </TableCell>
-                    <TableCell sx={{ fontSize: 13, color: theme.palette.text.secondary, padding: "10px 16px" }}>
+                    <TableCell
+                      sx={{
+                        fontSize: 13,
+                        color: theme.palette.text.secondary,
+                        padding: "10px 16px",
+                      }}
+                    >
                       {v.created_by_name || "—"}
                     </TableCell>
-                    <TableCell sx={{ fontSize: 13, color: theme.palette.text.secondary, padding: "10px 16px" }}>
+                    <TableCell
+                      sx={{
+                        fontSize: 13,
+                        color: theme.palette.text.secondary,
+                        padding: "10px 16px",
+                      }}
+                    >
                       {v.created_at ? formatTimestamp(v.created_at) : "—"}
                     </TableCell>
                     <TableCell sx={{ width: 36, padding: "10px 8px", textAlign: "center" }}>
@@ -448,7 +549,14 @@ const FriaVersionHistory = ({ friaId, currentVersion, inline = false }: FriaVers
                             padding: "12px 16px",
                           }}
                         >
-                          <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "8px",
+                            }}
+                          >
                             <Typography
                               sx={{
                                 fontSize: 11,

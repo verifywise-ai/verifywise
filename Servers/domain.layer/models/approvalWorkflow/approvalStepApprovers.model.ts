@@ -1,11 +1,4 @@
-import {
-  Table,
-  Column,
-  Model,
-  DataType,
-  ForeignKey,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { IApprovalStepApproversAttributes } from "../../interfaces/i.approvalWorkflow";
 import { UserModel } from "../user/user.model";
 import { ApprovalWorkflowStepModel } from "./approvalWorkflowStep.model";

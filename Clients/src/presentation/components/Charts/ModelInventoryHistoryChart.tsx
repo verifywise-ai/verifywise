@@ -64,8 +64,7 @@ export function ModelInventoryHistoryChart({
       }
     } catch (err: unknown) {
       console.error("Error fetching timeseries data:", err);
-      const message =
-        err instanceof Error ? err.message : "Failed to load chart data";
+      const message = err instanceof Error ? err.message : "Failed to load chart data";
       setError(message);
     } finally {
       setLoading(false);
@@ -90,7 +89,9 @@ export function ModelInventoryHistoryChart({
     const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
     const chartData = timeseriesData.map((point) => {
-      const entry: Record<string, string | number> = { date: fmt.format(new Date(point.timestamp)) };
+      const entry: Record<string, string | number> = {
+        date: fmt.format(new Date(point.timestamp)),
+      };
       statusValues.forEach((status) => {
         entry[status] = point.data[status] || 0;
       });
@@ -105,10 +106,7 @@ export function ModelInventoryHistoryChart({
       dot: false as const,
     }));
 
-    const maxValue = Math.max(
-      ...timeseriesData.flatMap((point) => Object.values(point.data)),
-      0
-    );
+    const maxValue = Math.max(...timeseriesData.flatMap((point) => Object.values(point.data)), 0);
 
     return { chartData, series, maxValue };
   }, [timeseriesData, parameter]);
@@ -144,20 +142,14 @@ export function ModelInventoryHistoryChart({
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
       >
-        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>
-          {error}
-        </Typography>
+        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>{error}</Typography>
       </Stack>
     );
   }
 
   if (!timeseriesData || timeseriesData.length === 0) {
     return (
-      <EmptyState
-        message="There is no historical data here"
-        showBorder={true}
-        icon={TrendingUp}
-      />
+      <EmptyState message="There is no historical data here" showBorder={true} icon={TrendingUp} />
     );
   }
 

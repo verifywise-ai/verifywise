@@ -35,9 +35,7 @@ export const useUserFilesMetaData = () => {
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
-        setError(
-          error instanceof Error ? error : new Error("Unknown error occurred")
-        );
+        setError(error instanceof Error ? error : new Error("Unknown error occurred"));
       } finally {
         setLoading(false);
       }

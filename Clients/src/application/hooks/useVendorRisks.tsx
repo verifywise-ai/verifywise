@@ -19,20 +19,23 @@ import { getAllVendorRisks } from "../repository/vendorRisk.repository";
 
 // Query keys for vendor risks
 export const vendorRiskQueryKeys = {
-  all: ['vendorRisks'] as const,
-  lists: () => [...vendorRiskQueryKeys.all, 'list'] as const,
-  list: (filters: { projectId?: string | null; vendorId?: string | null; filter?: 'active' | 'deleted' | 'all' }) =>
-    [...vendorRiskQueryKeys.lists(), filters] as const,
+  all: ["vendorRisks"] as const,
+  lists: () => [...vendorRiskQueryKeys.all, "list"] as const,
+  list: (filters: {
+    projectId?: string | null;
+    vendorId?: string | null;
+    filter?: "active" | "deleted" | "all";
+  }) => [...vendorRiskQueryKeys.lists(), filters] as const,
 };
 
-const useVendorRisks = ({ 
-  projectId, 
-  vendorId, 
-  filter = 'active' 
-}: { 
-  projectId?: string | null; 
-  vendorId?: string | null; 
-  filter?: 'active' | 'deleted' | 'all';
+const useVendorRisks = ({
+  projectId,
+  vendorId,
+  filter = "active",
+}: {
+  projectId?: string | null;
+  vendorId?: string | null;
+  filter?: "active" | "deleted" | "all";
 }) => {
   const {
     data: vendorRisks = [],
@@ -46,14 +49,16 @@ const useVendorRisks = ({
       return response?.data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Filter risks based on projectId and vendorId
   const filteredVendorRisks = useMemo(() => {
-    return vendorRisks.filter(risk => {
-      const matchesProject = !projectId || projectId === "all" || risk.project_id?.toString() === projectId;
-      const matchesVendor = !vendorId || vendorId === "all" || risk.vendor_id?.toString() === vendorId;
+    return vendorRisks.filter((risk) => {
+      const matchesProject =
+        !projectId || projectId === "all" || risk.project_id?.toString() === projectId;
+      const matchesVendor =
+        !vendorId || vendorId === "all" || risk.vendor_id?.toString() === vendorId;
       return matchesProject && matchesVendor;
     });
   }, [vendorRisks, projectId, vendorId]);
@@ -63,8 +68,13 @@ const useVendorRisks = ({
       (acc, risk) => {
         const _risk = convertToCamelCaseRiskKey(risk.risk_level);
         const key = `${_risk.replace(/risks?$/i, "")}Risks`;
-        if (key in acc && key !== 'total') {
-          const riskKey = key as 'veryHighRisks' | 'highRisks' | 'mediumRisks' | 'lowRisks' | 'veryLowRisks';
+        if (key in acc && key !== "total") {
+          const riskKey = key as
+            | "veryHighRisks"
+            | "highRisks"
+            | "mediumRisks"
+            | "lowRisks"
+            | "veryLowRisks";
           acc[riskKey] = acc[riskKey] + 1;
         }
         acc.total = acc.total + 1;
@@ -77,7 +87,7 @@ const useVendorRisks = ({
         mediumRisks: 0,
         lowRisks: 0,
         veryLowRisks: 0,
-      }
+      },
     );
   }, [filteredVendorRisks]);
 

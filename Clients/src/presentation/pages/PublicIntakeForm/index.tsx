@@ -15,10 +15,7 @@ import {
   FormSchema,
   IntakeEntityType,
 } from "../../../application/repository/intakeForm.repository";
-import {
-  FormDesignSettings,
-  DEFAULT_DESIGN_SETTINGS,
-} from "../IntakeFormBuilder/types";
+import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "../IntakeFormBuilder/types";
 import { brand } from "../../themes/palette";
 
 /**
@@ -255,8 +252,8 @@ export function PublicIntakeForm() {
     try {
       const payload = {
         formData: data,
-        submitterEmail: collectContactInfo ? (submitterEmail || "") : "",
-        submitterName: collectContactInfo ? (submitterName || undefined) : undefined,
+        submitterEmail: collectContactInfo ? submitterEmail || "" : "",
+        submitterName: collectContactInfo ? submitterName || undefined : undefined,
         captchaToken,
         captchaAnswer: captchaNum,
         resubmissionToken,
@@ -309,11 +306,7 @@ export function PublicIntakeForm() {
           backgroundColor: "#fafafa",
         }}
       >
-        <Loader2
-          size={32}
-          color={brand.primary}
-          style={{ animation: "spin 1s linear infinite" }}
-        />
+        <Loader2 size={32} color={brand.primary} style={{ animation: "spin 1s linear infinite" }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </Box>
     );
@@ -345,9 +338,7 @@ export function PublicIntakeForm() {
           <Typography sx={{ fontWeight: 600, color: "#1e293b", fontSize: "18px", mb: 2 }}>
             Form unavailable
           </Typography>
-          <Typography sx={{ color: "#64748b", fontSize: "14px" }}>
-            {error}
-          </Typography>
+          <Typography sx={{ color: "#64748b", fontSize: "14px" }}>{error}</Typography>
         </Box>
       </Box>
     );
@@ -419,12 +410,7 @@ export function PublicIntakeForm() {
           </GradientBanner>
 
           {/* Form body */}
-          <Box
-            component="form"
-            onSubmit={handleSubmit(onSubmit)}
-            sx={{ p: "32px" }}
-          >
-
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
             {/* Resubmission alert */}
             {previousData && (
               <Box
@@ -463,9 +449,7 @@ export function PublicIntakeForm() {
                 }}
               >
                 <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>
-                  {error}
-                </Typography>
+                <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
               </Box>
             )}
 
@@ -535,12 +519,7 @@ export function PublicIntakeForm() {
             {/* Form fields */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {sortedFields.map((field) => (
-                <FormFieldRenderer
-                  key={field.id}
-                  field={field}
-                  control={control}
-                  errors={errors}
-                />
+                <FormFieldRenderer key={field.id} field={field} control={control} errors={errors} />
               ))}
             </Box>
 
@@ -561,10 +540,7 @@ export function PublicIntakeForm() {
               isDisabled={isSubmitting}
               startIcon={
                 isSubmitting ? (
-                  <Loader2
-                    size={16}
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />
+                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
                 ) : (
                   <Send size={16} />
                 )

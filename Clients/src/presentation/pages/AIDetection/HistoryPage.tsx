@@ -27,7 +27,17 @@ import {
 } from "@mui/material";
 import Chip from "../../components/Chip";
 import Alert from "../../components/Alert";
-import { Trash2, ChevronsUpDown, Clock, ChevronUp, ChevronDown, Scan as ScanIcon, GitBranch, Search, BarChart3 } from "lucide-react";
+import {
+  Trash2,
+  ChevronsUpDown,
+  Clock,
+  ChevronUp,
+  ChevronDown,
+  Scan as ScanIcon,
+  GitBranch,
+  Search,
+  BarChart3,
+} from "lucide-react";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
@@ -40,7 +50,11 @@ import SearchBox from "../../components/Search/SearchBox";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useGroupByState, useTableGrouping } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { getScans, deleteScan, getScanStatus } from "../../../application/repository/aiDetection.repository";
+import {
+  getScans,
+  deleteScan,
+  getScanStatus,
+} from "../../../application/repository/aiDetection.repository";
 import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette } from "../../themes/palette";
@@ -76,7 +90,6 @@ type SortConfig = {
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
 );
-
 
 // Table columns configuration with sortable flag
 const TABLE_COLUMNS = [
@@ -254,7 +267,7 @@ export default function HistoryPage() {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy hook
@@ -321,7 +334,7 @@ export default function HistoryPage() {
           } catch (error) {
             console.error(`Failed to poll status for scan ${scan.id}:`, error);
           }
-        })
+        }),
       );
 
       if (updates.size > 0) {
@@ -332,12 +345,12 @@ export default function HistoryPage() {
               return { ...scan, status: newStatus };
             }
             return scan;
-          })
+          }),
         );
 
         // If any scan completed, reload to get full data
         const hasCompleted = Array.from(updates.values()).some(
-          (status) => !ACTIVE_STATUSES.includes(status)
+          (status) => !ACTIVE_STATUSES.includes(status),
         );
         if (hasCompleted) {
           loadScans();
@@ -354,13 +367,10 @@ export default function HistoryPage() {
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   const openDeleteModal = (scan: Scan, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -421,7 +431,8 @@ export default function HistoryPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((scan) => {
         const repoName = `${scan.repository_owner}/${scan.repository_name}`.toLowerCase();
-        const triggeredBy = `${scan.triggered_by.name}${scan.triggered_by.surname ? ` ${scan.triggered_by.surname}` : ""}`.toLowerCase();
+        const triggeredBy =
+          `${scan.triggered_by.name}${scan.triggered_by.surname ? ` ${scan.triggered_by.surname}` : ""}`.toLowerCase();
         return repoName.includes(query) || triggeredBy.includes(query);
       });
     }
@@ -480,8 +491,10 @@ export default function HistoryPage() {
           bValue = b.duration_ms ?? 0;
           break;
         case "triggered_by":
-          aValue = `${a.triggered_by.name}${a.triggered_by.surname ? ` ${a.triggered_by.surname}` : ""}`.toLowerCase();
-          bValue = `${b.triggered_by.name}${b.triggered_by.surname ? ` ${b.triggered_by.surname}` : ""}`.toLowerCase();
+          aValue =
+            `${a.triggered_by.name}${a.triggered_by.surname ? ` ${a.triggered_by.surname}` : ""}`.toLowerCase();
+          bValue =
+            `${b.triggered_by.name}${b.triggered_by.surname ? ` ${b.triggered_by.surname}` : ""}`.toLowerCase();
           break;
         default:
           return 0;
@@ -501,10 +514,7 @@ export default function HistoryPage() {
   }, [filteredScans, sortConfig]);
 
   // Define how to get the group key for each scan
-  const getScanGroupKey = (
-    scan: Scan,
-    field: string
-  ): string | string[] => {
+  const getScanGroupKey = (scan: Scan, field: string): string | string[] => {
     switch (field) {
       case "status":
         return STATUS_CONFIG[scan.status] || "Unknown";
@@ -540,11 +550,7 @@ export default function HistoryPage() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Chip label={STATUS_CONFIG[scan.status]} size="small" />
           {scan.scan_mode === "incremental" && (
-            <Chip
-              label="Incremental"
-              size="small"
-              variant="info"
-            />
+            <Chip label="Incremental" size="small" variant="info" />
           )}
         </Box>
       ),
@@ -554,11 +560,7 @@ export default function HistoryPage() {
       label: "RISK SCORE",
       render: (scan: Scan) => {
         if (scan.status !== "completed" || scan.risk_score == null) {
-          return (
-            <Typography sx={{ fontSize: "13px", color: palette.text.accent }}>
-              -
-            </Typography>
-          );
+          return <Typography sx={{ fontSize: "13px", color: palette.text.accent }}>-</Typography>;
         }
         const grade = scan.risk_score_grade;
         const color = getGradeColor(grade);
@@ -612,7 +614,9 @@ export default function HistoryPage() {
       render: (scan: Scan) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Clock size={14} color={palette.text.tertiary} />
-          <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, fontFamily: "monospace" }}>
+          <Typography
+            sx={{ fontSize: "13px", color: palette.text.tertiary, fontFamily: "monospace" }}
+          >
             {scan.status === "completed" ? formatDuration(scan.duration_ms) : "-"}
           </Typography>
         </Box>
@@ -748,17 +752,10 @@ export default function HistoryPage() {
         ) : undefined
       }
     >
-
       {/* Toolbar with Filter, Group, Search */}
       <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
-        <FilterBy
-          columns={FILTER_COLUMNS}
-          onFilterChange={handleFilterChange}
-        />
-        <GroupBy
-          options={GROUP_BY_OPTIONS}
-          onGroupChange={handleGroupChange}
-        />
+        <FilterBy columns={FILTER_COLUMNS} onFilterChange={handleFilterChange} />
+        <GroupBy options={GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
         <SearchBox
           placeholder="Search scans..."
           value={searchQuery}
@@ -800,10 +797,7 @@ export default function HistoryPage() {
                     }}
                   >
                     {columns.map((col) => (
-                      <TableCell
-                        key={col.id}
-                        sx={singleTheme.tableStyles.primary.body.cell}
-                      >
+                      <TableCell key={col.id} sx={singleTheme.tableStyles.primary.body.cell}>
                         {col.render(scan)}
                       </TableCell>
                     ))}
@@ -836,15 +830,10 @@ export default function HistoryPage() {
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 25]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => (
-                        <TablePaginationActions {...props} />
-                      )}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: currentPage, count }) =>
-                        `Page ${currentPage + 1} of ${Math.max(
-                          1,
-                          Math.ceil(count / rowsPerPage)
-                        )}`
+                        `Page ${currentPage + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
                       }
                       slotProps={{
                         select: {

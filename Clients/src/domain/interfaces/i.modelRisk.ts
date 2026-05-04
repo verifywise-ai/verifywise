@@ -1,23 +1,23 @@
 export enum ModelRiskCategory {
   PERFORMANCE = "Performance",
-  BIAS = "Bias & Fairness", 
+  BIAS = "Bias & Fairness",
   SECURITY = "Security",
   DATA_QUALITY = "Data Quality",
-  COMPLIANCE = "Compliance"
+  COMPLIANCE = "Compliance",
 }
 
 export enum ModelRiskLevel {
   LOW = "Low",
-  MEDIUM = "Medium", 
+  MEDIUM = "Medium",
   HIGH = "High",
-  CRITICAL = "Critical"
+  CRITICAL = "Critical",
 }
 
 export enum ModelRiskStatus {
   OPEN = "Open",
   IN_PROGRESS = "In Progress",
-  RESOLVED = "Resolved", 
-  ACCEPTED = "Accepted"
+  RESOLVED = "Resolved",
+  ACCEPTED = "Accepted",
 }
 
 export interface IModelRisk {

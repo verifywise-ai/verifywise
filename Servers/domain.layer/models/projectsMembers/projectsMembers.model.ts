@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../project/project.model";
 import { UserModel } from "../user/user.model";
 import { IProjectsMembers } from "../../interfaces/i.projectMember";
@@ -21,10 +15,7 @@ import {
   timestamps: true,
   underscored: true,
 })
-export class ProjectsMembersModel
-  extends Model<ProjectsMembersModel>
-  implements IProjectsMembers
-{
+export class ProjectsMembersModel extends Model<ProjectsMembersModel> implements IProjectsMembers {
   @ForeignKey(() => UserModel)
   @Column({
     type: DataType.INTEGER,
@@ -64,15 +55,11 @@ export class ProjectsMembersModel
   static async createNewProjectMember(
     userId: number,
     projectId: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<ProjectsMembersModel> {
     // Validate user_id
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     // Validate project_id
@@ -80,7 +67,7 @@ export class ProjectsMembersModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -96,7 +83,7 @@ export class ProjectsMembersModel
       throw new ConflictException(
         "User is already a member of this project",
         "ProjectMember",
-        "user_id,project_id"
+        "user_id,project_id",
       );
     }
 
@@ -118,7 +105,7 @@ export class ProjectsMembersModel
       throw new BusinessLogicException(
         "Demo project members cannot be converted to regular members",
         "DEMO_MEMBER_RESTRICTION",
-        { userId: this.user_id, projectId: this.project_id }
+        { userId: this.user_id, projectId: this.project_id },
       );
     }
 
@@ -136,7 +123,7 @@ export class ProjectsMembersModel
       throw new ValidationException(
         "Valid user_id is required (must be >= 1)",
         "user_id",
-        this.user_id
+        this.user_id,
       );
     }
 
@@ -144,7 +131,7 @@ export class ProjectsMembersModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }
@@ -164,7 +151,7 @@ export class ProjectsMembersModel
       throw new BusinessLogicException(
         "Demo project members cannot be modified",
         "DEMO_MEMBER_RESTRICTION",
-        { userId: this.user_id, projectId: this.project_id }
+        { userId: this.user_id, projectId: this.project_id },
       );
     }
     return true;
@@ -219,21 +206,17 @@ export class ProjectsMembersModel
    */
   static async findByUserAndProject(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<ProjectsMembersModel | null> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -250,12 +233,9 @@ export class ProjectsMembersModel
    */
   static async findByUserAndProjectWithValidation(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<ProjectsMembersModel> {
-    const projectMember = await ProjectsMembersModel.findByUserAndProject(
-      userId,
-      projectId
-    );
+    const projectMember = await ProjectsMembersModel.findByUserAndProject(userId, projectId);
 
     if (!projectMember) {
       throw new NotFoundException("Project member not found", "ProjectMember", {
@@ -270,14 +250,12 @@ export class ProjectsMembersModel
   /**
    * Static method to find all project members by project ID
    */
-  static async findByProjectId(
-    projectId: number
-  ): Promise<ProjectsMembersModel[]> {
+  static async findByProjectId(projectId: number): Promise<ProjectsMembersModel[]> {
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -291,11 +269,7 @@ export class ProjectsMembersModel
    */
   static async findByUserId(userId: number): Promise<ProjectsMembersModel[]> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await ProjectsMembersModel.findAll({
@@ -309,21 +283,17 @@ export class ProjectsMembersModel
   static async updateProjectMemberByUserAndProject(
     userId: number,
     projectId: number,
-    updateData: Partial<IProjectsMembers>
+    updateData: Partial<IProjectsMembers>,
   ): Promise<[number, ProjectsMembersModel[]]> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -341,21 +311,17 @@ export class ProjectsMembersModel
    */
   static async deleteProjectMemberByUserAndProject(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<number> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -370,23 +336,16 @@ export class ProjectsMembersModel
   /**
    * Static method to check if user is a member of a project
    */
-  static async isUserMemberOfProject(
-    userId: number,
-    projectId: number
-  ): Promise<boolean> {
+  static async isUserMemberOfProject(userId: number, projectId: number): Promise<boolean> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -408,7 +367,7 @@ export class ProjectsMembersModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -422,11 +381,7 @@ export class ProjectsMembersModel
    */
   static async getUserProjectCount(userId: number): Promise<number> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return await ProjectsMembersModel.count({

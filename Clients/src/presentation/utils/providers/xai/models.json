@@ -2,13 +2,61 @@
   "provider": "xai",
   "displayName": "xAI",
   "models": [
-    { "id": "grok-4-1-fast-reasoning", "name": "Grok 4.1 Fast Reasoning", "description": "Fast with reasoning, 2M context", "inputCost": 0.20, "outputCost": 0.50 },
-    { "id": "grok-4-1-fast-non-reasoning", "name": "Grok 4.1 Fast", "description": "Fast without reasoning, 2M context", "inputCost": 0.20, "outputCost": 0.50 },
-    { "id": "grok-code-fast-1", "name": "Grok Code Fast 1", "description": "Optimized for code", "inputCost": 0.20, "outputCost": 1.50 },
-    { "id": "grok-4-fast-reasoning", "name": "Grok 4 Fast Reasoning", "description": "Fast with reasoning", "inputCost": 0.20, "outputCost": 0.50 },
-    { "id": "grok-4-fast-non-reasoning", "name": "Grok 4 Fast", "description": "Fast without reasoning", "inputCost": 0.20, "outputCost": 0.50 },
-    { "id": "grok-4-0709", "name": "Grok 4", "description": "Full capability model", "inputCost": 3.00, "outputCost": 15.00 },
-    { "id": "grok-3-mini", "name": "Grok 3 Mini", "description": "Compact and efficient", "inputCost": 0.30, "outputCost": 0.50 },
-    { "id": "grok-3", "name": "Grok 3", "description": "Third generation", "inputCost": 3.00, "outputCost": 15.00 }
+    {
+      "id": "grok-4-1-fast-reasoning",
+      "name": "Grok 4.1 Fast Reasoning",
+      "description": "Fast with reasoning, 2M context",
+      "inputCost": 0.2,
+      "outputCost": 0.5
+    },
+    {
+      "id": "grok-4-1-fast-non-reasoning",
+      "name": "Grok 4.1 Fast",
+      "description": "Fast without reasoning, 2M context",
+      "inputCost": 0.2,
+      "outputCost": 0.5
+    },
+    {
+      "id": "grok-code-fast-1",
+      "name": "Grok Code Fast 1",
+      "description": "Optimized for code",
+      "inputCost": 0.2,
+      "outputCost": 1.5
+    },
+    {
+      "id": "grok-4-fast-reasoning",
+      "name": "Grok 4 Fast Reasoning",
+      "description": "Fast with reasoning",
+      "inputCost": 0.2,
+      "outputCost": 0.5
+    },
+    {
+      "id": "grok-4-fast-non-reasoning",
+      "name": "Grok 4 Fast",
+      "description": "Fast without reasoning",
+      "inputCost": 0.2,
+      "outputCost": 0.5
+    },
+    {
+      "id": "grok-4-0709",
+      "name": "Grok 4",
+      "description": "Full capability model",
+      "inputCost": 3.0,
+      "outputCost": 15.0
+    },
+    {
+      "id": "grok-3-mini",
+      "name": "Grok 3 Mini",
+      "description": "Compact and efficient",
+      "inputCost": 0.3,
+      "outputCost": 0.5
+    },
+    {
+      "id": "grok-3",
+      "name": "Grok 3",
+      "description": "Third generation",
+      "inputCost": 3.0,
+      "outputCost": 15.0
+    }
   ]
 }

@@ -9,11 +9,11 @@ export const TransparencyObligationsForProviders = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We design AI systems to clearly indicate user interaction with AI.",
+        title: "We design AI systems to clearly indicate user interaction with AI.",
         description:
           "Clear indicators help users understand when they are interacting with AI, promoting transparency and trust.",
-        implementation_details: "Indicators will be displayed at key touchpoints of the user journey.",
+        implementation_details:
+          "Indicators will be displayed at key touchpoints of the user journey.",
         evidence_description: "Mockup of system interface with AI indicator is available.",
         feedback_description: "Awaiting user feedback on interface design.",
       },
@@ -51,18 +51,18 @@ export const TransparencyObligationsForProviders = [
   {
     order_no: 3,
     title: "AI System Scope and Impact Definition",
-    description:
-      "Define and document AI system scope, goals, methods, and potential impacts.",
-    implementation_details: "Comprehensive documentation helps align AI deployment with intended goals and prepares for potential risks.",
+    description: "Define and document AI system scope, goals, methods, and potential impacts.",
+    implementation_details:
+      "Comprehensive documentation helps align AI deployment with intended goals and prepares for potential risks.",
     article: "Art. 50(1)",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We define and document AI system scope, goals, methods, and potential impacts.",
+        title: "We define and document AI system scope, goals, methods, and potential impacts.",
         description:
           "Comprehensive documentation helps align AI deployment with intended goals and prepares for potential risks.",
-        implementation_details: "System documentation is being drafted, with input from cross-functional teams.",
+        implementation_details:
+          "System documentation is being drafted, with input from cross-functional teams.",
         evidence_description: "Draft document available for review.",
         feedback_description: "Feedback from technical team is being incorporated.",
       },
@@ -73,7 +73,8 @@ export const TransparencyObligationsForProviders = [
     title: "AI System Scope and Impact Definition",
     description:
       "Maintain accurate records of AI system activities, including modifications and third-party involvements.",
-    implementation_details: "Accurate records ensure accountability and support audits, troubleshooting, and regulatory compliance.",
+    implementation_details:
+      "Accurate records ensure accountability and support audits, troubleshooting, and regulatory compliance.",
     article: "Art. 50(1)",
     subControls: [
       {
@@ -145,8 +146,7 @@ export const TransparencyObligationsForProviders = [
   },
   {
     order_no: 7,
-    title:
-      "Label AI-generated text published to inform the public on matters of public interest.",
+    title: "Label AI-generated text published to inform the public on matters of public interest.",
     description:
       "AI-generated text disclosure when publishing on matters of public interest (Art 50.4).",
     article: "Art. 50(4)",

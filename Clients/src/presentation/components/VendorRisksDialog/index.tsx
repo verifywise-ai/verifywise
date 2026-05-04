@@ -30,14 +30,9 @@ import {
 import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
 import { ChevronsUpDown, ShieldAlert } from "lucide-react";
-import {
-  IVendorRisk,
-  IVendorRisksDialogProps,
-} from "../../../domain/interfaces/i.vendor";
+import { IVendorRisk, IVendorRisksDialogProps } from "../../../domain/interfaces/i.vendor";
 
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
 const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
   open,
@@ -105,9 +100,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -123,213 +116,184 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
         hideFooter={true}
       >
         {loading ? (
-            <Stack
+          <Stack
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 4,
+            }}
+          >
+            <CircularProgress size={40} />
+          </Stack>
+        ) : error ? (
+          <MuiAlert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </MuiAlert>
+        ) : (
+          <TableContainer>
+            <Table
               sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                py: 4,
+                ...singleTheme.tableStyles.primary.frame,
+                ...tableWrapper(theme),
               }}
             >
-              <CircularProgress size={40} />
-            </Stack>
-          ) : error ? (
-            <MuiAlert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </MuiAlert>
-          ) : (
-            <TableContainer>
-              <Table
+              <TableHead
                 sx={{
-                  ...singleTheme.tableStyles.primary.frame,
-                  ...tableWrapper(theme),
+                  backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
                 }}
               >
-                <TableHead
-                  sx={{
-                    backgroundColor:
-                      singleTheme.tableStyles.primary.header.backgroundColors,
-                  }}
-                >
-                  <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                    <TableCell
-                      style={{
-                        ...singleTheme.tableStyles.primary.header.cell,
-                      }}
-                    >
-                      Risk Description
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        ...singleTheme.tableStyles.primary.header.cell,
-                      }}
-                    >
-                      Severity
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        ...singleTheme.tableStyles.primary.header.cell,
-                      }}
-                    >
-                      Likelihood
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        ...singleTheme.tableStyles.primary.header.cell,
-                      }}
-                    >
-                      Risk Level
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                {vendorRisks.length > 0 ? (
-                  <>
-                    <TableBody>
-                      {vendorRisks
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((risk) => (
-                            <TableRow
-                              key={risk.id}
-                              sx={{
-                                ...singleTheme.tableStyles.primary.body.row,
-                                cursor: "pointer",
-                                "&:hover": {
-                                  backgroundColor: "rgba(0, 0, 0, 0.04)",
-                                },
-                              }}
-                              onClick={() => handleRiskClick(risk.id)}
-                            >
-                              <TableCell
-                                sx={{
-                                  ...singleTheme.tableStyles.primary.body.cell,
-                                  maxWidth: 250,
-                                }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  noWrap
-                                  title={risk.risk_description}
-                                >
-                                  {risk.risk_description &&
-                                  risk.risk_description.length > 40
-                                    ? `${risk.risk_description.slice(0, 40)}...`
-                                    : risk.risk_description || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell
-                                sx={{
-                                  ...singleTheme.tableStyles.primary.body.cell,
-                                  maxWidth: 120,
-                                }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  noWrap
-                                  title={risk.risk_severity}
-                                >
-                                  {risk.risk_severity &&
-                                  risk.risk_severity.length > 15
-                                    ? `${risk.risk_severity.slice(0, 15)}...`
-                                    : risk.risk_severity || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell
-                                sx={{
-                                  ...singleTheme.tableStyles.primary.body.cell,
-                                  maxWidth: 120,
-                                }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  noWrap
-                                  title={risk.likelihood}
-                                >
-                                  {risk.likelihood &&
-                                  risk.likelihood.length > 15
-                                    ? `${risk.likelihood.slice(0, 15)}...`
-                                    : risk.likelihood || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell
-                                sx={singleTheme.tableStyles.primary.body.cell}
-                              >
-                                <Chip label={risk.risk_level} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow
-                        sx={{
-                          "& .MuiTableCell-root.MuiTableCell-footer": {
-                            paddingX: theme.spacing(8),
-                            paddingY: theme.spacing(4),
-                          },
-                        }}
-                      >
-                        <TablePagination
-                          count={vendorRisks.length}
-                          page={page}
-                          onPageChange={handleChangePage}
-                          rowsPerPage={rowsPerPage}
-                          rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                          onRowsPerPageChange={handleChangeRowsPerPage}
-                          ActionsComponent={(props) => (
-                            <TablePaginationActions {...props} />
-                          )}
-                          labelRowsPerPage="Risks per page"
-                          labelDisplayedRows={({ page, count }) =>
-                            `Page ${page + 1} of ${Math.max(
-                              0,
-                              Math.ceil(count / rowsPerPage)
-                            )}`
-                          }
-                          sx={paginationStyle(theme)}
-                          slotProps={{
-                            select: {
-                              MenuProps: {
-                                keepMounted: true,
-                                PaperProps: {
-                                  className: "pagination-dropdown",
-                                  sx: paginationDropdown(theme),
-                                },
-                                transformOrigin: {
-                                  vertical: "bottom",
-                                  horizontal: "left",
-                                },
-                                anchorOrigin: {
-                                  vertical: "top",
-                                  horizontal: "left",
-                                },
-                                sx: { mt: theme.spacing(-2) },
-                              },
-                              inputProps: { id: "pagination-dropdown" },
-                              IconComponent: SelectorVertical,
-                              sx: paginationSelect(theme),
+                <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Risk Description
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Severity
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Likelihood
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...singleTheme.tableStyles.primary.header.cell,
+                    }}
+                  >
+                    Risk Level
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              {vendorRisks.length > 0 ? (
+                <>
+                  <TableBody>
+                    {vendorRisks
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((risk) => (
+                        <TableRow
+                          key={risk.id}
+                          sx={{
+                            ...singleTheme.tableStyles.primary.body.row,
+                            cursor: "pointer",
+                            "&:hover": {
+                              backgroundColor: "rgba(0, 0, 0, 0.04)",
                             },
                           }}
-                        />
-                      </TableRow>
-                    </TableFooter>
-                  </>
-                ) : (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        sx={{ border: "none", p: 0 }}
-                      >
-                        <EmptyState icon={ShieldAlert} message="No risks found for this vendor." />
-                      </TableCell>
-                    </TableRow>
+                          onClick={() => handleRiskClick(risk.id)}
+                        >
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 250,
+                            }}
+                          >
+                            <Typography variant="body2" noWrap title={risk.risk_description}>
+                              {risk.risk_description && risk.risk_description.length > 40
+                                ? `${risk.risk_description.slice(0, 40)}...`
+                                : risk.risk_description || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 120,
+                            }}
+                          >
+                            <Typography variant="body2" noWrap title={risk.risk_severity}>
+                              {risk.risk_severity && risk.risk_severity.length > 15
+                                ? `${risk.risk_severity.slice(0, 15)}...`
+                                : risk.risk_severity || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              ...singleTheme.tableStyles.primary.body.cell,
+                              maxWidth: 120,
+                            }}
+                          >
+                            <Typography variant="body2" noWrap title={risk.likelihood}>
+                              {risk.likelihood && risk.likelihood.length > 15
+                                ? `${risk.likelihood.slice(0, 15)}...`
+                                : risk.likelihood || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                            <Chip label={risk.risk_level} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
-                )}
-              </Table>
-            </TableContainer>
-          )}
+                  <TableFooter>
+                    <TableRow
+                      sx={{
+                        "& .MuiTableCell-root.MuiTableCell-footer": {
+                          paddingX: theme.spacing(8),
+                          paddingY: theme.spacing(4),
+                        },
+                      }}
+                    >
+                      <TablePagination
+                        count={vendorRisks.length}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                        labelRowsPerPage="Risks per page"
+                        labelDisplayedRows={({ page, count }) =>
+                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                        }
+                        sx={paginationStyle(theme)}
+                        slotProps={{
+                          select: {
+                            MenuProps: {
+                              keepMounted: true,
+                              PaperProps: {
+                                className: "pagination-dropdown",
+                                sx: paginationDropdown(theme),
+                              },
+                              transformOrigin: {
+                                vertical: "bottom",
+                                horizontal: "left",
+                              },
+                              anchorOrigin: {
+                                vertical: "top",
+                                horizontal: "left",
+                              },
+                              sx: { mt: theme.spacing(-2) },
+                            },
+                            inputProps: { id: "pagination-dropdown" },
+                            IconComponent: SelectorVertical,
+                            sx: paginationSelect(theme),
+                          },
+                        }}
+                      />
+                    </TableRow>
+                  </TableFooter>
+                </>
+              ) : (
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={4} sx={{ border: "none", p: 0 }}>
+                      <EmptyState icon={ShieldAlert} message="No risks found for this vendor." />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              )}
+            </Table>
+          </TableContainer>
+        )}
       </StandardModal>
 
       {/* Edit Risk Modal */}

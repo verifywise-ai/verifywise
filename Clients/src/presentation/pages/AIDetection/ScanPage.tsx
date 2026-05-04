@@ -105,7 +105,7 @@ export default function ScanPage() {
         if (activeScan) {
           // Set the repository URL from active scan
           setRepositoryUrl(
-            `https://github.com/${activeScan.repository_owner}/${activeScan.repository_name}`
+            `https://github.com/${activeScan.repository_owner}/${activeScan.repository_name}`,
           );
           currentScanIdRef.current = activeScan.id;
           setScanState("scanning");
@@ -118,22 +118,25 @@ export default function ScanPage() {
             activeScan.id,
             (status) => setProgress(status),
             1000,
-            abortControllerRef.current.signal
+            abortControllerRef.current.signal,
           );
 
           if (finalStatus.status === "completed") {
-            const scanResult = await getScan(
-              activeScan.id,
-              abortControllerRef.current.signal
-            );
+            const scanResult = await getScan(activeScan.id, abortControllerRef.current.signal);
             setResult(scanResult);
             setScanState("completed");
             refreshRecentScans();
-            showAlert("success", `Scan completed for ${activeScan.repository_owner}/${activeScan.repository_name}`);
+            showAlert(
+              "success",
+              `Scan completed for ${activeScan.repository_owner}/${activeScan.repository_name}`,
+            );
           } else if (finalStatus.status === "failed") {
             setScanState("failed");
             setError(finalStatus.error_message || "Scan failed");
-            showAlert("error", `Scan failed for ${activeScan.repository_owner}/${activeScan.repository_name}`);
+            showAlert(
+              "error",
+              `Scan failed for ${activeScan.repository_owner}/${activeScan.repository_name}`,
+            );
           } else if (finalStatus.status === "cancelled") {
             setScanState("idle");
           }
@@ -219,7 +222,7 @@ export default function ScanPage() {
               base_commit_sha: baseCommitSha.trim(),
               head_commit_sha: headCommitSha.trim(),
             }
-          : undefined
+          : undefined,
       );
 
       // Store scan ID for cancellation
@@ -230,15 +233,12 @@ export default function ScanPage() {
         scan.id!,
         (status) => setProgress(status),
         1000,
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
       );
 
       if (finalStatus.status === "completed") {
         // Get full scan details
-        const scanResult = await getScan(
-          scan.id!,
-          abortControllerRef.current.signal
-        );
+        const scanResult = await getScan(scan.id!, abortControllerRef.current.signal);
         setResult(scanResult);
         setScanState("completed");
         refreshRecentScans();
@@ -309,7 +309,6 @@ export default function ScanPage() {
         ) : undefined
       }
     >
-
       {/* Statistics Cards - 6 cards in 3x2 grid */}
       {!isCheckingActive && scanState === "idle" && !statsLoading && stats && (
         <Box
@@ -376,12 +375,7 @@ export default function ScanPage() {
           }}
         >
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton
-              key={i}
-              variant="rectangular"
-              height={90}
-              sx={{ borderRadius: "4px" }}
-            />
+            <Skeleton key={i} variant="rectangular" height={90} sx={{ borderRadius: "4px" }} />
           ))}
         </Box>
       )}
@@ -406,25 +400,43 @@ export default function ScanPage() {
               Repository URL
             </Typography>
             <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: "4px" }}>
-              Configure a GitHub token in Settings to scan private repositories.
-              Try these examples:
+              Configure a GitHub token in Settings to scan private repositories. Try these examples:
             </Typography>
-            <Box component="ul" sx={{ m: 0, pl: "20px", mb: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
-              {([
-                {
-                  repo: "Shubhamsaboo/awesome-llm-apps",
-                  description: "Curated LLM apps — detects AI libraries, API calls, and provider dependencies",
-                },
-                {
-                  repo: "langchain-ai/chat-langchain",
-                  description: "LangChain chatbot — reveals RAG components, agent patterns, and model references",
-                },
-                {
-                  repo: "verifywise-ai/llm-security-tester",
-                  description: "Intentionally vulnerable — triggers prompt injection, PII exposure, excessive agency, and jailbreak findings",
-                },
-              ] as const).map(({ repo, description }) => (
-                <Box component="li" key={repo} sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+            <Box
+              component="ul"
+              sx={{
+                m: 0,
+                pl: "20px",
+                mb: "8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              {(
+                [
+                  {
+                    repo: "Shubhamsaboo/awesome-llm-apps",
+                    description:
+                      "Curated LLM apps — detects AI libraries, API calls, and provider dependencies",
+                  },
+                  {
+                    repo: "langchain-ai/chat-langchain",
+                    description:
+                      "LangChain chatbot — reveals RAG components, agent patterns, and model references",
+                  },
+                  {
+                    repo: "verifywise-ai/llm-security-tester",
+                    description:
+                      "Intentionally vulnerable — triggers prompt injection, PII exposure, excessive agency, and jailbreak findings",
+                  },
+                ] as const
+              ).map(({ repo, description }) => (
+                <Box
+                  component="li"
+                  key={repo}
+                  sx={{ fontSize: "13px", color: palette.text.tertiary }}
+                >
                   <span
                     onClick={() => setRepositoryUrl(repo)}
                     style={{
@@ -467,9 +479,7 @@ export default function ScanPage() {
                   onChange={(e) => setIsIncremental(e.target.checked)}
                 />
               }
-              label={
-                <Typography sx={{ fontSize: "13px", ml: "8px" }}>Incremental scan</Typography>
-              }
+              label={<Typography sx={{ fontSize: "13px", ml: "8px" }}>Incremental scan</Typography>}
               sx={{ ml: 0 }}
             />
             {isIncremental && (
@@ -589,7 +599,8 @@ export default function ScanPage() {
 
           {progress.findings_count > 0 && (
             <Typography sx={{ fontSize: "13px", mt: 2, color: palette.brand.primary }}>
-              Found {progress.findings_count} AI/ML {progress.findings_count === 1 ? "library" : "libraries"} so far
+              Found {progress.findings_count} AI/ML{" "}
+              {progress.findings_count === 1 ? "library" : "libraries"} so far
             </Typography>
           )}
 
@@ -617,9 +628,7 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
             <CheckCircle2 size={24} color={palette.status.success.text} />
             <Box>
-              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
-                Scan completed
-              </Typography>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>Scan completed</Typography>
               <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                 {result.scan.repository_owner}/{result.scan.repository_name}
               </Typography>
@@ -658,7 +667,9 @@ export default function ScanPage() {
                 textAlign: "center",
               }}
             >
-              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.status.error.text }}>
+              <Typography
+                sx={{ fontSize: "20px", fontWeight: 600, color: palette.status.error.text }}
+              >
                 {result.summary.by_confidence.high}
               </Typography>
               <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
@@ -712,7 +723,9 @@ export default function ScanPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <XCircle size={24} color={palette.status.error.text} />
             <Box>
-              <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.status.error.text }}>
+              <Typography
+                sx={{ fontSize: "13px", fontWeight: 500, color: palette.status.error.text }}
+              >
                 Scan failed
               </Typography>
               <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
@@ -722,18 +735,11 @@ export default function ScanPage() {
           </Box>
 
           <Box sx={{ textAlign: "right" }}>
-            <CustomizableButton
-              text="Try again"
-              onClick={handleReset}
-              sx={{ height: 34 }}
-            />
+            <CustomizableButton text="Try again" onClick={handleReset} sx={{ height: 34 }} />
           </Box>
         </Box>
       )}
-      <AIDetectionOnboarding
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
+      <AIDetectionOnboarding isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </PageHeaderExtended>
   );
 }

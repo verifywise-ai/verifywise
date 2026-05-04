@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Project Risks**
-
   - Route: `/`
   - Handler: `getAllProjectRisks`
   - Authentication: JWT (currently commented out)

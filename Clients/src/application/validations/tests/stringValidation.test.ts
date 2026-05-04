@@ -4,11 +4,7 @@ describe("Test String Validation", () => {
   it("if value is falsy and minLength is bigger than 0, should return accepted false with required message", () => {
     const falsyValues = [undefined, null, "", " "];
     falsyValues.forEach((val) => {
-      const result = checkStringValidation(
-        "Test Field",
-        val as unknown as string,
-        1,
-      );
+      const result = checkStringValidation("Test Field", val as unknown as string, 1);
       expect(result).toEqual({
         accepted: false,
         message: "Test Field is required.",
@@ -37,42 +33,21 @@ describe("Test String Validation", () => {
     });
   });
   it("if hasUpperCase is true and value has no uppercase letters, should return accepted false with appropriate message", () => {
-    const result = checkStringValidation(
-      "Test Field",
-      "lowercase",
-      0,
-      12,
-      true,
-    );
+    const result = checkStringValidation("Test Field", "lowercase", 0, 12, true);
     expect(result).toEqual({
       accepted: false,
       message: "Test Field must contain at least one uppercase letter.",
     });
   });
   it("if hasLowerCase is true and value has no lowercase letters, should return accepted false with appropriate message", () => {
-    const result = checkStringValidation(
-      "Test Field",
-      "UPPERCASE",
-      0,
-      12,
-      false,
-      true,
-    );
+    const result = checkStringValidation("Test Field", "UPPERCASE", 0, 12, false, true);
     expect(result).toEqual({
       accepted: false,
       message: "Test Field must contain at least one lowercase letter.",
     });
   });
   it("if hasNumber is true and value has no numbers, should return accepted false with appropriate message", () => {
-    const result = checkStringValidation(
-      "Test Field",
-      "NoNumbersHere",
-      0,
-      20,
-      false,
-      false,
-      true,
-    );
+    const result = checkStringValidation("Test Field", "NoNumbersHere", 0, 20, false, false, true);
     expect(result).toEqual({
       accepted: false,
       message: "Test Field must contain at least one number.",
@@ -163,16 +138,7 @@ describe("Test String Validation", () => {
     });
   });
   it("if all conditions are met, should return accepted true with success message", () => {
-    const result = checkStringValidation(
-      "Test Field",
-      "Valid1!",
-      1,
-      20,
-      true,
-      true,
-      true,
-      true,
-    );
+    const result = checkStringValidation("Test Field", "Valid1!", 1, 20, true, true, true, true);
     expect(result).toEqual({
       accepted: true,
       message: "Success",

@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { QuestionStructEUModel } from "./questionStructEU.model";
 import { AssessmentEUModel } from "./assessmentEU.model";
 import { StatusAnswers, STATUSES_ANSWERS } from "../../../types/status.type";

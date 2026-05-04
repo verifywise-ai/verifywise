@@ -68,13 +68,10 @@ function extractData<T>(response: { data: { data?: T; message?: string } }): T {
  * @param attachedToId - Entity ID
  * @returns Promise resolving to array of notes
  */
-export async function getNotes(
-  attachedTo: string,
-  attachedToId: string
-): Promise<Note[]> {
+export async function getNotes(attachedTo: string, attachedToId: string): Promise<Note[]> {
   try {
     const response = await apiServices.get<{ message: string; data: Note[] }>(
-      `/notes?attachedTo=${attachedTo}&attachedToId=${attachedToId}`
+      `/notes?attachedTo=${attachedTo}&attachedToId=${attachedToId}`,
     );
     const notes = extractData<Note[]>(response);
     // Ensure we always return an array
@@ -85,11 +82,7 @@ export async function getNotes(
       // 204 No Content is a valid response for empty notes
       return [];
     }
-    throw new APIError(
-      "Failed to fetch notes",
-      error?.response?.status,
-      error
-    );
+    throw new APIError("Failed to fetch notes", error?.response?.status, error);
   }
 }
 
@@ -101,16 +94,10 @@ export async function getNotes(
  */
 export async function getNoteById(noteId: number): Promise<Note> {
   try {
-    const response = await apiServices.get<{ message: string; data: Note }>(
-      `/notes/${noteId}`
-    );
+    const response = await apiServices.get<{ message: string; data: Note }>(`/notes/${noteId}`);
     return extractData<Note>(response);
   } catch (error: any) {
-    throw new APIError(
-      `Failed to fetch note with ID ${noteId}`,
-      error?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to fetch note with ID ${noteId}`, error?.response?.status, error);
   }
 }
 
@@ -122,10 +109,7 @@ export async function getNoteById(noteId: number): Promise<Note> {
  */
 export async function createNote(input: CreateNoteRequest): Promise<Note> {
   try {
-    const response = await apiServices.post<{ message: string; data: Note }>(
-      "/notes",
-      input
-    );
+    const response = await apiServices.post<{ message: string; data: Note }>("/notes", input);
     return extractData<Note>(response);
   } catch (error: any) {
     throw new APIError("Failed to create note", error?.response?.status, error);
@@ -139,22 +123,15 @@ export async function createNote(input: CreateNoteRequest): Promise<Note> {
  * @param input - Updated note data
  * @returns Promise resolving to updated note object
  */
-export async function updateNote(
-  noteId: number,
-  input: UpdateNoteRequest
-): Promise<Note> {
+export async function updateNote(noteId: number, input: UpdateNoteRequest): Promise<Note> {
   try {
     const response = await apiServices.put<{ message: string; data: Note }>(
       `/notes/${noteId}`,
-      input
+      input,
     );
     return extractData<Note>(response);
   } catch (error: any) {
-    throw new APIError(
-      `Failed to update note with ID ${noteId}`,
-      error?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to update note with ID ${noteId}`, error?.response?.status, error);
   }
 }
 
@@ -168,10 +145,6 @@ export async function deleteNote(noteId: number): Promise<void> {
   try {
     await apiServices.delete(`/notes/${noteId}`);
   } catch (error: any) {
-    throw new APIError(
-      `Failed to delete note with ID ${noteId}`,
-      error?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to delete note with ID ${noteId}`, error?.response?.status, error);
   }
 }

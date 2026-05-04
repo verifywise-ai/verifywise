@@ -13,8 +13,7 @@ export const ReportingSeriousIncidents = {
       subControls: [
         {
           id: 1,
-          title:
-            "We implement processes to capture and integrate unexpected impact inputs.",
+          title: "We implement processes to capture and integrate unexpected impact inputs.",
           description:
             "Capturing unforeseen impacts helps refine systems and address emerging risks proactively.",
         },
@@ -45,8 +44,7 @@ export const ReportingSeriousIncidents = {
       id: 3,
       icon: Checked,
       title: "Post-Deployment Incident Monitoring",
-      description:
-        "Monitor incidents related to AI systems and respond post-deployment.",
+      description: "Monitor incidents related to AI systems and respond post-deployment.",
       subControls: [
         {
           id: 1,
@@ -69,13 +67,11 @@ export const ReportingSeriousIncidents = {
       id: 4,
       icon: Checked,
       title: "AI System Logging Implementation",
-      description:
-        "Ensure providers implement systems for capturing and storing AI system logs.",
+      description: "Ensure providers implement systems for capturing and storing AI system logs.",
       subControls: [
         {
           id: 1,
-          title:
-            "We ensure providers implement systems for capturing and storing AI system logs.",
+          title: "We ensure providers implement systems for capturing and storing AI system logs.",
           description:
             "Logging systems provide traceability, aiding audits and troubleshooting while supporting regulatory requirements.",
         },

@@ -16,13 +16,11 @@ test.describe("Evals Dashboard", () => {
         .or(page.getByText(/evaluation/i))
         .or(page.getByText(/llm/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/evals");
     await page.waitForLoadState("domcontentloaded");
 
@@ -44,9 +42,7 @@ test.describe("Evals Dashboard", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays evaluation content or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("displays evaluation content or empty state", async ({ authedPage: page }) => {
     await page.goto("/evals");
 
     // Should show eval projects, runs, or an empty state
@@ -69,15 +65,13 @@ test.describe("Evals Dashboard", () => {
       page
         .getByText(/setting/i)
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
   // --- Tier 1: Sub-page navigation ---
 
-  test("can navigate through evals sub-pages via sidebar", async ({
-    authedPage: page,
-  }) => {
+  test("can navigate through evals sub-pages via sidebar", async ({ authedPage: page }) => {
     await page.goto("/evals");
     await page.waitForTimeout(3000);
 
@@ -86,17 +80,18 @@ test.describe("Evals Dashboard", () => {
       .getByText(/eval/i)
       .or(page.getByText(/experiment/i))
       .or(page.getByRole("button", { name: /experiments/i }));
-    if (!(await pageContent.first().isVisible().catch(() => false))) {
+    if (
+      !(await pageContent
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
 
     // The evals page uses a sidebar with navigation buttons
-    const sidebarItems = [
-      { name: /experiments/i },
-      { name: /datasets/i },
-      { name: /scorers/i },
-    ];
+    const sidebarItems = [{ name: /experiments/i }, { name: /datasets/i }, { name: /scorers/i }];
 
     for (const item of sidebarItems) {
       const sidebarBtn = page

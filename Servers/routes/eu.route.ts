@@ -4,7 +4,23 @@ const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 
 import authenticateJWT from "../middleware/auth.middleware";
-import { deleteAssessmentsByProjectId, deleteCompliancesByProjectId, getAllControlCategories, getAllProjectsAssessmentProgress, getAllProjectsComplianceProgress, getAllTopics, getAssessmentsByProjectId, getCompliancesByProjectId, getControlById, getControlsByControlCategoryId, getProjectAssessmentProgress, getProjectComplianceProgress, getTopicById, saveControls, updateQuestionById } from "../controllers/eu.ctrl";
+import {
+  deleteAssessmentsByProjectId,
+  deleteCompliancesByProjectId,
+  getAllControlCategories,
+  getAllProjectsAssessmentProgress,
+  getAllProjectsComplianceProgress,
+  getAllTopics,
+  getAssessmentsByProjectId,
+  getCompliancesByProjectId,
+  getControlById,
+  getControlsByControlCategoryId,
+  getProjectAssessmentProgress,
+  getProjectComplianceProgress,
+  getTopicById,
+  saveControls,
+  updateQuestionById,
+} from "../controllers/eu.ctrl";
 
 router.get("/controlCategories", authenticateJWT, getAllControlCategories);
 router.get("/controls/byControlCategoryId/:id", authenticateJWT, getControlsByControlCategoryId);
@@ -27,18 +43,8 @@ router.get("/topicById", authenticateJWT, getTopicById);
 // get control by id
 router.get("/controlById", authenticateJWT, getControlById);
 
-router.patch(
-  "/saveControls/:id",
-  authenticateJWT,
-  upload.any(),
-  saveControls
-);
-router.patch(
-  "/saveAnswer/:id",
-  authenticateJWT,
-  upload.any(),
-  updateQuestionById
-);
+router.patch("/saveControls/:id", authenticateJWT, upload.any(), saveControls);
+router.patch("/saveAnswer/:id", authenticateJWT, upload.any(), updateQuestionById);
 
 router.delete("/assessments/byProjectId/:id", authenticateJWT, deleteAssessmentsByProjectId);
 router.delete("/compliances/byProjectId/:id", authenticateJWT, deleteCompliancesByProjectId);

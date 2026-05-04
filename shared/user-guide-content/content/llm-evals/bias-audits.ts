@@ -14,7 +14,7 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'NYC Local Law 144 requires annual independent bias audits for any automated employment decision tool. EU AI Act Article 9 and the EEOC guidelines set similar expectations. VerifyWise ships with 15 compliance frameworks out of the box, each pre-configured with the right categories, thresholds and reporting requirements.',
+      text: 'NYC Local Law 144 requires annual independent bias audits for any automated employment decision tool. EU AI Act Article 9 and the EEOC guidelines set similar expectations. VerifyWise ships with 16 compliance frameworks out of the box (including a Custom option), each pre-configured with the right categories, thresholds and reporting requirements.',
     },
     {
       type: 'paragraph',

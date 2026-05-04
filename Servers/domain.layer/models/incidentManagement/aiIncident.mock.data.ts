@@ -9,10 +9,7 @@ import { IAIIncidentManagement } from "../../interfaces/i.aiIncidentManagement";
 /**
  * Sample mock data for AI Incident Management
  */
-const mockAIIncidents = (
-  reporter1: string,
-  reporter2: string
-): IAIIncidentManagement[] => {
+const mockAIIncidents = (reporter1: string, reporter2: string): IAIIncidentManagement[] => {
   return [
     {
       id: 1,
@@ -30,12 +27,10 @@ const mockAIIncidents = (
       affected_persons_groups: "Customers using credit evaluation model",
       description:
         "Unexpected model drift detected, causing higher false positive rates in fraud detection.",
-      relationship_causality:
-        "Direct relationship with AI model retraining cycle",
+      relationship_causality: "Direct relationship with AI model retraining cycle",
       immediate_mitigations:
         "Temporarily disabled auto-retrain and reverted to last stable version.",
-      planned_corrective_actions:
-        "Conduct data quality audit and retrain with verified dataset.",
+      planned_corrective_actions: "Conduct data quality audit and retrain with verified dataset.",
       model_system_version: "v2.3.1",
       interim_report: false,
       archived: false,
@@ -58,12 +53,9 @@ const mockAIIncidents = (
       affected_persons_groups: "Social media content creators",
       description:
         "AI system flagged non-harmful content as inappropriate due to keyword misinterpretation.",
-      relationship_causality:
-        "Partially related to bias in keyword-based classification module.",
-      immediate_mitigations:
-        "Rolled back keyword weights and adjusted thresholds.",
-      planned_corrective_actions:
-        "Introduce contextual NLP analysis in next release.",
+      relationship_causality: "Partially related to bias in keyword-based classification module.",
+      immediate_mitigations: "Rolled back keyword weights and adjusted thresholds.",
+      planned_corrective_actions: "Introduce contextual NLP analysis in next release.",
       model_system_version: "v1.4.0",
       interim_report: true,
       archived: false,
@@ -84,13 +76,10 @@ const mockAIIncidents = (
       approved_by: "Sarah Johnson (AI Lead)",
       categories_of_harm: ["Safety", "Ethical Concerns"],
       affected_persons_groups: "Patients diagnosed with rare conditions",
-      description:
-        "Corrupted data input caused misdiagnosis in patient recommendation module.",
-      relationship_causality:
-        "Directly caused by faulty data ingestion pipeline.",
+      description: "Corrupted data input caused misdiagnosis in patient recommendation module.",
+      relationship_causality: "Directly caused by faulty data ingestion pipeline.",
       immediate_mitigations: "Isolated corrupted dataset and restored backups.",
-      planned_corrective_actions:
-        "Add validation checks and monitoring for input data integrity.",
+      planned_corrective_actions: "Add validation checks and monitoring for input data integrity.",
       model_system_version: "v3.0.2",
       interim_report: false,
       archived: false,

@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Drawer,
-  Stack,
-  Box,
-  Typography,
-  Divider,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Drawer, Stack, Box, Typography, Divider, IconButton, useTheme } from "@mui/material";
 import { X, Link as LinkIcon, Unlink } from "lucide-react";
 import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -57,7 +49,9 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   if (!agent) return null;
 
   const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : "—";
-  const reviewedByName = agent.reviewed_by ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}` : null;
+  const reviewedByName = agent.reviewed_by
+    ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}`
+    : null;
 
   const handleReview = async (status: "confirmed" | "rejected") => {
     setIsSubmitting(true);
@@ -104,7 +98,9 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
         anchor="right"
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        PaperProps={{ sx: { width: 480, backgroundColor: theme.palette.background.modal || "#FCFCFD" } }}
+        PaperProps={{
+          sx: { width: 480, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        }}
       >
         {/* Header */}
         <Stack
@@ -145,8 +141,8 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
                   agent.review_status === "confirmed"
                     ? "success"
                     : agent.review_status === "rejected"
-                    ? "error"
-                    : "warning"
+                      ? "error"
+                      : "warning"
                 }
               />
               {reviewedByName && (
@@ -160,9 +156,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {agent.is_stale && (
             <DetailRow label="Stale" value="This agent has been inactive for 30+ days" />
           )}
-          {agent.is_manual && (
-            <DetailRow label="Entry type" value="Manually added" />
-          )}
+          {agent.is_manual && <DetailRow label="Entry type" value="Manually added" />}
 
           {/* Permissions - Categories */}
           <Box>
@@ -211,9 +205,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             </Typography>
             {agent.linked_model_inventory_id ? (
               <Stack direction="row" alignItems="center" gap="8px">
-                <Typography fontSize={13}>
-                  Model #{agent.linked_model_inventory_id}
-                </Typography>
+                <Typography fontSize={13}>Model #{agent.linked_model_inventory_id}</Typography>
                 <IconButton size="small" onClick={handleUnlink} title="Unlink model">
                   <Unlink size={14} strokeWidth={1.5} />
                 </IconButton>

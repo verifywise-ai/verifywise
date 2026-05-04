@@ -10,7 +10,7 @@ export const getAllDatasetsQuery = async (organizationId: number) => {
       replacements: { organizationId },
       mapToModel: true,
       model: DatasetModel,
-    }
+    },
   );
 
   // Fetch relationships for each dataset
@@ -23,7 +23,7 @@ export const getAllDatasetsQuery = async (organizationId: number) => {
       `SELECT model_inventory_id, relationship_type FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
       {
         replacements: { organizationId, dataset_id: dataset.id },
-      }
+      },
     )) as [IDatasetModelInventory[], number];
 
     for (const relation of modelRelations[0]) {
@@ -35,7 +35,7 @@ export const getAllDatasetsQuery = async (organizationId: number) => {
       `SELECT project_id FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
       {
         replacements: { organizationId, dataset_id: dataset.id },
-      }
+      },
     )) as [IDatasetProject[], number];
 
     for (const relation of projectRelations[0]) {
@@ -53,7 +53,7 @@ export const getDatasetByIdQuery = async (id: number, organizationId: number) =>
       replacements: { organizationId, id },
       mapToModel: true,
       model: DatasetModel,
-    }
+    },
   );
 
   if (!datasets.length) return null;
@@ -67,7 +67,7 @@ export const getDatasetByIdQuery = async (id: number, organizationId: number) =>
     `SELECT model_inventory_id, relationship_type FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
     {
       replacements: { organizationId, dataset_id: dataset.id },
-    }
+    },
   )) as [IDatasetModelInventory[], number];
 
   for (const relation of modelRelations[0]) {
@@ -79,7 +79,7 @@ export const getDatasetByIdQuery = async (id: number, organizationId: number) =>
     `SELECT project_id FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :dataset_id`,
     {
       replacements: { organizationId, dataset_id: dataset.id },
-    }
+    },
   )) as [IDatasetProject[], number];
 
   for (const relation of projectRelations[0]) {
@@ -89,10 +89,7 @@ export const getDatasetByIdQuery = async (id: number, organizationId: number) =>
   return dataset;
 };
 
-export const getDatasetsByModelIdQuery = async (
-  modelId: number,
-  organizationId: number
-) => {
+export const getDatasetsByModelIdQuery = async (modelId: number, organizationId: number) => {
   const datasets = await sequelize.query(
     `SELECT d.*, dmi.relationship_type FROM datasets d
       JOIN dataset_model_inventories dmi ON d.id = dmi.dataset_id AND dmi.organization_id = :organizationId
@@ -101,15 +98,12 @@ export const getDatasetsByModelIdQuery = async (
       replacements: { organizationId, model_id: modelId },
       mapToModel: true,
       model: DatasetModel,
-    }
+    },
   );
   return datasets;
 };
 
-export const getDatasetsByProjectIdQuery = async (
-  projectId: number,
-  organizationId: number
-) => {
+export const getDatasetsByProjectIdQuery = async (projectId: number, organizationId: number) => {
   const datasets = await sequelize.query(
     `SELECT d.* FROM datasets d
       JOIN dataset_projects dp ON d.id = dp.dataset_id AND dp.organization_id = :organizationId
@@ -118,7 +112,7 @@ export const getDatasetsByProjectIdQuery = async (
       replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: DatasetModel,
-    }
+    },
   );
   return datasets;
 };
@@ -128,7 +122,7 @@ export const createNewDatasetQuery = async (
   organizationId: number,
   models: number[],
   projects: number[],
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const created_at = new Date();
 
@@ -174,7 +168,7 @@ export const createNewDatasetQuery = async (
         mapToModel: true,
         model: DatasetModel,
         transaction,
-      }
+      },
     );
 
     const createdDataset = result[0];
@@ -193,7 +187,7 @@ export const createNewDatasetQuery = async (
             model_inventory_id: modelId,
           },
           transaction,
-        }
+        },
       );
       (createdDataset.dataValues as any).models.push(modelId);
     }
@@ -210,7 +204,7 @@ export const createNewDatasetQuery = async (
             project_id: projectId,
           },
           transaction,
-        }
+        },
       );
       (createdDataset.dataValues as any).projects.push(projectId);
     }
@@ -230,7 +224,7 @@ export const updateDatasetByIdQuery = async (
   deleteModels: boolean,
   deleteProjects: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const updated_at = new Date();
 
@@ -287,7 +281,7 @@ export const updateDatasetByIdQuery = async (
           updated_at,
         },
         transaction,
-      }
+      },
     );
 
     // Fetch the updated record
@@ -298,7 +292,7 @@ export const updateDatasetByIdQuery = async (
         mapToModel: true,
         model: DatasetModel,
         transaction,
-      }
+      },
     );
 
     const updatedDataset = result[0];
@@ -313,7 +307,7 @@ export const updateDatasetByIdQuery = async (
         {
           replacements: { organizationId, dataset_id: id },
           transaction,
-        }
+        },
       );
 
       // Insert new model associations
@@ -328,7 +322,7 @@ export const updateDatasetByIdQuery = async (
               model_inventory_id: modelId,
             },
             transaction,
-          }
+          },
         );
         (updatedDataset.dataValues as any).models.push(modelId);
       }
@@ -342,7 +336,7 @@ export const updateDatasetByIdQuery = async (
         {
           replacements: { organizationId, dataset_id: id },
           transaction,
-        }
+        },
       );
 
       // Insert new project associations
@@ -357,7 +351,7 @@ export const updateDatasetByIdQuery = async (
               project_id: projectId,
             },
             transaction,
-          }
+          },
         );
         (updatedDataset.dataValues as any).projects.push(projectId);
       }
@@ -373,7 +367,7 @@ export const updateDatasetByIdQuery = async (
 export const deleteDatasetByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   try {
     const result = (await sequelize.query(
@@ -381,7 +375,7 @@ export const deleteDatasetByIdQuery = async (
       {
         replacements: { organizationId, id },
         transaction,
-      }
+      },
     )) as [DatasetModel[], number];
 
     return result[0][0];

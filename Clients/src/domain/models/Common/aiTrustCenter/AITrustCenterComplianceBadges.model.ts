@@ -22,7 +22,7 @@ export class AITrustCenterComplianceBadgesModel {
   }
 
   static createNewAITrustCenterComplianceBadges(
-    data: AITrustCenterComplianceBadgesModel
+    data: AITrustCenterComplianceBadgesModel,
   ): AITrustCenterComplianceBadgesModel {
     return new AITrustCenterComplianceBadgesModel(data);
   }

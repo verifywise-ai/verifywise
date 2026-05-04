@@ -55,11 +55,7 @@ const MyComponent = () => {
   };
 
   return (
-    <AddNewVendorRiskForm
-      closePopup={handleClose}
-      onSuccess={handleSuccess}
-      popupStatus="new"
-    />
+    <AddNewVendorRiskForm closePopup={handleClose} onSuccess={handleSuccess} popupStatus="new" />
   );
 };
 ```
@@ -67,11 +63,7 @@ const MyComponent = () => {
 ### Edit Mode Implementation
 
 ```tsx
-<AddNewVendorRiskForm
-  closePopup={handleClose}
-  onSuccess={handleUpdate}
-  popupStatus="edit"
-/>
+<AddNewVendorRiskForm closePopup={handleClose} onSuccess={handleUpdate} popupStatus="edit" />
 ```
 
 ## API Integration

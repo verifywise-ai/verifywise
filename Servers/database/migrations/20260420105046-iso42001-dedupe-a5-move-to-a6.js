@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * ISO 42001 Annex re-scope: de-duplicate A.5 and reparent items that belong
@@ -25,10 +25,10 @@ module.exports = {
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks
          WHERE name ILIKE 'ISO 42001%' OR name ILIKE 'ISO/IEC 42001%' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[iso42001-dedupe] ISO 42001 framework not found — skipping');
+        console.warn("[iso42001-dedupe] ISO 42001 framework not found — skipping");
         await t.commit();
         return;
       }
@@ -36,14 +36,14 @@ module.exports = {
 
       const [[annex5]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.annex_struct_iso WHERE framework_id = :frameworkId AND annex_no = 5 LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
       const [[annex6]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.annex_struct_iso WHERE framework_id = :frameworkId AND annex_no = 6 LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
       if (!annex5?.id || !annex6?.id) {
-        console.warn('[iso42001-dedupe] A.5 or A.6 annex group missing — skipping');
+        console.warn("[iso42001-dedupe] A.5 or A.6 annex group missing — skipping");
         await t.commit();
         return;
       }
@@ -53,16 +53,16 @@ module.exports = {
         `DELETE FROM verifywise.annexcategories_struct_iso
          WHERE annex_id = :annex5Id
            AND title IN ('AI roles and responsibilities', 'Segregation of duties');`,
-        { transaction: t, replacements: { annex5Id: annex5.id } }
+        { transaction: t, replacements: { annex5Id: annex5.id } },
       );
 
       // 2. REPARENT the 4 misplaced items to A.6 (preserves tenant answers).
       //    Also reset is_applicable defaults and reassign order_no in A.6.
       const toMove = [
-        { title: 'Accountability for AI systems', sub_id: 2.1, order_no: 3 },
-        { title: 'Contact with authorities', sub_id: 3.1, order_no: 4 },
-        { title: 'Contact with special interest groups', sub_id: 3.2, order_no: 5 },
-        { title: 'AI in project management', sub_id: 4.1, order_no: 6 },
+        { title: "Accountability for AI systems", sub_id: 2.1, order_no: 3 },
+        { title: "Contact with authorities", sub_id: 3.1, order_no: 4 },
+        { title: "Contact with special interest groups", sub_id: 3.2, order_no: 5 },
+        { title: "AI in project management", sub_id: 4.1, order_no: 6 },
       ];
       for (const item of toMove) {
         await queryInterface.sequelize.query(
@@ -80,12 +80,12 @@ module.exports = {
               order_no: item.order_no,
               title: item.title,
             },
-          }
+          },
         );
       }
 
       await t.commit();
-      console.log('[iso42001-dedupe] A.5 duplicates removed; 4 items reparented to A.6');
+      console.log("[iso42001-dedupe] A.5 duplicates removed; 4 items reparented to A.6");
     } catch (err) {
       await t.rollback();
       throw err;
@@ -98,27 +98,33 @@ module.exports = {
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks
          WHERE name ILIKE 'ISO 42001%' OR name ILIKE 'ISO/IEC 42001%' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
-      if (!framework) { await t.commit(); return; }
+      if (!framework) {
+        await t.commit();
+        return;
+      }
       const frameworkId = framework.id;
 
       const [[annex5]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.annex_struct_iso WHERE framework_id = :frameworkId AND annex_no = 5 LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
       const [[annex6]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.annex_struct_iso WHERE framework_id = :frameworkId AND annex_no = 6 LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
-      if (!annex5?.id || !annex6?.id) { await t.commit(); return; }
+      if (!annex5?.id || !annex6?.id) {
+        await t.commit();
+        return;
+      }
 
       // Reverse the reparenting
       const toRestore = [
-        { title: 'Accountability for AI systems', sub_id: 4.1, order_no: 5 },
-        { title: 'Contact with authorities', sub_id: 5.1, order_no: 6 },
-        { title: 'Contact with special interest groups', sub_id: 5.2, order_no: 7 },
-        { title: 'AI in project management', sub_id: 6.1, order_no: 8 },
+        { title: "Accountability for AI systems", sub_id: 4.1, order_no: 5 },
+        { title: "Contact with authorities", sub_id: 5.1, order_no: 6 },
+        { title: "Contact with special interest groups", sub_id: 5.2, order_no: 7 },
+        { title: "AI in project management", sub_id: 6.1, order_no: 8 },
       ];
       for (const item of toRestore) {
         await queryInterface.sequelize.query(
@@ -134,7 +140,7 @@ module.exports = {
               order_no: item.order_no,
               title: item.title,
             },
-          }
+          },
         );
       }
       // Note: we do not recreate the deleted duplicates — they were intentionally dropped.

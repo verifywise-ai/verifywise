@@ -1,11 +1,7 @@
 import { FC } from "react";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { IQuantitativeRiskFields } from "../../../domain/interfaces/i.quantitativeRisk";
-import {
-  computeDerivedFields,
-  formatCurrency,
-  formatPercentage,
-} from "../../tools/fairCalculator";
+import { computeDerivedFields, formatCurrency, formatPercentage } from "../../tools/fairCalculator";
 import { background, border as borderPalette, text } from "../../themes/palette";
 
 interface ALESummaryCardProps {
@@ -44,8 +40,8 @@ const ALESummaryCard: FC<ALESummaryCardProps> = ({ fields }) => {
         derived.roi_percentage != null && derived.roi_percentage > 0
           ? theme.palette.success.main
           : derived.roi_percentage != null && derived.roi_percentage < 0
-          ? theme.palette.error.main
-          : undefined,
+            ? theme.palette.error.main
+            : undefined,
     },
   ];
 

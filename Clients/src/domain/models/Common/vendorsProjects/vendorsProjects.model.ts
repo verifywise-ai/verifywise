@@ -8,9 +8,7 @@ export class VendorsProjectsModel {
     this.project_id = data.project_id;
     this.is_demo = data.is_demo;
   }
-  static createNewVendorProject(
-    data: VendorsProjectsModel
-  ): VendorsProjectsModel {
+  static createNewVendorProject(data: VendorsProjectsModel): VendorsProjectsModel {
     return new VendorsProjectsModel(data);
   }
 }

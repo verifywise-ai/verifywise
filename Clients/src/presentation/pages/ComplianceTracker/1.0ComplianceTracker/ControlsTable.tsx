@@ -58,7 +58,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
   ownerFilter,
   approverFilter,
   dueDateFilter,
-  setFilteredControlsCount
+  setFilteredControlsCount,
 }) => {
   const { users } = useUsers();
   const currentProjectId = projectId;
@@ -92,10 +92,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
         });
 
         const filteredControls = response.filter((control: Control) => {
-          return (
-            control.status?.toLowerCase() === statusFilter ||
-            statusFilter === ""
-          );
+          return control.status?.toLowerCase() === statusFilter || statusFilter === "";
         });
 
         if (ownerFilter || approverFilter || dueDateFilter || statusFilter) {
@@ -114,15 +111,15 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
 
     fetchControls();
   }, [
-    currentProjectId, 
-    controlCategoryId, 
-    projectFrameworkId, 
-    refreshTrigger, 
-    ownerFilter, 
-    approverFilter, 
-    dueDateFilter, 
+    currentProjectId,
+    controlCategoryId,
+    projectFrameworkId,
+    refreshTrigger,
+    ownerFilter,
+    approverFilter,
+    dueDateFilter,
     statusFilter,
-    setFilteredControlsCount
+    setFilteredControlsCount,
   ]);
 
   useEffect(() => {
@@ -130,7 +127,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
       // URL param 'controlId' is the tenant table ID (controls_eu.id)
       // Find control by matching control_id (tenant table ID)
       const controlExists = controls.find(
-        (control: any) => control.control_id === Number(controlId)
+        (control: any) => control.control_id === Number(controlId),
       );
       if (controlExists) {
         (async () => {
@@ -148,7 +145,15 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
         })();
       }
     }
-  }, [controlId, controls, loading, projectFrameworkId, ownerFilter, approverFilter, dueDateFilter]);
+  }, [
+    controlId,
+    controls,
+    loading,
+    projectFrameworkId,
+    ownerFilter,
+    approverFilter,
+    dueDateFilter,
+  ]);
 
   // Reset state when project changes
   useEffect(() => {
@@ -235,10 +240,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
 
   const calculateCompletionPercentage = useCallback((control: Control) => {
     if (!control.numberOfSubcontrols) return 0;
-    return Math.round(
-      ((control.numberOfDoneSubcontrols ?? 0) / control.numberOfSubcontrols) *
-        100
-    );
+    return Math.round(((control.numberOfDoneSubcontrols ?? 0) / control.numberOfSubcontrols) * 100);
   }, []);
 
   const getOwnerName = (ownerId: number | undefined) => {
@@ -288,17 +290,14 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
           <TableBody>
             {controls.length === 0 && (
               <StyledTableRow isflashing={0}>
-                <TableCell
-                  sx={styles.descriptionCell}
-                  colSpan={columns.length}
-                >
+                <TableCell sx={styles.descriptionCell} colSpan={columns.length}>
                   <Typography
-                    sx={{ 
-                      textAlign: "center", 
-                      display: "block", 
-                      color: "#666", 
+                    sx={{
+                      textAlign: "center",
+                      display: "block",
+                      color: "#666",
                       fontSize: "13px",
-                      textTransform: "none"
+                      textTransform: "none",
                     }}
                   >
                     No controls found for the selected filters.
@@ -309,14 +308,11 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
             {controls
               .sort((a, b) => (a.order_no ?? 0) - (b.order_no ?? 0))
               .map((control: Control) => {
-                const completionPercentage =
-                  calculateCompletionPercentage(control);
+                const completionPercentage = calculateCompletionPercentage(control);
                 return (
                   <StyledTableRow
                     key={control.id}
-                    onClick={() =>
-                      control.id !== undefined && handleRowClick(control)
-                    }
+                    onClick={() => control.id !== undefined && handleRowClick(control)}
                     isflashing={currentFlashRow === control.id ? 1 : 0}
                   >
                     <TableCell
@@ -324,12 +320,8 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                       key={`${controlCategoryId}-${control.id}`}
                     >
                       <Typography component="span" variant="body2">
-                        {controlCategoryIndex}.{`${control.order_no}`}{" "}
-                        {control.title}{" "}
-                        <Typography
-                          component="span"
-                          sx={{ color: "grey", fontSize: "13px" }}
-                        >
+                        {controlCategoryIndex}.{`${control.order_no}`} {control.title}{" "}
+                        <Typography component="span" sx={{ color: "grey", fontSize: "13px" }}>
                           {`(${control.description})`}
                         </Typography>
                       </Typography>
@@ -339,18 +331,12 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                         {getOwnerName(control.owner)}
                       </Typography>
                     </TableCell>
-                    <TableCell
-                      sx={styles.cell}
-                      key={`noOfSubControls-${control.id}`}
-                    >
+                    <TableCell sx={styles.cell} key={`noOfSubControls-${control.id}`}>
                       <Typography component="span" variant="body2">
                         {`${control.numberOfSubcontrols} Controls`}
                       </Typography>
                     </TableCell>
-                    <TableCell
-                      sx={styles.cell}
-                      key={`completion-${control.id}`}
-                    >
+                    <TableCell sx={styles.cell} key={`completion-${control.id}`}>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Box sx={{ width: "100%", mr: 1 }}>
                           <LinearProgress
@@ -361,8 +347,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                               borderRadius: 4,
                               backgroundColor: "status.default.border",
                               "& .MuiLinearProgress-bar": {
-                                backgroundColor:
-                                  getProgressColor(completionPercentage),
+                                backgroundColor: getProgressColor(completionPercentage),
                               },
                             }}
                           />

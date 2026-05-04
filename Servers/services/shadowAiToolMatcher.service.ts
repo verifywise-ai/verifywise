@@ -26,7 +26,7 @@ export async function loadToolRegistry(): Promise<IShadowAiToolRegistry[]> {
     `SELECT id, name, vendor, domains, category, models,
             trains_on_data, soc2_certified, gdpr_compliant
      FROM shadow_ai_tool_registry
-     ORDER BY name`
+     ORDER BY name`,
   );
 
   toolRegistryCache = (rows as any[]).map((r) => ({
@@ -50,19 +50,14 @@ export function clearToolRegistryCache(): void {
  * Match a destination domain against the tool registry.
  * Returns the matching registry entry or null.
  */
-export async function matchDomain(
-  destination: string
-): Promise<IShadowAiToolRegistry | null> {
+export async function matchDomain(destination: string): Promise<IShadowAiToolRegistry | null> {
   const registry = await loadToolRegistry();
   const normalizedDest = destination.toLowerCase().replace(/^www\./, "");
 
   for (const tool of registry) {
     for (const domain of tool.domains) {
       const normalizedDomain = domain.toLowerCase().replace(/^www\./, "");
-      if (
-        normalizedDest === normalizedDomain ||
-        normalizedDest.endsWith(`.${normalizedDomain}`)
-      ) {
+      if (normalizedDest === normalizedDomain || normalizedDest.endsWith(`.${normalizedDomain}`)) {
         return tool;
       }
     }
@@ -80,7 +75,7 @@ export async function matchDomain(
 export async function ensureTenantTool(
   organizationId: number,
   registryEntry: IShadowAiToolRegistry,
-  transaction?: any
+  transaction?: any,
 ): Promise<{ id: number; isNew: boolean }> {
   // Check if tool already exists before upsert
   const [existing] = await sequelize.query(
@@ -88,7 +83,7 @@ export async function ensureTenantTool(
     {
       replacements: { organizationId, name: registryEntry.name },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
   const alreadyExists = (existing as any[]).length > 0;
 
@@ -114,7 +109,7 @@ export async function ensureTenantTool(
         gdpr_compliant: registryEntry.gdpr_compliant ?? null,
       },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   const row = (rows as any[])[0];
@@ -129,7 +124,7 @@ export async function updateToolCounters(
   toolId: number,
   eventCount: number,
   uniqueEmails: Set<string>,
-  transaction?: any
+  transaction?: any,
 ): Promise<void> {
   // Use the pre-computed unique email count from the batch to avoid a full table scan.
   // total_users is approximated by adding new unique users from this batch.
@@ -144,6 +139,6 @@ export async function updateToolCounters(
     {
       replacements: { organizationId, toolId, eventCount, uniqueUserCount: uniqueEmails.size },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 }

@@ -1,12 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Typography, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import { useSearchParams } from "react-router-dom";
@@ -44,10 +37,7 @@ import TasksSteps from "./TasksSteps";
 import { TaskModel } from "../../../domain/models/Common/task/task.model";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
@@ -60,14 +50,14 @@ import Alert from "../../components/Alert";
 import TabBar from "../../components/TabBar";
 import DeadlineView from "./DeadlineView";
 import { toggleLabelStyle, toggleContainerStyle } from "./style";
-import { TASK_PRIORITY_OPTIONS, PRIORITY_DISPLAY_MAP, PRIORITY_COLOR_MAP } from "../../constants/priorityOptions";
+import {
+  TASK_PRIORITY_OPTIONS,
+  PRIORITY_DISPLAY_MAP,
+  PRIORITY_COLOR_MAP,
+} from "../../constants/priorityOptions";
 
 // Task status options for CustomSelect
-const TASK_STATUS_OPTIONS = [
-  TaskStatus.OPEN,
-  TaskStatus.IN_PROGRESS,
-  TaskStatus.COMPLETED,
-];
+const TASK_STATUS_OPTIONS = [TaskStatus.OPEN, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED];
 
 // Status display mapping
 const STATUS_DISPLAY_MAP: Record<string, string> = {
@@ -134,8 +124,7 @@ const Tasks: React.FC = () => {
 
   // Group by state management
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-  const isCreatingDisabled =
-    !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
 
   // Column visibility for the tasks table
   const {
@@ -156,12 +145,12 @@ const Tasks: React.FC = () => {
       inProgress: tasks.filter(
         (task) =>
           (task.status as string) === "In Progress" || // API response
-          (task.status as string) === "In progress" // UI display
+          (task.status as string) === "In progress", // UI display
       ).length,
       completed: tasks.filter((task) => task.status === "Completed").length,
       overdue: tasks.filter((task) => task.isOverdue === true).length,
     }),
-    [tasks]
+    [tasks],
   );
 
   // Fetch all tasks (no server-side filtering - we use client-side FilterBy)
@@ -196,10 +185,7 @@ const Tasks: React.FC = () => {
   // the time the event fires — bumping refreshKey is enough to pull it in.
   useEffect(() => {
     return onAiActionCompleted((detail) => {
-      if (
-        detail?.status === 'approved' &&
-        detail?.toolName === 'agent_create_task'
-      ) {
+      if (detail?.status === "approved" && detail?.toolName === "agent_create_task") {
         setRefreshKey((k) => k + 1);
       }
     });
@@ -291,15 +277,12 @@ const Tasks: React.FC = () => {
         type: "date" as const,
       },
     ],
-    [getUniqueAssignees]
+    [getUniqueAssignees],
   );
 
   // FilterBy - Field value getter
   const getTaskFieldValue = useCallback(
-    (
-      item: TaskModel,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: TaskModel, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "title":
           return item.title;
@@ -316,14 +299,12 @@ const Tasks: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook
-  const {
-    filterData: filterTaskData,
-    handleFilterChange: handleTaskFilterChange,
-  } = useFilterBy<TaskModel>(getTaskFieldValue);
+  const { filterData: filterTaskData, handleFilterChange: handleTaskFilterChange } =
+    useFilterBy<TaskModel>(getTaskFieldValue);
 
   // Apply FilterBy and search filtering
   const filteredTasks = useMemo(() => {
@@ -334,13 +315,13 @@ const Tasks: React.FC = () => {
     if (selectedStatus) {
       result = result.filter((task) => {
         switch (selectedStatus) {
-          case 'open':
-            return task.status === 'Open';
-          case 'inProgress':
+          case "open":
+            return task.status === "Open";
+          case "inProgress":
             return task.status === TaskStatus.IN_PROGRESS;
-          case 'completed':
-            return task.status === 'Completed';
-          case 'overdue':
+          case "completed":
+            return task.status === "Completed";
+          case "overdue":
             return task.isOverdue === true;
           default:
             return true;
@@ -351,9 +332,7 @@ const Tasks: React.FC = () => {
     // Stage 3: Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter((task) =>
-        task.title?.toLowerCase().includes(query)
-      );
+      result = result.filter((task) => task.title?.toLowerCase().includes(query));
     }
 
     // Stage 4: Apply "My Tasks" filter for Admin users
@@ -361,7 +340,7 @@ const Tasks: React.FC = () => {
       result = result.filter(
         (task) =>
           task.creator_id === userId ||
-          (task.assignees && task.assignees.some((a) => a.user_id === userId))
+          (task.assignees && task.assignees.some((a) => a.user_id === userId)),
       );
     }
 
@@ -399,7 +378,7 @@ const Tasks: React.FC = () => {
                 newTaskId,
                 link.entity_id,
                 link.entity_type,
-                link.entity_name
+                link.entity_name,
               );
             }
           } catch (linkError) {
@@ -485,8 +464,8 @@ const Tasks: React.FC = () => {
                 !newEntityLinks.some(
                   (newLink: any) =>
                     newLink.entity_id === existing.entity_id &&
-                    newLink.entity_type === existing.entity_type
-                )
+                    newLink.entity_type === existing.entity_type,
+                ),
             );
 
             // Find links to add (in new but not in existing)
@@ -495,8 +474,8 @@ const Tasks: React.FC = () => {
                 !existingLinks.some(
                   (existing) =>
                     existing.entity_id === newLink.entity_id &&
-                    existing.entity_type === newLink.entity_type
-                )
+                    existing.entity_type === newLink.entity_type,
+                ),
             );
 
             // Remove old links
@@ -510,7 +489,7 @@ const Tasks: React.FC = () => {
                 editingTask.id!,
                 link.entity_id,
                 link.entity_type,
-                link.entity_name
+                link.entity_name,
               );
             }
           } catch (linkError) {
@@ -526,9 +505,7 @@ const Tasks: React.FC = () => {
         };
 
         setTasks((prev) =>
-          prev.map((task) =>
-            task.id === editingTask.id ? updatedTaskWithLinks : task
-          )
+          prev.map((task) => (task.id === editingTask.id ? updatedTaskWithLinks : task)),
         );
 
         // Flash the updated row
@@ -558,67 +535,63 @@ const Tasks: React.FC = () => {
 
   const handleTaskStatusChange =
     (taskId: number) =>
-      async (newStatus: string): Promise<boolean> => {
-        try {
-          const response = await updateTaskStatus({
-            id: taskId,
-            status: newStatus as TaskStatus,
-          });
-          if (response && response.data) {
-            setTasks((prev) =>
-              prev.map((task) =>
-                task.id === taskId
-                  ? { ...task, status: newStatus as TaskStatus }
-                  : task
-              )
-            );
+    async (newStatus: string): Promise<boolean> => {
+      try {
+        const response = await updateTaskStatus({
+          id: taskId,
+          status: newStatus as TaskStatus,
+        });
+        if (response && response.data) {
+          setTasks((prev) =>
+            prev.map((task) =>
+              task.id === taskId ? { ...task, status: newStatus as TaskStatus } : task,
+            ),
+          );
 
-            // Flash the updated row
-            setFlashRowId(taskId);
-            setTimeout(() => {
-              setFlashRowId(null);
-            }, 3000);
+          // Flash the updated row
+          setFlashRowId(taskId);
+          setTimeout(() => {
+            setFlashRowId(null);
+          }, 3000);
 
-            return true;
-          }
-          return false;
-        } catch (error) {
-          console.error("Error updating task status:", error);
-          return false;
+          return true;
         }
-      };
+        return false;
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        return false;
+      }
+    };
 
   const handleTaskPriorityChange =
     (taskId: number) =>
-      async (newPriority: string): Promise<boolean> => {
-        try {
-          const response = await updateTaskPriority({
-            id: taskId,
-            priority: newPriority as TaskPriority,
-          });
-          if (response && response.data) {
-            setTasks((prev) =>
-              prev.map((task) =>
-                task.id === taskId
-                  ? { ...task, priority: newPriority as TaskPriority }
-                  : task
-              )
-            );
+    async (newPriority: string): Promise<boolean> => {
+      try {
+        const response = await updateTaskPriority({
+          id: taskId,
+          priority: newPriority as TaskPriority,
+        });
+        if (response && response.data) {
+          setTasks((prev) =>
+            prev.map((task) =>
+              task.id === taskId ? { ...task, priority: newPriority as TaskPriority } : task,
+            ),
+          );
 
-            // Flash the updated row
-            setFlashRowId(taskId);
-            setTimeout(() => {
-              setFlashRowId(null);
-            }, 3000);
+          // Flash the updated row
+          setFlashRowId(taskId);
+          setTimeout(() => {
+            setFlashRowId(null);
+          }, 3000);
 
-            return true;
-          }
-          return false;
-        } catch (error) {
-          console.error("Error updating task priority:", error);
-          return false;
+          return true;
         }
-      };
+        return false;
+      } catch (error) {
+        console.error("Error updating task priority:", error);
+        return false;
+      }
+    };
 
   const handleRestoreTask = async (taskId: number) => {
     try {
@@ -628,9 +601,7 @@ const Tasks: React.FC = () => {
         const restoredTask = response.data;
         // Update the task in the list with restored status
         setTasks((prev) =>
-          prev.map((task) =>
-            task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task
-          )
+          prev.map((task) => (task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task)),
         );
         setAlert({
           variant: "success",
@@ -674,30 +645,33 @@ const Tasks: React.FC = () => {
   };
 
   // Handle status card click for filtering
-  const handleStatusCardClick = useCallback((statusKey: string) => {
-    if (statusKey === 'total' || selectedStatus === statusKey) {
-      setSelectedStatus(null);
-      setAlert(null);
-      setShowAlert(false);
-    } else {
-      setSelectedStatus(statusKey);
-      const labelMap: Record<string, string> = {
-        open: 'Open',
-        inProgress: 'In Progress',
-        completed: 'Completed',
-        overdue: 'Overdue',
-      };
-      setAlert({
-        variant: 'info',
-        title: `Filtering by ${labelMap[statusKey]} tasks`,
-        body: 'Click the card again or click Total to see all tasks.',
-      });
-    }
-  }, [selectedStatus]);
+  const handleStatusCardClick = useCallback(
+    (statusKey: string) => {
+      if (statusKey === "total" || selectedStatus === statusKey) {
+        setSelectedStatus(null);
+        setAlert(null);
+        setShowAlert(false);
+      } else {
+        setSelectedStatus(statusKey);
+        const labelMap: Record<string, string> = {
+          open: "Open",
+          inProgress: "In Progress",
+          completed: "Completed",
+          overdue: "Overdue",
+        };
+        setAlert({
+          variant: "info",
+          title: `Filtering by ${labelMap[statusKey]} tasks`,
+          body: "Click the card again or click Total to see all tasks.",
+        });
+      }
+    },
+    [selectedStatus],
+  );
 
   // Auto-dismiss info alert after 3 seconds with fade animation
   useEffect(() => {
-    if (alert && alert.variant === 'info') {
+    if (alert && alert.variant === "info") {
       setShowAlert(true);
       const timer = setTimeout(() => {
         setShowAlert(false);
@@ -709,17 +683,10 @@ const Tasks: React.FC = () => {
   }, [alert]);
 
   // Define how to get the group key for each task
-  const getTaskGroupKey = (
-    task: TaskModel,
-    field: string
-  ): string | string[] => {
+  const getTaskGroupKey = (task: TaskModel, field: string): string | string[] => {
     switch (field) {
       case "status":
-        return (
-          STATUS_DISPLAY_MAP[task.status as TaskStatus] ||
-          task.status ||
-          "Unknown"
-        );
+        return STATUS_DISPLAY_MAP[task.status as TaskStatus] || task.status || "Unknown";
       case "priority":
         return task.priority || "No Priority";
       case "assignees":
@@ -732,9 +699,7 @@ const Tasks: React.FC = () => {
         }
         return "Unassigned";
       case "due_date":
-        return task.due_date
-          ? displayFormattedDate(task.due_date)
-          : "No Due Date";
+        return task.due_date ? displayFormattedDate(task.due_date) : "No Due Date";
       default:
         return "Other";
     }
@@ -767,29 +732,24 @@ const Tasks: React.FC = () => {
       const assigneeNames =
         task.assignees && task.assignees.length > 0
           ? task.assignees
-            .map((assigneeId) => {
-              const user = users.find((u) => u.id === Number(assigneeId));
-              return user ? `${user.name} ${user.surname}`.trim() : null;
-            })
-            .filter(Boolean)
-            .join(", ") || "Unassigned"
+              .map((assigneeId) => {
+                const user = users.find((u) => u.id === Number(assigneeId));
+                return user ? `${user.name} ${user.surname}`.trim() : null;
+              })
+              .filter(Boolean)
+              .join(", ") || "Unassigned"
           : "Unassigned";
 
       // Look up creator name from creator_id
       const creatorUser = users.find((u) => u.id === task.creator_id);
-      const creatorName = creatorUser
-        ? `${creatorUser.name} ${creatorUser.surname}`.trim()
-        : "-";
+      const creatorName = creatorUser ? `${creatorUser.name} ${creatorUser.surname}`.trim() : "-";
 
       return {
         title: task.title || "-",
-        status:
-          STATUS_DISPLAY_MAP[task.status as TaskStatus] || task.status || "-",
+        status: STATUS_DISPLAY_MAP[task.status as TaskStatus] || task.status || "-",
         priority: task.priority || "-",
         assignees: assigneeNames,
-        due_date: task.due_date
-          ? displayFormattedDate(task.due_date)
-          : "-",
+        due_date: task.due_date ? displayFormattedDate(task.due_date) : "-",
         creator: creatorName,
         categories: task.categories?.join(", ") || "-",
       };
@@ -839,8 +799,18 @@ const Tasks: React.FC = () => {
       <TabContext value={activeTab}>
         <TabBar
           tabs={[
-            { label: "List view", value: "list", icon: "List", tooltip: "Tasks in a filterable table" },
-            { label: "Deadline view", value: "deadline", icon: "Calendar", tooltip: "Tasks organized by due date" },
+            {
+              label: "List view",
+              value: "list",
+              icon: "List",
+              tooltip: "Tasks in a filterable table",
+            },
+            {
+              label: "Deadline view",
+              value: "deadline",
+              icon: "Calendar",
+              tooltip: "Tasks organized by due date",
+            },
           ]}
           activeTab={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
@@ -864,10 +834,7 @@ const Tasks: React.FC = () => {
           >
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
-              <FilterBy
-                columns={taskFilterColumns}
-                onFilterChange={handleTaskFilterChange}
-              />
+              <FilterBy columns={taskFilterColumns} onFilterChange={handleTaskFilterChange} />
             </Box>
 
             {/* GroupBy */}
@@ -903,10 +870,7 @@ const Tasks: React.FC = () => {
             <Stack direction="row" gap="16px" alignItems="center" sx={{ ml: "8px" }}>
               {/* My Tasks toggle - Admin only */}
               {userRoleName === "Admin" && (
-                <Stack
-                  sx={toggleContainerStyle}
-                  data-joyride-id="my-tasks-toggle"
-                >
+                <Stack sx={toggleContainerStyle} data-joyride-id="my-tasks-toggle">
                   <Typography
                     component="span"
                     variant="body2"
@@ -923,10 +887,7 @@ const Tasks: React.FC = () => {
               )}
 
               {/* Include archived toggle */}
-              <Stack
-                sx={toggleContainerStyle}
-                data-joyride-id="include-archived-toggle"
-              >
+              <Stack sx={toggleContainerStyle} data-joyride-id="include-archived-toggle">
                 <Typography
                   component="span"
                   variant="body2"
@@ -1001,8 +962,7 @@ const Tasks: React.FC = () => {
                 onEdit={handleEditTask}
                 onStatusChange={handleTaskStatusChange}
                 statusOptions={TASK_STATUS_OPTIONS.map((status) => {
-                  const displayStatus =
-                    STATUS_DISPLAY_MAP[status as TaskStatus] || status;
+                  const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
                   return displayStatus;
                 })}
                 onPriorityChange={handleTaskPriorityChange}
@@ -1036,14 +996,12 @@ const Tasks: React.FC = () => {
             onEdit={handleEditTask}
             onStatusChange={handleTaskStatusChange}
             statusOptions={TASK_STATUS_OPTIONS.map((status) => {
-              const displayStatus =
-                STATUS_DISPLAY_MAP[status as TaskStatus] || status;
+              const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
               return displayStatus;
             })}
             onPriorityChange={handleTaskPriorityChange}
             priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
-              const displayPriority =
-                PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
+              const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
               return {
                 value: priority,
                 label: displayPriority,

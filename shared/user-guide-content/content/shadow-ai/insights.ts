@@ -44,7 +44,7 @@ export const insightsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Risk scores range from 0 to 100 and are recalculated nightly. They factor in approval status (40%), data and compliance policies (25%), usage volume (15%) and department sensitivity (20%).',
+      text: 'Risk scores range from 0 to 100 and are recalculated nightly. They factor in approval status (40%), data and compliance policies (25%), usage volume (15%, normalized to the tool\'s event ratio against the org average) and department sensitivity (20%).',
     },
     {
       type: 'heading',

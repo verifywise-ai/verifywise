@@ -18,8 +18,6 @@ import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { logEngine } from "../../../../application/tools/log.engine";
 
-
-
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
 };
@@ -40,7 +38,6 @@ const statusOptions: Array<{ _id: string; name: string }> = [
   { _id: TrainingStatus.Completed, name: "Completed" },
 ];
 
-
 const NewTraining: FC<NewTrainingProps> = ({
   isOpen,
   setIsOpen,
@@ -50,9 +47,7 @@ const NewTraining: FC<NewTrainingProps> = ({
   entityId,
 }) => {
   const theme = useTheme();
-  const [values, setValues] = useState<TrainingFormState>(
-    initialData || initialState
-  );
+  const [values, setValues] = useState<TrainingFormState>(initialData || initialState);
   const validators = useMemo(
     () => ({
       training_name: (v: unknown) => {
@@ -80,7 +75,7 @@ const NewTraining: FC<NewTrainingProps> = ({
         return "";
       },
     }),
-    []
+    [],
   );
   const { errors, validateAll, clearFieldError, resetErrors } =
     useFormValidation<TrainingFormState>(validators);
@@ -103,40 +98,38 @@ const NewTraining: FC<NewTrainingProps> = ({
 
   // Handler: Text field change with proper typing (Type Safety)
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof TrainingRegistarDTO) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
+    (prop: keyof TrainingRegistarDTO) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
 
-        // Defensive: Handle number fields explicitly
-        if (prop === "numberOfPeople") {
-          // Don't default to 0 - let validation catch empty values
-          const numValue = value === "" ? undefined : Number(value);
-          if (numValue === undefined || (!isNaN(numValue) && numValue >= 0)) {
-            setValues((prev) => ({
-              ...prev,
-              numberOfPeople: numValue,
-            }));
-          }
-        } else {
-          setValues((prev) => ({ ...prev, [prop]: value }));
+      // Defensive: Handle number fields explicitly
+      if (prop === "numberOfPeople") {
+        // Don't default to 0 - let validation catch empty values
+        const numValue = value === "" ? undefined : Number(value);
+        if (numValue === undefined || (!isNaN(numValue) && numValue >= 0)) {
+          setValues((prev) => ({
+            ...prev,
+            numberOfPeople: numValue,
+          }));
         }
+      } else {
+        setValues((prev) => ({ ...prev, [prop]: value }));
+      }
 
-        // Clear error for this field
-        clearFieldError(prop as keyof TrainingFormState);
-      },
-    [clearFieldError]
+      // Clear error for this field
+      clearFieldError(prop as keyof TrainingFormState);
+    },
+    [clearFieldError],
   );
 
   // Handler: Select change with proper typing (Type Safety)
   // DEFENSIVE: Cast value to TrainingStatus to ensure type safety end-to-end
   const handleOnSelectChange = useCallback(
-    (prop: keyof TrainingRegistarDTO) =>
-      (event: SelectChangeEvent<string | number>) => {
-        const value = event.target.value as TrainingStatus;
-        setValues((prev) => ({ ...prev, [prop]: value }));
-        clearFieldError(prop as keyof TrainingFormState);
-      },
-    [clearFieldError]
+    (prop: keyof TrainingRegistarDTO) => (event: SelectChangeEvent<string | number>) => {
+      const value = event.target.value as TrainingStatus;
+      setValues((prev) => ({ ...prev, [prop]: value }));
+      clearFieldError(prop as keyof TrainingFormState);
+    },
+    [clearFieldError],
   );
 
   const handleClose = useCallback(() => {
@@ -187,7 +180,7 @@ const NewTraining: FC<NewTrainingProps> = ({
         // Keep modal open to preserve user input
       }
     },
-    [values, onSuccess, handleClose, validateAll]
+    [values, onSuccess, handleClose, validateAll],
   );
 
   const fieldStyle = useMemo(
@@ -197,7 +190,7 @@ const NewTraining: FC<NewTrainingProps> = ({
         padding: "0 14px",
       },
     }),
-    [theme.palette.background.main]
+    [theme.palette.background.main],
   );
 
   useModalKeyHandling({
@@ -341,12 +334,7 @@ const NewTraining: FC<NewTrainingProps> = ({
           </Box>
           {activeTab === "details" && formContent}
           {activeTab === "activity" && (
-            <HistorySidebar
-              inline
-              isOpen={true}
-              entityType="training"
-              entityId={entityId}
-            />
+            <HistorySidebar inline isOpen={true} entityType="training" entityId={entityId} />
           )}
         </TabContext>
       ) : (

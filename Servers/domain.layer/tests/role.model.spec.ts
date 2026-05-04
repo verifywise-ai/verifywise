@@ -28,10 +28,7 @@ describe("RoleModel", () => {
   };
 
   it("should create a new role with valid data", async () => {
-    const role = await RoleModel.createRole(
-      validRoleData.name,
-      validRoleData.description
-    );
+    const role = await RoleModel.createRole(validRoleData.name, validRoleData.description);
     expect(role).toBeInstanceOf(RoleModel);
     expect(role.name).toBe(validRoleData.name);
     expect(role.description).toBe(validRoleData.description);
@@ -44,9 +41,7 @@ describe("RoleModel", () => {
       await RoleModel.createRole("", validRoleData.description);
     } catch (error) {
       expect(error).toBeInstanceOf(ValidationException);
-      expect((error as ValidationException).message).toBe(
-        "Role name is required"
-      );
+      expect((error as ValidationException).message).toBe("Role name is required");
     }
   });
 
@@ -56,9 +51,7 @@ describe("RoleModel", () => {
       await RoleModel.createRole(validRoleData.name, "");
     } catch (error) {
       expect(error).toBeInstanceOf(ValidationException);
-      expect((error as ValidationException).message).toBe(
-        "Role description is required"
-      );
+      expect((error as ValidationException).message).toBe("Role description is required");
     }
   });
 });

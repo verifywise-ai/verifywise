@@ -2,7 +2,7 @@
  * Utility functions for managing pagination row count in localStorage
  */
 
-const PAGINATION_STORAGE_KEY_PREFIX = 'pagination_rows_';
+const PAGINATION_STORAGE_KEY_PREFIX = "pagination_rows_";
 
 export const getPaginationRowCount = (tableKey: string, defaultCount: number = 10): number => {
   try {
@@ -14,7 +14,7 @@ export const getPaginationRowCount = (tableKey: string, defaultCount: number = 1
       }
     }
   } catch (error) {
-    console.warn('Failed to retrieve pagination setting from localStorage:', error);
+    console.warn("Failed to retrieve pagination setting from localStorage:", error);
   }
   return defaultCount;
 };
@@ -23,6 +23,6 @@ export const setPaginationRowCount = (tableKey: string, rowCount: number): void 
   try {
     localStorage.setItem(`${PAGINATION_STORAGE_KEY_PREFIX}${tableKey}`, rowCount.toString());
   } catch (error) {
-    console.warn('Failed to save pagination setting to localStorage:', error);
+    console.warn("Failed to save pagination setting to localStorage:", error);
   }
 };

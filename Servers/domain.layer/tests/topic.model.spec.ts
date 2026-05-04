@@ -46,7 +46,7 @@ class TestTopicModel {
     title: string,
     assessment_id: number,
     order_no?: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestTopicModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
@@ -58,7 +58,7 @@ class TestTopicModel {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessment_id
+        assessment_id,
       );
     }
 
@@ -67,7 +67,7 @@ class TestTopicModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -83,18 +83,11 @@ class TestTopicModel {
   }
 
   // Instance method to update topic
-  async updateTopic(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateTopic(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Topic title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Topic title is required", "title", updateData.title);
       }
       this.title = updateData.title.trim();
     }
@@ -105,7 +98,7 @@ class TestTopicModel {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -115,18 +108,14 @@ class TestTopicModel {
   // Instance method to validate topic data
   async validateTopicData(): Promise<void> {
     if (!this.title || this.title.trim().length === 0) {
-      throw new ValidationException(
-        "Topic title is required",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Topic title is required", "title", this.title);
     }
 
     if (!this.assessment_id || !numberValidation(this.assessment_id, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required",
         "assessment_id",
-        this.assessment_id
+        this.assessment_id,
       );
     }
 
@@ -134,7 +123,7 @@ class TestTopicModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -147,11 +136,10 @@ class TestTopicModel {
   // Instance method to check if topic can be modified
   canBeModified(): boolean {
     if (this.isDemoTopic()) {
-      throw new BusinessLogicException(
-        "Demo topics cannot be modified",
-        "DEMO_TOPIC_RESTRICTION",
-        { topicId: this.id, assessmentId: this.assessment_id }
-      );
+      throw new BusinessLogicException("Demo topics cannot be modified", "DEMO_TOPIC_RESTRICTION", {
+        topicId: this.id,
+        assessmentId: this.assessment_id,
+      });
     }
     return true;
   }
@@ -159,11 +147,7 @@ class TestTopicModel {
   // Static method to find topic by ID with validation
   static async findByIdWithValidation(id: number): Promise<TestTopicModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
@@ -181,14 +165,12 @@ class TestTopicModel {
   }
 
   // Static method to find topics by assessment ID
-  static async findByAssessmentId(
-    assessmentId: number
-  ): Promise<TestTopicModel[]> {
+  static async findByAssessmentId(assessmentId: number): Promise<TestTopicModel[]> {
     if (!numberValidation(assessmentId, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -227,7 +209,7 @@ describe("TopicModel", () => {
         validTopicData.title,
         validTopicData.assessment_id,
         validTopicData.order_no,
-        validTopicData.is_demo
+        validTopicData.is_demo,
       );
 
       expect(topic).toBeInstanceOf(TestTopicModel);
@@ -239,15 +221,15 @@ describe("TopicModel", () => {
     });
 
     it("should throw ValidationException for empty title", async () => {
-      await expect(
-        TestTopicModel.createNewTopic("", validTopicData.assessment_id)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestTopicModel.createNewTopic("", validTopicData.assessment_id)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid assessment_id", async () => {
-      await expect(
-        TestTopicModel.createNewTopic(validTopicData.title, 0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestTopicModel.createNewTopic(validTopicData.title, 0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -267,9 +249,7 @@ describe("TopicModel", () => {
     it("should throw ValidationException for empty title update", async () => {
       const topic = new TestTopicModel(validTopicData);
 
-      await expect(topic.updateTopic({ title: "" })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(topic.updateTopic({ title: "" })).rejects.toThrow(ValidationException);
     });
   });
 
@@ -286,9 +266,7 @@ describe("TopicModel", () => {
         title: "",
       });
 
-      await expect(topic.validateTopicData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(topic.validateTopicData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -318,15 +296,11 @@ describe("TopicModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(TestTopicModel.findByIdWithValidation(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestTopicModel.findByIdWithValidation(0)).rejects.toThrow(ValidationException);
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(TestTopicModel.findByIdWithValidation(999)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(TestTopicModel.findByIdWithValidation(999)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -340,9 +314,7 @@ describe("TopicModel", () => {
     });
 
     it("should throw ValidationException for invalid assessment_id", async () => {
-      await expect(TestTopicModel.findByAssessmentId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestTopicModel.findByAssessmentId(0)).rejects.toThrow(ValidationException);
     });
   });
 });

@@ -27,9 +27,7 @@ const deriveKey = (salt: string = "default-salt"): Buffer => {
  */
 const encryptText = (text: string): EncryptedResult => {
   if (!algorithm) {
-    throw new Error(
-      "Encryption algorithm not specified in environment variables",
-    );
+    throw new Error("Encryption algorithm not specified in environment variables");
   }
   try {
     const key = deriveKey();
@@ -56,19 +54,13 @@ const encryptText = (text: string): EncryptedResult => {
  */
 const decryptText = (encryptedData: EncryptedResult): DecryptionResult => {
   if (!algorithm) {
-    throw new Error(
-      "Encryption algorithm not specified in environment variables",
-    );
+    throw new Error("Encryption algorithm not specified in environment variables");
   }
   try {
     const { value, iv } = encryptedData;
     const key = deriveKey();
 
-    const decipher = crypto.createDecipheriv(
-      algorithm,
-      key,
-      Buffer.from(iv, "hex"),
-    );
+    const decipher = crypto.createDecipheriv(algorithm, key, Buffer.from(iv, "hex"));
 
     let decrypted = decipher.update(value, "hex", "utf8");
     decrypted += decipher.final("utf8");

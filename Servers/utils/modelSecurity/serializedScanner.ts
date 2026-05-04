@@ -158,7 +158,7 @@ function extractGlobalsFromParsed(parsed: unknown, parser: any): IGlobalReferenc
 function searchForReducePatterns(
   obj: unknown,
   globals: IGlobalReference[],
-  visited: Set<unknown>
+  visited: Set<unknown>,
 ): void {
   if (obj === null || obj === undefined || typeof obj !== "object") {
     return;
@@ -328,7 +328,7 @@ function analyzeGlobals(globals: IGlobalReference[], filePath: string): IModelSe
 function createFinding(
   global: IGlobalReference,
   dangerousOp: DangerousOperator,
-  filePath: string
+  filePath: string,
 ): IModelSecurityFinding {
   // Determine threat type based on module
   const threatType = determineThreatType(global.module);
@@ -369,7 +369,17 @@ function determineThreatType(module: string): string {
     "webbrowser",
   ];
   const fileModules = ["shutil", "pathlib", "tensorflow.io", "tensorflow.io.gfile"];
-  const codeExecModules = ["os", "subprocess", "sys", "runpy", "code", "commands", "popen2", "nt", "posix"];
+  const codeExecModules = [
+    "os",
+    "subprocess",
+    "sys",
+    "runpy",
+    "code",
+    "commands",
+    "popen2",
+    "nt",
+    "posix",
+  ];
 
   if (networkModules.some((m) => module.toLowerCase().includes(m))) {
     return "network_access";
@@ -408,7 +418,7 @@ function getThreatName(threatType: string): string {
  * Gets the highest severity from a list of findings
  */
 function getHighestSeverity(
-  findings: IModelSecurityFinding[]
+  findings: IModelSecurityFinding[],
 ): "critical" | "high" | "medium" | "low" | null {
   if (findings.length === 0) {
     return null;

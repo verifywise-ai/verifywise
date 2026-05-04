@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { Box, Typography } from '@mui/material';
-import { PageBreadcrumbs } from '../breadcrumbs/PageBreadcrumbs';
-import { DashboardActionButtons } from './DashboardActionButtons';
-import { BreadcrumbItem } from '../../types/interfaces/i.breadcrumbs';
+import type { ReactNode } from "react";
+import { Box, Typography } from "@mui/material";
+import { PageBreadcrumbs } from "../breadcrumbs/PageBreadcrumbs";
+import { DashboardActionButtons } from "./DashboardActionButtons";
+import { BreadcrumbItem } from "../../types/interfaces/i.breadcrumbs";
 
 interface PageLayoutWithActionsProps {
   children: ReactNode;
@@ -26,7 +26,7 @@ export function PageLayoutWithActions({
   showCurrentPage = true,
 }: PageLayoutWithActionsProps) {
   return (
-    <Box sx={{ position: 'relative', width: '100%' }}>
+    <Box sx={{ position: "relative", width: "100%" }}>
       {showActionButtons && <DashboardActionButtons />}
 
       {showBreadcrumbs && (
@@ -43,17 +43,14 @@ export function PageLayoutWithActions({
             variant="h5"
             sx={{
               fontWeight: 600,
-              color: 'text.primary',
+              color: "text.primary",
               mb: 1,
             }}
           >
             {title}
           </Typography>
           {description && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               {description}
             </Typography>
           )}

@@ -1,17 +1,5 @@
-import {
-  Box,
-  Typography,
-  IconButton,
-  Tooltip,
-  useTheme,
-} from "@mui/material";
-import {
-  Trash2,
-  Copy,
-  ChevronUp,
-  ChevronDown,
-  Info,
-} from "lucide-react";
+import { Box, Typography, IconButton, Tooltip, useTheme } from "@mui/material";
+import { Trash2, Copy, ChevronUp, ChevronDown, Info } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
@@ -86,7 +74,11 @@ function FieldPreview({ field }: { field: FormField }) {
     case "url":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
+          />
           <Field
             id={`preview-${field.id}`}
             label=""
@@ -106,7 +98,11 @@ function FieldPreview({ field }: { field: FormField }) {
     case "textarea":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
+          />
           <Field
             id={`preview-${field.id}`}
             label=""
@@ -127,7 +123,11 @@ function FieldPreview({ field }: { field: FormField }) {
     case "number":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
+          />
           <Field
             id={`preview-${field.id}`}
             label=""
@@ -147,14 +147,12 @@ function FieldPreview({ field }: { field: FormField }) {
     case "date":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
-          <Field
-            id={`preview-${field.id}`}
-            label=""
-            value=""
-            type="date"
-            disabled
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
           />
+          <Field id={`preview-${field.id}`} label="" value="" type="date" disabled />
           {field.helpText && (
             <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px" }}>
               {field.helpText}
@@ -166,7 +164,11 @@ function FieldPreview({ field }: { field: FormField }) {
     case "select":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
+          />
           <Select
             id={`preview-${field.id}`}
             label=""
@@ -187,7 +189,11 @@ function FieldPreview({ field }: { field: FormField }) {
     case "multiselect":
       return (
         <>
-          <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} required={isRequired} />
+          <PreviewFieldLabel
+            label={field.label}
+            guidanceText={field.guidanceText}
+            required={isRequired}
+          />
           <Select
             id={`preview-${field.id}`}
             label=""
@@ -215,23 +221,28 @@ function FieldPreview({ field }: { field: FormField }) {
               value={field.id}
               onChange={() => {}}
               isDisabled
-              label={
-                isRequired
-                  ? `${field.label} *`
-                  : field.label
-              }
+              label={isRequired ? `${field.label} *` : field.label}
               size="small"
             />
             {field.guidanceText && (
               <Tooltip title={field.guidanceText} placement="top" arrow>
-                <span style={{ display: "inline-flex", alignItems: "center", cursor: "help", marginLeft: 4 }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    cursor: "help",
+                    marginLeft: 4,
+                  }}
+                >
                   <Info size={14} strokeWidth={1.5} color={theme.palette.text.accent} />
                 </span>
               </Tooltip>
             )}
           </Box>
           {field.helpText && (
-            <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px", ml: "32px" }}>
+            <Typography
+              sx={{ color: theme.palette.other.icon, fontSize: "11px", mt: "2px", ml: "32px" }}
+            >
               {field.helpText}
             </Typography>
           )}
@@ -307,7 +318,12 @@ export function FieldCard({
       <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mt: "8px", flexWrap: "wrap" }}>
         <Chip label={TYPE_LABELS[field.type]} variant="default" size="small" uppercase={false} />
         {field.entityFieldMapping && (
-          <Chip label={`Maps to: ${field.entityFieldMapping}`} variant="info" size="small" uppercase={false} />
+          <Chip
+            label={`Maps to: ${field.entityFieldMapping}`}
+            variant="info"
+            size="small"
+            uppercase={false}
+          />
         )}
       </Box>
 
@@ -340,7 +356,10 @@ export function FieldCard({
               sx={{
                 p: "3px",
                 color: isFirst ? theme.palette.border.dark : theme.palette.other.icon,
-                "&:hover": { color: theme.palette.primary.main, backgroundColor: theme.palette.background.fill },
+                "&:hover": {
+                  color: theme.palette.primary.main,
+                  backgroundColor: theme.palette.background.fill,
+                },
               }}
             >
               <ChevronUp size={14} />
@@ -356,14 +375,19 @@ export function FieldCard({
               sx={{
                 p: "3px",
                 color: isLast ? theme.palette.border.dark : theme.palette.other.icon,
-                "&:hover": { color: theme.palette.primary.main, backgroundColor: theme.palette.background.fill },
+                "&:hover": {
+                  color: theme.palette.primary.main,
+                  backgroundColor: theme.palette.background.fill,
+                },
               }}
             >
               <ChevronDown size={14} />
             </IconButton>
           </span>
         </Tooltip>
-        <Box sx={{ width: "1px", height: 16, backgroundColor: theme.palette.border.dark, mx: "1px" }} />
+        <Box
+          sx={{ width: "1px", height: 16, backgroundColor: theme.palette.border.dark, mx: "1px" }}
+        />
         <Tooltip title="Duplicate" placement="top">
           <IconButton
             size="small"
@@ -371,7 +395,10 @@ export function FieldCard({
             sx={{
               p: "3px",
               color: theme.palette.other.icon,
-              "&:hover": { color: theme.palette.primary.main, backgroundColor: theme.palette.background.fill },
+              "&:hover": {
+                color: theme.palette.primary.main,
+                backgroundColor: theme.palette.background.fill,
+              },
             }}
           >
             <Copy size={14} />
@@ -384,7 +411,10 @@ export function FieldCard({
             sx={{
               p: "3px",
               color: theme.palette.other.icon,
-              "&:hover": { color: theme.palette.status.error.text, backgroundColor: theme.palette.status.error.bg },
+              "&:hover": {
+                color: theme.palette.status.error.text,
+                backgroundColor: theme.palette.status.error.bg,
+              },
             }}
           >
             <Trash2 size={14} />

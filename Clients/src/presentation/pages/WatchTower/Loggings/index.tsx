@@ -1,11 +1,4 @@
-import {
-  Stack,
-  Typography,
-  useTheme,
-  Box,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Stack, Typography, useTheme, Box, IconButton, Tooltip } from "@mui/material";
 import { useState, useEffect, useMemo } from "react";
 import { getAllLogs } from "../../../../application/repository/logs.repository";
 import LogsTable from "../../../components/Table/LogsTable";
@@ -76,9 +69,7 @@ const WatchTowerLogs = () => {
       result = result.filter((line) => {
         const lowerLine = line.toLowerCase();
         if (stateFilter === "successful") {
-          return (
-            lowerLine.includes("successful") || lowerLine.includes("success")
-          );
+          return lowerLine.includes("successful") || lowerLine.includes("success");
         }
         return lowerLine.includes(stateFilter.toLowerCase());
       });
@@ -141,14 +132,8 @@ const WatchTowerLogs = () => {
           gap: theme.spacing(2),
         }}
       >
-        <Box
-          sx={{ display: "flex", alignItems: "center", gap: theme.spacing(2) }}
-        >
-          <SearchBox
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search logs..."
-          />
+        <Box sx={{ display: "flex", alignItems: "center", gap: theme.spacing(2) }}>
+          <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Search logs..." />
           <Select
             id="state-filter"
             value={stateFilter}
@@ -162,9 +147,7 @@ const WatchTowerLogs = () => {
             }}
           />
         </Box>
-        <Box
-          sx={{ display: "flex", alignItems: "center", gap: theme.spacing(2) }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", gap: theme.spacing(2) }}>
           <Typography
             variant="body2"
             sx={{
@@ -174,17 +157,11 @@ const WatchTowerLogs = () => {
           >
             {logsInfo || `${filteredLogs.length} log entries`}
           </Typography>
-          <Tooltip
-            title="Refresh logs"
-            disableInteractive
-            sx={{ fontSize: 13 }}
-          >
+          <Tooltip title="Refresh logs" disableInteractive sx={{ fontSize: 13 }}>
             {isLoading ? (
               <span style={{ display: "inline-block" }}>
                 <IconButton
-                  disableRipple={
-                    theme.components?.MuiIconButton?.defaultProps?.disableRipple
-                  }
+                  disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
                   onClick={handleRefresh}
                   disabled={isLoading}
                   sx={{
@@ -202,9 +179,7 @@ const WatchTowerLogs = () => {
               </span>
             ) : (
               <IconButton
-                disableRipple={
-                  theme.components?.MuiIconButton?.defaultProps?.disableRipple
-                }
+                disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
                 onClick={handleRefresh}
                 disabled={isLoading}
                 sx={{

@@ -328,27 +328,27 @@ export const mockFrameworkRisks: IRisk[] = mockRisks.filter((_, index) => index 
 export const mockTimeseriesData: TimeseriesDataPoint[] = [
   {
     timestamp: createPastDate(60),
-    data: { "Catastrophic": 2, "Major": 3, "Moderate": 4, "Minor": 1, "Negligible": 0 }
+    data: { Catastrophic: 2, Major: 3, Moderate: 4, Minor: 1, Negligible: 0 },
   },
   {
     timestamp: createPastDate(53),
-    data: { "Catastrophic": 2, "Major": 4, "Moderate": 3, "Minor": 1, "Negligible": 1 }
+    data: { Catastrophic: 2, Major: 4, Moderate: 3, Minor: 1, Negligible: 1 },
   },
   {
     timestamp: createPastDate(46),
-    data: { "Catastrophic": 1, "Major": 4, "Moderate": 4, "Minor": 1, "Negligible": 1 }
+    data: { Catastrophic: 1, Major: 4, Moderate: 4, Minor: 1, Negligible: 1 },
   },
   {
     timestamp: createPastDate(39),
-    data: { "Catastrophic": 2, "Major": 3, "Moderate": 3, "Minor": 2, "Negligible": 1 }
+    data: { Catastrophic: 2, Major: 3, Moderate: 3, Minor: 2, Negligible: 1 },
   },
   {
     timestamp: createPastDate(32),
-    data: { "Catastrophic": 2, "Major": 3, "Moderate": 3, "Minor": 1, "Negligible": 1 }
+    data: { Catastrophic: 2, Major: 3, Moderate: 3, Minor: 1, Negligible: 1 },
   },
   {
     timestamp: createPastDate(27),
-    data: { "Catastrophic": 2, "Major": 3, "Moderate": 3, "Minor": 1, "Negligible": 1 }
+    data: { Catastrophic: 2, Major: 3, Moderate: 3, Minor: 1, Negligible: 1 },
   },
 ];
 
@@ -383,6 +383,6 @@ export const createMockRisk = (overrides: Partial<IRisk>): IRisk => {
     approval_status: "Pending",
     date_of_assessment: createPastDate(27),
     created_at: createPastDate(27),
-    ...overrides
+    ...overrides,
   };
 };

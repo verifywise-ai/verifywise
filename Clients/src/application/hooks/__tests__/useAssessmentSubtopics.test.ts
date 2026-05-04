@@ -15,12 +15,15 @@ describe("useAssessmentSubtopics", () => {
 
   it("fetches subtopics for a topic", async () => {
     mockGetTopic.mockResolvedValue({
-      data: { subTopics: [{ id: 1, name: "Subtopic A" }, { id: 2, name: "Subtopic B" }] },
+      data: {
+        subTopics: [
+          { id: 1, name: "Subtopic A" },
+          { id: 2, name: "Subtopic B" },
+        ],
+      },
     });
 
-    const { result } = renderHook(() =>
-      useAssessmentSubtopics({ activeAssessmentTopicId: 5 })
-    );
+    const { result } = renderHook(() => useAssessmentSubtopics({ activeAssessmentTopicId: 5 }));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.assessmentSubtopics).toHaveLength(2);
@@ -34,9 +37,7 @@ describe("useAssessmentSubtopics", () => {
   it("sets empty array on error", async () => {
     mockGetTopic.mockRejectedValue(new Error("Server error"));
 
-    const { result } = renderHook(() =>
-      useAssessmentSubtopics({ activeAssessmentTopicId: 1 })
-    );
+    const { result } = renderHook(() => useAssessmentSubtopics({ activeAssessmentTopicId: 1 }));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.assessmentSubtopics).toEqual([]);

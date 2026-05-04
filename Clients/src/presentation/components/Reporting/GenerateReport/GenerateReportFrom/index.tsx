@@ -23,10 +23,7 @@ const Field = lazy(() => import("../../../Inputs/Field"));
 import { fieldStyle } from "./styles";
 const Select = lazy(() => import("../../../../components/Inputs/Select"));
 import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
-import {
-  Project,
-  FrameworkValues,
-} from "../../../../../application/interfaces/appStates";
+import { Project, FrameworkValues } from "../../../../../application/interfaces/appStates";
 import { FileText, FileType, Sparkles } from "lucide-react";
 import { ReportFormat } from "../../../../../domain/interfaces/i.widget";
 
@@ -73,9 +70,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
   // Get projects based on report type
   const availableProjects = useMemo(() => {
-    const projects = Array.isArray(dashboardValues.projects)
-      ? dashboardValues.projects
-      : [];
+    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
 
     if (isOrganizational) {
       // For organizational reports, show only organizational projects
@@ -88,8 +83,8 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
         return (
           !p.is_organizational &&
           !hasPendingApproval &&
-          approvalStatus !== 'pending' &&
-          approvalStatus !== 'rejected'
+          approvalStatus !== "pending" &&
+          approvalStatus !== "rejected"
         );
       });
     }
@@ -97,14 +92,12 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
   // Get frameworks for organizational reports
   const organizationFrameworks = useMemo<FrameworkValues[]>(() => {
-    const projects = Array.isArray(dashboardValues.projects)
-      ? dashboardValues.projects
-      : [];
+    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
     const allFrameworks: FrameworkValues[] = projects
       .flatMap((p: Project) => (Array.isArray(p.framework) ? p.framework : []))
       .filter(
         (f: FrameworkValues) =>
-          typeof f?.framework_id === "number" && !!f?.name && f.framework_id !== 1
+          typeof f?.framework_id === "number" && !!f?.name && f.framework_id !== 1,
       );
 
     const deduped = new Map<number, FrameworkValues>();
@@ -117,12 +110,8 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
   // Get frameworks for selected project (use case reports)
   const projectFrameworks = useMemo<FrameworkValues[]>(() => {
-    const projects = Array.isArray(dashboardValues.projects)
-      ? dashboardValues.projects
-      : [];
-    const selectedProject = projects.find(
-      (project: Project) => project.id === values.project
-    );
+    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
+    const selectedProject = projects.find((project: Project) => project.id === values.project);
 
     const frameworks = selectedProject?.framework;
 
@@ -134,9 +123,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
   // Update projectFrameworkId when project or framework changes
   useEffect(() => {
     const frameworks = isOrganizational ? organizationFrameworks : projectFrameworks;
-    const matchingFramework = frameworks.find(
-      (pf) => pf.framework_id === values.framework
-    );
+    const matchingFramework = frameworks.find((pf) => pf.framework_id === values.framework);
     if (matchingFramework) {
       onValuesChange({
         ...values,
@@ -160,25 +147,23 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
   }, [values.project, isOrganizational]);
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof BasicFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        onValuesChange({ ...values, [prop]: event.target.value });
-        setErrors({ ...errors, [prop]: "" });
-      },
-    [values, errors, onValuesChange]
+    (prop: keyof BasicFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      onValuesChange({ ...values, [prop]: event.target.value });
+      setErrors({ ...errors, [prop]: "" });
+    },
+    [values, errors, onValuesChange],
   );
 
   const handleOnSelectChange = useCallback(
-    (prop: keyof BasicFormValues) =>
-      (event: SelectChangeEvent<string | number>) => {
-        const value = event.target.value;
-        onValuesChange({
-          ...values,
-          [prop]: typeof value === "string" ? parseInt(value, 10) : value,
-        });
-        setErrors({ ...errors, [prop]: "" });
-      },
-    [values, errors, onValuesChange]
+    (prop: keyof BasicFormValues) => (event: SelectChangeEvent<string | number>) => {
+      const value = event.target.value;
+      onValuesChange({
+        ...values,
+        [prop]: typeof value === "string" ? parseInt(value, 10) : value,
+      });
+      setErrors({ ...errors, [prop]: "" });
+    },
+    [values, errors, onValuesChange],
   );
 
   const handleFormatChange = useCallback(
@@ -187,7 +172,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
         onValuesChange({ ...values, format: newFormat });
       }
     },
-    [values, onValuesChange]
+    [values, onValuesChange],
   );
 
   // Validation function
@@ -229,15 +214,11 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Sparkles size={16} color={brand.primary} />
-              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
-                AI-enhanced report
-              </Typography>
+              <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>AI-enhanced report</Typography>
             </Box>
             <Toggle
               checked={values.aiEnhanced}
-              onChange={(e) =>
-                onValuesChange({ ...values, aiEnhanced: e.target.checked })
-              }
+              onChange={(e) => onValuesChange({ ...values, aiEnhanced: e.target.checked })}
             />
           </Box>
           {values.aiEnhanced && (
@@ -248,28 +229,22 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
                   color: theme.palette.text.secondary,
                 }}
               >
-                AI will analyze your data and enrich the following sections with
-                generated insights:
+                AI will analyze your data and enrich the following sections with generated insights:
               </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {[
-                  "Executive Summary",
-                  "Key Findings",
-                  "Risk Highlights",
-                  "Recommendations",
-                ].map((label) => (
-                  <Chip
-                    key={label}
-                    label={label}
-                    size="small"
-                    uppercase={false}
-                    backgroundColor={brand.primaryLight}
-                    textColor={brand.primary}
-                    icon={
-                      <Sparkles size={12} color={brand.primary} />
-                    }
-                  />
-                ))}
+                {["Executive Summary", "Key Findings", "Risk Highlights", "Recommendations"].map(
+                  (label) => (
+                    <Chip
+                      key={label}
+                      label={label}
+                      size="small"
+                      uppercase={false}
+                      backgroundColor={brand.primaryLight}
+                      textColor={brand.primary}
+                      icon={<Sparkles size={12} color={brand.primary} />}
+                    />
+                  ),
+                )}
               </Box>
               <Typography
                 sx={{
@@ -277,9 +252,9 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
                   color: theme.palette.text.accent,
                 }}
               >
-                A standard report typically takes 5 to 10 seconds to generate.
-                With AI enhancement enabled, expect 15 to 30 seconds as the
-                model analyzes your data and produces additional insights.
+                A standard report typically takes 5 to 10 seconds to generate. With AI enhancement
+                enabled, expect 15 to 30 seconds as the model analyzes your data and produces
+                additional insights.
               </Typography>
             </Stack>
           )}
@@ -291,11 +266,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
         <Select
           id="project-input"
           label={isOrganizational ? "Organizational project" : "Use case"}
-          placeholder={
-            isOrganizational
-              ? "Select organizational project"
-              : "Select use case"
-          }
+          placeholder={isOrganizational ? "Select organizational project" : "Select use case"}
           value={values.project ?? ""}
           onChange={handleOnSelectChange("project")}
           items={
@@ -353,9 +324,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
       {/* Export Format */}
       <Stack>
-        <Typography sx={{ fontSize: "13px", fontWeight: 500, mb: 2 }}>
-          Export format
-        </Typography>
+        <Typography sx={{ fontSize: "13px", fontWeight: 500, mb: 2 }}>Export format</Typography>
         <ToggleButtonGroup
           value={values.format}
           exclusive
@@ -415,7 +384,6 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
           </ToggleButton>
         </ToggleButtonGroup>
       </Stack>
-
     </Stack>
   );
 };

@@ -2,7 +2,10 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { sendInAppNotification } from "./inAppNotification.service";
-import { NotificationType, NotificationEntityType } from "../domain.layer/interfaces/i.notification";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 interface Notification {
@@ -36,14 +39,14 @@ const mapNotificationType = (type: Notification["type"]): NotificationType => {
 export const sendNotification = async (
   organizationId: number,
   userId: number,
-  notification: Notification
+  notification: Notification,
 ): Promise<void> => {
   try {
     console.log(`📤 Sending notification (DB + Redis):`, {
       organizationId,
       userId,
       type: notification.type,
-      title: notification.title
+      title: notification.title,
     });
 
     // Map notification type to email template
@@ -62,7 +65,8 @@ export const sendNotification = async (
         type: mapNotificationType(notification.type),
         title: notification.title,
         message: notification.message,
-        entity_type: notification.entityType as NotificationEntityType || NotificationEntityType.USE_CASE,
+        entity_type:
+          (notification.entityType as NotificationEntityType) || NotificationEntityType.USE_CASE,
         entity_id: notification.entityId,
         entity_name: notification.title,
       },
@@ -75,7 +79,7 @@ export const sendNotification = async (
           notification_message: notification.message,
           entity_id: String(notification.entityId),
         },
-      }
+      },
     );
 
     console.log(`✅ Notification stored and published`);
@@ -93,14 +97,14 @@ export const sendNotificationWithContext = async (
   organizationId: number,
   userId: number,
   notification: Notification,
-  templateVariables: Record<string, string>
+  templateVariables: Record<string, string>,
 ): Promise<void> => {
   try {
     console.log(`📤 Sending notification with context (DB + Redis):`, {
       organizationId,
       userId,
       type: notification.type,
-      title: notification.title
+      title: notification.title,
     });
 
     // Map notification type to email template
@@ -119,7 +123,8 @@ export const sendNotificationWithContext = async (
         type: mapNotificationType(notification.type),
         title: notification.title,
         message: notification.message,
-        entity_type: notification.entityType as NotificationEntityType || NotificationEntityType.USE_CASE,
+        entity_type:
+          (notification.entityType as NotificationEntityType) || NotificationEntityType.USE_CASE,
         entity_id: notification.entityId,
         entity_name: notification.title,
       },
@@ -128,7 +133,7 @@ export const sendNotificationWithContext = async (
         template: emailTemplateMap[notification.type],
         subject: notification.title,
         variables: templateVariables,
-      }
+      },
     );
 
     console.log(`✅ Notification with context stored and published`);
@@ -156,9 +161,11 @@ interface ApprovalContext {
 const getApproversForStep = async (
   organizationId: number,
   requestId: number,
-  stepNumber: number
+  stepNumber: number,
 ): Promise<ApproverInfo[]> => {
-  console.log(`🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${organizationId}`);
+  console.log(
+    `🔍 Fetching approvers for step ${stepNumber}, request ${requestId}, tenant ${organizationId}`,
+  );
 
   const approvers = (await sequelize.query(
     `SELECT DISTINCT asa.approver_id, u.name as approver_name
@@ -174,10 +181,13 @@ const getApproversForStep = async (
     {
       replacements: { organizationId, requestId, stepNumber },
       type: QueryTypes.SELECT,
-    }
+    },
   )) as ApproverInfo[];
 
-  console.log(`✅ Found ${approvers.length} approvers:`, approvers.map(a => a.approver_id));
+  console.log(
+    `✅ Found ${approvers.length} approvers:`,
+    approvers.map((a) => a.approver_id),
+  );
   return approvers;
 };
 
@@ -186,7 +196,7 @@ const getApproversForStep = async (
  */
 const getApprovalContext = async (
   organizationId: number,
-  requestId: number
+  requestId: number,
 ): Promise<ApprovalContext | null> => {
   const result = (await sequelize.query(
     `SELECT
@@ -201,7 +211,7 @@ const getApprovalContext = async (
     {
       replacements: { organizationId, requestId },
       type: QueryTypes.SELECT,
-    }
+    },
   )) as ApprovalContext[];
 
   return result[0] || null;
@@ -214,7 +224,7 @@ export const notifyStepApprovers = async (
   organizationId: number,
   requestId: number,
   stepNumber: number,
-  requestName: string
+  requestName: string,
 ): Promise<void> => {
   try {
     // Get approvers for this step (with names)
@@ -224,7 +234,7 @@ export const notifyStepApprovers = async (
     const context = await getApprovalContext(organizationId, requestId);
 
     console.log(
-      `Notifying ${approvers.length} approvers for Step ${stepNumber} of request: ${requestName}`
+      `Notifying ${approvers.length} approvers for Step ${stepNumber} of request: ${requestName}`,
     );
 
     // Build approval URL
@@ -233,21 +243,26 @@ export const notifyStepApprovers = async (
 
     // Send notification to each approver with full context
     const notificationPromises = approvers.map((approver) =>
-      sendNotificationWithContext(organizationId, approver.approver_id, {
-        title: "New Approval Request",
-        message: `${requestName} - You are an approver for Step ${stepNumber}`,
-        type: "approval_request",
-        entityId: requestId,
-        entityType: "use_case",
-      }, {
-        step_number: String(stepNumber),
-        approver_name: approver.approver_name || "Approver",
-        use_case_name: context?.use_case_name || requestName,
-        requester_name: context?.requester_name || "Unknown",
-        workflow_name: context?.workflow_name || "Approval Workflow",
-        total_steps: String(context?.total_steps || 1),
-        approval_url: approvalUrl,
-      })
+      sendNotificationWithContext(
+        organizationId,
+        approver.approver_id,
+        {
+          title: "New Approval Request",
+          message: `${requestName} - You are an approver for Step ${stepNumber}`,
+          type: "approval_request",
+          entityId: requestId,
+          entityType: "use_case",
+        },
+        {
+          step_number: String(stepNumber),
+          approver_name: approver.approver_name || "Approver",
+          use_case_name: context?.use_case_name || requestName,
+          requester_name: context?.requester_name || "Unknown",
+          workflow_name: context?.workflow_name || "Approval Workflow",
+          total_steps: String(context?.total_steps || 1),
+          approval_url: approvalUrl,
+        },
+      ),
     );
 
     await Promise.all(notificationPromises);
@@ -268,7 +283,7 @@ export const notifyRequesterApproved = async (
   context?: {
     requester_name?: string;
     total_steps?: number;
-  }
+  },
 ): Promise<void> => {
   try {
     // Fetch context if not provided
@@ -286,17 +301,22 @@ export const notifyRequesterApproved = async (
     const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const useCaseUrl = `${baseUrl}/approval-requests/${requestId}`;
 
-    await sendNotificationWithContext(organizationId, requesterId, {
-      title: "Request Approved",
-      message: `Your request "${requestName}" has been approved`,
-      type: "approval_complete",
-      entityId: requestId,
-    }, {
-      requester_name: requesterName,
-      use_case_name: requestName,
-      total_steps: String(totalSteps),
-      use_case_url: useCaseUrl,
-    });
+    await sendNotificationWithContext(
+      organizationId,
+      requesterId,
+      {
+        title: "Request Approved",
+        message: `Your request "${requestName}" has been approved`,
+        type: "approval_complete",
+        entityId: requestId,
+      },
+      {
+        requester_name: requesterName,
+        use_case_name: requestName,
+        total_steps: String(totalSteps),
+        use_case_url: useCaseUrl,
+      },
+    );
   } catch (error) {
     console.error("Error notifying requester of approval:", error);
     throw error;
@@ -315,7 +335,7 @@ export const notifyRequesterRejected = async (
     requester_name?: string;
     rejector_name?: string;
     rejection_reason?: string;
-  }
+  },
 ): Promise<void> => {
   try {
     // Fetch context if not provided
@@ -331,18 +351,23 @@ export const notifyRequesterRejected = async (
     const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
     const requestUrl = `${baseUrl}/approval-requests/${requestId}`;
 
-    await sendNotificationWithContext(organizationId, requesterId, {
-      title: "Request Rejected",
-      message: `Your request "${requestName}" has been rejected`,
-      type: "approval_rejected",
-      entityId: requestId,
-    }, {
-      requester_name: requesterName,
-      rejector_name: context?.rejector_name || "An approver",
-      request_name: requestName,
-      rejection_reason: context?.rejection_reason || "No reason provided",
-      request_url: requestUrl,
-    });
+    await sendNotificationWithContext(
+      organizationId,
+      requesterId,
+      {
+        title: "Request Rejected",
+        message: `Your request "${requestName}" has been rejected`,
+        type: "approval_rejected",
+        entityId: requestId,
+      },
+      {
+        requester_name: requesterName,
+        rejector_name: context?.rejector_name || "An approver",
+        request_name: requestName,
+        rejection_reason: context?.rejection_reason || "No reason provided",
+        request_url: requestUrl,
+      },
+    );
   } catch (error) {
     console.error("Error notifying requester of rejection:", error);
     throw error;
@@ -363,7 +388,7 @@ export const notifyRequesterStepCompleted = async (
     total_steps: number;
     approver_name: string;
     workflow_name?: string;
-  }
+  },
 ): Promise<void> => {
   try {
     // Fetch requester name if not available
@@ -399,10 +424,11 @@ export const notifyRequesterStepCompleted = async (
           next_step: String(context.next_step),
           total_steps: String(context.total_steps),
           approver_name: context.approver_name,
-          workflow_name: context.workflow_name || fetchedContext?.workflow_name || "Approval Workflow",
+          workflow_name:
+            context.workflow_name || fetchedContext?.workflow_name || "Approval Workflow",
           request_url: requestUrl,
         },
-      }
+      },
     );
   } catch (error) {
     console.error("Error notifying requester of step completion:", error);

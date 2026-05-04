@@ -52,5 +52,5 @@ export class TaskAssigneeModel implements ITaskAssignee {
   }
   static createAssignee(data: Partial<ITaskAssignee>): TaskAssigneeModel {
     return new TaskAssigneeModel(data);
-}
+  }
 }

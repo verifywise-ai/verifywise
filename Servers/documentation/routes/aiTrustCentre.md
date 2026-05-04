@@ -55,6 +55,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 **Description**: Creates or updates AI Trust Centre overview data for an organization.
 
 **Request Body**:
+
 ```json
 {
   "intro": {
@@ -99,6 +100,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 ```
 
 **Response**:
+
 - `201`: Created successfully
 - `400`: Bad request (validation errors)
 - `500`: Server error
@@ -110,20 +112,30 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 **Description**: Retrieves AI Trust Centre overview data for the current organization.
 
 **Response**:
+
 - `200`: Success with overview data
 - `404`: Overview not found
 - `500`: Server error
 
 **Response Body**:
+
 ```json
 {
   "status": 200,
   "message": "AI Trust Centre overview retrieved successfully",
   "data": {
-    "intro": { /* intro data */ },
-    "compliance_badges": { /* compliance badges data */ },
-    "company_info": { /* company info data */ },
-    "terms_and_contact": { /* terms and contact data */ }
+    "intro": {
+      /* intro data */
+    },
+    "compliance_badges": {
+      /* compliance badges data */
+    },
+    "company_info": {
+      /* company info data */
+    },
+    "terms_and_contact": {
+      /* terms and contact data */
+    }
   }
 }
 ```
@@ -137,6 +149,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 **Request Body**: Same structure as POST, but all fields are optional.
 
 **Response**:
+
 - `200`: Updated successfully
 - `400`: Bad request (validation errors)
 - `500`: Server error
@@ -144,6 +157,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 ## Data Models
 
 ### Intro Section
+
 - `intro_visible`: boolean - Whether the intro section is visible
 - `purpose_visible`: boolean - Whether the purpose section is visible
 - `purpose_text`: string (optional) - Purpose text content
@@ -153,6 +167,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 - `our_mission_text`: string (optional) - Mission text content
 
 ### Compliance Badges Section
+
 - `badges_visible`: boolean - Whether the badges section is visible
 - `SOC2_Type_I`: boolean - SOC2 Type I certification
 - `SOC2_Type_II`: boolean - SOC2 Type II certification
@@ -164,6 +179,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 - `EU_AI_Act`: boolean - EU AI Act compliance
 
 ### Company Info Section
+
 - `company_info_visible`: boolean - Whether the company info section is visible
 - `background_visible`: boolean - Whether the background section is visible
 - `background_text`: string (optional) - Background text content
@@ -173,6 +189,7 @@ All routes require JWT authentication middleware (`authenticateJWT`).
 - `compliance_doc_text`: string (optional) - Compliance docs text content
 
 ### Terms and Contact Section
+
 - `is_visible`: boolean - Whether the terms and contact section is visible
 - `has_terms_of_service`: boolean - Whether terms of service are provided
 - `terms_of_service`: string (optional) - Terms of service URL
@@ -195,4 +212,4 @@ The API includes comprehensive validation in the controller layer:
 - `400 Bad Request`: Validation errors with specific field messages
 - `404 Not Found`: Overview data not found for the organization
 - `500 Internal Server Error`: Database or server errors
-- `503 Service Unavailable`: Database operation failures 
+- `503 Service Unavailable`: Database operation failures

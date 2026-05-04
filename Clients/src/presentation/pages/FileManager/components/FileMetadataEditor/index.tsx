@@ -132,15 +132,19 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
               const status = value as ReviewStatus;
               return <StatusBadge status={status} size="small" />;
             }}
-            sx={file.approval_workflow_id ? {
-              "&.Mui-disabled": {
-                backgroundColor: "background.accent",
-                cursor: "not-allowed",
-              },
-              "& .MuiSelect-select.Mui-disabled": {
-                WebkitTextFillColor: "inherit",
-              },
-            } : undefined}
+            sx={
+              file.approval_workflow_id
+                ? {
+                    "&.Mui-disabled": {
+                      backgroundColor: "background.accent",
+                      cursor: "not-allowed",
+                    },
+                    "& .MuiSelect-select.Mui-disabled": {
+                      WebkitTextFillColor: "inherit",
+                    },
+                  }
+                : undefined
+            }
           />
           {file.approval_workflow_id && (
             <Box

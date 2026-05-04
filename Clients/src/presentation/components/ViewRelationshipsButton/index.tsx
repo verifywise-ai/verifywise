@@ -9,10 +9,10 @@
  * />
  */
 
-import React, { useState } from 'react';
-import { IconButton } from '@mui/material';
-import { GitBranch } from 'lucide-react';
-import VWTooltip from '../VWTooltip';
+import React, { useState } from "react";
+import { IconButton } from "@mui/material";
+import { GitBranch } from "lucide-react";
+import VWTooltip from "../VWTooltip";
 import { EntityGraphModal, FocusEntityType } from "../EntityGraphModal";
 import { brand, text } from "../../themes/palette";
 
@@ -20,7 +20,7 @@ interface ViewRelationshipsButtonProps {
   entityId: string | number;
   entityType: FocusEntityType;
   entityLabel?: string;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   tooltipText?: string;
 }
 
@@ -28,8 +28,8 @@ const ViewRelationshipsButton: React.FC<ViewRelationshipsButtonProps> = ({
   entityId,
   entityType,
   entityLabel,
-  size = 'small',
-  tooltipText = 'View relationships',
+  size = "small",
+  tooltipText = "View relationships",
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -42,7 +42,7 @@ const ViewRelationshipsButton: React.FC<ViewRelationshipsButtonProps> = ({
     setModalOpen(false);
   };
 
-  const iconSize = size === 'small' ? 16 : 20;
+  const iconSize = size === "small" ? 16 : 20;
 
   return (
     <>
@@ -52,9 +52,9 @@ const ViewRelationshipsButton: React.FC<ViewRelationshipsButtonProps> = ({
           onClick={handleClick}
           sx={{
             color: `${text.icon}`,
-            '&:hover': {
+            "&:hover": {
               color: `${brand.primary}`,
-              backgroundColor: 'rgba(19, 113, 91, 0.08)',
+              backgroundColor: "rgba(19, 113, 91, 0.08)",
             },
           }}
         >

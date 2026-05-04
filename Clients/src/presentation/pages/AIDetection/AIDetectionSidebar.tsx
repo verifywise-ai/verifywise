@@ -39,7 +39,7 @@ export default function AIDetectionSidebar({
   onScanClick,
 }: AIDetectionSidebarProps) {
   const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab('whats-new'), [openTab]);
+  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
 
   // Menu items for AI Detection
   const flatItems: SidebarMenuItem[] = [
@@ -76,18 +76,19 @@ export default function AIDetectionSidebar({
   ];
 
   // Recent sections
-  const recentSections: RecentSection[] = recentScans.length > 0
-    ? [
-        {
-          title: "Recent scans",
-          items: recentScans.map((scan) => ({
-            id: scan.id.toString(),
-            name: scan.name,
-            onClick: () => onScanClick?.(scan.id),
-          })),
-        },
-      ]
-    : [];
+  const recentSections: RecentSection[] =
+    recentScans.length > 0
+      ? [
+          {
+            title: "Recent scans",
+            items: recentScans.map((scan) => ({
+              id: scan.id.toString(),
+              name: scan.name,
+              onClick: () => onScanClick?.(scan.id),
+            })),
+          },
+        ]
+      : [];
 
   // Check if item is active based on activeTab
   const isItemActive = (item: SidebarMenuItem): boolean => {

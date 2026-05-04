@@ -51,12 +51,7 @@ aside .MuiList-root .MuiListItemText-root + svg {
 }
 
 /* Ensure nested menu items have consistent icon sizing */
-aside
-  .MuiCollapse-wrapperInner
-  .MuiList-root
-  .MuiListItemButton-root
-  .MuiListItemIcon-root
-  svg,
+aside .MuiCollapse-wrapperInner .MuiList-root .MuiListItemButton-root .MuiListItemIcon-root svg,
 aside
   .MuiCollapse-wrapperInner
   .MuiList-root

@@ -89,8 +89,7 @@ const mockQuestion: PMMQuestion = {
   created_at: "2026-03-12T00:00:00Z",
   eu_ai_act_article: "Article 14",
   options: undefined,
-  suggestion_text:
-    "Consider if the model meets the performance criteria defined in your project.",
+  suggestion_text: "Consider if the model meets the performance criteria defined in your project.",
 };
 
 const mockCycle: PMMCycleWithDetails = {
@@ -179,9 +178,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Config not found");
       vi.mocked(pmmService.getConfigByProjectId).mockRejectedValue(error);
 
-      await expect(getConfigByProjectId(999)).rejects.toThrow(
-        "Config not found",
-      );
+      await expect(getConfigByProjectId(999)).rejects.toThrow("Config not found");
     });
 
     it("should handle API errors", async () => {
@@ -211,18 +208,14 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Validation failed");
       vi.mocked(pmmService.createConfig).mockRejectedValue(error);
 
-      await expect(createConfig({} as any)).rejects.toThrow(
-        "Validation failed",
-      );
+      await expect(createConfig({} as any)).rejects.toThrow("Validation failed");
     });
 
     it("should handle conflict on duplicate config", async () => {
       const error = new Error("Config already exists");
       vi.mocked(pmmService.createConfig).mockRejectedValue(error);
 
-      await expect(createConfig({} as any)).rejects.toThrow(
-        "Config already exists",
-      );
+      await expect(createConfig({} as any)).rejects.toThrow("Config already exists");
     });
   });
 
@@ -242,9 +235,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Config not found");
       vi.mocked(pmmService.updateConfig).mockRejectedValue(error);
 
-      await expect(updateConfig(999, {} as any)).rejects.toThrow(
-        "Config not found",
-      );
+      await expect(updateConfig(999, {} as any)).rejects.toThrow("Config not found");
     });
 
     it("should pass correct config ID", async () => {
@@ -286,10 +277,7 @@ describe("postMarketMonitoring.repository", () => {
 
   describe("getQuestions", () => {
     it("should fetch questions for a config", async () => {
-      const questions: PMMQuestion[] = [
-        mockQuestion,
-        { ...mockQuestion, id: 2 },
-      ];
+      const questions: PMMQuestion[] = [mockQuestion, { ...mockQuestion, id: 2 }];
       vi.mocked(pmmService.getQuestions).mockResolvedValue(questions);
 
       const result = await getQuestions(1);
@@ -316,12 +304,8 @@ describe("postMarketMonitoring.repository", () => {
 
   describe("getOrgQuestions", () => {
     it("should fetch organization-level template questions", async () => {
-      const orgQuestions = [
-        { ...mockQuestion, isTemplate: true, configId: null },
-      ];
-      vi.mocked(pmmService.getOrgQuestions).mockResolvedValue(
-        orgQuestions as any,
-      );
+      const orgQuestions = [{ ...mockQuestion, isTemplate: true, configId: null }];
+      vi.mocked(pmmService.getOrgQuestions).mockResolvedValue(orgQuestions as any);
 
       const result = await getOrgQuestions();
 
@@ -359,9 +343,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Invalid question type");
       vi.mocked(pmmService.addQuestion).mockRejectedValue(error);
 
-      await expect(addQuestion(1, {} as any)).rejects.toThrow(
-        "Invalid question type",
-      );
+      await expect(addQuestion(1, {} as any)).rejects.toThrow("Invalid question type");
     });
   });
 
@@ -381,9 +363,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Question not found");
       vi.mocked(pmmService.updateQuestion).mockRejectedValue(error);
 
-      await expect(updateQuestion(999, {} as any)).rejects.toThrow(
-        "Question not found",
-      );
+      await expect(updateQuestion(999, {} as any)).rejects.toThrow("Question not found");
     });
   });
 
@@ -519,9 +499,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Invalid response data");
       vi.mocked(pmmService.saveResponses).mockRejectedValue(error);
 
-      await expect(saveResponses(1, [{} as any])).rejects.toThrow(
-        "Invalid response data",
-      );
+      await expect(saveResponses(1, [{} as any])).rejects.toThrow("Invalid response data");
     });
   });
 
@@ -562,18 +540,14 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Cycle not found");
       vi.mocked(pmmService.submitCycle).mockRejectedValue(error);
 
-      await expect(submitCycle(999, {} as any)).rejects.toThrow(
-        "Cycle not found",
-      );
+      await expect(submitCycle(999, {} as any)).rejects.toThrow("Cycle not found");
     });
 
     it("should handle submission with incomplete responses", async () => {
       const error = new Error("Incomplete responses");
       vi.mocked(pmmService.submitCycle).mockRejectedValue(error);
 
-      await expect(submitCycle(1, {} as any)).rejects.toThrow(
-        "Incomplete responses",
-      );
+      await expect(submitCycle(1, {} as any)).rejects.toThrow("Incomplete responses");
     });
   });
 
@@ -591,11 +565,7 @@ describe("postMarketMonitoring.repository", () => {
 
       await flagConcern(1, 1, "Model behavior concern");
 
-      expect(pmmService.flagConcern).toHaveBeenCalledWith(
-        1,
-        1,
-        "Model behavior concern",
-      );
+      expect(pmmService.flagConcern).toHaveBeenCalledWith(1, 1, "Model behavior concern");
     });
 
     it("should flag a concern with array response", async () => {
@@ -611,18 +581,14 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Cycle not found");
       vi.mocked(pmmService.flagConcern).mockRejectedValue(error);
 
-      await expect(flagConcern(999, 1, true)).rejects.toThrow(
-        "Cycle not found",
-      );
+      await expect(flagConcern(999, 1, true)).rejects.toThrow("Cycle not found");
     });
 
     it("should handle question not found", async () => {
       const error = new Error("Question not found");
       vi.mocked(pmmService.flagConcern).mockRejectedValue(error);
 
-      await expect(flagConcern(1, 999, true)).rejects.toThrow(
-        "Question not found",
-      );
+      await expect(flagConcern(1, 999, true)).rejects.toThrow("Question not found");
     });
   });
 
@@ -669,9 +635,7 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Invalid filter parameters");
       vi.mocked(pmmService.getReports).mockRejectedValue(error);
 
-      await expect(getReports({} as any)).rejects.toThrow(
-        "Invalid filter parameters",
-      );
+      await expect(getReports({} as any)).rejects.toThrow("Invalid filter parameters");
     });
   });
 
@@ -715,18 +679,14 @@ describe("postMarketMonitoring.repository", () => {
       const error = new Error("Cycle not found");
       vi.mocked(pmmService.reassignStakeholder).mockRejectedValue(error);
 
-      await expect(reassignStakeholder(999, 5)).rejects.toThrow(
-        "Cycle not found",
-      );
+      await expect(reassignStakeholder(999, 5)).rejects.toThrow("Cycle not found");
     });
 
     it("should handle stakeholder not found", async () => {
       const error = new Error("Stakeholder not found");
       vi.mocked(pmmService.reassignStakeholder).mockRejectedValue(error);
 
-      await expect(reassignStakeholder(1, 999)).rejects.toThrow(
-        "Stakeholder not found",
-      );
+      await expect(reassignStakeholder(1, 999)).rejects.toThrow("Stakeholder not found");
     });
 
     it("should handle forbidden reassignment", async () => {

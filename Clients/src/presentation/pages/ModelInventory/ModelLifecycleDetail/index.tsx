@@ -18,12 +18,7 @@ function ModelLifecycleDetail() {
     return null;
   }
 
-  return (
-    <PluginSlot
-      id={PLUGIN_SLOTS.MODEL_DETAIL_LIFECYCLE}
-      slotProps={{ modelId }}
-    />
-  );
+  return <PluginSlot id={PLUGIN_SLOTS.MODEL_DETAIL_LIFECYCLE} slotProps={{ modelId }} />;
 }
 
 export default ModelLifecycleDetail;

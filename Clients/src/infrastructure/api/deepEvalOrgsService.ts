@@ -37,7 +37,11 @@ class DeepEvalOrgsService {
     return res.data as { org: DeepEvalOrg };
   }
 
-  async updateOrg(orgId: string, name: string, memberIds?: number[]): Promise<{ org: DeepEvalOrg }> {
+  async updateOrg(
+    orgId: string,
+    name: string,
+    memberIds?: number[],
+  ): Promise<{ org: DeepEvalOrg }> {
     const res = await CustomAxios.put(`/deepeval/orgs/${orgId}`, { name, member_ids: memberIds });
     return res.data as { org: DeepEvalOrg };
   }
@@ -78,4 +82,3 @@ class DeepEvalOrgsService {
 }
 
 export const deepEvalOrgsService = new DeepEvalOrgsService();
-

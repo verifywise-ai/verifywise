@@ -63,7 +63,7 @@ export function useAuditLedger() {
     (_event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
       setPage(newPage);
     },
-    []
+    [],
   );
 
   const handleChangeRowsPerPage = useCallback(
@@ -71,7 +71,7 @@ export function useAuditLedger() {
       setRowsPerPage(parseInt(event.target.value, 10));
       setPage(0);
     },
-    []
+    [],
   );
 
   const verify = useCallback(async () => {

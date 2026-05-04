@@ -18,7 +18,7 @@ export class AnnexCategoryStructISO42001Model {
   }
 
   static createNewAnnexCategoryStructISO42001(
-    data: AnnexCategoryStructISO42001Model
+    data: AnnexCategoryStructISO42001Model,
   ): AnnexCategoryStructISO42001Model {
     return new AnnexCategoryStructISO42001Model(data);
   }

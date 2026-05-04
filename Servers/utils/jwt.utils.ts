@@ -112,7 +112,7 @@ const signToken = (payload: Object, expiresInMs: number, secret: string): string
         ...payload,
         expire: Date.now() + expiresInMs,
       },
-      secret
+      secret,
     );
   } catch (error) {
     console.error(error);
@@ -149,10 +149,16 @@ const generateRefreshToken = (payload: Object) => {
  * @param expiresInDays - Optional expiration in days (default: 30 days)
  */
 const generateApiToken = (payload: Object, expiresInDays?: number) => {
-  const expiresInMs = expiresInDays
-    ? expiresInDays * 24 * 60 * 60 * 1000
-    : THIRTY_DAYS_MS;
+  const expiresInMs = expiresInDays ? expiresInDays * 24 * 60 * 60 * 1000 : THIRTY_DAYS_MS;
   return signToken(payload, expiresInMs, process.env.JWT_SECRET as string);
 };
 
-export { getTokenPayload, generateToken, generateInviteToken, getRefreshTokenPayload, generateRefreshToken, generateApiToken, ONE_WEEK_MS };
+export {
+  getTokenPayload,
+  generateToken,
+  generateInviteToken,
+  getRefreshTokenPayload,
+  generateRefreshToken,
+  generateApiToken,
+  ONE_WEEK_MS,
+};

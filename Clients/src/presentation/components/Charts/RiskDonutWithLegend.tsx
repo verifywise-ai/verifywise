@@ -14,11 +14,7 @@ interface RiskDonutWithLegendProps {
   size?: number;
 }
 
-export function RiskDonutWithLegend({
-  data,
-  total,
-  size = 100,
-}: RiskDonutWithLegendProps) {
+export function RiskDonutWithLegend({ data, total, size = 100 }: RiskDonutWithLegendProps) {
   return (
     <Stack direction="row" alignItems="flex-start" justifyContent="space-around">
       <Box sx={{ pt: "8px" }}>

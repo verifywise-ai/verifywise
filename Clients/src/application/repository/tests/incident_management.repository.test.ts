@@ -65,9 +65,7 @@ describe("Test Incident Management Repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        createIncidentManagement(routeUrl, incidentData),
-      ).rejects.toEqual(mockError);
+      await expect(createIncidentManagement(routeUrl, incidentData)).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -75,9 +73,9 @@ describe("Test Incident Management Repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(
-        createIncidentManagement(routeUrl, incidentData),
-      ).rejects.toThrow("Network timeout");
+      await expect(createIncidentManagement(routeUrl, incidentData)).rejects.toThrow(
+        "Network timeout",
+      );
     });
 
     it("should use the exact routeUrl provided without modification", async () => {

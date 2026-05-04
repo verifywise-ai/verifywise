@@ -96,10 +96,10 @@ export const vendorRisksContent: ArticleContent = {
       items: [
         { bold: 'None', text: 'No sensitive data (lowest risk)' },
         { bold: 'Internal only', text: 'Internal business data' },
-        { bold: 'PII', text: 'Personally identifiable information' },
-        { bold: 'Financial', text: 'Financial data or records' },
-        { bold: 'Health', text: 'Health-related information' },
-        { bold: 'Model weights', text: 'Proprietary model parameters (highest risk)' },
+        { bold: 'Personally identifiable information (PII)', text: 'Names, emails, identifiers and other personal data' },
+        { bold: 'Financial data', text: 'Financial records, transactions or payment information' },
+        { bold: 'Health data (e.g. HIPAA)', text: 'Health and medical information subject to privacy regulation' },
+        { bold: 'Model weights or AI assets', text: 'Proprietary model parameters or training data (highest risk)' },
       ],
     },
     {
@@ -121,9 +121,9 @@ export const vendorRisksContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Low', text: 'Non-essential services; alternatives readily available' },
-        { bold: 'Medium', text: 'Important but not critical; disruption would be manageable' },
-        { bold: 'High', text: 'Critical to operations; disruption would significantly impact business' },
+        { bold: 'Low (vendor supports non-core functions)', text: 'Non-essential services; alternatives are readily available' },
+        { bold: 'Medium (affects operations but is replaceable)', text: 'Important but not critical; disruption would be manageable' },
+        { bold: 'High (critical to core services or products)', text: 'Disruption would significantly impact business' },
       ],
     },
     {
@@ -153,8 +153,8 @@ export const vendorRisksContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'None', text: 'No known issues (best)' },
-        { bold: 'Minor incident', text: 'Small issues that were resolved satisfactorily' },
-        { bold: 'Major incident', text: 'Significant incidents affecting operations or compliance' },
+        { bold: 'Minor incident (e.g. small delay, minor bug)', text: 'Small issues that were resolved satisfactorily' },
+        { bold: 'Major incident (e.g. data breach, legal issue)', text: 'Significant incidents affecting operations or compliance' },
       ],
     },
     {

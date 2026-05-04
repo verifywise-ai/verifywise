@@ -49,11 +49,7 @@ router.post("/ai-gateway/notify", async (req: Request, res: Response) => {
 
     switch (type) {
       case "config_change":
-        await notifyConfigChange(
-          organization_id,
-          req.body.changed_by_user_id,
-          req.body.event
-        );
+        await notifyConfigChange(organization_id, req.body.changed_by_user_id, req.body.event);
         break;
 
       case "budget_warning":
@@ -73,7 +69,7 @@ router.post("/ai-gateway/notify", async (req: Request, res: Response) => {
           organization_id,
           req.body.key_name,
           req.body.spend,
-          req.body.limit
+          req.body.limit,
         );
         break;
 

@@ -17,9 +17,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("initializes with default visible columns", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     expect(result.current.isColumnVisible("name")).toBe(true);
     expect(result.current.isColumnVisible("email")).toBe(true);
@@ -28,9 +26,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("toggleColumn hides a visible column", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     act(() => {
       result.current.toggleColumn("email");
@@ -40,9 +36,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("toggleColumn cannot hide alwaysVisible columns", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     act(() => {
       result.current.toggleColumn("name");
@@ -52,9 +46,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("toggleColumn shows a hidden column", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     act(() => {
       result.current.toggleColumn("status");
@@ -64,9 +56,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("resetToDefaults restores default visibility", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     act(() => {
       result.current.toggleColumn("email");
@@ -82,9 +72,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("persists to localStorage", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test-persist", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test-persist", columns }));
 
     act(() => {
       result.current.toggleColumn("role");
@@ -97,9 +85,7 @@ describe("useColumnVisibility", () => {
   it("restores from localStorage", () => {
     localStorage.setItem("verifywise:columns:test-restore", JSON.stringify(["name", "status"]));
 
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test-restore", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test-restore", columns }));
 
     expect(result.current.isColumnVisible("name")).toBe(true);
     expect(result.current.isColumnVisible("status")).toBe(true);
@@ -107,9 +93,7 @@ describe("useColumnVisibility", () => {
   });
 
   it("getVisibleColumnConfigs returns only visible configs", () => {
-    const { result } = renderHook(() =>
-      useColumnVisibility({ tableId: "test", columns })
-    );
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test", columns }));
 
     const visible = result.current.getVisibleColumnConfigs();
     expect(visible.map((c) => c.key)).toEqual(["name", "email", "role"]);

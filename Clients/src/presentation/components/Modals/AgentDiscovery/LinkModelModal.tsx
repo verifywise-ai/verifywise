@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Drawer,
-  Stack,
-  Typography,
-  Divider,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
 import { X } from "lucide-react";
 import SelectComponent from "../../Inputs/Select";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -47,7 +40,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
         data.map((m: any) => ({
           _id: m.id,
           name: m.model_name || m.name || `Model #${m.id}`,
-        }))
+        })),
       );
     } catch (error) {
       console.error("Failed to fetch models:", error);
@@ -81,7 +74,9 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
       anchor="right"
       open={isOpen}
       onClose={handleClose}
-      PaperProps={{ sx: { width: 400, backgroundColor: theme.palette.background.modal || "#FCFCFD" } }}
+      PaperProps={{
+        sx: { width: 400, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+      }}
     >
       {/* Header */}
       <Stack

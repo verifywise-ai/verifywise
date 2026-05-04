@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from "react";
 
-const SIDEBAR_STATE_KEY = 'verifywise-sidebar-open';
+const SIDEBAR_STATE_KEY = "verifywise-sidebar-open";
 
 interface UseUserGuideSidebarReturn {
   isOpen: boolean;
@@ -34,31 +34,31 @@ interface UseUserGuideSidebarReturn {
  */
 export function useUserGuideSidebar(): UseUserGuideSidebarReturn {
   const [isOpen, setIsOpen] = useState(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === "undefined") return false;
     const saved = localStorage.getItem(SIDEBAR_STATE_KEY);
-    return saved === 'true';
+    return saved === "true";
   });
 
   const [currentPath, setCurrentPath] = useState<string | undefined>();
 
   // Update body class for content push effect
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
 
     if (isOpen) {
-      document.body.classList.add('sidebar-open');
+      document.body.classList.add("sidebar-open");
     } else {
-      document.body.classList.remove('sidebar-open');
+      document.body.classList.remove("sidebar-open");
     }
 
     return () => {
-      document.body.classList.remove('sidebar-open');
+      document.body.classList.remove("sidebar-open");
     };
   }, [isOpen]);
 
   // Persist state to localStorage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(SIDEBAR_STATE_KEY, String(isOpen));
   }, [isOpen]);
 

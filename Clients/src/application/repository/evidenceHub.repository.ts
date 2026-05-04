@@ -9,15 +9,12 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  * @param {string} [authToken=getAuthToken()] - Optional auth token.
  * @returns {Promise<any>} The response from the API.
  */
-export async function createEvidenceHub(
-    routeUrl: string,
-    data: any
-): Promise<any> {
-    try {
-        const response = await apiServices.post(routeUrl, data);
-        return response.data;
-    } catch (error) {
-        console.error("Error creating incident management:", error);
-        throw error;
-    }
+export async function createEvidenceHub(routeUrl: string, data: any): Promise<any> {
+  try {
+    const response = await apiServices.post(routeUrl, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating incident management:", error);
+    throw error;
+  }
 }

@@ -101,7 +101,7 @@ function analyzeXlsx(file: File): Promise<Omit<FileAnalysis, "skipped" | "metada
 
 function buildDefaultMetadata(
   analysis: Omit<FileAnalysis, "skipped" | "metadata">,
-  ownerName: string
+  ownerName: string,
 ): DatasetMetadata {
   return {
     name: stripExtension(analysis.fileName),
@@ -154,34 +154,24 @@ export function useFileAnalysis() {
     }
   }, []);
 
-  const updateMetadata = useCallback(
-    (index: number, updates: Partial<DatasetMetadata>) => {
-      setAnalyses((prev) =>
-        prev.map((a, i) =>
-          i === index ? { ...a, metadata: { ...a.metadata, ...updates } } : a
-        )
-      );
-    },
-    []
-  );
-
-  const toggleSkip = useCallback((index: number) => {
+  const updateMetadata = useCallback((index: number, updates: Partial<DatasetMetadata>) => {
     setAnalyses((prev) =>
-      prev.map((a, i) => (i === index ? { ...a, skipped: !a.skipped } : a))
+      prev.map((a, i) => (i === index ? { ...a, metadata: { ...a.metadata, ...updates } } : a)),
     );
   }, []);
 
-  const applyBatchDefaults = useCallback(
-    (defaults: Partial<DatasetMetadata>) => {
-      setAnalyses((prev) =>
-        prev.map((a) => ({
-          ...a,
-          metadata: { ...a.metadata, ...defaults },
-        }))
-      );
-    },
-    []
-  );
+  const toggleSkip = useCallback((index: number) => {
+    setAnalyses((prev) => prev.map((a, i) => (i === index ? { ...a, skipped: !a.skipped } : a)));
+  }, []);
+
+  const applyBatchDefaults = useCallback((defaults: Partial<DatasetMetadata>) => {
+    setAnalyses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        metadata: { ...a.metadata, ...defaults },
+      })),
+    );
+  }, []);
 
   const reset = useCallback(() => {
     setAnalyses([]);

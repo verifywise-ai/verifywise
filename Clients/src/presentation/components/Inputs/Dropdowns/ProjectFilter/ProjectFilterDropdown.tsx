@@ -9,13 +9,11 @@ function ProjectFilterDropdown({
   projects,
   selectedProject,
   onChange,
-  sx
+  sx,
 }: ProjectFilterDropdownProps) {
   const theme = useTheme();
   return (
-    <FormControl
-      disabled={projects.length === 0}
-    >
+    <FormControl disabled={projects.length === 0}>
       <Select
         id="project-filter"
         value={selectedProject || ""}
@@ -28,7 +26,7 @@ function ProjectFilterDropdown({
           ...sx,
           "& svg path": {
             fill: theme.palette.other.icon,
-          }
+          },
         }}
         MenuProps={{
           PaperProps: {
@@ -56,10 +54,11 @@ function ProjectFilterDropdown({
           },
         }}
       >
-        {projects.length > 0 ?
-          <MenuItem value="all">All</MenuItem> :
+        {projects.length > 0 ? (
+          <MenuItem value="all">All</MenuItem>
+        ) : (
           <MenuItem value="all">No project available</MenuItem>
-        }
+        )}
         {projects.map((project) => (
           <MenuItem key={project.id} value={project.id}>
             {project.name}

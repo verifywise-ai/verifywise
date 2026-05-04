@@ -18,7 +18,7 @@ export class AITrustCenterTermsAndContactModel {
   }
 
   static createNewAITrustCenterTermsAndContact(
-    data: AITrustCenterTermsAndContactModel
+    data: AITrustCenterTermsAndContactModel,
   ): AITrustCenterTermsAndContactModel {
     return new AITrustCenterTermsAndContactModel(data);
   }

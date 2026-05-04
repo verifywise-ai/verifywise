@@ -62,11 +62,11 @@ export class NotificationService {
     lastSendTimestamp: 0,
     tokens: this.MAX_TOKENS,
     lastTokenRefill: Date.now(),
-    consecutiveFailures: 0
+    consecutiveFailures: 0,
   };
 
   private constructor() {
-      this.initialization = this.loadRateLimitState();
+    this.initialization = this.loadRateLimitState();
   }
 
   public static getInstance(): NotificationService {
@@ -81,18 +81,15 @@ export class NotificationService {
    */
   private async loadRateLimitState(): Promise<void> {
     try {
-      const data = await fs.readFile(rateLimitStateFile, 'utf8');
+      const data = await fs.readFile(rateLimitStateFile, "utf8");
       const loadedState = JSON.parse(data) as RateLimitState;
 
       // Validate and merge with defaults
       this.rateLimitState = {
         lastSendTimestamp: loadedState.lastSendTimestamp || 0,
-        tokens: Math.min(
-          Math.max(0, loadedState.tokens ?? this.MAX_TOKENS),
-          this.MAX_TOKENS
-        ),
+        tokens: Math.min(Math.max(0, loadedState.tokens ?? this.MAX_TOKENS), this.MAX_TOKENS),
         lastTokenRefill: loadedState.lastTokenRefill || Date.now(),
-        consecutiveFailures: loadedState.consecutiveFailures || 0
+        consecutiveFailures: loadedState.consecutiveFailures || 0,
       };
 
       // Refill tokens based on time elapsed since last refill
@@ -103,7 +100,7 @@ export class NotificationService {
         lastSendTimestamp: 0,
         tokens: this.MAX_TOKENS,
         lastTokenRefill: Date.now(),
-        consecutiveFailures: 0
+        consecutiveFailures: 0,
       };
     }
   }
@@ -113,10 +110,10 @@ export class NotificationService {
    */
   private async saveRateLimitState(): Promise<void> {
     try {
-      await fs.writeFile(rateLimitStateFile, JSON.stringify(this.rateLimitState), 'utf8');
+      await fs.writeFile(rateLimitStateFile, JSON.stringify(this.rateLimitState), "utf8");
     } catch (error) {
       // Log but don't throw - persistence failure shouldn't break email sending
-      console.warn('Failed to save rate limit state:', error);
+      console.warn("Failed to save rate limit state:", error);
     }
   }
 
@@ -131,7 +128,7 @@ export class NotificationService {
     if (tokensToAdd > 0) {
       this.rateLimitState.tokens = Math.min(
         this.rateLimitState.tokens + tokensToAdd,
-        this.MAX_TOKENS
+        this.MAX_TOKENS,
       );
       this.rateLimitState.lastTokenRefill = now;
     }
@@ -146,7 +143,8 @@ export class NotificationService {
     }
 
     // Exponential backoff: 600ms, 1200ms, 2400ms, max 10 seconds
-    const backoffMs = this.MIN_DELAY * Math.pow(2, Math.min(this.rateLimitState.consecutiveFailures, 4));
+    const backoffMs =
+      this.MIN_DELAY * Math.pow(2, Math.min(this.rateLimitState.consecutiveFailures, 4));
     return Math.min(backoffMs, 10000);
   }
 
@@ -158,9 +156,10 @@ export class NotificationService {
 
     // If no tokens available, wait for next token
     if (this.rateLimitState.tokens < 1) {
-      const timeUntilNextToken = this.TOKEN_REFILL_RATE - (Date.now() - this.rateLimitState.lastTokenRefill);
+      const timeUntilNextToken =
+        this.TOKEN_REFILL_RATE - (Date.now() - this.rateLimitState.lastTokenRefill);
       if (timeUntilNextToken > 0) {
-        await new Promise(resolve => setTimeout(resolve, timeUntilNextToken));
+        await new Promise((resolve) => setTimeout(resolve, timeUntilNextToken));
         this.refillTokens();
       }
     }
@@ -172,7 +171,7 @@ export class NotificationService {
 
     if (elapsed < requiredDelay) {
       const remainingTime = requiredDelay - elapsed;
-      await new Promise(resolve => setTimeout(resolve, remainingTime));
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
     }
   }
 
@@ -199,7 +198,7 @@ export class NotificationService {
           emailData.recipientEmail,
           emailData.subject,
           emailData.templateFileName,
-          emailData.templateData
+          emailData.templateData,
         );
 
         // Success: update state and reset failure count
@@ -222,7 +221,9 @@ export class NotificationService {
     const hasPending = this.emailQueue.length > 0;
     this.isProcessing = false;
     if (hasPending) {
-      setImmediate(() => { void this.processQueue(); });
+      setImmediate(() => {
+        void this.processQueue();
+      });
     }
   }
 
@@ -233,7 +234,7 @@ export class NotificationService {
     recipientEmail: string,
     subject: string,
     templateFileName: string,
-    templateData: Record<string, string>
+    templateData: Record<string, string>,
   ): Promise<void> {
     await this.initialization;
     return new Promise((resolve, reject) => {
@@ -243,7 +244,7 @@ export class NotificationService {
         templateFileName,
         templateData,
         resolve,
-        reject
+        reject,
       });
 
       // Start processing the queue if not already processing
@@ -258,7 +259,7 @@ export class NotificationService {
     recipientEmail: string,
     subject: string,
     templateFileName: string,
-    templateData: Record<string, string>
+    templateData: Record<string, string>,
   ): Promise<void> {
     // logProcessing({
     //   description: `Sending email with template: ${templateFileName}`,
@@ -272,12 +273,7 @@ export class NotificationService {
       const template = await fs.readFile(templatePath, "utf8");
 
       // Send the email
-      const result = await sendEmail(
-        recipientEmail,
-        subject,
-        template,
-        templateData
-      );
+      const result = await sendEmail(recipientEmail, subject, template, templateData);
 
       if (result.error) {
         throw new Error(`${result.error.name}: ${result.error.message}`);
@@ -290,13 +286,12 @@ export class NotificationService {
       //   fileName: "NotificationService.ts",
       // });
     } catch (error) {
-
       // Sanitize the error to remove any email addresses
       const sanitized = new Error(
         String((error as any)?.message ?? error).replace(
           /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
-          "[redacted]"
-        )
+          "[redacted]",
+        ),
       );
 
       // await logFailure({

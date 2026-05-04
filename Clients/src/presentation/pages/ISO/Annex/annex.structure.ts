@@ -15,8 +15,7 @@ export const ISO42001AnnexList = [
             control_no: 1,
             control_subSection: 1,
             title: "Policies for AI",
-            shortDescription:
-              "Management direction and support for AI via policies.",
+            shortDescription: "Management direction and support for AI via policies.",
             guidance:
               "Management should define and endorse a set of policies to provide clear direction and support for AI development and use within the organization, aligned with business objectives and relevant regulations/ethics.",
             status: "Not Started",
@@ -26,8 +25,7 @@ export const ISO42001AnnexList = [
             control_no: 2,
             control_subSection: 1,
             title: "AI governance framework",
-            shortDescription:
-              "Establishment of a governance structure for AI oversight.",
+            shortDescription: "Establishment of a governance structure for AI oversight.",
             guidance:
               "An AI governance framework, including roles, responsibilities, processes, and oversight mechanisms, should be established and maintained to direct and control the organization's AI-related activities.",
             status: "Draft",
@@ -38,8 +36,7 @@ export const ISO42001AnnexList = [
             control_subSection: 1,
             title: "AI roles and responsibilities",
             shortDescription: "Defining and allocating AI responsibilities.",
-            guidance:
-              "All AI system related responsibilities should be defined and allocated.",
+            guidance: "All AI system related responsibilities should be defined and allocated.",
             status: "In Progress",
           },
           {
@@ -48,8 +45,7 @@ export const ISO42001AnnexList = [
             control_subSection: 2,
             title: "Segregation of duties",
             shortDescription: "Separating conflicting duties related to AI.",
-            guidance:
-              "Conflicting duties and areas of responsibility should be segregated.",
+            guidance: "Conflicting duties and areas of responsibility should be segregated.",
             status: "Awaiting Review",
           },
           {
@@ -68,8 +64,7 @@ export const ISO42001AnnexList = [
             control_subSection: 1,
             title: "Contact with authorities",
             shortDescription: "Maintaining contact with relevant authorities.",
-            guidance:
-              "Appropriate contacts with relevant authorities should be maintained.",
+            guidance: "Appropriate contacts with relevant authorities should be maintained.",
             status: "Implemented",
           },
           {
@@ -77,8 +72,7 @@ export const ISO42001AnnexList = [
             control_no: 5,
             control_subSection: 2,
             title: "Contact with special interest groups",
-            shortDescription:
-              "Maintaining contact with special interest groups.",
+            shortDescription: "Maintaining contact with special interest groups.",
             guidance:
               "Appropriate contacts with special interest groups and other specialist forums and professional associations should be maintained.",
             status: "Implemented",
@@ -89,8 +83,7 @@ export const ISO42001AnnexList = [
             control_subSection: 1,
             title: "AI in project management",
             shortDescription: "Integrating AI aspects into project management.",
-            guidance:
-              "AI should be integrated into the organization's project management.",
+            guidance: "AI should be integrated into the organization's project management.",
             status: "Needs Rework",
           },
         ],
@@ -189,8 +182,7 @@ export const ISO42001AnnexList = [
             control_no: 1,
             control_subSection: 1,
             title: "AI system lifecycle management",
-            shortDescription:
-              "Establishing and managing a defined AI lifecycle process.",
+            shortDescription: "Establishing and managing a defined AI lifecycle process.",
             guidance:
               "A defined lifecycle process should be established and managed for AI systems, covering stages from conception through retirement, incorporating AI-specific considerations.",
             status: "Needs Rework",
@@ -200,8 +192,7 @@ export const ISO42001AnnexList = [
             control_no: 2,
             control_subSection: 1,
             title: "AI system requirements analysis",
-            shortDescription:
-              "Analyzing and specifying AI system requirements.",
+            shortDescription: "Analyzing and specifying AI system requirements.",
             guidance:
               "Requirements for AI systems, including functional, non-functional, data, ethical, legal, and societal aspects, should be analyzed and specified.",
             status: "Not Started",
@@ -251,8 +242,7 @@ export const ISO42001AnnexList = [
             control_no: 7,
             control_subSection: 1,
             title: "AI system deployment",
-            shortDescription:
-              "Deploying AI systems into the operational environment.",
+            shortDescription: "Deploying AI systems into the operational environment.",
             guidance:
               "AI systems should be deployed into the operational environment according to planned procedures.",
             status: "Implemented",
@@ -289,8 +279,7 @@ export const ISO42001AnnexList = [
             control_no: 1,
             control_subSection: 1,
             title: "Data quality for AI systems",
-            shortDescription:
-              "Processes to ensure data quality characteristics.",
+            shortDescription: "Processes to ensure data quality characteristics.",
             guidance:
               "Processes should be implemented to ensure that data used for developing and operating AI systems meets defined quality criteria relevant to its intended use (e.g., accuracy, completeness, timeliness, relevance, representativeness).",
             status: "Not Started",
@@ -340,8 +329,7 @@ export const ISO42001AnnexList = [
             control_no: 6,
             control_subSection: 1,
             title: "Data handling",
-            shortDescription:
-              "Securely handling data throughout its lifecycle.",
+            shortDescription: "Securely handling data throughout its lifecycle.",
             guidance:
               "Data should be handled securely, including storage, access control, transmission, and disposal, according to its classification and applicable requirements.",
             status: "Implemented",
@@ -358,8 +346,7 @@ export const ISO42001AnnexList = [
             control_no: 1,
             control_subSection: 1,
             title: "Information security for AI systems",
-            shortDescription:
-              "Application of information security controls to AI systems.",
+            shortDescription: "Application of information security controls to AI systems.",
             guidance:
               "Information security requirements and controls (potentially leveraging standards like ISO/IEC 27001) should be applied throughout the AI system lifecycle to protect confidentiality, integrity, and availability.",
             status: "Implemented",
@@ -389,8 +376,7 @@ export const ISO42001AnnexList = [
             control_no: 4,
             control_subSection: 1,
             title: "Resilience of AI systems",
-            shortDescription:
-              "Ensuring AI systems are resilient to failures and attacks.",
+            shortDescription: "Ensuring AI systems are resilient to failures and attacks.",
             guidance:
               "AI systems should be designed and operated to be resilient against failures, errors, and attacks.",
             status: "Draft",
@@ -418,8 +404,7 @@ export const ISO42001AnnexList = [
             control_no: 2,
             control_subSection: 1,
             title: "Supplier agreements for AI",
-            shortDescription:
-              "Including AI-specific requirements in supplier agreements.",
+            shortDescription: "Including AI-specific requirements in supplier agreements.",
             guidance:
               "Agreements with third parties supplying AI systems, components, services, or data should include relevant AI-specific requirements (e.g., security, privacy, ethics, performance).",
             status: "Awaiting Review",
@@ -429,8 +414,7 @@ export const ISO42001AnnexList = [
             control_no: 3,
             control_subSection: 1,
             title: "Monitoring of third-party AI services",
-            shortDescription:
-              "Monitoring third-party compliance and performance.",
+            shortDescription: "Monitoring third-party compliance and performance.",
             guidance:
               "The performance and compliance of third parties involved in the AI system lifecycle should be monitored according to agreements.",
             status: "Awaiting Approval",

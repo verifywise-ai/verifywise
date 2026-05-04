@@ -9,11 +9,7 @@ import { Request, Response } from "express";
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
   getInsightsSummaryQuery,
   getToolsByEventsQuery,
@@ -79,15 +75,36 @@ export async function getInsightsSummary(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching insights summary", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching insights summary",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
     const summary = await getInsightsSummaryQuery(tenantId, period);
-    await logSuccess({ eventType: "Read", description: "insights summary fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "insights summary fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch insights summary", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch insights summary",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -98,16 +115,37 @@ export async function getToolsByEvents(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching tools by events", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching tools by events",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
     const limit = parseInt(req.query.limit as string, 10) || 6;
     const data = await getToolsByEventsQuery(tenantId, period, limit);
-    await logSuccess({ eventType: "Read", description: "tools by events fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "tools by events fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch tools by events", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch tools by events",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -118,16 +156,37 @@ export async function getToolsByUsers(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching tools by users", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching tools by users",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
     const limit = parseInt(req.query.limit as string, 10) || 6;
     const data = await getToolsByUsersQuery(tenantId, period, limit);
-    await logSuccess({ eventType: "Read", description: "tools by users fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "tools by users fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch tools by users", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch tools by users",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -138,15 +197,36 @@ export async function getUsersByDepartment(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching users by department", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching users by department",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
     const data = await getUsersByDepartmentQuery(tenantId, period);
-    await logSuccess({ eventType: "Read", description: "users by department fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "users by department fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch users by department", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch users by department",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -157,7 +237,13 @@ export async function getTrend(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching trend data", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching trend data",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
@@ -167,10 +253,25 @@ export async function getTrend(req: Request, res: Response) {
       ? (granularity as "daily" | "weekly" | "monthly")
       : "daily";
     const data = await getTrendQuery(tenantId, period, gran);
-    await logSuccess({ eventType: "Read", description: "trend data fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "trend data fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch trend data", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch trend data",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -183,7 +284,13 @@ export async function getUsers(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching user activity", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching user activity",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const data = await getUserActivityQuery(tenantId, {
@@ -192,10 +299,25 @@ export async function getUsers(req: Request, res: Response) {
       sort: req.query.sort as string,
       department: req.query.department as string,
     });
-    await logSuccess({ eventType: "Read", description: "user activity fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "user activity fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch user activity", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch user activity",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -205,9 +327,17 @@ export async function getUserDetail(req: Request, res: Response) {
   const userId = req.userId!;
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
-  const email = decodeURIComponent(Array.isArray(req.params.email) ? req.params.email[0] : req.params.email);
+  const email = decodeURIComponent(
+    Array.isArray(req.params.email) ? req.params.email[0] : req.params.email,
+  );
 
-  logProcessing({ description: `fetching user detail: ${email}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `fetching user detail: ${email}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const period = parsePeriod(req.query.period as string);
@@ -220,7 +350,7 @@ export async function getUserDetail(req: Request, res: Response) {
        FROM shadow_ai_events
        WHERE organization_id = :organizationId AND user_email = :email
        ORDER BY event_timestamp DESC LIMIT 1`,
-      { replacements: { organizationId, email } }
+      { replacements: { organizationId, email } },
     );
     const department = (deptRows as any[])[0]?.department || "Unknown";
 
@@ -231,10 +361,25 @@ export async function getUserDetail(req: Request, res: Response) {
       total_prompts: totalPrompts,
     };
 
-    await logSuccess({ eventType: "Read", description: `user detail fetched: ${email}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: `user detail fetched: ${email}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch user detail", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch user detail",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -245,14 +390,35 @@ export async function getDepartmentActivity(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching department activity", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching department activity",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const data = await getDepartmentActivityQuery(tenantId);
-    await logSuccess({ eventType: "Read", description: "department activity fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "department activity fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch department activity", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch department activity",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -265,7 +431,13 @@ export async function getTools(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching shadow AI tools", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching shadow AI tools",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const data = await getAllToolsQuery(tenantId, {
@@ -274,10 +446,25 @@ export async function getTools(req: Request, res: Response) {
       page: parsePageLimit(req.query.page as string, 1),
       limit: parsePageLimit(req.query.limit as string, 20),
     });
-    await logSuccess({ eventType: "Read", description: "shadow AI tools fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "shadow AI tools fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch shadow AI tools", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch shadow AI tools",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -289,7 +476,13 @@ export async function getToolById(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `fetching tool: ${toolId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `fetching tool: ${toolId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (isNaN(toolId)) {
@@ -306,16 +499,31 @@ export async function getToolById(req: Request, res: Response) {
       getToolTopUsersQuery(tenantId, toolId),
     ]);
 
-    await logSuccess({ eventType: "Read", description: `tool fetched: ${toolId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: `tool fetched: ${toolId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(
       STATUS_CODE[200]({
         ...tool,
         departments,
         top_users: topUsers,
-      })
+      }),
     );
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch tool", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch tool",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -327,7 +535,13 @@ export async function updateToolStatus(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `updating tool status: ${toolId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `updating tool status: ${toolId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (!isWriteRole(req.role!)) {
@@ -340,7 +554,12 @@ export async function updateToolStatus(req: Request, res: Response) {
 
     const { status } = req.body;
     const validStatuses: ShadowAiToolStatus[] = [
-      "detected", "under_review", "approved", "restricted", "blocked", "dismissed",
+      "detected",
+      "under_review",
+      "approved",
+      "restricted",
+      "blocked",
+      "dismissed",
     ];
     if (!validStatuses.includes(status)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid status value"));
@@ -351,10 +570,25 @@ export async function updateToolStatus(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Tool not found"));
     }
 
-    await logSuccess({ eventType: "Update", description: `tool status updated: ${toolId} → ${status}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Update",
+      description: `tool status updated: ${toolId} → ${status}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
-    await logFailure({ eventType: "Update", description: "failed to update tool status", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Update",
+      description: "failed to update tool status",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -366,7 +600,13 @@ export async function startGovernance(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `starting governance for tool: ${toolId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `starting governance for tool: ${toolId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (!isWriteRole(req.role!)) {
@@ -385,12 +625,20 @@ export async function startGovernance(req: Request, res: Response) {
     const { model_inventory, governance_owner_id } = req.body;
 
     if (!model_inventory?.provider || !model_inventory?.model || !governance_owner_id) {
-      return res.status(400).json(STATUS_CODE[400]("Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id"));
+      return res
+        .status(400)
+        .json(
+          STATUS_CODE[400](
+            "Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id",
+          ),
+        );
     }
 
     const ownerId = parseInt(governance_owner_id, 10);
     if (isNaN(ownerId) || ownerId <= 0) {
-      return res.status(400).json(STATUS_CODE[400]("governance_owner_id must be a positive integer"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("governance_owner_id must be a positive integer"));
     }
 
     let transaction: Transaction | null = null;
@@ -415,7 +663,11 @@ export async function startGovernance(req: Request, res: Response) {
             model: model_inventory.model,
             provider_model: `${model_inventory.provider} / ${model_inventory.model}`,
             version: model_inventory.version || "N/A",
-            status: ["Approved", "Restricted", "Pending", "Blocked"].includes(model_inventory.status) ? model_inventory.status : "Pending",
+            status: ["Approved", "Restricted", "Pending", "Blocked"].includes(
+              model_inventory.status,
+            )
+              ? model_inventory.status
+              : "Pending",
             capabilities: "To be assessed",
             reference_link: "",
             biases: "",
@@ -424,12 +676,18 @@ export async function startGovernance(req: Request, res: Response) {
             approver: null,
           },
           transaction,
-        }
+        },
       );
       const modelInventoryId = (miResult as any[])[0].id;
 
       // Link tool to model inventory
-      await linkToolToModelInventoryQuery(organizationId, toolId, modelInventoryId, undefined, transaction);
+      await linkToolToModelInventoryQuery(
+        organizationId,
+        toolId,
+        modelInventoryId,
+        undefined,
+        transaction,
+      );
 
       // Update tool governance owner
       await sequelize.query(
@@ -439,7 +697,7 @@ export async function startGovernance(req: Request, res: Response) {
         {
           replacements: { organizationId, ownerId, toolId },
           transaction,
-        }
+        },
       );
 
       // Initialize lifecycle review if requested
@@ -448,21 +706,25 @@ export async function startGovernance(req: Request, res: Response) {
         try {
           await sequelize.query("SAVEPOINT lifecycle_init", { transaction });
 
-          const activeItems = await sequelize.query(
+          const activeItems = (await sequelize.query(
             `SELECT i.id
              FROM model_lifecycle_items i
              INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id
              WHERE i.organization_id = :organizationId
                AND p.organization_id = :organizationId
                AND i.is_active = true AND p.is_active = true`,
-            { type: QueryTypes.SELECT, transaction, replacements: { organizationId } }
-          ) as { id: number }[];
+            { type: QueryTypes.SELECT, transaction, replacements: { organizationId } },
+          )) as { id: number }[];
 
           if (activeItems.length > 0) {
             const valueTuples = activeItems
               .map((_, idx) => `(:organizationId, :modelInventoryId, :itemId${idx}, :userId)`)
               .join(", ");
-            const replacements: Record<string, unknown> = { organizationId, modelInventoryId, userId };
+            const replacements: Record<string, unknown> = {
+              organizationId,
+              modelInventoryId,
+              userId,
+            };
             activeItems.forEach((item, idx) => {
               replacements[`itemId${idx}`] = item.id;
             });
@@ -472,37 +734,69 @@ export async function startGovernance(req: Request, res: Response) {
                  (organization_id, model_inventory_id, item_id, updated_by)
                VALUES ${valueTuples}
                ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING`,
-              { replacements, transaction }
+              { replacements, transaction },
             );
             lifecycleInitialized = true;
           }
 
           await sequelize.query("RELEASE SAVEPOINT lifecycle_init", { transaction });
         } catch (lcError) {
-          await sequelize.query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction }).catch(() => {});
-          console.error(`[startGovernance] Lifecycle initialization failed for tool ${toolId}, continuing without it:`, lcError);
+          await sequelize
+            .query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction })
+            .catch(() => {});
+          console.error(
+            `[startGovernance] Lifecycle initialization failed for tool ${toolId}, continuing without it:`,
+            lcError,
+          );
         }
       }
 
       await transaction.commit();
 
-      await logSuccess({ eventType: "Create", description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, lifecycle: ${lifecycleInitialized}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+      await logSuccess({
+        eventType: "Create",
+        description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, lifecycle: ${lifecycleInitialized}`,
+        functionName: fn,
+        fileName: FILE_NAME,
+        userId,
+        organizationId,
+      });
 
       return res.status(201).json(
         STATUS_CODE[201]({
           model_inventory_id: modelInventoryId,
           tool_id: toolId,
           lifecycle_initialized: lifecycleInitialized,
-        })
+        }),
       );
     } catch (innerError) {
       if (transaction) {
-        try { await transaction.rollback(); } catch (rbErr) { logFailure({ eventType: "Create", description: "governance rollback failed", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: rbErr as Error }); }
+        try {
+          await transaction.rollback();
+        } catch (rbErr) {
+          logFailure({
+            eventType: "Create",
+            description: "governance rollback failed",
+            functionName: fn,
+            fileName: FILE_NAME,
+            userId,
+            organizationId,
+            error: rbErr as Error,
+          });
+        }
       }
       throw innerError;
     }
   } catch (error) {
-    await logFailure({ eventType: "Create", description: "failed to start governance", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Create",
+      description: "failed to start governance",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -515,14 +809,35 @@ export async function getRules(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching rules", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching rules",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const rules = await getAllRulesQuery(tenantId);
-    await logSuccess({ eventType: "Read", description: `${rules.length} rules fetched`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: `${rules.length} rules fetched`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](rules));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch rules", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch rules",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -533,17 +848,34 @@ export async function createRule(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "creating rule", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "creating rule",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (!isWriteRole(req.role!)) {
       return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
     }
 
-    const { name, description, is_active, trigger_type, trigger_config, actions, cooldown_minutes, notification_user_ids } = req.body;
+    const {
+      name,
+      description,
+      is_active,
+      trigger_type,
+      trigger_config,
+      actions,
+      cooldown_minutes,
+      notification_user_ids,
+    } = req.body;
 
     if (!name || !trigger_type || !actions || !Array.isArray(actions)) {
-      return res.status(400).json(STATUS_CODE[400]("Missing required fields: name, trigger_type, actions"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("Missing required fields: name, trigger_type, actions"));
     }
 
     const rule = await createRuleQuery(tenantId, {
@@ -558,10 +890,25 @@ export async function createRule(req: Request, res: Response) {
       notification_user_ids,
     });
 
-    await logSuccess({ eventType: "Create", description: `rule created: ${name}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Create",
+      description: `rule created: ${name}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(201).json(STATUS_CODE[201](rule));
   } catch (error) {
-    await logFailure({ eventType: "Create", description: "failed to create rule", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Create",
+      description: "failed to create rule",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -573,7 +920,13 @@ export async function updateRule(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const ruleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `updating rule: ${ruleId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `updating rule: ${ruleId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (!isWriteRole(req.role!)) {
@@ -589,10 +942,25 @@ export async function updateRule(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Rule not found"));
     }
 
-    await logSuccess({ eventType: "Update", description: `rule updated: ${ruleId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Update",
+      description: `rule updated: ${ruleId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
-    await logFailure({ eventType: "Update", description: "failed to update rule", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Update",
+      description: "failed to update rule",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -604,7 +972,13 @@ export async function deleteRule(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const ruleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `deleting rule: ${ruleId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `deleting rule: ${ruleId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (!isWriteRole(req.role!)) {
@@ -620,10 +994,25 @@ export async function deleteRule(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Rule not found"));
     }
 
-    await logSuccess({ eventType: "Delete", description: `rule deleted: ${ruleId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Delete",
+      description: `rule deleted: ${ruleId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200]("Rule deleted successfully"));
   } catch (error) {
-    await logFailure({ eventType: "Delete", description: "failed to delete rule", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Delete",
+      description: "failed to delete rule",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -634,7 +1023,13 @@ export async function getAlertHistory(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching alert history", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching alert history",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const data = await getAlertHistoryQuery(tenantId, {
@@ -642,10 +1037,25 @@ export async function getAlertHistory(req: Request, res: Response) {
       limit: parsePageLimit(req.query.limit as string, 20),
       ruleId: req.query.ruleId ? parseInt(req.query.ruleId as string, 10) : undefined,
     });
-    await logSuccess({ eventType: "Read", description: "alert history fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "alert history fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch alert history", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch alert history",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -658,7 +1068,13 @@ export async function getSyslogConfigs(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching syslog configs", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching syslog configs",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
@@ -666,10 +1082,25 @@ export async function getSyslogConfigs(req: Request, res: Response) {
     }
 
     const configs = await getSyslogConfigsQuery(tenantId);
-    await logSuccess({ eventType: "Read", description: "syslog configs fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "syslog configs fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](configs));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch syslog configs", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch syslog configs",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -680,7 +1111,13 @@ export async function createSyslogConfig(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "creating syslog config", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "creating syslog config",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
@@ -689,12 +1126,16 @@ export async function createSyslogConfig(req: Request, res: Response) {
 
     const { source_identifier, parser_type, is_active } = req.body;
     if (!source_identifier || !parser_type) {
-      return res.status(400).json(STATUS_CODE[400]("Missing required fields: source_identifier, parser_type"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("Missing required fields: source_identifier, parser_type"));
     }
 
     const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
     if (!validParsers.includes(parser_type)) {
-      return res.status(400).json(STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`));
     }
 
     const config = await createSyslogConfigQuery(tenantId, {
@@ -703,10 +1144,25 @@ export async function createSyslogConfig(req: Request, res: Response) {
       is_active: is_active !== false,
     });
 
-    await logSuccess({ eventType: "Create", description: `syslog config created: ${source_identifier}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Create",
+      description: `syslog config created: ${source_identifier}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(201).json(STATUS_CODE[201](config));
   } catch (error) {
-    await logFailure({ eventType: "Create", description: "failed to create syslog config", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Create",
+      description: "failed to create syslog config",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -718,7 +1174,13 @@ export async function updateSyslogConfig(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const configId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `updating syslog config: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `updating syslog config: ${configId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
@@ -734,7 +1196,11 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     if (parser_type) {
       const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
       if (!validParsers.includes(parser_type)) {
-        return res.status(400).json(STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`));
+        return res
+          .status(400)
+          .json(
+            STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`),
+          );
       }
     }
 
@@ -748,10 +1214,25 @@ export async function updateSyslogConfig(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Syslog config not found"));
     }
 
-    await logSuccess({ eventType: "Update", description: `syslog config updated: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Update",
+      description: `syslog config updated: ${configId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
-    await logFailure({ eventType: "Update", description: "failed to update syslog config", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Update",
+      description: "failed to update syslog config",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -763,7 +1244,13 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
   const organizationId = req.organizationId!;
   const configId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-  logProcessing({ description: `deleting syslog config: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: `deleting syslog config: ${configId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
@@ -779,10 +1266,25 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Syslog config not found"));
     }
 
-    await logSuccess({ eventType: "Delete", description: `syslog config deleted: ${configId}`, functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Delete",
+      description: `syslog config deleted: ${configId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200]("Syslog config deleted successfully"));
   } catch (error) {
-    await logFailure({ eventType: "Delete", description: "failed to delete syslog config", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Delete",
+      description: "failed to delete syslog config",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -795,14 +1297,35 @@ export async function getSettings(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "fetching settings", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "fetching settings",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     const settings = await getSettingsQuery(tenantId);
-    await logSuccess({ eventType: "Read", description: "settings fetched", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Read",
+      description: "settings fetched",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](settings));
   } catch (error) {
-    await logFailure({ eventType: "Read", description: "failed to fetch settings", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch settings",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -813,7 +1336,13 @@ export async function updateSettings(req: Request, res: Response) {
   const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
-  logProcessing({ description: "updating settings", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+  logProcessing({
+    description: "updating settings",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
@@ -835,10 +1364,25 @@ export async function updateSettings(req: Request, res: Response) {
       updated_by: userId,
     });
 
-    await logSuccess({ eventType: "Update", description: "settings updated", functionName: fn, fileName: FILE_NAME, userId, organizationId });
+    await logSuccess({
+      eventType: "Update",
+      description: "settings updated",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
-    await logFailure({ eventType: "Update", description: "failed to update settings", functionName: fn, fileName: FILE_NAME, userId, organizationId, error: error as Error });
+    await logFailure({
+      eventType: "Update",
+      description: "failed to update settings",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

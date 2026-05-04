@@ -26,7 +26,7 @@ const MitigationROI: FC<MitigationROIProps> = ({
     (_: Event, value: number | number[]) => {
       onControlEffectivenessChange(value as number);
     },
-    [onControlEffectivenessChange]
+    [onControlEffectivenessChange],
   );
 
   const handleCostChange = useCallback(
@@ -34,7 +34,7 @@ const MitigationROI: FC<MitigationROIProps> = ({
       const val = event.target.value;
       onMitigationCostChange(val === "" ? null : parseFloat(val));
     },
-    [onMitigationCostChange]
+    [onMitigationCostChange],
   );
 
   return (
@@ -56,17 +56,14 @@ const MitigationROI: FC<MitigationROIProps> = ({
             lineHeight: 1.5,
           }}
         >
-          Estimate how effective your controls are and the annual cost of
-          mitigation to calculate return on investment.
+          Estimate how effective your controls are and the annual cost of mitigation to calculate
+          return on investment.
         </Typography>
       </Stack>
 
       {/* Control Effectiveness Slider */}
       <Stack sx={{ gap: 1 }}>
-        <Stack
-          direction="row"
-          sx={{ justifyContent: "space-between", alignItems: "center" }}
-        >
+        <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
           <Typography
             sx={{
               fontSize: 13,
@@ -83,9 +80,7 @@ const MitigationROI: FC<MitigationROIProps> = ({
               color: theme.palette.primary.main,
             }}
           >
-            {controlEffectiveness != null
-              ? `${controlEffectiveness}%`
-              : "Not set"}
+            {controlEffectiveness != null ? `${controlEffectiveness}%` : "Not set"}
           </Typography>
         </Stack>
         <Slider
@@ -106,18 +101,11 @@ const MitigationROI: FC<MitigationROIProps> = ({
             },
           }}
         />
-        <Stack
-          direction="row"
-          sx={{ justifyContent: "space-between" }}
-        >
-          <Typography
-            sx={{ fontSize: 11, color: theme.palette.text.tertiary }}
-          >
+        <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+          <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
             0% (No control)
           </Typography>
-          <Typography
-            sx={{ fontSize: 11, color: theme.palette.text.tertiary }}
-          >
+          <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
             100% (Full control)
           </Typography>
         </Stack>
@@ -129,9 +117,7 @@ const MitigationROI: FC<MitigationROIProps> = ({
         label="Annual mitigation cost ($)"
         placeholder="e.g. 50000"
         type="number"
-        value={
-          mitigationCostAnnual != null ? String(mitigationCostAnnual) : ""
-        }
+        value={mitigationCostAnnual != null ? String(mitigationCostAnnual) : ""}
         onChange={handleCostChange}
         disabled={disabled}
         sx={{ width: "323px" }}

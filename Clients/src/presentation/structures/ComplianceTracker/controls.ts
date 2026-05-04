@@ -37,21 +37,18 @@ export const ControlGroups = [
   },
   {
     id: 7,
-    controlGroupTitle:
-      "Fundamental rights impact assessments for high-risk AI systems",
+    controlGroupTitle: "Fundamental rights impact assessments for high-risk AI systems",
     control: FundamentalRightsImpactAssessments,
   },
   {
     id: 8,
-    controlGroupTitle:
-      "Transparency obligations for providers and users of certain AI systems",
+    controlGroupTitle: "Transparency obligations for providers and users of certain AI systems",
     control: TransparencyObligationsForProviders,
   },
   { id: 9, controlGroupTitle: "Registration", control: Registration },
   {
     id: 10,
-    controlGroupTitle:
-      "EU database for high-risk AI systems listed in Annex III",
+    controlGroupTitle: "EU database for high-risk AI systems listed in Annex III",
     control: EUdatabaseForHighRiskAI,
   },
   {

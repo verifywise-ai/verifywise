@@ -7,7 +7,9 @@
 ## Notifications Not Being Received
 
 ### Symptom
+
 Approvers don't receive real-time notifications when:
+
 - Use-case created with workflow
 - Request approved/rejected
 - Request moves to next step
@@ -17,17 +19,19 @@ Approvers don't receive real-time notifications when:
 **1. Check SSE Connection**
 
 Browser Console:
+
 ```javascript
 // Should see connection established
-"SSE Connected"
+"SSE Connected";
 
 // Should see heartbeat every 30 seconds
-"SSE Heartbeat received"
+"SSE Heartbeat received";
 ```
 
 **2. Check Server Logs**
 
 Look for:
+
 ```
 SSE connection established for user: 123, tenant: a4ayc80OGd
 Redis subscriber connected
@@ -36,12 +40,14 @@ Redis subscriber connected
 **3. Test SSE Endpoint Directly**
 
 Using curl:
+
 ```bash
 curl -N -H "Authorization: Bearer YOUR_TOKEN" \
   http://localhost:3000/api/notifications/stream
 ```
 
 Should see:
+
 ```
 data: {"type":"connected"}
 
@@ -55,6 +61,7 @@ data: {"type":"connected"}
 #### Cause 1: Notifications Sent Before Transaction Commit
 
 **Symptoms**:
+
 - Server logs show "No active connection" or "0 approvers found"
 - Notification code runs but nothing sent
 
@@ -75,17 +82,20 @@ notifyStepApprovers(notificationInfo);  // Now data is visible
 ```
 
 **Files to Check**:
+
 - `controllers/approvalRequest.ctrl.ts` - approve/reject endpoints
 - `controllers/project.ctrl.ts` - create project endpoint
 
 #### Cause 2: Redis Not Running
 
 **Symptoms**:
+
 - Server logs show "Error: connect ECONNREFUSED 127.0.0.1:6379"
 - Notifications not delivered
 
 **Fix**:
 Start Redis server:
+
 ```bash
 # macOS with Homebrew
 brew services start redis
@@ -98,6 +108,7 @@ docker run -d -p 6379:6379 redis
 ```
 
 Verify Redis is running:
+
 ```bash
 redis-cli ping
 # Should return: PONG
@@ -106,6 +117,7 @@ redis-cli ping
 #### Cause 3: SSE Connection Dropped
 
 **Symptoms**:
+
 - Connection established initially
 - No heartbeats after some time
 - Notifications stop working
@@ -122,6 +134,7 @@ useEffect(() => {
 ```
 
 **Manual Reconnect**:
+
 ```javascript
 // In browser console
 window.location.reload();
@@ -130,6 +143,7 @@ window.location.reload();
 #### Cause 4: Connection Key Mismatch
 
 **Symptoms**:
+
 - Server logs show "No active connection for tenantId:userId"
 - User has valid JWT and SSE connected
 
@@ -143,6 +157,7 @@ console.log("Looking for:", `${tenantId}:${userId}`);
 
 **Fix**:
 Ensure connection key format matches:
+
 - Storage: `connections.set(\`${tenantId}:${userId}\`, ...)`
 - Lookup: `connections.get(\`${tenantId}:${userId}\`)`
 
@@ -151,6 +166,7 @@ Ensure connection key format matches:
 ## Approvals Not Progressing
 
 ### Symptom
+
 After approving, the request doesn't move to next step or complete.
 
 ### Diagnostic Steps
@@ -158,6 +174,7 @@ After approving, the request doesn't move to next step or complete.
 **1. Check Request Status**
 
 Query database:
+
 ```sql
 SELECT
   ar.id,
@@ -205,10 +222,12 @@ ORDER BY aws.step_number;
 #### Cause 1: Waiting for More Approvers
 
 **Symptoms**:
+
 - Step has `requires_all_approvers = true`
 - Only 1 of 3 approvers has approved
 
 **Check**:
+
 ```sql
 SELECT
   aws.requires_all_approvers,
@@ -236,6 +255,7 @@ WHERE id = 2;
 #### Cause 2: Step Progression Logic Bug
 
 **Symptoms**:
+
 - All required approvals received
 - Request still stuck at current step
 
@@ -243,15 +263,13 @@ WHERE id = 2;
 Check `utils/approvalRequest.utils.ts:processApprovalQuery` around lines 432-465:
 
 ```typescript
-const shouldComplete = requires_all_approvers
-  ? pendingCount === 0
-  : approvedCount > 0;
+const shouldComplete = requires_all_approvers ? pendingCount === 0 : approvedCount > 0;
 
 console.log("Step completion check:", {
   requires_all_approvers,
   pendingCount,
   approvedCount,
-  shouldComplete
+  shouldComplete,
 });
 ```
 
@@ -261,10 +279,12 @@ Ensure step completion logic is correct.
 #### Cause 3: Transaction Rollback
 
 **Symptoms**:
+
 - Approval appears to succeed
 - Database unchanged
 
 **Check Server Logs**:
+
 ```
 Error in approveRequest: ...
 Transaction rolled back
@@ -278,6 +298,7 @@ Address the underlying error (foreign key violation, validation error, etc.).
 ## Frameworks Not Being Created
 
 ### Symptom
+
 After final approval, frameworks are not created for the use-case.
 
 ### Diagnostic Steps
@@ -296,11 +317,13 @@ WHERE id = 123;
 ```
 
 Should show:
+
 ```
 pending_frameworks: [1, 2]
 ```
 
 After approval, should be:
+
 ```
 pending_frameworks: null
 ```
@@ -314,6 +337,7 @@ WHERE entity_id = 123 AND entity_type = 'use_case';
 ```
 
 Should show:
+
 ```
 status: APPROVED
 ```
@@ -332,6 +356,7 @@ Should have records for framework IDs 1 and 2.
 #### Cause 1: Approval Not Actually Complete
 
 **Symptoms**:
+
 - `status` still shows `PENDING`
 - `current_step` not at final step
 
@@ -351,16 +376,19 @@ GROUP BY ar.current_step;
 #### Cause 2: Framework Creation Failed
 
 **Symptoms**:
+
 - `status = APPROVED`
 - `pending_frameworks` still has values
 - Server logs show error
 
 **Check Server Logs**:
+
 ```
 Error creating frameworks: ...
 ```
 
 **Common Errors**:
+
 - Framework ID doesn't exist
 - Foreign key violation
 - Permission error
@@ -371,6 +399,7 @@ Manually create frameworks or fix underlying error.
 #### Cause 3: Transaction Commit Failed
 
 **Symptoms**:
+
 - Approval appears successful
 - Notification sent
 - Database not updated
@@ -404,6 +433,7 @@ try {
 ## Permission Errors
 
 ### Symptom
+
 User gets "403 Forbidden" or "You do not have permission" errors.
 
 ### Common Causes
@@ -411,6 +441,7 @@ User gets "403 Forbidden" or "You do not have permission" errors.
 #### Cause 1: Non-Admin Trying to Manage Workflows
 
 **Error**:
+
 ```json
 {
   "error": "You do not have permission to perform this action"
@@ -422,22 +453,25 @@ Only Admins can create/update/delete workflows. To view workflows (for use-case 
 
 ```typescript
 // ✅ Correct
-router.get("/approval-workflows",
-  authenticateJWT,  // No authorize
-  getApprovalWorkflows
+router.get(
+  "/approval-workflows",
+  authenticateJWT, // No authorize
+  getApprovalWorkflows,
 );
 
 // ❌ Wrong
-router.get("/approval-workflows",
+router.get(
+  "/approval-workflows",
   authenticateJWT,
-  authorize(["Admin"]),  // Blocks non-admins
-  getApprovalWorkflows
+  authorize(["Admin"]), // Blocks non-admins
+  getApprovalWorkflows,
 );
 ```
 
 #### Cause 2: Non-Approver Trying to Approve
 
 **Error**:
+
 ```json
 {
   "error": "You are not an approver for this step"
@@ -464,6 +498,7 @@ If user not in list, they can't approve. Add them to workflow step approvers.
 #### Cause 3: Non-Requester Trying to Withdraw
 
 **Error**:
+
 ```json
 {
   "error": "Only the requester can withdraw this request"
@@ -482,6 +517,7 @@ SELECT requested_by FROM approval_requests WHERE id = 14;
 ## Count Not Updating
 
 ### Symptom
+
 "Approval requests" count in header doesn't update after approval/rejection.
 
 ### Diagnostic Steps
@@ -489,6 +525,7 @@ SELECT requested_by FROM approval_requests WHERE id = 14;
 **1. Check Notification Received**
 
 Browser console should show:
+
 ```javascript
 "Notification received:", { type: "approval_request", ... }
 ```
@@ -501,17 +538,17 @@ In `DashboardActionButtons.tsx`, verify:
 const { connected } = useNotifications({
   onNotification: (notification) => {
     console.log("onNotification called:", notification);
-    if (notification.type === "approval_request" ||
-        notification.type === "approval_complete") {
-      fetchApprovalCounts();  // Should be called
+    if (notification.type === "approval_request" || notification.type === "approval_complete") {
+      fetchApprovalCounts(); // Should be called
     }
-  }
+  },
 });
 ```
 
 **3. Check API Call**
 
 Network tab should show:
+
 ```
 GET /api/approval-requests/pending
 Status: 200
@@ -527,18 +564,19 @@ Ensure `onNotification` callback is passed to `useNotifications`:
 ```typescript
 const { connected } = useNotifications({
   onNotification: handleNotification,
-  autoReconnect: true
+  autoReconnect: true,
 });
 ```
 
 #### Cause 2: Wrong Notification Type
 
 **Debug**:
+
 ```typescript
 onNotification: (notification) => {
   console.log("Notification type:", notification.type);
   // Should be: "approval_request", "approval_complete", or "approval_rejected"
-}
+};
 ```
 
 **Fix**:
@@ -549,6 +587,7 @@ Check notification types in `services/notification.service.ts`.
 ## Database Issues
 
 ### Symptom
+
 Errors related to missing tables, columns, or foreign keys.
 
 ### Diagnostic Steps
@@ -564,6 +603,7 @@ ORDER BY table_name;
 ```
 
 Should show:
+
 ```
 approval_request_step_approvals
 approval_request_steps
@@ -618,6 +658,7 @@ Or manually create tables using SQL from `database-schema.md`.
 #### Cause 2: Wrong Tenant Schema
 
 **Symptoms**:
+
 - Tables exist but queries fail
 - "relation does not exist" errors
 
@@ -625,7 +666,7 @@ Or manually create tables using SQL from `database-schema.md`.
 Ensure `tenantId` is correctly set:
 
 ```typescript
-const tenantId = req.tenantId;  // From JWT
+const tenantId = req.tenantId; // From JWT
 console.log("Using tenant schema:", tenantId);
 ```
 
@@ -634,6 +675,7 @@ console.log("Using tenant schema:", tenantId);
 ## Performance Issues
 
 ### Symptom
+
 Slow response times, timeouts, or high database load.
 
 ### Diagnostic Steps
@@ -641,16 +683,18 @@ Slow response times, timeouts, or high database load.
 **1. Check Query Performance**
 
 Enable query logging:
+
 ```typescript
 const sequelize = new Sequelize({
-  logging: console.log,  // Log all queries
-  benchmark: true        // Show execution time
+  logging: console.log, // Log all queries
+  benchmark: true, // Show execution time
 });
 ```
 
 **2. Analyze Slow Queries**
 
 PostgreSQL slow query log:
+
 ```sql
 -- Queries taking > 1 second
 SELECT
@@ -684,6 +728,7 @@ ON approval_request_step_approvals(approver_id, approval_result);
 #### Cause 2: N+1 Query Problem
 
 **Symptoms**:
+
 - Many individual queries instead of joins
 - Slow list endpoints
 
@@ -694,7 +739,7 @@ Use joins or eager loading:
 // ❌ N+1 queries
 const requests = await getRequests();
 for (const request of requests) {
-  request.steps = await getSteps(request.id);  // N queries
+  request.steps = await getSteps(request.id); // N queries
 }
 
 // ✅ Single query with join
@@ -704,6 +749,7 @@ const requests = await getRequestsWithSteps();
 #### Cause 3: Too Many SSE Connections
 
 **Symptoms**:
+
 - Memory usage increasing
 - Server becoming slow
 
@@ -715,12 +761,13 @@ Implement connection cleanup:
 setInterval(() => {
   const now = Date.now();
   connections.forEach((conn, key) => {
-    if (now - conn.lastHeartbeat > 3600000) {  // 1 hour
+    if (now - conn.lastHeartbeat > 3600000) {
+      // 1 hour
       conn.response.end();
       connections.delete(key);
     }
   });
-}, 300000);  // Every 5 minutes
+}, 300000); // Every 5 minutes
 ```
 
 ---
@@ -730,6 +777,7 @@ setInterval(() => {
 ### Enable Debug Logging
 
 **Backend**:
+
 ```typescript
 // In controllers
 console.log("[DEBUG] Request ID:", requestId);
@@ -738,6 +786,7 @@ console.log("[DEBUG] Approvers:", approvers);
 ```
 
 **Frontend**:
+
 ```typescript
 // In useNotifications.ts
 console.log("[SSE] Connection status:", connected);
@@ -747,6 +796,7 @@ console.log("[SSE] Notification received:", notification);
 ### Check Database State
 
 **Current Approval State**:
+
 ```sql
 SELECT
   ar.id,
@@ -768,6 +818,7 @@ GROUP BY ar.id, ar.request_name, ar.status, ar.current_step, ars.step_name, ars.
 ### Test Notification Flow
 
 **1. Create Test Workflow**:
+
 ```bash
 curl -X POST http://localhost:3000/api/approval-workflows \
   -H "Authorization: Bearer ADMIN_TOKEN" \
@@ -785,12 +836,14 @@ curl -X POST http://localhost:3000/api/approval-workflows \
 ```
 
 **2. Establish SSE Connection**:
+
 ```bash
 curl -N -H "Authorization: Bearer USER2_TOKEN" \
   http://localhost:3000/api/notifications/stream &
 ```
 
 **3. Create Use-Case**:
+
 ```bash
 curl -X POST http://localhost:3000/api/projects \
   -H "Authorization: Bearer USER1_TOKEN" \
@@ -805,6 +858,7 @@ curl -X POST http://localhost:3000/api/projects \
 
 **4. Verify Notification Received**:
 Should see in SSE stream:
+
 ```
 data: {"type":"approval_request","title":"New Approval Request",...}
 ```
@@ -818,11 +872,13 @@ data: {"type":"approval_request","title":"New Approval Request",...}
 **Note**: Debug console.log statements have been removed from production code for a cleaner user experience.
 
 **Server-side Logging**:
+
 - Uses structured logging via `logStructured()` function
 - Logs are written to `logs/server.log`
 - All approval workflow operations log their status (processing, successful, error)
 
 **Client-side Logging**:
+
 - Debug console logs removed from frontend
 - SSE connection and notifications work silently
 - Errors are displayed via the Alert system
@@ -849,6 +905,7 @@ If you need to debug issues in development:
 If you're still experiencing issues:
 
 1. **Check Server Logs**:
+
    ```bash
    tail -f logs/server.log
    ```

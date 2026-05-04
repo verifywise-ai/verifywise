@@ -56,7 +56,9 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
 
   return (
     <Box>
-      <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "13px", mb: "8px" }}>
+      <Typography
+        sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "13px", mb: "8px" }}
+      >
         Options
       </Typography>
       <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -103,10 +105,18 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
                   alignItems: "center",
                   p: "4px",
                   borderRadius: "4px",
-                  "&:hover": options.length > 1 ? { backgroundColor: theme.palette.status.error.bg } : {},
+                  "&:hover":
+                    options.length > 1 ? { backgroundColor: theme.palette.status.error.bg } : {},
                 }}
               >
-                <Trash2 size={14} color={options.length <= 1 ? theme.palette.text.accent : theme.palette.status.error.text} />
+                <Trash2
+                  size={14}
+                  color={
+                    options.length <= 1
+                      ? theme.palette.text.accent
+                      : theme.palette.status.error.text
+                  }
+                />
               </Box>
             </Tooltip>
           </Box>
@@ -138,7 +148,14 @@ interface FieldEditorProps {
   onClose: () => void;
 }
 
-export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKeyId, onChange, onClose }: FieldEditorProps) {
+export function FieldEditor({
+  field,
+  entityType,
+  usedEntityMappings = [],
+  llmKeyId,
+  onChange,
+  onClose,
+}: FieldEditorProps) {
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,7 +180,7 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKey
         onChange(updated);
       }, 300);
     },
-    [onChange]
+    [onChange],
   );
 
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
@@ -206,7 +223,7 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKey
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
-    mapping.requiredFieldType.includes(localField.type)
+    mapping.requiredFieldType.includes(localField.type),
   );
 
   const showOptions = localField.type === "select" || localField.type === "multiselect";
@@ -216,9 +233,10 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKey
   const mappingItems = [
     { _id: "", name: "None" },
     ...compatibleMappings
-      .filter((m: EntityFieldMapping) =>
-        // Allow the current field's own mapping, exclude mappings used by other fields
-        m.field === localField.entityFieldMapping || !usedEntityMappings.includes(m.field)
+      .filter(
+        (m: EntityFieldMapping) =>
+          // Allow the current field's own mapping, exclude mappings used by other fields
+          m.field === localField.entityFieldMapping || !usedEntityMappings.includes(m.field),
       )
       .map((m: EntityFieldMapping) => ({ _id: m.field, name: m.label })),
   ];
@@ -308,14 +326,28 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKey
                 rows={2}
               />
               <Box>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: "4px" }}>
-                  <Typography sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.secondary }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: "4px",
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.secondary }}
+                  >
                     Guidance text
                   </Typography>
                   {llmKeyId && (
-                    <Tooltip title={localField.label ? "Generate with AI" : "Add a label first"} placement="top">
+                    <Tooltip
+                      title={localField.label ? "Generate with AI" : "Add a label first"}
+                      placement="top"
+                    >
                       <Box
-                        onClick={!guidanceLoading && localField.label ? generateGuidance : undefined}
+                        onClick={
+                          !guidanceLoading && localField.label ? generateGuidance : undefined
+                        }
                         sx={{
                           display: "flex",
                           alignItems: "center",
@@ -326,7 +358,9 @@ export function FieldEditor({ field, entityType, usedEntityMappings = [], llmKey
                           borderRadius: "4px",
                           px: "6px",
                           py: "2px",
-                          "&:hover": localField.label ? { backgroundColor: theme.palette.background.fill } : {},
+                          "&:hover": localField.label
+                            ? { backgroundColor: theme.palette.background.fill }
+                            : {},
                         }}
                       >
                         {guidanceLoading ? (

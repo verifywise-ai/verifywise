@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { TopicModel } from "../topic/topic.model";
 import { ISubtopic } from "../../interfaces/i.subtopic";
 import { numberValidation } from "../../validations/number.valid";
@@ -69,15 +63,11 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
     title: string,
     topic_id: number,
     order_no?: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<SubtopicModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
-      throw new ValidationException(
-        "Subtopic title is required",
-        "title",
-        title
-      );
+      throw new ValidationException("Subtopic title is required", "title", title);
     }
 
     // Validate topic_id
@@ -85,7 +75,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
       throw new ValidationException(
         "Valid topic_id is required (must be >= 1)",
         "topic_id",
-        topic_id
+        topic_id,
       );
     }
 
@@ -94,7 +84,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -112,18 +102,11 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
   /**
    * Update subtopic information with validation
    */
-  async updateSubtopic(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateSubtopic(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Subtopic title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Subtopic title is required", "title", updateData.title);
       }
       this.title = updateData.title.trim();
     }
@@ -134,7 +117,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -146,26 +129,18 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
    */
   async validateSubtopicData(): Promise<void> {
     if (!this.title || this.title.trim().length === 0) {
-      throw new ValidationException(
-        "Subtopic title is required",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Subtopic title is required", "title", this.title);
     }
 
     if (!this.topic_id || !numberValidation(this.topic_id, 1)) {
-      throw new ValidationException(
-        "Valid topic_id is required",
-        "topic_id",
-        this.topic_id
-      );
+      throw new ValidationException("Valid topic_id is required", "topic_id", this.topic_id);
     }
 
     if (this.order_no !== undefined && !numberValidation(this.order_no, 1)) {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -185,7 +160,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
       throw new BusinessLogicException(
         "Demo subtopics cannot be modified",
         "DEMO_SUBTOPIC_RESTRICTION",
-        { subtopicId: this.id, topicId: this.topic_id }
+        { subtopicId: this.id, topicId: this.topic_id },
       );
     }
     return true;
@@ -240,11 +215,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
    */
   static async findByIdWithValidation(id: number): Promise<SubtopicModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const subtopic = await SubtopicModel.findByPk(id);
@@ -263,7 +234,7 @@ export class SubtopicModel extends Model<SubtopicModel> implements ISubtopic {
       throw new ValidationException(
         "Valid topic_id is required (must be >= 1)",
         "topic_id",
-        topicId
+        topicId,
       );
     }
 

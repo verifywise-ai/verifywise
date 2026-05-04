@@ -11,13 +11,11 @@ test.describe("AI Trust Center", () => {
       page
         .getByText(/trust/i)
         .or(page.getByText(/ai trust/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/ai-trust-center");
     await page.waitForLoadState("domcontentloaded");
 
@@ -40,9 +38,7 @@ test.describe("AI Trust Center", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("trust center content sections are visible", async ({
-    authedPage: page,
-  }) => {
+  test("trust center content sections are visible", async ({ authedPage: page }) => {
     await page.goto("/ai-trust-center");
 
     const content = page
@@ -63,7 +59,12 @@ test.describe("AI Trust Center", () => {
       .getByRole("tab", { name: /resources/i })
       .or(page.getByText(/resources/i));
 
-    if (await resourcesTab.first().isVisible().catch(() => false)) {
+    if (
+      await resourcesTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await resourcesTab.first().click();
       await expect(page).toHaveURL(/\/ai-trust-center\/resources/, {
         timeout: 10_000,
@@ -79,7 +80,12 @@ test.describe("AI Trust Center", () => {
       .getByRole("tab", { name: /settings/i })
       .or(page.getByText(/settings/i));
 
-    if (await settingsTab.first().isVisible().catch(() => false)) {
+    if (
+      await settingsTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await settingsTab.first().click();
       await expect(page).toHaveURL(/\/ai-trust-center\/settings/, {
         timeout: 10_000,

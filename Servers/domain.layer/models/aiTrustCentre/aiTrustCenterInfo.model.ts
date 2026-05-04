@@ -2,14 +2,17 @@ import { IAITrustCentreOverview } from "../../interfaces/i.aiTrustCentreOverview
 import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { FileModel } from "../file/file.model";
 
-type IAITrustCentreOverviewInfo = IAITrustCentreOverview["info"]
+type IAITrustCentreOverviewInfo = IAITrustCentreOverview["info"];
 
 @Table({
   tableName: "ai_trust_center_info",
   timestamps: true,
   underscored: true,
 })
-export class AITrustCenterInfoModel extends Model<AITrustCenterInfoModel> implements IAITrustCentreOverviewInfo {
+export class AITrustCenterInfoModel
+  extends Model<AITrustCenterInfoModel>
+  implements IAITrustCentreOverviewInfo
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -96,5 +99,4 @@ export class AITrustCenterInfoModel extends Model<AITrustCenterInfoModel> implem
     allowNull: false,
   })
   updated_at?: Date;
-
 }

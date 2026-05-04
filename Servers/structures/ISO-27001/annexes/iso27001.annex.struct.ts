@@ -27,7 +27,8 @@ export const ISO27001Annex = [
           "Audit reports verifying control effectiveness",
           "Change management records for updates to this control",
         ],
-        implementation_description: "Establish comprehensive information security policies that define the organization's approach to protecting information assets. This includes developing formal policy documents, obtaining management approval, communicating policies to all stakeholders, and establishing regular review cycles. The policies should cover all aspects of information security including data classification, access controls, incident response, and compliance requirements. Implementation involves policy distribution, staff training, and regular compliance monitoring.",
+        implementation_description:
+          "Establish comprehensive information security policies that define the organization's approach to protecting information assets. This includes developing formal policy documents, obtaining management approval, communicating policies to all stakeholders, and establishing regular review cycles. The policies should cover all aspects of information security including data classification, access controls, incident response, and compliance requirements. Implementation involves policy distribution, staff training, and regular compliance monitoring.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -66,7 +67,8 @@ export const ISO27001Annex = [
           "Audit reports verifying control effectiveness",
           "Change management records for updates to this control",
         ],
-        implementation_description: "Define and document clear information security roles and responsibilities across the organization. This includes establishing security governance structure, appointing information security officers, defining accountability for information assets, and ensuring all personnel understand their security responsibilities. Implementation involves creating role descriptions, establishing reporting lines, conducting regular role reviews, and maintaining up-to-date responsibility matrices that align with business objectives and regulatory requirements.",
+        implementation_description:
+          "Define and document clear information security roles and responsibilities across the organization. This includes establishing security governance structure, appointing information security officers, defining accountability for information assets, and ensuring all personnel understand their security responsibilities. Implementation involves creating role descriptions, establishing reporting lines, conducting regular role reviews, and maintaining up-to-date responsibility matrices that align with business objectives and regulatory requirements.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -893,7 +895,8 @@ export const ISO27001Annex = [
       {
         index: 26,
         title: "Response to information security incidents",
-        requirement_summary: "Respond to information security incidents in accordance with documented procedures.",
+        requirement_summary:
+          "Respond to information security incidents in accordance with documented procedures.",
         key_questions: [
           "Are incident response procedures followed consistently during events?",
           "Are containment, eradication, recovery, and post-incident steps covered?",
@@ -988,7 +991,8 @@ export const ISO27001Annex = [
       {
         index: 29,
         title: "Information security during disruption",
-        requirement_summary: "Plan how to maintain information security at an appropriate level during disruption.",
+        requirement_summary:
+          "Plan how to maintain information security at an appropriate level during disruption.",
         key_questions: [
           "Do continuity plans address how information security controls remain effective during disruption?",
           "Are alternate sites and workflows assessed for security equivalence?",
@@ -1083,7 +1087,8 @@ export const ISO27001Annex = [
       {
         index: 32,
         title: "Intellectual property rights",
-        requirement_summary: "Implement appropriate procedures to protect intellectual property rights.",
+        requirement_summary:
+          "Implement appropriate procedures to protect intellectual property rights.",
         key_questions: [
           "Are IP rights identified and catalogued for owned and licensed assets?",
           "Are software licenses and usage tracked for compliance?",
@@ -1472,11 +1477,7 @@ export const ISO27001Annex = [
           "Are NDA terms reviewed periodically against evolving risks?",
           "Are NDA records tracked for expiry and renewal?",
         ],
-        evidence_examples: [
-          "NDA templates",
-          "Signed NDA register",
-          "NDA review schedule",
-        ],
+        evidence_examples: ["NDA templates", "Signed NDA register", "NDA review schedule"],
         implementation_description:
           "Use appropriate NDA templates with personnel, contractors, and third parties. Track signatures and expirations, and review template clauses periodically.",
         status: "Not Started",
@@ -1751,7 +1752,8 @@ export const ISO27001Annex = [
       {
         index: 6,
         title: "Working in secure areas",
-        requirement_summary: "Design and implement security procedures for working in secure areas.",
+        requirement_summary:
+          "Design and implement security procedures for working in secure areas.",
         key_questions: [
           "Are secure areas defined and access controls documented?",
           "Are rules for work inside secure areas (devices, recording, visitors) established?",
@@ -2224,7 +2226,8 @@ export const ISO27001Annex = [
       {
         index: 6,
         title: "Capacity management",
-        requirement_summary: "Monitor and adjust the use of resources in line with current and expected capacity requirements.",
+        requirement_summary:
+          "Monitor and adjust the use of resources in line with current and expected capacity requirements.",
         key_questions: [
           "Are capacity metrics monitored for critical systems?",
           "Are forecasts maintained and reviewed?",
@@ -2564,7 +2567,8 @@ export const ISO27001Annex = [
       {
         index: 17,
         title: "Clock synchronization",
-        requirement_summary: "Synchronize clocks of the organization's information processing systems to approved time sources.",
+        requirement_summary:
+          "Synchronize clocks of the organization's information processing systems to approved time sources.",
         key_questions: [
           "Are all systems synchronized to a common, authoritative time source?",
           "Is clock drift monitored and alerted?",
@@ -2625,7 +2629,8 @@ export const ISO27001Annex = [
       {
         index: 19,
         title: "Installation of software on operational systems",
-        requirement_summary: "Implement procedures and measures to securely manage software installation on operational systems.",
+        requirement_summary:
+          "Implement procedures and measures to securely manage software installation on operational systems.",
         key_questions: [
           "Is software installation limited to authorized personnel and approved packages?",
           "Are installation sources verified (signing, hash)?",
@@ -2748,7 +2753,8 @@ export const ISO27001Annex = [
       {
         index: 23,
         title: "Web filtering",
-        requirement_summary: "Manage access to external websites to reduce exposure to malicious content.",
+        requirement_summary:
+          "Manage access to external websites to reduce exposure to malicious content.",
         key_questions: [
           "Is web access filtered by category and reputation?",
           "Are bypass mechanisms controlled and logged?",
@@ -2809,7 +2815,8 @@ export const ISO27001Annex = [
       {
         index: 25,
         title: "Secure development life cycle",
-        requirement_summary: "Establish and apply rules for the secure development of software and systems.",
+        requirement_summary:
+          "Establish and apply rules for the secure development of software and systems.",
         key_questions: [
           "Is a secure SDLC defined and followed?",
           "Are security activities integrated at each phase (design, build, test, release)?",
@@ -2931,7 +2938,8 @@ export const ISO27001Annex = [
       {
         index: 29,
         title: "Security testing in development and acceptance",
-        requirement_summary: "Define and implement security testing processes in the development life cycle.",
+        requirement_summary:
+          "Define and implement security testing processes in the development life cycle.",
         key_questions: [
           "Are SAST, DAST, and dependency scans integrated?",
           "Are high/critical findings blocked at the appropriate gate?",
@@ -2961,7 +2969,8 @@ export const ISO27001Annex = [
       {
         index: 30,
         title: "Outsourced development",
-        requirement_summary: "Direct, monitor, and review activities related to outsourced system development.",
+        requirement_summary:
+          "Direct, monitor, and review activities related to outsourced system development.",
         key_questions: [
           "Are security requirements included in outsourced development contracts?",
           "Do we monitor outsourced development deliverables for security?",
@@ -2991,7 +3000,8 @@ export const ISO27001Annex = [
       {
         index: 31,
         title: "Separation of development, test and production environments",
-        requirement_summary: "Separate and secure development, testing, and production environments.",
+        requirement_summary:
+          "Separate and secure development, testing, and production environments.",
         key_questions: [
           "Are dev, test, and prod environments logically and access-separated?",
           "Is production data prevented from flowing into lower environments without masking?",

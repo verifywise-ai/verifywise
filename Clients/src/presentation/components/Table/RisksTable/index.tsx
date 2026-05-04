@@ -72,15 +72,13 @@ function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): numb
   switch (key) {
     case "risk_description":
       return (a.risk_description?.toLowerCase() || "").localeCompare(
-        b.risk_description?.toLowerCase() || ""
+        b.risk_description?.toLowerCase() || "",
       );
     case "vendor_name":
-      return (a.vendor_name?.toLowerCase() || "").localeCompare(
-        b.vendor_name?.toLowerCase() || ""
-      );
+      return (a.vendor_name?.toLowerCase() || "").localeCompare(b.vendor_name?.toLowerCase() || "");
     case "project_titles":
       return (a.project_titles?.toLowerCase() || "").localeCompare(
-        b.project_titles?.toLowerCase() || ""
+        b.project_titles?.toLowerCase() || "",
       );
     case "action_owner":
       return (a.action_owner || 0) - (b.action_owner || 0);
@@ -113,15 +111,15 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       if (!visibleColumns) return true;
       return visibleColumns.has(key);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const visibleTableColumns = useMemo(
     () =>
       titleOfTableColumns.filter(
-        (col) => col.id === "risk_description" || col.id === "actions" || isVisible(col.id)
+        (col) => col.id === "risk_description" || col.id === "actions" || isVisible(col.id),
       ),
-    [isVisible]
+    [isVisible],
   );
 
   const getCellStyle = (row: VendorRisk) => ({
@@ -145,10 +143,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
 
   // Group risks by id so each risk appears only once, and collect all project titles
   const uniqueRisks = useMemo(() => {
-    const groupedRisks: Record<
-      number,
-      VendorRisk & { project_titles: string[] }
-    > = {};
+    const groupedRisks: Record<number, VendorRisk & { project_titles: string[] }> = {};
     vendorRisks?.forEach((row: VendorRisk & { project_title?: string }) => {
       const key = row.risk_id!;
       if (!groupedRisks[key]) {
@@ -194,7 +189,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
               hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
                 ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage
+                : validPage * rowsPerPage + rowsPerPage,
             )
             .map((row: EnrichedRisk) => (
               <TableRow
@@ -214,10 +209,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                     maxWidth: 300,
                     whiteSpace: "normal",
                     wordBreak: "break-word",
-                    backgroundColor:
-                      sortConfig.key === "risk_description"
-                        ? "#e8e8e8"
-                        : "#fafafa",
+                    backgroundColor: sortConfig.key === "risk_description" ? "#e8e8e8" : "#fafafa",
                   }}
                 >
                   <Tooltip title={row.risk_description} arrow placement="top">
@@ -238,161 +230,155 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                     </Box>
                   </Tooltip>
                 </TableCell>
-                {isVisible("vendor_name") && <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor:
-                      sortConfig.key === "vendor_name" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {
-                    formattedVendors?.find(
-                      (vendor: { _id: number; name: string }) =>
-                        vendor._id === row.vendor_id
-                    )?.name
-                  }
-                </TableCell>}
-                {isVisible("project_titles") && <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    maxWidth: 200,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    backgroundColor:
-                      sortConfig.key === "project_titles"
-                        ? "background.surface"
-                        : "inherit",
-                  }}
-                >
-                  {(() => {
-                    // Check if project_titles is empty or contains only empty strings
-                    const projectTitles = row.project_titles as string;
-                    if (
-                      !projectTitles ||
-                      projectTitles.trim() === "" ||
-                      projectTitles === "null"
-                    ) {
-                      return (
-                        <span style={{ color: "#888", fontStyle: "normal" }}>
-                          -
-                        </span>
-                      );
+                {isVisible("vendor_name") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "vendor_name" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {
+                      formattedVendors?.find(
+                        (vendor: { _id: number; name: string }) => vendor._id === row.vendor_id,
+                      )?.name
                     }
+                  </TableCell>
+                )}
+                {isVisible("project_titles") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      maxWidth: 200,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      backgroundColor:
+                        sortConfig.key === "project_titles" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {(() => {
+                      // Check if project_titles is empty or contains only empty strings
+                      const projectTitles = row.project_titles as string;
+                      if (
+                        !projectTitles ||
+                        projectTitles.trim() === "" ||
+                        projectTitles === "null"
+                      ) {
+                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                      }
 
-                    const projects = projectTitles
-                      .split(",")
-                      .map((p) => p.trim())
-                      .filter((p) => p !== "" && p !== "null"); // Filter out empty strings and 'null'
+                      const projects = projectTitles
+                        .split(",")
+                        .map((p) => p.trim())
+                        .filter((p) => p !== "" && p !== "null"); // Filter out empty strings and 'null'
 
-                    // If no valid projects after filtering, show dash
-                    if (projects.length === 0) {
+                      // If no valid projects after filtering, show dash
+                      if (projects.length === 0) {
+                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                      }
+
+                      const displayCount = 1;
+                      const showMore = projects.length > displayCount;
+                      const displayed = projects.slice(0, displayCount).join(", ");
+                      const moreCount = projects.length - displayCount;
                       return (
-                        <span style={{ color: "#888", fontStyle: "normal" }}>
-                          -
-                        </span>
-                      );
-                    }
-
-                    const displayCount = 1;
-                    const showMore = projects.length > displayCount;
-                    const displayed = projects
-                      .slice(0, displayCount)
-                      .join(", ");
-                    const moreCount = projects.length - displayCount;
-                    return (
-                      <Tooltip
-                        title={
-                          <>
-                            {projects.map((title, idx) => (
-                              <div key={idx}>{title}</div>
-                            ))}
-                          </>
-                        }
-                        arrow
-                        placement="top"
-                        sx={{ fontSize: 13 }}
-                      >
-                        <Box
-                          component="span"
-                          sx={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            cursor: "pointer",
-                            width: "100%",
-                          }}
+                        <Tooltip
+                          title={
+                            <>
+                              {projects.map((title, idx) => (
+                                <div key={idx}>{title}</div>
+                              ))}
+                            </>
+                          }
+                          arrow
+                          placement="top"
+                          sx={{ fontSize: 13 }}
                         >
-                          <span
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              maxWidth: 150,
-                              display: "inline-block",
-                              verticalAlign: "middle",
+                          <Box
+                            component="span"
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              cursor: "pointer",
+                              width: "100%",
                             }}
                           >
-                            {displayed}
-                          </span>
-                          {showMore && (
                             <span
                               style={{
-                                color: "#888",
-                                marginLeft: 4,
-                                fontWeight: 500,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                maxWidth: 150,
+                                display: "inline-block",
+                                verticalAlign: "middle",
                               }}
                             >
-                              +{moreCount}
+                              {displayed}
                             </span>
-                          )}
-                        </Box>
-                      </Tooltip>
-                    );
-                  })()}
-                </TableCell>}
-                {isVisible("action_owner") && <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor:
-                      sortConfig.key === "action_owner" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {
-                    formattedUsers?.find(
-                      (user: { _id: number; name: string }) =>
-                        user._id === row.action_owner
-                    )?.name
-                  }
-                </TableCell>}
-                {isVisible("risk_severity") && <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor:
-                      sortConfig.key === "risk_severity"
-                        ? "background.surface"
-                        : "inherit",
-                  }}
-                >
-                  {row.risk_severity ? <Chip label={row.risk_severity} /> : "-"}
-                </TableCell>}
-                {isVisible("risk_level") && <TableCell
-                  sx={{
-                    ...getCellStyle(row),
-                    backgroundColor:
-                      sortConfig.key === "risk_level" ? "background.surface" : "inherit",
-                  }}
-                >
-                  <VWLink
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(row.risk_id!);
+                            {showMore && (
+                              <span
+                                style={{
+                                  color: "#888",
+                                  marginLeft: 4,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                +{moreCount}
+                              </span>
+                            )}
+                          </Box>
+                        </Tooltip>
+                      );
+                    })()}
+                  </TableCell>
+                )}
+                {isVisible("action_owner") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "action_owner" ? "background.surface" : "inherit",
                     }}
-                    showUnderline={false}
-                    showIcon={false}
                   >
-                    {row.risk_level}
-                  </VWLink>
-                </TableCell>}
+                    {
+                      formattedUsers?.find(
+                        (user: { _id: number; name: string }) => user._id === row.action_owner,
+                      )?.name
+                    }
+                  </TableCell>
+                )}
+                {isVisible("risk_severity") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "risk_severity" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {row.risk_severity ? <Chip label={row.risk_severity} /> : "-"}
+                  </TableCell>
+                )}
+                {isVisible("risk_level") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "risk_level" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    <VWLink
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(row.risk_id!);
+                      }}
+                      showUnderline={false}
+                      showIcon={false}
+                    >
+                      {row.risk_level}
+                    </VWLink>
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -438,7 +424,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       hidePagination,
       sortConfig.key,
       isVisible,
-    ]
+    ],
   );
 
   return (

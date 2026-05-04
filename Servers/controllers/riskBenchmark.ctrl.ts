@@ -8,10 +8,7 @@ import {
 } from "../utils/riskBenchmark.utils";
 import { logStructured } from "../utils/logger/fileLogger";
 
-export async function getAllBenchmarks(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAllBenchmarks(req: Request, res: Response): Promise<any> {
   const industry = req.query.industry as string | undefined;
   const aiRiskType = req.query.ai_risk_type as string | undefined;
 
@@ -19,7 +16,7 @@ export async function getAllBenchmarks(
     "processing",
     "fetching risk benchmarks",
     "getAllBenchmarks",
-    "riskBenchmark.ctrl.ts"
+    "riskBenchmark.ctrl.ts",
   );
 
   try {
@@ -30,23 +27,20 @@ export async function getAllBenchmarks(
       "error",
       "failed to fetch risk benchmarks",
       "getAllBenchmarks",
-      "riskBenchmark.ctrl.ts"
+      "riskBenchmark.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function getBenchmarkById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getBenchmarkById(req: Request, res: Response): Promise<any> {
   const id = parseInt(req.params.id as string);
 
   logStructured(
     "processing",
     `fetching risk benchmark ID: ${id}`,
     "getBenchmarkById",
-    "riskBenchmark.ctrl.ts"
+    "riskBenchmark.ctrl.ts",
   );
 
   try {
@@ -60,16 +54,13 @@ export async function getBenchmarkById(
       "error",
       `failed to fetch risk benchmark ID: ${id}`,
       "getBenchmarkById",
-      "riskBenchmark.ctrl.ts"
+      "riskBenchmark.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function getBenchmarkFilters(
-  _req: Request,
-  res: Response
-): Promise<any> {
+export async function getBenchmarkFilters(_req: Request, res: Response): Promise<any> {
   try {
     const [industries, aiRiskTypes] = await Promise.all([
       getBenchmarkIndustriesQuery(),
@@ -81,7 +72,7 @@ export async function getBenchmarkFilters(
       "error",
       "failed to fetch benchmark filters",
       "getBenchmarkFilters",
-      "riskBenchmark.ctrl.ts"
+      "riskBenchmark.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

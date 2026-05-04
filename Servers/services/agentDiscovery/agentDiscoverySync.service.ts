@@ -1,9 +1,6 @@
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getInstalledPlugins } from "../../utils/pluginInstallation.utils";
-import {
-  PluginService,
-  PluginRouteContext,
-} from "../plugin/pluginService";
+import { PluginService, PluginRouteContext } from "../plugin/pluginService";
 import {
   upsertAgentPrimitivesQuery,
   flagStaleAgentsQuery,
@@ -20,65 +17,65 @@ import logger from "../../utils/logger/fileLogger";
  */
 const PERMISSION_CATEGORY_MAP: Record<string, string> = {
   // AI-level
-  "invokemodel": "ai:invoke",
-  "invoke": "ai:invoke",
-  "infer": "ai:invoke",
-  "predict": "ai:invoke",
-  "generate": "ai:invoke",
-  "bedrock": "ai:invoke",
-  "sagemaker": "ai:invoke",
-  "cognitiveservices": "ai:invoke",
-  "machinelearningservices": "ai:invoke",
-  "aiservices": "ai:invoke",
-  "createmodel": "ai:manage",
-  "deletemodel": "ai:manage",
-  "updatemodel": "ai:manage",
-  "createagent": "ai:manage",
-  "deleteagent": "ai:manage",
-  "createendpoint": "ai:manage",
+  invokemodel: "ai:invoke",
+  invoke: "ai:invoke",
+  infer: "ai:invoke",
+  predict: "ai:invoke",
+  generate: "ai:invoke",
+  bedrock: "ai:invoke",
+  sagemaker: "ai:invoke",
+  cognitiveservices: "ai:invoke",
+  machinelearningservices: "ai:invoke",
+  aiservices: "ai:invoke",
+  createmodel: "ai:manage",
+  deletemodel: "ai:manage",
+  updatemodel: "ai:manage",
+  createagent: "ai:manage",
+  deleteagent: "ai:manage",
+  createendpoint: "ai:manage",
   // Data-level
-  "read": "data:read",
-  "list": "data:read",
-  "get": "data:read",
-  "view": "data:read",
-  "describe": "data:read",
-  "select": "data:read",
-  "write": "data:write",
-  "create": "data:write",
-  "update": "data:write",
-  "put": "data:write",
-  "patch": "data:write",
-  "delete": "data:write",
-  "remove": "data:write",
-  "insert": "data:write",
+  read: "data:read",
+  list: "data:read",
+  get: "data:read",
+  view: "data:read",
+  describe: "data:read",
+  select: "data:read",
+  write: "data:write",
+  create: "data:write",
+  update: "data:write",
+  put: "data:write",
+  patch: "data:write",
+  delete: "data:write",
+  remove: "data:write",
+  insert: "data:write",
   // Identity-level
-  "users": "identity:read",
-  "members": "identity:read",
-  "profiles": "identity:read",
-  "directory": "identity:read",
-  "admin": "identity:manage",
-  "manage": "identity:manage",
-  "permissions": "identity:manage",
-  "roles": "identity:manage",
+  users: "identity:read",
+  members: "identity:read",
+  profiles: "identity:read",
+  directory: "identity:read",
+  admin: "identity:manage",
+  manage: "identity:manage",
+  permissions: "identity:manage",
+  roles: "identity:manage",
   // Code-level
-  "repos": "code:read",
-  "contents": "code:read",
-  "code": "code:read",
-  "actions": "code:write",
-  "workflows": "code:write",
-  "deploy": "code:write",
-  "push": "code:write",
-  "execute": "code:write",
-  "run": "code:write",
+  repos: "code:read",
+  contents: "code:read",
+  code: "code:read",
+  actions: "code:write",
+  workflows: "code:write",
+  deploy: "code:write",
+  push: "code:write",
+  execute: "code:write",
+  run: "code:write",
   // Communications-level
-  "channels": "comms:read",
-  "messages": "comms:read",
-  "chat": "comms:read",
-  "conversations": "comms:read",
-  "send": "comms:write",
-  "post": "comms:write",
-  "notify": "comms:write",
-  "email": "comms:write",
+  channels: "comms:read",
+  messages: "comms:read",
+  chat: "comms:read",
+  conversations: "comms:read",
+  send: "comms:write",
+  post: "comms:write",
+  notify: "comms:write",
+  email: "comms:write",
 };
 
 function categorizePermissions(permissions: string[]): string[] {
@@ -98,7 +95,12 @@ function categorizePermissions(permissions: string[]): string[] {
     // e.g., "bedrock:InvokeModel" → ["bedrock", "invoke", "model"]
     const segments = normalized
       .split(/[:._\-/]/)
-      .flatMap((s) => s.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().split(/\s+/))
+      .flatMap((s) =>
+        s
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .toLowerCase()
+          .split(/\s+/),
+      )
       .filter(Boolean);
 
     for (const segment of segments) {
@@ -134,7 +136,7 @@ const SKIP_DISCOVERY_CATEGORIES = new Set(["compliance", "communication"]);
 
 export async function runAgentDiscoverySyncForTenant(
   organizationId: number,
-  triggeredBy: string = "manual"
+  triggeredBy: string = "manual",
 ): Promise<{ synced: string[]; errors: string[] }> {
   const synced: string[] = [];
   const errors: string[] = [];
@@ -177,11 +179,17 @@ export async function runAgentDiscoverySyncForTenant(
         response = await PluginService.forwardToPlugin(pluginKey, context);
       } catch (routeError: any) {
         // Plugin doesn't have a /discover route — skip silently
-        if (routeError.message?.includes("No route") || routeError.message?.includes("not found") || routeError.statusCode === 404) {
+        if (
+          routeError.message?.includes("No route") ||
+          routeError.message?.includes("not found") ||
+          routeError.statusCode === 404
+        ) {
           continue;
         }
         // Other errors — log and skip
-        logger.warn(`[AgentDiscoverySync] ${pluginKey}: /discover call failed: ${routeError.message}`);
+        logger.warn(
+          `[AgentDiscoverySync] ${pluginKey}: /discover call failed: ${routeError.message}`,
+        );
         continue;
       }
 
@@ -193,30 +201,37 @@ export async function runAgentDiscoverySyncForTenant(
       // Plugin returned agent primitives — create sync log and process
       const syncLog = await createSyncLogQuery(
         { source_system: pluginKey, triggered_by: triggeredBy },
-        organizationId
+        organizationId,
       );
 
       try {
-
         // Validate plugin output — skip records missing required fields
         const primitives = rawPrimitives.filter((p: any) => {
           if (!p.external_id || typeof p.external_id !== "string") {
-            logger.warn(`[AgentDiscoverySync] ${pluginKey}: skipping primitive with missing/invalid external_id`);
+            logger.warn(
+              `[AgentDiscoverySync] ${pluginKey}: skipping primitive with missing/invalid external_id`,
+            );
             return false;
           }
           if (!p.display_name || typeof p.display_name !== "string") {
-            logger.warn(`[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" with missing/invalid display_name`);
+            logger.warn(
+              `[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" with missing/invalid display_name`,
+            );
             return false;
           }
           if (p.permissions && !Array.isArray(p.permissions)) {
-            logger.warn(`[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" — permissions must be an array`);
+            logger.warn(
+              `[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" — permissions must be an array`,
+            );
             return false;
           }
           return true;
         });
 
         if (primitives.length < rawPrimitives.length) {
-          logger.warn(`[AgentDiscoverySync] ${pluginKey}: ${rawPrimitives.length - primitives.length} of ${rawPrimitives.length} primitives failed validation`);
+          logger.warn(
+            `[AgentDiscoverySync] ${pluginKey}: ${rawPrimitives.length - primitives.length} of ${rawPrimitives.length} primitives failed validation`,
+          );
         }
 
         // Normalize permissions into categories
@@ -235,37 +250,47 @@ export async function runAgentDiscoverySyncForTenant(
         // Upsert primitives
         const { created, updated } = await upsertAgentPrimitivesQuery(
           normalizedPrimitives,
-          organizationId
+          organizationId,
         );
 
         // Flag stale agents (inactive > 30 days)
         const staleFlagged = await flagStaleAgentsQuery(pluginKey, organizationId);
 
         // Update sync log with success
-        await updateSyncLogQuery(syncLog.id!, {
-          status: "success",
-          primitives_found: normalizedPrimitives.length,
-          primitives_created: created,
-          primitives_updated: updated,
-          primitives_stale_flagged: typeof staleFlagged === "number" ? staleFlagged : 0,
-        }, organizationId);
+        await updateSyncLogQuery(
+          syncLog.id!,
+          {
+            status: "success",
+            primitives_found: normalizedPrimitives.length,
+            primitives_created: created,
+            primitives_updated: updated,
+            primitives_stale_flagged: typeof staleFlagged === "number" ? staleFlagged : 0,
+          },
+          organizationId,
+        );
 
         synced.push(pluginKey);
         logger.info(
-          `[AgentDiscoverySync] ${pluginKey}: found=${normalizedPrimitives.length}, created=${created}, updated=${updated}, stale=${staleFlagged}`
+          `[AgentDiscoverySync] ${pluginKey}: found=${normalizedPrimitives.length}, created=${created}, updated=${updated}, stale=${staleFlagged}`,
         );
       } catch (pluginError) {
         const errMsg = (pluginError as Error).message;
-        await updateSyncLogQuery(syncLog.id!, {
-          status: "failed",
-          error_message: errMsg,
-        }, organizationId);
+        await updateSyncLogQuery(
+          syncLog.id!,
+          {
+            status: "failed",
+            error_message: errMsg,
+          },
+          organizationId,
+        );
         errors.push(`${pluginKey}: ${errMsg}`);
         logger.error(`[AgentDiscoverySync] Error syncing ${pluginKey}: ${errMsg}`);
       }
     }
   } catch (error) {
-    logger.error(`[AgentDiscoverySync] Error for tenant ${organizationId}: ${(error as Error).message}`);
+    logger.error(
+      `[AgentDiscoverySync] Error for tenant ${organizationId}: ${(error as Error).message}`,
+    );
     errors.push((error as Error).message);
   }
 
@@ -285,9 +310,7 @@ export async function runAgentDiscoverySync(): Promise<void> {
     try {
       await runAgentDiscoverySyncForTenant(org.id!, "scheduled");
     } catch (error) {
-      logger.error(
-        `[AgentDiscoverySync] Failed for org ${org.id}: ${(error as Error).message}`
-      );
+      logger.error(`[AgentDiscoverySync] Failed for org ${org.id}: ${(error as Error).message}`);
     }
   }
 

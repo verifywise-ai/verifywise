@@ -1,7 +1,7 @@
-import React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
-import { GroupBadge } from './GroupBy';
-import { GroupedData } from '../../../application/hooks/useTableGrouping';
+import React from "react";
+import { Box, Stack, Typography } from "@mui/material";
+import { GroupBadge } from "./GroupBy";
+import { GroupedData } from "../../../application/hooks/useTableGrouping";
 
 interface GroupedTableViewProps<T> {
   groupedData: GroupedData<T>[] | null;
@@ -44,17 +44,17 @@ export function GroupedTableView<T>({
     return (
       <Stack spacing={0}>
         {groupedData.map(({ group, items }, index) => (
-          <Box key={group} sx={{ marginTop: index === 0 ? 0 : '24px' }}>
+          <Box key={group} sx={{ marginTop: index === 0 ? 0 : "24px" }}>
             <Typography
               component="div"
               sx={{
-                fontSize: '15px',
+                fontSize: "15px",
                 fontWeight: 600,
-                color: '#374151',
-                marginBottom: '4px',
-                paddingLeft: '4px',
-                display: 'flex',
-                alignItems: 'center',
+                color: "#374151",
+                marginBottom: "4px",
+                paddingLeft: "4px",
+                display: "flex",
+                alignItems: "center",
               }}
             >
               {group}

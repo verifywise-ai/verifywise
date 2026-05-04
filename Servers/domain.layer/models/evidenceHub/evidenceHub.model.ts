@@ -106,7 +106,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
 
   static updateEvidence(
     existingEvidence: EvidenceHubModel,
-    data: Partial<IEvidenceHub>
+    data: Partial<IEvidenceHub>,
   ): EvidenceHubModel {
     Object.assign(existingEvidence, {
       evidence_name: data.evidence_name ?? existingEvidence.evidence_name,
@@ -114,8 +114,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       description: data.description ?? existingEvidence.description,
       evidence_files: data.evidence_files ?? existingEvidence.evidence_files,
       expiry_date: data.expiry_date ?? existingEvidence.expiry_date,
-      mapped_model_ids:
-        data.mapped_model_ids ?? existingEvidence.mapped_model_ids,
+      mapped_model_ids: data.mapped_model_ids ?? existingEvidence.mapped_model_ids,
       updated_at: new Date(),
     });
 

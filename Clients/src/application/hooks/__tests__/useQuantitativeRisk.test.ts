@@ -9,8 +9,20 @@ vi.mock("../../repository/quantitativeRisk.repository", () => ({
   getPortfolioTrend: vi.fn(),
 }));
 
-import { useBenchmarks, useBenchmarkFilters, useOrgPortfolio, useProjectPortfolio, usePortfolioTrend } from "../useQuantitativeRisk";
-import { getAllBenchmarks, getBenchmarkFilters, getOrgPortfolio, getProjectPortfolio, getPortfolioTrend } from "../../repository/quantitativeRisk.repository";
+import {
+  useBenchmarks,
+  useBenchmarkFilters,
+  useOrgPortfolio,
+  useProjectPortfolio,
+  usePortfolioTrend,
+} from "../useQuantitativeRisk";
+import {
+  getAllBenchmarks,
+  getBenchmarkFilters,
+  getOrgPortfolio,
+  getProjectPortfolio,
+  getPortfolioTrend,
+} from "../../repository/quantitativeRisk.repository";
 
 const mockGetBenchmarks = vi.mocked(getAllBenchmarks);
 const mockGetFilters = vi.mocked(getBenchmarkFilters);

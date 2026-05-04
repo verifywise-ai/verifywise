@@ -85,5 +85,8 @@ export interface IProjectRepository {
   /**
    * Get project progress data
    */
-  getProgressData(routeUrl: string, options?: { signal?: AbortSignal }): Promise<ProjectProgressData>;
+  getProgressData(
+    routeUrl: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<ProjectProgressData>;
 }

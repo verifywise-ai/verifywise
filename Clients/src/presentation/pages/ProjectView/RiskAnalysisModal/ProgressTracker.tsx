@@ -1,10 +1,4 @@
-import {
-  Box,
-  Stack,
-  Typography,
-  useTheme,
-  LinearProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, useTheme, LinearProgress } from "@mui/material";
 import { background } from "../../../themes/palette";
 
 interface ProgressTrackerProps {
@@ -12,15 +6,11 @@ interface ProgressTrackerProps {
   totalSteps: number;
 }
 
-const ProgressTracker: React.FC<ProgressTrackerProps> = ({
-  currentStep,
-  totalSteps,
-}) => {
+const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSteps }) => {
   const theme = useTheme();
 
   // Calculate percentage
-  const percentage =
-    totalSteps > 0 ? Math.round((currentStep / totalSteps) * 100) : 0;
+  const percentage = totalSteps > 0 ? Math.round((currentStep / totalSteps) * 100) : 0;
 
   return (
     <Box
@@ -35,12 +25,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       }}
     >
       {/* Progress Stats */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-      >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
         <Stack direction="row" spacing={1} alignItems="baseline">
           <Typography fontSize={14} fontWeight={600} color="text.primary">
             Question {currentStep} of {totalSteps}

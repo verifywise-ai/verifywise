@@ -6,7 +6,7 @@
 }
 
 .back-link:hover {
-  color: #13715B;
+  color: #13715b;
 }
 
 /* Article row hover */
@@ -23,5 +23,5 @@
 }
 
 .article-row:hover .arrow-icon {
-  color: #13715B;
+  color: #13715b;
 }

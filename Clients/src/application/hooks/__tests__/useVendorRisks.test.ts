@@ -46,10 +46,9 @@ describe("useVendorRisks", () => {
       ],
     });
 
-    const { result } = renderHook(
-      () => useVendorRisks({ projectId: "1" }),
-      { wrapper: createWrapper() }
-    );
+    const { result } = renderHook(() => useVendorRisks({ projectId: "1" }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.loadingVendorRisks).toBe(false));
     expect(result.current.vendorRisks).toHaveLength(1);

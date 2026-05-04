@@ -78,12 +78,7 @@ const HIGH_RISK_PROVIDERS = [
  * Frameworks that can use cloud APIs but also support local models (medium risk)
  * Risk depends on configuration
  */
-const MEDIUM_RISK_PROVIDERS = [
-  "LangChain",
-  "LlamaIndex",
-  "Haystack",
-  "CrewAI",
-];
+const MEDIUM_RISK_PROVIDERS = ["LangChain", "LlamaIndex", "Haystack", "CrewAI"];
 
 /**
  * Local-only processing libraries (low risk)
@@ -142,7 +137,7 @@ export type FindingType =
  */
 export function calculateRiskLevel(
   provider: string,
-  findingType: FindingType
+  findingType: FindingType,
 ): "high" | "medium" | "low" {
   // Secret findings are always high risk - exposed credentials
   if (findingType === "secret") {
@@ -322,11 +317,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /from\s+['"]openai['"]/,
             /import\s+.*\s+from\s+['"]openai['"]/,
           ],
-          dependencies: [
-            /^openai[=<>~!\s]/m,
-            /"openai"\s*:/,
-            /'openai'\s*:/,
-          ],
+          dependencies: [/^openai[=<>~!\s]/m, /"openai"\s*:/, /'openai'\s*:/],
           apiCalls: [
             // REST API URLs
             /api\.openai\.com/,
@@ -433,10 +424,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+tensorflow\s+import/m,
             /import\s+tensorflow\s+as\s+tf/m,
           ],
-          dependencies: [
-            /^tensorflow[=<>~!\s]/m,
-            /^tensorflow-gpu[=<>~!\s]/m,
-          ],
+          dependencies: [/^tensorflow[=<>~!\s]/m, /^tensorflow-gpu[=<>~!\s]/m],
         },
       },
       {
@@ -504,11 +492,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pytorch.org/docs/stable/index.html",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+torch/m,
-            /^from\s+torch\s+import/m,
-            /^import\s+pytorch/m,
-          ],
+          imports: [/^import\s+torch/m, /^from\s+torch\s+import/m, /^import\s+pytorch/m],
           dependencies: [
             /^torch[=<>~!\s]/m,
             /^pytorch[=<>~!\s]/m,
@@ -528,10 +512,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/transformers",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+transformers/m,
-            /^from\s+transformers\s+import/m,
-          ],
+          imports: [/^import\s+transformers/m, /^from\s+transformers\s+import/m],
           dependencies: [/^transformers[=<>~!\s]/m],
         },
       },
@@ -542,10 +523,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/huggingface_hub",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+huggingface_hub/m,
-            /^from\s+huggingface_hub\s+import/m,
-          ],
+          imports: [/^import\s+huggingface_hub/m, /^from\s+huggingface_hub\s+import/m],
           dependencies: [/^huggingface[-_]hub[=<>~!\s]/m],
           secrets: [
             // HuggingFace API tokens (hf_...)
@@ -564,10 +542,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/datasets",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+datasets/m,
-            /^from\s+datasets\s+import/m,
-          ],
+          imports: [/^import\s+datasets/m, /^from\s+datasets\s+import/m],
           dependencies: [/^datasets[=<>~!\s]/m],
         },
       },
@@ -643,10 +618,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+llama_index\s+import/m,
             /^from\s+llama_index\.core\s+import/m,
           ],
-          dependencies: [
-            /^llama[-_]index[=<>~!\s]/m,
-            /^llama[-_]index[-_]/m,
-          ],
+          dependencies: [/^llama[-_]index[=<>~!\s]/m, /^llama[-_]index[-_]/m],
           apiCalls: [
             // LLM calls
             /OpenAI\s*\(\s*model\s*=/,
@@ -674,10 +646,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.cohere.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+cohere/m,
-            /^from\s+cohere\s+import/m,
-          ],
+          imports: [/^import\s+cohere/m, /^from\s+cohere\s+import/m],
           dependencies: [/^cohere[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -712,10 +681,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://replicate.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+replicate/m,
-            /^from\s+replicate\s+import/m,
-          ],
+          imports: [/^import\s+replicate/m, /^from\s+replicate\s+import/m],
           dependencies: [/^replicate[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -794,10 +760,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /require\s*\(\s*['"]@azure\/openai['"]\s*\)/,
             /^from\s+azure\.ai\.openai\s+import/m,
           ],
-          dependencies: [
-            /"@azure\/openai"\s*:/,
-            /^azure-ai-openai[=<>~!\s]/m,
-          ],
+          dependencies: [/"@azure\/openai"\s*:/, /^azure-ai-openai[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
             /\.openai\.azure\.com/,
@@ -828,10 +791,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.mistral.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mistralai/m,
-            /^from\s+mistralai\s+import/m,
-          ],
+          imports: [/^import\s+mistralai/m, /^from\s+mistralai\s+import/m],
           dependencies: [/^mistralai[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -861,15 +821,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://scikit-learn.org/stable/documentation.html",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+sklearn/m,
-            /^from\s+sklearn\s+import/m,
-            /^from\s+sklearn\./m,
-          ],
-          dependencies: [
-            /^scikit-learn[=<>~!\s]/m,
-            /^sklearn[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+sklearn/m, /^from\s+sklearn\s+import/m, /^from\s+sklearn\./m],
+          dependencies: [/^scikit-learn[=<>~!\s]/m, /^sklearn[=<>~!\s]/m],
         },
       },
       {
@@ -879,11 +832,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://mxnet.apache.org/",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mxnet/m,
-            /^from\s+mxnet\s+import/m,
-            /import\s+mxnet\s+as\s+mx/m,
-          ],
+          imports: [/^import\s+mxnet/m, /^from\s+mxnet\s+import/m, /import\s+mxnet\s+as\s+mx/m],
           dependencies: [/^mxnet[=<>~!\s]/m],
         },
       },
@@ -894,10 +843,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://xgboost.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+xgboost/m,
-            /^from\s+xgboost\s+import/m,
-          ],
+          imports: [/^import\s+xgboost/m, /^from\s+xgboost\s+import/m],
           dependencies: [/^xgboost[=<>~!\s]/m],
         },
       },
@@ -908,10 +854,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://lightgbm.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lightgbm/m,
-            /^from\s+lightgbm\s+import/m,
-          ],
+          imports: [/^import\s+lightgbm/m, /^from\s+lightgbm\s+import/m],
           dependencies: [/^lightgbm[=<>~!\s]/m],
         },
       },
@@ -926,10 +869,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://spacy.io/api",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+spacy/m,
-            /^from\s+spacy\s+import/m,
-          ],
+          imports: [/^import\s+spacy/m, /^from\s+spacy\s+import/m],
           dependencies: [/^spacy[=<>~!\s]/m],
         },
       },
@@ -940,10 +880,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.nltk.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+nltk/m,
-            /^from\s+nltk\s+import/m,
-          ],
+          imports: [/^import\s+nltk/m, /^from\s+nltk\s+import/m],
           dependencies: [/^nltk[=<>~!\s]/m],
         },
       },
@@ -954,10 +891,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://radimrehurek.com/gensim/",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+gensim/m,
-            /^from\s+gensim\s+import/m,
-          ],
+          imports: [/^import\s+gensim/m, /^from\s+gensim\s+import/m],
           dependencies: [/^gensim[=<>~!\s]/m],
         },
       },
@@ -972,11 +906,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.fast.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fastai/m,
-            /^from\s+fastai\s+import/m,
-            /^from\s+fastai\./m,
-          ],
+          imports: [/^import\s+fastai/m, /^from\s+fastai\s+import/m, /^from\s+fastai\./m],
           dependencies: [/^fastai[=<>~!\s]/m],
         },
       },
@@ -987,10 +917,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://jax.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+jax/m,
-            /^from\s+jax\s+import/m,
-          ],
+          imports: [/^import\s+jax/m, /^from\s+jax\s+import/m],
           dependencies: [/^jax[=<>~!\s]/m, /^jaxlib[=<>~!\s]/m],
         },
       },
@@ -1001,10 +928,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://flax.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+flax/m,
-            /^from\s+flax\s+import/m,
-          ],
+          imports: [/^import\s+flax/m, /^from\s+flax\s+import/m],
           dependencies: [/^flax[=<>~!\s]/m],
         },
       },
@@ -1024,10 +948,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^import\s+onnxruntime/m,
             /^from\s+onnxruntime\s+import/m,
           ],
-          dependencies: [
-            /^onnx[=<>~!\s]/m,
-            /^onnxruntime[=<>~!\s]/m,
-          ],
+          dependencies: [/^onnx[=<>~!\s]/m, /^onnxruntime[=<>~!\s]/m],
         },
       },
 
@@ -1041,10 +962,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://mlflow.org/docs/latest/index.html",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mlflow/m,
-            /^from\s+mlflow\s+import/m,
-          ],
+          imports: [/^import\s+mlflow/m, /^from\s+mlflow\s+import/m],
           dependencies: [/^mlflow[=<>~!\s]/m],
         },
       },
@@ -1055,10 +973,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.wandb.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+wandb/m,
-            /^from\s+wandb\s+import/m,
-          ],
+          imports: [/^import\s+wandb/m, /^from\s+wandb\s+import/m],
           dependencies: [/^wandb[=<>~!\s]/m],
         },
       },
@@ -1073,14 +988,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.opencv.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+cv2/m,
-            /^from\s+cv2\s+import/m,
-          ],
-          dependencies: [
-            /^opencv-python[=<>~!\s]/m,
-            /^opencv-python-headless[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+cv2/m, /^from\s+cv2\s+import/m],
+          dependencies: [/^opencv-python[=<>~!\s]/m, /^opencv-python-headless[=<>~!\s]/m],
         },
       },
       {
@@ -1090,10 +999,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://detectron2.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+detectron2/m,
-            /^from\s+detectron2\s+import/m,
-          ],
+          imports: [/^import\s+detectron2/m, /^from\s+detectron2\s+import/m],
           dependencies: [/^detectron2[=<>~!\s]/m],
         },
       },
@@ -1104,10 +1010,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.ultralytics.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ultralytics/m,
-            /^from\s+ultralytics\s+import/m,
-          ],
+          imports: [/^import\s+ultralytics/m, /^from\s+ultralytics\s+import/m],
           dependencies: [/^ultralytics[=<>~!\s]/m],
         },
       },
@@ -1122,10 +1025,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/openai/whisper",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+whisper/m,
-            /^from\s+whisper\s+import/m,
-          ],
+          imports: [/^import\s+whisper/m, /^from\s+whisper\s+import/m],
           dependencies: [/^openai-whisper[=<>~!\s]/m],
         },
       },
@@ -1140,10 +1040,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.pinecone.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pinecone/m,
-            /^from\s+pinecone\s+import/m,
-          ],
+          imports: [/^import\s+pinecone/m, /^from\s+pinecone\s+import/m],
           dependencies: [/^pinecone-client[=<>~!\s]/m],
         },
       },
@@ -1154,10 +1051,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.trychroma.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+chromadb/m,
-            /^from\s+chromadb\s+import/m,
-          ],
+          imports: [/^import\s+chromadb/m, /^from\s+chromadb\s+import/m],
           dependencies: [/^chromadb[=<>~!\s]/m],
         },
       },
@@ -1168,10 +1062,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://weaviate.io/developers/weaviate",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+weaviate/m,
-            /^from\s+weaviate\s+import/m,
-          ],
+          imports: [/^import\s+weaviate/m, /^from\s+weaviate\s+import/m],
           dependencies: [/^weaviate-client[=<>~!\s]/m],
         },
       },
@@ -1182,10 +1073,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://qdrant.tech/documentation",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+qdrant_client/m,
-            /^from\s+qdrant_client\s+import/m,
-          ],
+          imports: [/^import\s+qdrant_client/m, /^from\s+qdrant_client\s+import/m],
           dependencies: [/^qdrant-client[=<>~!\s]/m],
         },
       },
@@ -1196,14 +1084,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://faiss.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+faiss/m,
-            /^from\s+faiss\s+import/m,
-          ],
-          dependencies: [
-            /^faiss-cpu[=<>~!\s]/m,
-            /^faiss-gpu[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+faiss/m, /^from\s+faiss\s+import/m],
+          dependencies: [/^faiss-cpu[=<>~!\s]/m, /^faiss-gpu[=<>~!\s]/m],
         },
       },
 
@@ -1217,10 +1099,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://microsoft.github.io/autogen",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+autogen/m,
-            /^from\s+autogen\s+import/m,
-          ],
+          imports: [/^import\s+autogen/m, /^from\s+autogen\s+import/m],
           dependencies: [/^pyautogen[=<>~!\s]/m],
         },
       },
@@ -1231,10 +1110,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.crewai.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+crewai/m,
-            /^from\s+crewai\s+import/m,
-          ],
+          imports: [/^import\s+crewai/m, /^from\s+crewai\s+import/m],
           dependencies: [/^crewai[=<>~!\s]/m],
         },
       },
@@ -1249,10 +1125,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://learn.microsoft.com/semantic-kernel",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+semantic_kernel/m,
-            /^from\s+semantic_kernel\s+import/m,
-          ],
+          imports: [/^import\s+semantic_kernel/m, /^from\s+semantic_kernel\s+import/m],
           dependencies: [/^semantic-kernel[=<>~!\s]/m],
         },
       },
@@ -1267,10 +1140,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://console.groq.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+groq/m,
-            /^from\s+groq\s+import/m,
-          ],
+          imports: [/^import\s+groq/m, /^from\s+groq\s+import/m],
           dependencies: [/^groq[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -1288,10 +1158,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.together.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+together/m,
-            /^from\s+together\s+import/m,
-          ],
+          imports: [/^import\s+together/m, /^from\s+together\s+import/m],
           dependencies: [/^together[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -1311,10 +1178,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.fireworks.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fireworks/m,
-            /^from\s+fireworks\s+import/m,
-          ],
+          imports: [/^import\s+fireworks/m, /^from\s+fireworks\s+import/m],
           dependencies: [/^fireworks-ai[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -1333,10 +1197,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.ai21.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ai21/m,
-            /^from\s+ai21\s+import/m,
-          ],
+          imports: [/^import\s+ai21/m, /^from\s+ai21\s+import/m],
           dependencies: [/^ai21[=<>~!\s]/m],
         },
       },
@@ -1347,10 +1208,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://platform.stability.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+stability_sdk/m,
-            /^from\s+stability_sdk\s+import/m,
-          ],
+          imports: [/^import\s+stability_sdk/m, /^from\s+stability_sdk\s+import/m],
           dependencies: [/^stability-sdk[=<>~!\s]/m],
         },
       },
@@ -1361,10 +1219,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://dev.writer.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+writer/m,
-            /^from\s+writer\s+import/m,
-          ],
+          imports: [/^import\s+writer/m, /^from\s+writer\s+import/m],
           dependencies: [/^writer-sdk[=<>~!\s]/m],
         },
       },
@@ -1375,10 +1230,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.litellm.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+litellm/m,
-            /^from\s+litellm\s+import/m,
-          ],
+          imports: [/^import\s+litellm/m, /^from\s+litellm\s+import/m],
           dependencies: [/^litellm[=<>~!\s]/m],
         },
       },
@@ -1389,10 +1241,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://platform.deepseek.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+deepseek/m,
-            /^from\s+deepseek\s+import/m,
-          ],
+          imports: [/^import\s+deepseek/m, /^from\s+deepseek\s+import/m],
           dependencies: [/^deepseek[=<>~!\s]/m],
         },
       },
@@ -1403,10 +1252,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.perplexity.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+perplexity/m,
-            /^from\s+perplexity\s+import/m,
-          ],
+          imports: [/^import\s+perplexity/m, /^from\s+perplexity\s+import/m],
           dependencies: [/^perplexity[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -1423,10 +1269,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.cerebras.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+cerebras/m,
-            /^from\s+cerebras\s+import/m,
-          ],
+          imports: [/^import\s+cerebras/m, /^from\s+cerebras\s+import/m],
           dependencies: [/^cerebras-cloud-sdk[=<>~!\s]/m],
         },
       },
@@ -1437,10 +1280,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.lepton.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+leptonai/m,
-            /^from\s+leptonai\s+import/m,
-          ],
+          imports: [/^import\s+leptonai/m, /^from\s+leptonai\s+import/m],
           dependencies: [/^leptonai[=<>~!\s]/m],
         },
       },
@@ -1451,10 +1291,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://modal.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+modal/m,
-            /^from\s+modal\s+import/m,
-          ],
+          imports: [/^import\s+modal/m, /^from\s+modal\s+import/m],
           dependencies: [/^modal[=<>~!\s]/m],
         },
       },
@@ -1481,10 +1318,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.runpod.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+runpod/m,
-            /^from\s+runpod\s+import/m,
-          ],
+          imports: [/^import\s+runpod/m, /^from\s+runpod\s+import/m],
           dependencies: [/^runpod[=<>~!\s]/m],
         },
       },
@@ -1495,10 +1329,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.assemblyai.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+assemblyai/m,
-            /^from\s+assemblyai\s+import/m,
-          ],
+          imports: [/^import\s+assemblyai/m, /^from\s+assemblyai\s+import/m],
           dependencies: [/^assemblyai[=<>~!\s]/m],
         },
       },
@@ -1509,10 +1340,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://elevenlabs.io/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+elevenlabs/m,
-            /^from\s+elevenlabs\s+import/m,
-          ],
+          imports: [/^import\s+elevenlabs/m, /^from\s+elevenlabs\s+import/m],
           dependencies: [/^elevenlabs[=<>~!\s]/m],
         },
       },
@@ -1523,10 +1351,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.reka.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+reka/m,
-            /^from\s+reka\s+import/m,
-          ],
+          imports: [/^import\s+reka/m, /^from\s+reka\s+import/m],
           dependencies: [/^reka-api[=<>~!\s]/m],
         },
       },
@@ -1537,10 +1362,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.voyageai.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+voyageai/m,
-            /^from\s+voyageai\s+import/m,
-          ],
+          imports: [/^import\s+voyageai/m, /^from\s+voyageai\s+import/m],
           dependencies: [/^voyageai[=<>~!\s]/m],
         },
       },
@@ -1551,10 +1373,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.jina.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+jina/m,
-            /^from\s+jina\s+import/m,
-          ],
+          imports: [/^import\s+jina/m, /^from\s+jina\s+import/m],
           dependencies: [/^jina[=<>~!\s]/m],
         },
       },
@@ -1565,10 +1384,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.nomic.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+nomic/m,
-            /^from\s+nomic\s+import/m,
-          ],
+          imports: [/^import\s+nomic/m, /^from\s+nomic\s+import/m],
           dependencies: [/^nomic[=<>~!\s]/m],
         },
       },
@@ -1579,10 +1395,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.octoai.cloud",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+octoai/m,
-            /^from\s+octoai\s+import/m,
-          ],
+          imports: [/^import\s+octoai/m, /^from\s+octoai\s+import/m],
           dependencies: [/^octoai-sdk[=<>~!\s]/m],
         },
       },
@@ -1593,10 +1406,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://deepinfra.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+deepinfra/m,
-            /^from\s+deepinfra\s+import/m,
-          ],
+          imports: [/^import\s+deepinfra/m, /^from\s+deepinfra\s+import/m],
           dependencies: [/^deepinfra[=<>~!\s]/m],
         },
       },
@@ -1612,10 +1422,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+vertexai\s+import/m,
             /^from\s+google\.cloud\s+import\s+aiplatform/m,
           ],
-          dependencies: [
-            /^google-cloud-aiplatform[=<>~!\s]/m,
-            /^vertexai[=<>~!\s]/m,
-          ],
+          dependencies: [/^google-cloud-aiplatform[=<>~!\s]/m, /^vertexai[=<>~!\s]/m],
         },
       },
       {
@@ -1625,10 +1432,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.aws.amazon.com/sagemaker",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+sagemaker/m,
-            /^from\s+sagemaker\s+import/m,
-          ],
+          imports: [/^import\s+sagemaker/m, /^from\s+sagemaker\s+import/m],
           dependencies: [/^sagemaker[=<>~!\s]/m],
         },
       },
@@ -1643,15 +1447,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.haystack.deepset.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+haystack/m,
-            /^from\s+haystack\s+import/m,
-            /^from\s+haystack\./m,
-          ],
-          dependencies: [
-            /^haystack-ai[=<>~!\s]/m,
-            /^farm-haystack[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+haystack/m, /^from\s+haystack\s+import/m, /^from\s+haystack\./m],
+          dependencies: [/^haystack-ai[=<>~!\s]/m, /^farm-haystack[=<>~!\s]/m],
         },
       },
       {
@@ -1661,10 +1458,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://python.useinstructor.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+instructor/m,
-            /^from\s+instructor\s+import/m,
-          ],
+          imports: [/^import\s+instructor/m, /^from\s+instructor\s+import/m],
           dependencies: [/^instructor[=<>~!\s]/m],
         },
       },
@@ -1675,10 +1469,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://dspy-docs.vercel.app",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+dspy/m,
-            /^from\s+dspy\s+import/m,
-          ],
+          imports: [/^import\s+dspy/m, /^from\s+dspy\s+import/m],
           dependencies: [/^dspy-ai[=<>~!\s]/m],
         },
       },
@@ -1689,10 +1480,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/guidance-ai/guidance",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+guidance/m,
-            /^from\s+guidance\s+import/m,
-          ],
+          imports: [/^import\s+guidance/m, /^from\s+guidance\s+import/m],
           dependencies: [/^guidance[=<>~!\s]/m],
         },
       },
@@ -1703,10 +1491,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.askmarvin.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+marvin/m,
-            /^from\s+marvin\s+import/m,
-          ],
+          imports: [/^import\s+marvin/m, /^from\s+marvin\s+import/m],
           dependencies: [/^marvin[=<>~!\s]/m],
         },
       },
@@ -1717,10 +1502,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ai.pydantic.dev",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pydantic_ai/m,
-            /^from\s+pydantic_ai\s+import/m,
-          ],
+          imports: [/^import\s+pydantic_ai/m, /^from\s+pydantic_ai\s+import/m],
           dependencies: [/^pydantic-ai[=<>~!\s]/m],
         },
       },
@@ -1731,10 +1513,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://outlines-dev.github.io/outlines",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+outlines/m,
-            /^from\s+outlines\s+import/m,
-          ],
+          imports: [/^import\s+outlines/m, /^from\s+outlines\s+import/m],
           dependencies: [/^outlines[=<>~!\s]/m],
         },
       },
@@ -1745,11 +1524,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.phidata.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+phi/m,
-            /^from\s+phi\s+import/m,
-            /^from\s+phi\./m,
-          ],
+          imports: [/^import\s+phi/m, /^from\s+phi\s+import/m, /^from\s+phi\./m],
           dependencies: [/^phidata[=<>~!\s]/m],
         },
       },
@@ -1760,10 +1535,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/smolagents",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+smolagents/m,
-            /^from\s+smolagents\s+import/m,
-          ],
+          imports: [/^import\s+smolagents/m, /^from\s+smolagents\s+import/m],
           dependencies: [/^smolagents[=<>~!\s]/m],
         },
       },
@@ -1778,10 +1550,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://milvus.io/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pymilvus/m,
-            /^from\s+pymilvus\s+import/m,
-          ],
+          imports: [/^import\s+pymilvus/m, /^from\s+pymilvus\s+import/m],
           dependencies: [/^pymilvus[=<>~!\s]/m],
         },
       },
@@ -1792,10 +1561,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/pgvector/pgvector",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+pgvector\s+import/m,
-            /^from\s+pgvector\./m,
-          ],
+          imports: [/^from\s+pgvector\s+import/m, /^from\s+pgvector\./m],
           dependencies: [/^pgvector[=<>~!\s]/m],
         },
       },
@@ -1806,10 +1572,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://lancedb.github.io/lancedb",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lancedb/m,
-            /^from\s+lancedb\s+import/m,
-          ],
+          imports: [/^import\s+lancedb/m, /^from\s+lancedb\s+import/m],
           dependencies: [/^lancedb[=<>~!\s]/m],
         },
       },
@@ -1824,10 +1587,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.vllm.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+vllm/m,
-            /^from\s+vllm\s+import/m,
-          ],
+          imports: [/^import\s+vllm/m, /^from\s+vllm\s+import/m],
           dependencies: [/^vllm[=<>~!\s]/m],
         },
       },
@@ -1838,10 +1598,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://llama-cpp-python.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+llama_cpp/m,
-            /^from\s+llama_cpp\s+import/m,
-          ],
+          imports: [/^import\s+llama_cpp/m, /^from\s+llama_cpp\s+import/m],
           dependencies: [/^llama-cpp-python[=<>~!\s]/m],
         },
       },
@@ -1852,10 +1609,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ollama.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ollama/m,
-            /^from\s+ollama\s+import/m,
-          ],
+          imports: [/^import\s+ollama/m, /^from\s+ollama\s+import/m],
           dependencies: [/^ollama[=<>~!\s]/m],
         },
       },
@@ -1866,14 +1620,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://developer.nvidia.com/tensorrt",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+tensorrt/m,
-            /^from\s+tensorrt\s+import/m,
-          ],
-          dependencies: [
-            /^tensorrt[=<>~!\s]/m,
-            /^nvidia-tensorrt[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+tensorrt/m, /^from\s+tensorrt\s+import/m],
+          dependencies: [/^tensorrt[=<>~!\s]/m, /^nvidia-tensorrt[=<>~!\s]/m],
         },
       },
       {
@@ -1883,9 +1631,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/text-generation-inference",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+text_generation\s+import/m,
-          ],
+          imports: [/^from\s+text_generation\s+import/m],
           dependencies: [/^text-generation[=<>~!\s]/m],
           apiCalls: [
             // REST API URL
@@ -1905,14 +1651,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.nvidia.com/deeplearning/triton-inference-server",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+tritonclient/m,
-            /^from\s+tritonclient\s+import/m,
-          ],
-          dependencies: [
-            /^tritonclient[=<>~!\s]/m,
-            /^nvidia-pytriton[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+tritonclient/m, /^from\s+tritonclient\s+import/m],
+          dependencies: [/^tritonclient[=<>~!\s]/m, /^nvidia-pytriton[=<>~!\s]/m],
         },
       },
       {
@@ -1922,10 +1662,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/marella/ctransformers",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ctransformers/m,
-            /^from\s+ctransformers\s+import/m,
-          ],
+          imports: [/^import\s+ctransformers/m, /^from\s+ctransformers\s+import/m],
           dependencies: [/^ctransformers[=<>~!\s]/m],
         },
       },
@@ -1940,10 +1677,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ml-explore.github.io/mlx",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mlx/m,
-            /^from\s+mlx\s+import/m,
-          ],
+          imports: [/^import\s+mlx/m, /^from\s+mlx\s+import/m],
           dependencies: [/^mlx[=<>~!\s]/m],
         },
       },
@@ -1954,10 +1688,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/ml-explore/mlx-examples",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mlx_lm/m,
-            /^from\s+mlx_lm\s+import/m,
-          ],
+          imports: [/^import\s+mlx_lm/m, /^from\s+mlx_lm\s+import/m],
           dependencies: [/^mlx-lm[=<>~!\s]/m],
         },
       },
@@ -1968,10 +1699,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/turboderp/exllamav2",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+exllamav2/m,
-            /^from\s+exllamav2\s+import/m,
-          ],
+          imports: [/^import\s+exllamav2/m, /^from\s+exllamav2\s+import/m],
           dependencies: [/^exllamav2[=<>~!\s]/m],
         },
       },
@@ -1982,10 +1710,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/AutoGPTQ/AutoGPTQ",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+auto_gptq/m,
-            /^from\s+auto_gptq\s+import/m,
-          ],
+          imports: [/^import\s+auto_gptq/m, /^from\s+auto_gptq\s+import/m],
           dependencies: [/^auto-gptq[=<>~!\s]/m],
         },
       },
@@ -1996,10 +1721,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/casper-hansen/AutoAWQ",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+awq/m,
-            /^from\s+awq\s+import/m,
-          ],
+          imports: [/^import\s+awq/m, /^from\s+awq\s+import/m],
           dependencies: [/^autoawq[=<>~!\s]/m],
         },
       },
@@ -2010,10 +1732,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/TimDettmers/bitsandbytes",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+bitsandbytes/m,
-            /^from\s+bitsandbytes\s+import/m,
-          ],
+          imports: [/^import\s+bitsandbytes/m, /^from\s+bitsandbytes\s+import/m],
           dependencies: [/^bitsandbytes[=<>~!\s]/m],
         },
       },
@@ -2024,10 +1743,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/unslothai/unsloth",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+unsloth/m,
-            /^from\s+unsloth\s+import/m,
-          ],
+          imports: [/^import\s+unsloth/m, /^from\s+unsloth\s+import/m],
           dependencies: [/^unsloth[=<>~!\s]/m],
         },
       },
@@ -2038,10 +1754,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.gpt4all.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+gpt4all/m,
-            /^from\s+gpt4all\s+import/m,
-          ],
+          imports: [/^import\s+gpt4all/m, /^from\s+gpt4all\s+import/m],
           dependencies: [/^gpt4all[=<>~!\s]/m],
         },
       },
@@ -2052,10 +1765,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://lmdeploy.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lmdeploy/m,
-            /^from\s+lmdeploy\s+import/m,
-          ],
+          imports: [/^import\s+lmdeploy/m, /^from\s+lmdeploy\s+import/m],
           dependencies: [/^lmdeploy[=<>~!\s]/m],
         },
       },
@@ -2066,10 +1776,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/PygmalionAI/aphrodite-engine",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+aphrodite/m,
-            /^from\s+aphrodite\s+import/m,
-          ],
+          imports: [/^import\s+aphrodite/m, /^from\s+aphrodite\s+import/m],
           dependencies: [/^aphrodite-engine[=<>~!\s]/m],
         },
       },
@@ -2080,10 +1787,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/predibase/lorax",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lorax/m,
-            /^from\s+lorax\s+import/m,
-          ],
+          imports: [/^import\s+lorax/m, /^from\s+lorax\s+import/m],
           dependencies: [/^lorax-client[=<>~!\s]/m],
         },
       },
@@ -2094,10 +1798,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://inference.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+xinference/m,
-            /^from\s+xinference\s+import/m,
-          ],
+          imports: [/^import\s+xinference/m, /^from\s+xinference\s+import/m],
           dependencies: [/^xinference[=<>~!\s]/m],
         },
       },
@@ -2112,10 +1813,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/peft",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+peft/m,
-            /^from\s+peft\s+import/m,
-          ],
+          imports: [/^import\s+peft/m, /^from\s+peft\s+import/m],
           dependencies: [/^peft[=<>~!\s]/m],
         },
       },
@@ -2126,10 +1824,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/trl",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+trl/m,
-            /^from\s+trl\s+import/m,
-          ],
+          imports: [/^import\s+trl/m, /^from\s+trl\s+import/m],
           dependencies: [/^trl[=<>~!\s]/m],
         },
       },
@@ -2140,10 +1835,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/accelerate",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+accelerate/m,
-            /^from\s+accelerate\s+import/m,
-          ],
+          imports: [/^import\s+accelerate/m, /^from\s+accelerate\s+import/m],
           dependencies: [/^accelerate[=<>~!\s]/m],
         },
       },
@@ -2154,10 +1846,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.deepspeed.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+deepspeed/m,
-            /^from\s+deepspeed\s+import/m,
-          ],
+          imports: [/^import\s+deepspeed/m, /^from\s+deepspeed\s+import/m],
           dependencies: [/^deepspeed[=<>~!\s]/m],
         },
       },
@@ -2174,10 +1863,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^import\s+pytorch_lightning/m,
             /^from\s+pytorch_lightning\s+import/m,
           ],
-          dependencies: [
-            /^lightning[=<>~!\s]/m,
-            /^pytorch-lightning[=<>~!\s]/m,
-          ],
+          dependencies: [/^lightning[=<>~!\s]/m, /^pytorch-lightning[=<>~!\s]/m],
         },
       },
       {
@@ -2187,10 +1873,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://colossalai.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+colossalai/m,
-            /^from\s+colossalai\s+import/m,
-          ],
+          imports: [/^import\s+colossalai/m, /^from\s+colossalai\s+import/m],
           dependencies: [/^colossalai[=<>~!\s]/m],
         },
       },
@@ -2201,10 +1884,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/OpenAccess-AI-Collective/axolotl",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+axolotl/m,
-            /^from\s+axolotl\s+import/m,
-          ],
+          imports: [/^import\s+axolotl/m, /^from\s+axolotl\s+import/m],
           dependencies: [/^axolotl[=<>~!\s]/m],
         },
       },
@@ -2215,10 +1895,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://fairscale.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fairscale/m,
-            /^from\s+fairscale\s+import/m,
-          ],
+          imports: [/^import\s+fairscale/m, /^from\s+fairscale\s+import/m],
           dependencies: [/^fairscale[=<>~!\s]/m],
         },
       },
@@ -2229,10 +1906,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/Dao-AILab/flash-attention",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+flash_attn/m,
-            /^from\s+flash_attn\s+import/m,
-          ],
+          imports: [/^import\s+flash_attn/m, /^from\s+flash_attn\s+import/m],
           dependencies: [/^flash-attn[=<>~!\s]/m],
         },
       },
@@ -2243,10 +1917,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://facebookresearch.github.io/xformers",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+xformers/m,
-            /^from\s+xformers\s+import/m,
-          ],
+          imports: [/^import\s+xformers/m, /^from\s+xformers\s+import/m],
           dependencies: [/^xformers[=<>~!\s]/m],
         },
       },
@@ -2257,10 +1928,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/NVIDIA/apex",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+apex/m,
-            /^from\s+apex\s+import/m,
-          ],
+          imports: [/^import\s+apex/m, /^from\s+apex\s+import/m],
           dependencies: [/^apex[=<>~!\s]/m, /^nvidia-apex[=<>~!\s]/m],
         },
       },
@@ -2271,10 +1939,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/linkedin/Liger-Kernel",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+liger_kernel/m,
-            /^from\s+liger_kernel\s+import/m,
-          ],
+          imports: [/^import\s+liger_kernel/m, /^from\s+liger_kernel\s+import/m],
           dependencies: [/^liger-kernel[=<>~!\s]/m],
         },
       },
@@ -2289,10 +1954,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://langchain-ai.github.io/langgraph",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+langgraph/m,
-            /^from\s+langgraph\s+import/m,
-          ],
+          imports: [/^import\s+langgraph/m, /^from\s+langgraph\s+import/m],
           dependencies: [/^langgraph[=<>~!\s]/m],
         },
       },
@@ -2303,10 +1965,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.unstructured.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+unstructured/m,
-            /^from\s+unstructured\s+import/m,
-          ],
+          imports: [/^import\s+unstructured/m, /^from\s+unstructured\s+import/m],
           dependencies: [/^unstructured[=<>~!\s]/m],
         },
       },
@@ -2317,10 +1976,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ds4sd.github.io/docling",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+docling/m,
-            /^from\s+docling\s+import/m,
-          ],
+          imports: [/^import\s+docling/m, /^from\s+docling\s+import/m],
           dependencies: [/^docling[=<>~!\s]/m],
         },
       },
@@ -2331,10 +1987,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.embedchain.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+embedchain/m,
-            /^from\s+embedchain\s+import/m,
-          ],
+          imports: [/^import\s+embedchain/m, /^from\s+embedchain\s+import/m],
           dependencies: [/^embedchain[=<>~!\s]/m],
         },
       },
@@ -2345,10 +1998,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.docarray.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+docarray/m,
-            /^from\s+docarray\s+import/m,
-          ],
+          imports: [/^import\s+docarray/m, /^from\s+docarray\s+import/m],
           dependencies: [/^docarray[=<>~!\s]/m],
         },
       },
@@ -2359,10 +2009,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.llamaindex.ai/en/stable/llama_cloud/llama_parse",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+llama_parse/m,
-            /^from\s+llama_parse\s+import/m,
-          ],
+          imports: [/^import\s+llama_parse/m, /^from\s+llama_parse\s+import/m],
           dependencies: [/^llama-parse[=<>~!\s]/m],
         },
       },
@@ -2373,10 +2020,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/VikParuchuri/marker",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+marker/m,
-            /^from\s+marker\s+import/m,
-          ],
+          imports: [/^import\s+marker/m, /^from\s+marker\s+import/m],
           dependencies: [/^marker-pdf[=<>~!\s]/m],
         },
       },
@@ -2387,10 +2031,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/VikParuchuri/surya",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+surya/m,
-            /^from\s+surya\s+import/m,
-          ],
+          imports: [/^import\s+surya/m, /^from\s+surya\s+import/m],
           dependencies: [/^surya-ocr[=<>~!\s]/m],
         },
       },
@@ -2401,10 +2042,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/bclavie/RAGatouille",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ragatouille/m,
-            /^from\s+ragatouille\s+import/m,
-          ],
+          imports: [/^import\s+ragatouille/m, /^from\s+ragatouille\s+import/m],
           dependencies: [/^ragatouille[=<>~!\s]/m],
         },
       },
@@ -2415,10 +2053,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/PrithivirajDamodaran/FlashRank",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+flashrank/m,
-            /^from\s+flashrank\s+import/m,
-          ],
+          imports: [/^import\s+flashrank/m, /^from\s+flashrank\s+import/m],
           dependencies: [/^flashrank[=<>~!\s]/m],
         },
       },
@@ -2429,10 +2064,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://neuml.github.io/txtai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+txtai/m,
-            /^from\s+txtai\s+import/m,
-          ],
+          imports: [/^import\s+txtai/m, /^from\s+txtai\s+import/m],
           dependencies: [/^txtai[=<>~!\s]/m],
         },
       },
@@ -2447,10 +2079,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pytorch.org/vision/stable/index.html",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+torchvision/m,
-            /^from\s+torchvision\s+import/m,
-          ],
+          imports: [/^import\s+torchvision/m, /^from\s+torchvision\s+import/m],
           dependencies: [/^torchvision[=<>~!\s]/m],
         },
       },
@@ -2461,10 +2090,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://albumentations.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+albumentations/m,
-            /^from\s+albumentations\s+import/m,
-          ],
+          imports: [/^import\s+albumentations/m, /^from\s+albumentations\s+import/m],
           dependencies: [/^albumentations[=<>~!\s]/m],
         },
       },
@@ -2475,10 +2101,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://mmdetection.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mmdet/m,
-            /^from\s+mmdet\s+import/m,
-          ],
+          imports: [/^import\s+mmdet/m, /^from\s+mmdet\s+import/m],
           dependencies: [/^mmdet[=<>~!\s]/m],
         },
       },
@@ -2489,10 +2112,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/timm",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+timm/m,
-            /^from\s+timm\s+import/m,
-          ],
+          imports: [/^import\s+timm/m, /^from\s+timm\s+import/m],
           dependencies: [/^timm[=<>~!\s]/m],
         },
       },
@@ -2503,10 +2123,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://supervision.roboflow.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+supervision/m,
-            /^from\s+supervision\s+import/m,
-          ],
+          imports: [/^import\s+supervision/m, /^from\s+supervision\s+import/m],
           dependencies: [/^supervision[=<>~!\s]/m],
         },
       },
@@ -2521,10 +2138,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://speechbrain.github.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+speechbrain/m,
-            /^from\s+speechbrain\s+import/m,
-          ],
+          imports: [/^import\s+speechbrain/m, /^from\s+speechbrain\s+import/m],
           dependencies: [/^speechbrain[=<>~!\s]/m],
         },
       },
@@ -2535,10 +2149,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://tts.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+TTS/m,
-            /^from\s+TTS\s+import/m,
-          ],
+          imports: [/^import\s+TTS/m, /^from\s+TTS\s+import/m],
           dependencies: [/^TTS[=<>~!\s]/m, /^coqui-tts[=<>~!\s]/m],
         },
       },
@@ -2549,10 +2160,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://librosa.org/doc",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+librosa/m,
-            /^from\s+librosa\s+import/m,
-          ],
+          imports: [/^import\s+librosa/m, /^from\s+librosa\s+import/m],
           dependencies: [/^librosa[=<>~!\s]/m],
         },
       },
@@ -2563,11 +2171,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/pyannote/pyannote-audio",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pyannote/m,
-            /^from\s+pyannote\s+import/m,
-            /^from\s+pyannote\./m,
-          ],
+          imports: [/^import\s+pyannote/m, /^from\s+pyannote\s+import/m, /^from\s+pyannote\./m],
           dependencies: [/^pyannote[=<>~!\s]/m],
         },
       },
@@ -2578,10 +2182,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/facebookresearch/audiocraft",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+audiocraft/m,
-            /^from\s+audiocraft\s+import/m,
-          ],
+          imports: [/^import\s+audiocraft/m, /^from\s+audiocraft\s+import/m],
           dependencies: [/^audiocraft[=<>~!\s]/m],
         },
       },
@@ -2596,10 +2197,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://stable-baselines3.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+stable_baselines3/m,
-            /^from\s+stable_baselines3\s+import/m,
-          ],
+          imports: [/^import\s+stable_baselines3/m, /^from\s+stable_baselines3\s+import/m],
           dependencies: [/^stable-baselines3[=<>~!\s]/m],
         },
       },
@@ -2616,10 +2214,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^import\s+gym\b/m,
             /^from\s+gym\s+import/m,
           ],
-          dependencies: [
-            /^gymnasium[=<>~!\s]/m,
-            /^gym[=<>~!\s]/m,
-          ],
+          dependencies: [/^gymnasium[=<>~!\s]/m, /^gym[=<>~!\s]/m],
         },
       },
       {
@@ -2629,10 +2224,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.ray.io/en/latest/rllib",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+ray\.rllib\s+import/m,
-            /^from\s+ray\s+import\s+rllib/m,
-          ],
+          imports: [/^from\s+ray\.rllib\s+import/m, /^from\s+ray\s+import\s+rllib/m],
           dependencies: [/^ray\[rllib\]/m],
         },
       },
@@ -2647,10 +2239,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://optuna.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+optuna/m,
-            /^from\s+optuna\s+import/m,
-          ],
+          imports: [/^import\s+optuna/m, /^from\s+optuna\s+import/m],
           dependencies: [/^optuna[=<>~!\s]/m],
         },
       },
@@ -2661,10 +2250,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "http://hyperopt.github.io/hyperopt",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+hyperopt/m,
-            /^from\s+hyperopt\s+import/m,
-          ],
+          imports: [/^import\s+hyperopt/m, /^from\s+hyperopt\s+import/m],
           dependencies: [/^hyperopt[=<>~!\s]/m],
         },
       },
@@ -2675,10 +2261,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://automl.github.io/auto-sklearn",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+autosklearn/m,
-            /^from\s+autosklearn\s+import/m,
-          ],
+          imports: [/^import\s+autosklearn/m, /^from\s+autosklearn\s+import/m],
           dependencies: [/^auto-sklearn[=<>~!\s]/m],
         },
       },
@@ -2689,10 +2272,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://autokeras.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+autokeras/m,
-            /^from\s+autokeras\s+import/m,
-          ],
+          imports: [/^import\s+autokeras/m, /^from\s+autokeras\s+import/m],
           dependencies: [/^autokeras[=<>~!\s]/m],
         },
       },
@@ -2703,10 +2283,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "http://epistasislab.github.io/tpot",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+tpot/m,
-            /^from\s+tpot\s+import/m,
-          ],
+          imports: [/^import\s+tpot/m, /^from\s+tpot\s+import/m],
           dependencies: [/^tpot[=<>~!\s]/m],
         },
       },
@@ -2721,10 +2298,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://shap.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+shap/m,
-            /^from\s+shap\s+import/m,
-          ],
+          imports: [/^import\s+shap/m, /^from\s+shap\s+import/m],
           dependencies: [/^shap[=<>~!\s]/m],
         },
       },
@@ -2735,10 +2309,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://lime-ml.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lime/m,
-            /^from\s+lime\s+import/m,
-          ],
+          imports: [/^import\s+lime/m, /^from\s+lime\s+import/m],
           dependencies: [/^lime[=<>~!\s]/m],
         },
       },
@@ -2749,10 +2320,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://captum.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+captum/m,
-            /^from\s+captum\s+import/m,
-          ],
+          imports: [/^import\s+captum/m, /^from\s+captum\s+import/m],
           dependencies: [/^captum[=<>~!\s]/m],
         },
       },
@@ -2763,10 +2331,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://interpret.ml",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+interpret/m,
-            /^from\s+interpret\s+import/m,
-          ],
+          imports: [/^import\s+interpret/m, /^from\s+interpret\s+import/m],
           dependencies: [/^interpret[=<>~!\s]/m],
         },
       },
@@ -2777,10 +2342,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.seldon.io/projects/alibi",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+alibi/m,
-            /^from\s+alibi\s+import/m,
-          ],
+          imports: [/^import\s+alibi/m, /^from\s+alibi\s+import/m],
           dependencies: [/^alibi[=<>~!\s]/m],
         },
       },
@@ -2795,10 +2357,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://facebook.github.io/prophet",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+prophet/m,
-            /^from\s+prophet\s+import/m,
-          ],
+          imports: [/^import\s+prophet/m, /^from\s+prophet\s+import/m],
           dependencies: [/^prophet[=<>~!\s]/m],
         },
       },
@@ -2809,10 +2368,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://unit8co.github.io/darts",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+darts/m,
-            /^from\s+darts\s+import/m,
-          ],
+          imports: [/^import\s+darts/m, /^from\s+darts\s+import/m],
           dependencies: [/^darts[=<>~!\s]/m],
         },
       },
@@ -2823,10 +2379,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://neuralprophet.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+neuralprophet/m,
-            /^from\s+neuralprophet\s+import/m,
-          ],
+          imports: [/^import\s+neuralprophet/m, /^from\s+neuralprophet\s+import/m],
           dependencies: [/^neuralprophet[=<>~!\s]/m],
         },
       },
@@ -2837,10 +2390,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.sktime.net",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+sktime/m,
-            /^from\s+sktime\s+import/m,
-          ],
+          imports: [/^import\s+sktime/m, /^from\s+sktime\s+import/m],
           dependencies: [/^sktime[=<>~!\s]/m],
         },
       },
@@ -2855,10 +2405,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pytorch-geometric.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+torch_geometric/m,
-            /^from\s+torch_geometric\s+import/m,
-          ],
+          imports: [/^import\s+torch_geometric/m, /^from\s+torch_geometric\s+import/m],
           dependencies: [/^torch-geometric[=<>~!\s]/m],
         },
       },
@@ -2869,10 +2416,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.dgl.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+dgl/m,
-            /^from\s+dgl\s+import/m,
-          ],
+          imports: [/^import\s+dgl/m, /^from\s+dgl\s+import/m],
           dependencies: [/^dgl[=<>~!\s]/m],
         },
       },
@@ -2886,10 +2430,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://featuretools.alteryx.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+featuretools/m,
-            /^from\s+featuretools\s+import/m,
-          ],
+          imports: [/^import\s+featuretools/m, /^from\s+featuretools\s+import/m],
           dependencies: [/^featuretools[=<>~!\s]/m],
         },
       },
@@ -2900,10 +2441,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://contrib.scikit-learn.org/category_encoders",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+category_encoders/m,
-            /^from\s+category_encoders\s+import/m,
-          ],
+          imports: [/^import\s+category_encoders/m, /^from\s+category_encoders\s+import/m],
           dependencies: [/^category-encoders[=<>~!\s]/m],
         },
       },
@@ -2918,10 +2456,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/diffusers",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+diffusers/m,
-            /^from\s+diffusers\s+import/m,
-          ],
+          imports: [/^import\s+diffusers/m, /^from\s+diffusers\s+import/m],
           dependencies: [/^diffusers[=<>~!\s]/m],
         },
       },
@@ -2932,10 +2467,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/damian0815/compel",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+compel/m,
-            /^from\s+compel\s+import/m,
-          ],
+          imports: [/^import\s+compel/m, /^from\s+compel\s+import/m],
           dependencies: [/^compel[=<>~!\s]/m],
         },
       },
@@ -2950,10 +2482,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.sbert.net",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+sentence_transformers/m,
-            /^from\s+sentence_transformers\s+import/m,
-          ],
+          imports: [/^import\s+sentence_transformers/m, /^from\s+sentence_transformers\s+import/m],
           dependencies: [/^sentence-transformers[=<>~!\s]/m],
         },
       },
@@ -2964,10 +2493,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://qdrant.github.io/fastembed",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fastembed/m,
-            /^from\s+fastembed\s+import/m,
-          ],
+          imports: [/^import\s+fastembed/m, /^from\s+fastembed\s+import/m],
           dependencies: [/^fastembed[=<>~!\s]/m],
         },
       },
@@ -2982,10 +2508,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.ragas.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ragas/m,
-            /^from\s+ragas\s+import/m,
-          ],
+          imports: [/^import\s+ragas/m, /^from\s+ragas\s+import/m],
           dependencies: [/^ragas[=<>~!\s]/m],
         },
       },
@@ -2996,10 +2519,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.deepeval.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+deepeval/m,
-            /^from\s+deepeval\s+import/m,
-          ],
+          imports: [/^import\s+deepeval/m, /^from\s+deepeval\s+import/m],
           dependencies: [/^deepeval[=<>~!\s]/m],
         },
       },
@@ -3010,10 +2530,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.trulens.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+trulens/m,
-            /^from\s+trulens\s+import/m,
-          ],
+          imports: [/^import\s+trulens/m, /^from\s+trulens\s+import/m],
           dependencies: [/^trulens[=<>~!\s]/m],
         },
       },
@@ -3028,10 +2545,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://microsoft.github.io/promptflow",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+promptflow/m,
-            /^from\s+promptflow\s+import/m,
-          ],
+          imports: [/^import\s+promptflow/m, /^from\s+promptflow\s+import/m],
           dependencies: [/^promptflow[=<>~!\s]/m],
         },
       },
@@ -3046,10 +2560,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.smith.langchain.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+langsmith/m,
-            /^from\s+langsmith\s+import/m,
-          ],
+          imports: [/^import\s+langsmith/m, /^from\s+langsmith\s+import/m],
           dependencies: [/^langsmith[=<>~!\s]/m],
         },
       },
@@ -3060,11 +2571,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.arize.com/phoenix",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+phoenix/m,
-            /^from\s+phoenix\s+import/m,
-            /^import\s+arize_phoenix/m,
-          ],
+          imports: [/^import\s+phoenix/m, /^from\s+phoenix\s+import/m, /^import\s+arize_phoenix/m],
           dependencies: [/^arize-phoenix[=<>~!\s]/m],
         },
       },
@@ -3075,10 +2582,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.evidentlyai.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+evidently/m,
-            /^from\s+evidently\s+import/m,
-          ],
+          imports: [/^import\s+evidently/m, /^from\s+evidently\s+import/m],
           dependencies: [/^evidently[=<>~!\s]/m],
         },
       },
@@ -3109,10 +2613,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.agentops.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+agentops/m,
-            /^from\s+agentops\s+import/m,
-          ],
+          imports: [/^import\s+agentops/m, /^from\s+agentops\s+import/m],
           dependencies: [/^agentops[=<>~!\s]/m],
         },
       },
@@ -3123,10 +2624,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.composio.dev",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+composio/m,
-            /^from\s+composio\s+import/m,
-          ],
+          imports: [/^import\s+composio/m, /^from\s+composio\s+import/m],
           dependencies: [/^composio[=<>~!\s]/m],
         },
       },
@@ -3137,10 +2635,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://e2b.dev/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+e2b/m,
-            /^from\s+e2b\s+import/m,
-          ],
+          imports: [/^import\s+e2b/m, /^from\s+e2b\s+import/m],
           dependencies: [/^e2b[=<>~!\s]/m],
         },
       },
@@ -3151,10 +2646,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/browser-use/browser-use",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+browser_use/m,
-            /^from\s+browser_use\s+import/m,
-          ],
+          imports: [/^import\s+browser_use/m, /^from\s+browser_use\s+import/m],
           dependencies: [/^browser-use[=<>~!\s]/m],
         },
       },
@@ -3165,10 +2657,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://superagi.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+superagi/m,
-            /^from\s+superagi\s+import/m,
-          ],
+          imports: [/^import\s+superagi/m, /^from\s+superagi\s+import/m],
           dependencies: [/^superagi[=<>~!\s]/m],
         },
       },
@@ -3179,10 +2668,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/openai/swarm",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+swarm/m,
-            /^from\s+swarm\s+import/m,
-          ],
+          imports: [/^import\s+swarm/m, /^from\s+swarm\s+import/m],
           dependencies: [/^openai-swarm[=<>~!\s]/m],
         },
       },
@@ -3193,10 +2679,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/VRSEN/agency-swarm",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+agency_swarm/m,
-            /^from\s+agency_swarm\s+import/m,
-          ],
+          imports: [/^import\s+agency_swarm/m, /^from\s+agency_swarm\s+import/m],
           dependencies: [/^agency-swarm[=<>~!\s]/m],
         },
       },
@@ -3207,10 +2690,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.camel-ai.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+camel/m,
-            /^from\s+camel\s+import/m,
-          ],
+          imports: [/^import\s+camel/m, /^from\s+camel\s+import/m],
           dependencies: [/^camel-ai[=<>~!\s]/m],
         },
       },
@@ -3225,10 +2705,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://segment-anything.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+segment_anything/m,
-            /^from\s+segment_anything\s+import/m,
-          ],
+          imports: [/^import\s+segment_anything/m, /^from\s+segment_anything\s+import/m],
           dependencies: [/^segment-anything[=<>~!\s]/m],
         },
       },
@@ -3239,10 +2716,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/openai/CLIP",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+clip/m,
-            /^from\s+clip\s+import/m,
-          ],
+          imports: [/^import\s+clip/m, /^from\s+clip\s+import/m],
           dependencies: [/^openai-clip[=<>~!\s]/m],
         },
       },
@@ -3253,10 +2727,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/mlfoundations/open_clip",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+open_clip/m,
-            /^from\s+open_clip\s+import/m,
-          ],
+          imports: [/^import\s+open_clip/m, /^from\s+open_clip\s+import/m],
           dependencies: [/^open-clip-torch[=<>~!\s]/m],
         },
       },
@@ -3267,10 +2738,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/IDEA-Research/GroundingDINO",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+groundingdino/m,
-            /^from\s+groundingdino\s+import/m,
-          ],
+          imports: [/^import\s+groundingdino/m, /^from\s+groundingdino\s+import/m],
           dependencies: [/^groundingdino[=<>~!\s]/m],
         },
       },
@@ -3281,10 +2749,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.roboflow.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+roboflow/m,
-            /^from\s+roboflow\s+import/m,
-          ],
+          imports: [/^import\s+roboflow/m, /^from\s+roboflow\s+import/m],
           dependencies: [/^roboflow[=<>~!\s]/m],
         },
       },
@@ -3295,10 +2760,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://llava-vl.github.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+llava/m,
-            /^from\s+llava\s+import/m,
-          ],
+          imports: [/^import\s+llava/m, /^from\s+llava\s+import/m],
           dependencies: [/^llava[=<>~!\s]/m],
         },
       },
@@ -3309,9 +2771,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/QwenLM/Qwen-VL",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+transformers\s+import\s+.*Qwen.*VL/m,
-          ],
+          imports: [/^from\s+transformers\s+import\s+.*Qwen.*VL/m],
           dependencies: [/^qwen-vl[=<>~!\s]/m],
         },
       },
@@ -3322,9 +2782,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/facebookresearch/detr",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+transformers\s+import\s+.*Detr/m,
-          ],
+          imports: [/^from\s+transformers\s+import\s+.*Detr/m],
           dependencies: [/^detr[=<>~!\s]/m],
         },
       },
@@ -3335,10 +2793,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/facebookresearch/sam2",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+sam2/m,
-            /^from\s+sam2\s+import/m,
-          ],
+          imports: [/^import\s+sam2/m, /^from\s+sam2\s+import/m],
           dependencies: [/^sam2[=<>~!\s]/m],
         },
       },
@@ -3353,10 +2808,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/SYSTRAN/faster-whisper",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+faster_whisper/m,
-            /^from\s+faster_whisper\s+import/m,
-          ],
+          imports: [/^import\s+faster_whisper/m, /^from\s+faster_whisper\s+import/m],
           dependencies: [/^faster-whisper[=<>~!\s]/m],
         },
       },
@@ -3367,10 +2819,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/m-bain/whisperX",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+whisperx/m,
-            /^from\s+whisperx\s+import/m,
-          ],
+          imports: [/^import\s+whisperx/m, /^from\s+whisperx\s+import/m],
           dependencies: [/^whisperx[=<>~!\s]/m],
         },
       },
@@ -3381,10 +2830,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/suno-ai/bark",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+bark/m,
-            /^from\s+bark\s+import/m,
-          ],
+          imports: [/^import\s+bark/m, /^from\s+bark\s+import/m],
           dependencies: [/^suno-bark[=<>~!\s]/m],
         },
       },
@@ -3395,10 +2841,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/huggingface/parler-tts",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+parler_tts/m,
-            /^from\s+parler_tts\s+import/m,
-          ],
+          imports: [/^import\s+parler_tts/m, /^from\s+parler_tts\s+import/m],
           dependencies: [/^parler-tts[=<>~!\s]/m],
         },
       },
@@ -3409,11 +2852,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.nvidia.com/nemo-framework",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+nemo/m,
-            /^from\s+nemo\s+import/m,
-            /^import\s+nemo_toolkit/m,
-          ],
+          imports: [/^import\s+nemo/m, /^from\s+nemo\s+import/m, /^import\s+nemo_toolkit/m],
           dependencies: [/^nemo-toolkit[=<>~!\s]/m],
         },
       },
@@ -3424,10 +2863,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://alphacephei.com/vosk",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+vosk/m,
-            /^from\s+vosk\s+import/m,
-          ],
+          imports: [/^import\s+vosk/m, /^from\s+vosk\s+import/m],
           dependencies: [/^vosk[=<>~!\s]/m],
         },
       },
@@ -3438,10 +2874,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pyttsx3.readthedocs.io",
         confidence: "medium",
         patterns: {
-          imports: [
-            /^import\s+pyttsx3/m,
-            /^from\s+pyttsx3\s+import/m,
-          ],
+          imports: [/^import\s+pyttsx3/m, /^from\s+pyttsx3\s+import/m],
           dependencies: [/^pyttsx3[=<>~!\s]/m],
         },
       },
@@ -3452,10 +2885,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/fishaudio/fish-speech",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fish_speech/m,
-            /^from\s+fish_speech\s+import/m,
-          ],
+          imports: [/^import\s+fish_speech/m, /^from\s+fish_speech\s+import/m],
           dependencies: [/^fish-speech[=<>~!\s]/m],
         },
       },
@@ -3485,10 +2915,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/tencent-ailab/IP-Adapter",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+ip_adapter/m,
-            /^from\s+ip_adapter\s+import/m,
-          ],
+          imports: [/^import\s+ip_adapter/m, /^from\s+ip_adapter\s+import/m],
           dependencies: [/^ip-adapter[=<>~!\s]/m],
         },
       },
@@ -3499,10 +2926,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/InstantID/InstantID",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+instantid/m,
-            /^from\s+instantid\s+import/m,
-          ],
+          imports: [/^import\s+instantid/m, /^from\s+instantid\s+import/m],
           dependencies: [/^instantid[=<>~!\s]/m],
         },
       },
@@ -3513,10 +2937,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/guoyww/AnimateDiff",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+animatediff/m,
-            /^from\s+animatediff\s+import/m,
-          ],
+          imports: [/^import\s+animatediff/m, /^from\s+animatediff\s+import/m],
           dependencies: [/^animatediff[=<>~!\s]/m],
         },
       },
@@ -3527,10 +2948,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/comfyanonymous/ComfyUI",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+comfy/m,
-            /^from\s+comfy\s+import/m,
-          ],
+          imports: [/^import\s+comfy/m, /^from\s+comfy\s+import/m],
           dependencies: [/^comfyui[=<>~!\s]/m],
         },
       },
@@ -3541,9 +2959,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://stability.ai/news/stability-ai-sdxl-turbo",
         confidence: "high",
         patterns: {
-          imports: [
-            /stabilityai\/sdxl-turbo/m,
-          ],
+          imports: [/stabilityai\/sdxl-turbo/m],
           dependencies: [],
         },
       },
@@ -3554,10 +2970,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://blackforestlabs.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /black-forest-labs\/FLUX/m,
-            /^import\s+flux/m,
-          ],
+          imports: [/black-forest-labs\/FLUX/m, /^import\s+flux/m],
           dependencies: [/^flux[=<>~!\s]/m],
         },
       },
@@ -3572,10 +2985,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/NVIDIA/NeMo-Guardrails",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+nemoguardrails/m,
-            /^from\s+nemoguardrails\s+import/m,
-          ],
+          imports: [/^import\s+nemoguardrails/m, /^from\s+nemoguardrails\s+import/m],
           dependencies: [/^nemoguardrails[=<>~!\s]/m],
         },
       },
@@ -3586,10 +2996,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.guardrailsai.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+guardrails/m,
-            /^from\s+guardrails\s+import/m,
-          ],
+          imports: [/^import\s+guardrails/m, /^from\s+guardrails\s+import/m],
           dependencies: [/^guardrails-ai[=<>~!\s]/m],
         },
       },
@@ -3600,10 +3007,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://llm-guard.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+llm_guard/m,
-            /^from\s+llm_guard\s+import/m,
-          ],
+          imports: [/^import\s+llm_guard/m, /^from\s+llm_guard\s+import/m],
           dependencies: [/^llm-guard[=<>~!\s]/m],
         },
       },
@@ -3614,10 +3018,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/protectai/rebuff",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+rebuff/m,
-            /^from\s+rebuff\s+import/m,
-          ],
+          imports: [/^import\s+rebuff/m, /^from\s+rebuff\s+import/m],
           dependencies: [/^rebuff[=<>~!\s]/m],
         },
       },
@@ -3628,10 +3029,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://platform.lakera.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lakera/m,
-            /^from\s+lakera\s+import/m,
-          ],
+          imports: [/^import\s+lakera/m, /^from\s+lakera\s+import/m],
           dependencies: [/^lakera[=<>~!\s]/m],
         },
       },
@@ -3642,10 +3040,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/unitaryai/detoxify",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+detoxify/m,
-            /^from\s+detoxify\s+import/m,
-          ],
+          imports: [/^import\s+detoxify/m, /^from\s+detoxify\s+import/m],
           dependencies: [/^detoxify[=<>~!\s]/m],
         },
       },
@@ -3656,9 +3051,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://perspectiveapi.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /from\s+['"]@google-cloud\/perspective['"]/,
-          ],
+          imports: [/from\s+['"]@google-cloud\/perspective['"]/],
           dependencies: [/^perspective-api[=<>~!\s]/m],
         },
       },
@@ -3673,10 +3066,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.helicone.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+helicone/m,
-            /^from\s+helicone\s+import/m,
-          ],
+          imports: [/^import\s+helicone/m, /^from\s+helicone\s+import/m],
           dependencies: [/^helicone[=<>~!\s]/m],
         },
       },
@@ -3687,10 +3077,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.portkey.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+portkey/m,
-            /^from\s+portkey\s+import/m,
-          ],
+          imports: [/^import\s+portkey/m, /^from\s+portkey\s+import/m],
           dependencies: [/^portkey-ai[=<>~!\s]/m],
         },
       },
@@ -3701,10 +3088,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.promptlayer.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+promptlayer/m,
-            /^from\s+promptlayer\s+import/m,
-          ],
+          imports: [/^import\s+promptlayer/m, /^from\s+promptlayer\s+import/m],
           dependencies: [/^promptlayer[=<>~!\s]/m],
         },
       },
@@ -3715,10 +3099,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://lunary.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lunary/m,
-            /^from\s+lunary\s+import/m,
-          ],
+          imports: [/^import\s+lunary/m, /^from\s+lunary\s+import/m],
           dependencies: [/^lunary[=<>~!\s]/m],
         },
       },
@@ -3729,10 +3110,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.bentoml.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+bentoml/m,
-            /^from\s+bentoml\s+import/m,
-          ],
+          imports: [/^import\s+bentoml/m, /^from\s+bentoml\s+import/m],
           dependencies: [/^bentoml[=<>~!\s]/m],
         },
       },
@@ -3743,10 +3121,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://clear.ml/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+clearml/m,
-            /^from\s+clearml\s+import/m,
-          ],
+          imports: [/^import\s+clearml/m, /^from\s+clearml\s+import/m],
           dependencies: [/^clearml[=<>~!\s]/m],
         },
       },
@@ -3757,10 +3132,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.comet.com/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+comet_ml/m,
-            /^from\s+comet_ml\s+import/m,
-          ],
+          imports: [/^import\s+comet_ml/m, /^from\s+comet_ml\s+import/m],
           dependencies: [/^comet-ml[=<>~!\s]/m],
         },
       },
@@ -3771,10 +3143,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.neptune.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+neptune/m,
-            /^from\s+neptune\s+import/m,
-          ],
+          imports: [/^import\s+neptune/m, /^from\s+neptune\s+import/m],
           dependencies: [/^neptune[=<>~!\s]/m],
         },
       },
@@ -3785,11 +3154,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://dvc.org/doc/dvclive",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+dvclive/m,
-            /^from\s+dvclive\s+import/m,
-            /^import\s+dvc/m,
-          ],
+          imports: [/^import\s+dvclive/m, /^from\s+dvclive\s+import/m, /^import\s+dvc/m],
           dependencies: [/^dvclive[=<>~!\s]/m, /^dvc[=<>~!\s]/m],
         },
       },
@@ -3800,10 +3165,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://aimstack.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+aim/m,
-            /^from\s+aim\s+import/m,
-          ],
+          imports: [/^import\s+aim/m, /^from\s+aim\s+import/m],
           dependencies: [/^aim[=<>~!\s]/m],
         },
       },
@@ -3818,10 +3180,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://catboost.ai/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+catboost/m,
-            /^from\s+catboost\s+import/m,
-          ],
+          imports: [/^import\s+catboost/m, /^from\s+catboost\s+import/m],
           dependencies: [/^catboost[=<>~!\s]/m],
         },
       },
@@ -3832,10 +3191,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://auto.gluon.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+autogluon/m,
-            /^from\s+autogluon\s+import/m,
-          ],
+          imports: [/^import\s+autogluon/m, /^from\s+autogluon\s+import/m],
           dependencies: [/^autogluon[=<>~!\s]/m],
         },
       },
@@ -3846,10 +3202,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pycaret.gitbook.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pycaret/m,
-            /^from\s+pycaret\s+import/m,
-          ],
+          imports: [/^import\s+pycaret/m, /^from\s+pycaret\s+import/m],
           dependencies: [/^pycaret[=<>~!\s]/m],
         },
       },
@@ -3860,10 +3213,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.h2o.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+h2o/m,
-            /^from\s+h2o\s+import/m,
-          ],
+          imports: [/^import\s+h2o/m, /^from\s+h2o\s+import/m],
           dependencies: [/^h2o[=<>~!\s]/m],
         },
       },
@@ -3874,10 +3224,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://microsoft.github.io/FLAML",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+flaml/m,
-            /^from\s+flaml\s+import/m,
-          ],
+          imports: [/^import\s+flaml/m, /^from\s+flaml\s+import/m],
           dependencies: [/^flaml[=<>~!\s]/m],
         },
       },
@@ -3888,10 +3235,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://monai.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+monai/m,
-            /^from\s+monai\s+import/m,
-          ],
+          imports: [/^import\s+monai/m, /^from\s+monai\s+import/m],
           dependencies: [/^monai[=<>~!\s]/m],
         },
       },
@@ -3902,10 +3246,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://deepchem.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+deepchem/m,
-            /^from\s+deepchem\s+import/m,
-          ],
+          imports: [/^import\s+deepchem/m, /^from\s+deepchem\s+import/m],
           dependencies: [/^deepchem[=<>~!\s]/m],
         },
       },
@@ -3916,10 +3257,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pyod.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pyod/m,
-            /^from\s+pyod\s+import/m,
-          ],
+          imports: [/^import\s+pyod/m, /^from\s+pyod\s+import/m],
           dependencies: [/^pyod[=<>~!\s]/m],
         },
       },
@@ -3930,10 +3268,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.pywhy.org/dowhy",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+dowhy/m,
-            /^from\s+dowhy\s+import/m,
-          ],
+          imports: [/^import\s+dowhy/m, /^from\s+dowhy\s+import/m],
           dependencies: [/^dowhy[=<>~!\s]/m],
         },
       },
@@ -3944,10 +3279,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://fairlearn.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+fairlearn/m,
-            /^from\s+fairlearn\s+import/m,
-          ],
+          imports: [/^import\s+fairlearn/m, /^from\s+fairlearn\s+import/m],
           dependencies: [/^fairlearn[=<>~!\s]/m],
         },
       },
@@ -3958,10 +3290,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.cleanlab.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+cleanlab/m,
-            /^from\s+cleanlab\s+import/m,
-          ],
+          imports: [/^import\s+cleanlab/m, /^from\s+cleanlab\s+import/m],
           dependencies: [/^cleanlab[=<>~!\s]/m],
         },
       },
@@ -3972,10 +3301,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.argilla.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+argilla/m,
-            /^from\s+argilla\s+import/m,
-          ],
+          imports: [/^import\s+argilla/m, /^from\s+argilla\s+import/m],
           dependencies: [/^argilla[=<>~!\s]/m],
         },
       },
@@ -3986,10 +3312,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://labelstud.io/guide",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+label_studio/m,
-            /^from\s+label_studio\s+import/m,
-          ],
+          imports: [/^import\s+label_studio/m, /^from\s+label_studio\s+import/m],
           dependencies: [/^label-studio[=<>~!\s]/m],
         },
       },
@@ -4000,10 +3323,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.snorkel.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+snorkel/m,
-            /^from\s+snorkel\s+import/m,
-          ],
+          imports: [/^import\s+snorkel/m, /^from\s+snorkel\s+import/m],
           dependencies: [/^snorkel[=<>~!\s]/m],
         },
       },
@@ -4014,10 +3334,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/scaleapi/great_ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+great_ai/m,
-            /^from\s+great_ai\s+import/m,
-          ],
+          imports: [/^import\s+great_ai/m, /^from\s+great_ai\s+import/m],
           dependencies: [/^great-ai[=<>~!\s]/m],
         },
       },
@@ -4028,10 +3345,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.seldon.io/projects/alibi-detect",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+alibi_detect/m,
-            /^from\s+alibi_detect\s+import/m,
-          ],
+          imports: [/^import\s+alibi_detect/m, /^from\s+alibi_detect\s+import/m],
           dependencies: [/^alibi-detect[=<>~!\s]/m],
         },
       },
@@ -4042,10 +3356,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://riverml.xyz",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+river/m,
-            /^from\s+river\s+import/m,
-          ],
+          imports: [/^import\s+river/m, /^from\s+river\s+import/m],
           dependencies: [/^river[=<>~!\s]/m],
         },
       },
@@ -4056,10 +3367,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://imbalanced-learn.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+imblearn/m,
-            /^from\s+imblearn\s+import/m,
-          ],
+          imports: [/^import\s+imblearn/m, /^from\s+imblearn\s+import/m],
           dependencies: [/^imbalanced-learn[=<>~!\s]/m],
         },
       },
@@ -4074,10 +3382,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://neo4j.com/docs/python-manual",
         confidence: "medium",
         patterns: {
-          imports: [
-            /^import\s+neo4j/m,
-            /^from\s+neo4j\s+import/m,
-          ],
+          imports: [/^import\s+neo4j/m, /^from\s+neo4j\s+import/m],
           dependencies: [/^neo4j[=<>~!\s]/m],
         },
       },
@@ -4088,10 +3393,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://rdflib.readthedocs.io",
         confidence: "medium",
         patterns: {
-          imports: [
-            /^import\s+rdflib/m,
-            /^from\s+rdflib\s+import/m,
-          ],
+          imports: [/^import\s+rdflib/m, /^from\s+rdflib\s+import/m],
           dependencies: [/^rdflib[=<>~!\s]/m],
         },
       },
@@ -4106,10 +3408,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://horovod.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+horovod/m,
-            /^from\s+horovod\s+import/m,
-          ],
+          imports: [/^import\s+horovod/m, /^from\s+horovod\s+import/m],
           dependencies: [/^horovod[=<>~!\s]/m],
         },
       },
@@ -4120,10 +3419,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://petals.dev",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+petals/m,
-            /^from\s+petals\s+import/m,
-          ],
+          imports: [/^import\s+petals/m, /^from\s+petals\s+import/m],
           dependencies: [/^petals[=<>~!\s]/m],
         },
       },
@@ -4138,10 +3434,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://codegeex.cn",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+codegeex/m,
-            /^from\s+codegeex\s+import/m,
-          ],
+          imports: [/^import\s+codegeex/m, /^from\s+codegeex\s+import/m],
           dependencies: [/^codegeex[=<>~!\s]/m],
         },
       },
@@ -4152,10 +3445,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://tabby.tabbyml.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+tabby/m,
-            /^from\s+tabby\s+import/m,
-          ],
+          imports: [/^import\s+tabby/m, /^from\s+tabby\s+import/m],
           dependencies: [/^tabby-client[=<>~!\s]/m],
         },
       },
@@ -4166,10 +3456,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://continue.dev/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+continuedev/m,
-            /^from\s+continuedev\s+import/m,
-          ],
+          imports: [/^import\s+continuedev/m, /^from\s+continuedev\s+import/m],
           dependencies: [/^continuedev[=<>~!\s]/m],
         },
       },
@@ -4184,10 +3471,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://surprise.readthedocs.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+surprise/m,
-            /^from\s+surprise\s+import/m,
-          ],
+          imports: [/^import\s+surprise/m, /^from\s+surprise\s+import/m],
           dependencies: [/^scikit-surprise[=<>~!\s]/m],
         },
       },
@@ -4198,10 +3482,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://making.lyst.com/lightfm/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+lightfm/m,
-            /^from\s+lightfm\s+import/m,
-          ],
+          imports: [/^import\s+lightfm/m, /^from\s+lightfm\s+import/m],
           dependencies: [/^lightfm[=<>~!\s]/m],
         },
       },
@@ -4212,10 +3493,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://recbole.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+recbole/m,
-            /^from\s+recbole\s+import/m,
-          ],
+          imports: [/^import\s+recbole/m, /^from\s+recbole\s+import/m],
           dependencies: [/^recbole[=<>~!\s]/m],
         },
       },
@@ -4230,10 +3508,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://developer.nvidia.com/isaac-gym",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+isaacgym/m,
-            /^from\s+isaacgym\s+import/m,
-          ],
+          imports: [/^import\s+isaacgym/m, /^from\s+isaacgym\s+import/m],
           dependencies: [/^isaacgym[=<>~!\s]/m],
         },
       },
@@ -4244,10 +3519,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://mujoco.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+mujoco/m,
-            /^from\s+mujoco\s+import/m,
-          ],
+          imports: [/^import\s+mujoco/m, /^from\s+mujoco\s+import/m],
           dependencies: [/^mujoco[=<>~!\s]/m],
         },
       },
@@ -4258,10 +3530,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://pybullet.org",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pybullet/m,
-            /^from\s+pybullet\s+import/m,
-          ],
+          imports: [/^import\s+pybullet/m, /^from\s+pybullet\s+import/m],
           dependencies: [/^pybullet[=<>~!\s]/m],
         },
       },
@@ -4285,10 +3554,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://platform.openai.com/docs",
         confidence: "high",
         patterns: {
-          apiCalls: [
-            /uses:\s*openai\//,
-            /\$\{\{.*OPENAI_API_KEY.*\}\}/,
-          ],
+          apiCalls: [/uses:\s*openai\//, /\$\{\{.*OPENAI_API_KEY.*\}\}/],
         },
       },
       {
@@ -4298,9 +3564,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.anthropic.com",
         confidence: "high",
         patterns: {
-          apiCalls: [
-            /\$\{\{.*ANTHROPIC_API_KEY.*\}\}/,
-          ],
+          apiCalls: [/\$\{\{.*ANTHROPIC_API_KEY.*\}\}/],
         },
       },
       {
@@ -4310,10 +3574,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://learn.microsoft.com/azure/ai-services/openai",
         confidence: "high",
         patterns: {
-          apiCalls: [
-            /\$\{\{.*AZURE_OPENAI_API_KEY.*\}\}/,
-            /\$\{\{.*AZURE_OPENAI_ENDPOINT.*\}\}/,
-          ],
+          apiCalls: [/\$\{\{.*AZURE_OPENAI_API_KEY.*\}\}/, /\$\{\{.*AZURE_OPENAI_ENDPOINT.*\}\}/],
         },
       },
       {
@@ -4337,10 +3598,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://cloud.google.com/vertex-ai/docs",
         confidence: "high",
         patterns: {
-          apiCalls: [
-            /\$\{\{.*GOOGLE_AI_API_KEY.*\}\}/,
-            /\$\{\{.*GOOGLE_GENAI_API_KEY.*\}\}/,
-          ],
+          apiCalls: [/\$\{\{.*GOOGLE_AI_API_KEY.*\}\}/, /\$\{\{.*GOOGLE_GENAI_API_KEY.*\}\}/],
         },
       },
       {
@@ -4350,9 +3608,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://replicate.com/docs",
         confidence: "high",
         patterns: {
-          apiCalls: [
-            /\$\{\{.*REPLICATE_API_TOKEN.*\}\}/,
-          ],
+          apiCalls: [/\$\{\{.*REPLICATE_API_TOKEN.*\}\}/],
         },
       },
       // ========================
@@ -4365,11 +3621,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://hub.docker.com/r/nvidia/cuda",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+nvidia\/cuda/i,
-            /FROM\s+\S*nvcr\.io/i,
-            /runtime:\s*nvidia/,
-          ],
+          dependencies: [/FROM\s+nvidia\/cuda/i, /FROM\s+\S*nvcr\.io/i, /runtime:\s*nvidia/],
         },
       },
       {
@@ -4379,10 +3631,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://hub.docker.com/r/pytorch/pytorch",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+pytorch\/pytorch/i,
-            /FROM\s+\S*pytorch\S*gpu/i,
-          ],
+          dependencies: [/FROM\s+pytorch\/pytorch/i, /FROM\s+\S*pytorch\S*gpu/i],
         },
       },
       {
@@ -4392,10 +3641,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://hub.docker.com/r/tensorflow/tensorflow",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+tensorflow\/tensorflow/i,
-            /FROM\s+\S*tensorflow\S*gpu/i,
-          ],
+          dependencies: [/FROM\s+tensorflow\/tensorflow/i, /FROM\s+\S*tensorflow\S*gpu/i],
         },
       },
       {
@@ -4405,10 +3651,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://huggingface.co/docs/transformers",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+huggingface\//i,
-            /ghcr\.io\/huggingface/,
-          ],
+          dependencies: [/FROM\s+huggingface\//i, /ghcr\.io\/huggingface/],
         },
       },
       {
@@ -4418,10 +3661,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ollama.com",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+ollama\/ollama/i,
-            /image:\s*ollama\/ollama/,
-          ],
+          dependencies: [/FROM\s+ollama\/ollama/i, /image:\s*ollama\/ollama/],
         },
       },
       {
@@ -4431,10 +3671,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.vllm.ai",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+vllm\/vllm/i,
-            /image:\s*vllm\/vllm/,
-          ],
+          dependencies: [/FROM\s+vllm\/vllm/i, /image:\s*vllm\/vllm/],
         },
       },
       {
@@ -4457,10 +3694,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://mlflow.org/docs/latest",
         confidence: "high",
         patterns: {
-          dependencies: [
-            /FROM\s+\S*mlflow/i,
-            /image:\s*\S*mlflow/,
-          ],
+          dependencies: [/FROM\s+\S*mlflow/i, /image:\s*\S*mlflow/],
         },
       },
     ],
@@ -4608,10 +3842,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.pinecone.io",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+pinecone/m,
-            /^from\s+pinecone\s+import/m,
-          ],
+          imports: [/^import\s+pinecone/m, /^from\s+pinecone\s+import/m],
           dependencies: [
             /^pinecone-client[=<>~!\s]/m,
             /^pinecone[=<>~!\s]/m,
@@ -4633,14 +3864,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://weaviate.io/developers/weaviate",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+weaviate/m,
-            /^from\s+weaviate\s+import/m,
-          ],
-          dependencies: [
-            /^weaviate-client[=<>~!\s]/m,
-            /"weaviate-client"\s*:/,
-          ],
+          imports: [/^import\s+weaviate/m, /^from\s+weaviate\s+import/m],
+          dependencies: [/^weaviate-client[=<>~!\s]/m, /"weaviate-client"\s*:/],
           ragPatterns: [
             /weaviate\.Client\s*\(/,
             /weaviate\.connect_to/,
@@ -4656,14 +3881,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.trychroma.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+chromadb/m,
-            /^from\s+chromadb\s+import/m,
-          ],
-          dependencies: [
-            /^chromadb[=<>~!\s]/m,
-            /"chromadb"\s*:/,
-          ],
+          imports: [/^import\s+chromadb/m, /^from\s+chromadb\s+import/m],
+          dependencies: [/^chromadb[=<>~!\s]/m, /"chromadb"\s*:/],
           ragPatterns: [
             /chromadb\.Client\s*\(/,
             /chromadb\.PersistentClient\s*\(/,
@@ -4680,14 +3899,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://qdrant.tech/documentation",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+qdrant_client\s+import/m,
-            /^import\s+qdrant_client/m,
-          ],
-          dependencies: [
-            /^qdrant-client[=<>~!\s]/m,
-            /"qdrant-client"\s*:/,
-          ],
+          imports: [/^from\s+qdrant_client\s+import/m, /^import\s+qdrant_client/m],
+          dependencies: [/^qdrant-client[=<>~!\s]/m, /"qdrant-client"\s*:/],
           ragPatterns: [
             /QdrantClient\s*\(/,
             /\.upsert\s*\(/,
@@ -4703,14 +3916,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://milvus.io/docs",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+pymilvus\s+import/m,
-            /^import\s+pymilvus/m,
-          ],
-          dependencies: [
-            /^pymilvus[=<>~!\s]/m,
-            /"pymilvus"\s*:/,
-          ],
+          imports: [/^from\s+pymilvus\s+import/m, /^import\s+pymilvus/m],
+          dependencies: [/^pymilvus[=<>~!\s]/m, /"pymilvus"\s*:/],
           ragPatterns: [
             /connections\.connect\s*\(/,
             /Collection\s*\([^)]*schema/,
@@ -4726,14 +3933,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://faiss.ai",
         confidence: "high",
         patterns: {
-          imports: [
-            /^import\s+faiss/m,
-            /^from\s+faiss\s+import/m,
-          ],
-          dependencies: [
-            /^faiss-cpu[=<>~!\s]/m,
-            /^faiss-gpu[=<>~!\s]/m,
-          ],
+          imports: [/^import\s+faiss/m, /^from\s+faiss\s+import/m],
+          dependencies: [/^faiss-cpu[=<>~!\s]/m, /^faiss-gpu[=<>~!\s]/m],
           ragPatterns: [
             /faiss\.IndexFlatL2\s*\(/,
             /faiss\.IndexIVFFlat\s*\(/,
@@ -4750,17 +3951,13 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/pgvector/pgvector",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+pgvector\s+import/m,
-          ],
-          dependencies: [
-            /^pgvector[=<>~!\s]/m,
-          ],
+          imports: [/^from\s+pgvector\s+import/m],
+          dependencies: [/^pgvector[=<>~!\s]/m],
           ragPatterns: [
             /register_vector\s*\(/,
             /CREATE\s+EXTENSION.*vector/i,
             /vector\s*\(\s*\d+\s*\)/,
-            /<->\s*'?\[/,  // Vector distance operator
+            /<->\s*'?\[/, // Vector distance operator
           ],
         },
       },
@@ -4833,12 +4030,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://www.sbert.net",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+sentence_transformers\s+import/m,
-          ],
-          dependencies: [
-            /^sentence-transformers[=<>~!\s]/m,
-          ],
+          imports: [/^from\s+sentence_transformers\s+import/m],
+          dependencies: [/^sentence-transformers[=<>~!\s]/m],
           ragPatterns: [
             /SentenceTransformer\s*\(/,
             /\.encode\s*\([^)]*sentences/,
@@ -4927,9 +4120,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+langgraph\.graph\s+import/m,
             /^from\s+langgraph\.prebuilt\s+import/m,
           ],
-          dependencies: [
-            /^langgraph[=<>~!\s]/m,
-          ],
+          dependencies: [/^langgraph[=<>~!\s]/m],
           agentPatterns: [
             /StateGraph\s*\(/,
             /MessageGraph\s*\(/,
@@ -4948,13 +4139,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://docs.crewai.com",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+crewai\s+import/m,
-            /^import\s+crewai/m,
-          ],
-          dependencies: [
-            /^crewai[=<>~!\s]/m,
-          ],
+          imports: [/^from\s+crewai\s+import/m, /^import\s+crewai/m],
+          dependencies: [/^crewai[=<>~!\s]/m],
           agentPatterns: [
             /Agent\s*\([^)]*role\s*=/,
             /Task\s*\([^)]*description\s*=/,
@@ -4979,10 +4165,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^import\s+autogen/m,
             /^from\s+pyautogen\s+import/m,
           ],
-          dependencies: [
-            /^pyautogen[=<>~!\s]/m,
-            /^autogen[=<>~!\s]/m,
-          ],
+          dependencies: [/^pyautogen[=<>~!\s]/m, /^autogen[=<>~!\s]/m],
           agentPatterns: [
             /AssistantAgent\s*\(/,
             /UserProxyAgent\s*\(/,
@@ -5000,13 +4183,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://learn.microsoft.com/semantic-kernel",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+semantic_kernel\s+import/m,
-            /^import\s+semantic_kernel/m,
-          ],
-          dependencies: [
-            /^semantic-kernel[=<>~!\s]/m,
-          ],
+          imports: [/^from\s+semantic_kernel\s+import/m, /^import\s+semantic_kernel/m],
+          dependencies: [/^semantic-kernel[=<>~!\s]/m],
           agentPatterns: [
             /Kernel\s*\(\)/,
             /kernel\.add_plugin\s*\(/,
@@ -5045,9 +4223,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+phi\.agent\s+import/m,
             /^from\s+phi\.assistant\s+import/m,
           ],
-          dependencies: [
-            /^phidata[=<>~!\s]/m,
-          ],
+          dependencies: [/^phidata[=<>~!\s]/m],
           agentPatterns: [
             /Agent\s*\([^)]*model\s*=/,
             /Assistant\s*\([^)]*llm\s*=/,
@@ -5066,10 +4242,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^from\s+haystack\.agents\s+import/m,
             /^from\s+haystack_experimental\.components\.agents\s+import/m,
           ],
-          agentPatterns: [
-            /Agent\s*\([^)]*tools\s*=/,
-            /ToolInvoker\s*\(/,
-          ],
+          agentPatterns: [/Agent\s*\([^)]*tools\s*=/, /ToolInvoker\s*\(/],
         },
       },
       {
@@ -5085,11 +4258,7 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
             /^import.*@modelcontextprotocol\/sdk/,
             /require\s*\(\s*['"]@modelcontextprotocol\/sdk['"]\s*\)/,
           ],
-          dependencies: [
-            /^mcp[=<>~!\s]/m,
-            /"@modelcontextprotocol\/sdk"\s*:/,
-            /"mcpServers"\s*:/,
-          ],
+          dependencies: [/^mcp[=<>~!\s]/m, /"@modelcontextprotocol\/sdk"\s*:/, /"mcpServers"\s*:/],
           agentPatterns: [
             /Server\s*\(\s*\{[^}]*name\s*:/,
             /McpServer\s*\(/,
@@ -5128,12 +4297,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://ai.pydantic.dev",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+pydantic_ai\s+import/m,
-          ],
-          dependencies: [
-            /^pydantic-ai[=<>~!\s]/m,
-          ],
+          imports: [/^from\s+pydantic_ai\s+import/m],
+          dependencies: [/^pydantic-ai[=<>~!\s]/m],
           agentPatterns: [
             /Agent\s*\([^)]*model\s*=/,
             /@agent\.tool/,
@@ -5150,13 +4315,8 @@ export const AI_DETECTION_PATTERNS: PatternCategory[] = [
         documentationUrl: "https://github.com/openai/swarm",
         confidence: "high",
         patterns: {
-          imports: [
-            /^from\s+swarm\s+import/m,
-          ],
-          dependencies: [
-            /^openai-swarm[=<>~!\s]/m,
-            /^git\+.*openai\/swarm/,
-          ],
+          imports: [/^from\s+swarm\s+import/m],
+          dependencies: [/^openai-swarm[=<>~!\s]/m, /^git\+.*openai\/swarm/],
           agentPatterns: [
             /Swarm\s*\(\)/,
             /Agent\s*\([^)]*name\s*=/,
@@ -5183,9 +4343,7 @@ export function getAllPatterns(): DetectionPattern[] {
 /**
  * Get patterns by confidence level
  */
-export function getPatternsByConfidence(
-  confidence: "high" | "medium" | "low"
-): DetectionPattern[] {
+export function getPatternsByConfidence(confidence: "high" | "medium" | "low"): DetectionPattern[] {
   return getAllPatterns().filter((p) => p.confidence === confidence);
 }
 
@@ -5193,7 +4351,5 @@ export function getPatternsByConfidence(
  * Get pattern by name (case-insensitive)
  */
 export function getPatternByName(name: string): DetectionPattern | undefined {
-  return getAllPatterns().find(
-    (p) => p.name.toLowerCase() === name.toLowerCase()
-  );
+  return getAllPatterns().find((p) => p.name.toLowerCase() === name.toLowerCase());
 }

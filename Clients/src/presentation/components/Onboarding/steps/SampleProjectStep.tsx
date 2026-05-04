@@ -22,7 +22,7 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
 }) => {
   const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
   const [selectedFrameworks, setSelectedFrameworks] = useState<number[]>(
-    sampleProject?.selectedFrameworks || []
+    sampleProject?.selectedFrameworks || [],
   );
 
   const hasFrameworks = allFrameworks && allFrameworks.length > 0;
@@ -48,8 +48,7 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
     }
   }, [sampleProject?.selectedFrameworks]);
 
-  const hasRequiredSelections =
-    sampleProject?.useCaseName && selectedFrameworks.length > 0;
+  const hasRequiredSelections = sampleProject?.useCaseName && selectedFrameworks.length > 0;
 
   return (
     <Stack spacing={4}>

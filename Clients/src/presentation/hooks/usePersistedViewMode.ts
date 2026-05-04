@@ -10,7 +10,7 @@ import { IViewMode } from "../types/toggle.types";
  */
 export const usePersistedViewMode = (
   key: string,
-  defaultValue: IViewMode = "card"
+  defaultValue: IViewMode = "card",
 ): [IViewMode, (mode: IViewMode) => void] => {
   const [viewMode, setViewMode] = useState<IViewMode>(() => {
     try {

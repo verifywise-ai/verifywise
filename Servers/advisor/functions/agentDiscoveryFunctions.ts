@@ -1,7 +1,4 @@
-import {
-  getAllAgentPrimitivesQuery,
-  getAgentStatsQuery,
-} from "../../utils/agentDiscovery.utils";
+import { getAllAgentPrimitivesQuery, getAgentStatsQuery } from "../../utils/agentDiscovery.utils";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchAgentPrimitivesParams {
@@ -14,7 +11,7 @@ export interface FetchAgentPrimitivesParams {
 
 const fetchAgentPrimitives = async (
   params: FetchAgentPrimitivesParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<any[]> => {
   try {
     // Pass filters directly to the query (it supports them natively)
@@ -48,14 +45,14 @@ const fetchAgentPrimitives = async (
   } catch (error) {
     logger.error("Error fetching agent primitives:", error);
     throw new Error(
-      `Failed to fetch agent primitives: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch agent primitives: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getAgentDiscoveryAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const [agents, stats] = await Promise.all([
@@ -94,24 +91,20 @@ const getAgentDiscoveryAnalytics = async (
   } catch (error) {
     logger.error("Error getting agent discovery analytics:", error);
     throw new Error(
-      `Failed to get agent discovery analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get agent discovery analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getAgentDiscoveryExecutiveSummary = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const stats = await getAgentStatsQuery(organizationId);
 
     const reviewRate =
-      stats.total > 0
-        ? Math.round(
-            ((stats.confirmed + stats.rejected) / stats.total) * 100
-          )
-        : 0;
+      stats.total > 0 ? Math.round(((stats.confirmed + stats.rejected) / stats.total) * 100) : 0;
 
     return {
       totalAgents: stats.total,
@@ -128,7 +121,7 @@ const getAgentDiscoveryExecutiveSummary = async (
   } catch (error) {
     logger.error("Error getting agent discovery executive summary:", error);
     throw new Error(
-      `Failed to get agent discovery executive summary: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get agent discovery executive summary: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

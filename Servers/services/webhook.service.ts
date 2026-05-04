@@ -51,15 +51,8 @@ interface GitHubPullRequestPayload {
 /**
  * Verify GitHub webhook HMAC-SHA256 signature
  */
-export function verifyGitHubSignature(
-  payload: Buffer,
-  signature: string,
-  secret: string
-): boolean {
-  const expected = "sha256=" + crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex");
+export function verifyGitHubSignature(payload: Buffer, signature: string, secret: string): boolean {
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(payload).digest("hex");
 
   const sigBuf = Buffer.from(signature);
   const expBuf = Buffer.from(expected);
@@ -91,7 +84,7 @@ export function generateWebhookSecret(): string {
  */
 export async function handlePushEvent(
   payload: GitHubPushPayload,
-  repo: IAIDetectionRepository & { organization_id: number }
+  repo: IAIDetectionRepository & { organization_id: number },
 ): Promise<{ triggered: boolean; reason: string }> {
   const branch = payload.ref.replace("refs/heads/", "");
   const defaultBranch = repo.default_branch || payload.repository.default_branch;
@@ -115,11 +108,11 @@ export async function handlePushEvent(
     ctx,
     { repositoryId: repo.id, triggeredByType: "webhook" },
     undefined,
-    { trigger_type: "webhook", commit_sha: commitSha, branch }
+    { trigger_type: "webhook", commit_sha: commitSha, branch },
   );
 
   logger.info(
-    `Webhook: started full scan #${scan.id} for push to ${branch} (${commitSha.slice(0, 7)})`
+    `Webhook: started full scan #${scan.id} for push to ${branch} (${commitSha.slice(0, 7)})`,
   );
 
   return { triggered: true, reason: `Full scan #${scan.id} started` };
@@ -130,7 +123,7 @@ export async function handlePushEvent(
  */
 export async function handlePullRequestEvent(
   payload: GitHubPullRequestPayload,
-  repo: IAIDetectionRepository & { organization_id: number }
+  repo: IAIDetectionRepository & { organization_id: number },
 ): Promise<{ triggered: boolean; reason: string }> {
   const validActions = ["opened", "synchronize", "reopened"];
   if (!validActions.includes(payload.action)) {
@@ -160,11 +153,11 @@ export async function handlePullRequestEvent(
     ctx,
     { repositoryId: repo.id, triggeredByType: "webhook" },
     incrementalOptions,
-    { trigger_type: "webhook", pr_number: prNumber, commit_sha: headSha, branch }
+    { trigger_type: "webhook", pr_number: prNumber, commit_sha: headSha, branch },
   );
 
   logger.info(
-    `Webhook: started incremental scan #${scan.id} for PR #${prNumber} (${headSha.slice(0, 7)})`
+    `Webhook: started incremental scan #${scan.id} for PR #${prNumber} (${headSha.slice(0, 7)})`,
   );
 
   return { triggered: true, reason: `Incremental scan #${scan.id} started for PR #${prNumber}` };
@@ -179,7 +172,7 @@ export async function handlePullRequestEvent(
  * Uses the repository's created_by user as the triggering user.
  */
 function buildWebhookServiceContext(
-  repo: IAIDetectionRepository & { organization_id: number }
+  repo: IAIDetectionRepository & { organization_id: number },
 ): IServiceContext {
   return {
     userId: repo.created_by,

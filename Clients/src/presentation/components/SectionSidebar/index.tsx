@@ -40,11 +40,7 @@ const SectionSidebar = ({
         padding: "12px 0",
       }}
     >
-      <List
-        component="nav"
-        disablePadding
-        sx={{ padding: "0 16px" }}
-      >
+      <List component="nav" disablePadding sx={{ padding: "0 16px" }}>
         {sections.map((section) => {
           const isActive = activeSection === section.id;
           const SectionIcon = section.Icon;
@@ -52,9 +48,7 @@ const SectionSidebar = ({
           return (
             <ListItemButton
               key={section.id}
-              disableRipple={
-                theme.components?.MuiListItemButton?.defaultProps?.disableRipple
-              }
+              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               className={isActive ? "selected-path" : "unselected"}
               onClick={() => onSelect(section.id)}
               sx={{
@@ -66,16 +60,12 @@ const SectionSidebar = ({
                 background: isActive
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                   : "transparent",
-                border: isActive
-                  ? "1px solid #E8E8E8"
-                  : "1px solid transparent",
+                border: isActive ? "1px solid #E8E8E8" : "1px solid transparent",
                 "&:hover": {
                   background: isActive
                     ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                     : "#FAFAFA",
-                  border: isActive
-                    ? "1px solid #E8E8E8"
-                    : "1px solid transparent",
+                  border: isActive ? "1px solid #E8E8E8" : "1px solid transparent",
                 },
                 "&:hover svg": {
                   color: "#13715B !important",
@@ -119,9 +109,7 @@ const SectionSidebar = ({
                   "& .MuiListItemText-primary": {
                     fontSize: "13px",
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive
-                      ? theme.palette.text.primary
-                      : theme.palette.text.secondary,
+                    color: isActive ? theme.palette.text.primary : theme.palette.text.secondary,
                   },
                 }}
               />

@@ -31,7 +31,7 @@ const FILE_NAME = "githubToken.ctrl.ts";
  */
 export async function getGitHubTokenStatusController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting GitHub token status",
@@ -66,10 +66,7 @@ export async function getGitHubTokenStatusController(
  * POST /api/integrations/github/token
  * Body: { token: string, token_name?: string }
  */
-export async function saveGitHubTokenController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function saveGitHubTokenController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Saving GitHub token",
     functionName: "saveGitHubTokenController",
@@ -125,10 +122,7 @@ export async function saveGitHubTokenController(
  *
  * DELETE /api/integrations/github/token
  */
-export async function deleteGitHubTokenController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function deleteGitHubTokenController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Deleting GitHub token",
     functionName: "deleteGitHubTokenController",
@@ -175,10 +169,7 @@ export async function deleteGitHubTokenController(
  * POST /api/integrations/github/token/test
  * Body: { token: string }
  */
-export async function testGitHubTokenController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function testGitHubTokenController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Testing GitHub token",
     functionName: "testGitHubTokenController",

@@ -44,8 +44,7 @@ export const PostMarketMonitoringByProviders = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We track and respond to errors and incidents through measurable activities.",
+        title: "We track and respond to errors and incidents through measurable activities.",
         description:
           "Effective tracking and response minimize the impact of errors and improve system resilience and compliance.",
         implementation_details: "Implemented an error tracking and response system",
@@ -57,14 +56,12 @@ export const PostMarketMonitoringByProviders = [
   {
     order_no: 4,
     title: "AI Lifecycle Risk Management",
-    description:
-      "Consult with domain experts and end-users to inform risk management activities.",
+    description: "Consult with domain experts and end-users to inform risk management activities.",
     implementation_details: "Planning consultations with experts and end-users.",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We consult with experts and end-users to inform risk management.",
+        title: "We consult with experts and end-users to inform risk management.",
         description:
           "Input from diverse perspectives ensures risk management strategies are comprehensive and practical.",
         implementation_details: "Conducted expert and user consultations for risk assessment",
@@ -76,8 +73,7 @@ export const PostMarketMonitoringByProviders = [
   {
     order_no: 5,
     title: "AI System Change Documentation",
-    description:
-      "Document changes to AI systems and their performance post-deployment.",
+    description: "Document changes to AI systems and their performance post-deployment.",
     implementation_details: "Establishing change management documentation process",
     subControls: [
       {
@@ -101,8 +97,7 @@ export const PostMarketMonitoringByProviders = [
       },
       {
         order_no: 3,
-        title:
-          "We regularly review and update AI systems to maintain regulatory compliance.",
+        title: "We regularly review and update AI systems to maintain regulatory compliance.",
         description:
           "Regular reviews ensure AI systems evolve in line with regulatory changes and industry standards.",
         implementation_details: "Scheduled regular reviews of AI systems for compliance",
@@ -111,8 +106,7 @@ export const PostMarketMonitoringByProviders = [
       },
       {
         order_no: 4,
-        title:
-          "We ensure that any system changes are documented and assessed for compliance.",
+        title: "We ensure that any system changes are documented and assessed for compliance.",
         description:
           "Thorough documentation and assessment of changes prevent compliance gaps and support accountability.",
         implementation_details: "Implemented a compliance review system for AI system changes",

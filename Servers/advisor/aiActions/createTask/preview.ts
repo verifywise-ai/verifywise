@@ -14,8 +14,6 @@ export function renderCreateTaskPreview(input: AgentCreateTaskInput): string {
   details.push(`${input.priority} priority`);
   details.push(`status: ${input.status}`);
   details.push(`due ${input.due_date}`);
-  details.push(
-    `${input.assignees.length} assignee${input.assignees.length === 1 ? "" : "s"}`,
-  );
+  details.push(`${input.assignees.length} assignee${input.assignees.length === 1 ? "" : "s"}`);
   return `Create task "${input.title}" (${details.join("; ")})`;
 }

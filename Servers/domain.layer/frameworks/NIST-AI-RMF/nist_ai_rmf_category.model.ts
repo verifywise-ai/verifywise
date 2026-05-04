@@ -1,9 +1,4 @@
-import {
-  Column,
-  DataType,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, Model, Table } from "sequelize-typescript";
 
 /**
  * NIST AI RMF Category Model

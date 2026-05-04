@@ -13,8 +13,7 @@ export const CorrectiveActionsDutyOfInfo = {
       subControls: [
         {
           id: 1,
-          title:
-            "We consult with diverse experts and end-users to inform corrective measures.",
+          title: "We consult with diverse experts and end-users to inform corrective measures.",
           description:
             "Consulting experts and end-users ensures corrective measures are comprehensive and address real-world implications.",
         },
@@ -32,15 +31,13 @@ export const CorrectiveActionsDutyOfInfo = {
       subControls: [
         {
           id: 1,
-          title:
-            "We validate and document system reliability and standards compliance.",
+          title: "We validate and document system reliability and standards compliance.",
           description:
             "Validation and documentation demonstrate that systems operate reliably and meet required compliance standards.",
         },
         {
           id: 2,
-          title:
-            "We sustain AI system value post-deployment through continuous improvements.",
+          title: "We sustain AI system value post-deployment through continuous improvements.",
           description:
             "Continuous improvements ensure AI systems remain effective, compliant, and aligned with user needs after deployment.",
         },

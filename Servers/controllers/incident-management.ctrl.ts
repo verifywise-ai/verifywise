@@ -31,13 +31,13 @@ export async function getAllIncidents(req: Request, res: Response) {
     "processing",
     "starting getAllIncidents",
     "getAllIncidents",
-    "incidentManagement.controller.ts"
+    "incidentManagement.controller.ts",
   );
   logger.debug("🔍 Fetching all incidents");
 
   try {
     const incidents = (await getAllIncidentsQuery(
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel[];
 
     if (incidents && incidents.length > 0) {
@@ -45,20 +45,18 @@ export async function getAllIncidents(req: Request, res: Response) {
         "successful",
         "incidents found",
         "getAllIncidents",
-        "incidentManagement.controller.ts"
+        "incidentManagement.controller.ts",
       );
       return res
         .status(200)
-        .json(
-          STATUS_CODE[200](incidents.map((incident) => incident.toSafeJSON()))
-        );
+        .json(STATUS_CODE[200](incidents.map((incident) => incident.toSafeJSON())));
     }
 
     logStructured(
       "successful",
       "no incidents found",
       "getAllIncidents",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(200).json(STATUS_CODE[200](incidents));
   } catch (error) {
@@ -66,7 +64,7 @@ export async function getAllIncidents(req: Request, res: Response) {
       "error",
       "failed to retrieve incidents",
       "getAllIncidents",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in getAllIncidents:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -85,7 +83,7 @@ export async function getIncidentById(req: Request, res: Response) {
       "error",
       `Invalid incident ID parameter: ${req.params.id}`,
       "getIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -98,21 +96,21 @@ export async function getIncidentById(req: Request, res: Response) {
     "processing",
     `fetching incident by id: ${incidentId}`,
     "getIncidentById",
-    "incidentManagement.controller.ts"
+    "incidentManagement.controller.ts",
   );
   logger.debug(`🔍 Looking up incident with id: ${incidentId}`);
 
   try {
     const incident = (await getIncidentByIdQuery(
       incidentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel;
     if (incident) {
       logStructured(
         "successful",
         `incident found: ${incidentId}`,
         "getIncidentById",
-        "incidentManagement.controller.ts"
+        "incidentManagement.controller.ts",
       );
       return res.status(200).json(STATUS_CODE[200](incident.toSafeJSON()));
     }
@@ -121,7 +119,7 @@ export async function getIncidentById(req: Request, res: Response) {
       "successful",
       `no incident found: ${incidentId}`,
       "getIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(204).json(STATUS_CODE[204](incident));
   } catch (error) {
@@ -129,7 +127,7 @@ export async function getIncidentById(req: Request, res: Response) {
       "error",
       "failed to retrieve incident",
       "getIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in getIncidentById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -146,7 +144,7 @@ export async function createNewIncident(req: Request, res: Response) {
       "error",
       "Incident creation validation failed",
       "createNewIncident",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -190,11 +188,7 @@ export async function createNewIncident(req: Request, res: Response) {
       updated_at: new Date(),
     });
 
-    const savedIncident = await createNewIncidentQuery(
-      incident,
-      req.organizationId!,
-      transaction
-    );
+    const savedIncident = await createNewIncidentQuery(incident, req.organizationId!, transaction);
 
     // Record creation in change history
     if (savedIncident.id && req.userId) {
@@ -203,7 +197,7 @@ export async function createNewIncident(req: Request, res: Response) {
         req.userId,
         req.organizationId!,
         req.body,
-        transaction
+        transaction,
       );
     }
 
@@ -213,7 +207,7 @@ export async function createNewIncident(req: Request, res: Response) {
       "successful",
       "new incident created",
       "createNewIncident",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(201).json(STATUS_CODE[201](savedIncident.toSafeJSON()));
   } catch (error) {
@@ -222,7 +216,7 @@ export async function createNewIncident(req: Request, res: Response) {
       "error",
       "failed to create new incident",
       "createNewIncident",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in createNewIncident:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -241,7 +235,7 @@ export async function updateIncidentById(req: Request, res: Response) {
       "error",
       `Invalid incident ID parameter: ${req.params.id}`,
       "updateIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -254,14 +248,11 @@ export async function updateIncidentById(req: Request, res: Response) {
   try {
     existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel;
   } catch {}
 
-  const validationErrors = validateCompleteIncidentUpdate(
-    req.body,
-    existingIncident
-  );
+  const validationErrors = validateCompleteIncidentUpdate(req.body, existingIncident);
   if (validationErrors.length > 0) {
     const errorDetails = validationErrors.map((err: ValidationError) => ({
       field: err.field,
@@ -272,7 +263,7 @@ export async function updateIncidentById(req: Request, res: Response) {
       "error",
       `Incident update validation failed for ID ${incidentId}: ${JSON.stringify(errorDetails)}`,
       "updateIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -285,14 +276,14 @@ export async function updateIncidentById(req: Request, res: Response) {
   try {
     const currentIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel;
     if (!currentIncident) {
       logStructured(
         "successful",
         "no incident found",
         "updateIncidentById",
-        "incidentManagement.controller.ts"
+        "incidentManagement.controller.ts",
       );
       return res.status(404).json(STATUS_CODE[404]("Incident not found"));
     }
@@ -306,7 +297,7 @@ export async function updateIncidentById(req: Request, res: Response) {
       incidentId,
       currentIncident,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     // Track and record changes
@@ -318,7 +309,7 @@ export async function updateIncidentById(req: Request, res: Response) {
           req.userId,
           req.organizationId!,
           changes,
-          transaction
+          transaction,
         );
       }
     }
@@ -329,7 +320,7 @@ export async function updateIncidentById(req: Request, res: Response) {
       "successful",
       "incident updated",
       "updateIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(200).json(STATUS_CODE[200](savedIncident.toSafeJSON()));
   } catch (error) {
@@ -338,7 +329,7 @@ export async function updateIncidentById(req: Request, res: Response) {
       "error",
       "failed to update incident",
       "updateIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in updateIncidentById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -357,7 +348,7 @@ export async function deleteIncidentById(req: Request, res: Response) {
       "error",
       `Invalid incident ID parameter: ${req.params.id}`,
       "deleteIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -370,14 +361,14 @@ export async function deleteIncidentById(req: Request, res: Response) {
   try {
     const existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel;
     if (!existingIncident) {
       logStructured(
         "successful",
         "no incident found",
         "deleteIncidentById",
-        "incidentManagement.controller.ts"
+        "incidentManagement.controller.ts",
       );
       return res.status(404).json(STATUS_CODE[404]("Incident not found"));
     }
@@ -389,18 +380,16 @@ export async function deleteIncidentById(req: Request, res: Response) {
       "successful",
       "incident deleted",
       "deleteIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("Incident deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200]("Incident deleted successfully"));
   } catch (error) {
     await transaction.rollback();
     logStructured(
       "error",
       "failed to delete incident",
       "deleteIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in deleteIncidentById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -419,7 +408,7 @@ export async function archiveIncidentById(req: Request, res: Response) {
       "error",
       `Invalid incident ID parameter: ${req.params.id}`,
       "archiveIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -432,14 +421,14 @@ export async function archiveIncidentById(req: Request, res: Response) {
   try {
     const existingIncident = (await getIncidentByIdQuery(
       incidentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AIIncidentManagementModel;
     if (!existingIncident) {
       logStructured(
         "successful",
         "no incident found",
         "archiveIncidentById",
-        "incidentManagement.controller.ts"
+        "incidentManagement.controller.ts",
       );
       return res.status(404).json(STATUS_CODE[404]("Incident not found"));
     }
@@ -447,7 +436,7 @@ export async function archiveIncidentById(req: Request, res: Response) {
     const archivedIncident = await archiveIncidentByIdQuery(
       incidentId,
       req.organizationId!,
-      transaction
+      transaction,
     );
     await transaction.commit();
 
@@ -455,18 +444,16 @@ export async function archiveIncidentById(req: Request, res: Response) {
       "successful",
       "incident archived",
       "archiveIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
-    return res
-      .status(200)
-      .json(STATUS_CODE[200](archivedIncident.toSafeJSON()));
+    return res.status(200).json(STATUS_CODE[200](archivedIncident.toSafeJSON()));
   } catch (error) {
     await transaction.rollback();
     logStructured(
       "error",
       "failed to archive incident",
       "archiveIncidentById",
-      "incidentManagement.controller.ts"
+      "incidentManagement.controller.ts",
     );
     logger.error("❌ Error in archiveIncidentById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

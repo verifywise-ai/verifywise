@@ -67,4 +67,3 @@ export class TiersModel extends Model<TiersModel> implements ITiers {
     }
   }
 }
-

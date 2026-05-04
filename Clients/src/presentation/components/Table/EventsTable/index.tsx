@@ -35,9 +35,7 @@ type SortConfig = {
   direction: SortDirection;
 };
 
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
 const TABLE_COLUMNS = [
   { id: "id", label: "ID" },
@@ -49,9 +47,7 @@ const TABLE_COLUMNS = [
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 
-const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({
-  eventType,
-}) => {
+const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({ eventType }) => {
   const eventTypeStyles = {
     Create: { bg: "#E6F4EA", color: `${status.success.text}` },
     Read: { bg: "#DCEFFF", color: "#1976D2" },
@@ -92,7 +88,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("eventTracker", DEFAULT_ROWS_PER_PAGE)
+    getPaginationRowCount("eventTracker", DEFAULT_ROWS_PER_PAGE),
   );
 
   // Initialize sorting state from localStorage or default to no sorting
@@ -125,15 +121,12 @@ const EventsTable: React.FC<IEventsTableProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("eventTracker", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    setPaginationRowCount("eventTracker", newRowsPerPage);
+    setPage(0);
+  }, []);
 
   // Sorting handlers
   const handleSort = useCallback((columnId: string) => {
@@ -178,12 +171,10 @@ const EventsTable: React.FC<IEventsTableProps> = ({
         bValue = b.description?.toLowerCase() || "";
       } else if (sortKey.includes("user")) {
         // Get user name for sorting, fallback to user_id
-        const aUserName = formattedUsers?.find(
-          (user: any) => user._id === a.user_id
-        )?.name?.toLowerCase() || "";
-        const bUserName = formattedUsers?.find(
-          (user: any) => user._id === b.user_id
-        )?.name?.toLowerCase() || "";
+        const aUserName =
+          formattedUsers?.find((user: any) => user._id === a.user_id)?.name?.toLowerCase() || "";
+        const bUserName =
+          formattedUsers?.find((user: any) => user._id === b.user_id)?.name?.toLowerCase() || "";
         aValue = aUserName || a.user_id?.toString() || "";
         bValue = bUserName || b.user_id?.toString() || "";
       } else if (sortKey.includes("timestamp") || sortKey.includes("time")) {
@@ -219,8 +210,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
     () => (
       <TableHead
         sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
+          backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
         }}
       >
         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -233,8 +223,8 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   column.id === "description"
                     ? "auto"
                     : column.id === "id"
-                    ? "80px"
-                    : "fit-content",
+                      ? "80px"
+                      : "fit-content",
                 whiteSpace: column.id === "description" ? "normal" : "nowrap",
                 cursor: "pointer",
                 userSelect: "none",
@@ -252,7 +242,12 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   gap: theme.spacing(2),
                 }}
               >
-                <div style={{ fontWeight: 400, color: sortConfig.key === column.label ? "primary.main" : "inherit" }}>
+                <div
+                  style={{
+                    fontWeight: 400,
+                    color: sortConfig.key === column.label ? "primary.main" : "inherit",
+                  }}
+                >
                   {column.label}
                 </div>
                 <Box
@@ -268,9 +263,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   {sortConfig.key === column.label && sortConfig.direction === "desc" && (
                     <ChevronDown size={16} />
                   )}
-                  {sortConfig.key !== column.label && (
-                    <ChevronsUpDown size={16} />
-                  )}
+                  {sortConfig.key !== column.label && <ChevronsUpDown size={16} />}
                 </Box>
               </Box>
             </TableCell>
@@ -278,96 +271,107 @@ const EventsTable: React.FC<IEventsTableProps> = ({
         </TableRow>
       </TableHead>
     ),
-    [sortConfig, handleSort, theme]
+    [sortConfig, handleSort, theme],
   );
 
   const tableBody = useMemo(
     () => (
       <TableBody>
         {sortedData?.length > 0 ? (
-          sortedData
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((event) => (
-              <TableRow
-                key={event.id}
+          sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((event) => (
+            <TableRow
+              key={event.id}
+              sx={{
+                ...singleTheme.tableStyles.primary.body.row,
+                "&:hover": { backgroundColor: "background.surface", cursor: "pointer" },
+              }}
+            >
+              <TableCell
                 sx={{
-                  ...singleTheme.tableStyles.primary.body.row,
-                  "&:hover": { backgroundColor: "background.surface", cursor: "pointer" },
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  width: "80px",
+                  whiteSpace: "nowrap",
+                  backgroundColor:
+                    sortConfig.key && sortConfig.key.toLowerCase().includes("id")
+                      ? "#e8e8e8"
+                      : "#fafafa",
                 }}
               >
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    width: "80px",
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key && sortConfig.key.toLowerCase().includes("id") ? "#e8e8e8" : "#fafafa",
-                  }}
-                >
-                  {event.id}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    width: "fit-content",
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key && (sortConfig.key.toLowerCase().includes("event") || sortConfig.key.toLowerCase().includes("type")) ? "background.surface" : "inherit",
-                  }}
-                >
-                  <EventTypeBadge eventType={event.event_type} />
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    width: "auto",
-                    whiteSpace: "normal",
-                    backgroundColor: sortConfig.key && sortConfig.key.toLowerCase().includes("description") ? "background.surface" : "inherit",
-                  }}
-                >
-                  {event.description}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    width: "fit-content",
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key && sortConfig.key.toLowerCase().includes("user") ? "background.surface" : "inherit",
-                  }}
-                >
-                  {(() => {
-                    const userName = formattedUsers?.find(
-                      (user: any) => user._id === event.user_id
-                    )?.name;
-                    return userName
-                      ? `${userName} (${event.user_id})`
-                      : event.user_id;
-                  })()}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    width: "fit-content",
-                    whiteSpace: "nowrap",
-                    backgroundColor: sortConfig.key && (sortConfig.key.toLowerCase().includes("timestamp") || sortConfig.key.toLowerCase().includes("time")) ? "background.surface" : "inherit",
-                  }}
-                >
-                  {event.timestamp ? formatDateTime(event.timestamp) : "N/A"}
-                </TableCell>
-              </TableRow>
-            ))
+                {event.id}
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  width: "fit-content",
+                  whiteSpace: "nowrap",
+                  backgroundColor:
+                    sortConfig.key &&
+                    (sortConfig.key.toLowerCase().includes("event") ||
+                      sortConfig.key.toLowerCase().includes("type"))
+                      ? "background.surface"
+                      : "inherit",
+                }}
+              >
+                <EventTypeBadge eventType={event.event_type} />
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  width: "auto",
+                  whiteSpace: "normal",
+                  backgroundColor:
+                    sortConfig.key && sortConfig.key.toLowerCase().includes("description")
+                      ? "background.surface"
+                      : "inherit",
+                }}
+              >
+                {event.description}
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  width: "fit-content",
+                  whiteSpace: "nowrap",
+                  backgroundColor:
+                    sortConfig.key && sortConfig.key.toLowerCase().includes("user")
+                      ? "background.surface"
+                      : "inherit",
+                }}
+              >
+                {(() => {
+                  const userName = formattedUsers?.find(
+                    (user: any) => user._id === event.user_id,
+                  )?.name;
+                  return userName ? `${userName} (${event.user_id})` : event.user_id;
+                })()}
+              </TableCell>
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  width: "fit-content",
+                  whiteSpace: "nowrap",
+                  backgroundColor:
+                    sortConfig.key &&
+                    (sortConfig.key.toLowerCase().includes("timestamp") ||
+                      sortConfig.key.toLowerCase().includes("time"))
+                      ? "background.surface"
+                      : "inherit",
+                }}
+              >
+                {event.timestamp ? formatDateTime(event.timestamp) : "N/A"}
+              </TableCell>
+            </TableRow>
+          ))
         ) : (
           <TableRow>
-            <TableCell
-              colSpan={TABLE_COLUMNS.length}
-              align="center"
-              sx={{ py: 4 }}
-            >
+            <TableCell colSpan={TABLE_COLUMNS.length} align="center" sx={{ py: 4 }}>
               No event data available.
             </TableCell>
           </TableRow>
         )}
       </TableBody>
     ),
-    [sortedData, page, rowsPerPage, formattedUsers]
+    [sortedData, page, rowsPerPage, formattedUsers],
   );
 
   if (isLoading) {
@@ -429,15 +433,10 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25]}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => (
-                  <TablePaginationActions {...props} />
-                )}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(
-                    0,
-                    Math.ceil(count / rowsPerPage)
-                  )}`
+                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                 }
                 slotProps={{
                   select: {

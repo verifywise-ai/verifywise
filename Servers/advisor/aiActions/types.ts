@@ -146,9 +146,7 @@ export interface AiActionHandler<TInput = unknown> {
    * approval reaches the approved state. Runs inside the same transaction
    * as the approval state change, so any error rolls both back.
    */
-  execute: (
-    ctx: AiActionExecuteContext<TInput>,
-  ) => Promise<AiActionExecuteResult>;
+  execute: (ctx: AiActionExecuteContext<TInput>) => Promise<AiActionExecuteResult>;
 
   /**
    * Pure function that produces a short human-readable summary of the

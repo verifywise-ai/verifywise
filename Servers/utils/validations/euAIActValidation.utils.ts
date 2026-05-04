@@ -30,11 +30,7 @@ export const EU_AI_ACT_VALIDATION_LIMITS = {
 export const EU_AI_ACT_ENUMS = {
   CONTROL_STATUS: ["Waiting", "In progress", "Done"] as const,
   SUBCONTROL_STATUS: ["Waiting", "In progress", "Done"] as const,
-  RISK_REVIEW: [
-    "Acceptable risk",
-    "Residual risk",
-    "Unacceptable risk",
-  ] as const,
+  RISK_REVIEW: ["Acceptable risk", "Residual risk", "Unacceptable risk"] as const,
   ANSWER_STATUS: ["Not started", "In progress", "Done"] as const,
 } as const;
 
@@ -141,12 +137,7 @@ export const validateControlStatus = (value: any): ValidationResult => {
   if (value === undefined || value === null) {
     return { isValid: true }; // Optional field
   }
-  return validateEnum(
-    value,
-    "Control status",
-    EU_AI_ACT_ENUMS.CONTROL_STATUS,
-    false
-  );
+  return validateEnum(value, "Control status", EU_AI_ACT_ENUMS.CONTROL_STATUS, false);
 };
 
 /**
@@ -156,12 +147,7 @@ export const validateSubcontrolStatus = (value: any): ValidationResult => {
   if (value === undefined || value === null) {
     return { isValid: true }; // Optional field
   }
-  return validateEnum(
-    value,
-    "Subcontrol status",
-    EU_AI_ACT_ENUMS.SUBCONTROL_STATUS,
-    false
-  );
+  return validateEnum(value, "Subcontrol status", EU_AI_ACT_ENUMS.SUBCONTROL_STATUS, false);
 };
 
 /**
@@ -181,12 +167,7 @@ export const validateAnswerStatus = (value: any): ValidationResult => {
   if (value === undefined || value === null) {
     return { isValid: true }; // Optional field
   }
-  return validateEnum(
-    value,
-    "Answer status",
-    EU_AI_ACT_ENUMS.ANSWER_STATUS,
-    false
-  );
+  return validateEnum(value, "Answer status", EU_AI_ACT_ENUMS.ANSWER_STATUS, false);
 };
 
 /**
@@ -249,11 +230,7 @@ export const validateRisksDelete = (value: any): ValidationResult => {
 
   // Validate each risk ID in the array
   for (let i = 0; i < risksArray.length; i++) {
-    const riskIdValidation = validateForeignKey(
-      risksArray[i],
-      `Risk ID at index ${i}`,
-      true
-    );
+    const riskIdValidation = validateForeignKey(risksArray[i], `Risk ID at index ${i}`, true);
     if (!riskIdValidation.isValid) {
       return {
         isValid: false,
@@ -307,7 +284,7 @@ export const validateRisksMitigated = (value: any): ValidationResult => {
     const riskIdValidation = validateForeignKey(
       risksArray[i],
       `Mitigated risk ID at index ${i}`,
-      true
+      true,
     );
     if (!riskIdValidation.isValid) {
       return {
@@ -356,11 +333,7 @@ export const validateFilesDelete = (value: any): ValidationResult => {
 
   // Validate each file ID in the array
   for (let i = 0; i < filesToDelete.length; i++) {
-    const fileIdValidation = validateForeignKey(
-      filesToDelete[i],
-      `File ID at index ${i}`,
-      true
-    );
+    const fileIdValidation = validateForeignKey(filesToDelete[i], `File ID at index ${i}`, true);
     if (!fileIdValidation.isValid) {
       return {
         isValid: false,
@@ -423,11 +396,7 @@ export const validateSubControls = (value: any): ValidationResult => {
 
     // Validate subcontrol ID if present
     if (subcontrol.id !== undefined) {
-      const idValidation = validateForeignKey(
-        subcontrol.id,
-        `SubControl ID at index ${i}`,
-        false
-      );
+      const idValidation = validateForeignKey(subcontrol.id, `SubControl ID at index ${i}`, false);
       if (!idValidation.isValid) {
         return {
           isValid: false,
@@ -573,8 +542,7 @@ export const validateUpdateControl = (data: any): ValidationError[] => {
   ];
 
   const hasMeaningfulField = meaningfulFields.some(
-    (field) =>
-      data[field] !== undefined && data[field] !== null && data[field] !== ""
+    (field) => data[field] !== undefined && data[field] !== null && data[field] !== "",
   );
 
   if (!hasMeaningfulField) {
@@ -595,16 +563,10 @@ export const validateUpdateAnswer = (data: any): ValidationError[] => {
   const errors = validateSchema(data, updateAnswerSchema);
 
   // Check if at least some meaningful data is provided
-  const meaningfulFields = [
-    "answer",
-    "status",
-    "risksDelete",
-    "risksMitigated",
-  ];
+  const meaningfulFields = ["answer", "status", "risksDelete", "risksMitigated"];
 
   const hasMeaningfulField = meaningfulFields.some(
-    (field) =>
-      data[field] !== undefined && data[field] !== null && data[field] !== ""
+    (field) => data[field] !== undefined && data[field] !== null && data[field] !== "",
   );
 
   if (!hasMeaningfulField) {
@@ -621,9 +583,7 @@ export const validateUpdateAnswer = (data: any): ValidationError[] => {
 /**
  * Validates project framework ID query parameter
  */
-export const validateProjectFrameworkIdQuery = (
-  value: any
-): ValidationResult => {
+export const validateProjectFrameworkIdQuery = (value: any): ValidationResult => {
   return validateProjectFrameworkIdParam(value);
 };
 
@@ -707,10 +667,7 @@ export const validateEUAnswerIdParam = (id: any): ValidationResult => {
 /**
  * Complete validation for EU AI Act control updates
  */
-export const validateCompleteControlUpdate = (
-  data: any,
-  files?: any[]
-): ValidationError[] => {
+export const validateCompleteControlUpdate = (data: any, files?: any[]): ValidationError[] => {
   const errors = validateUpdateControl(data);
 
   // Add file validation if files are present

@@ -65,12 +65,14 @@
 **Decision**: Use SSE instead of WebSockets
 
 **Rationale**:
+
 - **Simpler**: One-way server-to-client communication (perfect for notifications)
 - **HTTP-based**: Works with existing authentication (JWT in Authorization header)
 - **Auto-reconnect**: Browsers automatically reconnect on connection loss
 - **Efficient**: Lower overhead than WebSockets for push-only scenarios
 
 **Implementation**:
+
 - Frontend uses `fetch()` with `ReadableStream` to manually parse SSE
 - Allows sending custom headers (Authorization: Bearer token)
 - Connection kept alive with heartbeat every 30 seconds
@@ -80,17 +82,24 @@
 **Decision**: Use Redis Pub/Sub to broadcast notifications
 
 **Rationale**:
+
 - **Multi-server deployment**: In production, multiple server instances run behind load balancer
 - **Connection affinity**: User's SSE connection might be on Server 1, but approval happens on Server 2
 - **Broadcast mechanism**: Redis ensures ALL servers receive the notification
 - **Simple integration**: Already using Redis for other features
 
 **Implementation**:
+
 ```typescript
 // Publisher (any server)
-redisClient.publish("approval-notifications", JSON.stringify({
-  tenantId, userId, notification
-}));
+redisClient.publish(
+  "approval-notifications",
+  JSON.stringify({
+    tenantId,
+    userId,
+    notification,
+  }),
+);
 
 // Subscriber (all servers)
 subscriber.on("message", (channel, message) => {
@@ -107,11 +116,13 @@ subscriber.on("message", (channel, message) => {
 **Decision**: Send notifications AFTER database transaction commits
 
 **Rationale**:
+
 - **Data visibility**: Queries in notification service run on separate connections
 - **Transaction isolation**: Uncommitted data is invisible to other connections
 - **Consistency**: Prevents notifying about changes that might be rolled back
 
 **Before (Bug)**:
+
 ```typescript
 await createApprovalRequest(..., transaction);
 notifyStepApprovers(...);  // ❌ Query finds 0 approvers (uncommitted data)
@@ -119,6 +130,7 @@ await transaction.commit();
 ```
 
 **After (Fixed)**:
+
 ```typescript
 await createApprovalRequest(..., transaction);
 const notificationInfo = { requestId, stepNumber, ... };
@@ -131,12 +143,14 @@ notifyStepApprovers(notificationInfo);  // ✅ Now approvers are visible
 **Decision**: Store framework IDs in `pending_frameworks`, create after approval
 
 **Rationale**:
+
 - **Prevent orphaned data**: If approval rejected, no framework records exist
 - **Atomic operation**: Framework creation and approval in same transaction
 - **Clean rollback**: If framework creation fails, approval isn't marked complete
 - **Audit trail**: `pending_frameworks` shows what was requested
 
 **Flow**:
+
 ```typescript
 // At creation
 if (approval_workflow_id) {
@@ -158,12 +172,14 @@ if (status === APPROVED && pending_frameworks) {
 **Decision**: Use `current_step` column with requires_all_approvers flag
 
 **Rationale**:
+
 - **Simple state tracking**: Single column tracks progress
 - **Flexible requirements**: Steps can require all approvers OR just one
 - **Sequential processing**: Clear order (Step 1 → Step 2 → Step 3)
 - **Easy queries**: `WHERE step_number = current_step` gets active step
 
 **Logic**:
+
 ```typescript
 const shouldComplete = requires_all_approvers
   ? pendingCount === 0     // All must respond
@@ -249,25 +265,29 @@ if (shouldComplete) {
 ### Multi-Tenancy Isolation
 
 **Database Level**:
+
 - All queries use tenant-specific schemas: `"${tenantId}".table_name`
 - No cross-tenant queries possible
 
 **Connection Level**:
+
 - SSE connections keyed by `${tenantId}:${userId}`
 - Tenant validation before sending notifications
 
 **API Level**:
+
 - JWT middleware extracts and validates `tenantId`
 - All controllers require authenticated tenant context
 
 ### Notification Security
 
 **Double Validation**:
+
 ```typescript
 // When storing connection
 connections.set(`${tenantId}:${userId}`, {
   response: res,
-  tenantId: tenantId,  // Store for verification
+  tenantId: tenantId, // Store for verification
   userId: userId,
 });
 
@@ -318,6 +338,7 @@ The system is designed to scale horizontally:
 ### Transaction Rollback
 
 All database operations in transactions:
+
 ```typescript
 try {
   const transaction = await sequelize.transaction();
@@ -332,6 +353,7 @@ try {
 ### Notification Failures
 
 Notifications are fire-and-forget with error logging:
+
 ```typescript
 notifyStepApprovers(...).catch(error => {
   console.error("Error sending notification:", error);
@@ -342,6 +364,7 @@ notifyStepApprovers(...).catch(error => {
 ### SSE Reconnection
 
 Frontend automatically reconnects on connection loss:
+
 ```typescript
 if (autoReconnect && !isManuallyDisconnectedRef.current) {
   setTimeout(() => connect(), reconnectDelay);

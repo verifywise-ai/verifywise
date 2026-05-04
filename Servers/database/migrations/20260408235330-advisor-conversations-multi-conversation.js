@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Add multi-conversation support to `advisor_conversations`.

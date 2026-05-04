@@ -17,7 +17,10 @@ import {
   useTheme,
 } from "@mui/material";
 import { X } from "lucide-react";
-import { EntityGraphFocusProvider, useEntityGraphFocus } from "../../contexts/EntityGraphFocusContext";
+import {
+  EntityGraphFocusProvider,
+  useEntityGraphFocus,
+} from "../../contexts/EntityGraphFocusContext";
 // Import ReactFlow CSS at modal level to ensure it's available in the portal
 import "@xyflow/react/dist/style.css";
 // Import EntityGraph directly (not lazy) to avoid portal/context issues
@@ -34,8 +37,7 @@ const ENTITY_TYPE_LABELS: Record<FocusEntityType, string> = {
   framework: "Framework",
 };
 
-const getEntityTypeLabel = (type: FocusEntityType): string =>
-  ENTITY_TYPE_LABELS[type] || type;
+const getEntityTypeLabel = (type: FocusEntityType): string => ENTITY_TYPE_LABELS[type] || type;
 
 interface EntityGraphModalProps {
   open: boolean;
@@ -195,9 +197,7 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
               }}
             >
               <CircularProgress size={24} />
-              <Typography sx={{ color: theme.palette.other.icon }}>
-                Loading graph...
-              </Typography>
+              <Typography sx={{ color: theme.palette.other.icon }}>Loading graph...</Typography>
             </Box>
           )}
         </Box>

@@ -16,8 +16,18 @@ vi.mock("../../config/queryClient", () => ({
   invalidateQueries: vi.fn(),
 }));
 
-import { useGetAllEntities, useGetEntityById, useCreateEntity, useDeleteEntity } from "../useBaseQueries";
-import { getAllEntities, getEntityById, createNewUser, deleteEntityById } from "../../repository/entity.repository";
+import {
+  useGetAllEntities,
+  useGetEntityById,
+  useCreateEntity,
+  useDeleteEntity,
+} from "../useBaseQueries";
+import {
+  getAllEntities,
+  getEntityById,
+  createNewUser,
+  deleteEntityById,
+} from "../../repository/entity.repository";
 
 const mockGetAll = vi.mocked(getAllEntities);
 const mockGetById = vi.mocked(getEntityById);
@@ -51,7 +61,9 @@ describe("useGetEntityById", () => {
   it("fetches entity by ID", async () => {
     mockGetById.mockResolvedValue({ data: { id: 5, name: "Test" } });
 
-    const { result } = renderHook(() => useGetEntityById("/users", 5), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useGetEntityById("/users", 5), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockGetById).toHaveBeenCalledWith({ routeUrl: "/users/5" });

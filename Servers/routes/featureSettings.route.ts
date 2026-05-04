@@ -1,9 +1,6 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
-import {
-  getFeatureSettings,
-  updateFeatureSettings,
-} from "../controllers/featureSettings.ctrl";
+import { getFeatureSettings, updateFeatureSettings } from "../controllers/featureSettings.ctrl";
 
 const router = express.Router();
 

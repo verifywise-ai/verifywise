@@ -20,8 +20,7 @@ function hasFailedMetrics(eval_: ModelEvaluation): boolean {
   if (eval_.eval_type === "experiment") {
     const results = eval_.results;
     if (!results?.metric_results) return false;
-    const thresholds =
-      eval_.config?.thresholds || eval_.config?.metric_thresholds || {};
+    const thresholds = eval_.config?.thresholds || eval_.config?.metric_thresholds || {};
     for (const [metric, data] of Object.entries(results.metric_results)) {
       const score = (data as any)?.average ?? (data as any)?.score;
       const threshold = thresholds[metric];
@@ -54,26 +53,18 @@ function getKeyResult(eval_: ModelEvaluation): string {
     if (entries.length === 0) return "—";
     const [metric, data] = entries[0];
     const score = (data as any)?.average ?? (data as any)?.score;
-    return score !== undefined
-      ? `${metric}: ${(score as number).toFixed(2)}`
-      : "—";
+    return score !== undefined ? `${metric}: ${(score as number).toFixed(2)}` : "—";
   }
   if (eval_.eval_type === "bias_audit") {
     const results = eval_.results;
     if (!results?.categories) return "—";
     const cats = Object.values(results.categories) as any[];
-    const totalGroups = cats.reduce(
-      (sum, c) => sum + (c?.groups?.length || 0),
-      0
-    );
+    const totalGroups = cats.reduce((sum, c) => sum + (c?.groups?.length || 0), 0);
     const flagged = cats.reduce(
-      (sum, c) =>
-        sum + (c?.groups?.filter((g: any) => g.flagged)?.length || 0),
-      0
+      (sum, c) => sum + (c?.groups?.filter((g: any) => g.flagged)?.length || 0),
+      0,
     );
-    return flagged > 0
-      ? `${flagged}/${totalGroups} flagged`
-      : `${totalGroups} groups passed`;
+    return flagged > 0 ? `${flagged}/${totalGroups} flagged` : `${totalGroups} groups passed`;
   }
   return "—";
 }
@@ -93,15 +84,11 @@ export default function ModelEvaluationsTab() {
   const allEvals = useMemo(() => {
     if (!data) return [];
     return [...data.experiments, ...data.biasAudits].sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
   }, [data]);
 
-  const flaggedCount = useMemo(
-    () => allEvals.filter(hasFailedMetrics).length,
-    [allEvals]
-  );
+  const flaggedCount = useMemo(() => allEvals.filter(hasFailedMetrics).length, [allEvals]);
 
   if (loading) {
     return (
@@ -121,29 +108,19 @@ export default function ModelEvaluationsTab() {
           icon={<AlertTriangle size={16} strokeWidth={1.5} />}
           sx={{ mb: "16px", fontSize: "13px", borderRadius: "4px" }}
         >
-          {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a
-          potential risk. Consider adding{" "}
-          {flaggedCount !== 1 ? "these" : "this"} to the risk register.
+          {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a potential risk.
+          Consider adding {flaggedCount !== 1 ? "these" : "this"} to the risk register.
         </MuiAlert>
       )}
 
       {allEvals.length === 0 ? (
         <Box sx={{ textAlign: "center", py: "48px" }}>
-          <FlaskConical
-            size={32}
-            color={palette.text.secondary}
-            strokeWidth={1.5}
-          />
-          <Typography
-            sx={{ mt: "8px", fontSize: "13px", color: palette.text.secondary }}
-          >
+          <FlaskConical size={32} color={palette.text.secondary} strokeWidth={1.5} />
+          <Typography sx={{ mt: "8px", fontSize: "13px", color: palette.text.secondary }}>
             No evaluations linked to any model yet
           </Typography>
-          <Typography
-            sx={{ mt: "4px", fontSize: "12px", color: palette.text.secondary }}
-          >
-            Link evaluations to models when creating experiments or bias audits
-            in LLM Evals
+          <Typography sx={{ mt: "4px", fontSize: "12px", color: palette.text.secondary }}>
+            Link evaluations to models when creating experiments or bias audits in LLM Evals
           </Typography>
         </Box>
       ) : (
@@ -183,13 +160,9 @@ export default function ModelEvaluationsTab() {
               <tr key={e.id}>
                 <td>{e.name || e.id}</td>
                 <td>
-                  {e.model_provider && e.model_name
-                    ? `${e.model_provider} — ${e.model_name}`
-                    : "—"}
+                  {e.model_provider && e.model_name ? `${e.model_provider} — ${e.model_name}` : "—"}
                 </td>
-                <td>
-                  {e.eval_type === "experiment" ? "Experiment" : "Bias audit"}
-                </td>
+                <td>{e.eval_type === "experiment" ? "Experiment" : "Bias audit"}</td>
                 <td>
                   <Chip
                     label={e.status}
@@ -200,15 +173,9 @@ export default function ModelEvaluationsTab() {
                 </td>
                 <td>
                   <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <Typography sx={{ fontSize: "13px" }}>
-                      {getKeyResult(e)}
-                    </Typography>
+                    <Typography sx={{ fontSize: "13px" }}>{getKeyResult(e)}</Typography>
                     {hasFailedMetrics(e) && (
-                      <AlertTriangle
-                        size={14}
-                        color="#f44336"
-                        strokeWidth={1.5}
-                      />
+                      <AlertTriangle size={14} color="#f44336" strokeWidth={1.5} />
                     )}
                   </Stack>
                 </td>

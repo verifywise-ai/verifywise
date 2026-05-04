@@ -18,7 +18,7 @@ export class ISO27001AnnexControlStructModel {
   }
 
   static createNewISO27001AnnexControlStruct(
-    data: ISO27001AnnexControlStructModel
+    data: ISO27001AnnexControlStructModel,
   ): ISO27001AnnexControlStructModel {
     return new ISO27001AnnexControlStructModel(data);
   }

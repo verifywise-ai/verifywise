@@ -38,7 +38,7 @@ export const recordIncidentChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "incident",
@@ -49,7 +49,7 @@ export const recordIncidentChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -62,7 +62,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "incident",
@@ -70,7 +70,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -82,15 +82,9 @@ export const getIncidentChangeHistory = async (
   incidentId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "incident",
-    incidentId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("incident", incidentId, organizationId, limit, offset);
 };
 
 /**
@@ -99,7 +93,7 @@ export const getIncidentChangeHistory = async (
  */
 export const trackIncidentChanges = async (
   oldModel: IAIIncidentManagement,
-  newModel: Partial<IAIIncidentManagement>
+  newModel: Partial<IAIIncidentManagement>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("incident", oldModel, newModel);
 };
@@ -113,7 +107,7 @@ export const recordIncidentCreation = async (
   changedByUserId: number,
   organizationId: number,
   incidentData: Partial<IAIIncidentManagement>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "incident",
@@ -121,7 +115,7 @@ export const recordIncidentCreation = async (
     changedByUserId,
     organizationId,
     incidentData,
-    transaction
+    transaction,
   );
 };
 
@@ -133,13 +127,7 @@ export const recordIncidentDeletion = async (
   incidentId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
-  return recordEntityDeletion(
-    "incident",
-    incidentId,
-    changedByUserId,
-    organizationId,
-    transaction
-  );
+  return recordEntityDeletion("incident", incidentId, changedByUserId, organizationId, transaction);
 };

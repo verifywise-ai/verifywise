@@ -1,10 +1,4 @@
-import {
-  Box,
-  Typography,
-  Chip,
-  Stack,
-  Divider,
-} from "@mui/material";
+import { Box, Typography, Chip, Stack, Divider } from "@mui/material";
 import { Check, FileText } from "lucide-react";
 import { brand, text, background, status } from "../../../themes/palette";
 
@@ -21,7 +15,11 @@ export interface TemplateRow {
 }
 
 // Helper function to calculate predominant difficulty
-const getPredominantDifficultyLabel = (diff?: { easy: number; medium: number; hard: number }): string => {
+const getPredominantDifficultyLabel = (diff?: {
+  easy: number;
+  medium: number;
+  hard: number;
+}): string => {
   if (!diff) return "Medium";
   const total = diff.easy + diff.medium + diff.hard;
   if (total === 0) return "Medium";
@@ -114,7 +112,10 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               flexShrink: 0,
             }}
           >
-            <FileText size={compact ? 14 : 16} color={isSelected ? `${background.main}` : `${status.default.text}`} />
+            <FileText
+              size={compact ? 14 : 16}
+              color={isSelected ? `${background.main}` : `${status.default.text}`}
+            />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
@@ -145,7 +146,13 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           </Box>
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
             <Chip
-              label={template.category === "rag" ? "RAG" : template.category === "chatbot" ? "Chatbot" : "Agent"}
+              label={
+                template.category === "rag"
+                  ? "RAG"
+                  : template.category === "chatbot"
+                    ? "Chatbot"
+                    : "Agent"
+              }
               size="small"
               sx={{
                 height: compact ? "18px" : "20px",
@@ -182,7 +189,9 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
   if (loading) {
     return (
       <Box sx={{ py: 3, textAlign: "center" }}>
-        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>Loading templates...</Typography>
+        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
+          Loading templates...
+        </Typography>
       </Box>
     );
   }
@@ -190,7 +199,9 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
   if (templates.length === 0) {
     return (
       <Box sx={{ py: 3, textAlign: "center" }}>
-        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>No templates available</Typography>
+        <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
+          No templates available
+        </Typography>
       </Box>
     );
   }
@@ -273,9 +284,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {/* Simulated templates */}
           {simulated.length > 0 && (
             <Box>
-              {(multiTurn.length > 0 || singleTurn.length > 0) && (
-                <Divider sx={{ mb: 2 }} />
-              )}
+              {(multiTurn.length > 0 || singleTurn.length > 0) && <Divider sx={{ mb: 2 }} />}
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
                 <Typography
                   sx={{
@@ -335,4 +344,3 @@ export const getTypeStyles = (type?: string) => {
       return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
   }
 };
-

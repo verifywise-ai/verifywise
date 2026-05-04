@@ -19,8 +19,14 @@ describe("deepEvalArenaService", () => {
   });
 
   it("createComparison posts to /deepeval/arena/compare", async () => {
-    const payload = { name: "Test", contestants: [], metric: { name: "m", criteria: "c", evaluationParams: [] as any } };
-    mockAxios.post.mockResolvedValue({ data: { id: "abc", status: "pending", message: "ok", contestants: [] } });
+    const payload = {
+      name: "Test",
+      contestants: [],
+      metric: { name: "m", criteria: "c", evaluationParams: [] as any },
+    };
+    mockAxios.post.mockResolvedValue({
+      data: { id: "abc", status: "pending", message: "ok", contestants: [] },
+    });
     const result = await deepEvalArenaService.createComparison(payload as any);
     expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/arena/compare", payload);
     expect(result.id).toBe("abc");
@@ -29,7 +35,10 @@ describe("deepEvalArenaService", () => {
   it("listComparisons fetches with timeout", async () => {
     mockAxios.get.mockResolvedValue({ data: { comparisons: [] } });
     const result = await deepEvalArenaService.listComparisons({ org_id: "org1" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/arena/comparisons", { params: { org_id: "org1" }, timeout: 60000 });
+    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/arena/comparisons", {
+      params: { org_id: "org1" },
+      timeout: 60000,
+    });
     expect(result.comparisons).toEqual([]);
   });
 
@@ -41,16 +50,22 @@ describe("deepEvalArenaService", () => {
   });
 
   it("getComparisonResults fetches results", async () => {
-    mockAxios.get.mockResolvedValue({ data: { id: "y", results: { winner: "A", winCounts: {}, detailedResults: [] } } });
+    mockAxios.get.mockResolvedValue({
+      data: { id: "y", results: { winner: "A", winCounts: {}, detailedResults: [] } },
+    });
     const result = await deepEvalArenaService.getComparisonResults("y");
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/arena/comparisons/y/results", { timeout: 60000 });
+    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/arena/comparisons/y/results", {
+      timeout: 60000,
+    });
     expect(result.id).toBe("y");
   });
 
   it("deleteComparison deletes by ID", async () => {
     mockAxios.delete.mockResolvedValue({ data: { message: "deleted", id: "z" } });
     const result = await deepEvalArenaService.deleteComparison("z");
-    expect(mockAxios.delete).toHaveBeenCalledWith("/deepeval/arena/comparisons/z", { timeout: 60000 });
+    expect(mockAxios.delete).toHaveBeenCalledWith("/deepeval/arena/comparisons/z", {
+      timeout: 60000,
+    });
     expect(result.message).toBe("deleted");
   });
 });

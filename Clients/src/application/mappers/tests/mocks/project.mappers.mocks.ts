@@ -67,7 +67,7 @@ export class ProjectDtoToProjectBuilder {
 }
 
 export class ProjectDtoToModelBuilder {
-  private readonly project:ProjectResponseDTO;
+  private readonly project: ProjectResponseDTO;
 
   constructor(id: number = 1) {
     this.project = { ...projectDto };

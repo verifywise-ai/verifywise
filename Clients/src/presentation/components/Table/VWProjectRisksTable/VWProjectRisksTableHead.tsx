@@ -5,8 +5,7 @@ const VWProjectRisksTableHead = ({ columns }: { columns: any[] }) => {
   return (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>

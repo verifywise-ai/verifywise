@@ -122,17 +122,16 @@ const AnimationsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          VerifyWise uses subtle, fast transitions. Most button interactions have
-          no transition for instant feedback. Animations are reserved for modals
-          and loading states.
+          VerifyWise uses subtle, fast transitions. Most button interactions have no transition for
+          instant feedback. Animations are reserved for modals and loading states.
         </Typography>
       </Box>
 
       {/* Transition Durations */}
       <SpecSection title="Transition durations">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Standard duration values used across the application. Shorter durations
-          provide snappier interactions.
+          Standard duration values used across the application. Shorter durations provide snappier
+          interactions.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -191,7 +190,16 @@ const AnimationsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Duration scale
             </Typography>
             <SpecTable
@@ -202,7 +210,17 @@ const AnimationsSection: React.FC = () => {
               }))}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Easing functions
             </Typography>
             <SpecTable
@@ -219,8 +237,8 @@ const AnimationsSection: React.FC = () => {
       {/* Disabled Transitions */}
       <SpecSection title="Disabled transitions">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          VerifyWise intentionally disables transitions on buttons and interactive
-          elements for instant visual feedback.
+          VerifyWise intentionally disables transitions on buttons and interactive elements for
+          instant visual feedback.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -269,7 +287,16 @@ const AnimationsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Components with transition: none
             </Typography>
             <SpecTable
@@ -320,7 +347,9 @@ const AnimationsSection: React.FC = () => {
                   <Stack spacing="24px">
                     {/* Scale In Demo */}
                     <Box>
-                      <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}>
+                      <Typography
+                        sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}
+                      >
                         scaleIn (modals)
                       </Typography>
                       <Box
@@ -347,7 +376,9 @@ const AnimationsSection: React.FC = () => {
 
                     {/* Pulse Demo */}
                     <Box>
-                      <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}>
+                      <Typography
+                        sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}
+                      >
                         pulse (skeletons)
                       </Typography>
                       <Box
@@ -367,7 +398,9 @@ const AnimationsSection: React.FC = () => {
 
                     {/* Float Demo */}
                     <Box>
-                      <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}>
+                      <Typography
+                        sx={{ fontSize: 11, color: theme.palette.text.tertiary, mb: "8px" }}
+                      >
                         float (empty states)
                       </Typography>
                       <Box
@@ -430,7 +463,16 @@ const AnimationsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Animation reference
             </Typography>
             <SpecTable
@@ -445,7 +487,17 @@ const AnimationsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Animation counts
             </Typography>
             <SpecTable
@@ -482,13 +534,13 @@ const AnimationsSection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Use transition: \"none\" for buttons - instant feedback is preferred",
+            'Use transition: "none" for buttons - instant feedback is preferred',
             "Default transition duration is 0.2s with ease or ease-in-out",
             "Use 0.3s for larger elements or background color changes",
             "Modal animations should use scaleIn with 0.2s duration",
             "Skeleton loaders use pulse animation (1.6s infinite)",
             "Avoid animations longer than 0.3s for UI interactions",
-            "Use animation: \"animationName 0.2s\" syntax, not animationDuration",
+            'Use animation: "animationName 0.2s" syntax, not animationDuration',
           ].map((item, index) => (
             <Box
               key={index}
@@ -571,9 +623,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -595,9 +645,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -648,9 +696,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

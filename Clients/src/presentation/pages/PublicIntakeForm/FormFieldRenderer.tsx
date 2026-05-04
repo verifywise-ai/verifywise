@@ -8,13 +8,7 @@ import { FormField } from "../IntakeFormBuilder/types";
 /**
  * Renders a field label
  */
-function FieldLabel({
-  label,
-  required,
-}: {
-  label: string;
-  required?: boolean;
-}) {
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
     <Box sx={{ mb: "6px" }}>
       <Typography sx={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
@@ -107,14 +101,27 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               rules={{
                 required: isRequired ? "This field is required" : false,
                 minLength: field.validation?.minLength
-                  ? { value: field.validation.minLength, message: `Minimum ${field.validation.minLength} characters` }
+                  ? {
+                      value: field.validation.minLength,
+                      message: `Minimum ${field.validation.minLength} characters`,
+                    }
                   : undefined,
                 maxLength: field.validation?.maxLength
-                  ? { value: field.validation.maxLength, message: `Maximum ${field.validation.maxLength} characters` }
+                  ? {
+                      value: field.validation.maxLength,
+                      message: `Maximum ${field.validation.maxLength} characters`,
+                    }
                   : undefined,
                 pattern: (() => {
-                  const regex = field.validation?.pattern ? safeRegExp(field.validation.pattern) : null;
-                  return regex ? { value: regex, message: field.validation?.patternMessage || "Invalid format" } : undefined;
+                  const regex = field.validation?.pattern
+                    ? safeRegExp(field.validation.pattern)
+                    : null;
+                  return regex
+                    ? {
+                        value: regex,
+                        message: field.validation?.patternMessage || "Invalid format",
+                      }
+                    : undefined;
                 })(),
               }}
               render={({ field: fieldProps }) => (
@@ -147,10 +154,16 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               rules={{
                 required: isRequired ? "This field is required" : false,
                 minLength: field.validation?.minLength
-                  ? { value: field.validation.minLength, message: `Minimum ${field.validation.minLength} characters` }
+                  ? {
+                      value: field.validation.minLength,
+                      message: `Minimum ${field.validation.minLength} characters`,
+                    }
                   : undefined,
                 maxLength: field.validation?.maxLength
-                  ? { value: field.validation.maxLength, message: `Maximum ${field.validation.maxLength} characters` }
+                  ? {
+                      value: field.validation.maxLength,
+                      message: `Maximum ${field.validation.maxLength} characters`,
+                    }
                   : undefined,
               }}
               render={({ field: fieldProps }) => (
@@ -182,12 +195,20 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
-                min: field.validation?.min !== undefined
-                  ? { value: field.validation.min, message: `Minimum value is ${field.validation.min}` }
-                  : undefined,
-                max: field.validation?.max !== undefined
-                  ? { value: field.validation.max, message: `Maximum value is ${field.validation.max}` }
-                  : undefined,
+                min:
+                  field.validation?.min !== undefined
+                    ? {
+                        value: field.validation.min,
+                        message: `Minimum value is ${field.validation.min}`,
+                      }
+                    : undefined,
+                max:
+                  field.validation?.max !== undefined
+                    ? {
+                        value: field.validation.max,
+                        message: `Maximum value is ${field.validation.max}`,
+                      }
+                    : undefined,
               }}
               render={({ field: fieldProps }) => (
                 <>

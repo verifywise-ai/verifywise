@@ -1,11 +1,5 @@
 import React, { useState, useCallback } from "react";
-import {
-  useTheme,
-  Alert as MuiAlert,
-  Box,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { useTheme, Alert as MuiAlert, Box, Stack, Typography } from "@mui/material";
 import Field from "../../../components/Inputs/Field";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
@@ -30,16 +24,11 @@ const PasswordForm: React.FC = () => {
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
 
-  const [currentPasswordError, setCurrentPasswordError] = useState<
-    string | null
-  >(null);
+  const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
   const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<
-    string | null
-  >(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
-  const [isConfirmationModalOpen, setIsConfirmationModalOpen] =
-    useState<boolean>(false);
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState<boolean>(false);
   const [loading, _] = useState(false);
   const [showToast, setShowToast] = useState(false); // State for CustomizableToast visibility
 
@@ -58,46 +47,31 @@ const PasswordForm: React.FC = () => {
   });
 
   // Handle current password validation
-  const handleCurrentPasswordChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setCurrentPassword(value);
+  const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCurrentPassword(value);
 
-      const validation = checkStringValidation(
-        "Current password",
-        value,
-        8,
-        128,
-        true, // hasUpperCase
-        true, // hasLowerCase
-        true, // hasNumber
-        true // hasSpecialCharacter
-      );
-      setCurrentPasswordError(validation.accepted ? null : validation.message);
-    },
-    []
-  );
+    const validation = checkStringValidation(
+      "Current password",
+      value,
+      8,
+      128,
+      true, // hasUpperCase
+      true, // hasLowerCase
+      true, // hasNumber
+      true, // hasSpecialCharacter
+    );
+    setCurrentPasswordError(validation.accepted ? null : validation.message);
+  }, []);
 
   // Handle new password validation
-  const handleNewPasswordChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setNewPassword(value);
+  const handleNewPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewPassword(value);
 
-      const validation = checkStringValidation(
-        "New password",
-        value,
-        8,
-        128,
-        true,
-        true,
-        true,
-        true
-      );
-      setNewPasswordError(validation.accepted ? null : validation.message);
-    },
-    []
-  );
+    const validation = checkStringValidation("New password", value, 8, 128, true, true, true, true);
+    setNewPasswordError(validation.accepted ? null : validation.message);
+  }, []);
 
   // Handle confirm password validation
   const handleConfirmPasswordChange = useCallback(
@@ -111,7 +85,7 @@ const PasswordForm: React.FC = () => {
         setConfirmPasswordError(null);
       }
     },
-    [newPassword]
+    [newPassword],
   );
 
   // Handle save
@@ -128,7 +102,7 @@ const PasswordForm: React.FC = () => {
       true,
       true,
       true,
-      true
+      true,
     );
     if (!validation.accepted) {
       setNewPasswordError(validation.message);
@@ -226,8 +200,7 @@ const PasswordForm: React.FC = () => {
           onClick={() => setAlert((prev) => ({ ...prev, visible: false }))}
         />
       )}
-      {showToast && <CustomizableToast />}{" "}
-      {/* Show CustomizableToast when showToast is true */}
+      {showToast && <CustomizableToast />} {/* Show CustomizableToast when showToast is true */}
       {!loading && (
         <Box sx={{ width: "100%", maxWidth: 600 }}>
           <Stack sx={{ marginTop: theme.spacing(20) }}>
@@ -274,8 +247,8 @@ const PasswordForm: React.FC = () => {
             )}
 
             <MuiAlert severity="warning" sx={{ my: theme.spacing(5) }}>
-              Password must contain at least eight characters and must include
-              an uppercase letter, a lowercase letter, a number, and a symbol.
+              Password must contain at least eight characters and must include an uppercase letter,
+              a lowercase letter, a number, and a symbol.
             </MuiAlert>
 
             <Stack
@@ -308,11 +281,7 @@ const PasswordForm: React.FC = () => {
       {isConfirmationModalOpen && (
         <ConfirmationModal
           title="Confirm save"
-          body={
-            <Typography fontSize={13}>
-              Are you sure you want to save the changes?
-            </Typography>
-          }
+          body={<Typography fontSize={13}>Are you sure you want to save the changes?</Typography>}
           cancelText="Cancel"
           proceedText="Save"
           onCancel={handleCloseConfirmationModal}

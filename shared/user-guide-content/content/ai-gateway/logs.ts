@@ -10,7 +10,7 @@ export const logsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Logs page records every request through the AI Gateway, whether it came from the Playground or a virtual key. Each row shows the endpoint, model, cost, tokens, latency, status and who sent it. Click any row to see the full prompt and response.',
+      text: 'The Logs page records every request through the AI Gateway, whether it came from the Playground or a virtual key. Each row shows the endpoint, model, cost, tokens, status and who sent it. Click any row to see latency and the full prompt and response.',
     },
     {
       type: 'heading',

@@ -70,10 +70,9 @@ export async function getMlflowConfig({
 }: {
   signal?: AbortSignal;
 } = {}): Promise<MlflowConfigResponse> {
-  const response = await apiServices.get<MlflowConfigResponse>(
-    "/integrations/mlflow/config",
-    { signal }
-  );
+  const response = await apiServices.get<MlflowConfigResponse>("/integrations/mlflow/config", {
+    signal,
+  });
   return response.data;
 }
 
@@ -90,7 +89,7 @@ export async function getMlflowSyncStatus({
 } = {}): Promise<MlflowSyncStatusResponse> {
   const response = await apiServices.get<MlflowSyncStatusResponse>(
     "/integrations/mlflow/sync-status",
-    { signal }
+    { signal },
   );
   return response.data;
 }
@@ -106,10 +105,9 @@ export async function getMlflowModels({
 }: {
   signal?: AbortSignal;
 } = {}): Promise<MlflowModelsResponse> {
-  const response = await apiServices.get<MlflowModelsResponse>(
-    "/integrations/mlflow/models",
-    { signal }
-  );
+  const response = await apiServices.get<MlflowModelsResponse>("/integrations/mlflow/models", {
+    signal,
+  });
   return response.data;
 }
 
@@ -119,13 +117,8 @@ export async function getMlflowModels({
  * @param {MlflowTestData} data - The configuration data to test
  * @returns {Promise<MlflowTestResponse>} The test result
  */
-export async function testMlflowConnection(
-  data: MlflowTestData
-): Promise<MlflowTestResponse> {
-  const response = await apiServices.post<MlflowTestResponse>(
-    "/integrations/mlflow/test",
-    data
-  );
+export async function testMlflowConnection(data: MlflowTestData): Promise<MlflowTestResponse> {
+  const response = await apiServices.post<MlflowTestResponse>("/integrations/mlflow/test", data);
   return response.data;
 }
 
@@ -135,9 +128,7 @@ export async function testMlflowConnection(
  * @param {MlflowConfigureData} data - The configuration data
  * @returns {Promise<any>} The configuration result
  */
-export async function configureMlflow(
-  data: MlflowConfigureData
-): Promise<any> {
+export async function configureMlflow(data: MlflowConfigureData): Promise<any> {
   const response = await apiServices.post("/integrations/mlflow/configure", data);
   return response.data;
 }

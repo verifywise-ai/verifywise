@@ -23,11 +23,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 ## Functionality
 
 ```typescript
-const authenticateJWT = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
   // ...middleware implementation
 };
 ```
@@ -47,11 +43,9 @@ The middleware handles several authentication scenarios:
 - **Missing Token** (400 Bad Request)
   - When Authorization header is missing or malformed
 - **Invalid Token** (401 Unauthorized)
-
   - When token payload cannot be decoded or is invalid
 
 - **Expired Token** (406 Not Acceptable)
-
   - When token's expiration time has passed
 
 - **Server Error** (500 Internal Server Error)

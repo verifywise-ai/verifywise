@@ -38,7 +38,7 @@ const toJSON = (notification: INotification): INotificationJSON => ({
 export const createNotificationQuery = async (
   notification: ICreateNotification,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<INotificationJSON> => {
   const result = await sequelize.query<INotification>(
     `INSERT INTO notifications (
@@ -64,7 +64,7 @@ export const createNotificationQuery = async (
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return toJSON(result[0]);
@@ -76,7 +76,7 @@ export const createNotificationQuery = async (
 export const createBulkNotificationsQuery = async (
   bulk: IBulkNotification,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<INotificationJSON[]> => {
   if (bulk.user_ids.length === 0) {
     return [];
@@ -84,7 +84,10 @@ export const createBulkNotificationsQuery = async (
 
   // Build values for multi-row insert
   const values = bulk.user_ids
-    .map((_, i) => `(:organization_id, :user_id_${i}, :type, :title, :message, :entity_type, :entity_id, :entity_name, :action_url, :created_by, :metadata)`)
+    .map(
+      (_, i) =>
+        `(:organization_id, :user_id_${i}, :type, :title, :message, :entity_type, :entity_id, :entity_name, :action_url, :created_by, :metadata)`,
+    )
     .join(", ");
 
   const replacements: Record<string, any> = {
@@ -113,7 +116,7 @@ export const createBulkNotificationsQuery = async (
       replacements,
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.map(toJSON);
@@ -125,7 +128,7 @@ export const createBulkNotificationsQuery = async (
 export const getNotificationsQuery = async (
   userId: number,
   organizationId: number,
-  filters: INotificationFilters = {}
+  filters: INotificationFilters = {},
 ): Promise<INotificationJSON[]> => {
   const whereConditions: string[] = ["organization_id = :organizationId", "user_id = :userId"];
   const replacements: Record<string, any> = { organizationId, userId };
@@ -181,7 +184,7 @@ export const getNotificationsQuery = async (
     {
       replacements,
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return result.map(toJSON);
@@ -193,7 +196,7 @@ export const getNotificationsQuery = async (
  */
 export const getNotificationSummaryQuery = async (
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<INotificationSummary> => {
   // Single query with CTE to get both counts and recent notifications atomically
   const result = await sequelize.query<
@@ -218,7 +221,7 @@ export const getNotificationSummaryQuery = async (
     {
       replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   // Extract counts from first row (all rows have same counts due to CROSS JOIN)
@@ -244,7 +247,7 @@ export const getNotificationSummaryQuery = async (
 export const getNotificationByIdQuery = async (
   notificationId: number,
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<INotificationJSON | null> => {
   const result = await sequelize.query<INotification>(
     `SELECT * FROM notifications
@@ -252,7 +255,7 @@ export const getNotificationByIdQuery = async (
     {
       replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   if (result.length === 0) {
@@ -269,7 +272,7 @@ export const markNotificationAsReadQuery = async (
   notificationId: number,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<INotificationJSON | null> => {
   const result = await sequelize.query<INotification>(
     `UPDATE notifications
@@ -280,7 +283,7 @@ export const markNotificationAsReadQuery = async (
       replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   if (result.length === 0) {
@@ -296,7 +299,7 @@ export const markNotificationAsReadQuery = async (
 export const markAllNotificationsAsReadQuery = async (
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> => {
   // Use RETURNING to count affected rows reliably across PostgreSQL
   const result = await sequelize.query<{ id: number }>(
@@ -308,7 +311,7 @@ export const markAllNotificationsAsReadQuery = async (
       replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length;
@@ -321,7 +324,7 @@ export const deleteNotificationQuery = async (
   notificationId: number,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   // Use RETURNING to check if row was deleted
   const result = await sequelize.query<{ id: number }>(
@@ -332,7 +335,7 @@ export const deleteNotificationQuery = async (
       replacements: { organizationId, notificationId, userId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0;
@@ -346,7 +349,7 @@ export const deleteOldNotificationsQuery = async (
   userId: number,
   olderThan: Date,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> => {
   // Use RETURNING to count deleted rows
   const result = await sequelize.query<{ id: number }>(
@@ -360,7 +363,7 @@ export const deleteOldNotificationsQuery = async (
       replacements: { organizationId, userId, olderThan },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length;
@@ -371,7 +374,7 @@ export const deleteOldNotificationsQuery = async (
  */
 export const getUnreadCountQuery = async (
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> => {
   const result = await sequelize.query<{ count: string }>(
     `SELECT COUNT(*) as count FROM notifications
@@ -379,7 +382,7 @@ export const getUnreadCountQuery = async (
     {
       replacements: { organizationId, userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return parseInt(result[0]?.count || "0", 10);
@@ -392,7 +395,7 @@ export const deleteNotificationsByEntityQuery = async (
   entityType: NotificationEntityType,
   entityId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> => {
   // Use RETURNING to count deleted rows
   const result = await sequelize.query<{ id: number }>(
@@ -403,7 +406,7 @@ export const deleteNotificationsByEntityQuery = async (
       replacements: { organizationId, entityType, entityId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length;
@@ -417,7 +420,7 @@ export const getEntityNotificationRecipientsQuery = async (
   entityType: NotificationEntityType,
   entityId: number,
   organizationId: number,
-  excludeUserId?: number
+  excludeUserId?: number,
 ): Promise<number[]> => {
   let query = "";
   const replacements: Record<string, any> = { organizationId, entityId };

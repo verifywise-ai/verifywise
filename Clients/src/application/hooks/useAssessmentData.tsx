@@ -15,11 +15,7 @@ import { getAssessmentById } from "../repository/assesment.repository";
  * @example
  * const { assessmentData, loading } = useAssessmentData({ selectedProjectId: 'project123' });
  */
-const useAssessmentData = ({
-  selectedProjectId,
-}: {
-  selectedProjectId: string;
-}) => {
+const useAssessmentData = ({ selectedProjectId }: { selectedProjectId: string }) => {
   const [assessmentData, setAssessmentData] = useState<Framework | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -30,7 +26,7 @@ const useAssessmentData = ({
 
       setLoading(true);
       try {
-       const response = await getAssessmentById({ id: selectedProjectId, signal });
+        const response = await getAssessmentById({ id: selectedProjectId, signal });
         if (!response.ok) {
           console.error(`Failed to fetch progress data: ${response.message}`);
         }
@@ -43,7 +39,7 @@ const useAssessmentData = ({
         setLoading(false);
       }
     },
-    [selectedProjectId]
+    [selectedProjectId],
   );
   useEffect(() => {
     const controller = new AbortController();

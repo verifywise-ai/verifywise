@@ -155,12 +155,11 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Model updates', text: 'New models added, status changes or lifecycle events' },
-        { bold: 'Risk alerts', text: 'New risks identified or risk severity changes' },
-        { bold: 'Compliance updates', text: 'Assessment progress or control status changes' },
-        { bold: 'Policy changes', text: 'Policy status updates or approaching review dates' },
-        { bold: 'Vendor updates', text: 'Vendor status changes or new vendor risks' },
-        { bold: 'Training notifications', text: 'Training program updates or completions' },
+        { bold: 'Membership and roles', text: 'User invites, role changes and removals' },
+        { bold: 'Projects and organizations', text: 'Project creation, updates and organization changes' },
+        { bold: 'Policy reminders and status', text: 'Policy approaching review dates or status updates' },
+        { bold: 'Evidence and task alerts', text: 'New evidence uploads, task assignments and completions' },
+        { bold: 'Control or policy changes', text: 'Control status changes and policy updates' },
       ],
     },
     {

@@ -1,21 +1,17 @@
 /**
  * User Mapper
- * 
+ *
  * Maps between User DTOs (API layer) and User domain models.
  * Handles data transformation, type conversion, and validation.
  */
 
 import { UserModel } from "../../domain/models/Common/user/user.model";
-import {
-  UserResponseDTO,
-  CreateUserDTO,
-  UpdateUserDTO,
-} from "../dtos/user.dto";
+import { UserResponseDTO, CreateUserDTO, UpdateUserDTO } from "../dtos/user.dto";
 import { User } from "../../domain/types/User";
 
 /**
  * Maps a UserResponseDTO to a User domain type
- * 
+ *
  * @param dto - User response DTO from API
  * @returns User domain type
  */
@@ -38,7 +34,7 @@ export function mapUserResponseDTOToUser(dto: UserResponseDTO): User {
 
 /**
  * Maps a UserResponseDTO to a UserModel
- * 
+ *
  * @param dto - User response DTO from API
  * @returns UserModel instance
  */
@@ -54,13 +50,13 @@ export function mapUserResponseDTOToModel(dto: UserResponseDTO): UserModel {
     created_at: dto.created_at ? new Date(dto.created_at) : undefined,
     last_login: dto.last_login ? new Date(dto.last_login) : undefined,
   };
-  
+
   return new UserModel(userData);
 }
 
 /**
  * Maps an array of UserResponseDTOs to User domain types
- * 
+ *
  * @param dtos - Array of user response DTOs
  * @returns Array of User domain types
  */
@@ -70,7 +66,7 @@ export function mapUserResponseDTOsToUsers(dtos: UserResponseDTO[]): User[] {
 
 /**
  * Maps an array of UserResponseDTOs to UserModel instances
- * 
+ *
  * @param dtos - Array of user response DTOs
  * @returns Array of UserModel instances
  */
@@ -80,7 +76,7 @@ export function mapUserResponseDTOsToModels(dtos: UserResponseDTO[]): UserModel[
 
 /**
  * Maps a User domain type to CreateUserDTO
- * 
+ *
  * @param user - User domain type
  * @param password - Password for new user
  * @returns CreateUserDTO
@@ -98,7 +94,7 @@ export function mapUserToCreateDTO(user: Partial<User>, password: string): Creat
 
 /**
  * Maps a User domain type to UpdateUserDTO
- * 
+ *
  * @param user - User domain type with fields to update
  * @returns UpdateUserDTO
  */
@@ -111,4 +107,3 @@ export function mapUserToUpdateDTO(user: Partial<User>): UpdateUserDTO {
     organization_id: user.organization_id,
   };
 }
-

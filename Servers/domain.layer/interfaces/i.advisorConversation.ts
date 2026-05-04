@@ -3,7 +3,7 @@
  */
 export interface IAdvisorMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   createdAt: string; // ISO timestamp
   chartData?: unknown; // Optional chart data for assistant messages
@@ -40,21 +40,21 @@ export interface IAdvisorConversationSummary {
  * Valid advisor domains (matching frontend advisorConfig.ts)
  */
 export type AdvisorDomain =
-  | 'risk-management'
-  | 'model-inventory'
-  | 'model-risks'
-  | 'vendors'
-  | 'ai-incident-managements'
-  | 'tasks'
-  | 'policies'
-  | 'use-cases'
-  | 'datasets'
-  | 'frameworks'
-  | 'training'
-  | 'evidence'
-  | 'reporting'
-  | 'ai-trust-center'
-  | 'agent-discovery';
+  | "risk-management"
+  | "model-inventory"
+  | "model-risks"
+  | "vendors"
+  | "ai-incident-managements"
+  | "tasks"
+  | "policies"
+  | "use-cases"
+  | "datasets"
+  | "frameworks"
+  | "training"
+  | "evidence"
+  | "reporting"
+  | "ai-trust-center"
+  | "agent-discovery";
 
 /**
  * Maximum number of messages to store per conversation

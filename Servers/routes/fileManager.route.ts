@@ -54,14 +54,13 @@ const storage = multer.memoryStorage();
 const fileFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  cb: multer.FileFilterCallback,
 ) => {
   const mimetype = file.mimetype;
   const ext = path.extname(file.originalname).toLowerCase();
 
   // Check if MIME type is allowed
-  const allowedExts =
-    ALLOWED_MIME_TYPES[mimetype as keyof typeof ALLOWED_MIME_TYPES];
+  const allowedExts = ALLOWED_MIME_TYPES[mimetype as keyof typeof ALLOWED_MIME_TYPES];
 
   if (allowedExts && Array.isArray(allowedExts) && allowedExts.includes(ext)) {
     cb(null, true);
@@ -83,19 +82,12 @@ const upload = multer({
  * Catches file size limit errors and file type rejection errors
  * Note: No temp file cleanup needed with memory storage
  */
-const handleMulterError = (
-  err: any,
-  _req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res
         .status(413)
-        .json(
-          STATUS_CODE[413]("File size exceeds maximum allowed size of 30MB")
-        );
+        .json(STATUS_CODE[413]("File size exceeds maximum allowed size of 30MB"));
     }
     // Other multer errors
     return res.status(400).json(STATUS_CODE[400](err.message));
@@ -107,8 +99,8 @@ const handleMulterError = (
       .status(415)
       .json(
         STATUS_CODE[415](
-          "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)"
-        )
+          "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)",
+        ),
       );
   }
 
@@ -135,7 +127,7 @@ router.post(
   authorize(["Admin", "Reviewer", "Editor"]),
   upload.single("file"),
   handleMulterError,
-  uploadFile
+  uploadFile,
 );
 
 /**
@@ -161,12 +153,7 @@ router.get("/", fileOperationsLimiter, authenticateJWT, listFiles);
  * @returns {400} Validation error
  * @returns {500} Server error
  */
-router.get(
-  "/search",
-  fileOperationsLimiter,
-  authenticateJWT,
-  searchFiles
-);
+router.get("/search", fileOperationsLimiter, authenticateJWT, searchFiles);
 
 /**
  * @route   GET /file-manager/with-metadata
@@ -242,7 +229,7 @@ router.patch(
   fileOperationsLimiter,
   authenticateJWT,
   authorize(["Admin", "Reviewer", "Editor"]),
-  updateMetadata
+  updateMetadata,
 );
 
 /**
@@ -273,7 +260,7 @@ router.delete(
   fileOperationsLimiter,
   authenticateJWT,
   authorize(["Admin", "Reviewer", "Editor"]),
-  removeFile
+  removeFile,
 );
 
 export default router;

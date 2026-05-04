@@ -79,7 +79,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Endpoint:** `POST /api/v1/shadow-ai/events`',
+      text: '**Endpoint:** `POST /v1/shadow-ai/events`',
     },
     {
       type: 'paragraph',

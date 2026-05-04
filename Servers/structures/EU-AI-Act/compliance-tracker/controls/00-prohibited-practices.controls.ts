@@ -35,8 +35,7 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have assessed whether any AI system specifically targets or disproportionately affects vulnerable groups (children, elderly, persons with disabilities, economically disadvantaged persons).",
-        description:
-          "Vulnerability impact assessment records for each AI system in scope.",
+        description: "Vulnerability impact assessment records for each AI system in scope.",
       },
       {
         order_no: 2,
@@ -59,8 +58,7 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no AI system assigns scores or classifications to individuals based on social behavior or inferred personal traits for purposes unrelated to the original data collection context.",
-        description:
-          "Inventory of scoring/classification systems with context-of-use mapping.",
+        description: "Inventory of scoring/classification systems with context-of-use mapping.",
       },
       {
         order_no: 2,
@@ -83,8 +81,7 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no real-time remote biometric identification system is deployed in publicly accessible spaces.",
-        description:
-          "System inventory and deployment-context assessment records.",
+        description: "System inventory and deployment-context assessment records.",
       },
       {
         order_no: 2,
@@ -107,15 +104,13 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no AI system infers emotions of employees, job candidates, or students based on biometric data.",
-        description:
-          "HR/EdTech system inventory and emotion-inference capability assessment.",
+        description: "HR/EdTech system inventory and emotion-inference capability assessment.",
       },
       {
         order_no: 2,
         title:
           "If emotion recognition is used for medical or safety reasons, we have documented the specific justification and obtained any required consent.",
-        description:
-          "Medical/safety justification records and consent management artifacts.",
+        description: "Medical/safety justification records and consent management artifacts.",
       },
     ],
   },
@@ -131,15 +126,13 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no AI system uses biometric data (facial images, fingerprints, voice, gait) to infer sensitive personal attributes.",
-        description:
-          "Biometric system inventory, data-flow analysis, and inference-target review.",
+        description: "Biometric system inventory, data-flow analysis, and inference-target review.",
       },
       {
         order_no: 2,
         title:
           "We have reviewed all biometric processing systems and documented that none classify individuals by protected characteristics.",
-        description:
-          "Classification target review report and documented controls.",
+        description: "Classification target review report and documented controls.",
       },
     ],
   },
@@ -155,8 +148,7 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no AI system collects facial images from public internet sources or surveillance cameras for building facial recognition databases.",
-        description:
-          "Data-sourcing review for facial recognition datasets.",
+        description: "Data-sourcing review for facial recognition datasets.",
       },
       {
         order_no: 2,
@@ -179,8 +171,7 @@ export const ProhibitedPractices = [
         order_no: 1,
         title:
           "We have confirmed no AI system predicts the likelihood of a natural person committing a criminal offense based solely on profiling, prior offending, or personality assessment.",
-        description:
-          "Predictive policing / risk-scoring system inventory and logic review.",
+        description: "Predictive policing / risk-scoring system inventory and logic review.",
       },
       {
         order_no: 2,

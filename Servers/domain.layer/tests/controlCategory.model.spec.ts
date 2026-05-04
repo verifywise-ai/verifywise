@@ -45,14 +45,14 @@ class TestControlCategoryModel {
   static async createNewControlCategory(
     projectId: number,
     title: string,
-    orderNo?: number
+    orderNo?: number,
   ): Promise<TestControlCategoryModel> {
     // Validate project_id
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -62,19 +62,11 @@ class TestControlCategoryModel {
     }
 
     if (title.trim().length < 2) {
-      throw new ValidationException(
-        "Title must be at least 2 characters long",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must be at least 2 characters long", "title", title);
     }
 
     if (title.trim().length > 255) {
-      throw new ValidationException(
-        "Title must not exceed 255 characters",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must not exceed 255 characters", "title", title);
     }
 
     // Validate order_no if provided
@@ -83,7 +75,7 @@ class TestControlCategoryModel {
         throw new ValidationException(
           "Order number must be a non-negative integer",
           "order_no",
-          orderNo
+          orderNo,
         );
       }
     }
@@ -100,25 +92,18 @@ class TestControlCategoryModel {
   }
 
   // Instance method to update control category
-  async updateControlCategory(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateControlCategory(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Title is required", "title", updateData.title);
       }
 
       if (updateData.title.trim().length < 2) {
         throw new ValidationException(
           "Title must be at least 2 characters long",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
 
@@ -126,7 +111,7 @@ class TestControlCategoryModel {
         throw new ValidationException(
           "Title must not exceed 255 characters",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
 
@@ -139,7 +124,7 @@ class TestControlCategoryModel {
         throw new ValidationException(
           "Order number must be a non-negative integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -152,7 +137,7 @@ class TestControlCategoryModel {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
 
@@ -164,23 +149,19 @@ class TestControlCategoryModel {
       throw new ValidationException(
         "Title must be at least 2 characters long",
         "title",
-        this.title
+        this.title,
       );
     }
 
     if (this.title.trim().length > 255) {
-      throw new ValidationException(
-        "Title must not exceed 255 characters",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Title must not exceed 255 characters", "title", this.title);
     }
 
     if (this.order_no !== undefined && !numberValidation(this.order_no, 0)) {
       throw new ValidationException(
         "Order number must be a non-negative integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -196,7 +177,7 @@ class TestControlCategoryModel {
       throw new BusinessLogicException(
         "Demo control categories cannot be modified",
         "DEMO_CATEGORY_RESTRICTION",
-        { categoryId: this.id, categoryTitle: this.title }
+        { categoryId: this.id, categoryTitle: this.title },
       );
     }
     return true;
@@ -245,24 +226,14 @@ class TestControlCategoryModel {
   }
 
   // Static method to find control category by ID with validation
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TestControlCategoryModel> {
+  static async findByIdWithValidation(id: number): Promise<TestControlCategoryModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     // Mock finding a control category
     if (id === 999) {
-      throw new NotFoundException(
-        "Control category not found",
-        "ControlCategory",
-        id
-      );
+      throw new NotFoundException("Control category not found", "ControlCategory", id);
     }
 
     return new TestControlCategoryModel({
@@ -276,14 +247,12 @@ class TestControlCategoryModel {
   }
 
   // Static method to find control categories by project ID
-  static async findByProjectId(
-    projectId: number
-  ): Promise<TestControlCategoryModel[]> {
+  static async findByProjectId(projectId: number): Promise<TestControlCategoryModel[]> {
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -310,14 +279,10 @@ class TestControlCategoryModel {
   // Static method to update control category
   static async updateControlCategoryById(
     id: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestControlCategoryModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return [
@@ -338,11 +303,7 @@ class TestControlCategoryModel {
   // Static method to delete control category
   static async deleteControlCategoryById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return 1;
@@ -365,7 +326,7 @@ describe("ControlCategoryModel", () => {
       const category = await TestControlCategoryModel.createNewControlCategory(
         validCategoryData.project_id,
         validCategoryData.title,
-        validCategoryData.order_no
+        validCategoryData.order_no,
       );
 
       expect(category).toBeInstanceOf(TestControlCategoryModel);
@@ -379,7 +340,7 @@ describe("ControlCategoryModel", () => {
     it("should create control category without order_no", async () => {
       const category = await TestControlCategoryModel.createNewControlCategory(
         validCategoryData.project_id,
-        validCategoryData.title
+        validCategoryData.title,
       );
 
       expect(category.order_no).toBe(0);
@@ -387,38 +348,26 @@ describe("ControlCategoryModel", () => {
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(
-        TestControlCategoryModel.createNewControlCategory(
-          0,
-          validCategoryData.title
-        )
+        TestControlCategoryModel.createNewControlCategory(0, validCategoryData.title),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty title", async () => {
       await expect(
-        TestControlCategoryModel.createNewControlCategory(
-          validCategoryData.project_id,
-          ""
-        )
+        TestControlCategoryModel.createNewControlCategory(validCategoryData.project_id, ""),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for short title", async () => {
       await expect(
-        TestControlCategoryModel.createNewControlCategory(
-          validCategoryData.project_id,
-          "A"
-        )
+        TestControlCategoryModel.createNewControlCategory(validCategoryData.project_id, "A"),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for long title", async () => {
       const longTitle = "A".repeat(256);
       await expect(
-        TestControlCategoryModel.createNewControlCategory(
-          validCategoryData.project_id,
-          longTitle
-        )
+        TestControlCategoryModel.createNewControlCategory(validCategoryData.project_id, longTitle),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -427,8 +376,8 @@ describe("ControlCategoryModel", () => {
         TestControlCategoryModel.createNewControlCategory(
           validCategoryData.project_id,
           validCategoryData.title,
-          -1
-        )
+          -1,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -453,17 +402,17 @@ describe("ControlCategoryModel", () => {
     it("should throw ValidationException for empty title update", async () => {
       const category = new TestControlCategoryModel(validCategoryData);
 
-      await expect(
-        category.updateControlCategory({ title: "" })
-      ).rejects.toThrow(ValidationException);
+      await expect(category.updateControlCategory({ title: "" })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for negative order_no update", async () => {
       const category = new TestControlCategoryModel(validCategoryData);
 
-      await expect(
-        category.updateControlCategory({ order_no: -1 })
-      ).rejects.toThrow(ValidationException);
+      await expect(category.updateControlCategory({ order_no: -1 })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -471,9 +420,7 @@ describe("ControlCategoryModel", () => {
     it("should pass validation with valid data", async () => {
       const category = new TestControlCategoryModel(validCategoryData);
 
-      await expect(
-        category.validateControlCategoryData()
-      ).resolves.not.toThrow();
+      await expect(category.validateControlCategoryData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
@@ -482,9 +429,7 @@ describe("ControlCategoryModel", () => {
         project_id: 0,
       });
 
-      await expect(category.validateControlCategoryData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(category.validateControlCategoryData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty title", async () => {
@@ -493,9 +438,7 @@ describe("ControlCategoryModel", () => {
         title: "",
       });
 
-      await expect(category.validateControlCategoryData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(category.validateControlCategoryData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -664,15 +607,15 @@ describe("ControlCategoryModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestControlCategoryModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestControlCategoryModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestControlCategoryModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestControlCategoryModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -687,17 +630,16 @@ describe("ControlCategoryModel", () => {
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(TestControlCategoryModel.findByProjectId(0)).rejects.toThrow(
-        ValidationException
+        ValidationException,
       );
     });
   });
 
   describe("updateControlCategoryById", () => {
     it("should update control category successfully", async () => {
-      const [affected, updated] =
-        await TestControlCategoryModel.updateControlCategoryById(1, {
-          title: "Updated Category",
-        });
+      const [affected, updated] = await TestControlCategoryModel.updateControlCategoryById(1, {
+        title: "Updated Category",
+      });
 
       expect(affected).toBe(1);
       expect(updated[0].title).toBe("Updated Category");
@@ -707,24 +649,22 @@ describe("ControlCategoryModel", () => {
       await expect(
         TestControlCategoryModel.updateControlCategoryById(0, {
           title: "Updated",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
 
   describe("deleteControlCategoryById", () => {
     it("should delete control category successfully", async () => {
-      const deleted = await TestControlCategoryModel.deleteControlCategoryById(
-        1
-      );
+      const deleted = await TestControlCategoryModel.deleteControlCategoryById(1);
 
       expect(deleted).toBe(1);
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestControlCategoryModel.deleteControlCategoryById(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestControlCategoryModel.deleteControlCategoryById(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 });

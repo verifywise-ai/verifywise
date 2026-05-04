@@ -1,17 +1,8 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ControlCategoryModel } from "../controlCategory/controlCategory.model";
 import { IControl } from "../../interfaces/i.control";
 import { numberValidation } from "../../validations/number.valid";
-import {
-  ValidationException,
-  BusinessLogicException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, BusinessLogicException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "controls",
@@ -53,11 +44,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
   approver?: number;
 
   @Column({
-    type: DataType.ENUM(
-      "Acceptable risk",
-      "Residual risk",
-      "Unacceptable risk"
-    ),
+    type: DataType.ENUM("Acceptable risk", "Residual risk", "Unacceptable risk"),
   })
   risk_review?: "Acceptable risk" | "Residual risk" | "Unacceptable risk";
 
@@ -119,7 +106,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     approver?: number,
     due_date?: Date,
     implementation_details?: string,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<ControlModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
@@ -127,26 +114,18 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     }
 
     if (title.trim().length < 3) {
-      throw new ValidationException(
-        "Title must be at least 3 characters long",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must be at least 3 characters long", "title", title);
     }
 
     if (!description || description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        description
-      );
+      throw new ValidationException("Description is required", "description", description);
     }
 
     if (description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        description
+        description,
       );
     }
 
@@ -155,7 +134,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new ValidationException(
         "Valid control_category_id is required (must be >= 1)",
         "control_category_id",
-        control_category_id
+        control_category_id,
       );
     }
 
@@ -164,54 +143,34 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
     // Validate user IDs if provided
     if (owner !== undefined && !numberValidation(owner, 1)) {
-      throw new ValidationException(
-        "Owner ID must be a positive integer",
-        "owner",
-        owner
-      );
+      throw new ValidationException("Owner ID must be a positive integer", "owner", owner);
     }
 
     if (reviewer !== undefined && !numberValidation(reviewer, 1)) {
-      throw new ValidationException(
-        "Reviewer ID must be a positive integer",
-        "reviewer",
-        reviewer
-      );
+      throw new ValidationException("Reviewer ID must be a positive integer", "reviewer", reviewer);
     }
 
     if (approver !== undefined && !numberValidation(approver, 1)) {
-      throw new ValidationException(
-        "Approver ID must be a positive integer",
-        "approver",
-        approver
-      );
+      throw new ValidationException("Approver ID must be a positive integer", "approver", approver);
     }
 
     // Validate due_date if provided
     if (due_date !== undefined) {
       const dueDate = new Date(due_date);
       if (isNaN(dueDate.getTime())) {
-        throw new ValidationException(
-          "Invalid due date format",
-          "due_date",
-          due_date
-        );
+        throw new ValidationException("Invalid due date format", "due_date", due_date);
       }
 
       // Ensure due date is not in the past
       const now = new Date();
       if (dueDate < now) {
-        throw new ValidationException(
-          "Due date cannot be in the past",
-          "due_date",
-          due_date
-        );
+        throw new ValidationException("Due date cannot be in the past", "due_date", due_date);
       }
     }
 
@@ -251,17 +210,13 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Title is required", "title", updateData.title);
       }
       if (updateData.title.trim().length < 3) {
         throw new ValidationException(
           "Title must be at least 3 characters long",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
       this.title = updateData.title.trim();
@@ -269,21 +224,18 @@ export class ControlModel extends Model<ControlModel> implements IControl {
 
     // Validate description if provided
     if (updateData.description !== undefined) {
-      if (
-        !updateData.description ||
-        updateData.description.trim().length === 0
-      ) {
+      if (!updateData.description || updateData.description.trim().length === 0) {
         throw new ValidationException(
           "Description is required",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
       if (updateData.description.trim().length < 10) {
         throw new ValidationException(
           "Description must be at least 10 characters long",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
       this.description = updateData.description.trim();
@@ -295,7 +247,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -305,11 +257,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     if (updateData.status !== undefined) {
       const validStatuses = ["Waiting", "In progress", "Done"];
       if (!validStatuses.includes(updateData.status)) {
-        throw new ValidationException(
-          "Invalid status value",
-          "status",
-          updateData.status
-        );
+        throw new ValidationException("Invalid status value", "status", updateData.status);
       }
       this.status = updateData.status;
     }
@@ -320,7 +268,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
         throw new ValidationException(
           "Owner ID must be a positive integer",
           "owner",
-          updateData.owner
+          updateData.owner,
         );
       }
       this.owner = updateData.owner;
@@ -331,7 +279,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
         throw new ValidationException(
           "Reviewer ID must be a positive integer",
           "reviewer",
-          updateData.reviewer
+          updateData.reviewer,
         );
       }
       this.reviewer = updateData.reviewer;
@@ -342,7 +290,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
         throw new ValidationException(
           "Approver ID must be a positive integer",
           "approver",
-          updateData.approver
+          updateData.approver,
         );
       }
       this.approver = updateData.approver;
@@ -350,16 +298,12 @@ export class ControlModel extends Model<ControlModel> implements IControl {
 
     // Validate risk_review if provided
     if (updateData.risk_review !== undefined) {
-      const validRiskReviews = [
-        "Acceptable risk",
-        "Residual risk",
-        "Unacceptable risk",
-      ];
+      const validRiskReviews = ["Acceptable risk", "Residual risk", "Unacceptable risk"];
       if (!validRiskReviews.includes(updateData.risk_review)) {
         throw new ValidationException(
           "Invalid risk review value",
           "risk_review",
-          updateData.risk_review
+          updateData.risk_review,
         );
       }
       this.risk_review = updateData.risk_review;
@@ -369,11 +313,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     if (updateData.due_date !== undefined) {
       const dueDate = new Date(updateData.due_date);
       if (isNaN(dueDate.getTime())) {
-        throw new ValidationException(
-          "Invalid due date format",
-          "due_date",
-          updateData.due_date
-        );
+        throw new ValidationException("Invalid due date format", "due_date", updateData.due_date);
       }
       this.due_date = dueDate;
     }
@@ -396,34 +336,27 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new ValidationException(
         "Title must be at least 3 characters long",
         "title",
-        this.title
+        this.title,
       );
     }
 
     if (!this.description || this.description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        this.description
-      );
+      throw new ValidationException("Description is required", "description", this.description);
     }
 
     if (this.description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        this.description
+        this.description,
       );
     }
 
-    if (
-      !this.control_category_id ||
-      !numberValidation(this.control_category_id, 1)
-    ) {
+    if (!this.control_category_id || !numberValidation(this.control_category_id, 1)) {
       throw new ValidationException(
         "Valid control_category_id is required",
         "control_category_id",
-        this.control_category_id
+        this.control_category_id,
       );
     }
 
@@ -431,23 +364,19 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
 
     if (this.owner !== undefined && !numberValidation(this.owner, 1)) {
-      throw new ValidationException(
-        "Owner ID must be a positive integer",
-        "owner",
-        this.owner
-      );
+      throw new ValidationException("Owner ID must be a positive integer", "owner", this.owner);
     }
 
     if (this.reviewer !== undefined && !numberValidation(this.reviewer, 1)) {
       throw new ValidationException(
         "Reviewer ID must be a positive integer",
         "reviewer",
-        this.reviewer
+        this.reviewer,
       );
     }
 
@@ -455,7 +384,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new ValidationException(
         "Approver ID must be a positive integer",
         "approver",
-        this.approver
+        this.approver,
       );
     }
   }
@@ -527,7 +456,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
       throw new BusinessLogicException(
         "Demo controls cannot be modified",
         "DEMO_CONTROL_RESTRICTION",
-        { controlId: this.id, userId }
+        { controlId: this.id, userId },
       );
     }
 
@@ -537,11 +466,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
     }
 
     // Users can modify controls they own or are assigned to
-    return (
-      this.owner === userId ||
-      this.reviewer === userId ||
-      this.approver === userId
-    );
+    return this.owner === userId || this.reviewer === userId || this.approver === userId;
   }
 
   /**
@@ -663,10 +588,7 @@ export class ControlModel extends Model<ControlModel> implements IControl {
    */
   requiresImmediateAttention(): boolean {
     const daysUntilDue = this.getDaysUntilDue();
-    return (
-      this.isOverdue() ||
-      (daysUntilDue !== null && daysUntilDue <= 3 && !this.isCompleted())
-    );
+    return this.isOverdue() || (daysUntilDue !== null && daysUntilDue <= 3 && !this.isCompleted());
   }
 
   /**

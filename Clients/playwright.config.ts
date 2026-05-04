@@ -21,9 +21,7 @@ export default defineConfig({
   // In CI pair `list` with `github`: `github` emits PR annotations, `list`
   // streams pass/fail lines to the job log so cancellations (timeouts)
   // still leave a readable trail of what passed and what failed.
-  reporter: process.env.CI
-    ? [["list"], ["github"]]
-    : "html",
+  reporter: process.env.CI ? [["list"], ["github"]] : "html",
   timeout: 60_000,
 
   use: {

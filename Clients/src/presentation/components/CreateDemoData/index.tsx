@@ -30,13 +30,11 @@ export function CreateDemoData({
         body={
           <>
             <Typography fontSize={13} textAlign={"start"}>
-              If you accept, we’ll generate demo (mock) data for you, allowing
-              you to explore and get a hands-on understanding of how VerifyWise
-              works. We highly recommend this option.
+              If you accept, we’ll generate demo (mock) data for you, allowing you to explore and
+              get a hands-on understanding of how VerifyWise works. We highly recommend this option.
             </Typography>
             <Typography fontSize={13} textAlign={"start"}>
-              This option will create 2 projects and 2 users. You’ll be able to
-              remove them later.
+              This option will create 2 projects and 2 users. You’ll be able to remove them later.
             </Typography>
           </>
         }

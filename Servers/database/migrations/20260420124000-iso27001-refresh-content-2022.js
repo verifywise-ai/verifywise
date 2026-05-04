@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Pushes the 2022-aligned requirement_summary / key_questions /
@@ -15,23 +15,25 @@
  * level if content already matches.
  */
 const toPgArray = (arr) => {
-  if (!arr || !Array.isArray(arr) || arr.length === 0) return '{}';
-  const escaped = arr.map(v => `"${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
-  return `{${escaped.join(',')}}`;
+  if (!arr || !Array.isArray(arr) || arr.length === 0) return "{}";
+  const escaped = arr.map((v) => `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${escaped.join(",")}}`;
 };
 
 module.exports = {
   async up(queryInterface) {
-    const { ISO27001Annex } = require('../../dist/structures/ISO-27001/annexes/iso27001.annex.struct');
+    const {
+      ISO27001Annex,
+    } = require("../../dist/structures/ISO-27001/annexes/iso27001.annex.struct");
 
     const t = await queryInterface.sequelize.transaction();
     try {
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks WHERE name = 'ISO 27001' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[iso27001-refresh-content] ISO 27001 framework not found — skipping');
+        console.warn("[iso27001-refresh-content] ISO 27001 framework not found — skipping");
         await t.commit();
         return;
       }
@@ -55,21 +57,23 @@ module.exports = {
               transaction: t,
               replacements: {
                 title: ctrl.title,
-                req: ctrl.requirement_summary || '',
+                req: ctrl.requirement_summary || "",
                 kq: toPgArray(ctrl.key_questions || []),
                 ev: toPgArray(ctrl.evidence_examples || []),
                 frameworkId,
                 annexId: `A.${annex.index}`,
               },
-            }
+            },
           );
-          if (result && typeof result === 'object' && 'rowCount' in result) {
+          if (result && typeof result === "object" && "rowCount" in result) {
             updated += Number(result.rowCount) || 0;
           }
         }
       }
 
-      console.log(`[iso27001-refresh-content] refreshed content fields; approx rows updated: ${updated}`);
+      console.log(
+        `[iso27001-refresh-content] refreshed content fields; approx rows updated: ${updated}`,
+      );
       await t.commit();
     } catch (err) {
       await t.rollback();

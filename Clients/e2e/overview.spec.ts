@@ -15,13 +15,11 @@ test.describe("Overview (Home)", () => {
         .getByRole("heading")
         .or(page.getByText(/overview/i))
         .or(page.getByText(/home/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/overview");
     await page.waitForLoadState("domcontentloaded");
 
@@ -43,9 +41,7 @@ test.describe("Overview (Home)", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays project or summary content", async ({
-    authedPage: page,
-  }) => {
+  test("displays project or summary content", async ({ authedPage: page }) => {
     await page.goto("/overview");
 
     // Should show project cards, summary stats, or content area

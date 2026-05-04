@@ -26,9 +26,7 @@ export type { SearchParams, SearchResponse, GroupedSearchResults, SearchResult }
  * @param params - Search parameters
  * @returns Promise resolving to grouped search results
  */
-export async function performWiseSearch(
-  params: SearchParams
-): Promise<SearchResponse> {
+export async function performWiseSearch(params: SearchParams): Promise<SearchResponse> {
   return infraWiseSearch(params);
 }
 

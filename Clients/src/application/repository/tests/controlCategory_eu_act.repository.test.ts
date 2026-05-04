@@ -65,11 +65,7 @@ describe("Test ControlCategory EU Act Repository", () => {
 
       const response = await createControlCategory({ body });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/controlCategory",
-        body,
-        {},
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/controlCategory", body, {});
       expect(response).toEqual(mockResponse);
     });
   });
@@ -82,10 +78,7 @@ describe("Test ControlCategory EU Act Repository", () => {
 
       const response = await updateControlCategory({ id: 8, body });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/controlCategory/8",
-        body,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/controlCategory/8", body);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -125,10 +118,7 @@ describe("Test ControlCategory EU Act Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/controlCategory/byprojectid/99",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/controlCategory/byprojectid/99", { signal });
       expect(response).toEqual(mockData);
     });
 
@@ -137,10 +127,9 @@ describe("Test ControlCategory EU Act Repository", () => {
 
       await getControlCategoriesByProjectId({ projectId: 100 });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/controlCategory/byprojectid/100",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/controlCategory/byprojectid/100", {
+        signal: undefined,
+      });
     });
   });
 });

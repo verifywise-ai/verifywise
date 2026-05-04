@@ -32,9 +32,7 @@ describe("usePersistedViewMode", () => {
     });
 
     it("uses custom default value", () => {
-      const { result } = renderHook(() =>
-        usePersistedViewMode("test-key", "table")
-      );
+      const { result } = renderHook(() => usePersistedViewMode("test-key", "table"));
       expect(result.current[0]).toBe("table");
     });
   });

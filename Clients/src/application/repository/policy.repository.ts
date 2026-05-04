@@ -9,10 +9,11 @@ function extractData<T>(response: { data: { data: T } }): T {
   return response.data.data;
 }
 
-
 export async function getAllPolicies(): Promise<PolicyManagerModel[]> {
   try {
-    const response = await apiServices.get<{message: string; data: PolicyManagerModel[]}>("/policies");
+    const response = await apiServices.get<{ message: string; data: PolicyManagerModel[] }>(
+      "/policies",
+    );
     return extractData<PolicyManagerModel[]>(response);
   } catch (error: any) {
     throw new APIError("Failed to fetch policies", error?.response?.status, error);
@@ -21,7 +22,7 @@ export async function getAllPolicies(): Promise<PolicyManagerModel[]> {
 
 export async function getAllTags(): Promise<string[]> {
   try {
-    const response = await apiServices.get<{message: string; data: string[]}>("/policies/tags");
+    const response = await apiServices.get<{ message: string; data: string[] }>("/policies/tags");
     return extractData<string[]>(response);
   } catch (error: any) {
     throw new APIError("Failed to fetch tags", error?.response?.status, error);
@@ -30,7 +31,10 @@ export async function getAllTags(): Promise<string[]> {
 
 export async function getPolicyById(id: string): Promise<PolicyManagerModel> {
   try {
-    const response = await apiServices.get<{message: string; data: PolicyManagerModel | PolicyManagerModel[]}>(`/policies/${id}`);
+    const response = await apiServices.get<{
+      message: string;
+      data: PolicyManagerModel | PolicyManagerModel[];
+    }>(`/policies/${id}`);
     const data = extractData<PolicyManagerModel | PolicyManagerModel[]>(response);
     return Array.isArray(data) ? data[0] : data;
   } catch (error: any) {
@@ -40,7 +44,10 @@ export async function getPolicyById(id: string): Promise<PolicyManagerModel> {
 
 export async function createPolicy(input: PolicyInput): Promise<PolicyManagerModel> {
   try {
-    const response = await apiServices.post<{message: string; data: PolicyManagerModel}>("/policies", input);
+    const response = await apiServices.post<{ message: string; data: PolicyManagerModel }>(
+      "/policies",
+      input,
+    );
     return extractData<PolicyManagerModel>(response);
   } catch (error: any) {
     throw new APIError("Failed to create policy", error?.response?.status, error);
@@ -49,7 +56,10 @@ export async function createPolicy(input: PolicyInput): Promise<PolicyManagerMod
 
 export async function updatePolicy(id: number, input: PolicyInput): Promise<PolicyManagerModel> {
   try {
-    const response = await apiServices.put<{message: string; data: PolicyManagerModel}>(`/policies/${id}`, input);
+    const response = await apiServices.put<{ message: string; data: PolicyManagerModel }>(
+      `/policies/${id}`,
+      input,
+    );
     return extractData<PolicyManagerModel>(response);
   } catch (error: any) {
     throw new APIError(`Failed to update policy with ID ${id}`, error?.response?.status, error);
@@ -68,11 +78,10 @@ export async function importDocxToHtml(file: File): Promise<{ html: string; warn
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiServices.post<{ message: string; data: { html: string; warnings: string[] } }>(
-      "/policies/import/docx",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const response = await apiServices.post<{
+      message: string;
+      data: { html: string; warnings: string[] };
+    }>("/policies/import/docx", formData, { headers: { "Content-Type": "multipart/form-data" } });
     return extractData<{ html: string; warnings: string[] }>(response);
   } catch (error: any) {
     throw new APIError("Failed to import DOCX file", error?.response?.status, error);

@@ -33,17 +33,45 @@ function ScoreGauge({ score, size = 100 }: { score: number; size?: number }) {
     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <Box sx={{ position: "relative", width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={C.progressBackground} strokeWidth={strokeWidth} />
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={scoreColor} strokeWidth={strokeWidth} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={C.progressBackground}
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={scoreColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: "stroke-dashoffset 0.5s ease" }}
+          />
         </svg>
-        <Typography sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 24, fontWeight: 700, color: scoreColor }}>
+        <Typography
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            fontSize: 24,
+            fontWeight: 700,
+            color: scoreColor,
+          }}
+        >
           {score}
         </Typography>
       </Box>
       <Typography sx={{ ...TEXT_STYLES.label, mt: 1 }}>Overall score</Typography>
     </Box>
   );
-};
+}
 
 export function GovernanceScoreCard({ score, modules }: GovernanceScoreProps) {
   return (

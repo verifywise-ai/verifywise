@@ -1,5 +1,3 @@
-
-
 import { apiServices } from "../../infrastructure/api/networkServices";
 
 export async function getAssessmentById({
@@ -18,31 +16,17 @@ export async function getAssessmentById({
   return response.data;
 }
 
-export async function createAssessment({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createAssessment({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/assessments", body);
   return response;
 }
 
-export async function updateAssessment({
-  id,
-  body,
-}: {
-  id: string;
-  body: any;
-}): Promise<any> {
+export async function updateAssessment({ id, body }: { id: string; body: any }): Promise<any> {
   const response = await apiServices.patch(`/assessments/${id}`, body);
   return response;
 }
 
-export async function deleteAssessment({
-  id,
-}: {
-  id: string;
-}): Promise<any> {
+export async function deleteAssessment({ id }: { id: string }): Promise<any> {
   const response = await apiServices.delete(`/assessments/${id}`);
   return response;
 }
@@ -78,9 +62,12 @@ export async function getAssessmentTopicById({
   projectFrameworkId?: number;
   signal?: AbortSignal;
 }): Promise<any> {
-  const response = await apiServices.get(`/eu-ai-act/topicById?topicId=${topicId}&projectFrameworkId=${projectFrameworkId}`, {
-    signal,
-  });
+  const response = await apiServices.get(
+    `/eu-ai-act/topicById?topicId=${topicId}&projectFrameworkId=${projectFrameworkId}`,
+    {
+      signal,
+    },
+  );
   return response.data;
 }
 

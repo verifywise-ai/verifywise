@@ -26,7 +26,7 @@ interface FriaRiskImportModalProps {
       likelihood: string;
       severity: string;
       linked_project_risk_id: number;
-    }>
+    }>,
   ) => void;
 }
 
@@ -38,14 +38,16 @@ const FriaRiskImportModal = ({
   onImport,
 }: FriaRiskImportModalProps) => {
   const theme = useTheme();
-  const [risks, setRisks] = useState<Array<{
-    id: number;
-    risk_name?: string;
-    risk_description?: string;
-    likelihood?: string;
-    severity?: string;
-    final_risk_level?: string;
-  }>>([]);
+  const [risks, setRisks] = useState<
+    Array<{
+      id: number;
+      risk_name?: string;
+      risk_description?: string;
+      likelihood?: string;
+      severity?: string;
+      final_risk_level?: string;
+    }>
+  >([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,7 +57,8 @@ const FriaRiskImportModal = ({
     setSelectedIds([]);
     getAllProjectRisksByProjectId({ projectId, filter: "active" })
       .then((data: { data?: unknown[] } | unknown[]) => {
-        const riskList = (data && typeof data === "object" && "data" in data ? data.data : data) || [];
+        const riskList =
+          (data && typeof data === "object" && "data" in data ? data.data : data) || [];
         setRisks(Array.isArray(riskList) ? (riskList as typeof risks) : []);
       })
       .catch(() => setRisks([]))
@@ -64,9 +67,7 @@ const FriaRiskImportModal = ({
 
   const toggleRisk = (riskId: number) => {
     setSelectedIds((prev) =>
-      prev.includes(riskId)
-        ? prev.filter((id) => id !== riskId)
-        : [...prev, riskId]
+      prev.includes(riskId) ? prev.filter((id) => id !== riskId) : [...prev, riskId],
     );
   };
 
@@ -83,9 +84,7 @@ const FriaRiskImportModal = ({
     onClose();
   };
 
-  const availableRisks = risks.filter(
-    (r) => !existingLinkedRiskIds.includes(r.id)
-  );
+  const availableRisks = risks.filter((r) => !existingLinkedRiskIds.includes(r.id));
 
   return (
     <StandardModal
@@ -99,11 +98,15 @@ const FriaRiskImportModal = ({
     >
       <Stack spacing={2}>
         {isLoading ? (
-          <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, textAlign: "center", py: 4 }}>
+          <Typography
+            sx={{ fontSize: 13, color: theme.palette.text.secondary, textAlign: "center", py: 4 }}
+          >
             Loading project risks...
           </Typography>
         ) : availableRisks.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, textAlign: "center", py: 4 }}>
+          <Typography
+            sx={{ fontSize: 13, color: theme.palette.text.secondary, textAlign: "center", py: 4 }}
+          >
             {risks.length === 0
               ? "No project risks found."
               : "All project risks are already linked."}
@@ -121,8 +124,12 @@ const FriaRiskImportModal = ({
                   <TableRow>
                     <TableCell padding="checkbox" sx={{ width: 40 }} />
                     <TableCell sx={{ fontSize: 12, fontWeight: 600 }}>Risk name</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 600, width: 100 }}>Likelihood</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 600, width: 100 }}>Severity</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 600, width: 100 }}>
+                      Likelihood
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 600, width: 100 }}>
+                      Severity
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -149,9 +156,7 @@ const FriaRiskImportModal = ({
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {risk.likelihood && (
-                          <Chip label={risk.likelihood} size="small" />
-                        )}
+                        {risk.likelihood && <Chip label={risk.likelihood} size="small" />}
                       </TableCell>
                       <TableCell>
                         {(risk.severity || risk.final_risk_level) && (

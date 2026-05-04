@@ -4,8 +4,7 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 
-const sanitizeFilename = (name: string) =>
-  name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
+const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 
 export const uploadFile = async (
   file: UploadedFile,
@@ -18,7 +17,7 @@ export const uploadFile = async (
     org_id?: number;
     model_id?: number;
     file_path?: string;
-  }
+  },
 ) => {
   let is_demo = false;
   if (project_id) {
@@ -29,7 +28,7 @@ export const uploadFile = async (
         mapToModel: true,
         model: ProjectModel,
         ...(transaction && { transaction }),
-      }
+      },
     );
     is_demo = projectIsDemo[0]?.is_demo || false;
   }
@@ -61,15 +60,13 @@ export const uploadFile = async (
     ...(transaction && { transaction }),
   });
   // result[0] is an array of model instances, get the first one
-  return Array.isArray(result[0]) && result[0].length > 0
-    ? result[0][0]
-    : result[0];
+  return Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : result[0];
 };
 
 export const deleteFileById = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Clean up any virtual folder mappings for this file
   await sequelize.query(
@@ -77,7 +74,7 @@ export const deleteFileById = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   );
 
   const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id`;
@@ -115,7 +112,7 @@ export const canUserAccessFile = async (
   userId: number,
   role: string,
   organizationId: number,
-  userOrgId?: number
+  userOrgId?: number,
 ): Promise<boolean> => {
   // Admins can access all files
   if (role === "Admin" || role === "SuperAdmin") {
@@ -146,10 +143,7 @@ export const canUserAccessFile = async (
   return result.length > 0;
 };
 
-export const getFileMetadataByProjectId = async (
-  project_id: number,
-  organizationId: number
-) => {
+export const getFileMetadataByProjectId = async (project_id: number, organizationId: number) => {
   const query = `SELECT
   f.id,
   f.filename,

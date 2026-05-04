@@ -9,10 +9,7 @@ import {
 } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { ProjectModel } from "../project/project.model";
-import {
-  IPMMConfig,
-  FrequencyUnit,
-} from "../../interfaces/i.postMarketMonitoring";
+import { IPMMConfig, FrequencyUnit } from "../../interfaces/i.postMarketMonitoring";
 import { PMMQuestionModel } from "./pmmQuestion.model";
 import { PMMCycleModel } from "./pmmCycle.model";
 

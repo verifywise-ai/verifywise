@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Snackbar } from "@mui/material";
-import { Copy, Check, Layers, Database, MousePointer2, Search, Layout, FileText } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Layers,
+  Database,
+  MousePointer2,
+  Search,
+  Layout,
+  FileText,
+} from "lucide-react";
 
 interface PatternExample {
   id: string;
@@ -25,7 +34,8 @@ const CommonPatternsSection: React.FC = () => {
     {
       id: "modal-pattern",
       title: "Modal with form submission",
-      description: "Standard pattern for modals with form handling using useStandardModal hook and onSubmitRef.",
+      description:
+        "Standard pattern for modals with form handling using useStandardModal hook and onSubmitRef.",
       icon: <Layers size={18} />,
       code: `import { useRef } from "react";
 import StandardModal from "../Modals/StandardModal";
@@ -405,8 +415,8 @@ const MyTable = ({ items, onEdit, onDelete }: {
             maxWidth: 600,
           }}
         >
-          Reusable code patterns and recipes for common UI scenarios.
-          Copy these patterns as starting points for new features.
+          Reusable code patterns and recipes for common UI scenarios. Copy these patterns as
+          starting points for new features.
         </Typography>
       </Box>
 
@@ -606,10 +616,22 @@ const MyTable = ({ items, onEdit, onDelete }: {
           }}
         >
           {[
-            { label: "Modals", items: ["useStandardModal hook", "onSubmitRef for forms", "StandardModal component"] },
-            { label: "Dropdowns", items: ["Popover over Menu", "anchorEl state", "handleClose on select"] },
-            { label: "Forms", items: ["Validation before submit", "Error state display", "Loading state on button"] },
-            { label: "Data fetching", items: ["Loading spinner", "Error message", "Empty state handling"] },
+            {
+              label: "Modals",
+              items: ["useStandardModal hook", "onSubmitRef for forms", "StandardModal component"],
+            },
+            {
+              label: "Dropdowns",
+              items: ["Popover over Menu", "anchorEl state", "handleClose on select"],
+            },
+            {
+              label: "Forms",
+              items: ["Validation before submit", "Error state display", "Loading state on button"],
+            },
+            {
+              label: "Data fetching",
+              items: ["Loading spinner", "Error message", "Empty state handling"],
+            },
           ].map((group) => (
             <Box key={group.label}>
               <Typography

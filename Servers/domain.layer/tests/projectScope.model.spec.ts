@@ -52,14 +52,14 @@ class TestProjectScopeModel {
     hasOngoingMonitoring: boolean,
     unintendedOutcomes: string,
     technologyDocumentation: string,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestProjectScopeModel> {
     // Validate assessment_id
     if (!numberValidation(assessmentId, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -68,7 +68,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "AI environment description is required",
         "describeAiEnvironment",
-        describeAiEnvironment
+        describeAiEnvironment,
       );
     }
 
@@ -76,7 +76,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "AI environment description must be at least 10 characters long",
         "describeAiEnvironment",
-        describeAiEnvironment
+        describeAiEnvironment,
       );
     }
 
@@ -85,7 +85,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Project scope documents are required",
         "projectScopeDocuments",
-        projectScopeDocuments
+        projectScopeDocuments,
       );
     }
 
@@ -94,7 +94,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Technology type is required",
         "technologyType",
-        technologyType
+        technologyType,
       );
     }
 
@@ -102,7 +102,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Technology type must be at least 3 characters long",
         "technologyType",
-        technologyType
+        technologyType,
       );
     }
 
@@ -111,19 +111,16 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Unintended outcomes description is required",
         "unintendedOutcomes",
-        unintendedOutcomes
+        unintendedOutcomes,
       );
     }
 
     // Validate technologyDocumentation
-    if (
-      !technologyDocumentation ||
-      technologyDocumentation.trim().length === 0
-    ) {
+    if (!technologyDocumentation || technologyDocumentation.trim().length === 0) {
       throw new ValidationException(
         "Technology documentation is required",
         "technologyDocumentation",
-        technologyDocumentation
+        technologyDocumentation,
       );
     }
 
@@ -164,14 +161,14 @@ class TestProjectScopeModel {
         throw new ValidationException(
           "AI environment description is required",
           "describeAiEnvironment",
-          updateData.describeAiEnvironment
+          updateData.describeAiEnvironment,
         );
       }
       if (updateData.describeAiEnvironment.trim().length < 10) {
         throw new ValidationException(
           "AI environment description must be at least 10 characters long",
           "describeAiEnvironment",
-          updateData.describeAiEnvironment
+          updateData.describeAiEnvironment,
         );
       }
       this.describeAiEnvironment = updateData.describeAiEnvironment.trim();
@@ -186,7 +183,7 @@ class TestProjectScopeModel {
         throw new ValidationException(
           "Project scope documents are required",
           "projectScopeDocuments",
-          updateData.projectScopeDocuments
+          updateData.projectScopeDocuments,
         );
       }
       this.projectScopeDocuments = updateData.projectScopeDocuments.trim();
@@ -194,21 +191,18 @@ class TestProjectScopeModel {
 
     // Validate technologyType if provided
     if (updateData.technologyType !== undefined) {
-      if (
-        !updateData.technologyType ||
-        updateData.technologyType.trim().length === 0
-      ) {
+      if (!updateData.technologyType || updateData.technologyType.trim().length === 0) {
         throw new ValidationException(
           "Technology type is required",
           "technologyType",
-          updateData.technologyType
+          updateData.technologyType,
         );
       }
       if (updateData.technologyType.trim().length < 3) {
         throw new ValidationException(
           "Technology type must be at least 3 characters long",
           "technologyType",
-          updateData.technologyType
+          updateData.technologyType,
         );
       }
       this.technologyType = updateData.technologyType.trim();
@@ -216,14 +210,11 @@ class TestProjectScopeModel {
 
     // Validate unintendedOutcomes if provided
     if (updateData.unintendedOutcomes !== undefined) {
-      if (
-        !updateData.unintendedOutcomes ||
-        updateData.unintendedOutcomes.trim().length === 0
-      ) {
+      if (!updateData.unintendedOutcomes || updateData.unintendedOutcomes.trim().length === 0) {
         throw new ValidationException(
           "Unintended outcomes description is required",
           "unintendedOutcomes",
-          updateData.unintendedOutcomes
+          updateData.unintendedOutcomes,
         );
       }
       this.unintendedOutcomes = updateData.unintendedOutcomes.trim();
@@ -238,7 +229,7 @@ class TestProjectScopeModel {
         throw new ValidationException(
           "Technology documentation is required",
           "technologyDocumentation",
-          updateData.technologyDocumentation
+          updateData.technologyDocumentation,
         );
       }
       this.technologyDocumentation = updateData.technologyDocumentation.trim();
@@ -264,18 +255,15 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        this.assessmentId
+        this.assessmentId,
       );
     }
 
-    if (
-      !this.describeAiEnvironment ||
-      this.describeAiEnvironment.trim().length === 0
-    ) {
+    if (!this.describeAiEnvironment || this.describeAiEnvironment.trim().length === 0) {
       throw new ValidationException(
         "AI environment description is required",
         "describeAiEnvironment",
-        this.describeAiEnvironment
+        this.describeAiEnvironment,
       );
     }
 
@@ -283,18 +271,15 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "AI environment description must be at least 10 characters long",
         "describeAiEnvironment",
-        this.describeAiEnvironment
+        this.describeAiEnvironment,
       );
     }
 
-    if (
-      !this.projectScopeDocuments ||
-      this.projectScopeDocuments.trim().length === 0
-    ) {
+    if (!this.projectScopeDocuments || this.projectScopeDocuments.trim().length === 0) {
       throw new ValidationException(
         "Project scope documents are required",
         "projectScopeDocuments",
-        this.projectScopeDocuments
+        this.projectScopeDocuments,
       );
     }
 
@@ -302,7 +287,7 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Technology type is required",
         "technologyType",
-        this.technologyType
+        this.technologyType,
       );
     }
 
@@ -310,29 +295,23 @@ class TestProjectScopeModel {
       throw new ValidationException(
         "Technology type must be at least 3 characters long",
         "technologyType",
-        this.technologyType
+        this.technologyType,
       );
     }
 
-    if (
-      !this.unintendedOutcomes ||
-      this.unintendedOutcomes.trim().length === 0
-    ) {
+    if (!this.unintendedOutcomes || this.unintendedOutcomes.trim().length === 0) {
       throw new ValidationException(
         "Unintended outcomes description is required",
         "unintendedOutcomes",
-        this.unintendedOutcomes
+        this.unintendedOutcomes,
       );
     }
 
-    if (
-      !this.technologyDocumentation ||
-      this.technologyDocumentation.trim().length === 0
-    ) {
+    if (!this.technologyDocumentation || this.technologyDocumentation.trim().length === 0) {
       throw new ValidationException(
         "Technology documentation is required",
         "technologyDocumentation",
-        this.technologyDocumentation
+        this.technologyDocumentation,
       );
     }
   }
@@ -348,7 +327,7 @@ class TestProjectScopeModel {
       throw new BusinessLogicException(
         "Demo project scopes cannot be modified",
         "DEMO_SCOPE_RESTRICTION",
-        { scopeId: this.id, assessmentId: this.assessmentId }
+        { scopeId: this.id, assessmentId: this.assessmentId },
       );
     }
     return true;
@@ -437,23 +416,13 @@ class TestProjectScopeModel {
   }
 
   // Static method to find by ID with validation
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TestProjectScopeModel> {
+  static async findByIdWithValidation(id: number): Promise<TestProjectScopeModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
-      throw new NotFoundException(
-        "Project scope not found",
-        "ProjectScope",
-        id
-      );
+      throw new NotFoundException("Project scope not found", "ProjectScope", id);
     }
 
     return new TestProjectScopeModel({
@@ -472,14 +441,12 @@ class TestProjectScopeModel {
   }
 
   // Static method to find by assessment ID
-  static async findByAssessmentId(
-    assessmentId: number
-  ): Promise<TestProjectScopeModel | null> {
+  static async findByAssessmentId(assessmentId: number): Promise<TestProjectScopeModel | null> {
     if (!numberValidation(assessmentId, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -501,14 +468,10 @@ class TestProjectScopeModel {
   // Static method to update by ID
   static async updateProjectScopeById(
     id: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestProjectScopeModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return [1, [new TestProjectScopeModel({ id, ...updateData })]];
@@ -517,11 +480,7 @@ class TestProjectScopeModel {
   // Static method to delete by ID
   static async deleteProjectScopeById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return 1;
@@ -595,14 +554,12 @@ describe("ProjectScopeModel", () => {
         validData.hasOngoingMonitoring,
         validData.unintendedOutcomes,
         validData.technologyDocumentation,
-        validData.is_demo
+        validData.is_demo,
       );
 
       expect(projectScope).toBeInstanceOf(TestProjectScopeModel);
       expect(projectScope.assessmentId).toBe(1);
-      expect(projectScope.describeAiEnvironment).toBe(
-        validData.describeAiEnvironment
-      );
+      expect(projectScope.describeAiEnvironment).toBe(validData.describeAiEnvironment);
       expect(projectScope.technologyType).toBe("Machine Learning");
       expect(projectScope.is_demo).toBe(false);
       expect(projectScope.created_at).toBeInstanceOf(Date);
@@ -619,8 +576,8 @@ describe("ProjectScopeModel", () => {
           validData.technologyType,
           validData.hasOngoingMonitoring,
           validData.unintendedOutcomes,
-          validData.technologyDocumentation
-        )
+          validData.technologyDocumentation,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -635,8 +592,8 @@ describe("ProjectScopeModel", () => {
           validData.technologyType,
           validData.hasOngoingMonitoring,
           validData.unintendedOutcomes,
-          validData.technologyDocumentation
-        )
+          validData.technologyDocumentation,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -651,8 +608,8 @@ describe("ProjectScopeModel", () => {
           "AI",
           validData.hasOngoingMonitoring,
           validData.unintendedOutcomes,
-          validData.technologyDocumentation
-        )
+          validData.technologyDocumentation,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -668,7 +625,7 @@ describe("ProjectScopeModel", () => {
       });
 
       expect(projectScope.describeAiEnvironment).toBe(
-        "Updated AI environment description that meets the minimum length requirement"
+        "Updated AI environment description that meets the minimum length requirement",
       );
       expect(projectScope.technologyType).toBe("Deep Learning");
     });
@@ -679,7 +636,7 @@ describe("ProjectScopeModel", () => {
       await expect(
         projectScope.updateProjectScope({
           describeAiEnvironment: "Short",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -688,9 +645,7 @@ describe("ProjectScopeModel", () => {
     it("should pass validation with valid data", async () => {
       const projectScope = new TestProjectScopeModel(validData);
 
-      await expect(
-        projectScope.validateProjectScopeData()
-      ).resolves.not.toThrow();
+      await expect(projectScope.validateProjectScopeData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid data", async () => {
@@ -699,9 +654,7 @@ describe("ProjectScopeModel", () => {
         describeAiEnvironment: "Short",
       });
 
-      await expect(projectScope.validateProjectScopeData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectScope.validateProjectScopeData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -735,9 +688,7 @@ describe("ProjectScopeModel", () => {
         is_demo: true,
       });
 
-      expect(() => projectScope.canBeModified()).toThrow(
-        BusinessLogicException
-      );
+      expect(() => projectScope.canBeModified()).toThrow(BusinessLogicException);
     });
   });
 
@@ -831,23 +782,22 @@ describe("ProjectScopeModel", () => {
 
   describe("findByIdWithValidation", () => {
     it("should find project scope by valid ID", async () => {
-      const projectScope =
-        await TestProjectScopeModel.findByIdWithValidation(1);
+      const projectScope = await TestProjectScopeModel.findByIdWithValidation(1);
 
       expect(projectScope).toBeInstanceOf(TestProjectScopeModel);
       expect(projectScope.id).toBe(1);
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestProjectScopeModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectScopeModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestProjectScopeModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestProjectScopeModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -861,17 +811,16 @@ describe("ProjectScopeModel", () => {
 
     it("should throw ValidationException for invalid assessment ID", async () => {
       await expect(TestProjectScopeModel.findByAssessmentId(0)).rejects.toThrow(
-        ValidationException
+        ValidationException,
       );
     });
   });
 
   describe("updateProjectScopeById", () => {
     it("should update project scope by ID", async () => {
-      const [affected, updated] =
-        await TestProjectScopeModel.updateProjectScopeById(1, {
-          technologyType: "Updated Technology",
-        });
+      const [affected, updated] = await TestProjectScopeModel.updateProjectScopeById(1, {
+        technologyType: "Updated Technology",
+      });
 
       expect(affected).toBe(1);
       expect(updated[0].technologyType).toBe("Updated Technology");
@@ -881,7 +830,7 @@ describe("ProjectScopeModel", () => {
       await expect(
         TestProjectScopeModel.updateProjectScopeById(0, {
           technologyType: "Updated",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -894,9 +843,9 @@ describe("ProjectScopeModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestProjectScopeModel.deleteProjectScopeById(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectScopeModel.deleteProjectScopeById(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -929,9 +878,7 @@ describe("ProjectScopeModel", () => {
       const requirements = projectScope.getComplianceRequirements();
 
       expect(requirements).toContain("GDPR compliance required");
-      expect(requirements).toContain(
-        "Data protection impact assessment needed"
-      );
+      expect(requirements).toContain("Data protection impact assessment needed");
     });
 
     it("should return compliance requirements for new AI technology", () => {

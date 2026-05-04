@@ -66,36 +66,26 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
     onSkip();
   }, [onSkip]);
 
-  const setAnswer = useCallback(
-    (key: keyof Answers, value: Answer) => {
-      setAnswers((prev) => {
-        const updated = { ...prev, [key]: value };
-        if (key === "q1" && value === "no") {
-          updated.q2 = null;
-          updated.q3 = null;
-          updated.q4 = null;
-          updated.q5 = null;
-          updated.q6 = null;
-          updated.q7 = null;
-        }
-        return updated;
-      });
-    },
-    []
-  );
+  const setAnswer = useCallback((key: keyof Answers, value: Answer) => {
+    setAnswers((prev) => {
+      const updated = { ...prev, [key]: value };
+      if (key === "q1" && value === "no") {
+        updated.q2 = null;
+        updated.q3 = null;
+        updated.q4 = null;
+        updated.q5 = null;
+        updated.q6 = null;
+        updated.q7 = null;
+      }
+      return updated;
+    });
+  }, []);
 
   const result = useMemo(() => {
     if (answers.q1 === null) return null;
     if (answers.q1 === "no") return { isAi: false, reason: "core" as const };
 
-    const otherAnswers = [
-      answers.q2,
-      answers.q3,
-      answers.q4,
-      answers.q5,
-      answers.q6,
-      answers.q7,
-    ];
+    const otherAnswers = [answers.q2, answers.q3, answers.q4, answers.q5, answers.q6, answers.q7];
     const anyYes = otherAnswers.some((a) => a === "yes");
     const allAnswered = otherAnswers.every((a) => a !== null);
 
@@ -142,18 +132,13 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
 
   const labelSx = { fontSize: 13, color: theme.palette.text.primary };
 
-  const renderQuestion = (
-    key: keyof Answers,
-    label: string,
-    number: number
-  ) => (
+  const renderQuestion = (key: keyof Answers, label: string, number: number) => (
     <Box
       key={key}
       sx={{
         padding: "8px",
         borderRadius: "4px",
-        backgroundColor:
-          answers[key] !== null ? theme.palette.background.fill : "transparent",
+        backgroundColor: answers[key] !== null ? theme.palette.background.fill : "transparent",
       }}
     >
       <Typography sx={{ fontSize: 13, fontWeight: 500, mb: "8px" }}>
@@ -193,13 +178,12 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
             Is your system an AI system?
           </Typography>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-            This short screening (7 questions) helps determine whether your
-            system qualifies as an AI system under the EU AI Act, NIST AI RMF,
-            and ISO/IEC 42001.
+            This short screening (7 questions) helps determine whether your system qualifies as an
+            AI system under the EU AI Act, NIST AI RMF, and ISO/IEC 42001.
           </Typography>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-            If classified as AI, it should enter your AI inventory and follow
-            your AI governance lifecycle.
+            If classified as AI, it should enter your AI inventory and follow your AI governance
+            lifecycle.
           </Typography>
         </Stack>
       </Box>
@@ -233,7 +217,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
         {renderQuestion(
           "q1",
           "Does the system generate predictions, recommendations, classifications, or decisions from data?",
-          1
+          1,
         )}
 
         {!showEarlyExit && (
@@ -241,12 +225,12 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
             {renderQuestion(
               "q2",
               "Does the system use models that learn patterns from data or apply statistical/logic-based methods beyond fixed rules?",
-              2
+              2,
             )}
             {renderQuestion(
               "q3",
               "Are the system's outputs not fully predetermined by explicit, hard-coded rules?",
-              3
+              3,
             )}
           </>
         )}
@@ -267,8 +251,8 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
                 fontWeight: 500,
               }}
             >
-              Based on your answer, this system does not meet the core AI
-              definition. You can proceed to see the full result.
+              Based on your answer, this system does not meet the core AI definition. You can
+              proceed to see the full result.
             </Typography>
           </Box>
         )}
@@ -283,12 +267,12 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
           {renderQuestion(
             "q4",
             "Does the system adapt or change behaviour based on new data or feedback?",
-            4
+            4,
           )}
           {renderQuestion(
             "q5",
             "Does the system perform tasks normally requiring human perception or judgement (e.g., language understanding, image recognition)?",
-            5
+            5,
           )}
         </Stack>
       )}
@@ -302,12 +286,12 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
           {renderQuestion(
             "q6",
             "Does the system require monitoring, validation, or periodic review of a model or dataset?",
-            6
+            6,
           )}
           {renderQuestion(
             "q7",
             "Could the system's outputs materially affect people, processes, or decisions?",
-            7
+            7,
           )}
         </Stack>
       )}
@@ -344,20 +328,16 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
                 >
                   This system qualifies as an AI system
                 </Typography>
-                <Typography
-                  sx={{ fontSize: 13, color: theme.palette.text.secondary }}
-                >
-                  Based on your answers, this system meets the definition of an
-                  AI system under one or more of the following: EU AI Act, NIST
-                  AI RMF, or ISO/IEC 42001. It should be added to your AI
-                  inventory and follow your governance lifecycle.
+                <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
+                  Based on your answers, this system meets the definition of an AI system under one
+                  or more of the following: EU AI Act, NIST AI RMF, or ISO/IEC 42001. It should be
+                  added to your AI inventory and follow your governance lifecycle.
                 </Typography>
               </Stack>
             </Stack>
           </Box>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-            Click "Create use case" below to proceed with setting up this AI use
-            case in VerifyWise.
+            Click "Create use case" below to proceed with setting up this AI use case in VerifyWise.
           </Typography>
         </Stack>
       );
@@ -389,9 +369,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
               >
                 This system does not appear to be an AI system
               </Typography>
-              <Typography
-                sx={{ fontSize: 13, color: theme.palette.text.secondary }}
-              >
+              <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                 {result.reason === "core"
                   ? "The system does not generate predictions, recommendations, classifications, or decisions from data, which is the core requirement for an AI system."
                   : "While the system generates outputs from data, it appears to be deterministic software, a rules engine, workflow automation, or analytics tool rather than an AI system."}
@@ -426,9 +404,8 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
         </Stack>
 
         <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-          You can still create a use case if needed. Proceed with caution and
-          consider whether AI governance processes are appropriate for this
-          system.
+          You can still create a use case if needed. Proceed with caution and consider whether AI
+          governance processes are appropriate for this system.
         </Typography>
       </Stack>
     );
@@ -447,9 +424,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
       onBack={handleBack}
       onSubmit={handleSubmit}
       canProceed={canProceed}
-      submitButtonText={
-        result?.isAi ? "Create use case" : "Proceed with caution"
-      }
+      submitButtonText={result?.isAi ? "Create use case" : "Proceed with caution"}
       maxWidth="680px"
     >
       {stepContent[activeStep]()}

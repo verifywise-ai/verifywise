@@ -21,17 +21,11 @@ const REVIEW_STATUS_OPTIONS = [
   { _id: "Planned", name: "Planned" },
 ];
 
-function ConsultationSection({
-  assessment,
-  onUpdate,
-  isSaving,
-}: ConsultationSectionProps) {
+function ConsultationSection({ assessment, onUpdate, isSaving }: ConsultationSectionProps) {
   const [stakeholdersConsulted, setStakeholdersConsulted] = useState(
-    assessment.stakeholders_consulted ?? ""
+    assessment.stakeholders_consulted ?? "",
   );
-  const [consultationNotes, setConsultationNotes] = useState(
-    assessment.consultation_notes ?? ""
-  );
+  const [consultationNotes, setConsultationNotes] = useState(assessment.consultation_notes ?? "");
 
   const handleSelectChange =
     (field: keyof FriaAssessment) => (e: SelectChangeEvent<string | number>) => {
@@ -39,12 +33,7 @@ function ConsultationSection({
     };
 
   const handleTextBlur =
-    (
-      field: keyof FriaAssessment,
-      currentVal: string,
-      originalVal: string | null
-    ) =>
-    () => {
+    (field: keyof FriaAssessment, currentVal: string, originalVal: string | null) => () => {
       if (currentVal !== (originalVal ?? "")) {
         onUpdate({ [field]: currentVal });
       }
@@ -57,14 +46,27 @@ function ConsultationSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(3)
           </a>{" "}
-          requires deployers to notify the relevant market surveillance authority of the FRIA results.{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          requires deployers to notify the relevant market surveillance authority of the FRIA
+          results.{" "}
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(4)
           </a>{" "}
-          states that where data protection impact assessments (DPIAs) are already required, the FRIA may complement that process. Consultation with your DPO and legal team is recommended.
+          states that where data protection impact assessments (DPIAs) are already required, the
+          FRIA may complement that process. Consultation with your DPO and legal team is
+          recommended.
         </>
       }
     >
@@ -117,7 +119,7 @@ function ConsultationSection({
         onBlur={handleTextBlur(
           "stakeholders_consulted",
           stakeholdersConsulted,
-          assessment.stakeholders_consulted
+          assessment.stakeholders_consulted,
         )}
         disabled={isSaving}
       />
@@ -133,7 +135,7 @@ function ConsultationSection({
         onBlur={handleTextBlur(
           "consultation_notes",
           consultationNotes,
-          assessment.consultation_notes
+          assessment.consultation_notes,
         )}
         disabled={isSaving}
       />

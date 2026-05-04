@@ -7,16 +7,9 @@ import { brand } from "../../../../themes/palette";
 const STANDARD_DURATION = 10; // seconds
 const AI_DURATION = 30; // seconds
 
-const AI_PHASES = [
-  "Collecting data...",
-  "Generating AI analysis...",
-  "Building document...",
-];
+const AI_PHASES = ["Collecting data...", "Generating AI analysis...", "Building document..."];
 
-const DownloadReportForm: React.FC<IStatusProps> = ({
-  statusCode,
-  aiEnhanced = false,
-}) => {
+const DownloadReportForm: React.FC<IStatusProps> = ({ statusCode, aiEnhanced = false }) => {
   const theme = useTheme();
   const [phase, setPhase] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -113,15 +106,13 @@ const DownloadReportForm: React.FC<IStatusProps> = ({
                 Access denied...
               </Typography>
               <Typography sx={{ ...styles.baseText, color: "error.main" }}>
-                It looks like you're not authorized to generate this report, as
-                you're not part of the selected project.
+                It looks like you're not authorized to generate this report, as you're not part of
+                the selected project.
               </Typography>
             </Stack>
           ) : (
             <Stack sx={styles.container}>
-              <Typography sx={{ ...styles.titleText, color: "error.main" }}>
-                Sorry...
-              </Typography>
+              <Typography sx={{ ...styles.titleText, color: "error.main" }}>Sorry...</Typography>
               <Typography sx={{ ...styles.baseText, color: "error.main" }}>
                 Unexpected error occurs while downloading the report.
               </Typography>

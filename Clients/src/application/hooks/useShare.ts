@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createShareLink,
   getShareLinksForResource,
@@ -7,15 +7,15 @@ import {
   deleteShareLink,
   CreateShareLinkParams,
   UpdateShareLinkParams,
-} from '../repository/share.repository';
+} from "../repository/share.repository";
 
 // Query keys for shares
 export const shareQueryKeys = {
-  all: ['shares'] as const,
-  lists: () => [...shareQueryKeys.all, 'list'] as const,
+  all: ["shares"] as const,
+  lists: () => [...shareQueryKeys.all, "list"] as const,
   list: (resourceType: string, resourceId: number) =>
     [...shareQueryKeys.lists(), resourceType, resourceId] as const,
-  details: () => [...shareQueryKeys.all, 'detail'] as const,
+  details: () => [...shareQueryKeys.all, "detail"] as const,
   detail: (token: string) => [...shareQueryKeys.details(), token] as const,
 };
 
@@ -30,7 +30,7 @@ export const useShareLinks = (resourceType: string, resourceId: number) => {
       return response?.data || [];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!resourceType && !!resourceId,
   });
 };
@@ -46,7 +46,7 @@ export const useShareLinkByToken = (token: string) => {
       return response?.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!token,
   });
 };

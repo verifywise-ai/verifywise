@@ -3,10 +3,7 @@ import { Box, Typography, Stack, Chip } from "@mui/material";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 
-const RiskTimeline: React.FC<IRiskTimelineProps> = ({
-  risks,
-  onRiskSelect,
-}) => {
+const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const getRiskLevelFromString = (level: string | number): number => {
     if (typeof level === "number") return level;
     const levelStr = level.trim().toLowerCase();
@@ -40,11 +37,9 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
 
     risks.forEach((risk) => {
       // Add creation event
-      const createdDate = risk.date_of_assessment
-        ? new Date(risk.date_of_assessment)
-        : new Date();
+      const createdDate = risk.date_of_assessment ? new Date(risk.date_of_assessment) : new Date();
       const riskLevelValue = getRiskLevelFromString(
-        risk.current_risk_level || risk.risk_level_autocalculated
+        risk.current_risk_level || risk.risk_level_autocalculated,
       );
 
       events.push({
@@ -53,9 +48,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
         type: "created",
         risk,
         title: `Risk Identified: ${risk.risk_name}`,
-        description: `New ${getRiskLevelLabel(
-          riskLevelValue
-        ).toLowerCase()} risk identified`,
+        description: `New ${getRiskLevelLabel(riskLevelValue).toLowerCase()} risk identified`,
         riskLevel: riskLevelValue,
       });
 
@@ -68,9 +61,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
           type: "mitigated",
           risk,
           title: `Risk Mitigated: ${risk.risk_name}`,
-          description: `Mitigation completed: ${
-            risk.mitigation_plan || "Mitigation action"
-          }`,
+          description: `Mitigation completed: ${risk.mitigation_plan || "Mitigation action"}`,
           riskLevel: riskLevelValue,
         });
       }
@@ -129,10 +120,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography
-        variant="h6"
-        sx={{ fontWeight: 600, color: "#111827", mb: 3 }}
-      >
+      <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827", mb: 3 }}>
         Risk Timeline Analysis
       </Typography>
 
@@ -215,9 +203,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
                       borderRadius: 2,
                       p: 3,
                       transition: "all 0.2s ease-in-out",
-                      borderLeft: `4px solid ${getRiskLevelColor(
-                        event.riskLevel
-                      )}`,
+                      borderLeft: `4px solid ${getRiskLevelColor(event.riskLevel)}`,
                     }}
                   >
                     <Box
@@ -240,10 +226,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
                       {event.title}
                     </Typography>
 
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "#4B5563", mb: 2 }}
-                    >
+                    <Typography variant="body2" sx={{ color: "#4B5563", mb: 2 }}>
                       {event.description}
                     </Typography>
 
@@ -252,16 +235,12 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({
                         label={getRiskLevelLabel(event.riskLevel)}
                         size="small"
                         sx={{
-                          backgroundColor: `${getRiskLevelColor(
-                            event.riskLevel
-                          )}20`,
+                          backgroundColor: `${getRiskLevelColor(event.riskLevel)}20`,
                           color: getRiskLevelColor(event.riskLevel),
                           fontWeight: 500,
                           fontSize: 11,
                           borderRadius: "4px",
-                          border: `1px solid ${getRiskLevelColor(
-                            event.riskLevel
-                          )}40`,
+                          border: `1px solid ${getRiskLevelColor(event.riskLevel)}40`,
                         }}
                       />
                       {event.risk.risk_owner && (

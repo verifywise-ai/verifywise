@@ -153,7 +153,7 @@ export const euAiActContent: ArticleContent = {
       items: [
         { bold: 'Controls', text: 'High-level requirements from the regulation' },
         { bold: 'Subcontrols', text: 'Specific actions needed to satisfy each control' },
-        { bold: 'Status tracking', text: 'Track each control as Waiting, In progress, or Done' },
+        { bold: 'Status tracking', text: 'Track each control as Not started, In progress, or Done' },
         { bold: 'Risk review', text: 'Assess residual risk as Acceptable, Residual, or Unacceptable' },
         { bold: 'Ownership', text: 'Assign owners, reviewers and approvers to controls' },
       ],
@@ -271,7 +271,7 @@ export const euAiActContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Change status from "Waiting" to "In progress" when you begin work' },
+        { text: 'Change status from "Not started" to "In progress" when you begin work' },
         { text: 'Work through each subcontrol, marking them complete as you go' },
         { text: 'Document your implementation details in the control' },
         { text: 'Link or upload evidence supporting your implementation' },
@@ -348,7 +348,7 @@ export const euAiActContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Completion percentage', text: 'Overall progress across all controls' },
-        { bold: 'Status breakdown', text: 'Number of controls in each status (Waiting, In progress, Done)' },
+        { bold: 'Status breakdown', text: 'Number of controls in each status (Not started, In progress, Done)' },
         { bold: 'Subcontrol progress', text: 'Detailed view of completed vs. pending subcontrols' },
         { bold: 'Overdue controls', text: 'Controls that have passed their due date' },
         { bold: 'Risk summary', text: 'Distribution of controls by risk assessment outcome' },

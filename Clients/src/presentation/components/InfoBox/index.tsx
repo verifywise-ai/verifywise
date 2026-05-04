@@ -35,7 +35,7 @@ function InfoBox({
   disableInternalStorage = false,
   disableAnimation = false,
   backgroundColor,
-  borderColor
+  borderColor,
 }: InfoBoxProps) {
   const theme = useTheme();
   const [isVisible, setIsVisible] = useState(true);

@@ -13,10 +13,7 @@ const initialFilterState: IFilterState = {
   deletionStatus: "active",
 };
 
-const RiskFilters: React.FC<IRiskFiltersProps> = ({
-  risks,
-  onFilterChange,
-}) => {
+const RiskFilters: React.FC<IRiskFiltersProps> = ({ risks, onFilterChange }) => {
   const [filters, setFilters] = useState<IFilterState>(initialFilterState);
   const [users, setUsers] = useState<User[]>([]);
 
@@ -39,7 +36,7 @@ const RiskFilters: React.FC<IRiskFiltersProps> = ({
     if (risks.length > 0) {
       applyFilters(filters);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [risks]);
 
   const applyFilters = (newFilters: IFilterState) => {
@@ -58,22 +55,13 @@ const RiskFilters: React.FC<IRiskFiltersProps> = ({
           case "veryHigh":
             return currentRiskLevel.includes("very high");
           case "high":
-            return (
-              currentRiskLevel.includes("high") &&
-              !currentRiskLevel.includes("very high")
-            );
+            return currentRiskLevel.includes("high") && !currentRiskLevel.includes("very high");
           case "medium":
             return currentRiskLevel.includes("medium");
           case "low":
-            return (
-              currentRiskLevel.includes("low") &&
-              !currentRiskLevel.includes("very low")
-            );
+            return currentRiskLevel.includes("low") && !currentRiskLevel.includes("very low");
           case "veryLow":
-            return (
-              currentRiskLevel.includes("very low") ||
-              currentRiskLevel.includes("no risk")
-            );
+            return currentRiskLevel.includes("very low") || currentRiskLevel.includes("no risk");
           default:
             return true;
         }
@@ -194,9 +182,7 @@ const RiskFilters: React.FC<IRiskFiltersProps> = ({
             { _id: "pending", name: "Pending" },
             { _id: "none", name: "No Mitigations" },
           ]}
-          onChange={(e) =>
-            handleFilterChange("mitigationStatus", e.target.value)
-          }
+          onChange={(e) => handleFilterChange("mitigationStatus", e.target.value)}
           sx={{ width: 140 }}
           isFilterApplied={!!filters.mitigationStatus && filters.mitigationStatus !== "all"}
         />

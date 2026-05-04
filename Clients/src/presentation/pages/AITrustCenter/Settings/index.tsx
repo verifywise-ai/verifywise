@@ -1,12 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  Button as MUIButton,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, Button as MUIButton, CircularProgress } from "@mui/material";
 import Alert from "../../../components/Alert";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
@@ -32,11 +26,7 @@ import { brand, text, background } from "../../../themes/palette";
 const AITrustCenterSettings: React.FC = () => {
   const styles = useStyles();
   const { fetchLogoAsBlobUrl } = useLogoFetch();
-  const {
-    data: overviewData,
-    isLoading: loading,
-    error,
-  } = useAITrustCentreOverviewQuery();
+  const { data: overviewData, isLoading: loading, error } = useAITrustCentreOverviewQuery();
   const updateOverviewMutation = useAITrustCentreOverviewMutation();
   const [alert, setAlert] = React.useState<AlertProps | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
@@ -46,11 +36,8 @@ const AITrustCenterSettings: React.FC = () => {
   const [logoLoading, setLogoLoading] = React.useState(false);
   const [logoRemoving, setLogoRemoving] = React.useState(false);
   const [logoLoadError, setLogoLoadError] = React.useState(false);
-  const [isRemoveLogoModalOpen, setIsRemoveLogoModalOpen] =
-    React.useState(false);
-  const [selectedLogoPreview, setSelectedLogoPreview] = React.useState<
-    string | null
-  >(null);
+  const [isRemoveLogoModalOpen, setIsRemoveLogoModalOpen] = React.useState(false);
+  const [selectedLogoPreview, setSelectedLogoPreview] = React.useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle logo load error
@@ -140,8 +127,7 @@ const AITrustCenterSettings: React.FC = () => {
       };
 
       const hasChanges =
-        JSON.stringify(formDataWithoutLogo) !==
-        JSON.stringify(originalDataWithoutLogo);
+        JSON.stringify(formDataWithoutLogo) !== JSON.stringify(originalDataWithoutLogo);
       setHasUnsavedChanges(hasChanges);
     }
   }, [formData, originalData]);
@@ -153,21 +139,14 @@ const AITrustCenterSettings: React.FC = () => {
         URL.revokeObjectURL(selectedLogoPreview);
       }
       // Also revoke the logo URL if it's a Blob URL
-      if (
-        formData?.info?.logo_url &&
-        formData.info.logo_url.startsWith("blob:")
-      ) {
+      if (formData?.info?.logo_url && formData.info.logo_url.startsWith("blob:")) {
         URL.revokeObjectURL(formData.info.logo_url);
       }
     };
   }, [selectedLogoPreview, formData?.info?.logo_url]);
 
   // Generic handler for form field changes
-  const handleFieldChange = (
-    section: string,
-    field: string,
-    value: boolean | string
-  ) => {
+  const handleFieldChange = (section: string, field: string, value: boolean | string) => {
     setFormData((prev: any) => {
       if (!prev) return prev;
       return {
@@ -180,11 +159,7 @@ const AITrustCenterSettings: React.FC = () => {
     });
   };
 
-  const showToast = (
-    variant: AlertProps["variant"],
-    body: string,
-    timeout = 4000,
-  ) => {
+  const showToast = (variant: AlertProps["variant"], body: string, timeout = 4000) => {
     handleAlert({ variant, body, setAlert, alertTimeout: timeout });
   };
 
@@ -231,10 +206,7 @@ const AITrustCenterSettings: React.FC = () => {
 
           if (tenantId) {
             // Clear any existing logo URL before setting new one
-            if (
-              formData?.info?.logo_url &&
-              formData.info.logo_url.startsWith("blob:")
-            ) {
+            if (formData?.info?.logo_url && formData.info.logo_url.startsWith("blob:")) {
               URL.revokeObjectURL(formData.info.logo_url);
             }
 
@@ -324,10 +296,7 @@ const AITrustCenterSettings: React.FC = () => {
       }
 
       // Also revoke the current logo URL if it's a Blob URL
-      if (
-        formData?.info?.logo_url &&
-        formData.info.logo_url.startsWith("blob:")
-      ) {
+      if (formData?.info?.logo_url && formData.info.logo_url.startsWith("blob:")) {
         URL.revokeObjectURL(formData.info.logo_url);
       }
 
@@ -395,9 +364,7 @@ const AITrustCenterSettings: React.FC = () => {
           height: "200px",
         }}
       >
-        <Typography color="error">
-          Error loading AI Trust Center settings
-        </Typography>
+        <Typography color="error">Error loading AI Trust Center settings</Typography>
       </Box>
     );
   }
@@ -419,12 +386,8 @@ const AITrustCenterSettings: React.FC = () => {
         >
           {/* Company Logo Row */}
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Company logo
-            </Typography>
-            <Typography
-              sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-            >
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Company logo</Typography>
+            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
               This logo will be shown in the AI Trust Center page
             </Typography>
           </Box>
@@ -499,15 +462,11 @@ const AITrustCenterSettings: React.FC = () => {
                         justifyContent: "center",
                       }}
                     >
-                      <Typography
-                        sx={{ fontSize: 12, color: "#666", fontWeight: 600 }}
-                      >
+                      <Typography sx={{ fontSize: 12, color: "#666", fontWeight: 600 }}>
                         L
                       </Typography>
                     </Box>
-                    <Typography
-                      sx={{ fontSize: 10, color: "#888", textAlign: "center" }}
-                    >
+                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center" }}>
                       {logoLoadError ? "Failed to load logo" : "Logo"}
                     </Typography>
                   </Box>
@@ -545,7 +504,12 @@ const AITrustCenterSettings: React.FC = () => {
                   variant="outlined"
                   sx={styles.removeButton}
                   onClick={handleRemoveLogo}
-                  disabled={logoRemoving || logoUploading || logoLoading || (!selectedLogoPreview && !formData?.info?.logo_url)}
+                  disabled={
+                    logoRemoving ||
+                    logoUploading ||
+                    logoLoading ||
+                    (!selectedLogoPreview && !formData?.info?.logo_url)
+                  }
                 >
                   {logoRemoving ? (
                     <>
@@ -558,10 +522,7 @@ const AITrustCenterSettings: React.FC = () => {
                 </MUIButton>
               </Box>
             </Box>
-            <Stack
-              direction="row"
-              sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}
-            >
+            <Stack direction="row" sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
               <Typography
                 sx={{
                   fontSize: 11,
@@ -577,12 +538,8 @@ const AITrustCenterSettings: React.FC = () => {
 
           {/* Header Color Row */}
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Header color
-            </Typography>
-            <Typography
-              sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-            >
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Header color</Typography>
+            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
               Select or customize your top header color
             </Typography>
           </Box>
@@ -598,18 +555,14 @@ const AITrustCenterSettings: React.FC = () => {
             <input
               type="text"
               value={formData?.info?.header_color}
-              onChange={(e) =>
-                handleFieldChange("info", "header_color", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("info", "header_color", e.target.value)}
               style={styles.customColorInput}
             />
             {/* Color picker input positioned to the right and down */}
             <input
               type="color"
               value={formData?.info?.header_color || `${text.black}`}
-              onChange={(e) =>
-                handleFieldChange("info", "header_color", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("info", "header_color", e.target.value)}
               style={{
                 position: "absolute",
                 top: "40px",
@@ -642,12 +595,8 @@ const AITrustCenterSettings: React.FC = () => {
 
           {/* Trust Center Title Row */}
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Trust center title
-            </Typography>
-            <Typography
-              sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-            >
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Trust center title</Typography>
+            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
               This title will be shown in the AI Trust Center page
             </Typography>
           </Box>
@@ -671,9 +620,7 @@ const AITrustCenterSettings: React.FC = () => {
             { label: "Unpublished", value: "unpublished" },
           ]}
           value={formData?.info?.visible ? "published" : "unpublished"}
-          onChange={(value) =>
-            handleFieldChange("info", "visible", value === "published")
-          }
+          onChange={(value) => handleFieldChange("info", "visible", value === "published")}
         />
       </Box>
 
@@ -709,8 +656,7 @@ const AITrustCenterSettings: React.FC = () => {
           title="Confirm logo removal"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to remove the company logo? This action
-              cannot be undone.
+              Are you sure you want to remove the company logo? This action cannot be undone.
             </Typography>
           }
           cancelText="Cancel"

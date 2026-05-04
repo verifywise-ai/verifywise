@@ -8,7 +8,7 @@ import logger from "../../utils/logger/fileLogger";
 
 const fetchTrustCenterOverview = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const [overview, resources, subprocessors, isVisible] = await Promise.all([
@@ -31,9 +31,7 @@ const fetchTrustCenterOverview = async (
             filename: r.filename,
           }))
         : [],
-      subprocessorCount: Array.isArray(subprocessors)
-        ? subprocessors.length
-        : 0,
+      subprocessorCount: Array.isArray(subprocessors) ? subprocessors.length : 0,
       subprocessors: Array.isArray(subprocessors)
         ? subprocessors.map((s: any) => ({
             id: s.id,
@@ -46,14 +44,14 @@ const fetchTrustCenterOverview = async (
   } catch (error) {
     logger.error("Error fetching trust center overview:", error);
     throw new Error(
-      `Failed to fetch trust center overview: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch trust center overview: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getTrustCenterAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const [overview, resources, subprocessors, isVisible] = await Promise.all([
@@ -67,9 +65,7 @@ const getTrustCenterAnalytics = async (
     const subprocessorList = Array.isArray(subprocessors) ? subprocessors : [];
 
     // Count visible resources
-    const visibleResources = resourceList.filter(
-      (r: any) => r.visible
-    ).length;
+    const visibleResources = resourceList.filter((r: any) => r.visible).length;
 
     // Section visibility from overview
     const info = (overview as any)?.info || {};
@@ -82,9 +78,7 @@ const getTrustCenterAnalytics = async (
       subprocessors: !!info.subprocessor_visible,
     };
 
-    const visibleSections = Object.values(sectionVisibility).filter(
-      Boolean
-    ).length;
+    const visibleSections = Object.values(sectionVisibility).filter(Boolean).length;
     const totalSections = Object.keys(sectionVisibility).length;
 
     return {
@@ -98,7 +92,7 @@ const getTrustCenterAnalytics = async (
   } catch (error) {
     logger.error("Error getting trust center analytics:", error);
     throw new Error(
-      `Failed to get trust center analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get trust center analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

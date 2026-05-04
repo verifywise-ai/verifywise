@@ -40,7 +40,13 @@ describe("useAITrustCentreSubprocessorsQuery", () => {
 
   it("fetches subprocessors", async () => {
     const subprocessors = [
-      { id: 1, name: "AWS", purpose: "Cloud hosting", location: "US", url: "https://aws.amazon.com" },
+      {
+        id: 1,
+        name: "AWS",
+        purpose: "Cloud hosting",
+        location: "US",
+        url: "https://aws.amazon.com",
+      },
     ];
     mockGetSubprocessors.mockResolvedValue({ data: { data: { subprocessors } } });
 
@@ -76,10 +82,20 @@ describe("useCreateAITrustCentreSubprocessorMutation", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate({ name: "GCP", purpose: "AI", location: "EU", url: "https://cloud.google.com" });
+    result.current.mutate({
+      name: "GCP",
+      purpose: "AI",
+      location: "EU",
+      url: "https://cloud.google.com",
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockCreateSubprocessor).toHaveBeenCalledWith("GCP", "AI", "EU", "https://cloud.google.com");
+    expect(mockCreateSubprocessor).toHaveBeenCalledWith(
+      "GCP",
+      "AI",
+      "EU",
+      "https://cloud.google.com",
+    );
   });
 });
 

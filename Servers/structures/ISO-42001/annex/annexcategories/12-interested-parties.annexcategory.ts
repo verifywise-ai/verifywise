@@ -7,9 +7,7 @@ import { AnnexCategoryStructISO } from "../../../../domain.layer/frameworks/ISO-
  * of concerns from interested parties affected by the organization's AI
  * systems.
  */
-export const InterestedParties: Partial<
-  AnnexCategoryStructISO & AnnexCategoryISO
->[] = [
+export const InterestedParties: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
   {
     sub_id: 1.1,
     order_no: 1,

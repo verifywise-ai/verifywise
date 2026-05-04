@@ -7,14 +7,10 @@ test.describe("Frameworks", () => {
     await expect(page).toHaveURL(/\/framework/);
 
     // Page should show framework-related content
-    await expect(
-      page.getByText(/framework/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/framework/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/framework");
     await page.waitForLoadState("domcontentloaded");
 
@@ -37,9 +33,7 @@ test.describe("Frameworks", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("framework list or selection is visible", async ({
-    authedPage: page,
-  }) => {
+  test("framework list or selection is visible", async ({ authedPage: page }) => {
     await page.goto("/framework");
 
     const content = page
@@ -75,9 +69,7 @@ test.describe("Frameworks", () => {
     await expect(content.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("switching framework tabs loads different content", async ({
-    authedPage: page,
-  }) => {
+  test("switching framework tabs loads different content", async ({ authedPage: page }) => {
     await page.goto("/framework");
     await page.waitForTimeout(2000);
 
@@ -89,7 +81,10 @@ test.describe("Frameworks", () => {
     }
 
     // Click the second tab
-    const firstTabText = await tabs.nth(0).textContent().catch(() => "");
+    const firstTabText = await tabs
+      .nth(0)
+      .textContent()
+      .catch(() => "");
     await tabs.nth(1).click();
     await page.waitForTimeout(1000);
 
@@ -109,7 +104,12 @@ test.describe("Frameworks", () => {
       .or(page.getByText(/dashboard/i))
       .or(page.getByText(/requirements/i));
 
-    if (await subViewBtn.first().isVisible().catch(() => false)) {
+    if (
+      await subViewBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await subViewBtn.first().click();
       await page.waitForTimeout(1000);
 

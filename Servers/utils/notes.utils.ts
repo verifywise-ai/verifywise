@@ -29,7 +29,7 @@ import { QueryTypes } from "sequelize";
  */
 export async function createNewNoteQuery(
   note: NotesModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<NotesModel> {
   try {
     const result = await sequelize.query(
@@ -49,7 +49,7 @@ export async function createNewNoteQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
     // Extract the generated ID from the result
@@ -98,7 +98,7 @@ export async function createNewNoteQuery(
 export async function getNotesByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<NotesModel[]> {
   try {
     const notes = await sequelize.query(
@@ -116,7 +116,7 @@ export async function getNotesByEntityQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     // Convert raw results to NotesModel instances with author info
@@ -159,7 +159,7 @@ export async function getNotesByEntityQuery(
  */
 export async function getNoteByIdQuery(
   noteId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<NotesModel | null> {
   try {
     const result = await sequelize.query(
@@ -171,7 +171,7 @@ export async function getNoteByIdQuery(
       {
         replacements: { id: noteId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -217,7 +217,7 @@ export async function getNoteByIdQuery(
 export async function updateNoteContentQuery(
   noteId: number,
   note: NotesModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<NotesModel> {
   try {
     const updatedAt = new Date();
@@ -235,7 +235,7 @@ export async function updateNoteContentQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     // Fetch the complete updated note with author information
@@ -262,10 +262,7 @@ export async function updateNoteContentQuery(
  * @returns {Promise<number>} Number of rows affected (0 or 1)
  * @throws {Error} If database operation fails
  */
-export async function deleteNoteByIdQuery(
-  noteId: number,
-  organizationId: number
-): Promise<number> {
+export async function deleteNoteByIdQuery(noteId: number, organizationId: number): Promise<number> {
   try {
     // Use RETURNING to get the deleted row and check if deletion was successful
     const result = await sequelize.query(
@@ -275,7 +272,7 @@ export async function deleteNoteByIdQuery(
       {
         replacements: { id: noteId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     // Return 1 if a row was deleted, 0 otherwise
@@ -300,7 +297,7 @@ export async function deleteNoteByIdQuery(
 export async function getNoteCountByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -316,7 +313,7 @@ export async function getNoteCountByEntityQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return parseInt((result as any[])[0].count, 10) || 0;
@@ -338,7 +335,7 @@ export async function getNoteCountByEntityQuery(
  */
 export async function getNotesByAuthorQuery(
   authorId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<NotesModel[]> {
   try {
     const notes = await sequelize.query(
@@ -354,7 +351,7 @@ export async function getNotesByAuthorQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     // Convert raw results to NotesModel instances with author info
@@ -382,9 +379,7 @@ export async function getNotesByAuthorQuery(
       return note;
     });
   } catch (error) {
-    throw new Error(
-      `Failed to fetch author notes: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to fetch author notes: ${(error as Error).message}`);
   }
 }
 
@@ -403,7 +398,7 @@ export async function getNotesByAuthorQuery(
 export async function deleteNotesByEntityQuery(
   attachedTo: string,
   attachedToId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = (await sequelize.query(
@@ -418,13 +413,11 @@ export async function deleteNotesByEntityQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.DELETE,
-      }
+      },
     )) as any;
 
     return result && typeof result === "number" ? result : 0;
   } catch (error) {
-    throw new Error(
-      `Failed to delete entity notes: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to delete entity notes: ${(error as Error).message}`);
   }
 }

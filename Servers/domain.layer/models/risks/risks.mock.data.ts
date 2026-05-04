@@ -14,11 +14,7 @@ const createFutureDate = (daysFromNow: number): Date => {
 };
 
 // Sample mock data for ProjectRisk
-const mockProjectRisks = (
-  _projectId1: number,
-  userId1: number,
-  userId2: number
-): IRisk[] => {
+const mockProjectRisks = (_projectId1: number, userId1: number, userId2: number): IRisk[] => {
   return [
     // Project risk for the first project
     {
@@ -39,8 +35,7 @@ const mockProjectRisks = (
       current_risk_level: "Medium risk",
       deadline: createPastDate(30),
       mitigation_plan: "In Progress",
-      implementation_strategy:
-        "Anonymize user data in production environments.",
+      implementation_strategy: "Anonymize user data in production environments.",
       mitigation_evidence_document: "Data_Anonymization_Plan.pdf",
       likelihood_mitigation: "Almost Certain",
       risk_severity: "Moderate",

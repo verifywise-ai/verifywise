@@ -1,22 +1,11 @@
 import React from "react";
 import { Stack, Typography, Box, useTheme } from "@mui/material";
-import {
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCircle,
-  RotateCcw,
-  Save,
-} from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, CheckCircle, RotateCcw, Save } from "lucide-react";
 import { ResultsDisplayProps } from "./iQuestion";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { brand, status } from "../../../themes/palette";
 
-const Results: React.FC<ResultsDisplayProps> = ({
-  classification,
-  onRestart,
-  onSave,
-}) => {
+const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onSave }) => {
   const theme = useTheme();
 
   // Get styling based on risk level
@@ -64,8 +53,7 @@ const Results: React.FC<ResultsDisplayProps> = ({
           bgColor: theme.palette.background.paper,
           icon: <Info size={32} />,
           title: "Assessment pending",
-          description:
-            "Complete the questionnaire to receive your classification.",
+          description: "Complete the questionnaire to receive your classification.",
         };
     }
   };
@@ -87,12 +75,7 @@ const Results: React.FC<ResultsDisplayProps> = ({
         <Stack direction="row" spacing={2} alignItems="center">
           <Box sx={{ color: config.color }}>{config.icon}</Box>
           <Stack flex={1}>
-            <Typography
-              fontSize={15}
-              fontWeight={700}
-              color={config.color}
-              mb={0.5}
-            >
+            <Typography fontSize={15} fontWeight={700} color={config.color} mb={0.5}>
               {config.title}
             </Typography>
             <Typography fontSize={13} color="text.primary">

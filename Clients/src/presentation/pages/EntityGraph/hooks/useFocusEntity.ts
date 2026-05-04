@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useReactFlow, type Node } from '@xyflow/react';
-import { useEntityGraphFocus } from '../../../contexts/EntityGraphFocusContext';
-import { EntityGraphData } from '../../../../application/repository/entityGraph.repository';
-import { getConnectedEntityTypes } from '../utils';
-import { TIMING, VIEWPORT } from '../constants';
+import { useEffect, useRef, useState } from "react";
+import { useReactFlow, type Node } from "@xyflow/react";
+import { useEntityGraphFocus } from "../../../contexts/EntityGraphFocusContext";
+import { EntityGraphData } from "../../../../application/repository/entityGraph.repository";
+import { getConnectedEntityTypes } from "../utils";
+import { TIMING, VIEWPORT } from "../constants";
 
 interface UseFocusEntityOptions {
   entityData: EntityGraphData | null;
@@ -44,7 +44,7 @@ export function useFocusEntity({
     // Set visible entities to show all connected types
     setVisibleEntities(connectedTypes);
     setShowProblemsOnly(false);
-    setSearchQuery('');
+    setSearchQuery("");
   }, [focusEntity, entityData, setVisibleEntities, setShowProblemsOnly, setSearchQuery]);
 
   // Center on focused entity after initial render completes
@@ -59,7 +59,7 @@ export function useFocusEntity({
       setCenter(
         targetNode.position.x + VIEWPORT.FOCUS_OFFSET_X,
         targetNode.position.y + VIEWPORT.FOCUS_OFFSET_Y,
-        { zoom: VIEWPORT.FOCUS_ZOOM, duration: TIMING.ZOOM_DURATION }
+        { zoom: VIEWPORT.FOCUS_ZOOM, duration: TIMING.ZOOM_DURATION },
       );
       hasFocusedRef.current = true;
       setHighlightedNodeId(targetNode.id);
@@ -68,7 +68,7 @@ export function useFocusEntity({
     // Clear highlight after duration
     const highlightTimer = setTimeout(
       () => setHighlightedNodeId(null),
-      TIMING.FOCUS_DELAY + TIMING.HIGHLIGHT_DURATION
+      TIMING.FOCUS_DELAY + TIMING.HIGHLIGHT_DURATION,
     );
 
     return () => {
@@ -84,7 +84,7 @@ export function useFocusEntity({
       nds.map((node) => ({
         ...node,
         data: { ...node.data, isHighlighted: node.id === highlightedNodeId },
-      }))
+      })),
     );
   }, [highlightedNodeId, setNodes]);
 

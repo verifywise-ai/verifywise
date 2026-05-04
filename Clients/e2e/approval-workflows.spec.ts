@@ -2,9 +2,7 @@ import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("Approval Workflows", () => {
-  test("renders the approval workflows page", async ({
-    authedPage: page,
-  }) => {
+  test("renders the approval workflows page", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
     await expect(page).toHaveURL(/\/approval-workflows/);
 
@@ -13,13 +11,11 @@ test.describe("Approval Workflows", () => {
       page
         .getByText(/approval/i)
         .or(page.getByText(/workflow/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
     await page.waitForLoadState("domcontentloaded");
 
@@ -42,9 +38,7 @@ test.describe("Approval Workflows", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("workflow list or create button is visible", async ({
-    authedPage: page,
-  }) => {
+  test("workflow list or create button is visible", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
 
     const content = page
@@ -57,9 +51,7 @@ test.describe("Approval Workflows", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Add workflow button opens and closes modal", async ({
-    authedPage: page,
-  }) => {
+  test("Add workflow button opens and closes modal", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
     const addBtn = page
       .getByRole("button", { name: /add new workflow/i })
@@ -67,7 +59,12 @@ test.describe("Approval Workflows", () => {
       .or(page.getByRole("button", { name: /create workflow/i }))
       .or(page.getByRole("button", { name: /add/i }));
 
-    if (await addBtn.first().isVisible().catch(() => false)) {
+    if (
+      await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await addBtn.first().click();
       await expect(
         page
@@ -76,7 +73,7 @@ test.describe("Approval Workflows", () => {
           .or(page.getByText(/add workflow/i))
           .or(page.getByRole("dialog"))
           .or(page.locator(".MuiDrawer-root"))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -84,9 +81,7 @@ test.describe("Approval Workflows", () => {
 
   // --- Tier 3: Validation ---
 
-  test("submitting empty workflow form shows validation errors", async ({
-    authedPage: page,
-  }) => {
+  test("submitting empty workflow form shows validation errors", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
     const addBtn = page
       .getByRole("button", { name: /add new workflow/i })
@@ -94,7 +89,12 @@ test.describe("Approval Workflows", () => {
       .or(page.getByRole("button", { name: /create workflow/i }))
       .or(page.getByRole("button", { name: /add/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -102,9 +102,7 @@ test.describe("Approval Workflows", () => {
     await page.waitForTimeout(500);
 
     // Click submit without filling any fields
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     if (await submitBtn.isVisible().catch(() => false)) {
       await submitBtn.click();
       await page.waitForTimeout(500);
@@ -115,7 +113,12 @@ test.describe("Approval Workflows", () => {
         .or(page.getByText(/please/i))
         .or(page.getByText(/error/i))
         .or(page.locator(".Mui-error"));
-      if (await error.first().isVisible().catch(() => false)) {
+      if (
+        await error
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(error.first()).toBeVisible();
       }
     }
@@ -124,9 +127,7 @@ test.describe("Approval Workflows", () => {
 
   // --- Tier 4: CRUD ---
 
-  test("CRUD: create and delete an approval workflow", async ({
-    authedPage: page,
-  }) => {
+  test("CRUD: create and delete an approval workflow", async ({ authedPage: page }) => {
     await page.goto("/approval-workflows");
     const workflowTitle = `E2E Test Workflow ${Date.now()}`;
 
@@ -137,7 +138,12 @@ test.describe("Approval Workflows", () => {
       .or(page.getByRole("button", { name: /create workflow/i }))
       .or(page.getByRole("button", { name: /add/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -158,7 +164,12 @@ test.describe("Approval Workflows", () => {
       .getByRole("combobox", { name: /entity/i })
       .or(page.getByText(/select.*entity/i))
       .or(page.getByRole("combobox", { name: /type/i }));
-    if (await entitySelect.first().isVisible().catch(() => false)) {
+    if (
+      await entitySelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await entitySelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible().catch(() => false)) {
@@ -170,7 +181,12 @@ test.describe("Approval Workflows", () => {
     const stepInput = page
       .getByRole("textbox", { name: /step/i })
       .or(page.getByPlaceholder(/step/i));
-    if (await stepInput.first().isVisible().catch(() => false)) {
+    if (
+      await stepInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await stepInput.first().fill("Review Step");
     }
 
@@ -178,7 +194,12 @@ test.describe("Approval Workflows", () => {
     const approverSelect = page
       .getByRole("combobox", { name: /approver/i })
       .or(page.getByText(/select.*approver/i));
-    if (await approverSelect.first().isVisible().catch(() => false)) {
+    if (
+      await approverSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await approverSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible().catch(() => false)) {
@@ -187,15 +208,18 @@ test.describe("Approval Workflows", () => {
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
     // Verify: Search for the created workflow
     const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill(workflowTitle);
       await page.waitForTimeout(500);
     }
@@ -205,17 +229,32 @@ test.describe("Approval Workflows", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);

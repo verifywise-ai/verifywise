@@ -10,7 +10,7 @@ import type {
 
 export async function getAllBenchmarks(
   industry?: string,
-  aiRiskType?: string
+  aiRiskType?: string,
 ): Promise<IRiskBenchmark[]> {
   const params = new URLSearchParams();
   if (industry) params.set("industry", industry);
@@ -32,12 +32,9 @@ export async function getBenchmarkFilters(): Promise<IBenchmarkFilters> {
 
 // ── Apply benchmark ──
 
-export async function applyBenchmarkToRisk(
-  riskId: number,
-  benchmarkId: number
-): Promise<any> {
+export async function applyBenchmarkToRisk(riskId: number, benchmarkId: number): Promise<any> {
   const response = await CustomAxios.post(
-    `/quantitative-risks/${riskId}/apply-benchmark/${benchmarkId}`
+    `/quantitative-risks/${riskId}/apply-benchmark/${benchmarkId}`,
   );
   return response.data.data;
 }
@@ -49,26 +46,20 @@ export async function getOrgPortfolio(): Promise<IPortfolioSummary> {
   return response.data.data;
 }
 
-export async function getProjectPortfolio(
-  projectId: number
-): Promise<IPortfolioSummary> {
-  const response = await CustomAxios.get(
-    `/quantitative-risks/portfolio/project/${projectId}`
-  );
+export async function getProjectPortfolio(projectId: number): Promise<IPortfolioSummary> {
+  const response = await CustomAxios.get(`/quantitative-risks/portfolio/project/${projectId}`);
   return response.data.data;
 }
 
 export async function getPortfolioTrend(
   days?: number,
-  projectId?: number
+  projectId?: number,
 ): Promise<IPortfolioSnapshot[]> {
   const params = new URLSearchParams();
   if (days) params.set("days", String(days));
   if (projectId) params.set("projectId", String(projectId));
   const query = params.toString() ? `?${params.toString()}` : "";
-  const response = await CustomAxios.get(
-    `/quantitative-risks/portfolio/trend${query}`
-  );
+  const response = await CustomAxios.get(`/quantitative-risks/portfolio/trend${query}`);
   return response.data.data;
 }
 
@@ -77,18 +68,13 @@ export async function getPortfolioTrend(
 export async function getRiskAssessmentMode(): Promise<{
   risk_assessment_mode: string;
 }> {
-  const response = await CustomAxios.get(
-    "/quantitative-risks/assessment-mode"
-  );
+  const response = await CustomAxios.get("/quantitative-risks/assessment-mode");
   return response.data.data;
 }
 
 export async function updateRiskAssessmentMode(
-  mode: "qualitative" | "quantitative"
+  mode: "qualitative" | "quantitative",
 ): Promise<{ risk_assessment_mode: string }> {
-  const response = await CustomAxios.put(
-    "/quantitative-risks/assessment-mode",
-    { mode }
-  );
+  const response = await CustomAxios.put("/quantitative-risks/assessment-mode", { mode });
   return response.data.data;
 }

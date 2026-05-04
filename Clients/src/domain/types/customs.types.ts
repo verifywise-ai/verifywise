@@ -1,7 +1,7 @@
 /**
  * Custom tour step content structure
  * Pure domain type with no framework dependencies
- * 
+ *
  * Note: Icon type uses 'unknown' to avoid React dependencies.
  * Presentation layer will handle React-specific type casting.
  */

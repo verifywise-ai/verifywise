@@ -190,7 +190,6 @@ export const routeMapping: Record<string, string> = {
   "/reset-password": "Reset password",
   "/set-new-password": "Set new password",
   "/reset-password-continue": "Continue password reset",
-
 };
 
 /**
@@ -216,8 +215,10 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // Model inventory
   "/model-inventory": () => React.createElement(ListIcon, { size: 14, strokeWidth: 1.5 }),
-  "/model-inventory/model-risks": () => React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
-  "/model-inventory/evidence-hub": () => React.createElement(FileText, { size: 14, strokeWidth: 1.5 }),
+  "/model-inventory/model-risks": () =>
+    React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
+  "/model-inventory/evidence-hub": () =>
+    React.createElement(FileText, { size: 14, strokeWidth: 1.5 }),
   // Plugin tabs use default icon (or could be made dynamic via plugin registry)
 
   // Risk management
@@ -262,7 +263,8 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/automations": () => React.createElement(Zap, { size: 14, strokeWidth: 1.5 }),
 
   // Framework tabs (note: /framework itself shows dashboard, no /framework/dashboard route)
-  "/framework/framework-risks": () => React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
+  "/framework/framework-risks": () =>
+    React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
   "/framework/linked-models": () => React.createElement(Link, { size: 14, strokeWidth: 1.5 }),
   "/framework/controls": () => React.createElement(FileCode, { size: 14, strokeWidth: 1.5 }),
   "/framework/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
@@ -281,7 +283,8 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-detection/scan": () => React.createElement(Search, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/history": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/scans": () => React.createElement(History, { size: 14, strokeWidth: 1.5 }),
-  "/ai-detection/repositories": () => React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
+  "/ai-detection/repositories": () =>
+    React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
   // Intake forms
@@ -292,22 +295,30 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-gateway": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/dashboard": () => React.createElement(BarChart3, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/endpoints": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/playground": () => React.createElement(MessageSquare, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/playground": () =>
+    React.createElement(MessageSquare, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/guardrails": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/guardrails/pii": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/guardrails/content-filter": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/guardrails/pii": () =>
+    React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/guardrails/content-filter": () =>
+    React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/models": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/models/catalog": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/models/calculator": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/models/calculator": () =>
+    React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/models/compare": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/logs": () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/prompts": () => React.createElement(BookOpen, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/virtual-keys": () => React.createElement(KeyRound, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/settings/api-keys": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/settings/budget": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/settings/virtual-keys": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/settings/guardrails": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/api-keys": () =>
+    React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/budget": () =>
+    React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/virtual-keys": () =>
+    React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/settings/guardrails": () =>
+    React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/settings/risks": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
   // MCP Gateway
@@ -316,8 +327,10 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-gateway/mcp/servers": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/tools": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/audit": () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/mcp/approvals": () => React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
-  "/ai-gateway/mcp/guardrails": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/approvals": () =>
+    React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/guardrails": () =>
+    React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
 
   // Super Admin
   "/super-admin": () => React.createElement(Shield, { size: 14, strokeWidth: 1.5 }),
@@ -327,13 +340,14 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/shadow-ai": () => React.createElement(Eye, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/insights": () => React.createElement(BarChart3, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/user-activity": () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
-  "/shadow-ai/user-activity/users": () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
-  "/shadow-ai/user-activity/departments": () => React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
+  "/shadow-ai/user-activity/users": () =>
+    React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
+  "/shadow-ai/user-activity/departments": () =>
+    React.createElement(Users, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/tools": () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/rules": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/rules/alerts": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
-
 };
 
 /**

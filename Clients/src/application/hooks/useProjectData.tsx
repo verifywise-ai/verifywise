@@ -1,4 +1,4 @@
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Project } from "../../domain/types/Project";
 import { User } from "../../domain/types/User";
 import { getProjectById } from "../repository/project.repository";
@@ -17,10 +17,7 @@ interface UseProjectDataResult {
   setProject: (project: Project | null) => void; // Add setProject to the return type
 }
 
-const useProjectData = ({
-  projectId,
-  refreshKey,
-}: UseProjectDataParams): UseProjectDataResult => {
+const useProjectData = ({ projectId, refreshKey }: UseProjectDataParams): UseProjectDataResult => {
   const [project, setProject] = useState<Project | null>(null);
   const [projectOwner, setProjectOwner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +36,9 @@ const useProjectData = ({
     setIsLoading(true);
 
     getProjectById({
-        id: projectId,
-        signal: controller.signal,
-      })
+      id: projectId,
+      signal: controller.signal,
+    })
       .then(({ data }) => {
         const ownerUser = users.find((user: User) => user.id === data.owner);
 

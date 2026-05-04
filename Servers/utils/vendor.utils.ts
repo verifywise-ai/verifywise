@@ -3,10 +3,7 @@ import { sequelize } from "../database/db";
 import { deleteVendorRisksForVendorQuery } from "./vendorRisk.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { QueryTypes, Transaction } from "sequelize";
-import {
-  getUserProjects,
-  updateProjectUpdatedByIdQuery,
-} from "./project.utils";
+import { getUserProjects, updateProjectUpdatedByIdQuery } from "./project.utils";
 import { IVendor } from "../domain.layer/interfaces/i.vendor";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
@@ -16,16 +13,14 @@ import {
 } from "./automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 
-export const getAllVendorsQuery = async (
-  organizationId: number
-): Promise<IVendor[]> => {
+export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
     `SELECT * FROM vendors WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { organizationId },
       mapToModel: true,
       model: VendorModel,
-    }
+    },
   );
   const vendorsWithDetails = [];
   for (let vendor of vendors as VendorModel[]) {
@@ -35,14 +30,14 @@ export const getAllVendorsQuery = async (
         replacements: { organizationId, vendor_id: vendor.id },
         mapToModel: true,
         model: VendorsProjectsModel,
-      }
+      },
     );
 
     const reviewer_name = (await sequelize.query(
       `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :reviewer_id`,
       {
         replacements: { reviewer_id: vendor.reviewer },
-      }
+      },
     )) as [{ full_name: string }[], number];
 
     // Extract dataValues to include all database columns including scorecard fields
@@ -51,8 +46,7 @@ export const getAllVendorsQuery = async (
       created_at: (vendor.createdAt ?? vendor.created_at)?.toISOString(),
       updated_at: (vendor.updatedAt ?? vendor.updated_at)?.toISOString(),
       projects: projects.map((p) => p.project_id),
-      reviewer_name:
-        reviewer_name[0].length > 0 ? reviewer_name[0][0].full_name : "",
+      reviewer_name: reviewer_name[0].length > 0 ? reviewer_name[0][0].full_name : "",
     });
   }
   return vendorsWithDetails;
@@ -60,7 +54,7 @@ export const getAllVendorsQuery = async (
 
 export const getVendorByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IVendor | null> => {
   const result = await sequelize.query(
     `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id`,
@@ -68,7 +62,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: VendorModel,
-    }
+    },
   );
   if (!result.length) return null;
   const projects = await sequelize.query(
@@ -77,7 +71,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, vendor_id: id },
       mapToModel: true,
       model: VendorsProjectsModel,
-    }
+    },
   );
   const vendor = result[0] as VendorModel;
   return {
@@ -90,11 +84,11 @@ export const getVendorByIdQuery = async (
 
 export const getVendorByProjectIdQuery = async (
   project_id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IVendor[] | null> => {
   const projectExists = await sequelize.query(
     `SELECT 1 AS exists FROM projects WHERE organization_id = :organizationId AND id = :project_id`,
-    { replacements: { organizationId, project_id } }
+    { replacements: { organizationId, project_id } },
   );
   if (!(projectExists[0].length > 0)) return null;
   const vendors_projects = await sequelize.query(
@@ -103,7 +97,7 @@ export const getVendorByProjectIdQuery = async (
       replacements: { organizationId, project_id },
       mapToModel: true,
       model: VendorsProjectsModel,
-    }
+    },
   );
   const vendors: IVendor[] = [];
   for (let vendors_project of vendors_projects || []) {
@@ -116,7 +110,7 @@ export const getVendorByProjectIdQuery = async (
         },
         mapToModel: true,
         model: VendorModel,
-      }
+      },
     );
     // commenting as, for the current functionality, project and vendor have 1:1 mapping
     // const projects = await sequelize.query("SELECT project_id FROM vendors_projects WHERE vendor_id = $1", [vendors_project.vendor_id])
@@ -136,7 +130,7 @@ export const addVendorProjects = async (
   vendorId: number,
   projects: number[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   let vendorsProjectFlat = [];
   let placeholdersArray = [];
@@ -159,7 +153,7 @@ export const createNewVendorQuery = async (
   vendor: IVendor,
   organizationId: number,
   transaction: Transaction,
-  is_demo: boolean = false
+  is_demo: boolean = false,
 ): Promise<VendorModel> => {
   // Build dynamic query for optional fields
   const fields = [
@@ -252,7 +246,7 @@ export const createNewVendorQuery = async (
       mapToModel: true,
       model: VendorModel,
       transaction,
-    }
+    },
   );
   const createdVendor = result[0] as VendorModel & { projects: number[] };
   const vendorId = createdVendor.id!;
@@ -263,7 +257,7 @@ export const createNewVendorQuery = async (
       vendorId,
       vendor.projects,
       organizationId,
-      transaction
+      transaction,
     );
     createdVendor["projects"] = vendors_projects.map((p) => p.project_id);
   }
@@ -276,7 +270,7 @@ export const createNewVendorQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -307,9 +301,7 @@ export const createNewVendorQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
   return createdVendor;
@@ -329,7 +321,7 @@ export const updateVendorByIdQuery = async (
     role: string;
     transaction: Transaction;
   },
-  organizationId: number
+  organizationId: number,
 ): Promise<IVendor> => {
   const updateVendor: Partial<Record<keyof IVendor, any>> & { organizationId?: number } = {};
   const setClause = [
@@ -351,12 +343,9 @@ export const updateVendorByIdQuery = async (
     .filter((f) => {
       // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
       // For other required fields, only update if they have a value
-      const isReviewField = [
-        "review_result",
-        "review_status",
-        "reviewer",
-        "review_date",
-      ].includes(f);
+      const isReviewField = ["review_result", "review_status", "reviewer", "review_date"].includes(
+        f,
+      );
       const isScorecardField = [
         "data_sensitivity",
         "business_criticality",
@@ -409,14 +398,14 @@ export const updateVendorByIdQuery = async (
         role,
         transaction,
       },
-      organizationId
+      organizationId,
     );
 
     const vendors_projects = await addVendorProjects(
       id,
       vendor.projects,
       organizationId,
-      transaction
+      transaction,
     );
     result[0]["projects"] = vendors_projects.map((p) => p.project_id);
   } else {
@@ -426,7 +415,7 @@ export const updateVendorByIdQuery = async (
         replacements: { organizationId, vendor_id: id },
         mapToModel: true,
         model: VendorsProjectsModel,
-      }
+      },
     );
     result[0]["projects"] = projects.map((p) => p.project_id);
   }
@@ -439,7 +428,7 @@ export const updateVendorByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -454,10 +443,7 @@ export const updateVendorByIdQuery = async (
       const params = automation.params!;
 
       // Build replacements
-      const replacements = buildVendorUpdateReplacements(
-        oldVendor,
-        updatedVendor
-      );
+      const replacements = buildVendorUpdateReplacements(oldVendor, updatedVendor);
 
       // Replace variables in subject and body
       const processedParams = {
@@ -473,9 +459,7 @@ export const updateVendorByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
   return updatedVendor;
@@ -484,7 +468,7 @@ export const updateVendorByIdQuery = async (
 export const deleteVendorByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   await deleteVendorRisksForVendorQuery(id, organizationId, transaction);
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
@@ -496,7 +480,7 @@ export const deleteVendorByIdQuery = async (
       model: VendorsProjectsModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   const result = await sequelize.query(
     `DELETE FROM vendors WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -506,7 +490,7 @@ export const deleteVendorByIdQuery = async (
       model: VendorModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   const deletedVendor = result[0];
   const automations = (await sequelize.query(
@@ -516,7 +500,7 @@ export const deleteVendorByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -547,9 +531,7 @@ export const deleteVendorByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
   return result.length > 0;
@@ -564,13 +546,10 @@ interface DeleteAuthorizedVendorProjectsParams {
 
 export const deleteAuthorizedVendorProjectsQuery = async (
   { vendorId, userId, role, transaction }: DeleteAuthorizedVendorProjectsParams,
-  organizationId: number
+  organizationId: number,
 ) => {
   // 1. Get user-authorized project IDs
-  const userProjects = await getUserProjects(
-    { userId, role, transaction },
-    organizationId
-  );
+  const userProjects = await getUserProjects({ userId, role, transaction }, organizationId);
   const userProjectIds = userProjects
     .map((p) => p.id)
     .filter((value, index, self) => self.indexOf(value) === index);
@@ -587,7 +566,7 @@ export const deleteAuthorizedVendorProjectsQuery = async (
       {
         replacements: { organizationId, vendorId, userProjectIds },
         transaction,
-      }
+      },
     );
   }
 };

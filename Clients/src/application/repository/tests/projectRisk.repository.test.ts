@@ -126,12 +126,9 @@ describe("projectRisk.repository", () => {
 
       const result = await getAllProjectRisks();
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks?filter=active",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -141,12 +138,9 @@ describe("projectRisk.repository", () => {
 
       const result = await getAllProjectRisks({ filter: "active" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks?filter=active",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -156,12 +150,9 @@ describe("projectRisk.repository", () => {
 
       const result = await getAllProjectRisks({ filter: "deleted" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks?filter=deleted",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks?filter=deleted", {
+        signal: undefined,
+      });
       expect(result).toEqual([]);
     });
 
@@ -187,12 +178,9 @@ describe("projectRisk.repository", () => {
         filter: "active",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks?filter=active",
-        {
-          signal: abortController.signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks?filter=active", {
+        signal: abortController.signal,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -222,10 +210,9 @@ describe("projectRisk.repository", () => {
         projectId: "10",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/10?filter=active",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/10?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -238,10 +225,9 @@ describe("projectRisk.repository", () => {
         filter: "active",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/10?filter=active",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/10?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -254,10 +240,9 @@ describe("projectRisk.repository", () => {
         filter: "deleted",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/10?filter=deleted",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/10?filter=deleted", {
+        signal: undefined,
+      });
       expect(result).toEqual([]);
     });
 
@@ -270,10 +255,9 @@ describe("projectRisk.repository", () => {
         filter: "all",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/10?filter=all",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/10?filter=all", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -287,10 +271,9 @@ describe("projectRisk.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/10?filter=active",
-        { signal: abortController.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/10?filter=active", {
+        signal: abortController.signal,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -300,10 +283,9 @@ describe("projectRisk.repository", () => {
 
       await getAllProjectRisksByProjectId({ projectId: "25" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/25?filter=active",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/25?filter=active", {
+        signal: undefined,
+      });
     });
 
     it("should throw error when project not found", async () => {
@@ -313,9 +295,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getAllProjectRisksByProjectId({ projectId: "999" }),
-      ).rejects.toEqual(error);
+      await expect(getAllProjectRisksByProjectId({ projectId: "999" })).rejects.toEqual(error);
     });
   });
 
@@ -328,10 +308,9 @@ describe("projectRisk.repository", () => {
         frameworkId: 5,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-frameworkid/5?filter=active",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-frameworkid/5?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -344,10 +323,9 @@ describe("projectRisk.repository", () => {
         filter: "active",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-frameworkid/5?filter=active",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-frameworkid/5?filter=active", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -376,10 +354,9 @@ describe("projectRisk.repository", () => {
         filter: "all",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-frameworkid/5?filter=all",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-frameworkid/5?filter=all", {
+        signal: undefined,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -393,10 +370,9 @@ describe("projectRisk.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-frameworkid/5?filter=active",
-        { signal: abortController.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-frameworkid/5?filter=active", {
+        signal: abortController.signal,
+      });
       expect(result).toEqual(mockRisks);
     });
 
@@ -419,9 +395,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getAllRisksByFrameworkId({ frameworkId: 999 }),
-      ).rejects.toEqual(error);
+      await expect(getAllRisksByFrameworkId({ frameworkId: 999 })).rejects.toEqual(error);
     });
   });
 
@@ -435,10 +409,9 @@ describe("projectRisk.repository", () => {
         projectId: 10,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/non-mitigated/10",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/non-mitigated/10", {
+        signal: undefined,
+      });
       expect(result).toEqual(nonMitigatedRisks);
     });
 
@@ -452,10 +425,9 @@ describe("projectRisk.repository", () => {
         signal: abortController.signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/non-mitigated/10",
-        { signal: abortController.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/non-mitigated/10", {
+        signal: abortController.signal,
+      });
       expect(result).toEqual([mockRisk]);
     });
 
@@ -476,10 +448,9 @@ describe("projectRisk.repository", () => {
 
       await getNonMitigatedProjectRisks({ projectId: 25 });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/projectRisks/by-projid/non-mitigated/25",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/projectRisks/by-projid/non-mitigated/25", {
+        signal: undefined,
+      });
     });
 
     it("should throw error when project not found", async () => {
@@ -489,9 +460,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getNonMitigatedProjectRisks({ projectId: 999 }),
-      ).rejects.toEqual(error);
+      await expect(getNonMitigatedProjectRisks({ projectId: 999 })).rejects.toEqual(error);
     });
 
     it("should throw error with 403 forbidden", async () => {
@@ -501,9 +470,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(
-        getNonMitigatedProjectRisks({ projectId: 10 }),
-      ).rejects.toEqual(error);
+      await expect(getNonMitigatedProjectRisks({ projectId: 10 })).rejects.toEqual(error);
     });
   });
 
@@ -520,10 +487,7 @@ describe("projectRisk.repository", () => {
 
       const result = await createProjectRisk({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/projectRisks",
-        createData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/projectRisks", createData);
       expect(result).toEqual(response);
     });
 
@@ -549,10 +513,7 @@ describe("projectRisk.repository", () => {
 
       await createProjectRisk({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/projectRisks",
-        createData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/projectRisks", createData);
     });
 
     it("should handle validation errors on create", async () => {
@@ -597,10 +558,7 @@ describe("projectRisk.repository", () => {
 
       const result = await updateProjectRisk({ id: 1, body: updateData });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/projectRisks/1",
-        updateData,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/projectRisks/1", updateData);
       expect(result).toEqual(response);
       expect(result.data.title).toBe("Updated Risk");
     });
@@ -636,10 +594,7 @@ describe("projectRisk.repository", () => {
 
       await updateProjectRisk({ id: 1, body: updateData });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/projectRisks/1",
-        updateData,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/projectRisks/1", updateData);
     });
 
     it("should throw error when risk not found on update", async () => {
@@ -649,9 +604,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectRisk({ id: 999, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectRisk({ id: 999, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle validation errors on update", async () => {
@@ -661,9 +614,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle 403 forbidden on update", async () => {
@@ -673,9 +624,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle 409 conflict on update", async () => {
@@ -685,9 +634,7 @@ describe("projectRisk.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectRisk({ id: 1, body: {} })).rejects.toEqual(error);
     });
   });
 

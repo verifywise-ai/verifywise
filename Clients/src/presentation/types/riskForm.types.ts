@@ -40,6 +40,6 @@ export type AddNewRiskFormProps = AddNewRiskFormCoreProps;
  */
 export interface IRiskLevelProps extends IRiskLevelCoreProps {
   handleOnSelectChange: (
-    field: keyof IRiskLevelFormValues
+    field: keyof IRiskLevelFormValues,
   ) => (event: SelectChangeEvent<string | number>) => void;
 }

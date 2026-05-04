@@ -19,8 +19,7 @@ export const Registration = {
         },
         {
           id: 2,
-          title:
-            "We verify that high-risk AI systems have the required CE marking.",
+          title: "We verify that high-risk AI systems have the required CE marking.",
           description:
             "CE marking confirms that high-risk AI systems meet EU regulatory requirements, ensuring safety and compliance.",
         },
@@ -33,13 +32,11 @@ export const Registration = {
       id: 2,
       icon: Checked,
       title: "Conformity Assessment Completion",
-      description:
-        "Complete relevant conformity assessment procedures for AI systems.",
+      description: "Complete relevant conformity assessment procedures for AI systems.",
       subControls: [
         {
           id: 1,
-          title:
-            "We ensure AI systems are registered in the EU database per Article 71.",
+          title: "We ensure AI systems are registered in the EU database per Article 71.",
           description:
             "Registering systems ensures compliance with EU AI Act requirements and facilitates monitoring and transparency.",
         },
@@ -52,13 +49,11 @@ export const Registration = {
       id: 3,
       icon: Checked,
       title: "Conformity Assessment Completion",
-      description:
-        "Identify necessary technical standards and certifications for AI systems.",
+      description: "Identify necessary technical standards and certifications for AI systems.",
       subControls: [
         {
           id: 1,
-          title:
-            "We identify necessary technical standards and certifications for AI systems.",
+          title: "We identify necessary technical standards and certifications for AI systems.",
           description:
             "Identifying relevant standards ensures systems are developed and deployed in compliance with industry and legal requirements.",
         },
@@ -76,8 +71,7 @@ export const Registration = {
       subControls: [
         {
           id: 1,
-          title:
-            "We comply with common specifications established by the Commission.",
+          title: "We comply with common specifications established by the Commission.",
           description:
             "Adhering to common specifications ensures systems meet regulatory benchmarks for safety, reliability, and performance.",
         },

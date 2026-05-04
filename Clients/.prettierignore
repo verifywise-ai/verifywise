@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+playwright-report
+test-results
+package-lock.json
+*.min.js
+*.log
+.env
+.env.*
+public

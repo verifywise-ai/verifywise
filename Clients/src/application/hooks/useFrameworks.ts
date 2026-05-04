@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import { Framework } from "../../domain/types/Framework";
 import { getAllFrameworks } from "../repository/entity.repository";
@@ -13,11 +13,7 @@ interface UseFrameworksResult {
   refreshFilteredFrameworks: () => Promise<void>;
 }
 
-const useFrameworks = ({
-  listOfFrameworks,
-}: {
-  listOfFrameworks: any[];
-}): UseFrameworksResult => {
+const useFrameworks = ({ listOfFrameworks }: { listOfFrameworks: any[] }): UseFrameworksResult => {
   const queryClient = useQueryClient();
 
   // Fetch all frameworks using TanStack Query
@@ -25,9 +21,9 @@ const useFrameworks = ({
     data: allFrameworks = [],
     isLoading: loading,
     error: queryError,
-    refetch: refetchAllFrameworks
+    refetch: refetchAllFrameworks,
   } = useQuery({
-    queryKey: ['frameworks', 'all'],
+    queryKey: ["frameworks", "all"],
     queryFn: async () => {
       const response = await getAllFrameworks();
       if (response?.data) {
@@ -37,7 +33,7 @@ const useFrameworks = ({
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Memoized computation of filtered frameworks and project frameworks map
@@ -52,13 +48,13 @@ const useFrameworks = ({
       });
 
       _filteredFrameworks = allFrameworks.filter((fw: Framework) =>
-        frameworkIds.includes(Number(fw.id))
+        frameworkIds.includes(Number(fw.id)),
       );
     }
 
     return {
       filteredFrameworks: _filteredFrameworks,
-      projectFrameworksMap: _projectFrameworksMap
+      projectFrameworksMap: _projectFrameworksMap,
     };
   }, [allFrameworks, listOfFrameworks]);
 
@@ -69,11 +65,15 @@ const useFrameworks = ({
 
   // Refresh filtered frameworks (invalidate and refetch)
   const refreshFilteredFrameworks = useCallback(async () => {
-    queryClient.invalidateQueries({ queryKey: ['frameworks', 'all'] });
+    queryClient.invalidateQueries({ queryKey: ["frameworks", "all"] });
   }, [queryClient]);
 
   // Convert error to string
-  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Failed to fetch frameworks') : null;
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : "Failed to fetch frameworks"
+    : null;
 
   return {
     allFrameworks,

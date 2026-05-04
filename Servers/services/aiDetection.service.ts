@@ -78,10 +78,7 @@ import {
   generateFindingDescription,
   getThreatCategory,
 } from "../utils/modelSecurity";
-import {
-  getDecryptedGitHubToken,
-  updateGitHubTokenLastUsed,
-} from "../utils/githubToken.utils";
+import { getDecryptedGitHubToken, updateGitHubTokenLastUsed } from "../utils/githubToken.utils";
 import {
   IModelSecurityFinding,
   ICreateModelSecurityFindingInput,
@@ -90,15 +87,14 @@ import {
 import { QueryTypes } from "sequelize";
 import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
-import {
-  cacheAside,
-  buildOrgCacheKey,
-  deleteByPattern,
-  CACHE_KEYS,
-} from "../utils/cache.utils";
+import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
 import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
-import { scanFileForVulnerabilityIndicators, buildAnalysisContext, VulnerabilityCandidate } from "./aiDetection/vulnerabilityPreFilter";
+import {
+  scanFileForVulnerabilityIndicators,
+  buildAnalysisContext,
+  VulnerabilityCandidate,
+} from "./aiDetection/vulnerabilityPreFilter";
 import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
@@ -144,7 +140,7 @@ const scanProgressMap = new Map<number, ScanProgressEntry>();
 async function updateLinkedRepositoryLastScan(
   scanId: number,
   scanStatus: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   try {
     const scan = await getScanByIdQuery(scanId, organizationId);
@@ -210,7 +206,7 @@ const MAX_REPO_SIZE_KB = 2.5 * 1024 * 1024; // 2.5 GB
 async function checkRepositorySize(
   owner: string,
   repo: string,
-  githubToken?: string
+  githubToken?: string,
 ): Promise<void> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
@@ -235,7 +231,9 @@ async function checkRepositorySize(
     if (!response.ok) {
       // Don't fail here - let the clone handle auth/not-found errors
       // Just skip the size check if we can't get repo info
-      logger.warn(`Could not fetch repo info for size check: ${response.status} ${response.statusText}`);
+      logger.warn(
+        `Could not fetch repo info for size check: ${response.status} ${response.statusText}`,
+      );
       return;
     }
 
@@ -246,7 +244,7 @@ async function checkRepositorySize(
     if (sizeKB > MAX_REPO_SIZE_KB) {
       throw new ValidationException(
         `Repository size (${sizeGB} GB) exceeds the maximum allowed size of 2.5 GB. Please scan a smaller repository.`,
-        "repository_url"
+        "repository_url",
       );
     }
   } catch (error) {
@@ -255,7 +253,9 @@ async function checkRepositorySize(
       throw error;
     }
     // Log and skip size check on network/timeout errors
-    logger.warn(`Size check failed, proceeding with clone: ${error instanceof Error ? error.message : "Unknown error"}`);
+    logger.warn(
+      `Size check failed, proceeding with clone: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -272,14 +272,17 @@ async function cloneRepository(
   owner: string,
   repo: string,
   signal?: AbortSignal,
-  githubToken?: string
+  githubToken?: string,
 ): Promise<string> {
   if (signal?.aborted) {
     throw new BusinessLogicException("Scan was cancelled");
   }
 
   // Create temp directory
-  const tempDir = path.join(os.tmpdir(), `verifywise-scan-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+  const tempDir = path.join(
+    os.tmpdir(),
+    `verifywise-scan-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+  );
   await fs.promises.mkdir(tempDir, { recursive: true });
 
   // Build repository URL - use authenticated URL if token provided
@@ -352,14 +355,16 @@ async function cloneRepository(
 
     if (error instanceof Error) {
       // Check for authentication errors
-      if (error.message.includes("Authentication failed") ||
-          error.message.includes("could not read Username") ||
-          error.message.includes("403")) {
+      if (
+        error.message.includes("Authentication failed") ||
+        error.message.includes("could not read Username") ||
+        error.message.includes("403")
+      ) {
         throw new ValidationException(
           githubToken
             ? "Authentication failed. The token may be invalid or expired, or lacks permission for this repository."
             : "Repository not found or is private. Configure a GitHub token in Settings to scan private repositories.",
-          "repository_url"
+          "repository_url",
         );
       }
       if (error.message.includes("not found") || error.message.includes("Repository not found")) {
@@ -367,19 +372,19 @@ async function cloneRepository(
           githubToken
             ? "Repository not found. Check the URL and ensure your token has access to this repository."
             : "Repository not found or is private. Configure a GitHub token in Settings to scan private repositories.",
-          "repository_url"
+          "repository_url",
         );
       }
       if (error.message.includes("timeout")) {
         throw new ExternalServiceException(
           "Repository clone timed out. The repository may be too large.",
-          "Git"
+          "Git",
         );
       }
     }
     throw new ExternalServiceException(
       `Failed to clone repository: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "Git"
+      "Git",
     );
   }
 }
@@ -400,7 +405,7 @@ async function cleanupClonedRepo(repoPath: string): Promise<void> {
  */
 async function getRepositoryFiles(
   repoPath: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<LocalFileItem[]> {
   const files: LocalFileItem[] = [];
 
@@ -484,27 +489,25 @@ const VALID_NAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 export function parseGitHubUrl(url: string): IParsedGitHubUrl {
   // Validate input is a string
   if (typeof url !== "string") {
-    throw new ValidationException(
-      "Repository URL must be a string",
-      "repository_url"
-    );
+    throw new ValidationException("Repository URL must be a string", "repository_url");
   }
 
   // Validate URL length to prevent abuse
   if (url.length > MAX_URL_LENGTH) {
     throw new ValidationException(
       `Repository URL is too long (max ${MAX_URL_LENGTH} characters)`,
-      "repository_url"
+      "repository_url",
     );
   }
 
   // Clean the URL
-  const cleanUrl = url.trim().replace(/\.git$/, "").replace(/\/$/, "");
+  const cleanUrl = url
+    .trim()
+    .replace(/\.git$/, "")
+    .replace(/\/$/, "");
 
   // Try HTTPS format: https://github.com/owner/repo
-  const httpsMatch = cleanUrl.match(
-    /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)/i
-  );
+  const httpsMatch = cleanUrl.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)/i);
   if (httpsMatch) {
     return validateParsedNames(httpsMatch[1], httpsMatch[2]);
   }
@@ -523,7 +526,7 @@ export function parseGitHubUrl(url: string): IParsedGitHubUrl {
 
   throw new ValidationException(
     "Invalid GitHub URL format. Please provide a valid public GitHub repository URL.",
-    "repository_url"
+    "repository_url",
   );
 }
 
@@ -535,7 +538,7 @@ function validateParsedNames(owner: string, repo: string): IParsedGitHubUrl {
   if (owner.length > MAX_NAME_LENGTH || repo.length > MAX_NAME_LENGTH) {
     throw new ValidationException(
       `Owner/repository name is too long (max ${MAX_NAME_LENGTH} characters)`,
-      "repository_url"
+      "repository_url",
     );
   }
 
@@ -543,13 +546,12 @@ function validateParsedNames(owner: string, repo: string): IParsedGitHubUrl {
   if (!VALID_NAME_PATTERN.test(owner) || !VALID_NAME_PATTERN.test(repo)) {
     throw new ValidationException(
       "Owner/repository name contains invalid characters",
-      "repository_url"
+      "repository_url",
     );
   }
 
   return { owner, repo };
 }
-
 
 // ============================================================================
 // Pattern Matching
@@ -585,7 +587,12 @@ function shouldScanFile(filePath: string): "code" | "dependency" | false {
 /**
  * Extract surrounding lines for code context (3 lines before and after by default)
  */
-function getCodeContext(lines: string[], matchLineIndex: number, contextLines: number = 3, maskSecrets: boolean = false): string {
+function getCodeContext(
+  lines: string[],
+  matchLineIndex: number,
+  contextLines: number = 3,
+  maskSecrets: boolean = false,
+): string {
   const startLine = Math.max(0, matchLineIndex - contextLines);
   const endLine = Math.min(lines.length - 1, matchLineIndex + contextLines);
 
@@ -627,8 +634,8 @@ const PLACEHOLDER_PATTERNS = [
   /sample[_-]?key/i,
   /^["']?sk-[x]{10,}["']?$/i, // sk-xxxxxxxxxxxx
   /^["']?your[_-]?/i,
-  /\.\.\./,  // Ellipsis placeholder
-  /<[^>]+>/,  // <your-key-here> style placeholders
+  /\.\.\./, // Ellipsis placeholder
+  /<[^>]+>/, // <your-key-here> style placeholders
 ];
 
 /**
@@ -641,10 +648,10 @@ const NOT_SECRET_PATTERNS = [
   /^from\s+\w+\s+import/,
   /require\s*\(/,
   // Dependency declarations (requirements.txt, package.json)
-  /^[a-zA-Z][a-zA-Z0-9_-]*[=<>~!]=?\d/,  // package>=1.0.0, package==1.0.0
-  /^\s*["'][a-zA-Z@][^"']*["']\s*:\s*["']\^?~?[\d*]/,  // "package": "^1.0.0"
+  /^[a-zA-Z][a-zA-Z0-9_-]*[=<>~!]=?\d/, // package>=1.0.0, package==1.0.0
+  /^\s*["'][a-zA-Z@][^"']*["']\s*:\s*["']\^?~?[\d*]/, // "package": "^1.0.0"
   // Function/method calls that aren't assignments
-  /^\s*\w+\s*=\s*\w+\.\w+\(/,  // result = client.method(
+  /^\s*\w+\s*=\s*\w+\.\w+\(/, // result = client.method(
   /^\s*return\s+/,
   /^\s*await\s+/,
   // Comments
@@ -658,14 +665,14 @@ const NOT_SECRET_PATTERNS = [
  * Check if a matched line contains a placeholder value rather than a real secret
  */
 function isPlaceholderSecret(line: string): boolean {
-  return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(line));
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(line));
 }
 
 /**
  * Check if a line is definitely not a secret (import, dependency, etc.)
  */
 function isDefinitelyNotSecret(line: string): boolean {
-  return NOT_SECRET_PATTERNS.some(pattern => pattern.test(line.trim()));
+  return NOT_SECRET_PATTERNS.some((pattern) => pattern.test(line.trim()));
 }
 
 /**
@@ -673,7 +680,7 @@ function isDefinitelyNotSecret(line: string): boolean {
  */
 function scanFileForPatterns(
   content: string,
-  fileType: "code" | "dependency"
+  fileType: "code" | "dependency",
 ): Array<{
   pattern: DetectionPattern;
   lineNumber: number | null;
@@ -792,7 +799,10 @@ function scanFileForPatterns(
               // Determine confidence based on pattern specificity
               // - Explicit from_pretrained/pipeline calls are high confidence
               // - Generic model ID patterns are medium confidence
-              const isExplicitApiCall = /from_pretrained|pipeline|AutoModel|AutoTokenizer|ollama\.(chat|generate|pull)|ChatOpenAI|ChatAnthropic|GenerativeModel/i.test(match[0]);
+              const isExplicitApiCall =
+                /from_pretrained|pipeline|AutoModel|AutoTokenizer|ollama\.(chat|generate|pull)|ChatOpenAI|ChatAnthropic|GenerativeModel/i.test(
+                  match[0],
+                );
               const confidence: "high" | "medium" | "low" = isExplicitApiCall ? "high" : "medium";
 
               matches.push({
@@ -876,7 +886,7 @@ function maskSecret(secret: string): string {
 async function scanModelFileContent(
   content: string,
   filePath: string,
-  extension: string
+  extension: string,
 ): Promise<{ findings: IModelSecurityFinding[] }> {
   const findings: IModelSecurityFinding[] = [];
 
@@ -896,9 +906,8 @@ async function scanModelFileContent(
     const contentStr = buffer.toString("latin1");
 
     // Import the dangerous operator check from model security patterns
-    const { checkDangerousOperator, getComplianceForThreatType } = await import(
-      "../config/modelSecurityPatterns"
-    );
+    const { checkDangerousOperator, getComplianceForThreatType } =
+      await import("../config/modelSecurityPatterns");
 
     // Common dangerous patterns in serialized files
     // GLOBAL opcode: 'c' + module + '\n' + name + '\n'
@@ -933,10 +942,7 @@ async function scanModelFileContent(
 
     // Also check for Lambda layers in H5 files
     if ([".h5", ".keras", ".hdf5"].includes(extension)) {
-      const lambdaPatterns = [
-        /"class_name":\s*"Lambda"/gi,
-        /keras\.layers\.Lambda/gi,
-      ];
+      const lambdaPatterns = [/"class_name":\s*"Lambda"/gi, /keras\.layers\.Lambda/gi];
 
       for (const pattern of lambdaPatterns) {
         if (pattern.test(contentStr)) {
@@ -1022,7 +1028,7 @@ export async function startScan(
     pr_number?: number;
     commit_sha?: string;
     branch?: string;
-  }
+  },
 ): Promise<IScan> {
   // Parse and validate URL
   const { owner, repo } = parseGitHubUrl(repositoryUrl);
@@ -1034,7 +1040,7 @@ export async function startScan(
   const activeScan = await getActiveScanForRepoQuery(owner, repo, ctx.organizationId);
   if (activeScan) {
     throw new BusinessLogicException(
-      `A scan is already in progress for ${owner}/${repo}. Please wait for it to complete.`
+      `A scan is already in progress for ${owner}/${repo}. Please wait for it to complete.`,
     );
   }
 
@@ -1059,7 +1065,7 @@ export async function startScan(
     // Validate commit SHAs
     if (!incrementalOptions?.base_commit_sha || !incrementalOptions?.head_commit_sha) {
       throw new ValidationException(
-        "Both base_commit_sha and head_commit_sha are required for incremental scans"
+        "Both base_commit_sha and head_commit_sha are required for incremental scans",
       );
     }
 
@@ -1105,7 +1111,7 @@ export async function startScan(
       const errMsg = dbError instanceof Error ? dbError.message : "";
       if (errMsg.includes("unique_active_idx") || errMsg.includes("duplicate key")) {
         throw new BusinessLogicException(
-          `A scan is already in progress for ${owner}/${repo}. Please wait for it to complete.`
+          `A scan is already in progress for ${owner}/${repo}. Please wait for it to complete.`,
         );
       }
       throw dbError;
@@ -1118,9 +1124,7 @@ export async function startScan(
 
       // If still at limit after cleanup, reject
       if (scanProgressMap.size >= MAX_CONCURRENT_SCANS) {
-        throw new BusinessLogicException(
-          "Too many concurrent scans. Please try again later."
-        );
+        throw new BusinessLogicException("Too many concurrent scans. Please try again later.");
       }
     }
 
@@ -1155,23 +1159,33 @@ export async function startScan(
  */
 async function crossReferenceFindings(scanId: number, organizationId: number): Promise<void> {
   // 1. Get all findings for this scan
-  const [allFindings] = await sequelize.query(
+  const [allFindings] = (await sequelize.query(
     `SELECT id, finding_type, file_paths, vulnerability_details
      FROM ai_detection_findings
      WHERE scan_id = :scanId AND organization_id = :organizationId`,
-    { replacements: { scanId, organizationId } }
-  ) as [Array<{
-    id: number;
-    finding_type: string;
-    file_paths: Array<{ path: string; line_number: number | null; matched_text: string }> | null;
-    vulnerability_details: Record<string, unknown> | null;
-  }>, unknown];
+    { replacements: { scanId, organizationId } },
+  )) as [
+    Array<{
+      id: number;
+      finding_type: string;
+      file_paths: Array<{ path: string; line_number: number | null; matched_text: string }> | null;
+      vulnerability_details: Record<string, unknown> | null;
+    }>,
+    unknown,
+  ];
 
   // 2. Separate vulnerability vs non-vulnerability findings
   const vulnTypes = new Set([
-    "prompt_injection", "jailbreak_risk", "training_data_poisoning", "model_dos",
-    "supply_chain", "pii_exposure", "insecure_plugin", "excessive_agency",
-    "overreliance", "model_theft",
+    "prompt_injection",
+    "jailbreak_risk",
+    "training_data_poisoning",
+    "model_dos",
+    "supply_chain",
+    "pii_exposure",
+    "insecure_plugin",
+    "excessive_agency",
+    "overreliance",
+    "model_theft",
   ]);
 
   const vulnFindings = allFindings.filter((f) => vulnTypes.has(f.finding_type));
@@ -1216,7 +1230,7 @@ async function crossReferenceFindings(scanId: number, organizationId: number): P
       `UPDATE ai_detection_findings
        SET vulnerability_details = :details
        WHERE id = :id AND organization_id = :organizationId`,
-      { replacements: { details: JSON.stringify(updatedDetails), id: vf.id, organizationId } }
+      { replacements: { details: JSON.stringify(updatedDetails), id: vf.id, organizationId } },
     );
   }
 }
@@ -1244,13 +1258,15 @@ interface ChangedFile {
 async function getChangedFiles(
   repoPath: string,
   baseSha: string,
-  headSha: string
+  headSha: string,
 ): Promise<ChangedFile[]> {
   // Fetch the base commit (shallow clone only has HEAD)
   await new Promise<void>((resolve, reject) => {
     const fetchProc = spawn("git", ["fetch", "--depth=1", "origin", baseSha], { cwd: repoPath });
     let stderr = "";
-    fetchProc.stderr.on("data", (data) => { stderr += data.toString(); });
+    fetchProc.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
     fetchProc.on("close", (code) => {
       if (code !== 0) reject(new Error(`git fetch failed: ${stderr}`));
       else resolve();
@@ -1263,8 +1279,12 @@ async function getChangedFiles(
     const diffProc = spawn("git", ["diff", "--name-status", baseSha, headSha], { cwd: repoPath });
     let stdout = "";
     let stderr = "";
-    diffProc.stdout.on("data", (data) => { stdout += data.toString(); });
-    diffProc.stderr.on("data", (data) => { stderr += data.toString(); });
+    diffProc.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+    diffProc.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
     diffProc.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`git diff failed: ${stderr}`));
@@ -1299,7 +1319,7 @@ async function executeIncrementalScan(
   baselineScanId: number,
   ctx: IServiceContext,
   signal: AbortSignal | undefined,
-  progressState: ScanProgressEntry
+  progressState: ScanProgressEntry,
 ): Promise<void> {
   // Categorize files
   const addedOrModified = changedFiles.filter((f) => f.status !== "D");
@@ -1310,11 +1330,11 @@ async function executeIncrementalScan(
   await updateScanProgressQuery(
     scanId,
     { status: "scanning" } as IUpdateScanProgressInput,
-    ctx.organizationId
+    ctx.organizationId,
   );
   await sequelize.query(
     `UPDATE ai_detection_scans SET changed_files_count = :count WHERE id = :scanId AND organization_id = :orgId`,
-    { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } }
+    { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } },
   );
 
   // Filter scannable files from changed set
@@ -1371,17 +1391,19 @@ async function executeIncrementalScan(
         } else {
           findingsMap.set(key, {
             pattern: match.pattern,
-            category: AI_DETECTION_PATTERNS.find((c) =>
-              c.patterns.includes(match.pattern)
-            )?.name || "Unknown",
+            category:
+              AI_DETECTION_PATTERNS.find((c) => c.patterns.includes(match.pattern))?.name ||
+              "Unknown",
             findingType: match.findingType,
             extractedModelName: match.extractedModelName,
             overrideConfidence: match.confidence,
-            filePaths: [{
-              path: file.path,
-              line_number: match.lineNumber,
-              matched_text: match.matchedText,
-            }],
+            filePaths: [
+              {
+                path: file.path,
+                line_number: match.lineNumber,
+                matched_text: match.matchedText,
+              },
+            ],
           });
         }
       }
@@ -1429,7 +1451,8 @@ async function executeIncrementalScan(
   for (const bf of baselineFindings) {
     const filePaths: IFilePath[] = Array.isArray(bf.file_paths) ? bf.file_paths : [];
     const allInDeleted = filePaths.length > 0 && filePaths.every((fp) => deletedPaths.has(fp.path));
-    const allOutsideChanged = filePaths.length > 0 && filePaths.every((fp) => !changedPathsSet.has(fp.path));
+    const allOutsideChanged =
+      filePaths.length > 0 && filePaths.every((fp) => !changedPathsSet.has(fp.path));
 
     if (allInDeleted) {
       // All files deleted → fixed
@@ -1526,7 +1549,7 @@ async function executeIncrementalScan(
         duration_ms: durationMs,
       },
       ctx.organizationId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -1543,7 +1566,11 @@ async function executeIncrementalScan(
 
     const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
-      calculateAndStoreRiskScore(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx).catch((err) => {
+      calculateAndStoreRiskScore(
+        scanId,
+        `${scan.repository_owner}/${scan.repository_name}`,
+        ctx,
+      ).catch((err) => {
         logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
       });
 
@@ -1565,7 +1592,7 @@ async function executeScan(
   scanId: number,
   owner: string,
   repo: string,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<void> {
   const progressState = scanProgressMap.get(scanId);
   if (!progressState) return;
@@ -1582,7 +1609,7 @@ async function executeScan(
     await updateScanProgressQuery(
       scanId,
       { status: "cloning", started_at: startedAt },
-      ctx.organizationId
+      ctx.organizationId,
     );
 
     // Fetch GitHub token for private repository support
@@ -1611,7 +1638,7 @@ async function executeScan(
         const changedFiles = await getChangedFiles(
           clonedRepoPath,
           scanRecord.base_commit_sha,
-          scanRecord.head_commit_sha
+          scanRecord.head_commit_sha,
         );
 
         if (changedFiles.length <= 500) {
@@ -1623,28 +1650,28 @@ async function executeScan(
             scanRecord.baseline_scan_id,
             ctx,
             signal,
-            progressState
+            progressState,
           );
           return;
         }
 
         // Too many changed files — fall back to full scan
         logger.warn(
-          `Incremental scan for ${owner}/${repo}: ${changedFiles.length} changed files exceeds limit, falling back to full scan`
+          `Incremental scan for ${owner}/${repo}: ${changedFiles.length} changed files exceeds limit, falling back to full scan`,
         );
         await sequelize.query(
           `UPDATE ai_detection_scans SET scan_mode = 'full', changed_files_count = :count WHERE id = :scanId AND organization_id = :orgId`,
-          { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } }
+          { replacements: { count: changedFiles.length, scanId, orgId: ctx.organizationId } },
         );
       } catch (diffError) {
         // git diff failed — fall back to full scan
         logger.warn(
           `Incremental scan git diff failed for ${owner}/${repo}, falling back to full scan:`,
-          diffError
+          diffError,
         );
         await sequelize.query(
           `UPDATE ai_detection_scans SET scan_mode = 'full' WHERE id = :scanId AND organization_id = :orgId`,
-          { replacements: { scanId, orgId: ctx.organizationId } }
+          { replacements: { scanId, orgId: ctx.organizationId } },
         );
       }
     }
@@ -1661,7 +1688,7 @@ async function executeScan(
     await updateScanProgressQuery(
       scanId,
       { status: "scanning", total_files: filesToScan.length },
-      ctx.organizationId
+      ctx.organizationId,
     );
 
     // Collect findings (aggregated by pattern and finding type)
@@ -1717,9 +1744,9 @@ async function executeScan(
           } else {
             findingsMap.set(key, {
               pattern: match.pattern,
-              category: AI_DETECTION_PATTERNS.find((c) =>
-                c.patterns.includes(match.pattern)
-              )?.name || "Unknown",
+              category:
+                AI_DETECTION_PATTERNS.find((c) => c.patterns.includes(match.pattern))?.name ||
+                "Unknown",
               findingType: match.findingType,
               extractedModelName: match.extractedModelName,
               overrideConfidence: match.confidence,
@@ -1745,7 +1772,7 @@ async function executeScan(
         await updateScanProgressQuery(
           scanId,
           { files_scanned: i + 1, findings_count: findingsMap.size },
-          ctx.organizationId
+          ctx.organizationId,
         );
       }
     }
@@ -1760,8 +1787,8 @@ async function executeScan(
     try {
       // Check if vulnerability scanning is enabled for this org
       const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
-      const vulnScanEnabled = riskConfig?.vulnerability_scan_enabled &&
-        riskConfig?.llm_enabled && riskConfig?.llm_key_id;
+      const vulnScanEnabled =
+        riskConfig?.vulnerability_scan_enabled && riskConfig?.llm_enabled && riskConfig?.llm_key_id;
 
       // Determine which vulnerability types are enabled
       const enabledTypes = riskConfig?.vulnerability_types_enabled ?? {
@@ -1783,8 +1810,9 @@ async function executeScan(
           if (signal?.aborted) break;
           try {
             const content = await readFileContent(file.fullPath);
-            const candidates = scanFileForVulnerabilityIndicators(content, file.path)
-              .filter((c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false);
+            const candidates = scanFileForVulnerabilityIndicators(content, file.path).filter(
+              (c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false,
+            );
             if (candidates.length > 0) {
               vulnerabilityCandidates.push(...candidates);
               vulnerabilityFileContents.set(file.path, content);
@@ -1801,13 +1829,16 @@ async function executeScan(
             context,
             riskConfig!.llm_key_id,
             ctx.organizationId,
-            scanId
+            scanId,
           );
         }
       }
     } catch (err) {
       // Graceful degradation: vulnerability scan failure does not fail the overall scan
-      logger.warn(`Vulnerability scan failed for scan ${scanId}, continuing without vulnerability findings:`, err);
+      logger.warn(
+        `Vulnerability scan failed for scan ${scanId}, continuing without vulnerability findings:`,
+        err,
+      );
       vulnerabilityFindings = [];
     }
 
@@ -1841,7 +1872,9 @@ async function executeScan(
           description: `File exceeds 500MB size limit (${Math.round(modelFile.size / 1024 / 1024)}MB). Unable to analyze for security threats.`,
           documentation_url: undefined,
           file_count: 1,
-          file_paths: [{ path: modelFile.path, line_number: null, matched_text: "Size limit exceeded" }],
+          file_paths: [
+            { path: modelFile.path, line_number: null, matched_text: "Size limit exceeded" },
+          ],
           severity: "low",
           cwe_id: "N/A",
           cwe_name: "N/A",
@@ -1871,14 +1904,20 @@ async function executeScan(
             name: formatFindingName(finding.moduleName, finding.operatorName),
             provider: getProviderFromExtension(extension),
             confidence: severityToConfidence(finding.severity),
-            description: generateFindingDescription(finding.threatType, finding.moduleName, finding.operatorName),
+            description: generateFindingDescription(
+              finding.threatType,
+              finding.moduleName,
+              finding.operatorName,
+            ),
             documentation_url: getDocumentationUrl(finding.threatType, finding.cweId),
             file_count: 1,
-            file_paths: [{
-              path: modelFile.path,
-              line_number: null,
-              matched_text: finding.moduleName + "." + finding.operatorName,
-            }],
+            file_paths: [
+              {
+                path: modelFile.path,
+                line_number: null,
+                matched_text: finding.moduleName + "." + finding.operatorName,
+              },
+            ],
             severity: finding.severity,
             cwe_id: finding.cweId,
             cwe_name: finding.cweName,
@@ -1902,7 +1941,9 @@ async function executeScan(
           description: "Could not complete security scan: " + errorMessage,
           documentation_url: undefined,
           file_count: 1,
-          file_paths: [{ path: modelFile.path, line_number: null, matched_text: "Scan incomplete" }],
+          file_paths: [
+            { path: modelFile.path, line_number: null, matched_text: "Scan incomplete" },
+          ],
           severity: "low",
           cwe_id: "N/A",
           cwe_name: "N/A",
@@ -1983,7 +2024,7 @@ async function executeScan(
             const license = await getLicenseForFinding(
               finding.name,
               finding.provider || "",
-              undefined // No code content available at this point
+              undefined, // No code content available at this point
             );
             if (license) {
               finding.license_id = license.licenseId;
@@ -1991,7 +2032,9 @@ async function executeScan(
               finding.license_risk = license.licenseRisk;
               finding.license_source = license.licenseSource;
               licensesFound++;
-              console.log(`[LICENSE] Found license for ${finding.name} (${finding.provider}): ${license.licenseId}`);
+              console.log(
+                `[LICENSE] Found license for ${finding.name} (${finding.provider}): ${license.licenseId}`,
+              );
             } else {
               console.log(`[LICENSE] No license found for ${finding.name} (${finding.provider})`);
             }
@@ -2029,14 +2072,20 @@ async function executeScan(
           }
         }
         const deduplicatedSecurityFindings = Array.from(securityFindingsMap.values());
-        await createModelSecurityFindingsBatchQuery(deduplicatedSecurityFindings, ctx.organizationId, transaction);
+        await createModelSecurityFindingsBatchQuery(
+          deduplicatedSecurityFindings,
+          ctx.organizationId,
+          transaction,
+        );
       }
 
       // Mark scan as completed (include both library and security findings)
-      const deduplicatedSecurityCount = modelSecurityFindings.length > 0
-        ? new Set(modelSecurityFindings.map(f => `${f.name}::${f.provider}`)).size
-        : 0;
-      const totalFindings = findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
+      const deduplicatedSecurityCount =
+        modelSecurityFindings.length > 0
+          ? new Set(modelSecurityFindings.map((f) => `${f.name}::${f.provider}`)).size
+          : 0;
+      const totalFindings =
+        findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
       const completedAt = new Date();
       const durationMs = progressState.startedAt
         ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -2051,7 +2100,7 @@ async function executeScan(
           duration_ms: durationMs,
         },
         ctx.organizationId,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -2092,11 +2141,9 @@ async function executeScan(
       throw error;
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     const status: ScanStatus =
-      error instanceof BusinessLogicException &&
-      errorMessage.includes("cancelled")
+      error instanceof BusinessLogicException && errorMessage.includes("cancelled")
         ? "cancelled"
         : "failed";
 
@@ -2112,7 +2159,7 @@ async function executeScan(
         completed_at: errorCompletedAt,
         duration_ms: errorDurationMs,
       },
-      ctx.organizationId
+      ctx.organizationId,
     );
 
     progressState.status = status;
@@ -2145,7 +2192,7 @@ async function executeScan(
  */
 export async function getScanStatus(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<IScanStatusResponse> {
   // Check in-memory progress first
   const progressState = scanProgressMap.get(scanId);
@@ -2186,10 +2233,7 @@ export async function getScanStatus(
  * @param ctx - Service context
  * @returns Scan with summary
  */
-export async function getScan(
-  scanId: number,
-  ctx: IServiceContext
-): Promise<IScanResponse> {
+export async function getScan(scanId: number, ctx: IServiceContext): Promise<IScanResponse> {
   const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
   if (!scan) {
     throw new NotFoundException(`Scan with ID ${scanId} not found`);
@@ -2245,7 +2289,7 @@ export async function getScanFindings(
   page: number = 1,
   limit: number = 50,
   confidence?: string,
-  findingType?: string
+  findingType?: string,
 ): Promise<IFindingsResponse> {
   // Verify scan exists
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2259,7 +2303,7 @@ export async function getScanFindings(
     page,
     limit,
     confidence,
-    findingType
+    findingType,
   );
 
   return {
@@ -2308,7 +2352,7 @@ export async function getScans(
   ctx: IServiceContext,
   page: number = 1,
   limit: number = 20,
-  status?: ScanStatus
+  status?: ScanStatus,
 ): Promise<IScansResponse> {
   const { scans, total } = await getScansListQuery(ctx.organizationId, page, limit, status);
 
@@ -2348,9 +2392,7 @@ export async function getScans(
  * @param ctx - Service context
  * @returns Active scan or null if no active scan
  */
-export async function getActiveScan(
-  ctx: IServiceContext
-): Promise<IScan | null> {
+export async function getActiveScan(ctx: IServiceContext): Promise<IScan | null> {
   const activeStatuses = ["pending", "cloning", "scanning"];
 
   // Single query to find any active scan (most recent first)
@@ -2364,7 +2406,7 @@ export async function getActiveScan(
     {
       type: QueryTypes.SELECT,
       replacements: { organizationId: ctx.organizationId, statuses: activeStatuses },
-    }
+    },
   );
 
   return scan || null;
@@ -2384,7 +2426,7 @@ export async function getActiveScan(
  */
 export async function cancelScan(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<{ id: number; status: "cancelled"; message: string }> {
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
@@ -2396,16 +2438,12 @@ export async function cancelScan(
   const isOwner = scan.triggered_by === ctx.userId;
 
   if (!isAdmin && !isOwner) {
-    throw new ForbiddenException(
-      "You can only cancel scans that you initiated",
-      "scan",
-      "cancel"
-    );
+    throw new ForbiddenException("You can only cancel scans that you initiated", "scan", "cancel");
   }
 
   if (!["pending", "cloning", "scanning"].includes(scan.status)) {
     throw new BusinessLogicException(
-      `Cannot cancel scan with status "${scan.status}". Only pending/in-progress scans can be cancelled.`
+      `Cannot cancel scan with status "${scan.status}". Only pending/in-progress scans can be cancelled.`,
     );
   }
 
@@ -2423,7 +2461,7 @@ export async function cancelScan(
   await updateScanProgressQuery(
     scanId,
     { status: "cancelled", completed_at: cancelledAt, duration_ms: cancelDurationMs },
-    ctx.organizationId
+    ctx.organizationId,
   );
 
   return {
@@ -2442,7 +2480,7 @@ export async function cancelScan(
  */
 export async function deleteScan(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<{ message: string }> {
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
@@ -2451,7 +2489,7 @@ export async function deleteScan(
 
   if (["pending", "cloning", "scanning"].includes(scan.status)) {
     throw new BusinessLogicException(
-      `Cannot delete scan with status "${scan.status}". Please cancel it first.`
+      `Cannot delete scan with status "${scan.status}". Please cancel it first.`,
     );
   }
 
@@ -2491,7 +2529,7 @@ export async function getSecurityFindings(
   ctx: IServiceContext,
   page: number = 1,
   limit: number = 50,
-  severity?: string
+  severity?: string,
 ): Promise<{
   findings: IModelSecurityFindingRecord[];
   pagination: { total: number; page: number; limit: number; total_pages: number };
@@ -2516,10 +2554,10 @@ export async function getSecurityFindings(
     FROM ai_detection_findings
     ${whereClause}
   `;
-  const countResult = await sequelize.query(countQuery, {
+  const countResult = (await sequelize.query(countQuery, {
     bind: countParams,
     type: QueryTypes.SELECT,
-  }) as Array<{ total: string }>;
+  })) as Array<{ total: string }>;
   const total = parseInt(countResult[0]?.total || "0", 10);
 
   // Get paginated findings
@@ -2562,23 +2600,21 @@ export async function getSecurityFindings(
     LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
   `;
 
-  const findings = await sequelize.query(findingsQuery, {
+  const findings = (await sequelize.query(findingsQuery, {
     bind: paginatedParams,
     type: QueryTypes.SELECT,
-  }) as IModelSecurityFindingRecord[];
+  })) as IModelSecurityFindingRecord[];
 
   // Transform findings (parse file_paths if stored as JSON string)
   const transformedFindings = findings.map((finding) => ({
     ...finding,
     file_paths:
-      typeof finding.file_paths === "string"
-        ? JSON.parse(finding.file_paths)
-        : finding.file_paths,
+      typeof finding.file_paths === "string" ? JSON.parse(finding.file_paths) : finding.file_paths,
     file_count: Array.isArray(finding.file_paths)
       ? finding.file_paths.length
       : typeof finding.file_paths === "string"
-      ? JSON.parse(finding.file_paths).length
-      : 0,
+        ? JSON.parse(finding.file_paths).length
+        : 0,
   }));
 
   return {
@@ -2601,7 +2637,7 @@ export async function getSecurityFindings(
  */
 export async function getSecuritySummary(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<{
   total: number;
   by_severity: { critical: number; high: number; medium: number; low: number };
@@ -2620,10 +2656,10 @@ export async function getSecuritySummary(
     WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
     GROUP BY severity
   `;
-  const severityCounts = await sequelize.query(severityQuery, {
+  const severityCounts = (await sequelize.query(severityQuery, {
     bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
-  }) as Array<{ severity: string; count: string }>;
+  })) as Array<{ severity: string; count: string }>;
 
   // Get counts by threat type - filter by finding_type = 'model_security'
   const threatTypeQuery = `
@@ -2632,10 +2668,10 @@ export async function getSecuritySummary(
     WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
     GROUP BY threat_type
   `;
-  const threatTypeCounts = await sequelize.query(threatTypeQuery, {
+  const threatTypeCounts = (await sequelize.query(threatTypeQuery, {
     bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
-  }) as Array<{ threat_type: string; count: string }>;
+  })) as Array<{ threat_type: string; count: string }>;
 
   // Get model files scanned count (count findings with finding_type = 'model_security')
   // Note: model_files_scanned column is not yet in the schema, so we derive from findings
@@ -2644,10 +2680,10 @@ export async function getSecuritySummary(
     FROM ai_detection_findings
     WHERE organization_id = $1 AND scan_id = $2 AND finding_type = 'model_security'
   `;
-  const modelFilesResult = await sequelize.query(modelFilesQuery, {
+  const modelFilesResult = (await sequelize.query(modelFilesQuery, {
     bind: [ctx.organizationId, scanId],
     type: QueryTypes.SELECT,
-  }) as Array<{ model_files_scanned: string }>;
+  })) as Array<{ model_files_scanned: string }>;
 
   // Build response
   const by_severity = {
@@ -2695,7 +2731,7 @@ export async function updateFindingGovernanceStatus(
   scanId: number,
   findingId: number,
   governanceStatus: GovernanceStatus | null,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<IUpdateGovernanceStatusResponse> {
   // Verify scan exists and belongs to tenant
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2704,8 +2740,13 @@ export async function updateFindingGovernanceStatus(
   }
 
   // Validate governance status if provided
-  if (governanceStatus !== null && !["reviewed", "approved", "flagged"].includes(governanceStatus)) {
-    throw new ValidationException("governance_status must be 'reviewed', 'approved', 'flagged', or null");
+  if (
+    governanceStatus !== null &&
+    !["reviewed", "approved", "flagged"].includes(governanceStatus)
+  ) {
+    throw new ValidationException(
+      "governance_status must be 'reviewed', 'approved', 'flagged', or null",
+    );
   }
 
   // Update the finding
@@ -2714,7 +2755,7 @@ export async function updateFindingGovernanceStatus(
     scanId,
     governanceStatus,
     ctx.userId,
-    ctx.organizationId
+    ctx.organizationId,
   );
 
   if (!updatedFinding) {
@@ -2738,7 +2779,7 @@ export async function updateFindingGovernanceStatus(
  */
 export async function getGovernanceSummary(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<{
   total: number;
   reviewed: number;
@@ -2771,15 +2812,13 @@ const AI_DETECTION_STATS_CACHE_TTL = 120;
  * @param ctx - Service context with tenant info
  * @returns Aggregated statistics
  */
-export async function getAIDetectionStats(
-  ctx: IServiceContext
-): Promise<IAIDetectionStats> {
+export async function getAIDetectionStats(ctx: IServiceContext): Promise<IAIDetectionStats> {
   const cacheKey = buildOrgCacheKey(CACHE_KEYS.AI_DETECTION_STATS, ctx.organizationId);
 
   return cacheAside(
     cacheKey,
     () => getAIDetectionStatsQuery(ctx.organizationId),
-    AI_DETECTION_STATS_CACHE_TTL
+    AI_DETECTION_STATS_CACHE_TTL,
   );
 }
 
@@ -2792,9 +2831,7 @@ export async function getAIDetectionStats(
  *
  * @param organizationId - Tenant identifier
  */
-export async function invalidateAIDetectionStatsCache(
-  organizationId: number
-): Promise<void> {
+export async function invalidateAIDetectionStatsCache(organizationId: number): Promise<void> {
   const pattern = `${CACHE_KEYS.AI_DETECTION_STATS}:${organizationId}`;
   await deleteByPattern(pattern);
 }
@@ -2859,7 +2896,7 @@ export interface AIBOMExport {
  * Map finding type to component type
  */
 function findingTypeToComponentType(
-  findingType: string
+  findingType: string,
 ): "library" | "model" | "service" | "framework" | "tool" {
   switch (findingType) {
     case "model_ref":
@@ -2893,7 +2930,7 @@ function generatePurl(provider: string, name: string): string {
  */
 export async function exportScanAsAIBOM(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<AIBOMExport> {
   // Get scan details
   const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
@@ -2906,7 +2943,7 @@ export async function exportScanAsAIBOM(
   const relevantFindings = await getAllFindingsForExportQuery(
     scanId,
     ctx.organizationId,
-    ["secret", "model_security"] // Exclude these types
+    ["secret", "model_security"], // Exclude these types
   );
 
   // Transform findings to AI-BOM components
@@ -2956,9 +2993,7 @@ export async function exportScanAsAIBOM(
     version: 1,
     metadata: {
       timestamp: new Date().toISOString(),
-      tools: [
-        { name: "VerifyWise AI Detection", version: "1.0.0" },
-      ],
+      tools: [{ name: "VerifyWise AI Detection", version: "1.0.0" }],
       repository: {
         url: scan.repository_url,
         owner: scan.repository_owner,
@@ -3035,7 +3070,7 @@ export interface DependencyGraphResponse {
  * Map finding type to graph node type
  */
 function findingTypeToNodeType(
-  findingType: string
+  findingType: string,
 ): "library" | "model" | "api" | "secret" | "rag" | "agent" {
   switch (findingType) {
     case "model_ref":
@@ -3057,9 +3092,7 @@ function findingTypeToNodeType(
  * Infer relationships between findings based on file co-location
  * If two findings appear in the same file, they likely have a relationship
  */
-function inferRelationships(
-  nodes: DependencyGraphNode[]
-): DependencyGraphEdge[] {
+function inferRelationships(nodes: DependencyGraphNode[]): DependencyGraphEdge[] {
   const edges: DependencyGraphEdge[] = [];
   const edgeSet = new Set<string>(); // Prevent duplicates
 
@@ -3116,7 +3149,7 @@ function inferRelationships(
  */
 function determineRelationship(
   nodeA: DependencyGraphNode,
-  nodeB: DependencyGraphNode
+  nodeB: DependencyGraphNode,
 ): { source: string; target: string; type: DependencyGraphEdge["relationship"] } | null {
   const typeA = nodeA.type;
   const typeB = nodeB.type;
@@ -3175,7 +3208,7 @@ function determineRelationship(
  */
 export async function getDependencyGraph(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<DependencyGraphResponse> {
   // Get scan details
   const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
@@ -3186,7 +3219,7 @@ export async function getDependencyGraph(
   // Get all findings for the scan using batched query
   const allFindings = await getAllFindingsForExportQuery(
     scanId,
-    ctx.organizationId
+    ctx.organizationId,
     // No exclusions - include all finding types in graph
   );
 
@@ -3300,7 +3333,7 @@ export interface ComplianceMappingResponse {
  */
 export async function getComplianceMapping(
   scanId: number,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<ComplianceMappingResponse> {
   // Verify scan exists and is completed
   const scan = await getScanWithUserQuery(scanId, ctx.organizationId);
@@ -3309,15 +3342,13 @@ export async function getComplianceMapping(
   }
 
   if (scan.status !== "completed") {
-    throw new BusinessLogicException(
-      "Compliance mapping is only available for completed scans"
-    );
+    throw new BusinessLogicException("Compliance mapping is only available for completed scans");
   }
 
   // Get all findings for the scan using batched query
   const findings = await getAllFindingsForExportQuery(
     scanId,
-    ctx.organizationId
+    ctx.organizationId,
     // No exclusions - include all finding types for compliance mapping
   );
 
@@ -3327,10 +3358,7 @@ export async function getComplianceMapping(
     findingName: finding.name,
     findingType: finding.finding_type,
     provider: finding.provider || "",
-    requirements: getComplianceRequirementsForFinding(
-      finding.finding_type,
-      finding.provider
-    ),
+    requirements: getComplianceRequirementsForFinding(finding.finding_type, finding.provider),
     riskFactors: getRiskFactorsForFinding(finding.finding_type),
     documentationNeeds: getDocumentationNeedsForFinding(finding.finding_type),
   }));
@@ -3359,7 +3387,7 @@ export async function getComplianceMapping(
  * Generate a consolidated compliance checklist from finding mappings
  */
 function generateComplianceChecklist(
-  mappings: ComplianceFindingMapping[]
+  mappings: ComplianceFindingMapping[],
 ): ComplianceChecklistItem[] {
   // Collect all unique checklist items with their related findings
   const checklistMap = new Map<
@@ -3379,9 +3407,7 @@ function generateComplianceChecklist(
 
         if (existing) {
           // Only add finding if not already present (avoid duplicates)
-          const alreadyExists = existing.findings.some(
-            (f) => f.id === mapping.findingId
-          );
+          const alreadyExists = existing.findings.some((f) => f.id === mapping.findingId);
           if (!alreadyExists) {
             existing.findings.push({
               id: mapping.findingId,
@@ -3438,7 +3464,7 @@ function generateComplianceChecklist(
  */
 function determinePriority(
   requirement: ComplianceRequirement,
-  findingCount: number
+  findingCount: number,
 ): "high" | "medium" | "low" {
   // High priority: security, or required documentation with many findings
   if (
@@ -3465,7 +3491,7 @@ function determinePriority(
  */
 function calculateComplianceSummary(
   mappings: ComplianceFindingMapping[],
-  checklist: ComplianceChecklistItem[]
+  checklist: ComplianceChecklistItem[],
 ): ComplianceSummary {
   // Count unique requirements
   const uniqueRequirements = new Set<string>();
@@ -3498,7 +3524,7 @@ function calculateComplianceSummary(
   // Calculate coverage (percentage of all possible requirements that are triggered)
   const totalPossibleRequirements = Object.keys(COMPLIANCE_REQUIREMENTS).length;
   const coveragePercentage = Math.round(
-    (uniqueRequirements.size / totalPossibleRequirements) * 100
+    (uniqueRequirements.size / totalPossibleRequirements) * 100,
   );
 
   return {
@@ -3515,7 +3541,7 @@ function calculateComplianceSummary(
  */
 export function getRequirementsForFindingType(
   findingType: string,
-  provider?: string
+  provider?: string,
 ): ComplianceRequirement[] {
   return getComplianceRequirementsForFinding(findingType, provider);
 }

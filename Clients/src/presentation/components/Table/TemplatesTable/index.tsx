@@ -26,7 +26,12 @@ import { brand, text, background, border as borderPalette, status } from "../../
 // Re-export TemplateRow from TemplatesList
 export type { TemplateRow } from "./TemplatesList";
 import type { TemplateRow } from "./TemplatesList";
-import { getPredominantDifficultyLabel, getDifficultyStyles, getCategoryStyles, getTypeStyles } from "./TemplatesList";
+import {
+  getPredominantDifficultyLabel,
+  getDifficultyStyles,
+  getCategoryStyles,
+  getTypeStyles,
+} from "./TemplatesList";
 
 export type SortDirection = "asc" | "desc" | null;
 export type SortConfig = {
@@ -56,9 +61,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
   compact = false,
 }) => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("templates", 10)
-  );
+  const [rowsPerPage, setRowsPerPage] = useState(() => getPaginationRowCount("templates", 10));
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "",
     direction: null,
@@ -135,7 +138,15 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
   };
 
   // Sortable header cell
-  const SortableHeader = ({ label, sortKey, width }: { label: string; sortKey: string; width: string }) => (
+  const SortableHeader = ({
+    label,
+    sortKey,
+    width,
+  }: {
+    label: string;
+    sortKey: string;
+    width: string;
+  }) => (
     <TableCell
       sx={{
         ...singleTheme.tableStyles.primary.header.cell,
@@ -160,9 +171,17 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
         >
           {label}
         </Typography>
-        <Box sx={{ color: sortConfig.key === sortKey ? "primary.main" : `${text.disabled}`, display: "flex", alignItems: "center" }}>
+        <Box
+          sx={{
+            color: sortConfig.key === sortKey ? "primary.main" : `${text.disabled}`,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           {sortConfig.key === sortKey && sortConfig.direction === "asc" && <ChevronUp size={14} />}
-          {sortConfig.key === sortKey && sortConfig.direction === "desc" && <ChevronDown size={14} />}
+          {sortConfig.key === sortKey && sortConfig.direction === "desc" && (
+            <ChevronDown size={14} />
+          )}
           {sortConfig.key !== sortKey && <ChevronsUpDown size={14} />}
         </Box>
       </Box>
@@ -172,15 +191,26 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
   return (
     <TableContainer>
       <Table sx={{ ...singleTheme.tableStyles.primary.frame }} size={compact ? "small" : "medium"}>
-        <TableHead sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}>
+        <TableHead
+          sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
+        >
           <TableRow sx={singleTheme.tableStyles.primary.header.row}>
             <SortableHeader label="DATASET" sortKey="name" width="25%" />
             <SortableHeader label="TYPE" sortKey="type" width="15%" />
             <SortableHeader label="CATEGORY" sortKey="category" width="15%" />
             <SortableHeader label="# PROMPTS" sortKey="tests" width="12%" />
             <SortableHeader label="DIFFICULTY" sortKey="difficulty" width="13%" />
-            <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "15%", textAlign: "center" }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, fontSize: compact ? "12px" : "13px" }}>
+            <TableCell
+              sx={{
+                ...singleTheme.tableStyles.primary.header.cell,
+                width: "15%",
+                textAlign: "center",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 500, fontSize: compact ? "12px" : "13px" }}
+              >
                 ACTION
               </Typography>
             </TableCell>
@@ -214,7 +244,9 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                     "&:hover": { backgroundColor: `${background.surface}` },
                   }}
                 >
-                  <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, maxWidth: "400px" }}>
+                  <TableCell
+                    sx={{ ...singleTheme.tableStyles.primary.body.cell, maxWidth: "400px" }}
+                  >
                     <Typography sx={{ fontSize: compact ? "12px" : "13px", fontWeight: 500 }}>
                       {template.name}
                     </Typography>
@@ -235,34 +267,58 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
+                  <TableCell
+                    sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
+                  >
                     {template.type ? (
                       <Chip
-                        label={template.type === "single-turn" ? "Single-Turn" : template.type === "multi-turn" ? "Multi-Turn" : "Simulated"}
+                        label={
+                          template.type === "single-turn"
+                            ? "Single-Turn"
+                            : template.type === "multi-turn"
+                              ? "Multi-Turn"
+                              : "Simulated"
+                        }
                         size="small"
                         uppercase={false}
                         backgroundColor={getTypeStyles(template.type).backgroundColor}
                         textColor={getTypeStyles(template.type).color}
                       />
                     ) : (
-                      <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
+                      <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>
+                        -
+                      </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
+                  <TableCell
+                    sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
+                  >
                     <Chip
-                      label={template.category === "rag" ? "RAG" : template.category === "chatbot" ? "Chatbot" : "Agent"}
+                      label={
+                        template.category === "rag"
+                          ? "RAG"
+                          : template.category === "chatbot"
+                            ? "Chatbot"
+                            : "Agent"
+                      }
                       size="small"
                       uppercase={false}
                       backgroundColor={getCategoryStyles(template.category).backgroundColor}
                       textColor={getCategoryStyles(template.category).color}
                     />
                   </TableCell>
-                  <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
-                    <Typography sx={{ fontSize: compact ? "12px" : "13px", color: `${status.default.text}` }}>
+                  <TableCell
+                    sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
+                  >
+                    <Typography
+                      sx={{ fontSize: compact ? "12px" : "13px", color: `${status.default.text}` }}
+                    >
                       {template.test_count ?? "-"}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}>
+                  <TableCell
+                    sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
+                  >
                     <Chip
                       label={difficultyLabel}
                       size="small"
@@ -326,6 +382,10 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
 };
 
 export default TemplatesTable;
-export { getPredominantDifficultyLabel, getDifficultyStyles, getTypeStyles, getCategoryStyles } from "./TemplatesList";
+export {
+  getPredominantDifficultyLabel,
+  getDifficultyStyles,
+  getTypeStyles,
+  getCategoryStyles,
+} from "./TemplatesList";
 export { default as TemplatesList } from "./TemplatesList";
-

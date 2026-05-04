@@ -20,7 +20,7 @@ router.post(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectId"),
-  addFrameworkToProject
+  addFrameworkToProject,
 );
 
 router.delete(
@@ -28,7 +28,7 @@ router.delete(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectId"),
-  deleteFrameworkFromProject
+  deleteFrameworkFromProject,
 );
 
 export default router;

@@ -9,28 +9,35 @@
  * - GET (decrypted keys): Internal services only
  */
 
-import express from 'express';
-import { getAllKeys, addKey, deleteKey, getDecryptedKeys, verifyKey } from '../controllers/evaluationLlmApiKey.ctrl';
-import authenticateJWT from '../middleware/auth.middleware';
-import authorize from '../middleware/accessControl.middleware';
+import express from "express";
+import {
+  getAllKeys,
+  addKey,
+  deleteKey,
+  getDecryptedKeys,
+  verifyKey,
+} from "../controllers/evaluationLlmApiKey.ctrl";
+import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 /**
  * Middleware to restrict access to internal services only (localhost)
  * For production, this should also check for an internal API key
  */
 const internalOnly = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const ip = req.ip || req.socket?.remoteAddress || '';
-  const isLocalhost = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('localhost');
-  
+  const ip = req.ip || req.socket?.remoteAddress || "";
+  const isLocalhost =
+    ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || ip.includes("localhost");
+
   // In development, allow all requests; in production, require localhost
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev = process.env.NODE_ENV !== "production";
   if (isDev || isLocalhost) {
     return next();
   }
-  
+
   return res.status(403).json({
     success: false,
-    message: 'This endpoint is only accessible from internal services',
+    message: "This endpoint is only accessible from internal services",
   });
 };
 
@@ -41,7 +48,7 @@ const router = express.Router();
  * Get all LLM API keys for the authenticated user's organization
  * Returns masked keys for security
  */
-router.get('/', authenticateJWT, getAllKeys);
+router.get("/", authenticateJWT, getAllKeys);
 
 /**
  * POST /api/evaluation-llm-keys
@@ -52,7 +59,7 @@ router.get('/', authenticateJWT, getAllKeys);
  * - provider: string (openai, anthropic, google, xai, mistral, huggingface)
  * - apiKey: string (will be encrypted before storage)
  */
-router.post('/', authenticateJWT, authorize(['Admin']), addKey);
+router.post("/", authenticateJWT, authorize(["Admin"]), addKey);
 
 /**
  * POST /api/evaluation-llm-keys/verify
@@ -67,7 +74,7 @@ router.post('/', authenticateJWT, authorize(['Admin']), addKey);
  * - valid: boolean (whether the key is valid)
  * - message: string (verification result message)
  */
-router.post('/verify', authenticateJWT, authorize(['Admin']), verifyKey);
+router.post("/verify", authenticateJWT, authorize(["Admin"]), verifyKey);
 
 /**
  * DELETE /api/evaluation-llm-keys/:provider
@@ -77,7 +84,7 @@ router.post('/verify', authenticateJWT, authorize(['Admin']), verifyKey);
  * Params:
  * - provider: string (openai, anthropic, google, xai, mistral, huggingface)
  */
-router.delete('/:provider', authenticateJWT, authorize(['Admin']), deleteKey);
+router.delete("/:provider", authenticateJWT, authorize(["Admin"]), deleteKey);
 
 /**
  * GET /api/evaluation-llm-keys/internal/decrypted
@@ -89,6 +96,6 @@ router.delete('/:provider', authenticateJWT, authorize(['Admin']), deleteKey);
  *
  * Note: This endpoint is restricted to internal services (localhost in production)
  */
-router.get('/internal/decrypted', internalOnly, getDecryptedKeys);
+router.get("/internal/decrypted", internalOnly, getDecryptedKeys);
 
 export default router;

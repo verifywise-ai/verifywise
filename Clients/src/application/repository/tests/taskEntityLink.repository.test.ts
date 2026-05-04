@@ -148,9 +148,7 @@ describe("taskEntityLink.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        addTaskEntityLink(1, 100, "vendor", "Test"),
-      ).rejects.toThrow(APIError);
+      await expect(addTaskEntityLink(1, 100, "vendor", "Test")).rejects.toThrow(APIError);
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -198,7 +196,9 @@ describe("taskEntityLink.repository", () => {
 
       vi.mocked(apiServices.delete).mockRejectedValue(networkError);
 
-      await expect(removeTaskEntityLink(1, 10)).rejects.toThrow("Failed to remove entity link from task");
+      await expect(removeTaskEntityLink(1, 10)).rejects.toThrow(
+        "Failed to remove entity link from task",
+      );
     });
   });
 });

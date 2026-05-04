@@ -41,7 +41,7 @@ type TableList = [
   TableEntry<ProjectScope>,
   TableEntry<Topic>,
   TableEntry<Subtopic>,
-  TableEntry<Question>
+  TableEntry<Question>,
 ];
 ```
 

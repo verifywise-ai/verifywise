@@ -25,51 +25,42 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // CRUD requests for NIST AI RMF functions
 router.get("/functions", authenticateJWT, getAllNISTAIRMFfunctions); // getting all NIST AI RMF functions of the organization
-router.get(
-  "/functions/:id",
-  authenticateJWT,
-  validateId("id"),
-  getNISTAIRMFfunctionById
-); // getting a specific NIST AI RMF function by id
+router.get("/functions/:id", authenticateJWT, validateId("id"), getNISTAIRMFfunctionById); // getting a specific NIST AI RMF function by id
 
 // CRUD requests for NIST AI RMF categories
-router.get(
-  "/categories/:title",
-  authenticateJWT,
-  getAllNISTAIRMFCategoriesByfunctionId
-); // getting all NIST AI RMF categories of the organization by function id
+router.get("/categories/:title", authenticateJWT, getAllNISTAIRMFCategoriesByfunctionId); // getting all NIST AI RMF categories of the organization by function id
 
 // CRUD requests for NIST AI RMF subcategories
 router.get(
   "/subcategories/byId/:id",
   authenticateJWT,
   validateId("id"),
-  getNISTAIRMFSubcategoryById
+  getNISTAIRMFSubcategoryById,
 ); // getting a specific NIST AI RMF subcategory by id
 router.get(
   "/subcategories/:id/risks",
   authenticateJWT,
   validateId("id"),
-  getNISTAIRMFSubcategoryRisks
+  getNISTAIRMFSubcategoryRisks,
 ); // getting all risks linked to a specific NIST AI RMF subcategory
 router.get(
   "/subcategories/:categoryId/:title",
   authenticateJWT,
   validateId("categoryId"),
-  getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle
+  getAllNISTAIRMFSubcategoriesBycategoryIdAndtitle,
 ); // getting all NIST AI RMF subcategories of the organization by category id and title
 router.patch(
   "/subcategories/:id",
   authenticateJWT,
   validateId("id"),
   upload.any(),
-  updateNISTAIRMFSubcategoryById
+  updateNISTAIRMFSubcategoryById,
 ); // updating a specific NIST AI RMF subcategory by id
 router.patch(
   "/subcategories/:id/status",
   authenticateJWT,
   validateId("id"),
-  updateNISTAIRMFSubcategoryStatus
+  updateNISTAIRMFSubcategoryStatus,
 ); // updating status of a specific NIST AI RMF subcategory by id
 
 // Dashboard calculation endpoints

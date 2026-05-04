@@ -23,13 +23,11 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Projects**
-
   - Route: `/`
   - Handler: `getAllProjects`
   - Authentication: JWT (currently commented out)
 
 - **Get Project by ID**
-
   - Route: `/:id`
   - Handler: `getProjectById`
   - Authentication: JWT (currently commented out)

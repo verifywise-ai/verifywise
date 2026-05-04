@@ -19,9 +19,7 @@ import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Placeholder from "../../../assets/imgs/empty-state.svg";
 import { IAITrustCenterTableProps } from "../../../types/interfaces/i.table";
 
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
 const DEFAULT_ROWS_PER_PAGE = 5;
 const AI_TRUST_CENTER_SORTING_KEY = "verifywise_ai_trust_center_sorting";
@@ -71,13 +69,10 @@ const AITrustCenterTable = <T extends { id: number }>({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   // Sorting handlers
   const handleSort = useCallback((columnId: string) => {
@@ -114,7 +109,11 @@ const AITrustCenterTable = <T extends { id: number }>({
       if (sortKey.includes("name")) {
         aValue = a.name?.toString().toLowerCase() || "";
         bValue = b.name?.toString().toLowerCase() || "";
-      } else if (sortKey.includes("type") || sortKey.includes("purpose") || sortKey.includes("description")) {
+      } else if (
+        sortKey.includes("type") ||
+        sortKey.includes("purpose") ||
+        sortKey.includes("description")
+      ) {
         aValue = a.description?.toString().toLowerCase() || "";
         bValue = b.description?.toString().toLowerCase() || "";
       } else if (sortKey.includes("visible")) {
@@ -139,7 +138,7 @@ const AITrustCenterTable = <T extends { id: number }>({
       // Handle boolean comparisons
       if (typeof aValue === "boolean" && typeof bValue === "boolean") {
         if (aValue === bValue) return 0;
-        return sortConfig.direction === "asc" ? (aValue ? -1 : 1) : (aValue ? 1 : -1);
+        return sortConfig.direction === "asc" ? (aValue ? -1 : 1) : aValue ? 1 : -1;
       }
 
       // Handle string comparisons
@@ -165,8 +164,7 @@ const AITrustCenterTable = <T extends { id: number }>({
     () => (
       <TableHead
         sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
+          backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
         }}
       >
         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -227,9 +225,7 @@ const AITrustCenterTable = <T extends { id: number }>({
                       {sortConfig.key === column.label && sortConfig.direction === "desc" && (
                         <ChevronDown size={16} />
                       )}
-                      {sortConfig.key !== column.label && (
-                        <ChevronsUpDown size={16} />
-                      )}
+                      {sortConfig.key !== column.label && <ChevronsUpDown size={16} />}
                     </Box>
                   )}
                 </Box>
@@ -239,7 +235,7 @@ const AITrustCenterTable = <T extends { id: number }>({
         </TableRow>
       </TableHead>
     ),
-    [columns, sortConfig, handleSort, theme]
+    [columns, sortConfig, handleSort, theme],
   );
 
   const tableBody = useMemo(
@@ -257,41 +253,51 @@ const AITrustCenterTable = <T extends { id: number }>({
             ? sortedData
             : sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
           ).map((item) => (
-              <TableRow
-                key={item.id}
-                sx={{
-                  ...singleTheme.tableStyles.primary.body.row,
-                  "& .MuiTableCell-root": {
-                    padding: "8px 10px !important",
-                    // Remove width constraints to match original AI Trust Center behavior
-                    minWidth: "auto",
-                    width: "auto",
-                  },
-                  ...(onRowClick &&
-                    !disabled && {
-                      cursor: "pointer",
-                      "&:hover": {
-                        backgroundColor: singleTheme.tableColors.rowHover,
-                      },
-                    }),
-                  ...(flashRowId === item.id && {
-                    backgroundColor: singleTheme.flashColors.background,
-                    "& td": {
-                      backgroundColor: "transparent !important",
-                    },
+            <TableRow
+              key={item.id}
+              sx={{
+                ...singleTheme.tableStyles.primary.body.row,
+                "& .MuiTableCell-root": {
+                  padding: "8px 10px !important",
+                  // Remove width constraints to match original AI Trust Center behavior
+                  minWidth: "auto",
+                  width: "auto",
+                },
+                ...(onRowClick &&
+                  !disabled && {
+                    cursor: "pointer",
                     "&:hover": {
-                      backgroundColor: singleTheme.flashColors.backgroundHover,
+                      backgroundColor: singleTheme.tableColors.rowHover,
                     },
                   }),
-                }}
-                onClick={() => !disabled && onRowClick?.(item)}
-              >
-                {renderRow(item, sortConfig)}
-              </TableRow>
-            ))}
+                ...(flashRowId === item.id && {
+                  backgroundColor: singleTheme.flashColors.background,
+                  "& td": {
+                    backgroundColor: "transparent !important",
+                  },
+                  "&:hover": {
+                    backgroundColor: singleTheme.flashColors.backgroundHover,
+                  },
+                }),
+              }}
+              onClick={() => !disabled && onRowClick?.(item)}
+            >
+              {renderRow(item, sortConfig)}
+            </TableRow>
+          ))}
       </TableBody>
     ),
-    [sortedData, page, rowsPerPage, renderRow, onRowClick, disabled, hidePagination, flashRowId, sortConfig]
+    [
+      sortedData,
+      page,
+      rowsPerPage,
+      renderRow,
+      onRowClick,
+      disabled,
+      hidePagination,
+      flashRowId,
+      sortConfig,
+    ],
   );
 
   const emptyState = useMemo(
@@ -310,12 +316,10 @@ const AITrustCenterTable = <T extends { id: number }>({
         }}
       >
         <img src={Placeholder} alt="Empty state" />
-        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>
-          {emptyStateText}
-        </Typography>
+        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>{emptyStateText}</Typography>
       </Stack>
     ),
-    [theme, emptyStateText]
+    [theme, emptyStateText],
   );
 
   if (isLoading) {
@@ -330,9 +334,7 @@ const AITrustCenterTable = <T extends { id: number }>({
           minHeight: 200,
         }}
       >
-        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>
-          Loading...
-        </Typography>
+        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>Loading...</Typography>
       </Stack>
     );
   }
@@ -372,15 +374,10 @@ const AITrustCenterTable = <T extends { id: number }>({
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25]}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => (
-                  <TablePaginationActions {...props} />
-                )}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(
-                    0,
-                    Math.ceil(count / rowsPerPage)
-                  )}`
+                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                 }
                 slotProps={{
                   select: {

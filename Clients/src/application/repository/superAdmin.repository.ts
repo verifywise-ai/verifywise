@@ -59,11 +59,17 @@ export async function getOrgUsers(orgId: number) {
   return apiServices.get<ServerResponse<OrgUser[]>>(`/super-admin/organizations/${orgId}/users`);
 }
 
-export async function inviteUserToOrg(orgId: number, data: { email: string; name: string; surname?: string; roleId: number }) {
+export async function inviteUserToOrg(
+  orgId: number,
+  data: { email: string; name: string; surname?: string; roleId: number },
+) {
   return apiServices.post(`/super-admin/organizations/${orgId}/invite`, data);
 }
 
-export async function updateUser(userId: number, data: { name?: string; surname?: string; email?: string; roleId?: number }) {
+export async function updateUser(
+  userId: number,
+  data: { name?: string; surname?: string; email?: string; roleId?: number },
+) {
   return apiServices.patch(`/super-admin/users/${userId}`, data);
 }
 

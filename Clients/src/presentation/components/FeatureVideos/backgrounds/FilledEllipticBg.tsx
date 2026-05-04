@@ -9,25 +9,26 @@ const ORBS = [
 
 /** Large soft glowing filled orbs — bokeh-like with visible drift & breathing */
 export function FilledEllipticBg({ frame }: { frame: number }) {
-
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       {ORBS.map((orb, i) => {
         // Wider drift range for visible movement
-        const x = Math.sin(frame * orb.speed + orb.phase) * 60
-                + Math.sin(frame * orb.speed * 0.6 + orb.phase * 2) * 25;
-        const y = Math.cos(frame * orb.speed * 0.8 + orb.phase) * 45
-                + Math.cos(frame * orb.speed * 0.4 + orb.phase * 1.5) * 20;
+        const x =
+          Math.sin(frame * orb.speed + orb.phase) * 60 +
+          Math.sin(frame * orb.speed * 0.6 + orb.phase * 2) * 25;
+        const y =
+          Math.cos(frame * orb.speed * 0.8 + orb.phase) * 45 +
+          Math.cos(frame * orb.speed * 0.4 + orb.phase * 1.5) * 20;
 
         // More pronounced breathing
-        const scale = 1
-          + Math.sin(frame * orb.speed * 0.7 + orb.phase) * 0.25
-          + Math.sin(frame * orb.speed * 1.3 + orb.phase * 0.5) * 0.1;
+        const scale =
+          1 +
+          Math.sin(frame * orb.speed * 0.7 + orb.phase) * 0.25 +
+          Math.sin(frame * orb.speed * 1.3 + orb.phase * 0.5) * 0.1;
 
         // Pulsing opacity
-        const opacity = 0.14
-          + Math.sin(frame * 0.03 + i * 1.2) * 0.06
-          + Math.sin(frame * 0.06 + i * 0.8) * 0.03;
+        const opacity =
+          0.14 + Math.sin(frame * 0.03 + i * 1.2) * 0.06 + Math.sin(frame * 0.06 + i * 0.8) * 0.03;
 
         return (
           <div

@@ -6,7 +6,7 @@ const FileStructureSection: React.FC = () => {
   const theme = useTheme();
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(["src", "presentation", "components", "pages", "application", "themes"])
+    new Set(["src", "presentation", "components", "pages", "application", "themes"]),
   );
 
   const handleCopy = async (text: string) => {
@@ -35,12 +35,20 @@ const FileStructureSection: React.FC = () => {
         type: "folder",
         description: "App configuration",
         children: [
-          { name: "config", type: "folder", description: "Routes, constants", children: [
-            { name: "routes.tsx", type: "file", description: "Route definitions" },
-          ]},
-          { name: "hooks", type: "folder", description: "Custom React hooks", children: [
-            { name: "useLocalStorage.ts", type: "file", description: "localStorage wrapper" },
-          ]},
+          {
+            name: "config",
+            type: "folder",
+            description: "Routes, constants",
+            children: [{ name: "routes.tsx", type: "file", description: "Route definitions" }],
+          },
+          {
+            name: "hooks",
+            type: "folder",
+            description: "Custom React hooks",
+            children: [
+              { name: "useLocalStorage.ts", type: "file", description: "localStorage wrapper" },
+            ],
+          },
           { name: "redux", type: "folder", description: "Redux store & slices" },
           { name: "validations", type: "folder", description: "Form validation schemas" },
         ],
@@ -49,17 +57,13 @@ const FileStructureSection: React.FC = () => {
         name: "domain",
         type: "folder",
         description: "Business logic",
-        children: [
-          { name: "entities", type: "folder", description: "TypeScript interfaces" },
-        ],
+        children: [{ name: "entities", type: "folder", description: "TypeScript interfaces" }],
       },
       {
         name: "infrastructure",
         type: "folder",
         description: "External services",
-        children: [
-          { name: "api", type: "folder", description: "API client & endpoints" },
-        ],
+        children: [{ name: "api", type: "folder", description: "API client & endpoints" }],
       },
       {
         name: "presentation",
@@ -114,9 +118,7 @@ const FileStructureSection: React.FC = () => {
             name: "utils",
             type: "folder",
             description: "Utility functions",
-            children: [
-              { name: "tabUtils.tsx", type: "file", description: "Tab label helpers" },
-            ],
+            children: [{ name: "tabUtils.tsx", type: "file", description: "Tab label helpers" }],
           },
         ],
       },
@@ -176,8 +178,8 @@ const FileStructureSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Reference guide for the VerifyWise codebase structure. Know where to find
-          components and where to add new ones.
+          Reference guide for the VerifyWise codebase structure. Know where to find components and
+          where to add new ones.
         </Typography>
       </Box>
 
@@ -211,7 +213,16 @@ const FileStructureSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Layer responsibilities
             </Typography>
             <Stack spacing="12px">
@@ -244,7 +255,14 @@ const FileStructureSection: React.FC = () => {
       <SpecSection title="Component locations">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
           Quick reference for finding common components. All paths relative to
-          <code style={{ marginLeft: 4, padding: "2px 6px", backgroundColor: theme.palette.background.fill, borderRadius: 4 }}>
+          <code
+            style={{
+              marginLeft: 4,
+              padding: "2px 6px",
+              backgroundColor: theme.palette.background.fill,
+              borderRadius: 4,
+            }}
+          >
             src/presentation/
           </code>
         </Typography>
@@ -316,7 +334,10 @@ const FileStructureSection: React.FC = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                     p: "12px 16px",
-                    borderBottom: index < conventions.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
+                    borderBottom:
+                      index < conventions.length - 1
+                        ? `1px solid ${theme.palette.border.light}`
+                        : "none",
                   }}
                 >
                   <Typography sx={{ fontSize: 12, color: theme.palette.text.primary }}>
@@ -341,7 +362,16 @@ const FileStructureSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               File naming
             </Typography>
             <Stack spacing="8px">
@@ -364,7 +394,13 @@ const FileStructureSection: React.FC = () => {
                     border: `1px solid ${theme.palette.border.light}`,
                   }}
                 >
-                  <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.primary.main }}>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      fontFamily: "monospace",
+                      color: theme.palette.primary.main,
+                    }}
+                  >
                     {item.pattern}
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
@@ -467,7 +503,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   return (
     <Box>
       <Box
-        onClick={() => isFolder && hasChildren ? toggleFolder(path) : onCopy(path)}
+        onClick={() => (isFolder && hasChildren ? toggleFolder(path) : onCopy(path))}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -484,7 +520,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         {isFolder ? (
           <>
             {hasChildren ? (
-              isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />
+              isExpanded ? (
+                <ChevronDown size={12} />
+              ) : (
+                <ChevronRight size={12} />
+              )
             ) : (
               <Box sx={{ width: 12 }} />
             )}
@@ -562,7 +602,9 @@ const LayerCard: React.FC<{ name: string; description: string; color: string }> 
       }}
     >
       <Box>
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}>
+        <Typography
+          sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.primary, mb: "4px" }}
+        >
           {name}/
         </Typography>
         <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>

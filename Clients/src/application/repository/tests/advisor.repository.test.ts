@@ -40,9 +40,7 @@ describe("Test Advisor Repository", () => {
       await listConversationsAPI("test-domain");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain`,
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`/advisor/conversations/test-domain`);
     });
 
     it("should throw an error with status and data if the API call fails", async () => {
@@ -85,9 +83,7 @@ describe("Test Advisor Repository", () => {
 
     it("should propagate network errors", async () => {
       vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
-      await expect(listConversationsAPI("test-domain")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(listConversationsAPI("test-domain")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -115,9 +111,7 @@ describe("Test Advisor Repository", () => {
 
       await getConversationByIdAPI("test-domain", 42);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain/42`,
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`/advisor/conversations/test-domain/42`);
     });
 
     it("should surface a 404 as a thrown error", async () => {
@@ -125,9 +119,7 @@ describe("Test Advisor Repository", () => {
         response: { status: 404, data: { error: "Conversation not found" } },
       });
 
-      await expect(
-        getConversationByIdAPI("test-domain", 42),
-      ).rejects.toEqual(
+      await expect(getConversationByIdAPI("test-domain", 42)).rejects.toEqual(
         expect.objectContaining({ status: 404 }),
       );
     });
@@ -157,10 +149,7 @@ describe("Test Advisor Repository", () => {
 
       await createConversationAPI("test-domain");
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain`,
-        {},
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(`/advisor/conversations/test-domain`, {});
     });
   });
 
@@ -197,10 +186,9 @@ describe("Test Advisor Repository", () => {
 
       await updateConversationAPI("test-domain", 7, messages);
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain/7`,
-        { messages },
-      );
+      expect(apiServices.put).toHaveBeenCalledWith(`/advisor/conversations/test-domain/7`, {
+        messages,
+      });
     });
 
     it("should propagate a 500 error with its data", async () => {
@@ -208,9 +196,7 @@ describe("Test Advisor Repository", () => {
         response: { status: 500, data: { message: "Server Error" } },
       });
 
-      await expect(
-        updateConversationAPI("test-domain", 7, messages),
-      ).rejects.toEqual(
+      await expect(updateConversationAPI("test-domain", 7, messages)).rejects.toEqual(
         expect.objectContaining({
           status: 500,
           data: { message: "Server Error" },
@@ -229,9 +215,7 @@ describe("Test Advisor Repository", () => {
 
       await deleteConversationAPI("test-domain", 3);
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        `/advisor/conversations/test-domain/3`,
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith(`/advisor/conversations/test-domain/3`);
     });
   });
 });

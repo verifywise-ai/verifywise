@@ -71,10 +71,7 @@ export const AgentCreateTaskSchema = z
     status: TaskStatusEnum,
     due_date: isoDateString,
     assignees: z.array(z.number().int().positive()).min(1).max(50),
-    categories: z
-      .array(z.string().min(1).max(50))
-      .max(10)
-      .optional(),
+    categories: z.array(z.string().min(1).max(50)).max(10).optional(),
   })
   .strict();
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from "react";
 import {
   AdvisorMessage,
   ConversationSummary,
@@ -7,11 +7,11 @@ import {
   createConversationAPI,
   updateConversationAPI,
   deleteConversationAPI,
-} from '../repository/advisor.repository';
+} from "../repository/advisor.repository";
 // `createConversationAPI` is still used by `ensureActiveConversation` to
 // create a row on the first message of a brand-new chat. Don't remove it
 // from the import even though `startNewConversation` no longer calls it.
-import { AdvisorDomain } from '../../presentation/components/AdvisorChat/advisorConfig';
+import { AdvisorDomain } from "../../presentation/components/AdvisorChat/advisorConfig";
 
 /**
  * Per-domain state held by the context.
@@ -87,7 +87,9 @@ const AdvisorConversationContext = createContext<AdvisorConversationContextType 
 const EMPTY_CONVERSATIONS: ConversationSummary[] = [];
 const EMPTY_MESSAGES: AdvisorMessage[] = [];
 
-export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, setState] = useState<Record<string, DomainState>>({});
 
   // Synchronous mirror of `state`, read by async paths that can't wait for
@@ -124,26 +126,22 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
   );
 
   const getActiveId = useCallback(
-    (domain: AdvisorDomain): number | null =>
-      state[domain]?.activeId ?? null,
+    (domain: AdvisorDomain): number | null => state[domain]?.activeId ?? null,
     [state],
   );
 
   const getMessages = useCallback(
-    (domain: AdvisorDomain): AdvisorMessage[] =>
-      state[domain]?.activeMessages ?? EMPTY_MESSAGES,
+    (domain: AdvisorDomain): AdvisorMessage[] => state[domain]?.activeMessages ?? EMPTY_MESSAGES,
     [state],
   );
 
   const isLoaded = useCallback(
-    (domain: AdvisorDomain | undefined): boolean =>
-      !!domain && !!state[domain]?.isLoaded,
+    (domain: AdvisorDomain | undefined): boolean => !!domain && !!state[domain]?.isLoaded,
     [state],
   );
 
   const isLoading = useCallback(
-    (domain: AdvisorDomain | undefined): boolean =>
-      !!domain && !!state[domain]?.isLoading,
+    (domain: AdvisorDomain | undefined): boolean => !!domain && !!state[domain]?.isLoading,
     [state],
   );
 
@@ -151,21 +149,18 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
    * Internal helper: apply a partial patch to a domain's state, preserving
    * whatever's already there.
    */
-  const patchDomain = useCallback(
-    (domain: AdvisorDomain, patch: Partial<DomainState>) => {
-      setState((prev) => {
-        const current: DomainState = prev[domain] ?? {
-          conversations: [],
-          activeId: null,
-          activeMessages: [],
-          isLoading: false,
-          isLoaded: false,
-        };
-        return { ...prev, [domain]: { ...current, ...patch } };
-      });
-    },
-    [],
-  );
+  const patchDomain = useCallback((domain: AdvisorDomain, patch: Partial<DomainState>) => {
+    setState((prev) => {
+      const current: DomainState = prev[domain] ?? {
+        conversations: [],
+        activeId: null,
+        activeMessages: [],
+        isLoading: false,
+        isLoaded: false,
+      };
+      return { ...prev, [domain]: { ...current, ...patch } };
+    });
+  }, []);
 
   const loadDomain = useCallback(
     async (domain: AdvisorDomain): Promise<void> => {
@@ -250,10 +245,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
           activeMessages: conv?.messages ?? [],
         });
       } catch (error) {
-        console.error(
-          `Failed to load conversation ${id} in ${domain}:`,
-          error,
-        );
+        console.error(`Failed to load conversation ${id} in ${domain}:`, error);
       } finally {
         loadingConversationsRef.current.delete(key);
       }
@@ -324,10 +316,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
               patchDomain(domain, { activeMessages: conv?.messages ?? [] });
             })
             .catch((err) => {
-              console.error(
-                `Failed to load conversation ${nextActive} in ${domain}:`,
-                err,
-              );
+              console.error(`Failed to load conversation ${nextActive} in ${domain}:`, err);
             });
         }
         return prev;
@@ -405,10 +394,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
           });
           return conv.id;
         } catch (error) {
-          console.error(
-            `Failed to auto-create conversation in ${domain}:`,
-            error,
-          );
+          console.error(`Failed to auto-create conversation in ${domain}:`, error);
           return null;
         }
       })();
@@ -441,9 +427,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
 
       // Recompute the conversation summary list so history reflects fresh
       // activity immediately.
-      const updatedSummary = currentDomain.conversations.find(
-        (c) => c.id === activeId,
-      );
+      const updatedSummary = currentDomain.conversations.find((c) => c.id === activeId);
       const nextConversations = updatedSummary
         ? [
             {
@@ -452,7 +436,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
               last_message_at: new Date().toISOString(),
               title:
                 updatedSummary.title ??
-                (message.role === 'user' && message.content
+                (message.role === "user" && message.content
                   ? message.content.slice(0, 80)
                   : updatedSummary.title),
             },
@@ -551,7 +535,7 @@ export const AdvisorConversationProvider: React.FC<{ children: React.ReactNode }
 export const useAdvisorConversation = (): AdvisorConversationContextType => {
   const context = useContext(AdvisorConversationContext);
   if (!context) {
-    throw new Error('useAdvisorConversation must be used within an AdvisorConversationProvider');
+    throw new Error("useAdvisorConversation must be used within an AdvisorConversationProvider");
   }
   return context;
 };

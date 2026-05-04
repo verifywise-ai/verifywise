@@ -9,6 +9,7 @@ This document provides step-by-step code execution flows for key operations.
 ## Flow 1: Create Use-Case with Approval Workflow
 
 ### Entry Point
+
 **User Action**: Clicks "Create Use-Case" with workflow selected
 **Frontend**: `POST /api/projects`
 **Backend**: `controllers/project.ctrl.ts:createProject`
@@ -177,6 +178,7 @@ Browser (User 2) receives SSE message
 ## Flow 2: Approve Request (Step 1 → Step 2)
 
 ### Entry Point
+
 **User Action**: Clicks "Approve" button
 **Frontend**: `POST /api/approval-requests/14/approve`
 **Backend**: `controllers/approvalRequest.ctrl.ts:approveRequest`
@@ -300,6 +302,7 @@ User 4 (Finance Director) receives notification
 ## Flow 3: Final Approval (Step 3 → Complete)
 
 ### Entry Point
+
 **User Action**: CEO (User 5) clicks "Approve" on Step 3
 **Frontend**: `POST /api/approval-requests/14/approve`
 
@@ -402,6 +405,7 @@ Alice (User 1) receives notification
 ## Flow 4: SSE Connection Establishment
 
 ### Entry Point
+
 **User Action**: User logs in / page loads
 **Frontend**: `App.tsx` → `useNotifications()` hook auto-connects
 
@@ -512,6 +516,7 @@ Alice (User 1) receives notification
 ## Flow 5: Request Rejection
 
 ### Entry Point
+
 **User Action**: Approver clicks "Reject" button
 **Frontend**: `POST /api/approval-requests/14/reject`
 
@@ -560,6 +565,7 @@ processApprovalQuery(requestId, userId, ApprovalResult.REJECTED, ...)
 ```
 
 **Result**:
+
 - No more step progression
 - Frameworks NOT created
 - `pending_frameworks` remains in project table
@@ -569,12 +575,12 @@ processApprovalQuery(requestId, userId, ApprovalResult.REJECTED, ...)
 
 ## Summary Table
 
-| Operation | Entry Point | Transaction Commits | Notifications Sent | Frameworks Created |
-|-----------|-------------|---------------------|-------------------|-------------------|
-| Create Use-Case | `POST /projects` | ✅ Before notify | Step 1 approvers | ❌ Deferred |
-| Approve (Next Step) | `POST /approve` | ✅ Before notify | Next step approvers | ❌ Not yet |
-| Approve (Final) | `POST /approve` | ✅ Before notify | Requester | ✅ Yes! |
-| Reject | `POST /reject` | ✅ Before notify | Requester | ❌ Never |
-| SSE Connect | `GET /stream` | N/A | Connection confirmed | N/A |
+| Operation           | Entry Point      | Transaction Commits | Notifications Sent   | Frameworks Created |
+| ------------------- | ---------------- | ------------------- | -------------------- | ------------------ |
+| Create Use-Case     | `POST /projects` | ✅ Before notify    | Step 1 approvers     | ❌ Deferred        |
+| Approve (Next Step) | `POST /approve`  | ✅ Before notify    | Next step approvers  | ❌ Not yet         |
+| Approve (Final)     | `POST /approve`  | ✅ Before notify    | Requester            | ✅ Yes!            |
+| Reject              | `POST /reject`   | ✅ Before notify    | Requester            | ❌ Never           |
+| SSE Connect         | `GET /stream`    | N/A                 | Connection confirmed | N/A                |
 
 **Key Principle**: All notifications sent AFTER `transaction.commit()` to ensure data visibility.

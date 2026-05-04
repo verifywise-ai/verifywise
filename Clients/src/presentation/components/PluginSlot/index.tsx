@@ -1,10 +1,7 @@
 import React, { Suspense, useState, ReactNode } from "react";
 import { CircularProgress } from "@mui/material";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
-import {
-  PluginSlotId,
-  PluginRenderType,
-} from "../../../domain/constants/pluginSlots";
+import { PluginSlotId, PluginRenderType } from "../../../domain/constants/pluginSlots";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 
 interface PluginSlotProps {

@@ -1,12 +1,4 @@
-import React, {
-  useState,
-  lazy,
-  Suspense,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, lazy, Suspense, useRef, useEffect, useMemo, useCallback } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -21,10 +13,7 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
-import {
-  IGenerateReportProps,
-  ReportFormat,
-} from "../../../../domain/interfaces/i.widget";
+import { IGenerateReportProps, ReportFormat } from "../../../../domain/interfaces/i.widget";
 import {
   getDefaultSectionSelection,
   loadSectionPreferences,
@@ -74,9 +63,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   });
 
   // Section selection for Page 2
-  const [sectionSelection, setSectionSelection] = useState<
-    Record<string, boolean>
-  >({});
+  const [sectionSelection, setSectionSelection] = useState<Record<string, boolean>>({});
 
   // Determine if this is an organizational report
   const isOrganizational = reportType === "organization";
@@ -86,10 +73,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     const savedPrefs = loadSectionPreferences();
     if (savedPrefs) {
       // Merge saved preferences with defaults for current framework
-      const defaults = getDefaultSectionSelection(
-        basicFormValues.framework,
-        isOrganizational
-      );
+      const defaults = getDefaultSectionSelection(basicFormValues.framework, isOrganizational);
       const merged = { ...defaults };
       // Only apply saved preferences for sections that exist in current framework
       Object.keys(savedPrefs).forEach((key) => {
@@ -99,9 +83,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
       });
       setSectionSelection(merged);
     } else {
-      setSectionSelection(
-        getDefaultSectionSelection(basicFormValues.framework, isOrganizational)
-      );
+      setSectionSelection(getDefaultSectionSelection(basicFormValues.framework, isOrganizational));
     }
   }, [basicFormValues.framework, isOrganizational]);
 
@@ -125,7 +107,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
         }
       }, 3000);
     },
-    [onClose]
+    [onClose],
   );
 
   const handleGenerateReport = useCallback(async () => {
@@ -136,7 +118,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     }
 
     const currentProject = projects?.find(
-      (project: { id: number | null }) => project.id === basicFormValues.project
+      (project: { id: number | null }) => project.id === basicFormValues.project,
     );
 
     if (!currentProject) {
@@ -146,16 +128,14 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
 
     setCurrentPage("status");
 
-    const owner = users.find(
-      (user: { id: number }) => user.id === currentProject.owner
-    );
+    const owner = users.find((user: { id: number }) => user.id === currentProject.owner);
     const currentProjectOwner = owner ? `${owner.name} ${owner.surname}` : "";
 
     // Convert section selection to backend format
     const selectedSections = selectionToBackendFormat(
       sectionSelection,
       basicFormValues.framework,
-      isOrganizational
+      isOrganizational,
     );
 
     // Save preferences to localStorage
@@ -182,15 +162,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
         onReportGenerated();
       }
     } else if (reportDownloadResponse === 403) {
-      handleToast(
-        "warning",
-        "Access denied: Unauthorized user to download the report."
-      );
+      handleToast("warning", "Access denied: Unauthorized user to download the report.");
     } else {
-      handleToast(
-        "error",
-        "Unexpected error occurs while downloading the report."
-      );
+      handleToast("error", "Unexpected error occurs while downloading the report.");
     }
   }, [
     basicFormValues,

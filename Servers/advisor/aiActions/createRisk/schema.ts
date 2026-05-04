@@ -17,21 +17,9 @@
 
 import { z } from "zod";
 
-export const RiskSeverity = z.enum([
-  "Negligible",
-  "Minor",
-  "Moderate",
-  "Major",
-  "Catastrophic",
-]);
+export const RiskSeverity = z.enum(["Negligible", "Minor", "Moderate", "Major", "Catastrophic"]);
 
-export const RiskLikelihood = z.enum([
-  "Rare",
-  "Unlikely",
-  "Possible",
-  "Likely",
-  "Almost Certain",
-]);
+export const RiskLikelihood = z.enum(["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"]);
 
 export const RiskMitigationStatus = z.enum([
   "Not Started",

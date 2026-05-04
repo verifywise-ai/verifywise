@@ -37,7 +37,12 @@ export async function getAllAgentPrimitives(req: Request, res: Response) {
     };
 
     const primitives = await getAllAgentPrimitivesQuery(req.organizationId!, filters);
-    logStructured("successful", `found ${primitives.length} agent primitives`, functionName, fileName);
+    logStructured(
+      "successful",
+      `found ${primitives.length} agent primitives`,
+      functionName,
+      fileName,
+    );
     return res.status(200).json(STATUS_CODE[200](primitives));
   } catch (error) {
     logStructured("error", "failed to retrieve agent primitives", functionName, fileName);
@@ -131,7 +136,8 @@ export async function createAgentPrimitive(req: Request, res: Response) {
   logStructured("processing", "creating agent primitive", functionName, fileName);
 
   try {
-    const { display_name, primitive_type, owner_id, permissions, permission_categories, metadata } = req.body;
+    const { display_name, primitive_type, owner_id, permissions, permission_categories, metadata } =
+      req.body;
     if (!display_name || !primitive_type) {
       return res.status(400).json(STATUS_CODE[400]("display_name and primitive_type are required"));
     }
@@ -148,7 +154,7 @@ export async function createAgentPrimitive(req: Request, res: Response) {
         external_id: `manual_${Date.now()}`,
         is_manual: true,
       },
-      req.organizationId!
+      req.organizationId!,
     );
 
     logStructured("successful", "agent primitive created", functionName, fileName);
@@ -182,14 +188,19 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
 
     const { display_name, primitive_type, owner_id, metadata } = req.body;
 
-    if (display_name === undefined && primitive_type === undefined && owner_id === undefined && metadata === undefined) {
+    if (
+      display_name === undefined &&
+      primitive_type === undefined &&
+      owner_id === undefined &&
+      metadata === undefined
+    ) {
       return res.status(400).json(STATUS_CODE[400]("No fields to update"));
     }
 
     const updated = await updateAgentPrimitiveQuery(
       id,
       { display_name, primitive_type, owner_id, metadata },
-      req.organizationId!
+      req.organizationId!,
     );
 
     // Create audit log entries for each changed field
@@ -197,19 +208,26 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       { field: "display_name", oldVal: existing.display_name, newVal: display_name },
       { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
       { field: "owner_id", oldVal: existing.owner_id, newVal: owner_id },
-      { field: "metadata", oldVal: JSON.stringify(existing.metadata), newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined },
+      {
+        field: "metadata",
+        oldVal: JSON.stringify(existing.metadata),
+        newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
+      },
     ];
 
     for (const { field, oldVal, newVal } of fieldsToCheck) {
       if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
-        await createAuditLogQuery({
-          agent_primitive_id: id,
-          action: "field_updated",
-          field_changed: field,
-          old_value: oldVal != null ? String(oldVal) : null,
-          new_value: newVal != null ? String(newVal) : null,
-          performed_by: req.userId!,
-        }, req.organizationId!);
+        await createAuditLogQuery(
+          {
+            agent_primitive_id: id,
+            action: "field_updated",
+            field_changed: field,
+            old_value: oldVal != null ? String(oldVal) : null,
+            new_value: newVal != null ? String(newVal) : null,
+            performed_by: req.userId!,
+          },
+          req.organizationId!,
+        );
       }
     }
 
@@ -253,7 +271,9 @@ export async function reviewAgentPrimitive(req: Request, res: Response) {
 
     const { review_status } = req.body;
     if (!review_status || !["confirmed", "rejected", "unreviewed"].includes(review_status)) {
-      return res.status(400).json(STATUS_CODE[400]("review_status must be 'confirmed', 'rejected', or 'unreviewed'"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("review_status must be 'confirmed', 'rejected', or 'unreviewed'"));
     }
 
     const existing = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
@@ -261,18 +281,31 @@ export async function reviewAgentPrimitive(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404]("Agent primitive not found"));
     }
 
-    const primitive = await updateReviewStatusQuery(id, review_status, req.userId!, req.organizationId!);
+    const primitive = await updateReviewStatusQuery(
+      id,
+      review_status,
+      req.userId!,
+      req.organizationId!,
+    );
 
-    await createAuditLogQuery({
-      agent_primitive_id: id,
-      action: "review_status_changed",
-      field_changed: "review_status",
-      old_value: existing.review_status,
-      new_value: review_status,
-      performed_by: req.userId!,
-    }, req.organizationId!);
+    await createAuditLogQuery(
+      {
+        agent_primitive_id: id,
+        action: "review_status_changed",
+        field_changed: "review_status",
+        old_value: existing.review_status,
+        new_value: review_status,
+        performed_by: req.userId!,
+      },
+      req.organizationId!,
+    );
 
-    logStructured("successful", `agent primitive reviewed as ${review_status}`, functionName, fileName);
+    logStructured(
+      "successful",
+      `agent primitive reviewed as ${review_status}`,
+      functionName,
+      fileName,
+    );
     return res.status(200).json(STATUS_CODE[200](primitive));
   } catch (error) {
     logStructured("error", "failed to review agent primitive", functionName, fileName);
@@ -305,14 +338,17 @@ export async function linkModelToAgent(req: Request, res: Response) {
 
     const primitive = await linkModelQuery(id, model_id, req.organizationId!);
 
-    await createAuditLogQuery({
-      agent_primitive_id: id,
-      action: "model_linked",
-      field_changed: "linked_model_inventory_id",
-      old_value: existing.linked_model_inventory_id?.toString() || null,
-      new_value: model_id.toString(),
-      performed_by: req.userId!,
-    }, req.organizationId!);
+    await createAuditLogQuery(
+      {
+        agent_primitive_id: id,
+        action: "model_linked",
+        field_changed: "linked_model_inventory_id",
+        old_value: existing.linked_model_inventory_id?.toString() || null,
+        new_value: model_id.toString(),
+        performed_by: req.userId!,
+      },
+      req.organizationId!,
+    );
 
     logStructured("successful", "model linked to agent", functionName, fileName);
     return res.status(200).json(STATUS_CODE[200](primitive));
@@ -342,14 +378,17 @@ export async function unlinkModelFromAgent(req: Request, res: Response) {
 
     const primitive = await unlinkModelQuery(id, req.organizationId!);
 
-    await createAuditLogQuery({
-      agent_primitive_id: id,
-      action: "model_unlinked",
-      field_changed: "linked_model_inventory_id",
-      old_value: existing.linked_model_inventory_id?.toString() || null,
-      new_value: null,
-      performed_by: req.userId!,
-    }, req.organizationId!);
+    await createAuditLogQuery(
+      {
+        agent_primitive_id: id,
+        action: "model_unlinked",
+        field_changed: "linked_model_inventory_id",
+        old_value: existing.linked_model_inventory_id?.toString() || null,
+        new_value: null,
+        performed_by: req.userId!,
+      },
+      req.organizationId!,
+    );
 
     logStructured("successful", "model unlinked from agent", functionName, fileName);
     return res.status(200).json(STATUS_CODE[200](primitive));

@@ -22,7 +22,7 @@ export const projectOverviewContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Framework progress', text: 'A progress bar for each attached framework showing how many controls and assessments are complete.' },
-        { bold: 'Risk summary', text: 'Counts of risks by severity: very high, high, medium, low, very low.' },
+        { bold: 'Risk summary', text: 'Counts of risks by severity: Critical, Major, Moderate, Minor, Negligible.' },
         { bold: 'Use case details', text: 'Title, owner, UC ID, creation date, last update and description.' },
         { bold: 'Intake submission', text: 'If this use case was created through an intake form, the original submission details appear here.' },
       ],

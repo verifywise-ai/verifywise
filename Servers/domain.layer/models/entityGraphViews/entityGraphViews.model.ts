@@ -29,14 +29,7 @@
  * @module domain.layer/models/entityGraphViews
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 import { ValidationException } from "../../exceptions/custom.exception";
@@ -116,32 +109,20 @@ export class EntityGraphViewsModel extends Model<EntityGraphViewsModel> {
     name: string,
     user_id: number,
     organization_id: number,
-    config: EntityGraphViewConfig
+    config: EntityGraphViewConfig,
   ): Promise<EntityGraphViewsModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
-      throw new ValidationException(
-        "View name is required",
-        "name",
-        name
-      );
+      throw new ValidationException("View name is required", "name", name);
     }
 
     if (name.trim().length > 100) {
-      throw new ValidationException(
-        "View name cannot exceed 100 characters",
-        "name",
-        name
-      );
+      throw new ValidationException("View name cannot exceed 100 characters", "name", name);
     }
 
     // Validate user_id
     if (!user_id || user_id < 1) {
-      throw new ValidationException(
-        "Valid user_id is required",
-        "user_id",
-        user_id
-      );
+      throw new ValidationException("Valid user_id is required", "user_id", user_id);
     }
 
     // Validate organization_id
@@ -149,17 +130,13 @@ export class EntityGraphViewsModel extends Model<EntityGraphViewsModel> {
       throw new ValidationException(
         "Valid organization_id is required",
         "organization_id",
-        organization_id
+        organization_id,
       );
     }
 
     // Validate config
-    if (!config || typeof config !== 'object') {
-      throw new ValidationException(
-        "Valid config object is required",
-        "config",
-        config
-      );
+    if (!config || typeof config !== "object") {
+      throw new ValidationException("Valid config object is required", "config", config);
     }
 
     const view = new EntityGraphViewsModel();
@@ -179,29 +156,17 @@ export class EntityGraphViewsModel extends Model<EntityGraphViewsModel> {
   async updateView(name?: string, config?: EntityGraphViewConfig): Promise<void> {
     if (name !== undefined) {
       if (!name || name.trim().length === 0) {
-        throw new ValidationException(
-          "View name is required",
-          "name",
-          name
-        );
+        throw new ValidationException("View name is required", "name", name);
       }
       if (name.trim().length > 100) {
-        throw new ValidationException(
-          "View name cannot exceed 100 characters",
-          "name",
-          name
-        );
+        throw new ValidationException("View name cannot exceed 100 characters", "name", name);
       }
       this.name = name.trim();
     }
 
     if (config !== undefined) {
-      if (!config || typeof config !== 'object') {
-        throw new ValidationException(
-          "Valid config object is required",
-          "config",
-          config
-        );
+      if (!config || typeof config !== "object") {
+        throw new ValidationException("Valid config object is required", "config", config);
       }
       this.config = config;
     }

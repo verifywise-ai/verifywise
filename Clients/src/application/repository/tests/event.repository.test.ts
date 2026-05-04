@@ -38,17 +38,12 @@ describe("Test Event Repository", () => {
     it("should log and rethrow when get fails", async () => {
       const routeUrl = "/events";
       const error = new Error("Network error");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getAllEvents({ routeUrl })).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching events:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching events:", error);
 
       consoleErrorSpy.mockRestore();
     });

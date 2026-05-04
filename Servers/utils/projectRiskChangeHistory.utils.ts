@@ -38,7 +38,7 @@ export const recordProjectRiskChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "risk",
@@ -49,7 +49,7 @@ export const recordProjectRiskChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -62,7 +62,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "risk",
@@ -70,7 +70,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -82,15 +82,9 @@ export const getProjectRiskChangeHistory = async (
   projectRiskId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "risk",
-    projectRiskId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("risk", projectRiskId, organizationId, limit, offset);
 };
 
 /**
@@ -99,7 +93,7 @@ export const getProjectRiskChangeHistory = async (
  */
 export const trackProjectRiskChanges = async (
   oldProjectRisk: RiskModel,
-  newProjectRisk: Partial<RiskModel>
+  newProjectRisk: Partial<RiskModel>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("risk", oldProjectRisk, newProjectRisk);
 };
@@ -113,7 +107,7 @@ export const recordProjectRiskCreation = async (
   changedByUserId: number,
   organizationId: number,
   projectRiskData: Partial<RiskModel>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "risk",
@@ -121,7 +115,7 @@ export const recordProjectRiskCreation = async (
     changedByUserId,
     organizationId,
     projectRiskData,
-    transaction
+    transaction,
   );
 };
 
@@ -133,13 +127,7 @@ export const recordProjectRiskDeletion = async (
   projectRiskId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
-  return recordEntityDeletion(
-    "risk",
-    projectRiskId,
-    changedByUserId,
-    organizationId,
-    transaction
-  );
+  return recordEntityDeletion("risk", projectRiskId, changedByUserId, organizationId, transaction);
 };

@@ -57,8 +57,7 @@ const SortableTableHead: React.FC<{
   return (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -110,9 +109,7 @@ const SortableTableHead: React.FC<{
                   {sortConfig.key === column.id && sortConfig.direction === "desc" && (
                     <ChevronDown size={16} />
                   )}
-                  {sortConfig.key !== column.id && (
-                    <ChevronsUpDown size={16} />
-                  )}
+                  {sortConfig.key !== column.id && <ChevronsUpDown size={16} />}
                 </Box>
               )}
             </Box>
@@ -135,11 +132,8 @@ const VWProjectRisksTable = ({
   visibleColumns,
 }: IVWProjectRisksTable) => {
   const filteredColumns = useMemo(
-    () =>
-      visibleColumns
-        ? columns.filter((col) => visibleColumns.has(col.id))
-        : columns,
-    [visibleColumns]
+    () => (visibleColumns ? columns.filter((col) => visibleColumns.has(col.id)) : columns),
+    [visibleColumns],
   );
   const theme = useTheme();
 
@@ -319,16 +313,19 @@ const VWProjectRisksTable = ({
     return `${start} - ${end}`;
   }, [page, rowsPerPage, sortedRows?.length]);
 
-  const handleChangePage = useCallback((_: unknown, newPage: number) => {
-    setPage(newPage);
-  }, [setPage]);
+  const handleChangePage = useCallback(
+    (_: unknown, newPage: number) => {
+      setPage(newPage);
+    },
+    [setPage],
+  );
 
   const handleChangeRowsPerPage = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setRowsPerPage(parseInt(event.target.value, 10));
       setPage(0);
     },
-    [setPage]
+    [setPage],
   );
 
   return (
@@ -338,11 +335,7 @@ const VWProjectRisksTable = ({
           ...singleTheme.tableStyles.primary.frame,
         }}
       >
-        <SortableTableHead
-          columns={filteredColumns}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
+        <SortableTableHead columns={filteredColumns} sortConfig={sortConfig} onSort={handleSort} />
         {sortedRows.length !== 0 ? (
           <VWProjectRisksTableBody
             rows={sortedRows}
@@ -359,7 +352,10 @@ const VWProjectRisksTable = ({
           <TableBody>
             <TableRow>
               <TableCell colSpan={filteredColumns.length} sx={{ border: "none", p: 0 }}>
-                <EmptyState icon={ShieldAlert} message="There is currently no data in this table." />
+                <EmptyState
+                  icon={ShieldAlert}
+                  message="There is currently no data in this table."
+                />
               </TableCell>
             </TableRow>
           </TableBody>
@@ -396,15 +392,10 @@ const VWProjectRisksTable = ({
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 20, 25]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => (
-                        <TablePaginationActions {...props} />
-                      )}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Project risks per page"
                       labelDisplayedRows={({ page, count }) =>
-                        `Page ${page + 1} of ${Math.max(
-                          0,
-                          Math.ceil(count / rowsPerPage)
-                        )}`
+                        `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                       }
                       sx={{
                         mt: theme.spacing(6),

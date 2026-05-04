@@ -1,7 +1,7 @@
 /**
  * Interface for individual breadcrumb item
  * Pure domain type with no framework dependencies
- * 
+ *
  * Note: Icon type uses 'unknown' to avoid React dependencies.
  * Presentation layer will handle React-specific type casting.
  */
@@ -25,7 +25,7 @@ export interface BreadcrumbItem {
 /**
  * Props for the Breadcrumbs component
  * Pure domain type with no framework dependencies
- * 
+ *
  * Note: Separator type uses 'unknown' to avoid React dependencies.
  * Presentation layer will handle React-specific type casting.
  */

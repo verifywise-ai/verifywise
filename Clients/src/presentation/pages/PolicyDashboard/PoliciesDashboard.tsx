@@ -6,10 +6,7 @@ import TabBar from "../../components/TabBar";
 import PageTour from "../../components/PageTour";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
-import {
-  getAllPolicies,
-  getAllTags,
-} from "../../../application/repository/policy.repository";
+import { getAllPolicies, getAllTags } from "../../../application/repository/policy.repository";
 import PolicyManager from "./PolicyManager";
 import PolicyTemplates from "./PolicyTemplates";
 import PolicySteps from "./PolicySteps";
@@ -84,15 +81,9 @@ const PolicyDashboard: React.FC = () => {
         {activeTab === "policies" && (
           <PolicyManager policies={policies} tags={tags} fetchAll={fetchAll} />
         )}
-        {activeTab === "templates" && (
-          <PolicyTemplates tags={tags} fetchAll={fetchAll} />
-        )}
+        {activeTab === "templates" && <PolicyTemplates tags={tags} fetchAll={fetchAll} />}
 
-        <PageTour
-          steps={PolicySteps}
-          run={isInitialLoadComplete}
-          tourKey="policy-tour"
-        />
+        <PageTour steps={PolicySteps} run={isInitialLoadComplete} tourKey="policy-tour" />
       </TabContext>
     </PageHeaderExtended>
   );

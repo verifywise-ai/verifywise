@@ -38,17 +38,13 @@ interface AlertState {
 const Organization = () => {
   const { userRoleName, organizationId } = useAuth();
   const { fetchLogoAsBlobUrl } = useLogoFetch();
-  const isEditingDisabled =
-    !allowedRoles.organizations.edit.includes(userRoleName);
-  const isCreatingDisabled =
-    !allowedRoles.organizations.create.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.organizations.edit.includes(userRoleName);
+  const isCreatingDisabled = !allowedRoles.organizations.create.includes(userRoleName);
 
   // Organization states
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [organizationName, setOrganizationName] = useState("");
-  const [organizationNameError, setOrganizationNameError] = useState<
-    string | null
-  >(null);
+  const [organizationNameError, setOrganizationNameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [organizationExists, setOrganizationExists] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -58,9 +54,7 @@ const Organization = () => {
   const [logoLoading, setLogoLoading] = useState(false);
   const [logoRemoving, setLogoRemoving] = useState(false);
   const [isRemoveLogoModalOpen, setIsRemoveLogoModalOpen] = useState(false);
-  const [selectedLogoPreview, setSelectedLogoPreview] = useState<string | null>(
-    null
-  );
+  const [selectedLogoPreview, setSelectedLogoPreview] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoLoadError, setLogoLoadError] = useState(false);
 
@@ -70,12 +64,9 @@ const Organization = () => {
   const [alert, setAlert] = useState<AlertState | null>(null);
 
   // Utility function to show alerts
-  const showAlert = useCallback(
-    (variant: AlertState["variant"], title: string, body: string) => {
-      setAlert({ variant, title, body, isToast: false });
-    },
-    []
-  );
+  const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
+    setAlert({ variant, title, body, isToast: false });
+  }, []);
 
   // Utility function to clear preview and revoke URLs
   const clearLogoPreview = useCallback(() => {
@@ -141,27 +132,22 @@ const Organization = () => {
   }, [organizationId, fetchLogoAsBlobUrl]);
 
   // Handle organization name changes
-  const handleOrganizationNameChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setOrganizationName(value);
-      setHasChanges(true);
+  const handleOrganizationNameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setOrganizationName(value);
+    setHasChanges(true);
 
-      const tempOrganization = OrganizationModel.createNewOrganization({
-        name: value,
-        logo: "",
-      } as OrganizationModel);
+    const tempOrganization = OrganizationModel.createNewOrganization({
+      name: value,
+      logo: "",
+    } as OrganizationModel);
 
-      const validation = tempOrganization.validateName();
-      setOrganizationNameError(
-        validation.accepted
-          ? null
-          : validation.message || "Invalid organization name"
-      );
-      setIsSaveDisabled(!value.trim() || !validation.accepted);
-    },
-    []
-  );
+    const validation = tempOrganization.validateName();
+    setOrganizationNameError(
+      validation.accepted ? null : validation.message || "Invalid organization name",
+    );
+    setIsSaveDisabled(!value.trim() || !validation.accepted);
+  }, []);
 
   // Handle logo file selection and upload
   const handleLogoChange = useCallback(
@@ -206,31 +192,22 @@ const Organization = () => {
               showAlert(
                 "success",
                 "Logo Uploaded",
-                response.data.message ||
-                  "Organization logo uploaded successfully"
+                response.data.message || "Organization logo uploaded successfully",
               );
             } else {
               showAlert(
                 "error",
                 "Upload Failed",
-                "Failed to load uploaded logo. Please try again."
+                "Failed to load uploaded logo. Please try again.",
               );
             }
           } else {
-            showAlert(
-              "error",
-              "Upload Failed",
-              "Failed to get tenant information"
-            );
+            showAlert("error", "Upload Failed", "Failed to get tenant information");
           }
         }
       } catch (error: any) {
         console.error("Error uploading logo:", error);
-        showAlert(
-          "error",
-          "Upload Failed",
-          error.message || "Failed to upload logo"
-        );
+        showAlert("error", "Upload Failed", error.message || "Failed to upload logo");
       } finally {
         setLogoUploading(false);
         clearLogoPreview();
@@ -239,18 +216,12 @@ const Organization = () => {
         }
       }
     },
-    [fetchLogoAsBlobUrl, showAlert, clearLogoPreview]
+    [fetchLogoAsBlobUrl, showAlert, clearLogoPreview],
   );
 
   // Logo removal handlers
-  const handleRemoveLogo = useCallback(
-    () => setIsRemoveLogoModalOpen(true),
-    []
-  );
-  const handleRemoveLogoCancel = useCallback(
-    () => setIsRemoveLogoModalOpen(false),
-    []
-  );
+  const handleRemoveLogo = useCallback(() => setIsRemoveLogoModalOpen(true), []);
+  const handleRemoveLogoCancel = useCallback(() => setIsRemoveLogoModalOpen(false), []);
 
   const handleRemoveLogoConfirm = useCallback(async () => {
     setLogoRemoving(true);
@@ -266,18 +237,10 @@ const Organization = () => {
       clearLogoPreview();
 
       setIsRemoveLogoModalOpen(false);
-      showAlert(
-        "success",
-        "Logo Removed",
-        "Organization logo removed successfully"
-      );
+      showAlert("success", "Logo Removed", "Organization logo removed successfully");
     } catch (error) {
       console.error("Error removing logo:", error);
-      showAlert(
-        "error",
-        "Remove Failed",
-        "Failed to remove logo. Please try again."
-      );
+      showAlert("error", "Remove Failed", "Failed to remove logo. Please try again.");
     } finally {
       setLogoRemoving(false);
     }
@@ -286,9 +249,7 @@ const Organization = () => {
   // Organization CRUD handlers
   const handleCreate = useCallback(async () => {
     if (!organizationName.trim() || organizationNameError) {
-      console.error(
-        "Validation error: Organization name is required or invalid"
-      );
+      console.error("Validation error: Organization name is required or invalid");
       return;
     }
 
@@ -304,11 +265,7 @@ const Organization = () => {
         body: { name: organizationData.name },
       });
 
-      showAlert(
-        "success",
-        "Organization Created",
-        "The organization was created successfully."
-      );
+      showAlert("success", "Organization Created", "The organization was created successfully.");
 
       if (response?.data && response.data.id) {
         setOrganizationName(response.data.name || "");
@@ -326,7 +283,7 @@ const Organization = () => {
   const handleUpdate = useCallback(async () => {
     if (!organizationName.trim() || organizationNameError || !organizationId) {
       console.error(
-        "Validation error: Organization name is required, invalid, or no organization ID"
+        "Validation error: Organization name is required, invalid, or no organization ID",
       );
       return;
     }
@@ -344,11 +301,7 @@ const Organization = () => {
         body: { name: organizationData.name },
       });
 
-      showAlert(
-        "success",
-        "Organization Updated",
-        "The organization was updated successfully."
-      );
+      showAlert("success", "Organization Updated", "The organization was updated successfully.");
 
       if (response && response.id) {
         setOrganizationName(response.name || "");
@@ -360,13 +313,7 @@ const Organization = () => {
     } finally {
       setTimeout(() => setIsLoading(false), 1500);
     }
-  }, [
-    organizationName,
-    organizationNameError,
-    organizationId,
-    fetchOrganization,
-    showAlert,
-  ]);
+  }, [organizationName, organizationNameError, organizationId, fetchOrganization, showAlert]);
 
   // Effects
   useEffect(() => {
@@ -434,13 +381,7 @@ const Organization = () => {
                 gap: 2,
                 mt: 3,
               }}
-              icon={
-                isLoading ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <SaveIcon size={16} />
-                )
-              }
+              icon={isLoading ? <CircularProgress size={20} /> : <SaveIcon size={16} />}
               onClick={organizationExists ? handleUpdate : handleCreate}
               isDisabled={
                 isSaveDisabled ||
@@ -453,12 +394,8 @@ const Organization = () => {
           </Stack>
 
           {/* Organization Logo Section */}
-          <Stack
-            sx={{ width: { xs: "100%", md: "40%", alignItems: "center" } }}
-          >
-            <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1 }}>
-              Organization Logo
-            </Typography>
+          <Stack sx={{ width: { xs: "100%", md: "40%", alignItems: "center" } }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1 }}>Organization Logo</Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
               <Box
                 sx={{
@@ -518,9 +455,7 @@ const Organization = () => {
                       gap: 1,
                     }}
                   >
-                    <Typography
-                      sx={{ fontSize: 10, color: "#888", textAlign: "center" }}
-                    >
+                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center" }}>
                       {logoLoadError ? "Failed to load logo" : "Logo"}
                     </Typography>
                   </Box>
@@ -535,15 +470,11 @@ const Organization = () => {
                   textTransform: "none",
                   color: logoUrl ? "#666" : "#ccc",
                   "&:hover": {
-                    backgroundColor: logoUrl
-                      ? "rgba(102, 102, 102, 0.04)"
-                      : "transparent",
+                    backgroundColor: logoUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
                   },
                 }}
                 onClick={handleRemoveLogo}
-                disabled={
-                  !logoUrl || logoRemoving || logoUploading || logoLoading
-                }
+                disabled={!logoUrl || logoRemoving || logoUploading || logoLoading}
               >
                 {logoRemoving ? (
                   <>
@@ -603,8 +534,7 @@ const Organization = () => {
                 lineHeight: 1.4,
               }}
             >
-              Recommended: 200×200px • Max size: 5MB • Formats: PNG, JPG, GIF,
-              SVG
+              Recommended: 200×200px • Max size: 5MB • Formats: PNG, JPG, GIF, SVG
             </Typography>
           </Stack>
         </Box>
@@ -616,8 +546,7 @@ const Organization = () => {
           title="Confirm logo removal"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to remove the organization logo? This action
-              cannot be undone.
+              Are you sure you want to remove the organization logo? This action cannot be undone.
             </Typography>
           }
           cancelText="Cancel"

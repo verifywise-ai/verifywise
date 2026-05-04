@@ -28,7 +28,10 @@ import {
   processApprovalQuery,
   withdrawApprovalRequestQuery,
 } from "../utils/approvalRequest.utils";
-import { getApprovalWorkflowByIdQuery, getWorkflowStepsQuery } from "../utils/approvalWorkflow.utils";
+import {
+  getApprovalWorkflowByIdQuery,
+  getWorkflowStepsQuery,
+} from "../utils/approvalWorkflow.utils";
 import { ApprovalResult } from "../domain.layer/enums/approval-workflow.enum";
 import {
   notifyApprovalRequested,
@@ -36,7 +39,10 @@ import {
   sendInAppNotification,
 } from "../services/inAppNotification.service";
 import { notifyRequesterStepCompleted } from "../services/notification.service";
-import { NotificationType, NotificationEntityType } from "../domain.layer/interfaces/i.notification";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 /**
@@ -44,23 +50,19 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
  * @route POST /api/approval-requests
  * @access All authenticated users
  */
-export async function createApprovalRequest(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function createApprovalRequest(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
   logStructured(
     "processing",
     "creating approval request",
     "createApprovalRequest",
-    "approvalRequest.ctrl.ts"
+    "approvalRequest.ctrl.ts",
   );
 
   try {
     const { userId, organizationId } = req;
-    const { request_name, workflow_id, entity_id, entity_type, entity_data } =
-      req.body;
+    const { request_name, workflow_id, entity_id, entity_type, entity_data } = req.body;
 
     if (!userId || !organizationId) {
       await transaction.rollback();
@@ -79,28 +81,18 @@ export async function createApprovalRequest(
     }
 
     // Get workflow and steps
-    const workflow = await getApprovalWorkflowByIdQuery(
-      workflow_id,
-      organizationId,
-      transaction
-    );
+    const workflow = await getApprovalWorkflowByIdQuery(workflow_id, organizationId, transaction);
 
     if (!workflow) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]("Workflow not found"));
     }
 
-    const workflowSteps = await getWorkflowStepsQuery(
-      workflow_id,
-      organizationId,
-      transaction
-    );
+    const workflowSteps = await getWorkflowStepsQuery(workflow_id, organizationId, transaction);
 
     if (!workflowSteps || workflowSteps.length === 0) {
       await transaction.rollback();
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]("Workflow must have at least one step"));
+      return res.status(400).json(STATUS_CODE[400]("Workflow must have at least one step"));
     }
 
     // Create request
@@ -116,7 +108,7 @@ export async function createApprovalRequest(
       },
       workflowSteps,
       organizationId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -125,7 +117,7 @@ export async function createApprovalRequest(
       "successful",
       `created approval request ${request.id}`,
       "createApprovalRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     // Send notifications to first step approvers (async, don't block response)
@@ -134,10 +126,12 @@ export async function createApprovalRequest(
         // Get requester name
         const requesterResult = await sequelize.query<{ name: string; surname: string }>(
           `SELECT name, surname FROM users WHERE id = :userId`,
-          { replacements: { userId }, type: QueryTypes.SELECT }
+          { replacements: { userId }, type: QueryTypes.SELECT },
         );
         const requester = requesterResult[0];
-        const requesterName = requester ? `${requester.name} ${requester.surname}`.trim() : "Someone";
+        const requesterName = requester
+          ? `${requester.name} ${requester.surname}`.trim()
+          : "Someone";
 
         // Get base URL from env or default
         const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -146,7 +140,8 @@ export async function createApprovalRequest(
         const firstStep = workflowSteps.find((s: any) => s.step_number === 1) as any;
         if (firstStep && firstStep.approvers && firstStep.approvers.length > 0) {
           for (const approver of firstStep.approvers) {
-            const approverId = typeof approver === 'object' ? (approver as any).approver_id : approver;
+            const approverId =
+              typeof approver === "object" ? (approver as any).approver_id : approver;
             if (approverId !== userId) {
               await notifyApprovalRequested(
                 organizationId,
@@ -159,7 +154,7 @@ export async function createApprovalRequest(
                   totalSteps: workflowSteps.length,
                 },
                 requesterName,
-                baseUrl
+                baseUrl,
               );
             }
           }
@@ -176,7 +171,7 @@ export async function createApprovalRequest(
       "error",
       "failed to create approval request",
       "createApprovalRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     if (error instanceof ValidationException) {
@@ -191,15 +186,12 @@ export async function createApprovalRequest(
  * @route GET /api/approval-requests/my-requests
  * @access All authenticated users
  */
-export async function getMyApprovalRequests(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getMyApprovalRequests(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "fetching my approval requests",
     "getMyApprovalRequests",
-    "approvalRequest.ctrl.ts"
+    "approvalRequest.ctrl.ts",
   );
 
   try {
@@ -215,7 +207,7 @@ export async function getMyApprovalRequests(
       "successful",
       `fetched ${requests.length} requests`,
       "getMyApprovalRequests",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](requests));
@@ -224,7 +216,7 @@ export async function getMyApprovalRequests(
       "error",
       "failed to fetch my requests",
       "getMyApprovalRequests",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -235,15 +227,12 @@ export async function getMyApprovalRequests(
  * @route GET /api/approval-requests/pending-approvals
  * @access All authenticated users
  */
-export async function getPendingApprovals(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getPendingApprovals(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "fetching pending approvals",
     "getPendingApprovals",
-    "approvalRequest.ctrl.ts"
+    "approvalRequest.ctrl.ts",
   );
 
   try {
@@ -259,7 +248,7 @@ export async function getPendingApprovals(
       "successful",
       `fetched ${requests.length} pending approvals`,
       "getPendingApprovals",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](requests));
@@ -268,7 +257,7 @@ export async function getPendingApprovals(
       "error",
       "failed to fetch pending approvals",
       "getPendingApprovals",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -279,15 +268,12 @@ export async function getPendingApprovals(
  * @route GET /api/approval-requests/:id
  * @access All authenticated users (must be requestor or approver)
  */
-export async function getApprovalRequestById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getApprovalRequestById(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "fetching approval request by ID",
     "getApprovalRequestById",
-    "approvalRequest.ctrl.ts"
+    "approvalRequest.ctrl.ts",
   );
 
   try {
@@ -313,7 +299,7 @@ export async function getApprovalRequestById(
       "successful",
       `fetched approval request ${requestId}`,
       "getApprovalRequestById",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](request));
@@ -322,7 +308,7 @@ export async function getApprovalRequestById(
       "error",
       "failed to fetch approval request",
       "getApprovalRequestById",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -333,18 +319,10 @@ export async function getApprovalRequestById(
  * @route POST /api/approval-requests/:id/approve
  * @access Approvers only
  */
-export async function approveRequest(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function approveRequest(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
-  logStructured(
-    "processing",
-    "approving request",
-    "approveRequest",
-    "approvalRequest.ctrl.ts"
-  );
+  logStructured("processing", "approving request", "approveRequest", "approvalRequest.ctrl.ts");
 
   try {
     const { userId, organizationId } = req;
@@ -369,7 +347,7 @@ export async function approveRequest(
       ApprovalResult.APPROVED,
       comments,
       organizationId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -378,7 +356,7 @@ export async function approveRequest(
       "successful",
       `approved request ${requestId}`,
       "approveRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     // Send notifications based on approval result (async, don't block response)
@@ -390,35 +368,45 @@ export async function approveRequest(
           // Get approver name
           const approverResult = await sequelize.query<{ name: string; surname: string }>(
             `SELECT name, surname FROM users WHERE id = :userId`,
-            { replacements: { userId }, type: QueryTypes.SELECT }
+            { replacements: { userId }, type: QueryTypes.SELECT },
           );
           const approver = approverResult[0];
           const approverName = approver ? `${approver.name} ${approver.surname}`.trim() : "Someone";
 
-          if (notificationInfo.type === 'step_approvers') {
+          if (notificationInfo.type === "step_approvers") {
             // Notify next step approvers
             const nextStepApprovers = await sequelize.query<{ user_id: number }>(
               `SELECT DISTINCT arsa.approver_id as user_id
                FROM approval_request_step_approvals arsa
                JOIN approval_request_steps ars ON arsa.request_step_id = ars.id AND arsa.organization_id = ars.organization_id
                WHERE ars.organization_id = :organizationId AND ars.request_id = :requestId AND ars.step_number = :stepNumber`,
-              { replacements: { organizationId, requestId, stepNumber: notificationInfo.stepNumber }, type: QueryTypes.SELECT }
+              {
+                replacements: {
+                  organizationId,
+                  requestId,
+                  stepNumber: notificationInfo.stepNumber,
+                },
+                type: QueryTypes.SELECT,
+              },
             );
 
             // Get workflow info
             const [request] = await sequelize.query<{ workflow_id: number }>(
               `SELECT workflow_id FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
-              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT },
             );
 
             const [workflow] = await sequelize.query<{ workflow_title: string }>(
               `SELECT workflow_title FROM approval_workflows WHERE organization_id = :organizationId AND id = :workflowId`,
-              { replacements: { organizationId, workflowId: request?.workflow_id }, type: QueryTypes.SELECT }
+              {
+                replacements: { organizationId, workflowId: request?.workflow_id },
+                type: QueryTypes.SELECT,
+              },
             );
 
             const [totalSteps] = await sequelize.query<{ count: string }>(
               `SELECT COUNT(*) as count FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId`,
-              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT },
             );
 
             for (const approverRow of nextStepApprovers) {
@@ -433,7 +421,7 @@ export async function approveRequest(
                   totalSteps: parseInt(totalSteps?.count || "1", 10),
                 },
                 approverName,
-                baseUrl
+                baseUrl,
               );
             }
 
@@ -450,14 +438,14 @@ export async function approveRequest(
                   total_steps: parseInt(totalSteps?.count || "1", 10),
                   approver_name: approverName,
                   workflow_name: workflow?.workflow_title,
-                }
+                },
               );
             }
-          } else if (notificationInfo.type === 'requester_approved') {
+          } else if (notificationInfo.type === "requester_approved") {
             // Notify requester that request is fully approved
             const [totalSteps] = await sequelize.query<{ count: string }>(
               `SELECT COUNT(*) as count FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId`,
-              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT }
+              { replacements: { organizationId, requestId }, type: QueryTypes.SELECT },
             );
 
             await notifyApprovalComplete(
@@ -468,7 +456,7 @@ export async function approveRequest(
                 name: notificationInfo.requestName,
                 totalSteps: parseInt(totalSteps?.count || "1", 10),
               },
-              baseUrl
+              baseUrl,
             );
           }
         } catch (notifyError) {
@@ -477,16 +465,14 @@ export async function approveRequest(
       })();
     }
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]({ message: "Request approved successfully" }));
+    return res.status(200).json(STATUS_CODE[200]({ message: "Request approved successfully" }));
   } catch (error) {
     await transaction.rollback();
     logStructured(
       "error",
       "failed to approve request",
       "approveRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -497,18 +483,10 @@ export async function approveRequest(
  * @route POST /api/approval-requests/:id/reject
  * @access Approvers only
  */
-export async function rejectRequest(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function rejectRequest(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
-  logStructured(
-    "processing",
-    "rejecting request",
-    "rejectRequest",
-    "approvalRequest.ctrl.ts"
-  );
+  logStructured("processing", "rejecting request", "rejectRequest", "approvalRequest.ctrl.ts");
 
   try {
     const { userId, organizationId } = req;
@@ -533,7 +511,7 @@ export async function rejectRequest(
       ApprovalResult.REJECTED,
       comments,
       organizationId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -542,11 +520,11 @@ export async function rejectRequest(
       "successful",
       `rejected request ${requestId}`,
       "rejectRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     // Send rejection notification to requester (async, don't block response)
-    if (notificationInfo && notificationInfo.type === 'requester_rejected') {
+    if (notificationInfo && notificationInfo.type === "requester_rejected") {
       (async () => {
         try {
           const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -554,7 +532,7 @@ export async function rejectRequest(
           // Get rejector name
           const rejectorResult = await sequelize.query<{ name: string; surname: string }>(
             `SELECT name, surname FROM users WHERE id = :userId`,
-            { replacements: { userId }, type: QueryTypes.SELECT }
+            { replacements: { userId }, type: QueryTypes.SELECT },
           );
           const rejector = rejectorResult[0];
           const rejectorName = rejector ? `${rejector.name} ${rejector.surname}`.trim() : "Someone";
@@ -562,10 +540,15 @@ export async function rejectRequest(
           // Get requester name
           const requesterResult = await sequelize.query<{ name: string; surname: string }>(
             `SELECT name, surname FROM users WHERE id = :requesterId`,
-            { replacements: { requesterId: notificationInfo.requesterId }, type: QueryTypes.SELECT }
+            {
+              replacements: { requesterId: notificationInfo.requesterId },
+              type: QueryTypes.SELECT,
+            },
           );
           const requester = requesterResult[0];
-          const requesterName = requester ? `${requester.name} ${requester.surname}`.trim() : "User";
+          const requesterName = requester
+            ? `${requester.name} ${requester.surname}`.trim()
+            : "User";
 
           // Send rejection notification
           await sendInAppNotification(
@@ -578,7 +561,7 @@ export async function rejectRequest(
               entity_type: NotificationEntityType.USE_CASE,
               entity_id: requestId,
               entity_name: notificationInfo.requestName,
-              action_url: `${baseUrl}/approval-requests`,
+              action_url: `${baseUrl}/approval-workflows`,
             },
             true,
             {
@@ -589,9 +572,9 @@ export async function rejectRequest(
                 rejector_name: rejectorName,
                 request_name: notificationInfo.requestName,
                 rejection_reason: comments || "No reason provided",
-                request_url: `${baseUrl}/approval-requests`,
+                request_url: `${baseUrl}/approval-workflows`,
               },
-            }
+            },
           );
         } catch (notifyError) {
           console.error("Error sending rejection notification:", notifyError);
@@ -599,17 +582,10 @@ export async function rejectRequest(
       })();
     }
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]({ message: "Request rejected successfully" }));
+    return res.status(200).json(STATUS_CODE[200]({ message: "Request rejected successfully" }));
   } catch (error) {
     await transaction.rollback();
-    logStructured(
-      "error",
-      "failed to reject request",
-      "rejectRequest",
-      "approvalRequest.ctrl.ts"
-    );
+    logStructured("error", "failed to reject request", "rejectRequest", "approvalRequest.ctrl.ts");
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -619,18 +595,10 @@ export async function rejectRequest(
  * @route POST /api/approval-requests/:id/withdraw
  * @access Requestor only
  */
-export async function withdrawRequest(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function withdrawRequest(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
-  logStructured(
-    "processing",
-    "withdrawing request",
-    "withdrawRequest",
-    "approvalRequest.ctrl.ts"
-  );
+  logStructured("processing", "withdrawing request", "withdrawRequest", "approvalRequest.ctrl.ts");
 
   try {
     const { userId, organizationId } = req;
@@ -651,11 +619,7 @@ export async function withdrawRequest(
     const request = await getApprovalRequestByIdQuery(requestId, organizationId, transaction);
     if (!request || request.requested_by !== userId) {
       await transaction.rollback();
-      return res
-        .status(403)
-        .json(
-          STATUS_CODE[403]("Only the requestor can withdraw this request")
-        );
+      return res.status(403).json(STATUS_CODE[403]("Only the requestor can withdraw this request"));
     }
 
     await withdrawApprovalRequestQuery(requestId, organizationId, transaction);
@@ -666,19 +630,17 @@ export async function withdrawRequest(
       "successful",
       `withdrew request ${requestId}`,
       "withdrawRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]({ message: "Request withdrawn successfully" }));
+    return res.status(200).json(STATUS_CODE[200]({ message: "Request withdrawn successfully" }));
   } catch (error) {
     await transaction.rollback();
     logStructured(
       "error",
       "failed to withdraw request",
       "withdrawRequest",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -689,15 +651,12 @@ export async function withdrawRequest(
  * @route GET /api/approval-requests
  * @access Admin only
  */
-export async function getAllApprovalRequests(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAllApprovalRequests(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "fetching all approval requests",
     "getAllApprovalRequests",
-    "approvalRequest.ctrl.ts"
+    "approvalRequest.ctrl.ts",
   );
 
   try {
@@ -712,14 +671,14 @@ export async function getAllApprovalRequests(
       {
         replacements: { organizationId },
         type: "SELECT",
-      }
+      },
     );
 
     logStructured(
       "successful",
       `fetched ${requests.length} requests`,
       "getAllApprovalRequests",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](requests));
@@ -728,7 +687,7 @@ export async function getAllApprovalRequests(
       "error",
       "failed to fetch all requests",
       "getAllApprovalRequests",
-      "approvalRequest.ctrl.ts"
+      "approvalRequest.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

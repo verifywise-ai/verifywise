@@ -92,7 +92,8 @@ export class DatasetModelInventoryModel
       dataset_id: this.dataset_id,
       model_inventory_id: this.model_inventory_id,
       relationship_type: this.relationship_type,
-      created_at: (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
+      created_at:
+        (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
     };
   }
 

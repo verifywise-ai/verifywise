@@ -3,7 +3,7 @@ import { sequelize } from "../database/db";
 import { UserPreferencesModel } from "../domain.layer/models/userPreferences/userPreferences.model";
 
 export const getPreferencesByUserQuery = async (
-  userId: number
+  userId: number,
 ): Promise<UserPreferencesModel | null> => {
   try {
     const [preference] = await sequelize.query(
@@ -12,7 +12,7 @@ export const getPreferencesByUserQuery = async (
         replacements: { id: userId },
         mapToModel: true,
         model: UserPreferencesModel,
-      }
+      },
     );
 
     if (!preference) {
@@ -26,7 +26,7 @@ export const getPreferencesByUserQuery = async (
 
 export const createNewUserPreferencesQuery = async (
   data: Omit<UserPreferencesModel, "id">,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<UserPreferencesModel> => {
   const result = await sequelize.query(
     `INSERT INTO user_preferences (user_id, date_format) VALUES (:user_id, :date_format) RETURNING *`,
@@ -38,7 +38,7 @@ export const createNewUserPreferencesQuery = async (
       mapToModel: true,
       model: UserPreferencesModel,
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -46,7 +46,7 @@ export const createNewUserPreferencesQuery = async (
 export const updateUserPreferencesByIdQuery = async (
   id: number,
   data: Partial<UserPreferencesModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<UserPreferencesModel | null> => {
   const updatedData: Partial<Record<keyof UserPreferencesModel, any>> = {};
   const setClause = ["date_format"]
@@ -55,8 +55,7 @@ export const updateUserPreferencesByIdQuery = async (
         data[f as keyof UserPreferencesModel] !== undefined &&
         data[f as keyof UserPreferencesModel]
       ) {
-        updatedData[f as keyof UserPreferencesModel] =
-          data[f as keyof UserPreferencesModel];
+        updatedData[f as keyof UserPreferencesModel] = data[f as keyof UserPreferencesModel];
         return true;
       }
       return false;

@@ -35,17 +35,11 @@ function extractData<T>(response: { data: ApiResponse<T> }): T {
  */
 export async function getAllFolders(): Promise<IFolderWithCount[]> {
   try {
-    const response = await apiServices.get<ApiResponse<IFolderWithCount[]>>(
-      "/virtual-folders"
-    );
+    const response = await apiServices.get<ApiResponse<IFolderWithCount[]>>("/virtual-folders");
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      "Failed to fetch folders",
-      err?.response?.status,
-      error
-    );
+    throw new APIError("Failed to fetch folders", err?.response?.status, error);
   }
 }
 
@@ -54,17 +48,11 @@ export async function getAllFolders(): Promise<IFolderWithCount[]> {
  */
 export async function getFolderTree(): Promise<IFolderTreeNode[]> {
   try {
-    const response = await apiServices.get<ApiResponse<IFolderTreeNode[]>>(
-      "/virtual-folders/tree"
-    );
+    const response = await apiServices.get<ApiResponse<IFolderTreeNode[]>>("/virtual-folders/tree");
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      "Failed to fetch folder tree",
-      err?.response?.status,
-      error
-    );
+    throw new APIError("Failed to fetch folder tree", err?.response?.status, error);
   }
 }
 
@@ -73,17 +61,11 @@ export async function getFolderTree(): Promise<IFolderTreeNode[]> {
  */
 export async function getFolderById(id: number): Promise<IFolderWithCount> {
   try {
-    const response = await apiServices.get<ApiResponse<IFolderWithCount>>(
-      `/virtual-folders/${id}`
-    );
+    const response = await apiServices.get<ApiResponse<IFolderWithCount>>(`/virtual-folders/${id}`);
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to fetch folder with ID ${id}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to fetch folder with ID ${id}`, err?.response?.status, error);
   }
 }
 
@@ -93,38 +75,25 @@ export async function getFolderById(id: number): Promise<IFolderWithCount> {
 export async function getFolderPath(id: number): Promise<IVirtualFolder[]> {
   try {
     const response = await apiServices.get<ApiResponse<IVirtualFolder[]>>(
-      `/virtual-folders/${id}/path`
+      `/virtual-folders/${id}/path`,
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to fetch folder path for ID ${id}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to fetch folder path for ID ${id}`, err?.response?.status, error);
   }
 }
 
 /**
  * Create a new folder
  */
-export async function createFolder(
-  input: IVirtualFolderInput
-): Promise<IVirtualFolder> {
+export async function createFolder(input: IVirtualFolderInput): Promise<IVirtualFolder> {
   try {
-    const response = await apiServices.post<ApiResponse<IVirtualFolder>>(
-      "/virtual-folders",
-      input
-    );
+    const response = await apiServices.post<ApiResponse<IVirtualFolder>>("/virtual-folders", input);
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      "Failed to create folder",
-      err?.response?.status,
-      error
-    );
+    throw new APIError("Failed to create folder", err?.response?.status, error);
   }
 }
 
@@ -133,21 +102,17 @@ export async function createFolder(
  */
 export async function updateFolder(
   id: number,
-  input: IVirtualFolderUpdate
+  input: IVirtualFolderUpdate,
 ): Promise<IVirtualFolder> {
   try {
     const response = await apiServices.patch<ApiResponse<IVirtualFolder>>(
       `/virtual-folders/${id}`,
-      input
+      input,
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to update folder with ID ${id}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to update folder with ID ${id}`, err?.response?.status, error);
   }
 }
 
@@ -159,11 +124,7 @@ export async function deleteFolder(id: number): Promise<void> {
     await apiServices.delete(`/virtual-folders/${id}`);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to delete folder with ID ${id}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to delete folder with ID ${id}`, err?.response?.status, error);
   }
 }
 
@@ -174,21 +135,15 @@ export async function deleteFolder(id: number): Promise<void> {
 /**
  * Get files in a folder
  */
-export async function getFilesInFolder(
-  folderId: number
-): Promise<IFileWithFolders[]> {
+export async function getFilesInFolder(folderId: number): Promise<IFileWithFolders[]> {
   try {
     const response = await apiServices.get<ApiResponse<IFileWithFolders[]>>(
-      `/virtual-folders/${folderId}/files`
+      `/virtual-folders/${folderId}/files`,
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to fetch files in folder ${folderId}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to fetch files in folder ${folderId}`, err?.response?.status, error);
   }
 }
 
@@ -198,16 +153,12 @@ export async function getFilesInFolder(
 export async function getUncategorizedFiles(): Promise<IFileWithFolders[]> {
   try {
     const response = await apiServices.get<ApiResponse<IFileWithFolders[]>>(
-      "/virtual-folders/uncategorized"
+      "/virtual-folders/uncategorized",
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      "Failed to fetch uncategorized files",
-      err?.response?.status,
-      error
-    );
+    throw new APIError("Failed to fetch uncategorized files", err?.response?.status, error);
   }
 }
 
@@ -216,12 +167,12 @@ export async function getUncategorizedFiles(): Promise<IFileWithFolders[]> {
  */
 export async function assignFilesToFolder(
   folderId: number,
-  fileIds: number[]
+  fileIds: number[],
 ): Promise<{ assigned: number }> {
   try {
     const response = await apiServices.post<ApiResponse<{ assigned: number }>>(
       `/virtual-folders/${folderId}/files`,
-      { file_ids: fileIds }
+      { file_ids: fileIds },
     );
     return extractData(response);
   } catch (error: unknown) {
@@ -229,7 +180,7 @@ export async function assignFilesToFolder(
     throw new APIError(
       `Failed to assign files to folder ${folderId}`,
       err?.response?.status,
-      error
+      error,
     );
   }
 }
@@ -239,11 +190,11 @@ export async function assignFilesToFolder(
  */
 export async function removeFileFromFolder(
   folderId: number,
-  fileId: number
+  fileId: number,
 ): Promise<{ removed: boolean }> {
   try {
     const response = await apiServices.delete<ApiResponse<{ removed: boolean }>>(
-      `/virtual-folders/${folderId}/files/${fileId}`
+      `/virtual-folders/${folderId}/files/${fileId}`,
     );
     return extractData(response);
   } catch (error: unknown) {
@@ -251,7 +202,7 @@ export async function removeFileFromFolder(
     throw new APIError(
       `Failed to remove file ${fileId} from folder ${folderId}`,
       err?.response?.status,
-      error
+      error,
     );
   }
 }
@@ -262,16 +213,12 @@ export async function removeFileFromFolder(
 export async function getFileFolders(fileId: number): Promise<IVirtualFolder[]> {
   try {
     const response = await apiServices.get<ApiResponse<IVirtualFolder[]>>(
-      `/files/${fileId}/folders`
+      `/files/${fileId}/folders`,
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to fetch folders for file ${fileId}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to fetch folders for file ${fileId}`, err?.response?.status, error);
   }
 }
 
@@ -280,20 +227,16 @@ export async function getFileFolders(fileId: number): Promise<IVirtualFolder[]> 
  */
 export async function updateFileFolders(
   fileId: number,
-  folderIds: number[]
+  folderIds: number[],
 ): Promise<IVirtualFolder[]> {
   try {
     const response = await apiServices.patch<ApiResponse<IVirtualFolder[]>>(
       `/files/${fileId}/folders`,
-      { folder_ids: folderIds }
+      { folder_ids: folderIds },
     );
     return extractData(response);
   } catch (error: unknown) {
     const err = error as { response?: { status?: number } };
-    throw new APIError(
-      `Failed to update folders for file ${fileId}`,
-      err?.response?.status,
-      error
-    );
+    throw new APIError(`Failed to update folders for file ${fileId}`, err?.response?.status, error);
   }
 }

@@ -111,7 +111,11 @@ export default function ModelsPage() {
   const [calcShowAll, setCalcShowAll] = useState(false);
 
   // Feature comparison
-  const [compareIds, setCompareIds] = useState<string[]>(["gpt-4o", "claude-sonnet-4-20250514", "gemini-2.0-flash"]);
+  const [compareIds, setCompareIds] = useState<string[]>([
+    "gpt-4o",
+    "claude-sonnet-4-20250514",
+    "gemini-2.0-flash",
+  ]);
 
   const loadModels = useCallback(async () => {
     try {
@@ -125,7 +129,9 @@ export default function ModelsPage() {
     }
   }, []);
 
-  useEffect(() => { loadModels(); }, [loadModels]);
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   // Filter out LiteLLM's description/sample row
   const cleanModels = useMemo(() => {
@@ -138,7 +144,10 @@ export default function ModelsPage() {
   // Derived: unique providers
   const providers = useMemo(() => {
     const set = new Set(cleanModels.map((m) => m.provider));
-    return [{ _id: "", name: "All providers" }, ...[...set].sort().map((p) => ({ _id: p, name: p }))];
+    return [
+      { _id: "", name: "All providers" },
+      ...[...set].sort().map((p) => ({ _id: p, name: p })),
+    ];
   }, [cleanModels]);
 
   // Filtered + searched models
@@ -146,7 +155,10 @@ export default function ModelsPage() {
     let result = cleanModels;
     if (search) {
       const q = search.toLowerCase();
-      result = result.filter((m) => (m.model || m.id || "").toLowerCase().includes(q) || m.provider.toLowerCase().includes(q));
+      result = result.filter(
+        (m) =>
+          (m.model || m.id || "").toLowerCase().includes(q) || m.provider.toLowerCase().includes(q),
+      );
     }
     if (providerFilter) result = result.filter((m) => m.provider === providerFilter);
     if (modeFilter) result = result.filter((m) => m.mode === modeFilter);
@@ -157,7 +169,10 @@ export default function ModelsPage() {
   }, [cleanModels, search, providerFilter, modeFilter, featureFilters]);
 
   const pageCount = useMemo(() => Math.ceil(filtered.length / PAGE_SIZE), [filtered]);
-  const pageModels = useMemo(() => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filtered, page]);
+  const pageModels = useMemo(
+    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filtered, page],
+  );
 
   // Cost calculator results
   const calcResults = useMemo(() => {
@@ -167,7 +182,9 @@ export default function ModelsPage() {
     if (!reqs || !inp) return [];
 
     return filtered
-      .filter((m) => m.mode === "chat" && (m.input_cost_per_million > 0 || m.output_cost_per_million > 0))
+      .filter(
+        (m) => m.mode === "chat" && (m.input_cost_per_million > 0 || m.output_cost_per_million > 0),
+      )
       .map((m) => {
         const dailyInputCost = (reqs * inp * m.input_cost_per_million) / 1_000_000;
         const dailyOutputCost = (reqs * out * m.output_cost_per_million) / 1_000_000;
@@ -183,7 +200,10 @@ export default function ModelsPage() {
   }, [filtered, calcRequests, calcInputTokens, calcOutputTokens]);
 
   // Compare models
-  const compareModels = useMemo(() => models.filter((m) => compareIds.includes(m.id)), [models, compareIds]);
+  const compareModels = useMemo(
+    () => models.filter((m) => compareIds.includes(m.id)),
+    [models, compareIds],
+  );
 
   const toggleFeature = (key: string) => {
     setFeatureFilters((prev) => {
@@ -196,7 +216,7 @@ export default function ModelsPage() {
 
   const toggleCompare = (id: string) => {
     setCompareIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 5 ? [...prev, id] : prev
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 5 ? [...prev, id] : prev,
     );
   };
 
@@ -204,10 +224,34 @@ export default function ModelsPage() {
 
   const featureIcons = (m: ModelInfo) => (
     <Stack direction="row" gap="4px" alignItems="center">
-      {m.supports_vision && <Tooltip title="Vision" arrow><span style={{ display: "inline-flex" }}><Eye size={12} strokeWidth={1.5} color={palette.brand.primary} /></span></Tooltip>}
-      {m.supports_function_calling && <Tooltip title="Function calling" arrow><span style={{ display: "inline-flex" }}><Wrench size={12} strokeWidth={1.5} color={palette.brand.primary} /></span></Tooltip>}
-      {m.supports_pdf_input && <Tooltip title="PDF input" arrow><span style={{ display: "inline-flex" }}><FileText size={12} strokeWidth={1.5} color={palette.brand.primary} /></span></Tooltip>}
-      {m.supports_prompt_caching && <Tooltip title="Prompt caching" arrow><span style={{ display: "inline-flex" }}><Database size={12} strokeWidth={1.5} color={palette.text.tertiary} /></span></Tooltip>}
+      {m.supports_vision && (
+        <Tooltip title="Vision" arrow>
+          <span style={{ display: "inline-flex" }}>
+            <Eye size={12} strokeWidth={1.5} color={palette.brand.primary} />
+          </span>
+        </Tooltip>
+      )}
+      {m.supports_function_calling && (
+        <Tooltip title="Function calling" arrow>
+          <span style={{ display: "inline-flex" }}>
+            <Wrench size={12} strokeWidth={1.5} color={palette.brand.primary} />
+          </span>
+        </Tooltip>
+      )}
+      {m.supports_pdf_input && (
+        <Tooltip title="PDF input" arrow>
+          <span style={{ display: "inline-flex" }}>
+            <FileText size={12} strokeWidth={1.5} color={palette.brand.primary} />
+          </span>
+        </Tooltip>
+      )}
+      {m.supports_prompt_caching && (
+        <Tooltip title="Prompt caching" arrow>
+          <span style={{ display: "inline-flex" }}>
+            <Database size={12} strokeWidth={1.5} color={palette.text.tertiary} />
+          </span>
+        </Tooltip>
+      )}
     </Stack>
   );
 
@@ -235,7 +279,10 @@ export default function ModelsPage() {
                   <Field
                     placeholder="Search models..."
                     value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(0);
+                    }}
                     sx={{ minWidth: "unset" }}
                   />
                 </Box>
@@ -244,7 +291,10 @@ export default function ModelsPage() {
                     id="provider-filter"
                     value={providerFilter}
                     items={providers}
-                    onChange={(e) => { setProviderFilter(e.target.value as string); setPage(0); }}
+                    onChange={(e) => {
+                      setProviderFilter(e.target.value as string);
+                      setPage(0);
+                    }}
                     getOptionValue={(i) => i._id}
                     sx={{ minWidth: "unset" }}
                   />
@@ -254,7 +304,10 @@ export default function ModelsPage() {
                     id="mode-filter"
                     value={modeFilter}
                     items={MODE_OPTIONS}
-                    onChange={(e) => { setModeFilter(e.target.value as string); setPage(0); }}
+                    onChange={(e) => {
+                      setModeFilter(e.target.value as string);
+                      setPage(0);
+                    }}
                     getOptionValue={(i) => i._id}
                     sx={{ minWidth: "unset" }}
                   />
@@ -267,12 +320,19 @@ export default function ModelsPage() {
                       key={f.key}
                       onClick={() => toggleFeature(f.key)}
                       sx={{
-                        display: "flex", alignItems: "center", gap: "4px",
-                        px: "8px", height: "34px", borderRadius: "4px", cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        px: "8px",
+                        height: "34px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
                         border: `1px solid ${active ? palette.brand.primary : palette.border.dark}`,
                         backgroundColor: active ? `${palette.brand.primary}10` : "transparent",
                         color: active ? palette.brand.primary : palette.text.tertiary,
-                        fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       <Icon size={12} strokeWidth={1.5} />
@@ -285,7 +345,9 @@ export default function ModelsPage() {
               {/* Results count */}
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                 {filtered.length.toLocaleString()} models
-                {search || providerFilter || modeFilter || featureFilters.size > 0 ? " (filtered)" : ""}
+                {search || providerFilter || modeFilter || featureFilters.size > 0
+                  ? " (filtered)"
+                  : ""}
               </Typography>
 
               {/* Table */}
@@ -295,23 +357,81 @@ export default function ModelsPage() {
                   direction="row"
                   sx={{ p: "8px 0", borderBottom: `1px solid ${palette.border.light}` }}
                 >
-                  <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}>PROVIDER</Typography>
-                  <Typography sx={{ flex: 2, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}>MODEL</Typography>
-                  <Typography sx={{ flex: 0.6, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}>MODE</Typography>
-                  <Typography sx={{ flex: 0.7, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>CONTEXT</Typography>
-                  <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>$/1M IN</Typography>
-                  <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>$/1M OUT</Typography>
-                  <Typography sx={{ flex: 0.6, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "center" }}>FEATURES</Typography>
+                  <Typography
+                    sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}
+                  >
+                    PROVIDER
+                  </Typography>
+                  <Typography
+                    sx={{ flex: 2, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}
+                  >
+                    MODEL
+                  </Typography>
+                  <Typography
+                    sx={{ flex: 0.6, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}
+                  >
+                    MODE
+                  </Typography>
+                  <Typography
+                    sx={{
+                      flex: 0.7,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      textAlign: "right",
+                    }}
+                  >
+                    CONTEXT
+                  </Typography>
+                  <Typography
+                    sx={{
+                      flex: 0.8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      textAlign: "right",
+                    }}
+                  >
+                    $/1M IN
+                  </Typography>
+                  <Typography
+                    sx={{
+                      flex: 0.8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      textAlign: "right",
+                    }}
+                  >
+                    $/1M OUT
+                  </Typography>
+                  <Typography
+                    sx={{
+                      flex: 0.6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      textAlign: "center",
+                    }}
+                  >
+                    FEATURES
+                  </Typography>
                   <Box sx={{ width: "60px" }} />
                 </Stack>
 
                 {/* Rows */}
                 {error ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.status.error.text }}>
+                    {error}
+                  </Typography>
                 ) : loading ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>Loading models...</Typography>
+                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>
+                    Loading models...
+                  </Typography>
                 ) : pageModels.length === 0 ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>No models match your filters.</Typography>
+                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>
+                    No models match your filters.
+                  </Typography>
                 ) : (
                   <Stack gap="0px">
                     {pageModels.map((m) => (
@@ -328,19 +448,52 @@ export default function ModelsPage() {
                       >
                         <Stack direction="row" alignItems="center" gap="6px" sx={{ flex: 0.8 }}>
                           <ProviderIcon provider={m.provider} size={14} />
-                          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>{m.provider}</Typography>
+                          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                            {m.provider}
+                          </Typography>
                         </Stack>
-                        <Typography sx={{ flex: 2, fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{
+                            flex: 2,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {m.id}
                         </Typography>
-                        <Typography sx={{ flex: 0.6, fontSize: 11, color: palette.text.tertiary }}>{m.mode}</Typography>
+                        <Typography sx={{ flex: 0.6, fontSize: 11, color: palette.text.tertiary }}>
+                          {m.mode}
+                        </Typography>
                         <Typography sx={{ flex: 0.7, fontSize: 12, textAlign: "right" }}>
                           {formatTokens(m.max_input_tokens)}
                         </Typography>
-                        <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", color: m.input_cost_per_million > 0 ? palette.text.primary : palette.text.disabled }}>
+                        <Typography
+                          sx={{
+                            flex: 0.8,
+                            fontSize: 12,
+                            textAlign: "right",
+                            color:
+                              m.input_cost_per_million > 0
+                                ? palette.text.primary
+                                : palette.text.disabled,
+                          }}
+                        >
                           {formatCost(m.input_cost_per_million)}
                         </Typography>
-                        <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", color: m.output_cost_per_million > 0 ? palette.text.primary : palette.text.disabled }}>
+                        <Typography
+                          sx={{
+                            flex: 0.8,
+                            fontSize: 12,
+                            textAlign: "right",
+                            color:
+                              m.output_cost_per_million > 0
+                                ? palette.text.primary
+                                : palette.text.disabled,
+                          }}
+                        >
                           {formatCost(m.output_cost_per_million)}
                         </Typography>
                         <Box sx={{ flex: 0.6, display: "flex", justifyContent: "center" }}>
@@ -351,7 +504,11 @@ export default function ModelsPage() {
                             text="Add"
                             variant="outlined"
                             icon={<CirclePlus size={12} strokeWidth={1.5} />}
-                            onClick={() => navigate(`/ai-gateway/endpoints?add=${encodeURIComponent(m.id)}&provider=${encodeURIComponent(m.provider)}`)}
+                            onClick={() =>
+                              navigate(
+                                `/ai-gateway/endpoints?add=${encodeURIComponent(m.id)}&provider=${encodeURIComponent(m.provider)}`,
+                              )
+                            }
                           />
                         </Box>
                       </Stack>
@@ -361,15 +518,28 @@ export default function ModelsPage() {
 
                 {/* Pagination */}
                 {pageCount > 1 && (
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: "12px" }}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ pt: "12px" }}
+                  >
                     <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                       Page {page + 1} of {pageCount}
                     </Typography>
                     <Stack direction="row" gap="4px">
-                      <IconButton size="small" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setPage(Math.max(0, page - 1))}
+                        disabled={page === 0}
+                      >
                         <ChevronLeft size={14} />
                       </IconButton>
-                      <IconButton size="small" onClick={() => setPage(Math.min(pageCount - 1, page + 1))} disabled={page >= pageCount - 1}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setPage(Math.min(pageCount - 1, page + 1))}
+                        disabled={page >= pageCount - 1}
+                      >
                         <ChevronRight size={14} />
                       </IconButton>
                     </Stack>
@@ -386,17 +556,33 @@ export default function ModelsPage() {
                 <Stack gap="12px">
                   <Typography sx={sectionTitleSx}>Cost calculator</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    Estimate monthly costs across models based on your expected usage. Only chat models with known pricing are shown.
+                    Estimate monthly costs across models based on your expected usage. Only chat
+                    models with known pricing are shown.
                   </Typography>
                   <Stack direction="row" gap="8px" flexWrap="wrap">
                     <Box sx={{ width: "130px" }}>
-                      <Field label="Requests/day" value={calcRequests} onChange={(e) => setCalcRequests(e.target.value)} sx={{ minWidth: "unset" }} />
+                      <Field
+                        label="Requests/day"
+                        value={calcRequests}
+                        onChange={(e) => setCalcRequests(e.target.value)}
+                        sx={{ minWidth: "unset" }}
+                      />
                     </Box>
                     <Box sx={{ width: "140px" }}>
-                      <Field label="Avg input tokens" value={calcInputTokens} onChange={(e) => setCalcInputTokens(e.target.value)} sx={{ minWidth: "unset" }} />
+                      <Field
+                        label="Avg input tokens"
+                        value={calcInputTokens}
+                        onChange={(e) => setCalcInputTokens(e.target.value)}
+                        sx={{ minWidth: "unset" }}
+                      />
                     </Box>
                     <Box sx={{ width: "140px" }}>
-                      <Field label="Avg output tokens" value={calcOutputTokens} onChange={(e) => setCalcOutputTokens(e.target.value)} sx={{ minWidth: "unset" }} />
+                      <Field
+                        label="Avg output tokens"
+                        value={calcOutputTokens}
+                        onChange={(e) => setCalcOutputTokens(e.target.value)}
+                        sx={{ minWidth: "unset" }}
+                      />
                     </Box>
                     <Box sx={{ width: "160px" }}>
                       <Select
@@ -420,19 +606,102 @@ export default function ModelsPage() {
                       Estimated costs ({Number(calcRequests).toLocaleString()} req/day)
                     </Typography>
                     {/* Table header */}
-                    <Stack direction="row" sx={{ p: "6px 12px", borderBottom: `1px solid ${palette.border.light}` }}>
-                      <Typography sx={{ width: "28px", fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}>#</Typography>
-                      <Typography sx={{ flex: 2, fontSize: 11, fontWeight: 600, color: palette.text.tertiary }}>MODEL</Typography>
-                      <Typography sx={{ flex: 0.6, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>CONTEXT</Typography>
-                      <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>$/REQ</Typography>
-                      <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>INPUT</Typography>
-                      <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>OUTPUT</Typography>
-                      <Typography sx={{ flex: 0.8, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>$/DAY</Typography>
-                      <Typography sx={{ flex: 1, fontSize: 11, fontWeight: 600, color: palette.text.tertiary, textAlign: "right" }}>$/MONTH</Typography>
+                    <Stack
+                      direction="row"
+                      sx={{ p: "6px 12px", borderBottom: `1px solid ${palette.border.light}` }}
+                    >
+                      <Typography
+                        sx={{
+                          width: "28px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                        }}
+                      >
+                        #
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 2,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                        }}
+                      >
+                        MODEL
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 0.6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        CONTEXT
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 0.8,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        $/REQ
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 0.8,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        INPUT
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 0.8,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        OUTPUT
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 0.8,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        $/DAY
+                      </Typography>
+                      <Typography
+                        sx={{
+                          flex: 1,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: palette.text.tertiary,
+                          textAlign: "right",
+                        }}
+                      >
+                        $/MONTH
+                      </Typography>
                     </Stack>
                     {calcResultsVisible.map((m, i) => {
-                      const inputCostPerReq = (Number(calcInputTokens) * m.input_cost_per_million) / 1_000_000;
-                      const outputCostPerReq = (Number(calcOutputTokens) * m.output_cost_per_million) / 1_000_000;
+                      const inputCostPerReq =
+                        (Number(calcInputTokens) * m.input_cost_per_million) / 1_000_000;
+                      const outputCostPerReq =
+                        (Number(calcOutputTokens) * m.output_cost_per_million) / 1_000_000;
                       const costPerReq = inputCostPerReq + outputCostPerReq;
                       return (
                         <Stack
@@ -442,43 +711,152 @@ export default function ModelsPage() {
                           sx={{
                             p: "8px 12px",
                             borderBottom: `1px solid ${palette.border.light}`,
-                            backgroundColor: i === 0 ? "#F0FDF4" : i === 1 ? "#F8FAFC" : i === 2 ? "#FFFBEB" : i < 10 ? `${palette.background.alt}` : "transparent",
+                            backgroundColor:
+                              i === 0
+                                ? "#F0FDF4"
+                                : i === 1
+                                  ? "#F8FAFC"
+                                  : i === 2
+                                    ? "#FFFBEB"
+                                    : i < 10
+                                      ? `${palette.background.alt}`
+                                      : "transparent",
                             "&:last-child": { borderBottom: "none" },
                           }}
                         >
-                          <Box sx={{ width: "28px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {i === 0 ? <Trophy size={14} strokeWidth={1.5} color="#D4AF37" /> :
-                             i === 1 ? <Medal size={14} strokeWidth={1.5} color="#9CA3AF" /> :
-                             i === 2 ? <Award size={14} strokeWidth={1.5} color="#CD7F32" /> :
-                             <Typography sx={{ fontSize: 12, color: palette.text.disabled, fontWeight: 600 }}>{i + 1}</Typography>}
+                          <Box
+                            sx={{
+                              width: "28px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {i === 0 ? (
+                              <Trophy size={14} strokeWidth={1.5} color="#D4AF37" />
+                            ) : i === 1 ? (
+                              <Medal size={14} strokeWidth={1.5} color="#9CA3AF" />
+                            ) : i === 2 ? (
+                              <Award size={14} strokeWidth={1.5} color="#CD7F32" />
+                            ) : (
+                              <Typography
+                                sx={{ fontSize: 12, color: palette.text.disabled, fontWeight: 600 }}
+                              >
+                                {i + 1}
+                              </Typography>
+                            )}
                           </Box>
-                          <Stack direction="row" alignItems="center" gap="6px" sx={{ flex: 2, minWidth: 0, overflow: "hidden" }}>
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            gap="6px"
+                            sx={{ flex: 2, minWidth: 0, overflow: "hidden" }}
+                          >
                             <ProviderIcon provider={m.provider} size={13} />
-                            <Typography component="span" sx={{ fontSize: 12, color: palette.text.tertiary, flexShrink: 0 }}>
+                            <Typography
+                              component="span"
+                              sx={{ fontSize: 12, color: palette.text.tertiary, flexShrink: 0 }}
+                            >
                               {m.provider}/
                             </Typography>
-                            <Typography component="span" sx={{ fontSize: 12, fontWeight: i === 0 ? 600 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Typography
+                              component="span"
+                              sx={{
+                                fontSize: 12,
+                                fontWeight: i === 0 ? 600 : 500,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
                               {m.id.includes("/") ? m.id.split("/").slice(1).join("/") : m.id}
                             </Typography>
                             {i === 0 && (
-                              <Typography sx={{ fontSize: 10, color: palette.brand.primary, fontWeight: 600, border: `1px solid ${palette.brand.primary}40`, borderRadius: "4px", px: "4px", py: "1px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: 10,
+                                  color: palette.brand.primary,
+                                  fontWeight: 600,
+                                  border: `1px solid ${palette.brand.primary}40`,
+                                  borderRadius: "4px",
+                                  px: "4px",
+                                  py: "1px",
+                                  whiteSpace: "nowrap",
+                                  flexShrink: 0,
+                                }}
+                              >
                                 cheapest
                               </Typography>
                             )}
                           </Stack>
-                          <Typography sx={{ flex: 0.6, fontSize: 12, textAlign: "right", color: palette.text.tertiary }}>{formatTokens(m.max_input_tokens)}</Typography>
-                          <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", fontFamily: "monospace" }}>${costPerReq.toFixed(6)}</Typography>
-                          <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", color: palette.text.tertiary, fontFamily: "monospace" }}>${(inputCostPerReq * Number(calcRequests)).toFixed(4)}</Typography>
-                          <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", color: palette.text.tertiary, fontFamily: "monospace" }}>${(outputCostPerReq * Number(calcRequests)).toFixed(4)}</Typography>
-                          <Typography sx={{ flex: 0.8, fontSize: 12, textAlign: "right", fontFamily: "monospace" }}>${m.dailyCost.toFixed(4)}</Typography>
-                          <Typography sx={{ flex: 1, fontSize: 13, textAlign: "right", fontWeight: 600 }}>${m.monthlyCost.toFixed(2)}</Typography>
+                          <Typography
+                            sx={{
+                              flex: 0.6,
+                              fontSize: 12,
+                              textAlign: "right",
+                              color: palette.text.tertiary,
+                            }}
+                          >
+                            {formatTokens(m.max_input_tokens)}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              flex: 0.8,
+                              fontSize: 12,
+                              textAlign: "right",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ${costPerReq.toFixed(6)}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              flex: 0.8,
+                              fontSize: 12,
+                              textAlign: "right",
+                              color: palette.text.tertiary,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ${(inputCostPerReq * Number(calcRequests)).toFixed(4)}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              flex: 0.8,
+                              fontSize: 12,
+                              textAlign: "right",
+                              color: palette.text.tertiary,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ${(outputCostPerReq * Number(calcRequests)).toFixed(4)}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              flex: 0.8,
+                              fontSize: 12,
+                              textAlign: "right",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ${m.dailyCost.toFixed(4)}
+                          </Typography>
+                          <Typography
+                            sx={{ flex: 1, fontSize: 13, textAlign: "right", fontWeight: 600 }}
+                          >
+                            ${m.monthlyCost.toFixed(2)}
+                          </Typography>
                         </Stack>
                       );
                     })}
                     {calcResultsTotal > 50 && (
                       <Stack direction="row" justifyContent="center" sx={{ pt: "12px" }}>
                         <CustomizableButton
-                          text={calcShowAll ? `Show top 50 of ${calcResultsTotal}` : `Show all ${calcResultsTotal} models`}
+                          text={
+                            calcShowAll
+                              ? `Show top 50 of ${calcResultsTotal}`
+                              : `Show all ${calcResultsTotal} models`
+                          }
                           variant="outlined"
                           onClick={() => setCalcShowAll(!calcShowAll)}
                         />
@@ -502,20 +880,42 @@ export default function ModelsPage() {
 
                   {/* Popular models quick-select */}
                   <Stack gap="4px">
-                    <Typography sx={{ fontSize: 11, color: palette.text.disabled, fontWeight: 600 }}>POPULAR MODELS</Typography>
+                    <Typography
+                      sx={{ fontSize: 11, color: palette.text.disabled, fontWeight: 600 }}
+                    >
+                      POPULAR MODELS
+                    </Typography>
                     <Stack direction="row" gap="6px" flexWrap="wrap">
-                      {["gpt-4o", "gpt-4o-mini", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "gemini-2.0-flash", "gemini-2.5-pro-preview-06-05", "mistral-large-latest", "grok-3"].map((id) => {
+                      {[
+                        "gpt-4o",
+                        "gpt-4o-mini",
+                        "claude-sonnet-4-20250514",
+                        "claude-haiku-4-5-20251001",
+                        "gemini-2.0-flash",
+                        "gemini-2.5-pro-preview-06-05",
+                        "mistral-large-latest",
+                        "grok-3",
+                      ].map((id) => {
                         const selected = compareIds.includes(id);
                         return (
                           <Box
                             key={id}
                             onClick={() => toggleCompare(id)}
                             sx={{
-                              display: "flex", alignItems: "center", gap: "4px",
-                              px: "8px", height: "28px", borderRadius: "4px", cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              px: "8px",
+                              height: "28px",
+                              borderRadius: "4px",
+                              cursor: "pointer",
                               border: `1px solid ${selected ? palette.brand.primary : palette.border.dark}`,
-                              backgroundColor: selected ? `${palette.brand.primary}10` : "transparent",
-                              fontSize: 11, fontWeight: 500, whiteSpace: "nowrap",
+                              backgroundColor: selected
+                                ? `${palette.brand.primary}10`
+                                : "transparent",
+                              fontSize: 11,
+                              fontWeight: 500,
+                              whiteSpace: "nowrap",
                               color: selected ? palette.brand.primary : palette.text.secondary,
                             }}
                           >
@@ -541,11 +941,18 @@ export default function ModelsPage() {
                           direction="row"
                           justifyContent="space-between"
                           alignItems="center"
-                          onClick={() => { toggleCompare(m.id); setSearch(""); }}
+                          onClick={() => {
+                            toggleCompare(m.id);
+                            setSearch("");
+                          }}
                           sx={{
-                            p: "6px 8px", borderRadius: "4px", cursor: "pointer",
+                            p: "6px 8px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
                             "&:hover": { backgroundColor: palette.background.alt },
-                            backgroundColor: compareIds.includes(m.id) ? `${palette.brand.primary}08` : "transparent",
+                            backgroundColor: compareIds.includes(m.id)
+                              ? `${palette.brand.primary}08`
+                              : "transparent",
                           }}
                         >
                           <Stack direction="row" gap="8px" alignItems="center">
@@ -553,7 +960,9 @@ export default function ModelsPage() {
                             <Typography sx={{ fontSize: 12 }}>{m.id}</Typography>
                           </Stack>
                           {compareIds.includes(m.id) && (
-                            <Typography sx={{ fontSize: 11, color: palette.brand.primary }}>selected</Typography>
+                            <Typography sx={{ fontSize: 11, color: palette.brand.primary }}>
+                              selected
+                            </Typography>
                           )}
                         </Stack>
                       ))}
@@ -567,10 +976,44 @@ export default function ModelsPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr>
-                        <th scope="col" style={{ textAlign: "left", padding: "8px", borderBottom: `1px solid ${palette.border.light}`, color: palette.text.tertiary, fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const }}>Feature</th>
+                        <th
+                          scope="col"
+                          style={{
+                            textAlign: "left",
+                            padding: "8px",
+                            borderBottom: `1px solid ${palette.border.light}`,
+                            color: palette.text.tertiary,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            textTransform: "uppercase" as const,
+                          }}
+                        >
+                          Feature
+                        </th>
                         {compareModels.map((m) => (
-                          <th scope="col" key={m.model || m.id} style={{ textAlign: "center", padding: "8px", borderBottom: `1px solid ${palette.border.light}`, fontSize: 11, fontWeight: 600, minWidth: "140px", position: "relative", color: palette.text.tertiary, textTransform: "uppercase" as const }}>
-                            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                          <th
+                            scope="col"
+                            key={m.model || m.id}
+                            style={{
+                              textAlign: "center",
+                              padding: "8px",
+                              borderBottom: `1px solid ${palette.border.light}`,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              minWidth: "140px",
+                              position: "relative",
+                              color: palette.text.tertiary,
+                              textTransform: "uppercase" as const,
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                              }}
+                            >
                               {m.id}
                               <span
                                 onClick={() => toggleCompare(m.id)}
@@ -588,21 +1031,75 @@ export default function ModelsPage() {
                       {[
                         { label: "Provider", icon: null, fn: (m: ModelInfo) => m.provider },
                         { label: "Mode", icon: null, fn: (m: ModelInfo) => m.mode },
-                        { label: "Max input tokens", icon: null, fn: (m: ModelInfo) => formatTokens(m.max_input_tokens) },
-                        { label: "Max output tokens", icon: null, fn: (m: ModelInfo) => formatTokens(m.max_output_tokens) },
-                        { label: "Input $/1M tokens", icon: null, fn: (m: ModelInfo) => formatCost(m.input_cost_per_million) },
-                        { label: "Output $/1M tokens", icon: null, fn: (m: ModelInfo) => formatCost(m.output_cost_per_million) },
-                        { label: "Vision", icon: Eye, fn: (m: ModelInfo) => m.supports_vision ? "Yes" : "No" },
-                        { label: "Function calling", icon: Wrench, fn: (m: ModelInfo) => m.supports_function_calling ? "Yes" : "No" },
-                        { label: "Parallel tools", icon: Wrench, fn: (m: ModelInfo) => m.supports_parallel_function_calling ? "Yes" : "No" },
-                        { label: "PDF input", icon: FileText, fn: (m: ModelInfo) => m.supports_pdf_input ? "Yes" : "No" },
-                        { label: "Prompt caching", icon: Database, fn: (m: ModelInfo) => m.supports_prompt_caching ? "Yes" : "No" },
-                        { label: "Response schema", icon: Layers, fn: (m: ModelInfo) => m.supports_response_schema ? "Yes" : "No" },
-                        { label: "System messages", icon: null, fn: (m: ModelInfo) => m.supports_system_messages ? "Yes" : "No" },
+                        {
+                          label: "Max input tokens",
+                          icon: null,
+                          fn: (m: ModelInfo) => formatTokens(m.max_input_tokens),
+                        },
+                        {
+                          label: "Max output tokens",
+                          icon: null,
+                          fn: (m: ModelInfo) => formatTokens(m.max_output_tokens),
+                        },
+                        {
+                          label: "Input $/1M tokens",
+                          icon: null,
+                          fn: (m: ModelInfo) => formatCost(m.input_cost_per_million),
+                        },
+                        {
+                          label: "Output $/1M tokens",
+                          icon: null,
+                          fn: (m: ModelInfo) => formatCost(m.output_cost_per_million),
+                        },
+                        {
+                          label: "Vision",
+                          icon: Eye,
+                          fn: (m: ModelInfo) => (m.supports_vision ? "Yes" : "No"),
+                        },
+                        {
+                          label: "Function calling",
+                          icon: Wrench,
+                          fn: (m: ModelInfo) => (m.supports_function_calling ? "Yes" : "No"),
+                        },
+                        {
+                          label: "Parallel tools",
+                          icon: Wrench,
+                          fn: (m: ModelInfo) =>
+                            m.supports_parallel_function_calling ? "Yes" : "No",
+                        },
+                        {
+                          label: "PDF input",
+                          icon: FileText,
+                          fn: (m: ModelInfo) => (m.supports_pdf_input ? "Yes" : "No"),
+                        },
+                        {
+                          label: "Prompt caching",
+                          icon: Database,
+                          fn: (m: ModelInfo) => (m.supports_prompt_caching ? "Yes" : "No"),
+                        },
+                        {
+                          label: "Response schema",
+                          icon: Layers,
+                          fn: (m: ModelInfo) => (m.supports_response_schema ? "Yes" : "No"),
+                        },
+                        {
+                          label: "System messages",
+                          icon: null,
+                          fn: (m: ModelInfo) => (m.supports_system_messages ? "Yes" : "No"),
+                        },
                       ].map((row) => (
                         <tr key={row.label}>
-                          <td style={{ padding: "8px", borderBottom: `1px solid ${palette.border.light}`, fontSize: 12, color: palette.text.tertiary }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <td
+                            style={{
+                              padding: "8px",
+                              borderBottom: `1px solid ${palette.border.light}`,
+                              fontSize: 12,
+                              color: palette.text.tertiary,
+                            }}
+                          >
+                            <span
+                              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                            >
                               {row.icon && <row.icon size={13} strokeWidth={1.5} />}
                               {row.label}
                             </span>
@@ -618,30 +1115,52 @@ export default function ModelsPage() {
                             });
                             // For cost rows (contains $), lower is better; for tokens/features, higher is better
                             const isCostRow = row.label.includes("$/");
-                            const validNums = numVals.filter((n) => n !== null && n > 0) as number[];
-                            const bestVal = validNums.length > 0
-                              ? (isCostRow ? Math.min(...validNums) : Math.max(...validNums))
-                              : null;
+                            const validNums = numVals.filter(
+                              (n) => n !== null && n > 0,
+                            ) as number[];
+                            const bestVal =
+                              validNums.length > 0
+                                ? isCostRow
+                                  ? Math.min(...validNums)
+                                  : Math.max(...validNums)
+                                : null;
 
                             return compareModels.map((m, mi) => {
                               const val = vals[mi];
                               const isYes = val === "Yes";
                               const isNo = val === "No";
                               const numVal = numVals[mi];
-                              const isBest = bestVal !== null && numVal === bestVal && validNums.length > 1;
+                              const isBest =
+                                bestVal !== null && numVal === bestVal && validNums.length > 1;
 
                               return (
-                                <td key={m.model || m.id} style={{
-                                  textAlign: "center", padding: "8px",
-                                  borderBottom: `1px solid ${palette.border.light}`,
-                                  fontSize: 12,
-                                  color: isYes ? palette.brand.primary : isNo ? palette.text.disabled : palette.text.primary,
-                                  backgroundColor: isBest ? "#F0FDF4" : "transparent",
-                                  fontWeight: isBest ? 600 : 400,
-                                }}>
-                                  {isYes ? <Check size={15} strokeWidth={2} color={palette.brand.primary} /> :
-                                   isNo ? <X size={15} strokeWidth={1.5} color={palette.text.disabled} /> :
-                                   val}
+                                <td
+                                  key={m.model || m.id}
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "8px",
+                                    borderBottom: `1px solid ${palette.border.light}`,
+                                    fontSize: 12,
+                                    color: isYes
+                                      ? palette.brand.primary
+                                      : isNo
+                                        ? palette.text.disabled
+                                        : palette.text.primary,
+                                    backgroundColor: isBest ? "#F0FDF4" : "transparent",
+                                    fontWeight: isBest ? 600 : 400,
+                                  }}
+                                >
+                                  {isYes ? (
+                                    <Check
+                                      size={15}
+                                      strokeWidth={2}
+                                      color={palette.brand.primary}
+                                    />
+                                  ) : isNo ? (
+                                    <X size={15} strokeWidth={1.5} color={palette.text.disabled} />
+                                  ) : (
+                                    val
+                                  )}
                                 </td>
                               );
                             });
@@ -654,7 +1173,14 @@ export default function ModelsPage() {
               )}
 
               {compareModels.length === 0 && !search && (
-                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, textAlign: "center", py: "32px" }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: palette.text.tertiary,
+                    textAlign: "center",
+                    py: "32px",
+                  }}
+                >
                   Search and select models above to compare features side by side.
                 </Typography>
               )}

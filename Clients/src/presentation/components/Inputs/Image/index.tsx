@@ -15,24 +15,12 @@
 
 import "./index.css";
 import { useState } from "react";
-import {
-  Box,
-  IconButton,
-  Stack,
-  TextField,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, IconButton, Stack, TextField, Typography, useTheme } from "@mui/material";
 import { CloudUpload as CloudUploadIcon } from "lucide-react";
 import { ImageFieldProps } from "../../../types/widget.types";
 import { checkImage, IconButtonStack, TextFieldStyles } from "./constants";
 
-function ImageField({
-  id,
-  src,
-  loading,
-  onChange,
-}: ImageFieldProps) {
+function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
   const theme = useTheme();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -55,9 +43,7 @@ function ImageField({
               height: "fit-content",
               border: "dashed",
               borderRadius: theme.shape.borderRadius,
-              borderColor: isDragging
-                ? theme.palette.primary.main
-                : theme.palette.border.light,
+              borderColor: isDragging ? theme.palette.primary.main : theme.palette.border.light,
               borderWidth: "2px",
               transition: "0.2s",
               "&:hover": {
@@ -69,18 +55,8 @@ function ImageField({
             onDragLeave={handleDragLeave}
             onDrop={handleDragLeave}
           >
-            <TextField
-              id={id}
-              type="file"
-              onChange={onChange}
-              sx={TextFieldStyles}
-            />
-            <Stack
-              className="custom-file-text"
-              alignItems="center"
-              gap="4px"
-              sx={IconButtonStack}
-            >
+            <TextField id={id} type="file" onChange={onChange} sx={TextFieldStyles} />
+            <Stack className="custom-file-text" alignItems="center" gap="4px" sx={IconButtonStack}>
               <IconButton
                 sx={{
                   pointerEvents: "none",
@@ -102,10 +78,7 @@ function ImageField({
                 </Typography>{" "}
                 or drag and drop
               </Typography>
-              <Typography
-                color={theme.palette.text.tertiary}
-                sx={{ opacity: 0.6 }}
-              >
+              <Typography color={theme.palette.text.tertiary} sx={{ opacity: 0.6 }}>
                 (maximum size: 3MB)
               </Typography>
             </Stack>

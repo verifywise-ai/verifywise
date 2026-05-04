@@ -59,9 +59,7 @@ const TipBox = ({ entityName }: TipBoxProps) => {
       sx={{
         marginTop: "8px",
         marginBottom: "8px",
-        animation: isClosing
-          ? `${fadeOut} 0.3s ease-out forwards`
-          : `${fadeIn} 0.3s ease-out`,
+        animation: isClosing ? `${fadeOut} 0.3s ease-out forwards` : `${fadeIn} 0.3s ease-out`,
         position: "relative",
       }}
     >

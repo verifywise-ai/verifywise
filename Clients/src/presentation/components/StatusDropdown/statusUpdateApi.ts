@@ -1,9 +1,9 @@
 /**
  * Status Update API Functions
- * 
+ *
  * Comprehensive API layer for updating status across all ISO framework components.
  * Handles the complex data requirements and endpoint differences between frameworks.
- * 
+ *
  * Key Features:
  * - Proper data fetching and preservation
  * - Framework-specific API endpoints
@@ -36,18 +36,21 @@ export async function updateISO27001ClauseStatus({
   try {
     // Fetch current subclause data to preserve existing fields
     let subClauseData: Record<string, unknown> = currentData || {};
-    
+
     const _response = await getEntityById({
       routeUrl: `/iso-27001/subClause/byId/${id}?projectFrameworkId=${projectFrameworkId}`,
     });
     subClauseData = _response?.data || {};
-    
+
     const formData = new FormData();
-    
+
     // Include all required fields based on drawer implementation
-    formData.append("implementation_description", String(subClauseData.implementation_description || ""));
+    formData.append(
+      "implementation_description",
+      String(subClauseData.implementation_description || ""),
+    );
     formData.append("status", newStatus);
-    
+
     // Only append integer fields if they have valid values
     if (subClauseData.owner && !isNaN(Number(subClauseData.owner))) {
       formData.append("owner", subClauseData.owner.toString());
@@ -58,14 +61,14 @@ export async function updateISO27001ClauseStatus({
     if (subClauseData.approver && !isNaN(Number(subClauseData.approver))) {
       formData.append("approver", subClauseData.approver.toString());
     }
-    
+
     formData.append("auditor_feedback", String(subClauseData.auditor_feedback || ""));
     formData.append("user_id", userId.toString());
     formData.append("project_id", "0");
     formData.append("delete", "[]");
     formData.append("risksMitigated", JSON.stringify(subClauseData.risks || []));
     formData.append("risksDelete", "[]");
-    
+
     if (subClauseData.due_date) {
       formData.append("due_date", String(subClauseData.due_date));
     }
@@ -103,13 +106,16 @@ export async function updateISO27001AnnexStatus({
       routeUrl: `/iso-27001/annexControl/byId/${id}?projectFrameworkId=${projectFrameworkId}`,
     });
     const annexControlId = _response?.data.id;
-    
+
     const formData = new FormData();
-    
+
     // Include all required fields based on drawer implementation
-    formData.append("implementation_description", String(controlData.implementation_description || ""));
+    formData.append(
+      "implementation_description",
+      String(controlData.implementation_description || ""),
+    );
     formData.append("status", newStatus);
-    
+
     // Only append integer fields if they have valid values
     if (controlData.owner && !isNaN(Number(controlData.owner))) {
       formData.append("owner", controlData.owner.toString());
@@ -120,7 +126,7 @@ export async function updateISO27001AnnexStatus({
     if (controlData.approver && !isNaN(Number(controlData.approver))) {
       formData.append("approver", controlData.approver.toString());
     }
-    
+
     formData.append("auditor_feedback", String(controlData.auditor_feedback || ""));
     formData.append("applicable", String(controlData.applicable?.toString() || "true"));
     formData.append("user_id", userId.toString());
@@ -128,7 +134,7 @@ export async function updateISO27001AnnexStatus({
     formData.append("delete", "[]");
     formData.append("risksMitigated", JSON.stringify(controlData.risks || []));
     formData.append("risksDelete", "[]");
-    
+
     if (controlData.due_date) {
       formData.append("due_date", String(controlData.due_date));
     }
@@ -191,18 +197,21 @@ export async function updateISO42001ClauseStatus({
   try {
     // Fetch current subclause data to preserve existing fields
     let subClauseData: Record<string, unknown> = currentData || {};
-    
+
     const _response = await getEntityById({
       routeUrl: `/iso-42001/subClause/byId/${id}?projectFrameworkId=${projectFrameworkId}`,
     });
     subClauseData = _response?.data || {};
-    
+
     const formData = new FormData();
-    
+
     // Include all required fields based on drawer implementation
-    formData.append("implementation_description", String(subClauseData.implementation_description || ""));
+    formData.append(
+      "implementation_description",
+      String(subClauseData.implementation_description || ""),
+    );
     formData.append("status", newStatus);
-    
+
     // Only append integer fields if they have valid values
     if (subClauseData.owner && !isNaN(Number(subClauseData.owner))) {
       formData.append("owner", subClauseData.owner.toString());
@@ -213,14 +222,14 @@ export async function updateISO42001ClauseStatus({
     if (subClauseData.approver && !isNaN(Number(subClauseData.approver))) {
       formData.append("approver", subClauseData.approver.toString());
     }
-    
+
     formData.append("auditor_feedback", String(subClauseData.auditor_feedback || ""));
     formData.append("user_id", userId.toString());
     formData.append("project_id", "0");
     formData.append("delete", "[]");
     formData.append("risksMitigated", JSON.stringify(subClauseData.risks || []));
     formData.append("risksDelete", "[]");
-    
+
     if (subClauseData.due_date) {
       formData.append("due_date", String(subClauseData.due_date));
     }
@@ -258,13 +267,16 @@ export async function updateISO42001AnnexStatus({
       routeUrl: `/iso-42001/annexCategory/byId/${id}?projectFrameworkId=${projectFrameworkId}`,
     });
     const annexCategoryId = _response?.data.id;
-    
+
     const formData = new FormData();
-    
+
     // Include all required fields based on drawer implementation
-    formData.append("implementation_description", String(controlData.implementation_description || ""));
+    formData.append(
+      "implementation_description",
+      String(controlData.implementation_description || ""),
+    );
     formData.append("status", newStatus);
-    
+
     // Only append integer fields if they have valid values
     if (controlData.owner && !isNaN(Number(controlData.owner))) {
       formData.append("owner", controlData.owner.toString());
@@ -275,7 +287,7 @@ export async function updateISO42001AnnexStatus({
     if (controlData.approver && !isNaN(Number(controlData.approver))) {
       formData.append("approver", controlData.approver.toString());
     }
-    
+
     formData.append("auditor_feedback", String(controlData.auditor_feedback || ""));
     formData.append("is_applicable", String(controlData.is_applicable?.toString() || "true"));
     formData.append("user_id", userId.toString());
@@ -283,7 +295,7 @@ export async function updateISO42001AnnexStatus({
     formData.append("delete", "[]");
     formData.append("risksMitigated", JSON.stringify(controlData.risks || []));
     formData.append("risksDelete", "[]");
-    
+
     if (controlData.due_date) {
       formData.append("due_date", String(controlData.due_date));
     }

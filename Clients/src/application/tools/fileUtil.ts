@@ -13,11 +13,10 @@ export const checkImage = (url: string) => {
   return image.naturalWidth !== 0;
 };
 
-
 export const uploadFile = (
   file: File,
   allowedFileTypes: string[],
-  maxFileSize: number
+  maxFileSize: number,
 ): { error?: string; file?: File } => {
   try {
     if (!allowedFileTypes.includes(file.type)) {
@@ -25,7 +24,9 @@ export const uploadFile = (
     }
 
     if (file.size > maxFileSize) {
-      return { error: `File is too large. Maximum size allowed is ${maxFileSize / (1024 * 1024)}MB.` };
+      return {
+        error: `File is too large. Maximum size allowed is ${maxFileSize / (1024 * 1024)}MB.`,
+      };
     }
 
     return { file };

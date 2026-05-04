@@ -49,14 +49,12 @@ Returns an object with the following properties:
 The function uses the following validation criteria:
 
 1. Password Regex Pattern: `/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/`
-
    - Requires at least one lowercase letter
    - Requires at least one uppercase letter
    - Requires at least one digit
    - Minimum length of 8 characters
 
 2. Special Characters Regex: `/[^a-zA-Z\d]/`
-
    - Checks for any non-alphanumeric characters
 
 3. Length Requirements:

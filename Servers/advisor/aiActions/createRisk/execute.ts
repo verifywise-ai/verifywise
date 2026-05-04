@@ -35,10 +35,7 @@ import {
 import { TaskPriority } from "../../../domain.layer/enums/task-priority.enum";
 import { TaskStatus } from "../../../domain.layer/enums/task-status.enum";
 import logger from "../../../utils/logger/fileLogger";
-import type {
-  AiActionExecuteContext,
-  AiActionExecuteResult,
-} from "../types";
+import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentCreateRiskInput } from "./schema";
 
 const DEFAULT_SEVERITY = "Negligible" as const;
@@ -87,10 +84,10 @@ function severityToDeadlineDays(severity: string): number {
  * user isn't found (shouldn't happen, but defensive).
  */
 async function getUserDisplayName(userId: number): Promise<string> {
-  const rows = (await sequelize.query(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  )) as Array<{ name: string; surname: string }>;
+  const rows = (await sequelize.query(`SELECT name, surname FROM users WHERE id = :userId`, {
+    replacements: { userId },
+    type: QueryTypes.SELECT,
+  })) as Array<{ name: string; surname: string }>;
   const user = rows[0];
   return user ? `${user.name} ${user.surname}`.trim() : "AI Advisor";
 }
@@ -99,10 +96,7 @@ async function getUserDisplayName(userId: number): Promise<string> {
  * Get the owner user id for each given project id. Returns a deduplicated
  * set of owner ids (excluding nulls).
  */
-async function getProjectOwnerIds(
-  projectIds: number[],
-  organizationId: number,
-): Promise<number[]> {
+async function getProjectOwnerIds(projectIds: number[], organizationId: number): Promise<number[]> {
   if (projectIds.length === 0) return [];
 
   const rows = (await sequelize.query(
@@ -240,10 +234,7 @@ export async function executeCreateRisk(
   try {
     const projectIds = input.project_ids ?? [];
     if (projectIds.length > 0) {
-      const projectOwnerIds = await getProjectOwnerIds(
-        projectIds,
-        ctx.organizationId,
-      );
+      const projectOwnerIds = await getProjectOwnerIds(projectIds, ctx.organizationId);
 
       for (const ownerId of projectOwnerIds) {
         // Skip if the project owner IS the risk owner — they already got notified above.
@@ -260,7 +251,7 @@ export async function executeCreateRisk(
           entity_id: newRisk.id!,
           entity_name: input.risk_name,
           action_url: `/risk-management?riskId=${newRisk.id}`,
-            });
+        });
       }
     }
   } catch (notifyError) {

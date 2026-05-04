@@ -12,31 +12,16 @@ interface OversightSectionProps {
   isSaving: boolean;
 }
 
-function OversightSection({
-  assessment,
-  onUpdate,
-  isSaving,
-}: OversightSectionProps) {
-  const [humanOversight, setHumanOversight] = useState(
-    assessment.human_oversight ?? ""
-  );
+function OversightSection({ assessment, onUpdate, isSaving }: OversightSectionProps) {
+  const [humanOversight, setHumanOversight] = useState(assessment.human_oversight ?? "");
   const [transparencyMeasures, setTransparencyMeasures] = useState(
-    assessment.transparency_measures ?? ""
+    assessment.transparency_measures ?? "",
   );
-  const [redressProcess, setRedressProcess] = useState(
-    assessment.redress_process ?? ""
-  );
-  const [dataGovernance, setDataGovernance] = useState(
-    assessment.data_governance ?? ""
-  );
+  const [redressProcess, setRedressProcess] = useState(assessment.redress_process ?? "");
+  const [dataGovernance, setDataGovernance] = useState(assessment.data_governance ?? "");
 
   const handleBlur =
-    (
-      field: keyof FriaAssessment,
-      currentVal: string,
-      originalVal: string | null
-    ) =>
-    () => {
+    (field: keyof FriaAssessment, currentVal: string, originalVal: string | null) => () => {
       if (currentVal !== (originalVal ?? "")) {
         onUpdate({ [field]: currentVal });
       }
@@ -49,18 +34,35 @@ function OversightSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_14`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_14`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 14
           </a>{" "}
-          mandates human oversight for high-risk AI systems, including the ability to intervene or override.{" "}
-          <a href={`${EU_ACT_LINK}#art_13`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          mandates human oversight for high-risk AI systems, including the ability to intervene or
+          override.{" "}
+          <a
+            href={`${EU_ACT_LINK}#art_13`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 13
           </a>{" "}
           requires transparency and provision of information to deployers.{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)(g)
           </a>{" "}
-          requires the FRIA to describe accountability and governance processes, including complaint and redress mechanisms.
+          requires the FRIA to describe accountability and governance processes, including complaint
+          and redress mechanisms.
         </>
       }
     >
@@ -87,7 +89,7 @@ function OversightSection({
         onBlur={handleBlur(
           "transparency_measures",
           transparencyMeasures,
-          assessment.transparency_measures
+          assessment.transparency_measures,
         )}
         disabled={isSaving}
       />

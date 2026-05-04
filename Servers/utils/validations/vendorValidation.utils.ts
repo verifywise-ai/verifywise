@@ -116,8 +116,7 @@ export const validateWebsite = (value: any): ValidationResult => {
   if (!urlPattern.test(value.trim())) {
     return {
       isValid: false,
-      message:
-        "Website must be a valid URL (starting with http:// or https://)",
+      message: "Website must be a valid URL (starting with http:// or https://)",
       code: "INVALID_URL_FORMAT",
     };
   }
@@ -161,24 +160,14 @@ export const validateReviewStatus = (value: any): ValidationResult => {
  * Validates data sensitivity enum field
  */
 export const validateDataSensitivity = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "Data sensitivity",
-    VENDOR_DATA_SENSITIVITY_ENUM,
-    false
-  );
+  return validateEnum(value, "Data sensitivity", VENDOR_DATA_SENSITIVITY_ENUM, false);
 };
 
 /**
  * Validates business criticality enum field
  */
 export const validateBusinessCriticality = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "Business criticality",
-    VENDOR_BUSINESS_CRITICALITY_ENUM,
-    false
-  );
+  return validateEnum(value, "Business criticality", VENDOR_BUSINESS_CRITICALITY_ENUM, false);
 };
 
 /**
@@ -192,12 +181,7 @@ export const validatePastIssues = (value: any): ValidationResult => {
  * Validates regulatory exposure enum field
  */
 export const validateRegulatoryExposure = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "Regulatory exposure",
-    VENDOR_REGULATORY_EXPOSURE_ENUM,
-    false
-  );
+  return validateEnum(value, "Regulatory exposure", VENDOR_REGULATORY_EXPOSURE_ENUM, false);
 };
 
 /**
@@ -271,11 +255,7 @@ export const validateProjects = (value: any): ValidationResult => {
   // Validate each project ID in the array
   for (let i = 0; i < value.length; i++) {
     const projectId = value[i];
-    const validation = validateForeignKey(
-      projectId,
-      `Project ID at index ${i}`,
-      false
-    );
+    const validation = validateForeignKey(projectId, `Project ID at index ${i}`, false);
     if (!validation.isValid) {
       return {
         isValid: false,
@@ -317,30 +297,22 @@ export const updateVendorSchema = {
     value !== undefined ? validateVendorName(value) : { isValid: true },
   vendor_provides: (value: any) =>
     value !== undefined ? validateVendorProvides(value) : { isValid: true },
-  assignee: (value: any) =>
-    value !== undefined ? validateAssignee(value) : { isValid: true },
-  website: (value: any) =>
-    value !== undefined ? validateWebsite(value) : { isValid: true },
+  assignee: (value: any) => (value !== undefined ? validateAssignee(value) : { isValid: true }),
+  website: (value: any) => (value !== undefined ? validateWebsite(value) : { isValid: true }),
   vendor_contact_person: (value: any) =>
-    value !== undefined
-      ? validateVendorContactPerson(value)
-      : { isValid: true },
+    value !== undefined ? validateVendorContactPerson(value) : { isValid: true },
   review_result: (value: any) =>
     value !== undefined ? validateReviewResult(value) : { isValid: true },
   review_status: (value: any) =>
     value !== undefined ? validateReviewStatus(value) : { isValid: true },
-  reviewer: (value: any) =>
-    value !== undefined ? validateReviewer(value) : { isValid: true },
+  reviewer: (value: any) => (value !== undefined ? validateReviewer(value) : { isValid: true }),
   review_date: (value: any) =>
     value !== undefined ? validateReviewDate(value) : { isValid: true },
-  projects: (value: any) =>
-    value !== undefined ? validateProjects(value) : { isValid: true },
+  projects: (value: any) => (value !== undefined ? validateProjects(value) : { isValid: true }),
   data_sensitivity: (value: any) =>
     value !== undefined ? validateDataSensitivity(value) : { isValid: true },
   business_criticality: (value: any) =>
-    value !== undefined
-      ? validateBusinessCriticality(value)
-      : { isValid: true },
+    value !== undefined ? validateBusinessCriticality(value) : { isValid: true },
   past_issues: (value: any) =>
     value !== undefined ? validatePastIssues(value) : { isValid: true },
   regulatory_exposure: (value: any) =>
@@ -376,9 +348,7 @@ export const validateUpdateVendor = (data: any): ValidationError[] => {
     "regulatory_exposure",
   ];
 
-  const hasUpdateField = updateFields.some(
-    (field) => data[field] !== undefined
-  );
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
     return [
@@ -416,7 +386,7 @@ export const validateProjectIdParam = (id: any): ValidationResult => {
  */
 export const validateReviewStatusProgression = (
   currentStatus: string,
-  newStatus: string
+  newStatus: string,
 ): ValidationResult => {
   // If status hasn't changed, it's always valid
   if (currentStatus === newStatus) {
@@ -449,7 +419,7 @@ export const validateReviewStatusProgression = (
  */
 export const validateReviewDateConsistency = (
   reviewStatus: string,
-  reviewDate: Date
+  reviewDate: Date,
 ): ValidationResult => {
   if (reviewStatus === "Reviewed" || reviewStatus === "Requires follow-up") {
     const now = new Date();
@@ -465,13 +435,10 @@ export const validateReviewDateConsistency = (
   return { isValid: true };
 };
 
-
 /**
  * Validates website accessibility (placeholder for future implementation)
  */
-export const validateWebsiteAccessibility = async (
-  website: string
-): Promise<ValidationResult> => {
+export const validateWebsiteAccessibility = async (website: string): Promise<ValidationResult> => {
   // This would be implemented to check if website is accessible
   // For now, just validate the URL format
   return validateWebsite(website);
@@ -480,9 +447,7 @@ export const validateWebsiteAccessibility = async (
 /**
  * Validates that user exists (placeholder for database check)
  */
-export const validateUserExists = async (
-  userId: number
-): Promise<ValidationResult> => {
+export const validateUserExists = async (userId: number): Promise<ValidationResult> => {
   // This would be implemented to check if user exists in database
   // For now, just validate the ID format
   return validateForeignKey(userId, "User ID", true);
@@ -491,9 +456,7 @@ export const validateUserExists = async (
 /**
  * Complete validation for vendor creation with business rules
  */
-export const validateCompleteVendorWithBusinessRules = (
-  data: any
-): ValidationError[] => {
+export const validateCompleteVendorWithBusinessRules = (data: any): ValidationError[] => {
   const errors = validateCompleteVendor(data);
 
   // Add business rule validations if basic validation passes
@@ -502,7 +465,7 @@ export const validateCompleteVendorWithBusinessRules = (
     if (data.review_status && data.review_date) {
       const reviewDateCheck = validateReviewDateConsistency(
         data.review_status,
-        new Date(data.review_date)
+        new Date(data.review_date),
       );
 
       if (!reviewDateCheck.isValid) {
@@ -523,7 +486,7 @@ export const validateCompleteVendorWithBusinessRules = (
  */
 export const validateUpdateVendorWithBusinessRules = (
   data: any,
-  currentVendor?: any
+  currentVendor?: any,
 ): ValidationError[] => {
   const errors = validateUpdateVendor(data);
 
@@ -533,7 +496,7 @@ export const validateUpdateVendorWithBusinessRules = (
     if (data.review_status !== undefined) {
       const statusProgression = validateReviewStatusProgression(
         currentVendor.review_status,
-        data.review_status
+        data.review_status,
       );
 
       if (!statusProgression.isValid) {
@@ -547,19 +510,11 @@ export const validateUpdateVendorWithBusinessRules = (
 
     // Check review date consistency
     const newStatus =
-      data.review_status !== undefined
-        ? data.review_status
-        : currentVendor.review_status;
-    const newDate =
-      data.review_date !== undefined
-        ? data.review_date
-        : currentVendor.review_date;
+      data.review_status !== undefined ? data.review_status : currentVendor.review_status;
+    const newDate = data.review_date !== undefined ? data.review_date : currentVendor.review_date;
 
     if (newStatus && newDate) {
-      const reviewDateCheck = validateReviewDateConsistency(
-        newStatus,
-        new Date(newDate)
-      );
+      const reviewDateCheck = validateReviewDateConsistency(newStatus, new Date(newDate));
 
       if (!reviewDateCheck.isValid) {
         errors.push({

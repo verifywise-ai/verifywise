@@ -40,17 +40,12 @@ describe("Test Evidence Hub Repository", () => {
       const routeUrl = "/evidenceHub";
       const data = { name: "Bad Evidence" };
       const error = new Error("Post failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(createEvidenceHub(routeUrl, data)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating incident management:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating incident management:", error);
 
       consoleErrorSpy.mockRestore();
     });

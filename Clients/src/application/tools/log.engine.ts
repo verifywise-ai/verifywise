@@ -20,9 +20,7 @@ export function logEngine(props: LogProps) {
   const tokenUser = authToken ? extractUserToken(authToken) : null;
 
   // Find user in users list
-  const contextUser = tokenUser?.id
-    ? users.find((u: any) => u.id === tokenUser.id)
-    : null;
+  const contextUser = tokenUser?.id ? users.find((u: any) => u.id === tokenUser.id) : null;
 
   // Use context user or token user
   const user = contextUser || tokenUser || {};

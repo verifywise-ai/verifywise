@@ -96,7 +96,7 @@ export class ValidationException extends CustomException {
     message: string,
     field?: string,
     value?: any,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       field,
@@ -123,7 +123,7 @@ export class NotFoundException extends CustomException {
     message: string,
     resource?: string,
     identifier?: any,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       resource,
@@ -148,7 +148,7 @@ export class NotFoundException extends CustomException {
 export class UnauthorizedException extends CustomException {
   constructor(
     message: string = "Unauthorized access",
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     super(message, {
       code: "UNAUTHORIZED",
@@ -168,7 +168,7 @@ export class ForbiddenException extends CustomException {
     message: string = "Access forbidden",
     resource?: string,
     action?: string,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       resource,
@@ -195,7 +195,7 @@ export class ConflictException extends CustomException {
     message: string,
     resource?: string,
     conflictField?: string,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       resource,
@@ -222,7 +222,7 @@ export class BusinessLogicException extends CustomException {
     message: string,
     rule?: string,
     context?: any,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       rule,
@@ -249,7 +249,7 @@ export class DatabaseException extends CustomException {
     message: string,
     operation?: string,
     table?: string,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       operation,
@@ -276,7 +276,7 @@ export class ExternalServiceException extends CustomException {
     message: string,
     service?: string,
     endpoint?: string,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       service,
@@ -302,7 +302,7 @@ export class ConfigurationException extends CustomException {
   constructor(
     message: string,
     configKey?: string,
-    options: Omit<ExceptionOptions, "code" | "statusCode"> = {}
+    options: Omit<ExceptionOptions, "code" | "statusCode"> = {},
   ) {
     const metadata = {
       configKey,
@@ -332,7 +332,7 @@ export function isCustomException(error: any): error is CustomException {
  */
 export function createCustomException(
   error: Error,
-  options: ExceptionOptions = {}
+  options: ExceptionOptions = {},
 ): CustomException {
   return new CustomException(error.message, {
     ...options,
@@ -344,19 +344,11 @@ export function createCustomException(
  * Exception factory for creating typed exceptions
  */
 export class ExceptionFactory {
-  static validation(
-    message: string,
-    field?: string,
-    value?: any
-  ): ValidationException {
+  static validation(message: string, field?: string, value?: any): ValidationException {
     return new ValidationException(message, field, value);
   }
 
-  static notFound(
-    message: string,
-    resource?: string,
-    identifier?: any
-  ): NotFoundException {
+  static notFound(message: string, resource?: string, identifier?: any): NotFoundException {
     return new NotFoundException(message, resource, identifier);
   }
 
@@ -364,50 +356,31 @@ export class ExceptionFactory {
     return new UnauthorizedException(message);
   }
 
-  static forbidden(
-    message?: string,
-    resource?: string,
-    action?: string
-  ): ForbiddenException {
+  static forbidden(message?: string, resource?: string, action?: string): ForbiddenException {
     return new ForbiddenException(message, resource, action);
   }
 
-  static conflict(
-    message: string,
-    resource?: string,
-    conflictField?: string
-  ): ConflictException {
+  static conflict(message: string, resource?: string, conflictField?: string): ConflictException {
     return new ConflictException(message, resource, conflictField);
   }
 
-  static businessLogic(
-    message: string,
-    rule?: string,
-    context?: any
-  ): BusinessLogicException {
+  static businessLogic(message: string, rule?: string, context?: any): BusinessLogicException {
     return new BusinessLogicException(message, rule, context);
   }
 
-  static database(
-    message: string,
-    operation?: string,
-    table?: string
-  ): DatabaseException {
+  static database(message: string, operation?: string, table?: string): DatabaseException {
     return new DatabaseException(message, operation, table);
   }
 
   static externalService(
     message: string,
     service?: string,
-    endpoint?: string
+    endpoint?: string,
   ): ExternalServiceException {
     return new ExternalServiceException(message, service, endpoint);
   }
 
-  static configuration(
-    message: string,
-    configKey?: string
-  ): ConfigurationException {
+  static configuration(message: string, configKey?: string): ConfigurationException {
     return new ConfigurationException(message, configKey);
   }
 }

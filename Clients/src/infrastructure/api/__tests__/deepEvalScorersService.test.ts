@@ -30,14 +30,23 @@ describe("deepEvalScorersService", () => {
   it("list fetches scorers with params", async () => {
     mockAxios.get.mockResolvedValue({ data: { scorers: [{ id: "s1" }] } });
     const result = await deepEvalScorersService.list({ org_id: "org-1" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/scorers", { params: { org_id: "org-1" } });
+    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/scorers", {
+      params: { org_id: "org-1" },
+    });
     expect(result.scorers).toHaveLength(1);
   });
 
   it("create posts scorer with orgId", async () => {
     mockAxios.post.mockResolvedValue({ data: { id: "s1", name: "Test", metricKey: "m1" } });
-    const result = await deepEvalScorersService.create({ name: "Test", metricKey: "m1", orgId: "org-1" });
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/scorers", expect.objectContaining({ name: "Test", orgId: "org-1" }));
+    const result = await deepEvalScorersService.create({
+      name: "Test",
+      metricKey: "m1",
+      orgId: "org-1",
+    });
+    expect(mockAxios.post).toHaveBeenCalledWith(
+      "/deepeval/scorers",
+      expect.objectContaining({ name: "Test", orgId: "org-1" }),
+    );
     expect(result.id).toBe("s1");
   });
 
@@ -58,7 +67,10 @@ describe("deepEvalScorersService", () => {
   it("test sends test payload", async () => {
     mockAxios.post.mockResolvedValue({ data: { scorerId: "s1", score: 0.9, passed: true } });
     const result = await deepEvalScorersService.test("s1", { input: "hi", output: "hello" });
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/scorers/s1/test", { input: "hi", output: "hello" });
+    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/scorers/s1/test", {
+      input: "hi",
+      output: "hello",
+    });
     expect(result.passed).toBe(true);
   });
 });

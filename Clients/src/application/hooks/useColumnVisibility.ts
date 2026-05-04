@@ -87,21 +87,15 @@ export interface UseColumnVisibilityReturn<TKey extends string> {
  * @returns Column visibility state and actions
  */
 export function useColumnVisibility<TKey extends string = string>(
-  options: UseColumnVisibilityOptions<TKey>
+  options: UseColumnVisibilityOptions<TKey>,
 ): UseColumnVisibilityReturn<TKey> {
-  const {
-    tableId,
-    columns,
-    storagePrefix = "verifywise:columns",
-  } = options;
+  const { tableId, columns, storagePrefix = "verifywise:columns" } = options;
 
   const storageKey = `${storagePrefix}:${tableId}`;
 
   // Get default visible columns
   const getDefaultVisibleColumns = useCallback((): Set<TKey> => {
-    return new Set(
-      columns.filter((c) => c.defaultVisible).map((c) => c.key)
-    );
+    return new Set(columns.filter((c) => c.defaultVisible).map((c) => c.key));
   }, [columns]);
 
   // Initialize from localStorage or defaults
@@ -111,13 +105,9 @@ export function useColumnVisibility<TKey extends string = string>(
       if (stored) {
         const parsed = JSON.parse(stored) as TKey[];
         // Validate that stored columns still exist in config
-        const validColumns = parsed.filter((key) =>
-          columns.some((c) => c.key === key)
-        );
+        const validColumns = parsed.filter((key) => columns.some((c) => c.key === key));
         // Always include alwaysVisible columns
-        const alwaysVisibleKeys = columns
-          .filter((c) => c.alwaysVisible)
-          .map((c) => c.key);
+        const alwaysVisibleKeys = columns.filter((c) => c.alwaysVisible).map((c) => c.key);
         return new Set([...validColumns, ...alwaysVisibleKeys]);
       }
     } catch (err) {
@@ -154,7 +144,7 @@ export function useColumnVisibility<TKey extends string = string>(
         return next;
       });
     },
-    [columns]
+    [columns],
   );
 
   /**
@@ -175,7 +165,7 @@ export function useColumnVisibility<TKey extends string = string>(
         return next;
       });
     },
-    [columns]
+    [columns],
   );
 
   /**
@@ -190,7 +180,7 @@ export function useColumnVisibility<TKey extends string = string>(
    */
   const isColumnVisible = useCallback(
     (column: TKey) => visibleColumns.has(column),
-    [visibleColumns]
+    [visibleColumns],
   );
 
   /**
@@ -209,7 +199,7 @@ export function useColumnVisibility<TKey extends string = string>(
         ...config,
         visible: visibleColumns.has(config.key),
       })),
-    [columns, visibleColumns]
+    [columns, visibleColumns],
   );
 
   return {

@@ -41,7 +41,10 @@ const SuperAdminSidebar: React.FC = () => {
 
   const isItemActive = (item: SidebarMenuItem): boolean => {
     if (item.path === "/super-admin") {
-      return location.pathname === "/super-admin" || location.pathname.startsWith("/super-admin/organizations");
+      return (
+        location.pathname === "/super-admin" ||
+        location.pathname.startsWith("/super-admin/organizations")
+      );
     }
     if (item.path) {
       return location.pathname === item.path;

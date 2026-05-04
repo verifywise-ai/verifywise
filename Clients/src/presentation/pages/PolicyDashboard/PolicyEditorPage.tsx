@@ -121,8 +121,7 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
   const src = node.attrs.src || "";
   const alt = node.attrs.alt || "";
   const width = node.attrs.width as number | null;
-  const isApiUrl =
-    src.startsWith("/api/") || src.includes("/api/file-manager/");
+  const isApiUrl = src.startsWith("/api/") || src.includes("/api/file-manager/");
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -172,7 +171,7 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [updateAttributes]
+    [updateAttributes],
   );
 
   const displaySrc = isApiUrl ? blobUrl : src;
@@ -257,7 +256,7 @@ const AuthImageExtension = TipTapImage.extend({
       ...this.parent?.(),
       width: {
         default: null,
-        parseHTML: (el) => el.getAttribute("width") ? Number(el.getAttribute("width")) : null,
+        parseHTML: (el) => (el.getAttribute("width") ? Number(el.getAttribute("width")) : null),
         renderHTML: (attrs) => (attrs.width ? { width: attrs.width } : {}),
       },
     };
@@ -323,13 +322,10 @@ const defaultToolbarState: Record<ToolbarKey, boolean> = {
 function normalizeSlateHtml(html: string): string {
   let n = html.replace(
     /<div([^>]*?)data-slate-type="(h[1-6]|p|blockquote)"([^>]*)>/gi,
-    (_m, before, tag, after) => `<${tag}${before}${after}>`
+    (_m, before, tag, after) => `<${tag}${before}${after}>`,
   );
   n = n.replace(/<div[^>]*class="slate-editor"[^>]*>/gi, "");
-  n = n.replace(
-    /<span[^>]*data-slate-string="true"[^>]*>([^<]*)<\/span>/gi,
-    "$1"
-  );
+  n = n.replace(/<span[^>]*data-slate-string="true"[^>]*>([^<]*)<\/span>/gi, "$1");
   n = n.replace(/<span[^>]*data-slate-leaf="true"[^>]*>/gi, "");
   n = n.replace(/<span[^>]*data-slate-node="text"[^>]*>/gi, "");
   n = n.replace(/\s*data-slate-[a-z-]+="[^"]*"/gi, "");
@@ -346,20 +342,60 @@ function normalizeSlateHtml(html: string): string {
 
 const sanitizeOptions: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOWED_TAGS: [
-    "p", "br", "strong", "b", "em", "i", "u",
-    "h1", "h2", "h3", "h4", "h5", "h6",
-    "blockquote", "code", "pre",
-    "ul", "ol", "li", "label", "input",
-    "a", "img", "span", "div", "mark", "s", "hr",
-    "table", "thead", "tbody", "tr", "th", "td",
-    "sup", "sub",
+    "p",
+    "br",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "code",
+    "pre",
+    "ul",
+    "ol",
+    "li",
+    "label",
+    "input",
+    "a",
+    "img",
+    "span",
+    "div",
+    "mark",
+    "s",
+    "hr",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "sup",
+    "sub",
   ],
   ALLOWED_ATTR: [
-    "href", "title", "alt", "src", "width",
-    "class", "id", "style",
-    "target", "rel",
-    "colspan", "rowspan",
-    "data-type", "data-checked", "type", "checked",
+    "href",
+    "title",
+    "alt",
+    "src",
+    "width",
+    "class",
+    "id",
+    "style",
+    "target",
+    "rel",
+    "colspan",
+    "rowspan",
+    "data-type",
+    "data-checked",
+    "type",
+    "checked",
   ],
   ALLOWED_URI_REGEXP:
     /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
@@ -379,7 +415,9 @@ function createSearchHighlightExtension() {
         new Plugin({
           key: searchHighlightKey,
           state: {
-            init() { return { term: "", decorations: DecorationSet.empty }; },
+            init() {
+              return { term: "", decorations: DecorationSet.empty };
+            },
             apply(tr, prev) {
               const meta = tr.getMeta(searchHighlightKey);
               if (meta !== undefined) {
@@ -395,7 +433,7 @@ function createSearchHighlightExtension() {
                     decorations.push(
                       Decoration.inline(pos + idx, pos + idx + term.length, {
                         class: "search-highlight",
-                      })
+                      }),
                     );
                     idx = text.indexOf(searchLower, idx + term.length);
                   }
@@ -506,15 +544,19 @@ export default function PolicyEditorPage() {
           : "";
       },
     }),
-    []
+    [],
   );
 
-  const { errors: validationErrors, validateAll, resetErrors, clearFieldError } =
-    useFormValidation<PolicyFormData>(validators);
+  const {
+    errors: validationErrors,
+    validateAll,
+    resetErrors,
+    clearFieldError,
+  } = useFormValidation<PolicyFormData>(validators);
 
   const displayErrors = useMemo(
     () => ({ ...validationErrors, ...serverErrors }),
-    [validationErrors, serverErrors]
+    [validationErrors, serverErrors],
   );
 
   const [formData, setFormData] = useState<PolicyFormData>({
@@ -558,9 +600,7 @@ export default function PolicyEditorPage() {
         }
       } catch (err: any) {
         if (!cancelled) {
-          setLoadError(
-            id ? "Failed to load policy. It may not exist." : "Failed to load tags."
-          );
+          setLoadError(id ? "Failed to load policy. It may not exist." : "Failed to load tags.");
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -568,7 +608,9 @@ export default function PolicyEditorPage() {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   // ── Populate form from policy/template ────────────────────────────
@@ -649,78 +691,50 @@ export default function PolicyEditorPage() {
 
   // ── TipTap editor ─────────────────────────────────────────────────
   // Pass `deps` array so the editor re-creates when content changes
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      TipTapUnderline,
-      Highlight,
-      TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
-      TipTapLink.configure({
-        openOnClick: false,
-        HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
-      }),
-      AuthImageExtension.configure({ inline: false, allowBase64: true }),
-      TipTapTable.configure({ resizable: true }),
-      TipTapTableRow,
-      TipTapTableCell,
-      TipTapTableHeader,
-      Placeholder.configure({ placeholder: "Start typing your policy content..." }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      CharacterCount,
-      Superscript,
-      Subscript,
-      TypographyExtension,
-      TextStyle,
-      Color,
-      createSearchHighlightExtension(),
-    ],
-    content: initialContent,
-    autofocus: false,
-    onUpdate: ({ editor: e }) => {
-      if (isLoadingContentRef.current) return;
-      setFormData((prev) => ({ ...prev, content: e.getHTML() }));
-      updateToolbarState();
-    },
-    onSelectionUpdate: () => updateToolbarState(),
-    editorProps: {
-      handleDrop: (view, event, _slice, moved) => {
-        if (moved || !event.dataTransfer?.files?.length) return false;
-        const file = event.dataTransfer.files[0];
-        if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) return false;
-        event.preventDefault();
-        // Capture position before async upload
-        const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
-        const dropPos = coords?.pos ?? view.state.selection.anchor;
-        (async () => {
-          try {
-            const response = await uploadFileToManager({
-              file,
-              model_id: null,
-              source: "policy_editor",
-              signal: undefined,
-            });
-            const fileId = response.data.id;
-            const node = view.state.schema.nodes.image.create({
-              src: `/api/file-manager/${fileId}`,
-              alt: file.name,
-            });
-            const tr = view.state.tr.insert(Math.min(dropPos, view.state.doc.content.size), node);
-            view.dispatch(tr);
-          } catch {
-            // ignore
-          }
-        })();
-        return true;
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+        TipTapUnderline,
+        Highlight,
+        TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
+        TipTapLink.configure({
+          openOnClick: false,
+          HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
+        }),
+        AuthImageExtension.configure({ inline: false, allowBase64: true }),
+        TipTapTable.configure({ resizable: true }),
+        TipTapTableRow,
+        TipTapTableCell,
+        TipTapTableHeader,
+        Placeholder.configure({ placeholder: "Start typing your policy content..." }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        CharacterCount,
+        Superscript,
+        Subscript,
+        TypographyExtension,
+        TextStyle,
+        Color,
+        createSearchHighlightExtension(),
+      ],
+      content: initialContent,
+      autofocus: false,
+      onUpdate: ({ editor: e }) => {
+        if (isLoadingContentRef.current) return;
+        setFormData((prev) => ({ ...prev, content: e.getHTML() }));
+        updateToolbarState();
       },
-      handlePaste: (view, event) => {
-        const items = event.clipboardData?.items;
-        if (!items) return false;
-        for (const item of Array.from(items)) {
-          if (!item.type.startsWith("image/")) continue;
-          const file = item.getAsFile();
-          if (!file || file.size > 10 * 1024 * 1024) continue;
+      onSelectionUpdate: () => updateToolbarState(),
+      editorProps: {
+        handleDrop: (view, event, _slice, moved) => {
+          if (moved || !event.dataTransfer?.files?.length) return false;
+          const file = event.dataTransfer.files[0];
+          if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) return false;
           event.preventDefault();
+          // Capture position before async upload
+          const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          const dropPos = coords?.pos ?? view.state.selection.anchor;
           (async () => {
             try {
               const response = await uploadFileToManager({
@@ -734,23 +748,52 @@ export default function PolicyEditorPage() {
                 src: `/api/file-manager/${fileId}`,
                 alt: file.name,
               });
-              const tr = view.state.tr.replaceSelectionWith(node);
+              const tr = view.state.tr.insert(Math.min(dropPos, view.state.doc.content.size), node);
               view.dispatch(tr);
             } catch {
               // ignore
             }
           })();
           return true;
-        }
-        return false;
+        },
+        handlePaste: (view, event) => {
+          const items = event.clipboardData?.items;
+          if (!items) return false;
+          for (const item of Array.from(items)) {
+            if (!item.type.startsWith("image/")) continue;
+            const file = item.getAsFile();
+            if (!file || file.size > 10 * 1024 * 1024) continue;
+            event.preventDefault();
+            (async () => {
+              try {
+                const response = await uploadFileToManager({
+                  file,
+                  model_id: null,
+                  source: "policy_editor",
+                  signal: undefined,
+                });
+                const fileId = response.data.id;
+                const node = view.state.schema.nodes.image.create({
+                  src: `/api/file-manager/${fileId}`,
+                  alt: file.name,
+                });
+                const tr = view.state.tr.replaceSelectionWith(node);
+                view.dispatch(tr);
+              } catch {
+                // ignore
+              }
+            })();
+            return true;
+          }
+          return false;
+        },
       },
     },
-  }, [initialContent]);
+    [initialContent],
+  );
 
   // ── Image upload handler ──────────────────────────────────────────
-  const handleImageFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     event.target.value = "";
@@ -779,33 +822,43 @@ export default function PolicyEditorPage() {
   };
 
   // ── Block type change ─────────────────────────────────────────────
-  const handleBlockTypeChange = (event: {
-    target: { value: string | number };
-  }) => {
+  const handleBlockTypeChange = (event: { target: { value: string | number } }) => {
     const newType = String(event.target.value);
     setCurrentBlockType(newType);
     if (!editor) return;
     if (newType === "p") editor.chain().focus().setParagraph().run();
-    else if (newType === "h1")
-      editor.chain().focus().toggleHeading({ level: 1 }).run();
-    else if (newType === "h2")
-      editor.chain().focus().toggleHeading({ level: 2 }).run();
-    else if (newType === "h3")
-      editor.chain().focus().toggleHeading({ level: 3 }).run();
+    else if (newType === "h1") editor.chain().focus().toggleHeading({ level: 1 }).run();
+    else if (newType === "h2") editor.chain().focus().toggleHeading({ level: 2 }).run();
+    else if (newType === "h3") editor.chain().focus().toggleHeading({ level: 3 }).run();
     setTimeout(() => updateToolbarState(), 0);
   };
 
   // ── Color palette ────────────────────────────────────────────────
   const colorPalette = [
-    "text.black", "text.secondary", "text.tertiary", "text.icon",
-    "#dc2626", "#ea580c", "#d97706", "#ca8a04",
-    "#16a34a", "#059669", "#0d9488", "#0891b2",
-    "#2563eb", "#4f46e5", "#7c3aed", "#9333ea",
+    "text.black",
+    "text.secondary",
+    "text.tertiary",
+    "text.icon",
+    "#dc2626",
+    "#ea580c",
+    "#d97706",
+    "#ca8a04",
+    "#16a34a",
+    "#059669",
+    "#0d9488",
+    "#0891b2",
+    "#2563eb",
+    "#4f46e5",
+    "#7c3aed",
+    "#9333ea",
   ];
 
   // ── Search & replace ───────────────────────────────────────────
   const countMatches = useCallback(() => {
-    if (!editor || !searchText) { setSearchMatchCount(0); return; }
+    if (!editor || !searchText) {
+      setSearchMatchCount(0);
+      return;
+    }
     const searchLower = searchText.toLowerCase();
     let count = 0;
     editor.state.doc.descendants((node) => {
@@ -855,9 +908,8 @@ export default function PolicyEditorPage() {
     doc.descendants((node, pos) => {
       if (found || !node.isText || !node.text) return;
       const text = node.text.toLowerCase();
-      const idx = pos >= startFrom
-        ? text.indexOf(searchLower)
-        : text.indexOf(searchLower, startFrom - pos);
+      const idx =
+        pos >= startFrom ? text.indexOf(searchLower) : text.indexOf(searchLower, startFrom - pos);
       if (idx !== -1 && pos + idx >= startFrom) {
         const from = pos + idx;
         const to = from + searchText.length;
@@ -952,9 +1004,9 @@ export default function PolicyEditorPage() {
         const from = pos + idx;
         const to = from + searchText.length;
         tr.replaceWith(
-          from + (replaced * (replaceText.length - searchText.length)),
-          to + (replaced * (replaceText.length - searchText.length)),
-          editor.state.schema.text(replaceText)
+          from + replaced * (replaceText.length - searchText.length),
+          to + replaced * (replaceText.length - searchText.length),
+          editor.state.schema.text(replaceText),
         );
         replaced++;
         idx = text.indexOf(searchLower, idx + searchText.length);
@@ -1085,11 +1137,7 @@ export default function PolicyEditorPage() {
     {
       key: "link",
       title: editor?.isActive("link") ? "Remove link" : "Insert link",
-      icon: editor?.isActive("link") ? (
-        <Unlink size={16} />
-      ) : (
-        <Link size={16} />
-      ),
+      icon: editor?.isActive("link") ? <Unlink size={16} /> : <Link size={16} />,
       action: () => {
         if (!editor) return;
         if (editor.isActive("link")) {
@@ -1097,9 +1145,7 @@ export default function PolicyEditorPage() {
           return;
         }
         const { from, to } = editor.state.selection;
-        setSelectedTextForLink(
-          from !== to ? editor.state.doc.textBetween(from, to) : ""
-        );
+        setSelectedTextForLink(from !== to ? editor.state.doc.textBetween(from, to) : "");
         setOpenLink(true);
       },
     },
@@ -1116,11 +1162,7 @@ export default function PolicyEditorPage() {
       title: "Insert table",
       icon: <Table size={16} />,
       action: () =>
-        editor
-          ?.chain()
-          .focus()
-          .insertTable({ rows: 3, cols: 4, withHeaderRow: true })
-          .run(),
+        editor?.chain().focus().insertTable({ rows: 3, cols: 4, withHeaderRow: true }).run(),
     },
     {
       key: "color",
@@ -1235,9 +1277,7 @@ export default function PolicyEditorPage() {
       status: formData.status,
       tags: formData.tags,
       content_html: html,
-      next_review_date: formData.nextReviewDate
-        ? new Date(formData.nextReviewDate)
-        : undefined,
+      next_review_date: formData.nextReviewDate ? new Date(formData.nextReviewDate) : undefined,
       assigned_reviewer_ids: formData.assignedReviewers.map((u) => u.id),
     };
 
@@ -1261,8 +1301,7 @@ export default function PolicyEditorPage() {
     } catch (err: any) {
       setIsSaving(false);
 
-      const errorData =
-        err?.originalError?.response || err?.response?.data || err?.response;
+      const errorData = err?.originalError?.response || err?.response?.data || err?.response;
 
       if (errorData?.errors) {
         const apiErrors: PolicyFormErrors = {};
@@ -1270,10 +1309,8 @@ export default function PolicyEditorPage() {
           if (error.field === "title") apiErrors.title = error.message;
           else if (error.field === "status") apiErrors.status = error.message;
           else if (error.field === "tags") apiErrors.tags = error.message;
-          else if (error.field === "content_html")
-            apiErrors.content = error.message;
-          else if (error.field === "next_review_date")
-            apiErrors.nextReviewDate = error.message;
+          else if (error.field === "content_html") apiErrors.content = error.message;
+          else if (error.field === "next_review_date") apiErrors.nextReviewDate = error.message;
           else if (error.field === "assigned_reviewer_ids")
             apiErrors.assignedReviewers = error.message;
         });
@@ -1286,8 +1323,7 @@ export default function PolicyEditorPage() {
   const downloadExport = async (format: "pdf" | "docx") => {
     if (!policy?.id) return;
 
-    const setExporting =
-      format === "pdf" ? setIsExportingPDF : setIsExportingDOCX;
+    const setExporting = format === "pdf" ? setIsExportingPDF : setIsExportingDOCX;
     setExporting(true);
     setExportError(null);
 
@@ -1296,14 +1332,11 @@ export default function PolicyEditorPage() {
 
     try {
       const token = store.getState().auth.authToken;
-      const response = await fetch(
-        `/api/policies/${policy.id}/export/${format}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        }
-      );
+      const response = await fetch(`/api/policies/${policy.id}/export/${format}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
 
       clearTimeout(timeout);
       if (!response.ok) throw new Error(`Export failed (${response.status})`);
@@ -1337,7 +1370,7 @@ export default function PolicyEditorPage() {
       setExportError(
         error.name === "AbortError"
           ? `${format.toUpperCase()} export timed out. Please try again.`
-          : `Failed to export ${format.toUpperCase()}. Please try again.`
+          : `Failed to export ${format.toUpperCase()}. Please try again.`,
       );
     } finally {
       setExporting(false);
@@ -1484,623 +1517,619 @@ export default function PolicyEditorPage() {
         {/* ── Breadcrumbs ──────────────────────────────────────────── */}
         <PageBreadcrumbs />
 
-      <Stack
-        sx={{
-          height: "calc(100vh - 100px)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-
         <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: "8px", flexShrink: 0 }}
+          sx={{
+            height: "calc(100vh - 100px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
         >
-          <Stack direction="row" alignItems="center" gap={1}>
-            <Tooltip title="Back to policies" arrow>
-              <IconButton
-                onClick={() => navigate("/policies")}
-                size="small"
-                sx={{
-                  padding: "4px",
-                  borderRadius: "4px",
-                  color: "text.muted",
-                  "&:hover": { backgroundColor: "#F2F4F7", color: "text.secondary" },
-                }}
-              >
-                <ArrowLeft size={18} />
-              </IconButton>
-            </Tooltip>
-            <Typography sx={{ fontSize: 16, color: "text.secondary", fontWeight: 600 }}>
-              {pageTitle}
-            </Typography>
-          </Stack>
-
-          <Stack direction="row" gap="8px" alignItems="center">
-            {/* Export error */}
-            {exportError && (
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  color: theme.palette.status?.error?.text || "#f04438",
-                  backgroundColor: theme.palette.status?.error?.bg || "#f9eced",
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: "4px",
-                }}
-              >
-                {exportError}
-              </Typography>
-            )}
-
-            {/* History toggle */}
-            {!isNew && policy?.id && (
-              <Tooltip title="Activity history" arrow>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ mb: "8px", flexShrink: 0 }}
+          >
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Tooltip title="Back to policies" arrow>
                 <IconButton
-                  onClick={() => setIsHistorySidebarOpen((prev) => !prev)}
+                  onClick={() => navigate("/policies")}
                   size="small"
                   sx={{
-                    color: isHistorySidebarOpen ? "brand.primary" : "text.muted",
                     padding: "4px",
                     borderRadius: "4px",
-                    backgroundColor: isHistorySidebarOpen
-                      ? "#E6F4F1"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor: isHistorySidebarOpen
-                        ? "#D1EDE6"
-                        : "#F2F4F7",
-                    },
+                    color: "text.muted",
+                    "&:hover": { backgroundColor: "#F2F4F7", color: "text.secondary" },
                   }}
                 >
-                  <HistoryIcon size={16} />
+                  <ArrowLeft size={18} />
                 </IconButton>
               </Tooltip>
-            )}
-
-            {/* Export dropdown + Import button */}
-            {!isNew && policy?.id && (
-              <>
-                <CustomizableButton
-                  variant="outlined"
-                  text={
-                    isExportingPDF
-                      ? "Exporting PDF..."
-                      : isExportingDOCX
-                        ? "Exporting Word..."
-                        : "Export"
-                  }
-                  isDisabled={isExportingPDF || isExportingDOCX}
-                  sx={{
-                    backgroundColor: "background.main",
-                    border: "1px solid #d0d5dd",
-                    color: "text.secondary",
-                    gap: 1,
-                    minWidth: "90px",
-                    "&:hover": {
-                      backgroundColor: "background.accent",
-                      borderColor: "text.muted",
-                    },
-                    "&:disabled": {
-                      backgroundColor: "background.accent",
-                      borderColor: "#E4E7EC",
-                      color: "text.muted",
-                    },
-                  }}
-                  onClick={(e: React.MouseEvent<HTMLElement>) =>
-                    setExportAnchorEl(e.currentTarget)
-                  }
-                  icon={
-                    isExportingPDF || isExportingDOCX ? (
-                      <Loader2
-                        size={16}
-                        style={{ animation: "spin 1s linear infinite" }}
-                      />
-                    ) : (
-                      <FileDown size={16} />
-                    )
-                  }
-                />
-                <Popover
-                  open={Boolean(exportAnchorEl)}
-                  anchorEl={exportAnchorEl}
-                  onClose={() => setExportAnchorEl(null)}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                  transformOrigin={{ vertical: "top", horizontal: "left" }}
-                  slotProps={{
-                    paper: {
-                      sx: {
-                        mt: 0.5,
-                        borderRadius: "4px",
-                        border: "1px solid #E4E7EC",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                        minWidth: 140,
-                        p: 0.5,
-                        display: "flex",
-                        flexDirection: "column",
-                      },
-                    },
-                  }}
-                >
-                  {[
-                    { icon: <FileText size={14} />, label: "Download as PDF", format: "pdf" as const },
-                    { icon: <FileDown size={14} />, label: "Download as Word", format: "docx" as const },
-                  ].map(({ icon, label, format }) => (
-                    <Box
-                      key={format}
-                      component="button"
-                      onClick={() => {
-                        setExportAnchorEl(null);
-                        downloadExport(format);
-                      }}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        px: 1.5,
-                        py: 1,
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        borderRadius: "4px",
-                        fontSize: 13,
-                        color: "text.secondary",
-                        width: "100%",
-                        textAlign: "left",
-                        "&:hover": { backgroundColor: "#F2F4F7" },
-                      }}
-                    >
-                      {icon}
-                      {label}
-                    </Box>
-                  ))}
-                </Popover>
-              </>
-            )}
-
-            {/* Import DOCX */}
-            <CustomizableButton
-              variant="outlined"
-              text={isImporting ? "Importing..." : "Import"}
-              isDisabled={isImporting}
-              sx={{
-                backgroundColor: "background.main",
-                border: "1px solid #d0d5dd",
-                color: "text.secondary",
-                gap: 1,
-                minWidth: "90px",
-                "&:hover": {
-                  backgroundColor: "background.accent",
-                  borderColor: "text.muted",
-                },
-                "&:disabled": {
-                  backgroundColor: "background.accent",
-                  borderColor: "#E4E7EC",
-                  color: "text.muted",
-                },
-              }}
-              onClick={() => docxInputRef.current?.click()}
-              icon={
-                isImporting ? (
-                  <Loader2
-                    size={16}
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />
-                ) : (
-                  <Upload size={16} />
-                )
-              }
-            />
-            <input
-              ref={docxInputRef}
-              type="file"
-              accept=".docx"
-              style={{ display: "none" }}
-              onChange={handleDocxFileSelect}
-            />
-
-            {/* Save */}
-            <CustomizableButton
-              variant="contained"
-              text={
-                isSaving
-                  ? "Saving..."
-                  : saveSuccess
-                    ? "Saved"
-                    : isNew && template
-                      ? "Save in organizational policies"
-                      : "Save"
-              }
-              isDisabled={isSaving}
-              sx={{
-                backgroundColor: saveSuccess ? "#079455" : "brand.primary",
-                border: `1px solid ${saveSuccess ? "#079455" : "#13715B"}`,
-                gap: 2,
-                "&:hover": {
-                  backgroundColor: saveSuccess ? "#079455" : "#0F5B4D",
-                  borderColor: saveSuccess ? "#079455" : "#0F5B4D",
-                },
-                "&:disabled": {
-                  backgroundColor: "brand.primary",
-                  opacity: 0.7,
-                },
-              }}
-              onClick={save}
-              icon={
-                isSaving ? (
-                  <Loader2
-                    size={16}
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />
-                ) : saveSuccess ? (
-                  <Check size={16} />
-                ) : (
-                  <SaveIcon size={16} />
-                )
-              }
-            />
-          </Stack>
-        </Stack>
-
-        {/* ── Metadata form ────────────────────────────────────────── */}
-        <Box ref={formRef} sx={{ flexShrink: 0, mb: "8px" }}>
-          <PolicyForm
-            formData={formData}
-            setFormData={setFormData}
-            tags={tags}
-            errors={displayErrors}
-            clearFieldError={clearFieldError}
-          />
-        </Box>
-
-        {/* ── Toolbar ──────────────────────────────────────────────── */}
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 0.5,
-            mb: "8px",
-            alignItems: "center",
-            flexShrink: 0,
-          }}
-        >
-          {/* Block type dropdown */}
-          <Box sx={{ mr: 2 }}>
-            <Select
-              id="block-type-select"
-              value={currentBlockType}
-              onChange={handleBlockTypeChange}
-              items={[
-                { _id: "p", name: "Text" },
-                { _id: "h1", name: "Header 1" },
-                { _id: "h2", name: "Header 2" },
-                { _id: "h3", name: "Header 3" },
-              ]}
-              sx={{ width: 120, height: "34px" }}
-            />
-          </Box>
-
-          {toolbarConfig.map(({ key, title, icon, action }) => (
-            <Tooltip key={key} title={title}>
-              <IconButton
-                onClick={(e) => {
-                  if (key === "color") {
-                    setColorAnchorEl(e.currentTarget);
-                    return;
-                  }
-                  if (key === "search") {
-                    setSearchAnchorEl(e.currentTarget);
-                    return;
-                  }
-                  action?.();
-                  setTimeout(() => updateToolbarState(), 0);
-                }}
-                size="small"
-                sx={{
-                  padding: "6px",
-                  borderRadius: "3px",
-                  backgroundColor: toolbarState[key] ? "#E0F7FA" : "background.main",
-                  border: "1px solid",
-                  borderColor: toolbarState[key] ? "brand.primary" : "transparent",
-                  "&:hover": { backgroundColor: "background.surface" },
-                }}
-              >
-                {icon}
-              </IconButton>
-            </Tooltip>
-          ))}
-
-          {/* Character / word count */}
-          {editor && (
-            <Box sx={{ ml: "auto", display: "flex", gap: 2, alignItems: "center" }}>
-              <Typography sx={{ fontSize: 11, color: "text.muted" }}>
-                {editor.storage.characterCount.words()} words
+              <Typography sx={{ fontSize: 16, color: "text.secondary", fontWeight: 600 }}>
+                {pageTitle}
               </Typography>
-              <Typography sx={{ fontSize: 11, color: "text.muted" }}>
-                {editor.storage.characterCount.characters()} characters
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
-        {/* ── Color picker popover ────────────────────────────────── */}
-        <Popover
-          open={Boolean(colorAnchorEl)}
-          anchorEl={colorAnchorEl}
-          onClose={() => setColorAnchorEl(null)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-          transformOrigin={{ vertical: "top", horizontal: "left" }}
-          slotProps={{
-            paper: {
-              sx: {
-                p: 1.5,
-                borderRadius: "6px",
-                border: "1px solid #d0d5dd",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-              },
-            },
-          }}
-        >
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "4px" }}>
-            {colorPalette.map((c) => (
-              <Box
-                key={c}
-                onClick={() => {
-                  editor?.chain().focus().setColor(c).run();
-                  setColorAnchorEl(null);
-                }}
-                sx={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: "4px",
-                  backgroundColor: c,
-                  cursor: "pointer",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  "&:hover": { transform: "scale(1.15)", transition: "transform 0.1s" },
-                }}
-              />
-            ))}
-          </Box>
-          <Box
-            onClick={() => {
-              editor?.chain().focus().unsetColor().run();
-              setColorAnchorEl(null);
-            }}
-            sx={{
-              mt: 1,
-              textAlign: "center",
-              fontSize: 11,
-              color: "text.icon",
-              cursor: "pointer",
-              "&:hover": { color: "text.secondary" },
-            }}
-          >
-            Reset to default
-          </Box>
-        </Popover>
-
-        {/* ── Find & replace popover (Google Docs style) ────────────── */}
-        <Popover
-          open={Boolean(searchAnchorEl)}
-          anchorEl={searchAnchorEl}
-          onClose={() => {
-            setSearchAnchorEl(null);
-            setSearchText("");
-            setReplaceText("");
-          }}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          disableAutoFocus
-          disableEnforceFocus
-          slotProps={{
-            paper: {
-              sx: {
-                width: 340,
-                borderRadius: "4px",
-                border: "1px solid #d0d5dd",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                p: "16px",
-              },
-            },
-          }}
-        >
-          {/* Find row */}
-          <Stack gap="12px">
-            <Stack direction="row" gap="8px" alignItems="center">
-              <Box sx={{ flex: 1 }}>
-                <Field
-                  id="search-find-input"
-                  placeholder="Find in document..."
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleSearchNext(); }}
-                  autoFocus
-                  sx={{
-                    "& .field-input": { height: 34 },
-                    "& input": { padding: "0 10px", fontSize: 13 },
-                  }}
-                />
-              </Box>
-              <Tooltip title="Previous" arrow>
-                <IconButton
-                  onClick={handleSearchPrev}
-                  disabled={searchMatchCount === 0}
-                  size="small"
-                  sx={{
-                    padding: "6px",
-                    borderRadius: "4px",
-                    border: "1px solid #d0d5dd",
-                    color: "text.secondary",
-                    "&:hover": { backgroundColor: "background.accent" },
-                    "&:disabled": { color: "border.dark", borderColor: "border.light" },
-                  }}
-                >
-                  <ChevronUpIcon size={16} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Next" arrow>
-                <IconButton
-                  onClick={handleSearchNext}
-                  disabled={searchMatchCount === 0}
-                  size="small"
-                  sx={{
-                    padding: "6px",
-                    borderRadius: "4px",
-                    border: "1px solid #d0d5dd",
-                    color: "text.secondary",
-                    "&:hover": { backgroundColor: "background.accent" },
-                    "&:disabled": { color: "border.dark", borderColor: "border.light" },
-                  }}
-                >
-                  <ChevronDownIcon size={16} />
-                </IconButton>
-              </Tooltip>
             </Stack>
 
-            {/* Match count */}
-            {searchText && (
-              <Typography sx={{ fontSize: 11, color: "text.muted", mt: "-4px" }}>
-                {searchMatchCount === 0
-                  ? "No matches found"
-                  : `${searchMatchCount} match${searchMatchCount !== 1 ? "es" : ""} found`}
-              </Typography>
-            )}
-
-            {/* Replace row */}
             <Stack direction="row" gap="8px" alignItems="center">
-              <Box sx={{ flex: 1 }}>
-                <Field
-                  id="search-replace-input"
-                  placeholder="Replace with..."
-                  value={replaceText}
-                  onChange={(e) => setReplaceText(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleReplaceCurrent(); }}
+              {/* Export error */}
+              {exportError && (
+                <Typography
                   sx={{
-                    "& .field-input": { height: 34 },
-                    "& input": { padding: "0 10px", fontSize: 13 },
+                    fontSize: 12,
+                    color: theme.palette.status?.error?.text || "#f04438",
+                    backgroundColor: theme.palette.status?.error?.bg || "#f9eced",
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: "4px",
                   }}
-                />
-              </Box>
-              <Tooltip title="Replace" arrow>
-                <span>
+                >
+                  {exportError}
+                </Typography>
+              )}
+
+              {/* History toggle */}
+              {!isNew && policy?.id && (
+                <Tooltip title="Activity history" arrow>
+                  <IconButton
+                    onClick={() => setIsHistorySidebarOpen((prev) => !prev)}
+                    size="small"
+                    sx={{
+                      color: isHistorySidebarOpen ? "brand.primary" : "text.muted",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      backgroundColor: isHistorySidebarOpen ? "#E6F4F1" : "transparent",
+                      "&:hover": {
+                        backgroundColor: isHistorySidebarOpen ? "#D1EDE6" : "#F2F4F7",
+                      },
+                    }}
+                  >
+                    <HistoryIcon size={16} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              {/* Export dropdown + Import button */}
+              {!isNew && policy?.id && (
+                <>
                   <CustomizableButton
                     variant="outlined"
-                    text="Replace"
-                    onClick={handleReplaceCurrent}
-                    isDisabled={searchMatchCount === 0}
+                    text={
+                      isExportingPDF
+                        ? "Exporting PDF..."
+                        : isExportingDOCX
+                          ? "Exporting Word..."
+                          : "Export"
+                    }
+                    isDisabled={isExportingPDF || isExportingDOCX}
                     sx={{
-                      minWidth: "auto",
-                      height: 34,
-                      px: "10px",
-                      fontSize: 12,
                       backgroundColor: "background.main",
                       border: "1px solid #d0d5dd",
                       color: "text.secondary",
-                      whiteSpace: "nowrap",
-                      "&:hover": { backgroundColor: "background.accent" },
+                      gap: 1,
+                      minWidth: "90px",
+                      "&:hover": {
+                        backgroundColor: "background.accent",
+                        borderColor: "text.muted",
+                      },
+                      "&:disabled": {
+                        backgroundColor: "background.accent",
+                        borderColor: "#E4E7EC",
+                        color: "text.muted",
+                      },
                     }}
+                    onClick={(e: React.MouseEvent<HTMLElement>) =>
+                      setExportAnchorEl(e.currentTarget)
+                    }
+                    icon={
+                      isExportingPDF || isExportingDOCX ? (
+                        <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                      ) : (
+                        <FileDown size={16} />
+                      )
+                    }
                   />
-                </span>
-              </Tooltip>
-            </Stack>
+                  <Popover
+                    open={Boolean(exportAnchorEl)}
+                    anchorEl={exportAnchorEl}
+                    onClose={() => setExportAnchorEl(null)}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                    transformOrigin={{ vertical: "top", horizontal: "left" }}
+                    slotProps={{
+                      paper: {
+                        sx: {
+                          mt: 0.5,
+                          borderRadius: "4px",
+                          border: "1px solid #E4E7EC",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          minWidth: 140,
+                          p: 0.5,
+                          display: "flex",
+                          flexDirection: "column",
+                        },
+                      },
+                    }}
+                  >
+                    {[
+                      {
+                        icon: <FileText size={14} />,
+                        label: "Download as PDF",
+                        format: "pdf" as const,
+                      },
+                      {
+                        icon: <FileDown size={14} />,
+                        label: "Download as Word",
+                        format: "docx" as const,
+                      },
+                    ].map(({ icon, label, format }) => (
+                      <Box
+                        key={format}
+                        component="button"
+                        onClick={() => {
+                          setExportAnchorEl(null);
+                          downloadExport(format);
+                        }}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          px: 1.5,
+                          py: 1,
+                          border: "none",
+                          background: "none",
+                          cursor: "pointer",
+                          borderRadius: "4px",
+                          fontSize: 13,
+                          color: "text.secondary",
+                          width: "100%",
+                          textAlign: "left",
+                          "&:hover": { backgroundColor: "#F2F4F7" },
+                        }}
+                      >
+                        {icon}
+                        {label}
+                      </Box>
+                    ))}
+                  </Popover>
+                </>
+              )}
 
-            {/* Replace all */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              {/* Import DOCX */}
               <CustomizableButton
                 variant="outlined"
-                text="Replace all"
-                onClick={handleReplaceAll}
-                isDisabled={searchMatchCount === 0}
+                text={isImporting ? "Importing..." : "Import"}
+                isDisabled={isImporting}
                 sx={{
-                  minWidth: "auto",
-                  height: 34,
-                  px: "10px",
-                  fontSize: 12,
                   backgroundColor: "background.main",
                   border: "1px solid #d0d5dd",
                   color: "text.secondary",
-                  whiteSpace: "nowrap",
-                  "&:hover": { backgroundColor: "background.accent" },
+                  gap: 1,
+                  minWidth: "90px",
+                  "&:hover": {
+                    backgroundColor: "background.accent",
+                    borderColor: "text.muted",
+                  },
+                  "&:disabled": {
+                    backgroundColor: "background.accent",
+                    borderColor: "#E4E7EC",
+                    color: "text.muted",
+                  },
                 }}
+                onClick={() => docxInputRef.current?.click()}
+                icon={
+                  isImporting ? (
+                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <Upload size={16} />
+                  )
+                }
               />
-            </Box>
-          </Stack>
-        </Popover>
+              <input
+                ref={docxInputRef}
+                type="file"
+                accept=".docx"
+                style={{ display: "none" }}
+                onChange={handleDocxFileSelect}
+              />
 
-        {/* ── Editor + History sidebar ────────────────────────────── */}
-        <Stack
-          direction="row"
-          sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}
-        >
-          {/* Editor */}
+              {/* Save */}
+              <CustomizableButton
+                variant="contained"
+                text={
+                  isSaving
+                    ? "Saving..."
+                    : saveSuccess
+                      ? "Saved"
+                      : isNew && template
+                        ? "Save in organizational policies"
+                        : "Save"
+                }
+                isDisabled={isSaving}
+                sx={{
+                  backgroundColor: saveSuccess ? "#079455" : "brand.primary",
+                  border: `1px solid ${saveSuccess ? "#079455" : "#13715B"}`,
+                  gap: 2,
+                  "&:hover": {
+                    backgroundColor: saveSuccess ? "#079455" : "#0F5B4D",
+                    borderColor: saveSuccess ? "#079455" : "#0F5B4D",
+                  },
+                  "&:disabled": {
+                    backgroundColor: "brand.primary",
+                    opacity: 0.7,
+                  },
+                }}
+                onClick={save}
+                icon={
+                  isSaving ? (
+                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : saveSuccess ? (
+                    <Check size={16} />
+                  ) : (
+                    <SaveIcon size={16} />
+                  )
+                }
+              />
+            </Stack>
+          </Stack>
+
+          {/* ── Metadata form ────────────────────────────────────────── */}
+          <Box ref={formRef} sx={{ flexShrink: 0, mb: "8px" }}>
+            <PolicyForm
+              formData={formData}
+              setFormData={setFormData}
+              tags={tags}
+              errors={displayErrors}
+              clearFieldError={clearFieldError}
+            />
+          </Box>
+
+          {/* ── Toolbar ──────────────────────────────────────────────── */}
           <Box
             sx={{
-              flex: 1,
-              minWidth: 0,
-              minHeight: 0,
-              overflow: "auto",
-              border: "1px solid #d0d5dd",
-              borderRadius: "4px",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 0.5,
+              mb: "8px",
+              alignItems: "center",
+              flexShrink: 0,
             }}
           >
-            <EditorContent
-              editor={editor}
-              className="policy-tiptap-editor"
-            />
+            {/* Block type dropdown */}
+            <Box sx={{ mr: 2 }}>
+              <Select
+                id="block-type-select"
+                value={currentBlockType}
+                onChange={handleBlockTypeChange}
+                items={[
+                  { _id: "p", name: "Text" },
+                  { _id: "h1", name: "Header 1" },
+                  { _id: "h2", name: "Header 2" },
+                  { _id: "h3", name: "Header 3" },
+                ]}
+                sx={{ width: 120, height: "34px" }}
+              />
+            </Box>
 
-            {/* ── Floating table toolbar ────────────────────────── */}
-            {editor && (
-              <BubbleMenu
-                editor={editor}
-                pluginKey="tableMenu"
-                shouldShow={({ editor: e }) => e.isActive("table")}
-                updateDelay={100}
-              >
-                <Box
+            {toolbarConfig.map(({ key, title, icon, action }) => (
+              <Tooltip key={key} title={title}>
+                <IconButton
+                  onClick={(e) => {
+                    if (key === "color") {
+                      setColorAnchorEl(e.currentTarget);
+                      return;
+                    }
+                    if (key === "search") {
+                      setSearchAnchorEl(e.currentTarget);
+                      return;
+                    }
+                    action?.();
+                    setTimeout(() => updateToolbarState(), 0);
+                  }}
+                  size="small"
                   sx={{
-                    display: "flex",
-                    gap: "2px",
-                    p: "4px",
-                    alignItems: "center",
-                    backgroundColor: "background.main",
-                    border: "1px solid #d0d5dd",
-                    borderRadius: "6px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+                    padding: "6px",
+                    borderRadius: "3px",
+                    backgroundColor: toolbarState[key] ? "#E0F7FA" : "background.main",
+                    border: "1px solid",
+                    borderColor: toolbarState[key] ? "brand.primary" : "transparent",
+                    "&:hover": { backgroundColor: "background.surface" },
                   }}
                 >
-                  {tableToolbarConfig.map(({ key, title, icon, action, separator, danger }) => (
-                    <React.Fragment key={key}>
-                      <Tooltip title={title} placement="top" arrow>
-                        <IconButton
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            action();
-                          }}
-                          size="small"
-                          sx={{
-                            padding: "5px",
-                            borderRadius: "4px",
-                            color: danger ? "#dc2626" : "#374151",
-                            "&:hover": {
-                              backgroundColor: danger ? "#fef2f2" : "background.hover",
-                            },
-                          }}
-                        >
-                          {icon}
-                        </IconButton>
-                      </Tooltip>
-                      {separator && (
-                        <Divider orientation="vertical" flexItem sx={{ mx: "2px", borderColor: "status.default.border" }} />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </Box>
-              </BubbleMenu>
+                  {icon}
+                </IconButton>
+              </Tooltip>
+            ))}
+
+            {/* Character / word count */}
+            {editor && (
+              <Box sx={{ ml: "auto", display: "flex", gap: 2, alignItems: "center" }}>
+                <Typography sx={{ fontSize: 11, color: "text.muted" }}>
+                  {editor.storage.characterCount.words()} words
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: "text.muted" }}>
+                  {editor.storage.characterCount.characters()} characters
+                </Typography>
+              </Box>
             )}
-            <style>{`
+          </Box>
+
+          {/* ── Color picker popover ────────────────────────────────── */}
+          <Popover
+            open={Boolean(colorAnchorEl)}
+            anchorEl={colorAnchorEl}
+            onClose={() => setColorAnchorEl(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  p: 1.5,
+                  borderRadius: "6px",
+                  border: "1px solid #d0d5dd",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                },
+              },
+            }}
+          >
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "4px" }}>
+              {colorPalette.map((c) => (
+                <Box
+                  key={c}
+                  onClick={() => {
+                    editor?.chain().focus().setColor(c).run();
+                    setColorAnchorEl(null);
+                  }}
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "4px",
+                    backgroundColor: c,
+                    cursor: "pointer",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    "&:hover": { transform: "scale(1.15)", transition: "transform 0.1s" },
+                  }}
+                />
+              ))}
+            </Box>
+            <Box
+              onClick={() => {
+                editor?.chain().focus().unsetColor().run();
+                setColorAnchorEl(null);
+              }}
+              sx={{
+                mt: 1,
+                textAlign: "center",
+                fontSize: 11,
+                color: "text.icon",
+                cursor: "pointer",
+                "&:hover": { color: "text.secondary" },
+              }}
+            >
+              Reset to default
+            </Box>
+          </Popover>
+
+          {/* ── Find & replace popover (Google Docs style) ────────────── */}
+          <Popover
+            open={Boolean(searchAnchorEl)}
+            anchorEl={searchAnchorEl}
+            onClose={() => {
+              setSearchAnchorEl(null);
+              setSearchText("");
+              setReplaceText("");
+            }}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            disableAutoFocus
+            disableEnforceFocus
+            slotProps={{
+              paper: {
+                sx: {
+                  width: 340,
+                  borderRadius: "4px",
+                  border: "1px solid #d0d5dd",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  p: "16px",
+                },
+              },
+            }}
+          >
+            {/* Find row */}
+            <Stack gap="12px">
+              <Stack direction="row" gap="8px" alignItems="center">
+                <Box sx={{ flex: 1 }}>
+                  <Field
+                    id="search-find-input"
+                    placeholder="Find in document..."
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSearchNext();
+                    }}
+                    autoFocus
+                    sx={{
+                      "& .field-input": { height: 34 },
+                      "& input": { padding: "0 10px", fontSize: 13 },
+                    }}
+                  />
+                </Box>
+                <Tooltip title="Previous" arrow>
+                  <IconButton
+                    onClick={handleSearchPrev}
+                    disabled={searchMatchCount === 0}
+                    size="small"
+                    sx={{
+                      padding: "6px",
+                      borderRadius: "4px",
+                      border: "1px solid #d0d5dd",
+                      color: "text.secondary",
+                      "&:hover": { backgroundColor: "background.accent" },
+                      "&:disabled": { color: "border.dark", borderColor: "border.light" },
+                    }}
+                  >
+                    <ChevronUpIcon size={16} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Next" arrow>
+                  <IconButton
+                    onClick={handleSearchNext}
+                    disabled={searchMatchCount === 0}
+                    size="small"
+                    sx={{
+                      padding: "6px",
+                      borderRadius: "4px",
+                      border: "1px solid #d0d5dd",
+                      color: "text.secondary",
+                      "&:hover": { backgroundColor: "background.accent" },
+                      "&:disabled": { color: "border.dark", borderColor: "border.light" },
+                    }}
+                  >
+                    <ChevronDownIcon size={16} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+
+              {/* Match count */}
+              {searchText && (
+                <Typography sx={{ fontSize: 11, color: "text.muted", mt: "-4px" }}>
+                  {searchMatchCount === 0
+                    ? "No matches found"
+                    : `${searchMatchCount} match${searchMatchCount !== 1 ? "es" : ""} found`}
+                </Typography>
+              )}
+
+              {/* Replace row */}
+              <Stack direction="row" gap="8px" alignItems="center">
+                <Box sx={{ flex: 1 }}>
+                  <Field
+                    id="search-replace-input"
+                    placeholder="Replace with..."
+                    value={replaceText}
+                    onChange={(e) => setReplaceText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleReplaceCurrent();
+                    }}
+                    sx={{
+                      "& .field-input": { height: 34 },
+                      "& input": { padding: "0 10px", fontSize: 13 },
+                    }}
+                  />
+                </Box>
+                <Tooltip title="Replace" arrow>
+                  <span>
+                    <CustomizableButton
+                      variant="outlined"
+                      text="Replace"
+                      onClick={handleReplaceCurrent}
+                      isDisabled={searchMatchCount === 0}
+                      sx={{
+                        minWidth: "auto",
+                        height: 34,
+                        px: "10px",
+                        fontSize: 12,
+                        backgroundColor: "background.main",
+                        border: "1px solid #d0d5dd",
+                        color: "text.secondary",
+                        whiteSpace: "nowrap",
+                        "&:hover": { backgroundColor: "background.accent" },
+                      }}
+                    />
+                  </span>
+                </Tooltip>
+              </Stack>
+
+              {/* Replace all */}
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <CustomizableButton
+                  variant="outlined"
+                  text="Replace all"
+                  onClick={handleReplaceAll}
+                  isDisabled={searchMatchCount === 0}
+                  sx={{
+                    minWidth: "auto",
+                    height: 34,
+                    px: "10px",
+                    fontSize: 12,
+                    backgroundColor: "background.main",
+                    border: "1px solid #d0d5dd",
+                    color: "text.secondary",
+                    whiteSpace: "nowrap",
+                    "&:hover": { backgroundColor: "background.accent" },
+                  }}
+                />
+              </Box>
+            </Stack>
+          </Popover>
+
+          {/* ── Editor + History sidebar ────────────────────────────── */}
+          <Stack direction="row" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+            {/* Editor */}
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                overflow: "auto",
+                border: "1px solid #d0d5dd",
+                borderRadius: "4px",
+              }}
+            >
+              <EditorContent editor={editor} className="policy-tiptap-editor" />
+
+              {/* ── Floating table toolbar ────────────────────────── */}
+              {editor && (
+                <BubbleMenu
+                  editor={editor}
+                  pluginKey="tableMenu"
+                  shouldShow={({ editor: e }) => e.isActive("table")}
+                  updateDelay={100}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: "2px",
+                      p: "4px",
+                      alignItems: "center",
+                      backgroundColor: "background.main",
+                      border: "1px solid #d0d5dd",
+                      borderRadius: "6px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    {tableToolbarConfig.map(({ key, title, icon, action, separator, danger }) => (
+                      <React.Fragment key={key}>
+                        <Tooltip title={title} placement="top" arrow>
+                          <IconButton
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              action();
+                            }}
+                            size="small"
+                            sx={{
+                              padding: "5px",
+                              borderRadius: "4px",
+                              color: danger ? "#dc2626" : "#374151",
+                              "&:hover": {
+                                backgroundColor: danger ? "#fef2f2" : "background.hover",
+                              },
+                            }}
+                          >
+                            {icon}
+                          </IconButton>
+                        </Tooltip>
+                        {separator && (
+                          <Divider
+                            orientation="vertical"
+                            flexItem
+                            sx={{ mx: "2px", borderColor: "status.default.border" }}
+                          />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </Box>
+                </BubbleMenu>
+              )}
+              <style>{`
               .policy-tiptap-editor .ProseMirror {
                 height: 100%;
                 min-height: 300px;
@@ -2285,29 +2314,29 @@ export default function PolicyEditorPage() {
                 box-shadow: 0 0 0 1px #eab308;
               }
             `}</style>
-          </Box>
+            </Box>
 
-          {displayErrors.content && (
-            <Typography
-              component="span"
-              color={theme.palette.status?.error?.text || theme.palette.error.main}
-              sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
-            >
-              {displayErrors.content}
-            </Typography>
-          )}
+            {displayErrors.content && (
+              <Typography
+                component="span"
+                color={theme.palette.status?.error?.text || theme.palette.error.main}
+                sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
+              >
+                {displayErrors.content}
+              </Typography>
+            )}
 
-          {/* History sidebar */}
-          {!isNew && policy?.id && (
-            <HistorySidebar
-              isOpen={isHistorySidebarOpen}
-              entityType="policy"
-              entityId={policy.id}
-              height="100%"
-            />
-          )}
+            {/* History sidebar */}
+            {!isNew && policy?.id && (
+              <HistorySidebar
+                isOpen={isHistorySidebarOpen}
+                entityType="policy"
+                entityId={policy.id}
+                height="100%"
+              />
+            )}
+          </Stack>
         </Stack>
-      </Stack>
       </Stack>
 
       {/* Validation error snackbar */}
@@ -2317,11 +2346,7 @@ export default function PolicyEditorPage() {
         onClose={() => setValidationSnackbar(false)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert
-          onClose={() => setValidationSnackbar(false)}
-          severity="error"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={() => setValidationSnackbar(false)} severity="error" sx={{ width: "100%" }}>
           Please fill in all required fields before saving.
         </Alert>
       </Snackbar>
@@ -2333,11 +2358,7 @@ export default function PolicyEditorPage() {
         onClose={() => setImportError(null)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert
-          onClose={() => setImportError(null)}
-          severity="error"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={() => setImportError(null)} severity="error" sx={{ width: "100%" }}>
           {importError}
         </Alert>
       </Snackbar>
@@ -2349,8 +2370,8 @@ export default function PolicyEditorPage() {
         title="Replace existing content?"
         body={
           <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
-            Importing this file will replace all current content in the editor.
-            This action cannot be undone.
+            Importing this file will replace all current content in the editor. This action cannot
+            be undone.
           </Typography>
         }
         cancelText="Cancel"

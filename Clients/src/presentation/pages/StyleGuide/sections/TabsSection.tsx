@@ -136,26 +136,22 @@ const TabsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Standardized TabBar component for consistent tabbed navigation.
-          Supports icons, count badges, loading states, and disabled tabs.
+          Standardized TabBar component for consistent tabbed navigation. Supports icons, count
+          badges, loading states, and disabled tabs.
         </Typography>
       </Box>
 
       {/* Basic Tabs */}
       <SpecSection title="Basic tabs">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          The TabBar component wraps MUI TabList with VerifyWise styling.
-          Requires TabContext as a parent for proper functionality.
+          The TabBar component wraps MUI TabList with VerifyWise styling. Requires TabContext as a
+          parent for proper functionality.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Simple tabs"
-                code={tabSnippets.basic}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Simple tabs" code={tabSnippets.basic} onCopy={handleCopy}>
                 <Box
                   sx={{
                     backgroundColor: theme.palette.background.main,
@@ -232,7 +228,16 @@ const TabsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               TabBar props
             </Typography>
             <SpecTable
@@ -249,7 +254,17 @@ const TabsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Styling specifications
             </Typography>
             <SpecTable
@@ -271,7 +286,8 @@ const TabsSection: React.FC = () => {
       {/* TabItem Interface */}
       <SpecSection title="TabItem interface">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Each tab is defined using the TabItem interface. All properties except label and value are optional.
+          Each tab is defined using the TabItem interface. All properties except label and value are
+          optional.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -373,7 +389,16 @@ const TabsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Icon specifications
             </Typography>
             <SpecTable
@@ -386,7 +411,17 @@ const TabsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Badge specifications
             </Typography>
             <SpecTable
@@ -409,8 +444,8 @@ const TabsSection: React.FC = () => {
       {/* Tab Label Utility */}
       <SpecSection title="createTabLabelWithCount utility">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          For advanced use cases or when building custom tab components, use the createTabLabelWithCount
-          utility function from tabUtils.
+          For advanced use cases or when building custom tab components, use the
+          createTabLabelWithCount utility function from tabUtils.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -428,8 +463,8 @@ const TabsSection: React.FC = () => {
                 }}
               >
                 <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "16px" }}>
-                  The utility returns a ReactNode that can be passed directly to MUI Tab's label prop.
-                  TabBar uses this internally.
+                  The utility returns a ReactNode that can be passed directly to MUI Tab's label
+                  prop. TabBar uses this internally.
                 </Typography>
 
                 <Box sx={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
@@ -461,7 +496,16 @@ const TabsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Utility options
             </Typography>
             <SpecTable
@@ -503,7 +547,7 @@ const TabsSection: React.FC = () => {
           {[
             "Always wrap TabBar with TabContext provider",
             "Use TabBar instead of raw MUI Tabs for consistent styling",
-            "Pass icon names as strings (e.g., icon: \"User\"), not components",
+            'Pass icon names as strings (e.g., icon: "User"), not components',
             "Set isLoading: true on tabs when fetching count data",
             "Use disabled: true for tabs that shouldn't be accessible yet",
             "Indicator color defaults to brand.primary - override with indicatorColor prop",
@@ -591,9 +635,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -615,9 +657,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -668,9 +708,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

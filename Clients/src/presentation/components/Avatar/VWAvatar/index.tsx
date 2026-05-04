@@ -122,23 +122,24 @@ const VWAvatar = ({
 
   const initials = useMemo(
     () => getInitials(user.firstname, user.lastname),
-    [user.firstname, user.lastname]
+    [user.firstname, user.lastname],
   );
 
   const fullName = useMemo(
     () => `${user.firstname} ${user.lastname}`.trim() || "Unknown User",
-    [user.firstname, user.lastname]
+    [user.firstname, user.lastname],
   );
 
   // Use theme-based colors
-  const avatarColors = useMemo(() => ({
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.common.white,
-  }), [theme.palette.primary.main, theme.palette.common.white]);
-
-  const shouldShowImage = Boolean(
-    user.pathToImage && !imageError && !imageLoading
+  const avatarColors = useMemo(
+    () => ({
+      backgroundColor: theme.palette.primary.main,
+      color: theme.palette.common.white,
+    }),
+    [theme.palette.primary.main, theme.palette.common.white],
   );
+
+  const shouldShowImage = Boolean(user.pathToImage && !imageError && !imageLoading);
 
   // Memoized event handlers
   const handleImageError = useCallback(() => {
@@ -158,7 +159,7 @@ const VWAvatar = ({
         onClick();
       }
     },
-    [onClick]
+    [onClick],
   );
 
   const handleKeyDown = useCallback(
@@ -168,29 +169,22 @@ const VWAvatar = ({
         onClick();
       }
     },
-    [onClick]
+    [onClick],
   );
 
   // Memoized styles
   const avatarStyles = useMemo(
     (): SxProps<Theme> => ({
       ...dimensions,
-      backgroundColor: shouldShowImage
-        ? "transparent"
-        : avatarColors.backgroundColor,
+      backgroundColor: shouldShowImage ? "transparent" : avatarColors.backgroundColor,
       color: avatarColors.color,
       border: showBorder
-        ? `2px solid ${
-            shouldShowImage ? theme.palette.primary.main : "transparent"
-          }`
+        ? `2px solid ${shouldShowImage ? theme.palette.primary.main : "transparent"}`
         : "none",
       cursor: onClick ? "pointer" : "default",
-      transition: theme.transitions.create(
-        ["background-color", "border-color", "transform"],
-        {
-          duration: theme.transitions.duration.short,
-        }
-      ),
+      transition: theme.transitions.create(["background-color", "border-color", "transform"], {
+        duration: theme.transitions.duration.short,
+      }),
       "&:hover": onClick
         ? {
             transform: "scale(1.05)",
@@ -207,7 +201,7 @@ const VWAvatar = ({
       fontWeight: 600,
       ...sx,
     }),
-    [dimensions, shouldShowImage, showBorder, theme, onClick, sx, avatarColors]
+    [dimensions, shouldShowImage, showBorder, theme, onClick, sx, avatarColors],
   );
 
   const avatarProps = useMemo(() => {

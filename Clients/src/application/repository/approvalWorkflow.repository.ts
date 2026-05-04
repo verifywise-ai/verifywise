@@ -24,11 +24,7 @@ export async function getApprovalWorkflowById({
   return response.data;
 }
 
-export async function createApprovalWorkflow({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createApprovalWorkflow({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/approval-workflows", body);
   return response;
 }
@@ -44,11 +40,7 @@ export async function updateApprovalWorkflow({
   return response;
 }
 
-export async function deleteApprovalWorkflow({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteApprovalWorkflow({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/approval-workflows/${id}`);
   return response;
 }
@@ -64,16 +56,17 @@ export async function getApprovalWorkflowsByEntityType({
   entityType,
   signal,
 }: {
-  entityType: 'use_case' | 'file';
+  entityType: "use_case" | "file";
   signal?: AbortSignal;
 }): Promise<any[]> {
-  const response = await apiServices.get(`/approval-workflows?entity_type=${entityType}`, {
+  const response = (await apiServices.get(`/approval-workflows?entity_type=${entityType}`, {
     signal,
-  }) as { data?: { data?: unknown[] } | unknown[] };
+  })) as { data?: { data?: unknown[] } | unknown[] };
   // Filter by entity type if the backend doesn't support query param
   const responseData = response.data as { data?: unknown[] } | unknown[] | undefined;
-  const workflows = (responseData && typeof responseData === 'object' && 'data' in responseData ? responseData.data : responseData) || [];
-  return Array.isArray(workflows)
-    ? workflows.filter((w: any) => w.entity_type === entityType)
-    : [];
+  const workflows =
+    (responseData && typeof responseData === "object" && "data" in responseData
+      ? responseData.data
+      : responseData) || [];
+  return Array.isArray(workflows) ? workflows.filter((w: any) => w.entity_type === entityType) : [];
 }

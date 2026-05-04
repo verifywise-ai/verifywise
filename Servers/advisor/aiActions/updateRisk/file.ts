@@ -62,11 +62,7 @@ export async function fileUpdateRisk(
   //    confirm the target exists. `getRiskByIdQuery` runs outside any
   //    transaction, which is fine at file-time — the actual update
   //    re-reads inside the approve transaction.
-  const currentRisk = await getRiskByIdQuery(
-    parsed.data.risk_id,
-    organizationId,
-    false,
-  );
+  const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);
 
   if (!currentRisk) {
     return {
@@ -79,22 +75,12 @@ export async function fileUpdateRisk(
   //    insert commit atomically.
   const transaction = await sequelize.transaction();
   try {
-    const workflow = await ensureAiActionWorkflow(
-      organizationId,
-      userId,
-      transaction,
-    );
+    const workflow = await ensureAiActionWorkflow(organizationId, userId, transaction);
 
-    const workflowSteps = await getWorkflowStepsQuery(
-      workflow.id!,
-      organizationId,
-      transaction,
-    );
+    const workflowSteps = await getWorkflowStepsQuery(workflow.id!, organizationId, transaction);
 
     if (!workflowSteps || workflowSteps.length === 0) {
-      throw new Error(
-        "AI Action workflow has no steps — cannot file approval request",
-      );
+      throw new Error("AI Action workflow has no steps — cannot file approval request");
     }
 
     const preview = renderUpdateRiskDiffPreview(parsed.data, currentRisk);
@@ -128,10 +114,7 @@ export async function fileUpdateRisk(
     };
   } catch (error) {
     await transaction.rollback();
-    logger.error(
-      `[${UPDATE_RISK_TOOL_NAME}] failed to file approval request`,
-      error,
-    );
+    logger.error(`[${UPDATE_RISK_TOOL_NAME}] failed to file approval request`, error);
     return {
       status: "error",
       message: `Failed to file approval request: ${error instanceof Error ? error.message : "unknown error"}`,

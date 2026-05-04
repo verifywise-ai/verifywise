@@ -87,21 +87,16 @@ const LLMKeys = () => {
   // Custom headers state
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([]);
 
-  const showAlert = useCallback(
-    (variant: AlertState["variant"], title: string, body: string) => {
-      setAlert({ variant, title, body, isToast: false });
-    },
-    [],
-  );
+  const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
+    setAlert({ variant, title, body, isToast: false });
+  }, []);
 
   const fetchLLMKeys = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await getLLMKeys();
       if (response && response.data && response.data.data) {
-        const llmKeyModel = response.data.data.map((item: any) =>
-          LLMKeysModel.createNewKey(item),
-        );
+        const llmKeyModel = response.data.data.map((item: any) => LLMKeysModel.createNewKey(item));
         setKeys(llmKeyModel);
       }
     } catch (_error) {
@@ -138,13 +133,13 @@ const LLMKeys = () => {
   // Get provider config for current selection
   const currentProviderConfig = useMemo(
     () => LLMKeysModel.getProviderConfig(formData.name),
-    [formData.name]
+    [formData.name],
   );
 
   // Get provider ID for fetching models
   const currentProviderId = useMemo(
     () => LLMKeysModel.getProviderIdByName(formData.name),
-    [formData.name]
+    [formData.name],
   );
 
   // Track if user is entering a custom model
@@ -187,7 +182,7 @@ const LLMKeys = () => {
     const isCustom = providerName === "Custom";
     const providerId = LLMKeysModel.getProviderIdByName(providerName as LLMProviderName);
     const recommended = !isCustom && providerId ? getRecommendedModel(providerId) : undefined;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       name: providerName as LLMProviderName,
       model: recommended?.id || "",
@@ -205,36 +200,36 @@ const LLMKeys = () => {
   const handleModelChange = useCallback((modelId: string) => {
     if (modelId === "__custom__") {
       setIsCustomModel(true);
-      setFormData(prev => ({ ...prev, model: "" }));
+      setFormData((prev) => ({ ...prev, model: "" }));
     } else {
       setIsCustomModel(false);
       setCustomModelName("");
-      setFormData(prev => ({ ...prev, model: modelId }));
+      setFormData((prev) => ({ ...prev, model: modelId }));
     }
   }, []);
 
   // Handle custom model name input
   const handleCustomModelChange = useCallback((value: string) => {
     setCustomModelName(value);
-    setFormData(prev => ({ ...prev, model: value }));
+    setFormData((prev) => ({ ...prev, model: value }));
   }, []);
 
   // Header row management
   const handleAddHeaderRow = useCallback(() => {
-    setHeaderRows(prev => [...prev, { key: "", value: "" }]);
+    setHeaderRows((prev) => [...prev, { key: "", value: "" }]);
   }, []);
 
   const handleRemoveHeaderRow = useCallback((index: number) => {
-    setHeaderRows(prev => prev.filter((_, i) => i !== index));
+    setHeaderRows((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleHeaderRowChange = useCallback(
     (index: number, field: "key" | "value", value: string) => {
-      setHeaderRows(prev =>
-        prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+      setHeaderRows((prev) =>
+        prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
       );
     },
-    []
+    [],
   );
 
   const handleCreateKey = useCallback(async () => {
@@ -255,7 +250,8 @@ const LLMKeys = () => {
         fetchLLMKeys();
       }
     } catch (error: any) {
-      const errorMessage = error?.data?.message || error?.response?.data?.message || "Failed to add API key";
+      const errorMessage =
+        error?.data?.message || error?.response?.data?.message || "Failed to add API key";
       showAlert("error", "Error", errorMessage);
     } finally {
       setIsLoading(false);
@@ -266,7 +262,14 @@ const LLMKeys = () => {
       setCustomModelName("");
       setHeaderRows([]);
     }
-  }, [fetchLLMKeys, formData, showAlert, initialFormData, isCustomProvider, getCustomHeadersFromRows]);
+  }, [
+    fetchLLMKeys,
+    formData,
+    showAlert,
+    initialFormData,
+    isCustomProvider,
+    getCustomHeadersFromRows,
+  ]);
 
   const handleEditKey = useCallback(async () => {
     setIsLoading(true);
@@ -286,7 +289,8 @@ const LLMKeys = () => {
         fetchLLMKeys();
       }
     } catch (error: any) {
-      const errorMessage = error?.data?.message || error?.response?.data?.message || "Failed to update API key";
+      const errorMessage =
+        error?.data?.message || error?.response?.data?.message || "Failed to update API key";
       showAlert("error", "Error", errorMessage);
     } finally {
       setIsLoading(false);
@@ -297,7 +301,15 @@ const LLMKeys = () => {
       setCustomModelName("");
       setHeaderRows([]);
     }
-  }, [fetchLLMKeys, formData, showAlert, keyToEdit, initialFormData, isCustomProvider, getCustomHeadersFromRows]);
+  }, [
+    fetchLLMKeys,
+    formData,
+    showAlert,
+    keyToEdit,
+    initialFormData,
+    isCustomProvider,
+    getCustomHeadersFromRows,
+  ]);
 
   const handleDeleteKey = useCallback(async () => {
     if (!keyToDelete) return;
@@ -348,7 +360,7 @@ const LLMKeys = () => {
       const providerId = LLMKeysModel.getProviderIdByName(data.name);
       if (providerId) {
         const models = getModelsForProvider(providerId);
-        const isPresetModel = models.some(m => m.id === data.model);
+        const isPresetModel = models.some((m) => m.id === data.model);
         if (!isPresetModel) {
           setIsCustomModel(true);
           setCustomModelName(data.model);
@@ -388,9 +400,7 @@ const LLMKeys = () => {
           }}
         >
           <Box>
-            <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}>
               LLM Keys
             </Typography>
             <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5, mb: 3 }}>
@@ -442,14 +452,11 @@ const LLMKeys = () => {
             >
               <PlusIcon size={24} color={brand.primary} />
             </Box>
-            <Typography
-              sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}`, mb: 1 }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}`, mb: 1 }}>
               No LLM keys yet
             </Typography>
             <Typography sx={{ fontSize: 13, color: "#666666", mb: 3 }}>
-              Add your first LLM API key to enable access to your VerifyWise
-              Advisor.
+              Add your first LLM API key to enable access to your VerifyWise Advisor.
             </Typography>
             <CustomizableButton
               text="Add API key"
@@ -466,11 +473,7 @@ const LLMKeys = () => {
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {keys.map((key) => (
-              <Collapse
-                key={key.id}
-                in={deletingKeyId !== key.id}
-                timeout={300}
-              >
+              <Collapse key={key.id} in={deletingKeyId !== key.id} timeout={300}>
                 <Box
                   onMouseEnter={() => setHoveredKeyId(key.id)}
                   onMouseLeave={() => setHoveredKeyId(null)}
@@ -478,22 +481,16 @@ const LLMKeys = () => {
                     border: `1.5px solid ${borderPalette.light}`,
                     borderRadius: "4px",
                     p: 4,
-                    backgroundColor:
-                      hoveredKeyId === key.id ? "#f8fffe" : `${background.main}`,
+                    backgroundColor: hoveredKeyId === key.id ? "#f8fffe" : `${background.main}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     transition: "all 0.3s ease-in-out",
                     cursor: "default",
                     boxShadow:
-                      hoveredKeyId === key.id
-                        ? "0 2px 8px rgba(19, 113, 91, 0.08)"
-                        : "none",
+                      hoveredKeyId === key.id ? "0 2px 8px rgba(19, 113, 91, 0.08)" : "none",
                     opacity: deletingKeyId === key.id ? 0 : 1,
-                    transform:
-                      deletingKeyId === key.id
-                        ? "translateY(-20px)"
-                        : "translateY(0)",
+                    transform: deletingKeyId === key.id ? "translateY(-20px)" : "translateY(0)",
                   }}
                 >
                   <Box sx={{ flex: 1 }}>
@@ -519,14 +516,10 @@ const LLMKeys = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                      <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                        {key.model}
-                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#666666" }}>{key.model}</Typography>
                       {key.name === "Custom" && key.url && (
                         <>
-                          <Typography sx={{ fontSize: 12, color: "#999999" }}>
-                            •
-                          </Typography>
+                          <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
                           <Typography
                             sx={{
                               fontSize: 12,
@@ -541,9 +534,7 @@ const LLMKeys = () => {
                           </Typography>
                         </>
                       )}
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
-                        •
-                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
                       <Typography sx={{ fontSize: 12, color: "#999999" }}>
                         Added {key.getFormattedCreatedDate()}
                       </Typography>
@@ -611,9 +602,7 @@ const LLMKeys = () => {
             : "Update your API key details below."
         }
         onSubmit={isCreateModalOpen ? handleCreateKey : handleEditKey}
-        submitButtonText={
-          isLoading ? "Saving..." : isCreateModalOpen ? "Add key" : "Save changes"
-        }
+        submitButtonText={isLoading ? "Saving..." : isCreateModalOpen ? "Add key" : "Save changes"}
         isSubmitting={isCreateButtonDisabled}
         maxWidth="600px"
       >
@@ -622,7 +611,13 @@ const LLMKeys = () => {
           <Box>
             <Typography
               component="label"
-              sx={{ fontSize: 13, fontWeight: 500, color: `${text.secondary}`, mb: 0.5, display: "block" }}
+              sx={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: `${text.secondary}`,
+                mb: 0.5,
+                display: "block",
+              }}
             >
               Provider <span style={{ color: "#f04438" }}>*</span>
             </Typography>
@@ -646,12 +641,12 @@ const LLMKeys = () => {
                     padding: "12px 8px",
                     borderRadius: "4px",
                     border: "0.5px solid",
-                    borderColor: formData.name === provider.name
-                      ? `${brand.primary}`
-                      : `${borderPalette.light}`,
-                    backgroundColor: formData.name === provider.name
-                      ? "#f0fdf4"
-                      : `${background.main}`,
+                    borderColor:
+                      formData.name === provider.name
+                        ? `${brand.primary}`
+                        : `${borderPalette.light}`,
+                    backgroundColor:
+                      formData.name === provider.name ? "#f0fdf4" : `${background.main}`,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     "&:hover": {
@@ -786,26 +781,28 @@ const LLMKeys = () => {
             <Box>
               <Typography
                 component="label"
-                sx={{ fontSize: 13, fontWeight: 500, color: `${text.secondary}`, mb: 1, display: "block" }}
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: `${text.secondary}`,
+                  mb: 1,
+                  display: "block",
+                }}
               >
                 Custom headers
               </Typography>
               <Typography sx={{ fontSize: 11, color: "#666666", mb: 1.5 }}>
-                Optional HTTP headers sent with every request (e.g., HTTP-Referer, X-Title, Helicone-Auth)
+                Optional HTTP headers sent with every request (e.g., HTTP-Referer, X-Title,
+                Helicone-Auth)
               </Typography>
               <Stack spacing="8px">
                 {headerRows.map((row, index) => (
-                  <Box
-                    key={index}
-                    sx={{ display: "flex", gap: "8px", alignItems: "center" }}
-                  >
+                  <Box key={index} sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <Box sx={{ flex: 1 }}>
                       <Field
                         id={`header-key-${index}`}
                         value={row.key}
-                        onChange={(e) =>
-                          handleHeaderRowChange(index, "key", e.target.value)
-                        }
+                        onChange={(e) => handleHeaderRowChange(index, "key", e.target.value)}
                         placeholder="Header name"
                       />
                     </Box>
@@ -813,9 +810,7 @@ const LLMKeys = () => {
                       <Field
                         id={`header-value-${index}`}
                         value={row.value}
-                        onChange={(e) =>
-                          handleHeaderRowChange(index, "value", e.target.value)
-                        }
+                        onChange={(e) => handleHeaderRowChange(index, "value", e.target.value)}
                         placeholder="Value"
                       />
                     </Box>
@@ -860,9 +855,9 @@ const LLMKeys = () => {
           title="Delete API key"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to delete the API key "{keyToDelete.name === "Custom" ? "Custom endpoint" : keyToDelete.name}"?
-              This action cannot be undone and any advisor using this key will
-              lose access.
+              Are you sure you want to delete the API key "
+              {keyToDelete.name === "Custom" ? "Custom endpoint" : keyToDelete.name}"? This action
+              cannot be undone and any advisor using this key will lose access.
             </Typography>
           }
           cancelText="Cancel"

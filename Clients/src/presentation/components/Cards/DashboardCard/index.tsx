@@ -45,13 +45,15 @@ export function DashboardCard({
       onClick={() => navigateTo && navigate(navigateTo)}
     >
       <CardContent sx={{ p: "16px", "&:last-child": { pb: "16px" } }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          mb="16px"
-        >
-          <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1F2937", flex: actionPosition === "center" ? 1 : undefined }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#1F2937",
+              flex: actionPosition === "center" ? 1 : undefined,
+            }}
+          >
             {title}
           </Typography>
           {actionPosition === "center" && action && (
@@ -59,7 +61,15 @@ export function DashboardCard({
               {action}
             </Stack>
           )}
-          <Stack direction="row" alignItems="center" gap={1} sx={{ flex: actionPosition === "center" ? 1 : undefined, justifyContent: actionPosition === "center" ? "flex-end" : undefined }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            gap={1}
+            sx={{
+              flex: actionPosition === "center" ? 1 : undefined,
+              justifyContent: actionPosition === "center" ? "flex-end" : undefined,
+            }}
+          >
             {actionPosition === "right" && action}
             {navigateTo && (
               <ChevronRight

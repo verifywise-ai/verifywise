@@ -1,10 +1,6 @@
 import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
-import {
-  IPolicy,
-  PolicyTag,
-  PolicyTagsSet,
-} from "../domain.layer/interfaces/i.policy";
+import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
 import { PolicyManagerModel } from "../domain.layer/models/policy/policy.model";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
@@ -22,7 +18,7 @@ export const updatePolicyReviewStatusQuery = async (
   reviewStatus: PolicyReviewStatus,
   reviewerId: number,
   comment?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ) => {
   const queryOptions: any = {
     replacements: {
@@ -46,7 +42,7 @@ export const updatePolicyReviewStatusQuery = async (
          reviewed_by = :reviewerId,
          reviewed_at = :reviewedAt
      WHERE organization_id = :organizationId AND id = :policyId`,
-    queryOptions
+    queryOptions,
   );
 };
 
@@ -66,16 +62,13 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return result;
 };
 
-export const getAllPoliciesDueSoonQuery = async (
-  organizationId: number,
-  daysAhead: number = 7
-) => {
+export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
   const result = await sequelize.query(
     `SELECT * FROM policy_manager
      WHERE organization_id = :organizationId
@@ -87,14 +80,14 @@ export const getAllPoliciesDueSoonQuery = async (
       replacements: { organizationId },
       mapToModel: true,
       model: PolicyManagerModel,
-    }
+    },
   );
 
   return result;
 };
 
 export const getPolicyByIdQuery = async (organizationId: number, id: number) => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       pm.*,
       COALESCE(
@@ -109,8 +102,8 @@ export const getPolicyByIdQuery = async (organizationId: number, id: number) => 
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
-    }
-  ) as any[];
+    },
+  )) as any[];
 
   return result;
 };
@@ -127,12 +120,12 @@ export const createPolicyQuery = async (
   policy: IPolicy,
   organizationId: number,
   userId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   verifyPolicyTags(policy.tags || []);
 
   // Insert policy without assigned_reviewer_ids
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO policy_manager (
       organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
@@ -153,8 +146,8 @@ export const createPolicyQuery = async (
       },
       transaction,
       type: QueryTypes.INSERT,
-    }
-  ) as any;
+    },
+  )) as any;
 
   const createdPolicy = result[0][0] as any;
   const policyId = createdPolicy.id;
@@ -169,7 +162,7 @@ export const createPolicyQuery = async (
         {
           replacements: { organizationId, policyId, userId: reviewerId },
           transaction,
-        }
+        },
       );
     }
   }
@@ -184,7 +177,7 @@ export const createPolicyQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -204,7 +197,7 @@ export const createPolicyQuery = async (
           },
           transaction,
           type: QueryTypes.SELECT,
-        }
+        },
       )) as { full_name: string }[];
 
       const params = automation.params!;
@@ -229,9 +222,7 @@ export const createPolicyQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -243,7 +234,7 @@ export const updatePolicyByIdQuery = async (
   policy: Partial<IPolicy>,
   organizationId: number,
   userId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const existingPolicy = await getPolicyByIdQuery(organizationId, id);
   const updatePolicy: Partial<Record<keyof IPolicy, any>> & { organizationId?: number } = {};
@@ -261,10 +252,7 @@ export const updatePolicyByIdQuery = async (
         return true;
       }
 
-      if (
-        policy[f as keyof IPolicy] !== undefined &&
-        policy[f as keyof IPolicy]
-      ) {
+      if (policy[f as keyof IPolicy] !== undefined && policy[f as keyof IPolicy]) {
         if (f === "tags") {
           verifyPolicyTags(policy[f as keyof IPolicy] as PolicyTag[]);
         }
@@ -303,7 +291,7 @@ export const updatePolicyByIdQuery = async (
       {
         replacements: { organizationId, policyId: id },
         transaction,
-      }
+      },
     );
 
     // Insert new reviewer mappings
@@ -316,7 +304,7 @@ export const updatePolicyByIdQuery = async (
           {
             replacements: { organizationId, policyId: id, userId: reviewerId },
             transaction,
-          }
+          },
         );
       }
     }
@@ -325,7 +313,7 @@ export const updatePolicyByIdQuery = async (
   // Get the updated policy with reviewer IDs
   const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id);
   if (!updatedPolicyResult || updatedPolicyResult.length === 0) {
-    throw new Error('Policy not found after update');
+    throw new Error("Policy not found after update");
   }
   const updatedPolicy = updatedPolicyResult[0];
   const automations = (await sequelize.query(
@@ -335,7 +323,7 @@ export const updatePolicyByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -355,7 +343,7 @@ export const updatePolicyByIdQuery = async (
           },
           transaction,
           type: QueryTypes.SELECT,
-        }
+        },
       )) as { full_name: string }[];
 
       const params = automation.params!;
@@ -380,9 +368,7 @@ export const updatePolicyByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
   return updatedPolicy;
@@ -391,7 +377,7 @@ export const updatePolicyByIdQuery = async (
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
   const policyToDelete = await getPolicyByIdQuery(organizationId, id);
@@ -409,7 +395,7 @@ export const deletePolicyByIdQuery = async (
       replacements: { organizationId, id },
       transaction,
       type: QueryTypes.DELETE,
-    }
+    },
   );
 
   const automations = (await sequelize.query(
@@ -419,7 +405,7 @@ export const deletePolicyByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -439,7 +425,7 @@ export const deletePolicyByIdQuery = async (
           },
           transaction,
           type: QueryTypes.SELECT,
-        }
+        },
       )) as { full_name: string }[];
 
       const params = automation.params!;
@@ -464,9 +450,7 @@ export const deletePolicyByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 

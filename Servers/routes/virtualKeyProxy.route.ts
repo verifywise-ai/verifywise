@@ -8,8 +8,7 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { Router } from "express";
 
-const AI_GATEWAY_URL =
-  process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
 
 function virtualKeyProxyRoutes() {
   const router = Router();
@@ -23,7 +22,7 @@ function virtualKeyProxyRoutes() {
         const errAny = err as any;
         console.error(
           `[Virtual Key Proxy] Error for ${req.url}:`,
-          errAny.message || errAny.code || errAny
+          errAny.message || errAny.code || errAny,
         );
         if (res && "writeHead" in res) {
           (res as any).writeHead(502, { "Content-Type": "application/json" });
@@ -31,7 +30,7 @@ function virtualKeyProxyRoutes() {
             JSON.stringify({
               error: "AI Gateway proxy error",
               message: errAny.message || errAny.code || "Unknown error",
-            })
+            }),
           );
         }
       },

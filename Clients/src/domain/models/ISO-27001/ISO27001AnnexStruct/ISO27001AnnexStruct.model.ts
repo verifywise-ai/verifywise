@@ -13,9 +13,7 @@ export class ISO27001AnnexStructModel {
     this.framework_id = data.framework_id;
   }
 
-  static createNewISO27001AnnexStruct(
-    data: ISO27001AnnexStructModel
-  ): ISO27001AnnexStructModel {
+  static createNewISO27001AnnexStruct(data: ISO27001AnnexStructModel): ISO27001AnnexStructModel {
     return new ISO27001AnnexStructModel(data);
   }
 }

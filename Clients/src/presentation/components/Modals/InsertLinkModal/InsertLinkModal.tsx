@@ -52,9 +52,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
         sx: { borderRadius: 3, p: 1.5 },
       }}
     >
-      <DialogTitle>
-        Insert link
-      </DialogTitle>
+      <DialogTitle>Insert link</DialogTitle>
 
       <DialogContent>
         {hasSelection && (
@@ -67,9 +65,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
               border: "1px solid #D9E0DD",
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#667085", mb: 0.5 }}>
-              Selected text
-            </Typography>
+            <Typography sx={{ fontSize: 12, color: "#667085", mb: 0.5 }}>Selected text</Typography>
             <Typography sx={{ fontSize: 13, color: "#344054", fontWeight: 500 }}>
               {selectedText}
             </Typography>

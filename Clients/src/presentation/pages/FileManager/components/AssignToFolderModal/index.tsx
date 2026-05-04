@@ -14,10 +14,7 @@ import {
   ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import StandardModal from "../../../../components/Modals/StandardModal";
-import {
-  IFolderTreeNode,
-  IVirtualFolder,
-} from "../../../../../domain/interfaces/i.virtualFolder";
+import { IFolderTreeNode, IVirtualFolder } from "../../../../../domain/interfaces/i.virtualFolder";
 import { text, brand } from "../../../../themes/palette";
 
 interface AssignToFolderModalProps {
@@ -93,13 +90,12 @@ const FolderCheckItem: React.FC<FolderCheckItemProps> = ({
             opacity: hasChildren ? 1 : 0,
           }}
         >
-          {hasChildren && (
-            isExpanded ? (
+          {hasChildren &&
+            (isExpanded ? (
               <ChevronDownIcon size={14} color={text.icon} />
             ) : (
               <ChevronRightIcon size={14} color={text.icon} />
-            )
-          )}
+            ))}
         </Box>
 
         {/* Checkbox */}

@@ -1,5 +1,9 @@
 import { Stack, Typography, Tooltip, Box } from "@mui/material";
-import { TrendingUp as TrendingUpRedIcon, TrendingDown as TrendingDownGreenIcon, Minus as TrendingFlatGreyIcon } from "lucide-react";
+import {
+  TrendingUp as TrendingUpRedIcon,
+  TrendingDown as TrendingDownGreenIcon,
+  Minus as TrendingFlatGreyIcon,
+} from "lucide-react";
 import {
   projectRisksCard,
   projectRisksTileCard,
@@ -10,7 +14,11 @@ import {
   trendIconDown,
   trendIconStable,
 } from "./style";
-import { risksSummary, EnhancedRiskSummary, RiskTrend } from "../../../../domain/interfaces/i.riskSummary";
+import {
+  risksSummary,
+  EnhancedRiskSummary,
+  RiskTrend,
+} from "../../../../domain/interfaces/i.riskSummary";
 import { status, border as borderPalette } from "../../../themes/palette";
 
 interface RisksCardProps {
@@ -23,24 +31,20 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
   const getValidRiskValue = (value: number) => (isNaN(value) ? 0 : value);
 
   const renderTrendIndicator = (trend?: RiskTrend) => {
-    if (!trend || trend.direction === 'stable') {
+    if (!trend || trend.direction === "stable") {
       return (
         <Typography sx={trendIndicator}>
           <TrendingFlatGreyIcon size={16} style={trendIconStable} />
-          <span style={{ color: `${status.default.text}` }}>
-            {trend?.change === 0 ? "0" : "—"}
-          </span>
+          <span style={{ color: `${status.default.text}` }}>{trend?.change === 0 ? "0" : "—"}</span>
         </Typography>
       );
     }
 
-    if (trend.direction === 'up') {
+    if (trend.direction === "up") {
       return (
         <Typography sx={trendIndicator}>
           <TrendingUpRedIcon size={16} style={trendIconUp} />
-          <span style={{ color: "#EF4444" }}>
-            +{trend.change}
-          </span>
+          <span style={{ color: "#EF4444" }}>+{trend.change}</span>
         </Typography>
       );
     }
@@ -48,17 +52,19 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
     return (
       <Typography sx={trendIndicator}>
         <TrendingDownGreenIcon size={16} style={trendIconDown} />
-        <span style={{ color: "#10B981" }}>
-          -{Math.abs(trend.change)}
-        </span>
+        <span style={{ color: "#10B981" }}>-{Math.abs(trend.change)}</span>
       </Typography>
     );
   };
 
   const getTrendTooltip = (trend: RiskTrend | undefined, level: string) => {
     if (!trend) return "";
-    const direction = trend.direction === 'up' ? 'increased' : 
-                     trend.direction === 'down' ? 'decreased' : 'remained stable';
+    const direction =
+      trend.direction === "up"
+        ? "increased"
+        : trend.direction === "down"
+          ? "decreased"
+          : "remained stable";
     return `${level} risks have ${direction} by ${Math.abs(trend.change)} this ${trend.period}`;
   };
 
@@ -67,8 +73,8 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
   const handleCardClick = (levelLabel: string) => {
     if (onCardClick) {
       // Clear filter if "Total" clicked or same level clicked again
-      if (levelLabel === 'Total' || selectedLevel === levelLabel) {
-        onCardClick('');
+      if (levelLabel === "Total" || selectedLevel === levelLabel) {
+        onCardClick("");
       } else {
         onCardClick(levelLabel);
       }
@@ -122,7 +128,6 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
 
   return (
     <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-
       <Stack className="vw-project-risks" sx={{ ...projectRisksCard, flex: 1 }}>
         {riskLevels.map((level) => {
           const isSelected = selectedLevel === level.label;
@@ -141,9 +146,11 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
                 sx={{
                   ...projectRisksTileCard,
                   color: level.color,
-                  cursor: isClickable ? 'pointer' : 'default',
-                  border: isSelected ? `1px solid ${level.color}` : `1px solid ${borderPalette.dark}`,
-                  background: isSelected ? 'rgba(146, 247, 224, 0.08)' : undefined,
+                  cursor: isClickable ? "pointer" : "default",
+                  border: isSelected
+                    ? `1px solid ${level.color}`
+                    : `1px solid ${borderPalette.dark}`,
+                  background: isSelected ? "rgba(146, 247, 224, 0.08)" : undefined,
                 }}
               >
                 <Typography sx={projectRisksTileCardKey}>{level.label}</Typography>

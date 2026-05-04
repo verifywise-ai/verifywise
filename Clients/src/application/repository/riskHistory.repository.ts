@@ -15,11 +15,15 @@ export async function getRiskTimeseries(
   timeframe?: string,
   startDate?: string,
   endDate?: string,
-  intervalHours?: number
+  intervalHours?: number,
 ): Promise<any> {
   try {
     const response = await apiServices.get("/riskHistory/timeseries", {
-      parameter, startDate, endDate, intervalHours, timeframe
+      parameter,
+      startDate,
+      endDate,
+      intervalHours,
+      timeframe,
     });
     return response;
   } catch (error: any) {
@@ -55,7 +59,7 @@ export async function getCurrentRiskParameterCounts(parameter: string): Promise<
  */
 export async function createRiskHistorySnapshot(
   parameter: string,
-  description?: string
+  description?: string,
 ): Promise<any> {
   try {
     const response = await apiServices.post("/api/riskHistory/snapshot", {

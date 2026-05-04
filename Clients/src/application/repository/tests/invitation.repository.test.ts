@@ -92,9 +92,7 @@ describe("Test Invitation Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getInvitations()).rejects.toThrow("Network timeout");
     });
@@ -135,9 +133,7 @@ describe("Test Invitation Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.delete).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.delete).mockRejectedValue(new Error("Connection refused"));
 
       await expect(revokeInvitation(1)).rejects.toThrow("Connection refused");
     });
@@ -178,9 +174,7 @@ describe("Test Invitation Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
       await expect(resendInvitation(1)).rejects.toThrow("Network timeout");
     });

@@ -1,16 +1,12 @@
 /**
  * Vendor Mapper
- * 
+ *
  * Maps between Vendor DTOs (API layer) and Vendor domain models.
  * Handles data transformation, type conversion, and validation.
  */
 
 import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
-import {
-  VendorResponseDTO,
-  CreateVendorDTO,
-  UpdateVendorDTO,
-} from "../dtos/vendor.dto";
+import { VendorResponseDTO, CreateVendorDTO, UpdateVendorDTO } from "../dtos/vendor.dto";
 import {
   ReviewStatus,
   DataSensitivity,
@@ -26,7 +22,7 @@ export function mapReviewStatus(status: string): ReviewStatus {
   const mapping: Record<string, ReviewStatus> = {
     "not started": ReviewStatus.NotStarted,
     "in review": ReviewStatus.InReview,
-    "reviewed": ReviewStatus.Reviewed,
+    reviewed: ReviewStatus.Reviewed,
     "requires follow-up": ReviewStatus.RequiresFollowUp,
   };
   return mapping[status] || ReviewStatus.NotStarted;
@@ -38,7 +34,7 @@ export function mapReviewStatus(status: string): ReviewStatus {
 export function mapDataSensitivity(value?: string): DataSensitivity | undefined {
   if (!value) return undefined;
   const mapping: Record<string, DataSensitivity> = {
-    "none": DataSensitivity.None,
+    none: DataSensitivity.None,
     "internal only": DataSensitivity.InternalOnly,
     "personally identifiable information (pii)": DataSensitivity.PII,
     "financial data": DataSensitivity.FinancialData,
@@ -68,7 +64,7 @@ export function mapBusinessCriticality(value?: string): BusinessCriticality | un
 export function mapPastIssues(value?: string): PastIssues | undefined {
   if (!value) return undefined;
   const mapping: Record<string, PastIssues> = {
-    "none": PastIssues.None,
+    none: PastIssues.None,
     "minor incident (e.g. small delay, minor bug)": PastIssues.MinorIncident,
     "major incident (e.g. data breach, legal issue)": PastIssues.MajorIncident,
   };
@@ -81,21 +77,21 @@ export function mapPastIssues(value?: string): PastIssues | undefined {
 export function mapRegulatoryExposure(value?: string): RegulatoryExposure | undefined {
   if (!value) return undefined;
   const mapping: Record<string, RegulatoryExposure> = {
-    "none": RegulatoryExposure.None,
+    none: RegulatoryExposure.None,
     "gdpr (eu)": RegulatoryExposure.GDPR,
     "hipaa (us)": RegulatoryExposure.HIPAA,
     "soc 2": RegulatoryExposure.SOC2,
     "iso 27001": RegulatoryExposure.ISO27001,
     "eu ai act": RegulatoryExposure.EUAIAct,
     "ccpa (california)": RegulatoryExposure.CCPA,
-    "other": RegulatoryExposure.Other,
+    other: RegulatoryExposure.Other,
   };
   return mapping[value.toLowerCase()] || RegulatoryExposure.None;
 }
 
 /**
  * Maps a VendorResponseDTO to a VendorModel
- * 
+ *
  * @param dto - Vendor response DTO from API
  * @returns VendorModel instance
  */
@@ -121,13 +117,13 @@ export function mapVendorResponseDTOToModel(dto: VendorResponseDTO): VendorModel
     regulatory_exposure: mapRegulatoryExposure(dto.regulatory_exposure),
     risk_score: dto.risk_score,
   };
-  
+
   return new VendorModel(vendorData);
 }
 
 /**
  * Maps an array of VendorResponseDTOs to VendorModel instances
- * 
+ *
  * @param dtos - Array of vendor response DTOs
  * @returns Array of VendorModel instances
  */
@@ -137,7 +133,7 @@ export function mapVendorResponseDTOsToModels(dtos: VendorResponseDTO[]): Vendor
 
 /**
  * Maps VendorModel to CreateVendorDTO
- * 
+ *
  * @param vendor - VendorModel instance
  * @returns CreateVendorDTO
  */
@@ -162,7 +158,7 @@ export function mapVendorToCreateDTO(vendor: Partial<VendorModel>): CreateVendor
 
 /**
  * Maps VendorModel to UpdateVendorDTO
- * 
+ *
  * @param vendor - VendorModel instance with fields to update
  * @returns UpdateVendorDTO
  */
@@ -184,4 +180,3 @@ export function mapVendorToUpdateDTO(vendor: Partial<VendorModel>): UpdateVendor
     regulatory_exposure: vendor.regulatory_exposure,
   };
 }
-

@@ -42,7 +42,12 @@ export const test = base.extend<{
     const skipBtn = page
       .getByRole("button", { name: /skip/i })
       .or(page.getByRole("button", { name: /no/i }));
-    if (await skipBtn.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (
+      await skipBtn
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false)
+    ) {
       await skipBtn.first().click();
       await page.waitForTimeout(500);
     }
@@ -53,11 +58,13 @@ export const test = base.extend<{
     await titleInput.fill(projectName);
 
     // Fill Goal field (required) — unlabeled textbox under "Goal*"
-    const goalInput = page
-      .getByText(/^Goal/i)
-      .locator("..")
-      .getByRole("textbox");
-    if (await goalInput.first().isVisible().catch(() => false)) {
+    const goalInput = page.getByText(/^Goal/i).locator("..").getByRole("textbox");
+    if (
+      await goalInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await goalInput.first().fill("E2E test goal");
     }
 
@@ -66,7 +73,12 @@ export const test = base.extend<{
       .getByText(/^Owner/i)
       .locator("..")
       .getByRole("combobox");
-    if (await ownerSelect.first().isVisible().catch(() => false)) {
+    if (
+      await ownerSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await ownerSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -79,7 +91,12 @@ export const test = base.extend<{
       .getByText(/AI risk classification/i)
       .locator("..")
       .getByRole("combobox");
-    if (await riskSelect.first().isVisible().catch(() => false)) {
+    if (
+      await riskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await riskSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -92,7 +109,12 @@ export const test = base.extend<{
       .getByText(/Type of high risk role/i)
       .locator("..")
       .getByRole("combobox");
-    if (await highRiskSelect.first().isVisible().catch(() => false)) {
+    if (
+      await highRiskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await highRiskSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -105,7 +127,12 @@ export const test = base.extend<{
       .getByText(/^Geography/i)
       .locator("..")
       .getByRole("combobox");
-    if (await geoSelect.first().isVisible().catch(() => false)) {
+    if (
+      await geoSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       // Already has "Global" selected by default — skip
     }
 

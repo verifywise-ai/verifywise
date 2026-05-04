@@ -28,7 +28,7 @@ import { AlertProps } from "../../presentation/types/alert.types";
 
 const performLogout = () => {
   store.dispatch(clearAuthState());
-  window.location.href = '/login';
+  window.location.href = "/login";
 };
 
 // Create a global callback for showing alerts
@@ -83,18 +83,21 @@ CustomAxios.interceptors.request.use(
     // Add authorization token
     const state = store.getState();
     const token = state.auth.authToken;
-    if (token && !(config.url?.includes('/users/reset-password') || config.url?.includes('/users/register'))) {
+    if (
+      token &&
+      !(config.url?.includes("/users/reset-password") || config.url?.includes("/users/register"))
+    ) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
     // Attach X-Organization-Id header when super-admin is viewing an org
     const activeOrgId = state.auth.activeOrganizationId;
     if (activeOrgId) {
-      config.headers['X-Organization-Id'] = String(activeOrgId);
+      config.headers["X-Organization-Id"] = String(activeOrgId);
     }
 
     // Enable credentials for auth-related endpoints
-    if (config.url?.includes('/users/login') || config.url?.includes('/users/refresh-token')) {
+    if (config.url?.includes("/users/login") || config.url?.includes("/users/refresh-token")) {
       config.withCredentials = true;
     }
 
@@ -102,7 +105,7 @@ CustomAxios.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor to handle responses and errors
@@ -112,7 +115,7 @@ CustomAxios.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    const responseData = (error.response?.data as { message?: string })
+    const responseData = error.response?.data as { message?: string };
     // Don't transform 404 errors - let them through as AxiosErrors so status is preserved
     // This allows downstream code to handle 404s differently (e.g., as empty state vs error)
     // if (error.response?.status === 404) {
@@ -122,10 +125,8 @@ CustomAxios.interceptors.response.use(
 
     if (
       error.response?.status === 403 &&
-      (
-        responseData.message === 'User does not belong to this organization' ||
-        responseData.message === 'Not allowed to access'
-      )
+      (responseData.message === "User does not belong to this organization" ||
+        responseData.message === "Not allowed to access")
     ) {
       if (showAlertCallback) {
         showAlertCallback({
@@ -137,13 +138,13 @@ CustomAxios.interceptors.response.use(
       setTimeout(() => {
         performLogout();
       }, 1000);
-      return Promise.reject(new Error(responseData?.message || 'Forbidden'));
+      return Promise.reject(new Error(responseData?.message || "Forbidden"));
     }
 
     // If error is 406 (Token Expired) and we haven't tried to refresh yet
     if (error.response?.status === 406 && !originalRequest._retry) {
       // If this is the refresh token request itself returning 406
-      if (originalRequest.url === '/users/refresh-token') {
+      if (originalRequest.url === "/users/refresh-token") {
         // Show alert using the callback
         if (showAlertCallback) {
           showAlertCallback({
@@ -180,7 +181,7 @@ CustomAxios.interceptors.response.use(
         const response = await CustomAxios.post(
           `/users/refresh-token`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         if (response.status === 200) {
@@ -203,7 +204,7 @@ CustomAxios.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default CustomAxios;

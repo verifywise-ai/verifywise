@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+templates
+patches
+package-lock.json
+*.min.js
+*.log
+.env
+.env.*
+SQL_Commands.sql
+swagger.yaml
+swagger.generated.yaml
+swagger.old.yaml

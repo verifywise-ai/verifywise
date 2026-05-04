@@ -1,4 +1,4 @@
-.PHONY: seeds render perturb validate all backfill-base export-parquet publish-dataset generate
+.PHONY: seeds render perturb validate all backfill-base export-parquet publish-dataset generate judge-patch
 
 seeds:
 	uv run grs-scenarios generate --stage seeds
@@ -34,6 +34,13 @@ judge:
 judge-resume:
 	uv run grs-scenarios generate --stage judge --judge-resume
 
+judge-patch:
+	uv run grs-scenarios generate --stage judge-patch \
+		--dataset-version debug \
+		--patch-dimension accountability_transparency \
+		--judge-model-id openai/gpt-5.2 \
+		--judge-provider openrouter
+
 run-scenario-viewer:
 	uv run streamlit run viewer.py
 
@@ -59,6 +66,6 @@ publish-dataset: export-parquet
 		|| git -C .. worktree add -b data/grs_scenarios /tmp/grs-data
 	mkdir -p /tmp/grs-data/GRSModule
 	cp -r datasets/ /tmp/grs-data/GRSModule/
-	cd /tmp/grs-data && git add GRSModule/datasets/ && git commit -m "data: publish $(VERSION) $$(date +%Y-%m-%d)"
+	cd /tmp/grs-data && git add GRSModule/datasets/ && git commit -m "$(if $(MSG),$(MSG),data: publish $(VERSION) $$(date +%Y-%m-%d))"
 	git -C .. worktree remove /tmp/grs-data
 	@echo "Done. $(VERSION) committed to data/grs_scenarios."

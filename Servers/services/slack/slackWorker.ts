@@ -14,7 +14,7 @@ export const createNotificationWorker = () => {
         throw new Error(`Unknown job type: ${job.data.type}`);
       }
     },
-    { connection: { url: REDIS_URL } }
+    { connection: { url: REDIS_URL } },
   );
 
   worker.on("completed", (_job) => {

@@ -13,6 +13,7 @@ docker build -f Clients/Dockerfile -t verifywise-frontend .
 ```
 
 **DO NOT run from the Clients directory:**
+
 ```bash
 # ❌ WRONG - This will fail
 cd Clients && docker build -t verifywise-frontend .
@@ -35,6 +36,7 @@ The following build arguments are supported:
 - `VITE_APP_VERSION` - Application version string
 
 Example with build args:
+
 ```bash
 docker build \
   -f Clients/Dockerfile \
@@ -53,6 +55,7 @@ This means the build context is incorrect. Make sure you're running the build co
 ### Error: "COPY failed: file not found"
 
 Verify that:
+
 1. You're in the project root directory (`verifywise/`)
 2. The `shared/` directory exists at the same level as `Clients/`
 3. The `Clients/` directory contains all necessary files

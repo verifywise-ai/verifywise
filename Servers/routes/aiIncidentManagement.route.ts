@@ -2,12 +2,12 @@ import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
 import {
-    archiveIncidentById,
-    createNewIncident,
-    deleteIncidentById,
-    getAllIncidents,
-    getIncidentById,
-    updateIncidentById,
+  archiveIncidentById,
+  createNewIncident,
+  deleteIncidentById,
+  getAllIncidents,
+  getIncidentById,
+  updateIncidentById,
 } from "../controllers/incident-management.ctrl";
 
 // GET all incidents

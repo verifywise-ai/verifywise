@@ -1,16 +1,16 @@
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from "@mui/material/styles";
 
 export const useStyles = () => {
   const theme = useTheme();
 
   return {
     root: {
-      display: 'flex',
-      flexDirection: 'column',
+      display: "flex",
+      flexDirection: "column",
       gap: theme.spacing(4),
       fontSize: 13,
-      width: '100%',
-      margin: '0 auto',
+      width: "100%",
+      margin: "0 auto",
     },
     card: {
       background: theme.palette.background.paper,
@@ -18,8 +18,8 @@ export const useStyles = () => {
       borderRadius: theme.shape.borderRadius,
       padding: theme.spacing(5, 6),
       marginBottom: theme.spacing(4),
-      boxShadow: 'none',
-      width: '100%',
+      boxShadow: "none",
+      width: "100%",
     },
     sectionTitle: {
       fontWeight: 600,
@@ -34,4 +34,3 @@ export const useStyles = () => {
     },
   };
 };
-

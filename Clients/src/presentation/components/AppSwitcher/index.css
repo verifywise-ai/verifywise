@@ -6,7 +6,7 @@
   --app-switcher-icon-color: rgba(255, 255, 255, 0.6);
   --app-switcher-icon-hover-color: rgba(255, 255, 255, 0.9);
   --app-switcher-icon-hover-bg: rgba(255, 255, 255, 0.1);
-  --app-switcher-active-bg: #13715B;
+  --app-switcher-active-bg: #13715b;
   --app-switcher-active-color: #ffffff;
   --app-switcher-disabled-opacity: 0.4;
 }
@@ -31,7 +31,11 @@ html.dark-mode {
   max-width: 40px;
   flex-shrink: 0;
   height: 100vh;
-  background: linear-gradient(180deg, var(--app-switcher-bg-start) 0%, var(--app-switcher-bg-end) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--app-switcher-bg-start) 0%,
+    var(--app-switcher-bg-end) 100%
+  );
   border-right: 1px solid var(--app-switcher-border);
   display: flex;
   flex-direction: column;

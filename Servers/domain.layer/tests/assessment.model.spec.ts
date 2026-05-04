@@ -31,14 +31,12 @@ class TestAssessmentModel {
   }
 
   // Static methods
-  static async CreateNewAssessment(
-    attributes: Partial<IAssessment>
-  ): Promise<TestAssessmentModel> {
+  static async CreateNewAssessment(attributes: Partial<IAssessment>): Promise<TestAssessmentModel> {
     if (!attributes.project_id || attributes.project_id < 1) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        attributes.project_id
+        attributes.project_id,
       );
     }
     return new TestAssessmentModel({
@@ -50,48 +48,42 @@ class TestAssessmentModel {
 
   static async UpdateAssessment(
     id: number,
-    attributes: Partial<IAssessment>
+    attributes: Partial<IAssessment>,
   ): Promise<[number, TestAssessmentModel[]]> {
     if (id < 1) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        id
+        id,
       );
     }
     if (attributes.project_id !== undefined && attributes.project_id < 1) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        attributes.project_id
+        attributes.project_id,
       );
     }
     return [1, [new TestAssessmentModel({ id, ...attributes })]];
   }
 
-  static async FindAssessmentById(
-    id: number
-  ): Promise<TestAssessmentModel | null> {
+  static async FindAssessmentById(id: number): Promise<TestAssessmentModel | null> {
     if (id < 1) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        id
+        id,
       );
     }
-    return id === 999
-      ? null
-      : new TestAssessmentModel({ id, project_id: 1, is_demo: false });
+    return id === 999 ? null : new TestAssessmentModel({ id, project_id: 1, is_demo: false });
   }
 
-  static async FindAssessmentsByProjectId(
-    projectId: number
-  ): Promise<TestAssessmentModel[]> {
+  static async FindAssessmentsByProjectId(projectId: number): Promise<TestAssessmentModel[]> {
     if (projectId < 1) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
     return [
@@ -105,7 +97,7 @@ class TestAssessmentModel {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        id
+        id,
       );
     }
     return 1;
@@ -117,7 +109,7 @@ class TestAssessmentModel {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }
@@ -177,9 +169,7 @@ describe("AssessmentModel", () => {
 
   describe("CreateNewAssessment", () => {
     it("should create assessment with valid data", async () => {
-      const assessment = await TestAssessmentModel.CreateNewAssessment(
-        validData
-      );
+      const assessment = await TestAssessmentModel.CreateNewAssessment(validData);
       expect(assessment).toBeInstanceOf(TestAssessmentModel);
       expect(assessment.project_id).toBe(1);
       expect(assessment.is_demo).toBe(false);
@@ -187,26 +177,23 @@ describe("AssessmentModel", () => {
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestAssessmentModel.CreateNewAssessment({ project_id: 0 })
-      ).rejects.toThrow(ValidationException);
+      await expect(TestAssessmentModel.CreateNewAssessment({ project_id: 0 })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
   describe("UpdateAssessment", () => {
     it("should update assessment successfully", async () => {
-      const [affected, updated] = await TestAssessmentModel.UpdateAssessment(
-        1,
-        { is_demo: true }
-      );
+      const [affected, updated] = await TestAssessmentModel.UpdateAssessment(1, { is_demo: true });
       expect(affected).toBe(1);
       expect(updated[0].is_demo).toBe(true);
     });
 
     it("should throw ValidationException for invalid assessment ID", async () => {
-      await expect(
-        TestAssessmentModel.UpdateAssessment(0, { is_demo: true })
-      ).rejects.toThrow(ValidationException);
+      await expect(TestAssessmentModel.UpdateAssessment(0, { is_demo: true })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -225,9 +212,7 @@ describe("AssessmentModel", () => {
 
   describe("FindAssessmentsByProjectId", () => {
     it("should find assessments for project", async () => {
-      const assessments = await TestAssessmentModel.FindAssessmentsByProjectId(
-        1
-      );
+      const assessments = await TestAssessmentModel.FindAssessmentsByProjectId(1);
       expect(assessments).toHaveLength(2);
       expect(assessments[0].project_id).toBe(1);
     });
@@ -248,9 +233,7 @@ describe("AssessmentModel", () => {
 
     it("should throw ValidationException for invalid project_id", async () => {
       const assessment = new TestAssessmentModel({ project_id: 0 });
-      await expect(assessment.validateAssessmentData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(assessment.validateAssessmentData()).rejects.toThrow(ValidationException);
     });
   });
 

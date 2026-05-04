@@ -11,4 +11,4 @@ export type Dashboard = {
     upcoming: number;
   };
   projects_list: Project[];
-}
+};

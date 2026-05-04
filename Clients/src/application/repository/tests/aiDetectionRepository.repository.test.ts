@@ -43,9 +43,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await getRepositories(2, 10);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/repositories?page=2&limit=10",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/repositories?page=2&limit=10");
       expect(response).toEqual(mockData);
     });
 
@@ -64,9 +62,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await getRepositories();
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/repositories?page=1&limit=20",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/repositories?page=1&limit=20");
       expect(response).toEqual(mockData);
     });
   });
@@ -84,9 +80,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await getRepository(123);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/repositories/123",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/repositories/123");
       expect(response).toEqual(mockData);
     });
   });
@@ -108,10 +102,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await createRepository(input as any);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/ai-detection/repositories",
-        input,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/ai-detection/repositories", input);
       expect(response).toEqual(mockData);
     });
   });
@@ -135,10 +126,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await updateRepository(id, input as any);
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/ai-detection/repositories/123",
-        input,
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/ai-detection/repositories/123", input);
       expect(response).toEqual(mockData);
     });
   });
@@ -149,9 +137,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await deleteRepository(123);
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        "/ai-detection/repositories/123",
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith("/ai-detection/repositories/123");
       expect(response).toBeUndefined();
     });
   });
@@ -169,9 +155,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await triggerRepositoryScan(123);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/ai-detection/repositories/123/scan",
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/ai-detection/repositories/123/scan");
       expect(response).toEqual(mockData);
     });
   });
@@ -237,9 +221,7 @@ describe("Test AI Detection Repository Registry", () => {
 
       const response = await getRepositoryCount();
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/repositories?page=1&limit=1",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/repositories?page=1&limit=1");
       expect(response).toBe(42);
     });
   });

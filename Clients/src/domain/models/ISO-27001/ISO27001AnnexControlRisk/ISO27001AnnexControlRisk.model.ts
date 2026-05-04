@@ -8,7 +8,7 @@ export class ISO27001AnnexControlRiskModel {
   }
 
   static createNewISO27001AnnexControlRisk(
-    data: ISO27001AnnexControlRiskModel
+    data: ISO27001AnnexControlRiskModel,
   ): ISO27001AnnexControlRiskModel {
     return new ISO27001AnnexControlRiskModel(data);
   }

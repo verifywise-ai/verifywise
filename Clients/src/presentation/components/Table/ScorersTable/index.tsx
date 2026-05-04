@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Typography } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useCallback } from "react";
 import { Gauge, Ruler, Settings2, BarChart3 } from "lucide-react";
@@ -131,11 +124,7 @@ const ScorersTable: React.FC<ScorersTableProps> = ({
   return (
     <TableContainer>
       <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-        <StandardTableHead
-          columns={columns}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
+        <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>
             <TableRow>
@@ -157,7 +146,10 @@ const ScorersTable: React.FC<ScorersTableProps> = ({
           <TableBody>
             <TableRow>
               <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                <EmptyState icon={Gauge} message="No scorers found. Create a scorer to get started.">
+                <EmptyState
+                  icon={Gauge}
+                  message="No scorers found. Create a scorer to get started."
+                >
                   <EmptyStateTip
                     icon={Ruler}
                     title="What is a scorer?"

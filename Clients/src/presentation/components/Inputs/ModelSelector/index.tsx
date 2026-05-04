@@ -21,15 +21,7 @@ import {
   InputAdornment,
   useTheme,
 } from "@mui/material";
-import {
-  Search,
-  Check,
-  ChevronRight,
-  ChevronDown,
-  Plus,
-  Key,
-  Settings,
-} from "lucide-react";
+import { Search, Check, ChevronRight, ChevronDown, Plus, Key, Settings } from "lucide-react";
 import { PROVIDERS, getModelsForProvider } from "../../../utils/providers";
 
 // Provider icons
@@ -100,7 +92,7 @@ function ModelSelector({
   const filteredModels = models.filter(
     (m) =>
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.id.toLowerCase().includes(searchQuery.toLowerCase())
+      m.id.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleProviderSelect = (newProvider: string) => {
@@ -181,9 +173,7 @@ function ModelSelector({
                   : theme.palette.text.disabled,
             }}
           >
-            {isOpenRouter && model
-              ? model
-              : selectedModel?.name || "Select a model"}
+            {isOpenRouter && model ? model : selectedModel?.name || "Select a model"}
           </Typography>
         </Stack>
         <ChevronDown
@@ -419,12 +409,9 @@ function ModelSelector({
                       >
                         API key required
                       </Typography>
-                      <Typography
-                        sx={{ fontSize: 12, color: theme.palette.text.disabled, mb: 2 }}
-                      >
-                        Add an API key for{" "}
-                        {PROVIDERS[provider]?.displayName || provider} to use
-                        its models
+                      <Typography sx={{ fontSize: 12, color: theme.palette.text.disabled, mb: 2 }}>
+                        Add an API key for {PROVIDERS[provider]?.displayName || provider} to use its
+                        models
                       </Typography>
                       <Box
                         onClick={(e) => {
@@ -467,9 +454,7 @@ function ModelSelector({
                     >
                       Enter model name
                     </Typography>
-                    <Typography
-                      sx={{ fontSize: 11, color: theme.palette.text.disabled, mb: 1.5 }}
-                    >
+                    <Typography sx={{ fontSize: 11, color: theme.palette.text.disabled, mb: 1.5 }}>
                       OpenRouter supports any model. Enter the model ID (e.g.,
                       anthropic/claude-3-opus)
                     </Typography>
@@ -514,7 +499,9 @@ function ModelSelector({
                         backgroundColor: customModel.trim()
                           ? theme.palette.primary.main
                           : theme.palette.action.disabledBackground,
-                        color: customModel.trim() ? theme.palette.common.white : theme.palette.text.disabled,
+                        color: customModel.trim()
+                          ? theme.palette.common.white
+                          : theme.palette.text.disabled,
                         fontSize: 12,
                         fontWeight: 500,
                         "&:hover": {
@@ -564,9 +551,7 @@ function ModelSelector({
                           borderRadius: theme.shape.borderRadius,
                           cursor: "pointer",
                           backgroundColor:
-                            model === m.id
-                              ? theme.palette.background.accent
-                              : "transparent",
+                            model === m.id ? theme.palette.background.accent : "transparent",
                           "&:hover": {
                             backgroundColor:
                               model === m.id
@@ -625,9 +610,7 @@ function ModelSelector({
                         }}
                       >
                         <Stack direction="row" alignItems="center" spacing={1.5}>
-                          {isSelected && (
-                            <Check size={16} color={theme.palette.primary.main} />
-                          )}
+                          {isSelected && <Check size={16} color={theme.palette.primary.main} />}
                           {renderProviderIcon(provider, 18)}
                           <Typography
                             sx={{

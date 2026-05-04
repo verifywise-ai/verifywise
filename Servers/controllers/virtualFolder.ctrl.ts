@@ -62,10 +62,7 @@ const parseParamId = (param: string | string[] | undefined): number => {
  * GET /virtual-folders
  * Get all folders (flat list with file counts)
  */
-export const getAllFolders = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getAllFolders = async (req: Request, res: Response): Promise<Response> => {
   try {
     const folders = await getAllFoldersQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](folders));
@@ -79,10 +76,7 @@ export const getAllFolders = async (
  * GET /virtual-folders/tree
  * Get folder tree (hierarchical structure)
  */
-export const getFolderTree = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getFolderTree = async (req: Request, res: Response): Promise<Response> => {
   try {
     const tree = await getFolderTreeQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](tree));
@@ -96,10 +90,7 @@ export const getFolderTree = async (
  * GET /virtual-folders/:id
  * Get folder by ID
  */
-export const getFolderById = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getFolderById = async (req: Request, res: Response): Promise<Response> => {
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
@@ -122,10 +113,7 @@ export const getFolderById = async (
  * GET /virtual-folders/:id/path
  * Get folder path (breadcrumb from root to folder)
  */
-export const getFolderPath = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getFolderPath = async (req: Request, res: Response): Promise<Response> => {
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
@@ -144,10 +132,7 @@ export const getFolderPath = async (
  * POST /virtual-folders
  * Create a new folder
  */
-export const createFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const createFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -156,8 +141,7 @@ export const createFolder = async (
       return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
     }
 
-    const { name, description, parent_id, color, icon } =
-      req.body as IVirtualFolderInput;
+    const { name, description, parent_id, color, icon } = req.body as IVirtualFolderInput;
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -172,11 +156,7 @@ export const createFolder = async (
     }
 
     // Check for duplicate name in same parent
-    const exists = await checkFolderNameExistsQuery(
-      req.organizationId!,
-      name,
-      parent_id || null
-    );
+    const exists = await checkFolderNameExistsQuery(req.organizationId!, name, parent_id || null);
     if (exists) {
       await transaction.rollback();
       return res
@@ -197,7 +177,7 @@ export const createFolder = async (
       { name, description, parent_id, color, icon },
       req.userId!,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -213,10 +193,7 @@ export const createFolder = async (
  * PATCH /virtual-folders/:id
  * Update an existing folder
  */
-export const updateFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const updateFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -231,8 +208,7 @@ export const updateFolder = async (
       return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
     }
 
-    const { name, description, parent_id, color, icon } =
-      req.body as IVirtualFolderUpdate;
+    const { name, description, parent_id, color, icon } = req.body as IVirtualFolderUpdate;
 
     // Check folder exists
     const existingFolder = await getFolderByIdQuery(req.organizationId!, folderId);
@@ -260,7 +236,7 @@ export const updateFolder = async (
         req.organizationId!,
         name,
         targetParentId || null,
-        folderId
+        folderId,
       );
       if (exists) {
         await transaction.rollback();
@@ -284,7 +260,7 @@ export const updateFolder = async (
         const wouldBeCircular = await wouldCreateCircularReferenceQuery(
           req.organizationId!,
           folderId,
-          parent_id
+          parent_id,
         );
         if (wouldBeCircular) {
           await transaction.rollback();
@@ -299,7 +275,7 @@ export const updateFolder = async (
       folderId,
       { name, description, parent_id, color, icon },
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (!folder) {
@@ -320,10 +296,7 @@ export const updateFolder = async (
  * DELETE /virtual-folders/:id
  * Delete a folder (cascade deletes children and mappings)
  */
-export const deleteFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const deleteFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -374,10 +347,7 @@ export const deleteFolder = async (
  * GET /virtual-folders/:id/files
  * Get files in a folder
  */
-export const getFilesInFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getFilesInFolder = async (req: Request, res: Response): Promise<Response> => {
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
@@ -402,10 +372,7 @@ export const getFilesInFolder = async (
  * GET /virtual-folders/uncategorized
  * Get files not assigned to any folder
  */
-export const getUncategorizedFiles = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getUncategorizedFiles = async (req: Request, res: Response): Promise<Response> => {
   try {
     const files = await getUncategorizedFilesQuery(req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](files));
@@ -419,10 +386,7 @@ export const getUncategorizedFiles = async (
  * POST /virtual-folders/:id/files
  * Assign files to a folder
  */
-export const assignFilesToFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const assignFilesToFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -455,7 +419,7 @@ export const assignFilesToFolder = async (
       folderId,
       file_ids,
       req.userId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -471,10 +435,7 @@ export const assignFilesToFolder = async (
  * DELETE /virtual-folders/:id/files/:fileId
  * Remove a file from a folder
  */
-export const removeFileFromFolder = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const removeFileFromFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -494,7 +455,7 @@ export const removeFileFromFolder = async (
       req.organizationId!,
       folderId,
       fileId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -510,10 +471,7 @@ export const removeFileFromFolder = async (
  * GET /files/:id/folders
  * Get all folders a file belongs to
  */
-export const getFileFolders = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const getFileFolders = async (req: Request, res: Response): Promise<Response> => {
   try {
     const fileId = parseParamId(req.params.id);
     if (isNaN(fileId)) {
@@ -532,10 +490,7 @@ export const getFileFolders = async (
  * PATCH /files/:id/folders
  * Bulk update file folder assignments
  */
-export const updateFileFolders = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const updateFileFolders = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
     // Check permissions
@@ -561,7 +516,7 @@ export const updateFileFolders = async (
       fileId,
       folder_ids,
       req.userId!,
-      transaction
+      transaction,
     );
 
     const updatedFolders = await getFileFoldersQuery(req.organizationId!, fileId);

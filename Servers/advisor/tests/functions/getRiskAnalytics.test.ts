@@ -1,19 +1,9 @@
-import {
-  afterEach, 
-  beforeEach, 
-  describe, 
-  expect, 
-  it, 
-  jest} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import * as riskUtils from "../../../utils/risk.utils";
 import { availableRiskTools } from "../../functions/riskFunctions";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
-import {
-  mockRisks,
-  mockEmptyRisks,
-  createMockRisk,
-} from "../../mocks/mockRiskData";
-import { createMockTenant } from '../../mocks/mockTenant';
+import { mockRisks, mockEmptyRisks, createMockRisk } from "../../mocks/mockRiskData";
+import { createMockTenant } from "../../mocks/mockTenant";
 
 const availableTools = {
   ...availableRiskTools,
@@ -33,7 +23,7 @@ describe("Advisor Functions: getRiskAnalytics", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-  
+
   const getRiskAnalytics = availableTools["get_risk_analytics"];
 
   describe("Risk Matrix Generation", () => {
@@ -43,12 +33,12 @@ describe("Advisor Functions: getRiskAnalytics", () => {
       const result = await getRiskAnalytics({}, mockTenant);
 
       // Check structure
-      expect(result).toHaveProperty('riskMatrix');
-      expect(result).toHaveProperty('categoryDistribution');
-      expect(result).toHaveProperty('mitigationStatusBreakdown');
-      expect(result).toHaveProperty('lifecyclePhaseDistribution');
-      expect(result).toHaveProperty('riskLevelSummary');
-      expect(result).toHaveProperty('totalRisks');
+      expect(result).toHaveProperty("riskMatrix");
+      expect(result).toHaveProperty("categoryDistribution");
+      expect(result).toHaveProperty("mitigationStatusBreakdown");
+      expect(result).toHaveProperty("lifecyclePhaseDistribution");
+      expect(result).toHaveProperty("riskLevelSummary");
+      expect(result).toHaveProperty("totalRisks");
 
       // Check risk matrix is 5x5
       expect(Object.keys(result.riskMatrix)).toHaveLength(5);
@@ -61,22 +51,22 @@ describe("Advisor Functions: getRiskAnalytics", () => {
 
       // Check each category has required fields
       result.categoryDistribution.forEach((cat: any) => {
-        expect(cat).toHaveProperty('category');
-        expect(cat).toHaveProperty('count');
-        expect(cat).toHaveProperty('percentage');
-        expect(typeof cat.count).toBe('number');
-        expect(typeof cat.percentage).toBe('number');
+        expect(cat).toHaveProperty("category");
+        expect(cat).toHaveProperty("count");
+        expect(cat).toHaveProperty("percentage");
+        expect(typeof cat.count).toBe("number");
+        expect(typeof cat.percentage).toBe("number");
       });
 
       // Check totalRisks is a number
-      expect(typeof result.totalRisks).toBe('number');
+      expect(typeof result.totalRisks).toBe("number");
 
       const severities = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"];
       const likelihoods = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
 
-      severities.forEach(sev => {
+      severities.forEach((sev) => {
         expect(result.riskMatrix[sev]).toBeDefined();
-        likelihoods.forEach(like => {
+        likelihoods.forEach((like) => {
           expect(result.riskMatrix[sev][like]).toBeDefined();
           expect(typeof result.riskMatrix[sev][like]).toBe("number");
         });
@@ -103,7 +93,7 @@ describe("Advisor Functions: getRiskAnalytics", () => {
       const result = await getRiskAnalytics({}, mockTenant);
 
       Object.values(result.riskMatrix).forEach((row: any) => {
-        Object.values(row).forEach(count => {
+        Object.values(row).forEach((count) => {
           expect(count).toBe(0);
         });
       });
@@ -112,7 +102,7 @@ describe("Advisor Functions: getRiskAnalytics", () => {
     it("should handle missing severity or likelihood data", async () => {
       const testRisks = [
         createMockRisk({ severity: "Major", likelihood: "Likely" }),
-        { ...createMockRisk({severity: undefined, likelihood: "Possible"}) } as any,
+        { ...createMockRisk({ severity: undefined, likelihood: "Possible" }) } as any,
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
@@ -156,9 +146,7 @@ describe("Advisor Functions: getRiskAnalytics", () => {
     });
 
     it("should handle multi-category risks (array of categories)", async () => {
-      const testRisks = [
-        createMockRisk({ risk_category: ["Security", "Privacy"] }),
-      ];
+      const testRisks = [createMockRisk({ risk_category: ["Security", "Privacy"] })];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getRiskAnalytics({}, mockTenant);
@@ -174,15 +162,13 @@ describe("Advisor Functions: getRiskAnalytics", () => {
 
       for (let i = 0; i < result.categoryDistribution.length - 1; i++) {
         expect(result.categoryDistribution[i].count).toBeGreaterThanOrEqual(
-          result.categoryDistribution[i + 1].count
+          result.categoryDistribution[i + 1].count,
         );
       }
     });
 
     it("should handle empty category arrays", async () => {
-      const testRisks = [
-        { ...createMockRisk({}), risk_category: [] },
-      ];
+      const testRisks = [{ ...createMockRisk({}), risk_category: [] }];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getRiskAnalytics({}, mockTenant);
@@ -202,9 +188,7 @@ describe("Advisor Functions: getRiskAnalytics", () => {
     });
 
     it("should default to 'Not Started' for missing status", async () => {
-      const testRisks = [
-        { ...createMockRisk({}), mitigation_status: undefined } as any,
-      ];
+      const testRisks = [{ ...createMockRisk({}), mitigation_status: undefined } as any];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getRiskAnalytics({}, mockTenant);
@@ -254,5 +238,4 @@ describe("Advisor Functions: getRiskAnalytics", () => {
       expect(result.totalRisks).toBe(mockRisks.length);
     });
   });
-
 });

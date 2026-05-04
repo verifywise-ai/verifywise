@@ -23,42 +23,18 @@ import authenticateJWT from "../middleware/auth.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllProjects);
-router.get(
-  "/calculateProjectRisks/:id",
-  authenticateJWT,
-  getProjectRisksCalculations
-);
-router.get(
-  "/calculateVendorRisks/:id",
-  authenticateJWT,
-  getVendorRisksCalculations
-);
+router.get("/calculateProjectRisks/:id", authenticateJWT, getProjectRisksCalculations);
+router.get("/calculateVendorRisks/:id", authenticateJWT, getVendorRisksCalculations);
 router.get("/:id", authenticateJWT, getProjectById);
 router.get("/stats/:id", authenticateJWT, getProjectStatsById);
 
 router.get("/complainces/:projid", authenticateJWT, getCompliances);
 
-router.get(
-  "/compliance/progress/:id",
-  authenticateJWT,
-  projectComplianceProgress
-);
-router.get(
-  "/assessment/progress/:id",
-  authenticateJWT,
-  projectAssessmentProgress
-);
+router.get("/compliance/progress/:id", authenticateJWT, projectComplianceProgress);
+router.get("/assessment/progress/:id", authenticateJWT, projectAssessmentProgress);
 
-router.get(
-  "/all/compliance/progress",
-  authenticateJWT,
-  allProjectsComplianceProgress
-);
-router.get(
-  "/all/assessment/progress",
-  authenticateJWT,
-  allProjectsAssessmentProgress
-);
+router.get("/all/compliance/progress", authenticateJWT, allProjectsComplianceProgress);
+router.get("/all/assessment/progress", authenticateJWT, allProjectsAssessmentProgress);
 
 // POSTs
 router.post("/", authenticateJWT, createProject);

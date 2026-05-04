@@ -24,7 +24,7 @@ describe("hasDashboardCache", () => {
   it("should return true when cache has entries", () => {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ riskMetrics: { data: { total: 5 }, timestamp: Date.now() } })
+      JSON.stringify({ riskMetrics: { data: { total: 5 }, timestamp: Date.now() } }),
     );
     expect(hasDashboardCache()).toBe(true);
   });
@@ -36,7 +36,9 @@ describe("hasDashboardCache", () => {
 
   it("should return false when localStorage throws", () => {
     const original = localStorage.getItem;
-    localStorage.getItem = () => { throw new Error("Storage disabled"); };
+    localStorage.getItem = () => {
+      throw new Error("Storage disabled");
+    };
     expect(hasDashboardCache()).toBe(false);
     localStorage.getItem = original;
   });
@@ -66,7 +68,12 @@ describe("useDashboardMetrics", () => {
           data: [
             { id: 1, risk_name: "Risk A", current_risk_level: "High", mitigation_status: "Open" },
             { id: 2, risk_name: "Risk B", current_risk_level: "Low", mitigation_status: "Open" },
-            { id: 3, risk_name: "Risk C", current_risk_level: "Medium", mitigation_status: "Completed" },
+            {
+              id: 3,
+              risk_name: "Risk C",
+              current_risk_level: "Medium",
+              mitigation_status: "Completed",
+            },
           ],
         };
       }
@@ -184,7 +191,7 @@ describe("useDashboardMetrics", () => {
       () =>
         new Promise<any>((resolve) => {
           resolvers.push(() => resolve({ data: [] }));
-        })
+        }),
     );
     mockGetEntityById.mockResolvedValue({ data: {} });
 
@@ -229,7 +236,11 @@ describe("useDashboardMetrics", () => {
   it("should cache fetched data in localStorage", async () => {
     mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
       if (routeUrl === "/tasks") {
-        return { data: [{ id: 1, title: "Task 1", status: "Open", priority: "High", created_at: "2026-01-01" }] };
+        return {
+          data: [
+            { id: 1, title: "Task 1", status: "Open", priority: "High", created_at: "2026-01-01" },
+          ],
+        };
       }
       return { data: [] };
     });

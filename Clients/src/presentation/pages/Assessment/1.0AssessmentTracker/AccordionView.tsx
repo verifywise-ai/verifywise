@@ -110,8 +110,7 @@ const EUAIActStatusDropdown = ({
               sx={{
                 fontSize: 13,
                 minWidth: "150px",
-                backgroundColor:
-                  status === currentStatus ? "#f0f0f0" : "transparent",
+                backgroundColor: status === currentStatus ? "#f0f0f0" : "transparent",
               }}
             >
               {status}
@@ -137,11 +136,9 @@ const AccordionView = ({
   // Track multiple expanded accordions - default to all expanded
   const [expandedSet, setExpandedSet] = useState<Set<number>>(() => {
     // Initialize with all subtopic IDs to expand all by default
-    return new Set(subtopics.map(s => s.id ?? 0));
+    return new Set(subtopics.map((s) => s.id ?? 0));
   });
-  const [updatingQuestionId, setUpdatingQuestionId] = useState<number | null>(
-    null
-  );
+  const [updatingQuestionId, setUpdatingQuestionId] = useState<number | null>(null);
   const [alert, setAlert] = useState<AlertProps | null>(null);
 
   /**
@@ -208,7 +205,7 @@ const AccordionView = ({
         setUpdatingQuestionId(null);
       }
     },
-    [userId, onStatusUpdate, onFlashingChange]
+    [userId, onStatusUpdate, onFlashingChange],
   );
 
   /**
@@ -242,13 +239,11 @@ const AccordionView = ({
     (questions: Question[]) => {
       let filtered = questions;
       if (statusFilter && statusFilter !== "") {
-        filtered = filtered.filter(
-          (q) => q.status?.toLowerCase() === statusFilter.toLowerCase()
-        );
+        filtered = filtered.filter((q) => q.status?.toLowerCase() === statusFilter.toLowerCase());
       }
       return filtered;
     },
-    [statusFilter]
+    [statusFilter],
   );
 
   // Check if any filter is active
@@ -267,7 +262,7 @@ const AccordionView = ({
   }, [subtopics, filterQuestions]);
 
   const handleAccordionChange = (subtopicId: number) => {
-    setExpandedSet(prev => {
+    setExpandedSet((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(subtopicId)) {
         newSet.delete(subtopicId);
@@ -280,9 +275,7 @@ const AccordionView = ({
 
   return (
     <>
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       <Stack sx={{ gap: 2 }}>
         {subtopics.map((subtopic) => {
           const filteredQuestions = filterQuestions(subtopic.questions || []);
@@ -302,43 +295,35 @@ const AccordionView = ({
               <AccordionSummary
                 sx={{
                   ...styles.accordionSummary,
-                  borderBottom:
-                    expandedSet.has(subtopic.id ?? 0) ? "1px solid #d0d5dd" : "none",
+                  borderBottom: expandedSet.has(subtopic.id ?? 0) ? "1px solid #d0d5dd" : "none",
                 }}
               >
                 {/* Arrow Icon */}
                 <RightArrowBlack
                   size={16}
                   style={
-                    styles.expandIcon(
-                      expandedSet.has(subtopic.id ?? 0)
-                    ) as React.CSSProperties
+                    styles.expandIcon(expandedSet.has(subtopic.id ?? 0)) as React.CSSProperties
                   }
                 />
 
                 {/* Title */}
-                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                  {subtopic.title}
-                </Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{subtopic.title}</Typography>
 
                 {/* Filter Count Badge */}
-                {hasActiveFilters &&
-                  filteredCountsMemo[subtopic.id ?? 0] > 0 && (
-                    <Box component="span" sx={{ ml: "auto" }}>
-                      <Chip
-                        label={`${
-                          filteredCountsMemo[subtopic.id ?? 0]
-                        } filtered`}
-                        size="small"
-                        sx={{
-                          height: "20px",
-                          fontSize: "12px",
-                          backgroundColor: "#f0f0f0",
-                          color: "text.secondary",
-                        }}
-                      />
-                    </Box>
-                  )}
+                {hasActiveFilters && filteredCountsMemo[subtopic.id ?? 0] > 0 && (
+                  <Box component="span" sx={{ ml: "auto" }}>
+                    <Chip
+                      label={`${filteredCountsMemo[subtopic.id ?? 0]} filtered`}
+                      size="small"
+                      sx={{
+                        height: "20px",
+                        fontSize: "12px",
+                        backgroundColor: "#f0f0f0",
+                        color: "text.secondary",
+                      }}
+                    />
+                  </Box>
+                )}
               </AccordionSummary>
 
               <AccordionDetails sx={{ padding: 0 }}>
@@ -349,19 +334,12 @@ const AccordionView = ({
                       onClick={() => onQuestionClick(question, subtopic)}
                       sx={styles.questionRow(
                         index === filteredQuestions.length - 1,
-                        flashingQuestionId === question.question_id
+                        flashingQuestionId === question.question_id,
                       )}
                     >
                       {/* Left side: Question text with tooltip */}
-                      <Tooltip
-                        title={question.question}
-                        arrow
-                        placement="top"
-                        enterDelay={500}
-                      >
-                        <Typography sx={styles.questionText}>
-                          {question.question}
-                        </Typography>
+                      <Tooltip title={question.question} arrow placement="top" enterDelay={500}>
+                        <Typography sx={styles.questionText}>{question.question}</Typography>
                       </Tooltip>
 
                       {/* Right side: Priority chip + Status dropdown */}
@@ -378,9 +356,7 @@ const AccordionView = ({
 
                         <EUAIActStatusDropdown
                           currentStatus={question.status || "Not started"}
-                          onStatusChange={(newStatus) =>
-                            handleStatusChange(question, newStatus)
-                          }
+                          onStatusChange={(newStatus) => handleStatusChange(question, newStatus)}
                           disabled={updatingQuestionId === question.question_id}
                         />
                       </Box>

@@ -1,16 +1,6 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
-import {
-  IPMMReport,
-  IPMMContextSnapshot,
-} from "../../interfaces/i.postMarketMonitoring";
+import { IPMMReport, IPMMContextSnapshot } from "../../interfaces/i.postMarketMonitoring";
 import { PMMCycleModel } from "./pmmCycle.model";
 import { FileModel } from "../file/file.model";
 

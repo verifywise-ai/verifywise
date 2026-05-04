@@ -14,11 +14,7 @@ interface ErrorModalProps {
   handleClose: () => void;
 }
 
-const ErrorModal: React.FC<ErrorModalProps> = ({
-  open,
-  errorMessage,
-  handleClose,
-}) => {
+const ErrorModal: React.FC<ErrorModalProps> = ({ open, errorMessage, handleClose }) => {
   return (
     <Dialog open={open} onClose={handleClose}>
       <DialogTitle>Error</DialogTitle>

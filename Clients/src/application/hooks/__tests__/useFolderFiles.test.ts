@@ -40,7 +40,17 @@ describe("useFolderFiles", () => {
   });
 
   it("fetches uncategorized files when folder is 'uncategorized'", async () => {
-    const files = [{ id: 1, filename: "doc.pdf", size: 1024, mimetype: "application/pdf", upload_date: "2024-01-01", uploaded_by: 1, folders: [] }];
+    const files = [
+      {
+        id: 1,
+        filename: "doc.pdf",
+        size: 1024,
+        mimetype: "application/pdf",
+        upload_date: "2024-01-01",
+        uploaded_by: 1,
+        folders: [],
+      },
+    ];
     mockGetUncategorized.mockResolvedValue(files as any);
 
     const { result } = renderHook(() => useFolderFiles("uncategorized"));
@@ -50,7 +60,17 @@ describe("useFolderFiles", () => {
   });
 
   it("fetches files in specific folder", async () => {
-    const files = [{ id: 2, filename: "report.xlsx", size: 2048, mimetype: "application/vnd.ms-excel", upload_date: "2024-02-01", uploaded_by: 2, folders: [] }];
+    const files = [
+      {
+        id: 2,
+        filename: "report.xlsx",
+        size: 2048,
+        mimetype: "application/vnd.ms-excel",
+        upload_date: "2024-02-01",
+        uploaded_by: 2,
+        folders: [],
+      },
+    ];
     mockGetFilesInFolder.mockResolvedValue(files as any);
 
     const { result } = renderHook(() => useFolderFiles(5));

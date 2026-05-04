@@ -46,18 +46,10 @@ const fetchRisks = async (
   try {
     // Fetch based on scope
     if (params.projectId) {
-      const result = await getRisksByProjectQuery(
-        params.projectId,
-        organizationId,
-        "active",
-      );
+      const result = await getRisksByProjectQuery(params.projectId, organizationId, "active");
       risks = result || [];
     } else if (params.frameworkId) {
-      const result = await getRisksByFrameworkQuery(
-        params.frameworkId,
-        organizationId,
-        "active",
-      );
+      const result = await getRisksByFrameworkQuery(params.frameworkId, organizationId, "active");
       risks = result || [];
     } else {
       risks = await getAllRisksQuery(organizationId, "active");
@@ -75,25 +67,17 @@ const fetchRisks = async (
         (r) =>
           r.risk_category &&
           Array.isArray(r.risk_category) &&
-          r.risk_category.some((cat) =>
-            cat.toLowerCase().includes(params.category!.toLowerCase()),
-          ),
+          r.risk_category.some((cat) => cat.toLowerCase().includes(params.category!.toLowerCase())),
       );
     }
     if (params.mitigationStatus) {
-      risks = risks.filter(
-        (r) => r.mitigation_status === params.mitigationStatus,
-      );
+      risks = risks.filter((r) => r.mitigation_status === params.mitigationStatus);
     }
     if (params.riskLevel) {
-      risks = risks.filter(
-        (r) => r.risk_level_autocalculated === params.riskLevel,
-      );
+      risks = risks.filter((r) => r.risk_level_autocalculated === params.riskLevel);
     }
     if (params.aiLifecyclePhase) {
-      risks = risks.filter(
-        (r) => r.ai_lifecycle_phase === params.aiLifecyclePhase,
-      );
+      risks = risks.filter((r) => r.ai_lifecycle_phase === params.aiLifecyclePhase);
     }
 
     // Limit results
@@ -160,20 +144,8 @@ const getRiskAnalytics = async (
 
     // 1. Risk Matrix (Severity × Likelihood)
     const riskMatrix: RiskAnalytics["riskMatrix"] = {};
-    const severities = [
-      "Negligible",
-      "Minor",
-      "Moderate",
-      "Major",
-      "Catastrophic",
-    ];
-    const likelihoods = [
-      "Rare",
-      "Unlikely",
-      "Possible",
-      "Likely",
-      "Almost Certain",
-    ];
+    const severities = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"];
+    const likelihoods = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
 
     severities.forEach((sev) => {
       riskMatrix[sev] = {};
@@ -210,8 +182,7 @@ const getRiskAnalytics = async (
     const mitigationStatusBreakdown: { [status: string]: number } = {};
     risks.forEach((risk) => {
       const status = risk.mitigation_status || "Not Started";
-      mitigationStatusBreakdown[status] =
-        (mitigationStatusBreakdown[status] || 0) + 1;
+      mitigationStatusBreakdown[status] = (mitigationStatusBreakdown[status] || 0) + 1;
     });
 
     // 4. Lifecycle Phase Distribution
@@ -283,14 +254,11 @@ const getExecutiveSummary = async (
 
     // Count critical and high risks
     const criticalRisks = risks.filter(
-      (r) =>
-        r.severity === "Catastrophic" ||
-        r.risk_level_autocalculated === "Very high risk",
+      (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
     ).length;
 
     const highRisks = risks.filter(
-      (r) =>
-        r.severity === "Major" || r.risk_level_autocalculated === "High risk",
+      (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
     ).length;
 
     // Top categories (top 3)
@@ -311,20 +279,14 @@ const getExecutiveSummary = async (
     // Overdue mitigations
     const now = new Date();
     const overdueMitigations = risks.filter(
-      (r) =>
-        r.deadline &&
-        new Date(r.deadline) < now &&
-        r.mitigation_status !== "Completed",
+      (r) => r.deadline && new Date(r.deadline) < now && r.mitigation_status !== "Completed",
     ).length;
 
     // Mitigation progress
     const mitigationProgress = {
-      notStarted: risks.filter((r) => r.mitigation_status === "Not Started")
-        .length,
-      inProgress: risks.filter((r) => r.mitigation_status === "In Progress")
-        .length,
-      completed: risks.filter((r) => r.mitigation_status === "Completed")
-        .length,
+      notStarted: risks.filter((r) => r.mitigation_status === "Not Started").length,
+      inProgress: risks.filter((r) => r.mitigation_status === "In Progress").length,
+      completed: risks.filter((r) => r.mitigation_status === "Completed").length,
     };
 
     // Urgent risks (high/critical severity with upcoming deadlines or overdue)
@@ -337,9 +299,7 @@ const getExecutiveSummary = async (
       .map((r) => {
         const deadline = r.deadline ? new Date(r.deadline) : null;
         const daysUntilDeadline = deadline
-          ? Math.ceil(
-              (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-            )
+          ? Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           : null;
 
         return {
@@ -394,11 +354,7 @@ const getRiskHistoryTimeseries = async (
     const { parameter, timeframe } = params;
 
     // Fetch timeseries data using the utility function
-    const timeseriesData = await getTimeseriesForTimeframe(
-      parameter,
-      timeframe,
-      organizationId,
-    );
+    const timeseriesData = await getTimeseriesForTimeframe(parameter, timeframe, organizationId);
 
     return timeseriesData;
   } catch (error) {

@@ -24,9 +24,16 @@ describe("useFrameworks", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("fetches all frameworks", async () => {
-    mockGetAll.mockResolvedValue({ data: [{ id: 1, name: "EU AI Act" }, { id: 2, name: "ISO 42001" }] });
+    mockGetAll.mockResolvedValue({
+      data: [
+        { id: 1, name: "EU AI Act" },
+        { id: 2, name: "ISO 42001" },
+      ],
+    });
 
-    const { result } = renderHook(() => useFrameworks({ listOfFrameworks: [] }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useFrameworks({ listOfFrameworks: [] }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.allFrameworks).toHaveLength(2);
@@ -34,11 +41,16 @@ describe("useFrameworks", () => {
   });
 
   it("filters frameworks based on listOfFrameworks", async () => {
-    mockGetAll.mockResolvedValue({ data: [{ id: 1, name: "EU AI Act" }, { id: 2, name: "ISO 42001" }] });
+    mockGetAll.mockResolvedValue({
+      data: [
+        { id: 1, name: "EU AI Act" },
+        { id: 2, name: "ISO 42001" },
+      ],
+    });
 
     const { result } = renderHook(
       () => useFrameworks({ listOfFrameworks: [{ framework_id: 1, project_framework_id: 10 }] }),
-      { wrapper: createWrapper() }
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -50,7 +62,9 @@ describe("useFrameworks", () => {
   it("handles error", async () => {
     mockGetAll.mockRejectedValue(new Error("Server down"));
 
-    const { result } = renderHook(() => useFrameworks({ listOfFrameworks: [] }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useFrameworks({ listOfFrameworks: [] }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.error).toBe("Server down"));
   });

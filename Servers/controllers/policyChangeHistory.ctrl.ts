@@ -6,10 +6,7 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 /**
  * Get change history for a specific policy with pagination support
  */
-export async function getPolicyChangeHistoryById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getPolicyChangeHistoryById(req: Request, res: Response): Promise<any> {
   const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   if (isNaN(policyId) || policyId <= 0) {
@@ -25,25 +22,20 @@ export async function getPolicyChangeHistoryById(
     "processing",
     `fetching change history for policy id: ${policyId} (limit: ${limit}, offset: ${offset})`,
     "getPolicyChangeHistoryById",
-    "policyChangeHistory.ctrl.ts"
+    "policyChangeHistory.ctrl.ts",
   );
   logger.debug(
-    `Fetching change history for policy with id: ${policyId} (limit: ${limit}, offset: ${offset})`
+    `Fetching change history for policy with id: ${policyId} (limit: ${limit}, offset: ${offset})`,
   );
 
   try {
-    const result = await getPolicyChangeHistory(
-      policyId,
-      req.organizationId!,
-      limit,
-      offset
-    );
+    const result = await getPolicyChangeHistory(policyId, req.organizationId!, limit, offset);
 
     logStructured(
       "successful",
       `change history retrieved for policy id: ${policyId} (${result.data.length} entries, hasMore: ${result.hasMore})`,
       "getPolicyChangeHistoryById",
-      "policyChangeHistory.ctrl.ts"
+      "policyChangeHistory.ctrl.ts",
     );
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -52,7 +44,7 @@ export async function getPolicyChangeHistoryById(
       "error",
       "failed to retrieve change history",
       "getPolicyChangeHistoryById",
-      "policyChangeHistory.ctrl.ts"
+      "policyChangeHistory.ctrl.ts",
     );
     logger.error("Error in getPolicyChangeHistoryById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

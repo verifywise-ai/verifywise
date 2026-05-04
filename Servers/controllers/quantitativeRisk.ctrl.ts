@@ -7,10 +7,7 @@ import {
   computeDerivedFields,
   recordPortfolioSnapshot,
 } from "../utils/quantitativeRisk.utils";
-import {
-  applyBenchmarkToRiskQuery,
-  getBenchmarkByIdQuery,
-} from "../utils/riskBenchmark.utils";
+import { applyBenchmarkToRiskQuery, getBenchmarkByIdQuery } from "../utils/riskBenchmark.utils";
 import { getRiskByIdQuery } from "../utils/risk.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
@@ -21,15 +18,12 @@ import { logEvent } from "../utils/logger/dbLogger";
  * GET /api/quantitative-risks/portfolio/org
  * Returns aggregated ALE, residual ALE, mitigation cost, risk count for the org.
  */
-export async function getOrgPortfolio(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getOrgPortfolio(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
     "fetching org portfolio summary",
     "getOrgPortfolio",
-    "quantitativeRisk.ctrl.ts"
+    "quantitativeRisk.ctrl.ts",
   );
 
   try {
@@ -40,7 +34,7 @@ export async function getOrgPortfolio(
       "error",
       "failed to fetch org portfolio",
       "getOrgPortfolio",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -50,31 +44,25 @@ export async function getOrgPortfolio(
  * GET /api/quantitative-risks/portfolio/project/:projectId
  * Returns aggregated portfolio for a specific project.
  */
-export async function getProjectPortfolio(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getProjectPortfolio(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(req.params.projectId as string);
 
   logStructured(
     "processing",
     `fetching project portfolio for ID: ${projectId}`,
     "getProjectPortfolio",
-    "quantitativeRisk.ctrl.ts"
+    "quantitativeRisk.ctrl.ts",
   );
 
   try {
-    const summary = await getPortfolioByProject(
-      req.organizationId!,
-      projectId
-    );
+    const summary = await getPortfolioByProject(req.organizationId!, projectId);
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
     logStructured(
       "error",
       `failed to fetch project portfolio for ID: ${projectId}`,
       "getProjectPortfolio",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -84,35 +72,26 @@ export async function getProjectPortfolio(
  * GET /api/quantitative-risks/portfolio/trend?days=30&projectId=123
  * Returns portfolio snapshots over time.
  */
-export async function getPortfolioTrendHandler(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getPortfolioTrendHandler(req: Request, res: Response): Promise<any> {
   const days = parseInt(req.query.days as string) || 30;
-  const projectId = req.query.projectId
-    ? parseInt(req.query.projectId as string)
-    : undefined;
+  const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
 
   logStructured(
     "processing",
     `fetching portfolio trend (${days} days)`,
     "getPortfolioTrend",
-    "quantitativeRisk.ctrl.ts"
+    "quantitativeRisk.ctrl.ts",
   );
 
   try {
-    const snapshots = await getPortfolioTrend(
-      req.organizationId!,
-      days,
-      projectId
-    );
+    const snapshots = await getPortfolioTrend(req.organizationId!, days, projectId);
     return res.status(200).json(STATUS_CODE[200](snapshots));
   } catch (error) {
     logStructured(
       "error",
       "failed to fetch portfolio trend",
       "getPortfolioTrend",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -122,10 +101,7 @@ export async function getPortfolioTrendHandler(
  * POST /api/quantitative-risks/:riskId/apply-benchmark/:benchmarkId
  * Copies benchmark values to a risk and recomputes derived fields.
  */
-export async function applyBenchmark(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function applyBenchmark(req: Request, res: Response): Promise<any> {
   const riskId = parseInt(req.params.riskId as string);
   const benchmarkId = parseInt(req.params.benchmarkId as string);
 
@@ -133,7 +109,7 @@ export async function applyBenchmark(
     "processing",
     `applying benchmark ${benchmarkId} to risk ${riskId}`,
     "applyBenchmark",
-    "quantitativeRisk.ctrl.ts"
+    "quantitativeRisk.ctrl.ts",
   );
 
   try {
@@ -143,11 +119,7 @@ export async function applyBenchmark(
     }
 
     // Apply benchmark values to risk
-    const applied = await applyBenchmarkToRiskQuery(
-      riskId,
-      benchmarkId,
-      req.organizationId!
-    );
+    const applied = await applyBenchmarkToRiskQuery(riskId, benchmarkId, req.organizationId!);
     if (!applied) {
       return res.status(404).json(STATUS_CODE[404]("Risk not found"));
     }
@@ -172,19 +144,19 @@ export async function applyBenchmark(
           residual_ale: derived.residual_ale ?? null,
           roi_percentage: derived.roi_percentage ?? null,
         },
-      }
+      },
     );
 
     // Record portfolio snapshot (fire-and-forget)
     recordPortfolioSnapshot(req.organizationId!).catch((err) =>
-      console.error("Failed to record portfolio snapshot:", err)
+      console.error("Failed to record portfolio snapshot:", err),
     );
 
     await logEvent(
       "Update",
       `Applied benchmark "${benchmark.category}" to risk ID ${riskId}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
 
     // Return the updated risk
@@ -195,7 +167,7 @@ export async function applyBenchmark(
       "error",
       `failed to apply benchmark ${benchmarkId} to risk ${riskId}`,
       "applyBenchmark",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -205,25 +177,18 @@ export async function applyBenchmark(
  * PUT /api/quantitative-risks/assessment-mode
  * Toggle organization's risk assessment mode (Admin only).
  */
-export async function updateRiskAssessmentMode(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateRiskAssessmentMode(req: Request, res: Response): Promise<any> {
   const { mode } = req.body;
 
   if (mode !== "qualitative" && mode !== "quantitative") {
-    return res
-      .status(400)
-      .json(
-        STATUS_CODE[400]("Mode must be 'qualitative' or 'quantitative'")
-      );
+    return res.status(400).json(STATUS_CODE[400]("Mode must be 'qualitative' or 'quantitative'"));
   }
 
   logStructured(
     "processing",
     `updating risk assessment mode to: ${mode}`,
     "updateRiskAssessmentMode",
-    "quantitativeRisk.ctrl.ts"
+    "quantitativeRisk.ctrl.ts",
   );
 
   try {
@@ -236,13 +201,11 @@ export async function updateRiskAssessmentMode(
           organizationId: req.organizationId!,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (!userResult[0] || userResult[0].role_id !== 1) {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("Only admins can change risk assessment mode"));
+      return res.status(403).json(STATUS_CODE[403]("Only admins can change risk assessment mode"));
     }
 
     await sequelize.query(
@@ -252,14 +215,14 @@ export async function updateRiskAssessmentMode(
           mode,
           organizationId: req.organizationId!,
         },
-      }
+      },
     );
 
     await logEvent(
       "Update",
       `Risk assessment mode changed to ${mode}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
 
     return res.status(200).json(STATUS_CODE[200]({ risk_assessment_mode: mode }));
@@ -268,7 +231,7 @@ export async function updateRiskAssessmentMode(
       "error",
       "failed to update risk assessment mode",
       "updateRiskAssessmentMode",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
@@ -278,17 +241,14 @@ export async function updateRiskAssessmentMode(
  * GET /api/quantitative-risks/assessment-mode
  * Get the current org's risk assessment mode.
  */
-export async function getRiskAssessmentMode(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getRiskAssessmentMode(req: Request, res: Response): Promise<any> {
   try {
     const result = await sequelize.query<{ risk_assessment_mode: string }>(
       `SELECT risk_assessment_mode FROM organizations WHERE id = :organizationId`,
       {
         replacements: { organizationId: req.organizationId! },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     const mode = result[0]?.risk_assessment_mode || "qualitative";
@@ -298,7 +258,7 @@ export async function getRiskAssessmentMode(
       "error",
       "failed to get risk assessment mode",
       "getRiskAssessmentMode",
-      "quantitativeRisk.ctrl.ts"
+      "quantitativeRisk.ctrl.ts",
     );
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

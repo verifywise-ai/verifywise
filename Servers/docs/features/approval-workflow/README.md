@@ -18,16 +18,16 @@ This feature implements a complete approval workflow system with real-time notif
 
 ### Main Components
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| Approval Workflow Routes | `routes/approvalWorkflow.route.ts` | Workflow CRUD endpoints |
-| Approval Request Routes | `routes/approvalRequest.route.ts` | Request processing endpoints |
-| Notification Routes | `routes/notification.route.ts` | SSE streaming endpoint |
-| Workflow Utils | `utils/approvalWorkflow.utils.ts` | Workflow business logic |
-| Request Utils | `utils/approvalRequest.utils.ts` | Request processing logic |
-| Notification Service | `services/notification.service.ts` | Notification publishing |
-| Notification Subscriber | `services/notificationSubscriber.service.ts` | Redis subscriber |
-| Notification Controller | `controllers/notification.ctrl.ts` | SSE connection management |
+| Component                | Location                                     | Purpose                      |
+| ------------------------ | -------------------------------------------- | ---------------------------- |
+| Approval Workflow Routes | `routes/approvalWorkflow.route.ts`           | Workflow CRUD endpoints      |
+| Approval Request Routes  | `routes/approvalRequest.route.ts`            | Request processing endpoints |
+| Notification Routes      | `routes/notification.route.ts`               | SSE streaming endpoint       |
+| Workflow Utils           | `utils/approvalWorkflow.utils.ts`            | Workflow business logic      |
+| Request Utils            | `utils/approvalRequest.utils.ts`             | Request processing logic     |
+| Notification Service     | `services/notification.service.ts`           | Notification publishing      |
+| Notification Subscriber  | `services/notificationSubscriber.service.ts` | Redis subscriber             |
+| Notification Controller  | `controllers/notification.ctrl.ts`           | SSE connection management    |
 
 ### Database Tables
 
@@ -98,6 +98,7 @@ POST /api/approval-requests/14/approve
 ## Recent Changes
 
 ### 2026-01-09
+
 - **Fixed notification timing bug**: Moved notification calls to after transaction commits
 - **Fixed project visibility**: Editors and Auditors can now view all projects
 - **Added real-time count updates**: Approval request count auto-refreshes on notifications
@@ -116,6 +117,7 @@ POST /api/approval-requests/14/approve
 ## Support
 
 For questions or issues, refer to:
+
 - [Troubleshooting Guide](./troubleshooting.md)
 - [Code Flow Documentation](./code-flow.md)
 - Check server logs for detailed error messages

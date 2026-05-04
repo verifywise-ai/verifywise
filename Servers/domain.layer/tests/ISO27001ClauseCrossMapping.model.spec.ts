@@ -39,14 +39,14 @@ class TestISO27001ClauseCrossMappingModel {
     order_no: number,
     clause_title: string,
     relevance: string,
-    iso27001clause_id: number
+    iso27001clause_id: number,
   ): Promise<TestISO27001ClauseCrossMappingModel> {
     // Validate clause_no
     if (clause_no < 1) {
       throw new ValidationException(
         "Clause number must be a positive integer",
         "clause_no",
-        clause_no
+        clause_no,
       );
     }
 
@@ -55,24 +55,20 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
     // Validate clause_title
     if (!clause_title || clause_title.trim().length === 0) {
-      throw new ValidationException(
-        "Clause title is required",
-        "clause_title",
-        clause_title
-      );
+      throw new ValidationException("Clause title is required", "clause_title", clause_title);
     }
 
     if (clause_title.trim().length < 3) {
       throw new ValidationException(
         "Clause title must be at least 3 characters long",
         "clause_title",
-        clause_title
+        clause_title,
       );
     }
 
@@ -80,24 +76,20 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Clause title must not exceed 255 characters",
         "clause_title",
-        clause_title
+        clause_title,
       );
     }
 
     // Validate relevance
     if (!relevance || relevance.trim().length === 0) {
-      throw new ValidationException(
-        "Relevance is required",
-        "relevance",
-        relevance
-      );
+      throw new ValidationException("Relevance is required", "relevance", relevance);
     }
 
     if (relevance.trim().length < 5) {
       throw new ValidationException(
         "Relevance must be at least 5 characters long",
         "relevance",
-        relevance
+        relevance,
       );
     }
 
@@ -105,7 +97,7 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Relevance must not exceed 500 characters",
         "relevance",
-        relevance
+        relevance,
       );
     }
 
@@ -114,7 +106,7 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Valid clause ID is required",
         "iso27001clause_id",
-        iso27001clause_id
+        iso27001clause_id,
       );
     }
 
@@ -143,7 +135,7 @@ class TestISO27001ClauseCrossMappingModel {
         throw new ValidationException(
           "Clause number must be a positive integer",
           "clause_no",
-          updateData.clause_no
+          updateData.clause_no,
         );
       }
       this.clause_no = updateData.clause_no;
@@ -151,28 +143,25 @@ class TestISO27001ClauseCrossMappingModel {
 
     // Validate clause_title if provided
     if (updateData.clause_title !== undefined) {
-      if (
-        !updateData.clause_title ||
-        updateData.clause_title.trim().length === 0
-      ) {
+      if (!updateData.clause_title || updateData.clause_title.trim().length === 0) {
         throw new ValidationException(
           "Clause title is required",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       if (updateData.clause_title.trim().length < 3) {
         throw new ValidationException(
           "Clause title must be at least 3 characters long",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       if (updateData.clause_title.trim().length > 255) {
         throw new ValidationException(
           "Clause title must not exceed 255 characters",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       this.clause_title = updateData.clause_title.trim();
@@ -198,7 +187,7 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Valid clause number is required (must be >= 1)",
         "clause_no",
-        this.clause_no
+        this.clause_no,
       );
     }
 
@@ -206,23 +195,19 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Valid order number is required (must be >= 1)",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
 
     if (!this.clause_title || this.clause_title.trim().length === 0) {
-      throw new ValidationException(
-        "Clause title is required",
-        "clause_title",
-        this.clause_title
-      );
+      throw new ValidationException("Clause title is required", "clause_title", this.clause_title);
     }
 
     if (this.clause_title.trim().length < 3) {
       throw new ValidationException(
         "Clause title must be at least 3 characters long",
         "clause_title",
-        this.clause_title
+        this.clause_title,
       );
     }
 
@@ -230,23 +215,19 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Clause title must not exceed 255 characters",
         "clause_title",
-        this.clause_title
+        this.clause_title,
       );
     }
 
     if (!this.relevance || this.relevance.trim().length === 0) {
-      throw new ValidationException(
-        "Relevance is required",
-        "relevance",
-        this.relevance
-      );
+      throw new ValidationException("Relevance is required", "relevance", this.relevance);
     }
 
     if (this.relevance.trim().length < 5) {
       throw new ValidationException(
         "Relevance must be at least 5 characters long",
         "relevance",
-        this.relevance
+        this.relevance,
       );
     }
 
@@ -254,7 +235,7 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Relevance must not exceed 500 characters",
         "relevance",
-        this.relevance
+        this.relevance,
       );
     }
 
@@ -262,7 +243,7 @@ class TestISO27001ClauseCrossMappingModel {
       throw new ValidationException(
         "Valid clause ID is required",
         "iso27001clause_id",
-        this.iso27001clause_id
+        this.iso27001clause_id,
       );
     }
   }
@@ -397,8 +378,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
     clause_no: 1,
     order_no: 1,
     clause_title: "Information Security Policy",
-    relevance:
-      "This clause is highly relevant for establishing security policies",
+    relevance: "This clause is highly relevant for establishing security policies",
     iso27001clause_id: 1,
   };
 
@@ -410,9 +390,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
   describe("instantiation", () => {
     it("should instantiate with correct attributes", () => {
       // Arrange & Act
-      const crossMapping = new TestISO27001ClauseCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001ClauseCrossMappingModel(validCrossMappingData);
 
       // Assert
       expect(crossMapping.clause_no).toBe(1);
@@ -425,26 +403,21 @@ describe("ISO27001ClauseCrossMappingModel", () => {
   describe("createNewCrossMapping", () => {
     it("should create a new cross mapping with valid data", async () => {
       // Arrange & Act
-      const crossMapping =
-        await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        );
+      const crossMapping = await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001clause_id,
+      );
 
       // Assert
       expect(crossMapping).toBeInstanceOf(TestISO27001ClauseCrossMappingModel);
       expect(crossMapping.clause_no).toBe(validCrossMappingData.clause_no);
-      expect(crossMapping.clause_title).toBe(
-        validCrossMappingData.clause_title
-      );
+      expect(crossMapping.clause_title).toBe(validCrossMappingData.clause_title);
       expect(crossMapping.order_no).toBe(validCrossMappingData.order_no);
       expect(crossMapping.relevance).toBe(validCrossMappingData.relevance);
-      expect(crossMapping.iso27001clause_id).toBe(
-        validCrossMappingData.iso27001clause_id
-      );
+      expect(crossMapping.iso27001clause_id).toBe(validCrossMappingData.iso27001clause_id);
     });
 
     it("should throw ValidationException for invalid clause_no", async () => {
@@ -455,8 +428,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -468,8 +441,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           0,
           validCrossMappingData.clause_title,
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -481,8 +454,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           "",
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -494,8 +467,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           "ab",
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -510,8 +483,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           longTitle,
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -523,8 +496,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           "",
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -536,8 +509,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           "abcd",
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -552,8 +525,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           longRelevance,
-          validCrossMappingData.iso27001clause_id
-        )
+          validCrossMappingData.iso27001clause_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -565,8 +538,8 @@ describe("ISO27001ClauseCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           validCrossMappingData.relevance,
-          0
-        )
+          0,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -575,14 +548,13 @@ describe("ISO27001ClauseCrossMappingModel", () => {
     let crossMapping: TestISO27001ClauseCrossMappingModel;
 
     beforeEach(async () => {
-      crossMapping =
-        await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        );
+      crossMapping = await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001clause_id,
+      );
     });
 
     it("should update cross mapping with valid data", async () => {
@@ -599,16 +571,16 @@ describe("ISO27001ClauseCrossMappingModel", () => {
 
     it("should throw ValidationException for invalid clause title update", async () => {
       // Arrange & Act & Assert
-      await expect(
-        crossMapping.updateCrossMapping({ clause_title: "" })
-      ).rejects.toThrow(ValidationException);
+      await expect(crossMapping.updateCrossMapping({ clause_title: "" })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid clause_no update", async () => {
       // Arrange & Act & Assert
-      await expect(
-        crossMapping.updateCrossMapping({ clause_no: 0 })
-      ).rejects.toThrow(ValidationException);
+      await expect(crossMapping.updateCrossMapping({ clause_no: 0 })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -616,21 +588,18 @@ describe("ISO27001ClauseCrossMappingModel", () => {
     let crossMapping: TestISO27001ClauseCrossMappingModel;
 
     beforeEach(async () => {
-      crossMapping =
-        await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        );
+      crossMapping = await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001clause_id,
+      );
     });
 
     it("should pass validation with valid data", async () => {
       // Arrange & Act & Assert
-      await expect(
-        crossMapping.validateCrossMappingData()
-      ).resolves.not.toThrow();
+      await expect(crossMapping.validateCrossMappingData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid clause_no", async () => {
@@ -638,9 +607,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       crossMapping.clause_no = 0;
 
       // Act & Assert
-      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid order_no", async () => {
@@ -648,9 +615,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       crossMapping.order_no = 0;
 
       // Act & Assert
-      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty clause title", async () => {
@@ -658,9 +623,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       crossMapping.clause_title = "";
 
       // Act & Assert
-      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(crossMapping.validateCrossMappingData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -668,14 +631,13 @@ describe("ISO27001ClauseCrossMappingModel", () => {
     let crossMapping: TestISO27001ClauseCrossMappingModel;
 
     beforeEach(async () => {
-      crossMapping =
-        await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        );
+      crossMapping = await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001clause_id,
+      );
     });
 
     it("should check if cross mapping belongs to clause", () => {
@@ -691,9 +653,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
 
     it("should get full clause name", () => {
       // Arrange & Act & Assert
-      expect(crossMapping.getFullClauseName()).toBe(
-        "Clause 1 - Information Security Policy"
-      );
+      expect(crossMapping.getFullClauseName()).toBe("Clause 1 - Information Security Policy");
     });
 
     it("should get mapping summary", () => {
@@ -704,9 +664,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       expect(summary.clause_no).toBe(1);
       expect(summary.clause_title).toBe("Information Security Policy");
       expect(summary.clause_identifier).toBe("Clause 1");
-      expect(summary.full_clause_name).toBe(
-        "Clause 1 - Information Security Policy"
-      );
+      expect(summary.full_clause_name).toBe("Clause 1 - Information Security Policy");
     });
 
     it("should get display info", () => {
@@ -716,9 +674,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       // Assert
       expect(displayInfo.identifier).toBe("Clause 1");
       expect(displayInfo.title).toBe("Information Security Policy");
-      expect(displayInfo.fullName).toBe(
-        "Clause 1 - Information Security Policy"
-      );
+      expect(displayInfo.fullName).toBe("Clause 1 - Information Security Policy");
       expect(displayInfo.order).toBe(1);
       expect(displayInfo.relevance).toBe(validCrossMappingData.relevance);
     });
@@ -763,14 +719,13 @@ describe("ISO27001ClauseCrossMappingModel", () => {
   describe("JSON serialization", () => {
     it("should convert to JSON", async () => {
       // Arrange
-      const crossMapping =
-        await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001clause_id
-        );
+      const crossMapping = await TestISO27001ClauseCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001clause_id,
+      );
 
       // Act
       const json = crossMapping.toJSON();
@@ -778,9 +733,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       // Assert
       expect(json.clause_title).toBe(validCrossMappingData.clause_title);
       expect(json.clause_identifier).toBe("Clause 1");
-      expect(json.full_clause_name).toBe(
-        "Clause 1 - Information Security Policy"
-      );
+      expect(json.full_clause_name).toBe("Clause 1 - Information Security Policy");
     });
 
     it("should create from JSON", () => {
@@ -788,8 +741,7 @@ describe("ISO27001ClauseCrossMappingModel", () => {
       const jsonData = { ...validCrossMappingData, id: 1 };
 
       // Act
-      const crossMapping =
-        TestISO27001ClauseCrossMappingModel.fromJSON(jsonData);
+      const crossMapping = TestISO27001ClauseCrossMappingModel.fromJSON(jsonData);
 
       // Assert
       expect(crossMapping.clause_title).toBe(jsonData.clause_title);

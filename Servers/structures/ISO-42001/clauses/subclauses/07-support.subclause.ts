@@ -68,8 +68,7 @@ export const Support: Partial<SubClauseStructISO & SubClauseISO>[] = [
   {
     title: "Communication",
     order_no: 4,
-    summary:
-      "Determine and implement internal and external communications relevant to the AIMS.",
+    summary: "Determine and implement internal and external communications relevant to the AIMS.",
     questions: [
       "What needs to be communicated about the AIMS?",
       "When, how, and with whom does communication occur (internal & external)?",

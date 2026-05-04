@@ -1,10 +1,4 @@
-import {
-  Autocomplete,
-  TextField,
-  Stack,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Autocomplete, TextField, Stack, Typography, useTheme } from "@mui/material";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 
 export interface ChipInputProps {
@@ -33,10 +27,7 @@ function ChipInput({
   const theme = useTheme();
 
   return (
-    <Stack
-      gap={theme.spacing(2)}
-      sx={sx}
-    >
+    <Stack gap={theme.spacing(2)} sx={sx}>
       {label && (
         <Typography
           component="p"
@@ -46,18 +37,14 @@ function ChipInput({
           fontSize={"13px"}
           sx={{
             margin: 0,
-            height: '22px',
+            height: "22px",
             display: "flex",
             alignItems: "center",
           }}
         >
           {label}
           {isRequired && (
-            <Typography
-              component="span"
-              ml={theme.spacing(1)}
-              color={theme.palette.error.text}
-            >
+            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
               *
             </Typography>
           )}

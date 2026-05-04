@@ -75,19 +75,22 @@ const TabBar: React.FC<TabBarProps> = ({
   disabledTabTooltip = "This tab is currently unavailable",
 }) => {
   // Memoize styles to prevent unnecessary recalculations
-  const standardTabStyle = useMemo<SxProps<Theme>>(() => ({
-    textTransform: "none",
-    fontWeight: 400,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    padding: "16px 0 7px",
-    minHeight: "20px",
-    minWidth: "auto",
-    "&.Mui-selected": {
-      color: indicatorColor,
-    },
-    ...tabSx,
-  }), [indicatorColor, tabSx]);
+  const standardTabStyle = useMemo<SxProps<Theme>>(
+    () => ({
+      textTransform: "none",
+      fontWeight: 400,
+      alignItems: "center",
+      justifyContent: "flex-end",
+      padding: "16px 0 7px",
+      minHeight: "20px",
+      minWidth: "auto",
+      "&.Mui-selected": {
+        color: indicatorColor,
+      },
+      ...tabSx,
+    }),
+    [indicatorColor, tabSx],
+  );
 
   const getTabStyle = (isDisabled: boolean): SxProps<Theme> => ({
     ...standardTabStyle,
@@ -98,27 +101,30 @@ const TabBar: React.FC<TabBarProps> = ({
     }),
   });
 
-  const standardTabListStyle = useMemo<SxProps<Theme>>(() => ({
-    minHeight: "20px",
-    "& .MuiTabs-flexContainer": {
-      columnGap: TAB_GAP,
-    },
-    ...tabListSx,
-  }), [tabListSx]);
+  const standardTabListStyle = useMemo<SxProps<Theme>>(
+    () => ({
+      minHeight: "20px",
+      "& .MuiTabs-flexContainer": {
+        columnGap: TAB_GAP,
+      },
+      ...tabListSx,
+    }),
+    [tabListSx],
+  );
 
   // Validate activeTab exists in tabs array (development warning)
-  if (process.env.NODE_ENV === 'development') {
-    const validValues = tabs.map(t => t.value);
+  if (process.env.NODE_ENV === "development") {
+    const validValues = tabs.map((t) => t.value);
     if (!validValues.includes(activeTab)) {
       console.warn(
-        `TabBar: activeTab "${activeTab}" is not in the tabs array. Valid values: ${validValues.join(', ')}`
+        `TabBar: activeTab "${activeTab}" is not in the tabs array. Valid values: ${validValues.join(", ")}`,
       );
     }
   }
 
   // Wrap onChange to prevent tab changes for disabled tabs
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
-    const targetTab = tabs.find(tab => tab.value === newValue);
+    const targetTab = tabs.find((tab) => tab.value === newValue);
     if (targetTab?.disabled) {
       event.preventDefault();
       event.stopPropagation();
@@ -159,7 +165,9 @@ const TabBar: React.FC<TabBarProps> = ({
             <VWTooltip content={tooltipText} placement="top">
               <span style={{ display: "inline-flex", alignItems: "center" }}>{labelContent}</span>
             </VWTooltip>
-          ) : labelContent;
+          ) : (
+            labelContent
+          );
 
           return (
             <Tab

@@ -1,9 +1,7 @@
 import { AnnexCategoryISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryISO.model";
 import { AnnexCategoryStructISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryStructISO.model";
 
-export const AISystemLifecycle: Partial<
-  AnnexCategoryStructISO & AnnexCategoryISO
->[] = [
+export const AISystemLifecycle: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
   {
     sub_id: 1.1,
     order_no: 1,
@@ -71,8 +69,7 @@ export const AISystemLifecycle: Partial<
     order_no: 6,
     title: "AI system verification and validation",
     description: "Verifying and validating AI systems.",
-    guidance:
-      "AI systems should be verified and validated against requirements before deployment.",
+    guidance: "AI systems should be verified and validated against requirements before deployment.",
     is_applicable: true,
     implementation_description:
       "Verification and validation activities are formalized before deployment.",
@@ -110,8 +107,7 @@ export const AISystemLifecycle: Partial<
     guidance:
       "AI systems should be maintained throughout their operational life and retired securely when no longer needed.",
     is_applicable: true,
-    implementation_description:
-      "Maintenance schedules and secure retirement plans are in place.",
+    implementation_description: "Maintenance schedules and secure retirement plans are in place.",
     auditor_feedback: "Maintenance and retirement controls are satisfactory.",
   },
 ];

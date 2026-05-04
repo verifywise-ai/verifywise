@@ -43,9 +43,7 @@ class TestModelInventoryModel {
   }
 
   // Static method to create new model inventory
-  static createNewModelInventory(
-    data: Partial<TestModelInventoryModel>
-  ): TestModelInventoryModel {
+  static createNewModelInventory(data: Partial<TestModelInventoryModel>): TestModelInventoryModel {
     const modelInventory = new TestModelInventoryModel({
       provider_model: data.provider_model || "",
       version: data.version || "",
@@ -65,7 +63,7 @@ class TestModelInventoryModel {
   // Static method to update model inventory
   static updateModelInventory(
     existingModel: TestModelInventoryModel,
-    data: Partial<TestModelInventoryModel>
+    data: Partial<TestModelInventoryModel>,
   ): TestModelInventoryModel {
     // Update only the fields that are provided
     if (data.provider_model !== undefined) {
@@ -208,21 +206,15 @@ describe("ModelInventoryModel", () => {
   describe("createNewModelInventory", () => {
     it("should create a new model inventory with valid data", () => {
       // Arrange & Act
-      const result = TestModelInventoryModel.createNewModelInventory(
-        validModelInventoryData
-      );
+      const result = TestModelInventoryModel.createNewModelInventory(validModelInventoryData);
 
       // Assert
       expect(result).toBeInstanceOf(TestModelInventoryModel);
-      expect(result.provider_model).toBe(
-        validModelInventoryData.provider_model
-      );
+      expect(result.provider_model).toBe(validModelInventoryData.provider_model);
       expect(result.version).toBe(validModelInventoryData.version);
       expect(result.approver).toBe(validModelInventoryData.approver);
       expect(result.capabilities).toBe(validModelInventoryData.capabilities);
-      expect(result.security_assessment).toBe(
-        validModelInventoryData.security_assessment
-      );
+      expect(result.security_assessment).toBe(validModelInventoryData.security_assessment);
       expect(result.status).toBe(validModelInventoryData.status);
       expect(result.status_date).toBeInstanceOf(Date);
       expect(result.is_demo).toBe(false); // default value
@@ -265,13 +257,10 @@ describe("ModelInventoryModel", () => {
 
     it("should update only provided fields", () => {
       // Arrange & Act
-      const result = TestModelInventoryModel.updateModelInventory(
-        existingModel,
-        {
-          provider_model: "Updated Model",
-          version: "2.0",
-        }
-      );
+      const result = TestModelInventoryModel.updateModelInventory(existingModel, {
+        provider_model: "Updated Model",
+        version: "2.0",
+      });
 
       // Assert
       expect(result.provider_model).toBe("Updated Model");
@@ -283,19 +272,16 @@ describe("ModelInventoryModel", () => {
 
     it("should update all fields when all are provided", () => {
       // Arrange & Act
-      const result = TestModelInventoryModel.updateModelInventory(
-        existingModel,
-        {
-          provider_model: "Updated Model",
-          version: "2.0",
-          approver: "Updated Approver",
-          capabilities: "Updated capabilities",
-          security_assessment: true,
-          status: ModelInventoryStatus.APPROVED,
-          status_date: new Date(),
-          is_demo: true,
-        }
-      );
+      const result = TestModelInventoryModel.updateModelInventory(existingModel, {
+        provider_model: "Updated Model",
+        version: "2.0",
+        approver: "Updated Approver",
+        capabilities: "Updated capabilities",
+        security_assessment: true,
+        status: ModelInventoryStatus.APPROVED,
+        status_date: new Date(),
+        is_demo: true,
+      });
 
       // Assert
       expect(result.provider_model).toBe("Updated Model");
@@ -331,9 +317,7 @@ describe("ModelInventoryModel", () => {
     });
 
     it("should return correct status badge", () => {
-      expect(modelInventory.getStatusBadge()).toBe(
-        ModelInventoryStatus.PENDING
-      );
+      expect(modelInventory.getStatusBadge()).toBe(ModelInventoryStatus.PENDING);
     });
 
     it("should check approval status correctly", () => {

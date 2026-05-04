@@ -2,9 +2,7 @@ import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("Page Not Found (404)", () => {
-  test("renders the 404 page for unknown routes", async ({
-    authedPage: page,
-  }) => {
+  test("renders the 404 page for unknown routes", async ({ authedPage: page }) => {
     await page.goto("/this-page-does-not-exist-e2e-test");
 
     // Should show a 404 or "not found" message
@@ -14,13 +12,11 @@ test.describe("Page Not Found (404)", () => {
         .or(page.getByText(/404/i))
         .or(page.getByText(/page.*exist/i))
         .or(page.getByText(/oops/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/this-page-does-not-exist-e2e-test");
     await page.waitForLoadState("domcontentloaded");
 

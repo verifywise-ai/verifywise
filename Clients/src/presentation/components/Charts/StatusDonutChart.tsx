@@ -3,11 +3,7 @@ import { StatusDonutChartProps } from "../../types/interfaces/i.chart";
 import { text, background, status } from "../../themes/palette";
 import { VWDonutChart } from "./VWCharts";
 
-export function StatusDonutChart({
-  data,
-  total,
-  size = 100,
-}: StatusDonutChartProps) {
+export function StatusDonutChart({ data, total, size = 100 }: StatusDonutChartProps) {
   // Filter out zero values for cleaner visualization
   const filteredData = data.filter((item) => item.value > 0);
 

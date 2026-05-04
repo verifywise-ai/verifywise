@@ -240,7 +240,7 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'Shield',
           title: 'Assurance',
-          description: 'Risk management, Controls hub, Training registry, Evidence, Reporting, and AI trust center.',
+          description: 'Risk management, Training registry, Evidence, Reporting, and AI trust center.',
         },
         {
           icon: 'Building2',

@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { RiskModel } from "../../models/risks/risk.model";
 import { SubcontrolEUModel } from "./subControlEU.model";
 
@@ -31,4 +25,3 @@ export class SubcontrolEURisksModel extends Model<SubcontrolEURisks> {
   })
   projects_risks_id?: number;
 }
-

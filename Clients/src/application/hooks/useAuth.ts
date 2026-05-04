@@ -5,7 +5,8 @@ import type { RootState } from "../redux/store";
 export const useAuth = () => {
   const token = useSelector((state: RootState) => state.auth?.authToken);
   const isSuperAdmin = useSelector((state: RootState) => state.auth?.isSuperAdmin) ?? false;
-  const activeOrganizationId = useSelector((state: RootState) => state.auth?.activeOrganizationId) ?? null;
+  const activeOrganizationId =
+    useSelector((state: RootState) => state.auth?.activeOrganizationId) ?? null;
   const userToken = token ? extractUserToken(token) : null;
 
   const tokenOrgId = userToken?.organizationId ? parseInt(userToken.organizationId) : null;

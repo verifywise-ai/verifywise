@@ -47,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab('whats-new'), [openTab]);
+  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
 
   const { refs: _refs, allVisible } = useMultipleOnScreen<HTMLElement>({

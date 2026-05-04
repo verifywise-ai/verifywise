@@ -65,6 +65,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Prettier format check
+        run: npm run format-check
+
       - name: Run tests with coverage
         run: npx vitest run --coverage
 

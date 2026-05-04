@@ -335,7 +335,8 @@ describe("AITrustCenterCompanyDescriptionModel", () => {
   } as AITrustCenterCompanyDescriptionModel;
 
   it("constructor and factory work", () => {
-    const model = AITrustCenterCompanyDescriptionModel.createNewAITrustCenterCompanyDescription(data);
+    const model =
+      AITrustCenterCompanyDescriptionModel.createNewAITrustCenterCompanyDescription(data);
     expect(model).toBeInstanceOf(AITrustCenterCompanyDescriptionModel);
   });
 });
@@ -358,7 +359,13 @@ describe("AITrustCenterIntroModel", () => {
 });
 
 describe("AITrustCenterResourcesModel", () => {
-  const data = { id: 1, name: "Whitepaper", description: "AI doc", file_id: 5, visible: true } as AITrustCenterResourcesModel;
+  const data = {
+    id: 1,
+    name: "Whitepaper",
+    description: "AI doc",
+    file_id: 5,
+    visible: true,
+  } as AITrustCenterResourcesModel;
 
   it("constructor and factory work", () => {
     const model = AITrustCenterResourcesModel.createNewAITrustCenterResources(data);
@@ -367,7 +374,13 @@ describe("AITrustCenterResourcesModel", () => {
 });
 
 describe("AITrustCenterSubprocessorsModel", () => {
-  const data = { id: 1, name: "AWS", purpose: "Hosting", location: "US", url: "https://aws.amazon.com" } as AITrustCenterSubprocessorsModel;
+  const data = {
+    id: 1,
+    name: "AWS",
+    purpose: "Hosting",
+    location: "US",
+    url: "https://aws.amazon.com",
+  } as AITrustCenterSubprocessorsModel;
 
   it("constructor and factory work", () => {
     const model = AITrustCenterSubprocessorsModel.createNewAITrustCenterSubprocessors(data);

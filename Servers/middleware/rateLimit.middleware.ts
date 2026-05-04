@@ -32,26 +32,22 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   fileOperations: {
     windowMinutes: 15,
     maxRequests: 100,
-    message:
-      "Too many file operation requests from this IP, please try again after 15 minutes",
+    message: "Too many file operation requests from this IP, please try again after 15 minutes",
   },
   generalApi: {
     windowMinutes: 15,
     maxRequests: 100,
-    message:
-      "Too many requests from this IP, please try again after 15 minutes",
+    message: "Too many requests from this IP, please try again after 15 minutes",
   },
   auth: {
     windowMinutes: 15,
     maxRequests: 5,
-    message:
-      "Too many authentication attempts from this IP, please try again after 15 minutes",
+    message: "Too many authentication attempts from this IP, please try again after 15 minutes",
   },
   aiDetectionScan: {
     windowMinutes: 60,
     maxRequests: 10,
-    message:
-      "Too many AI detection scan requests from this IP, please try again after 60 minutes",
+    message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
   },
 };
 
@@ -62,9 +58,7 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
 const createRateLimitHandler = (message: string) => {
   return (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
-    logger.warn(
-      `Rate limit exceeded for IP ${clientIp} on ${req.path}: ${message}`
-    );
+    logger.warn(`Rate limit exceeded for IP ${clientIp} on ${req.path}: ${message}`);
     res.status(429).json({ message, statusCode: 429 });
   };
 };
@@ -91,17 +85,13 @@ const createRateLimiter = (config: RateLimitConfig) => {
  * Rate limiter for file operations (upload, download, delete)
  * Restrictive limits due to expensive I/O operations
  */
-export const fileOperationsLimiter = createRateLimiter(
-  RATE_LIMIT_CONFIGS.fileOperations
-);
+export const fileOperationsLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.fileOperations);
 
 /**
  * General API rate limiter for standard CRUD endpoints
  * Moderate limits for typical operations
  */
-export const generalApiLimiter = createRateLimiter(
-  RATE_LIMIT_CONFIGS.generalApi
-);
+export const generalApiLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.generalApi);
 
 /**
  * Strict rate limiter for authentication endpoints
@@ -113,6 +103,4 @@ export const authLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.auth);
  * Rate limiter for AI Detection scan operations
  * Moderate limits as scans are resource-intensive
  */
-export const aiDetectionScanLimiter = createRateLimiter(
-  RATE_LIMIT_CONFIGS.aiDetectionScan
-);
+export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDetectionScan);

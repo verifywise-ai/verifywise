@@ -67,9 +67,7 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
       const locked = await acquireLock(lockKey);
       if (!locked) {
         console.log(`[ScheduledScan] Lock held for org ${orgId}, skipping`);
-        logger.info(
-          `Another worker is processing scheduled scans for org ${orgId}, skipping`
-        );
+        logger.info(`Another worker is processing scheduled scans for org ${orgId}, skipping`);
         continue;
       }
       console.log(`[ScheduledScan] Acquired lock for org ${orgId}`);
@@ -87,9 +85,7 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
 
         if (dueRepos.length === 0) continue;
 
-        logger.info(
-          `Found ${dueRepos.length} repositories due for scheduled scan in org ${orgId}`
-        );
+        logger.info(`Found ${dueRepos.length} repositories due for scheduled scan in org ${orgId}`);
 
         for (const repo of dueRepos) {
           try {
@@ -97,13 +93,15 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
             const activeScan = await getActiveScanForRepoQuery(
               repo.repository_owner,
               repo.repository_name,
-              orgId
+              orgId,
             );
 
             if (activeScan) {
-              console.log(`[ScheduledScan] SKIP ${repo.repository_owner}/${repo.repository_name} — scan already in progress (scan #${activeScan.id})`);
+              console.log(
+                `[ScheduledScan] SKIP ${repo.repository_owner}/${repo.repository_name} — scan already in progress (scan #${activeScan.id})`,
+              );
               logger.info(
-                `Skipping scheduled scan for ${repo.repository_owner}/${repo.repository_name} - scan already in progress`
+                `Skipping scheduled scan for ${repo.repository_owner}/${repo.repository_name} - scan already in progress`,
               );
               continue;
             }
@@ -116,12 +114,14 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
                 repo.schedule_day_of_week ?? null,
                 repo.schedule_day_of_month ?? null,
                 repo.schedule_hour,
-                repo.schedule_minute
+                repo.schedule_minute,
               );
               await updateRepositoryNextScanAtQuery(repo.id!, nextScanAt, orgId);
-              console.log(`[ScheduledScan] Next scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`);
+              console.log(
+                `[ScheduledScan] Next scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`,
+              );
               logger.info(
-                `Next scheduled scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`
+                `Next scheduled scan for ${repo.repository_owner}/${repo.repository_name}: ${nextScanAt.toISOString()}`,
               );
             }
 
@@ -130,32 +130,36 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
               userId: repo.created_by,
               role: "Admin",
               organizationId: orgId,
-              tenantId: orgId.toString(),  // For interface compatibility
+              tenantId: orgId.toString(), // For interface compatibility
             };
 
-            console.log(`[ScheduledScan] STARTING scan for ${repo.repository_owner}/${repo.repository_name} (repo #${repo.id}, user #${repo.created_by})`);
+            console.log(
+              `[ScheduledScan] STARTING scan for ${repo.repository_owner}/${repo.repository_name} (repo #${repo.id}, user #${repo.created_by})`,
+            );
             logger.info(
-              `Starting scheduled scan for ${repo.repository_owner}/${repo.repository_name}`
+              `Starting scheduled scan for ${repo.repository_owner}/${repo.repository_name}`,
             );
 
             await startScan(repo.repository_url, ctx, {
               repositoryId: repo.id,
               triggeredByType: "scheduled",
             });
-            console.log(`[ScheduledScan] STARTED scan for ${repo.repository_owner}/${repo.repository_name}`);
+            console.log(
+              `[ScheduledScan] STARTED scan for ${repo.repository_owner}/${repo.repository_name}`,
+            );
           } catch (repoError) {
-            console.error(`[ScheduledScan] FAILED for ${repo.repository_owner}/${repo.repository_name}:`, repoError);
+            console.error(
+              `[ScheduledScan] FAILED for ${repo.repository_owner}/${repo.repository_name}:`,
+              repoError,
+            );
             logger.error(
               `Failed to process scheduled scan for repo ${repo.repository_owner}/${repo.repository_name}:`,
-              repoError
+              repoError,
             );
           }
         }
       } catch (tenantError) {
-        logger.error(
-          `Error processing scheduled scans for org ${orgId}:`,
-          tenantError
-        );
+        logger.error(`Error processing scheduled scans for org ${orgId}:`, tenantError);
       } finally {
         // Release lock after processing this tenant
         await releaseLock(lockKey);

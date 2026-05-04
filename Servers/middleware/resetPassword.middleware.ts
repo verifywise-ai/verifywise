@@ -5,7 +5,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 const resetPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void | Response> => {
   const token = req.headers.authorization?.split(" ")[1];
 
@@ -13,7 +13,7 @@ const resetPassword = async (
     return res.status(400).json(
       STATUS_CODE[400]({
         message: "Token not found",
-      })
+      }),
     );
   }
 
@@ -25,20 +25,23 @@ const resetPassword = async (
       return res.status(401).json(
         STATUS_CODE[401]({
           message: "Unauthorized **",
-        })
+        }),
       );
 
     // Check token expiration
     if (decoded.expire < Date.now())
-      return res
-        .status(406)
-        .json(STATUS_CODE[406]({ message: "This invitation link is expired. You need to be invited again to gain access to the dashboard" }));
+      return res.status(406).json(
+        STATUS_CODE[406]({
+          message:
+            "This invitation link is expired. You need to be invited again to gain access to the dashboard",
+        }),
+      );
 
     if (!decoded.email) {
       return res.status(400).json(
         STATUS_CODE[400]({
           message: "Invalid token payload",
-        })
+        }),
       );
     }
 
@@ -46,7 +49,7 @@ const resetPassword = async (
       return res.status(400).json(
         STATUS_CODE[400]({
           message: "Token email does not match request email",
-        })
+        }),
       );
     }
 
@@ -55,6 +58,6 @@ const resetPassword = async (
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
-}
+};
 
 export default resetPassword;

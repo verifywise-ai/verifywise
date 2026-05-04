@@ -75,9 +75,7 @@ const SharedView: React.FC = () => {
 
       const headers = Object.keys(data[0]).filter((key) => key !== "id");
       const rows = data.map((row: any) =>
-        headers
-          .map((key) => `"${String(row[key] ?? "").replace(/"/g, '""')}"`)
-          .join(",")
+        headers.map((key) => `"${String(row[key] ?? "").replace(/"/g, '""')}"`).join(","),
       );
 
       csv = [headers.join(","), ...rows].join("\n");
@@ -158,12 +156,12 @@ const SharedView: React.FC = () => {
             >
               <ShieldX size={32} color="#C62828" />
             </Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600, 
-                color: "#C62828", 
-                mb: 1 
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: "#C62828",
+                mb: 1,
               }}
             >
               Access Forbidden
@@ -172,7 +170,8 @@ const SharedView: React.FC = () => {
               {error}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              This link may have expired or been revoked. Please contact the person who shared this link with you.
+              This link may have expired or been revoked. Please contact the person who shared this
+              link with you.
             </Typography>
           </Box>
         </Paper>
@@ -191,7 +190,7 @@ const SharedView: React.FC = () => {
   const getTableColumns = (_resourceType: string) => {
     // Show all columns that the backend returns (backend handles filtering based on shareAllFields setting)
     if (data && data.length > 0) {
-      return Object.keys(data[0]).filter(key => key !== 'id');
+      return Object.keys(data[0]).filter((key) => key !== "id");
     }
     // Fallback for empty tables
     return ["name", "created_at", "updated_at"];
@@ -298,10 +297,14 @@ const SharedView: React.FC = () => {
           >
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, color: "brand.primary", mb: 1 }}>
-                Shared {share_link.resource_type.charAt(0).toUpperCase() + share_link.resource_type.slice(1)} {isTableView ? "List" : "View"}
+                Shared{" "}
+                {share_link.resource_type.charAt(0).toUpperCase() +
+                  share_link.resource_type.slice(1)}{" "}
+                {isTableView ? "List" : "View"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                This {isTableView ? "list" : "view"} has been shared with you. {!permissions.allowDataExport && "Export is disabled by the owner."}
+                This {isTableView ? "list" : "view"} has been shared with you.{" "}
+                {!permissions.allowDataExport && "Export is disabled by the owner."}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>
@@ -335,7 +338,8 @@ const SharedView: React.FC = () => {
             }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {share_link.resource_type.charAt(0).toUpperCase() + share_link.resource_type.slice(1)} {isTableView ? "List" : "Details"}
+              {share_link.resource_type.charAt(0).toUpperCase() + share_link.resource_type.slice(1)}{" "}
+              {isTableView ? "List" : "Details"}
             </Typography>
           </Toolbar>
           <TableContainer sx={{ maxHeight: "calc(100vh - 300px)", overflowX: "auto" }}>
@@ -346,7 +350,10 @@ const SharedView: React.FC = () => {
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "background.surface" }}>
                       {tableColumns.map((key) => (
-                        <TableCell key={key} sx={{ fontWeight: 600, textTransform: "uppercase", fontSize: "12px" }}>
+                        <TableCell
+                          key={key}
+                          sx={{ fontWeight: 600, textTransform: "uppercase", fontSize: "12px" }}
+                        >
                           {key
                             .split("_")
                             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -358,7 +365,11 @@ const SharedView: React.FC = () => {
                   <TableBody>
                     {data.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={Math.max(tableColumns.length, 1)} align="center" sx={{ py: 4 }}>
+                        <TableCell
+                          colSpan={Math.max(tableColumns.length, 1)}
+                          align="center"
+                          sx={{ py: 4 }}
+                        >
                           <Typography variant="body2" color="textSecondary">
                             No records to display
                           </Typography>
@@ -382,9 +393,7 @@ const SharedView: React.FC = () => {
                   {/* Single Record View: Display key-value pairs */}
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "background.surface" }}>
-                      <TableCell sx={{ fontWeight: 600, width: "30%" }}>
-                        Field
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: "30%" }}>Field</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Value</TableCell>
                     </TableRow>
                   </TableHead>
@@ -403,13 +412,15 @@ const SharedView: React.FC = () => {
                               N/A
                             </Typography>
                           ) : typeof value === "object" ? (
-                            <Typography variant="body2" component="pre" sx={{ fontFamily: "monospace", fontSize: 12 }}>
+                            <Typography
+                              variant="body2"
+                              component="pre"
+                              sx={{ fontFamily: "monospace", fontSize: 12 }}
+                            >
                               {JSON.stringify(value, null, 2)}
                             </Typography>
                           ) : typeof value === "boolean" ? (
-                            <Typography variant="body2">
-                              {value ? "Yes" : "No"}
-                            </Typography>
+                            <Typography variant="body2">{value ? "Yes" : "No"}</Typography>
                           ) : (
                             <Typography variant="body2">{String(value)}</Typography>
                           )}

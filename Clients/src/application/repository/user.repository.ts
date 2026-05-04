@@ -79,11 +79,14 @@ export async function getAllUsers(): Promise<ApiResponse<User[]>> {
   return response.data as ApiResponse<User[]>;
 }
 
-export async function createNewUser({
-  userData,
-}: {
-  userData: CreateUserData;
-}, headers?: Record<string, string>): Promise<ApiResponse<User>> {
+export async function createNewUser(
+  {
+    userData,
+  }: {
+    userData: CreateUserData;
+  },
+  headers?: Record<string, string>,
+): Promise<ApiResponse<User>> {
   try {
     const response = await apiServices.post(`/users/register`, userData, { headers });
     return response as ApiResponse<User>;
@@ -168,7 +171,11 @@ interface LoginResponse {
   };
 }
 
-export async function loginUser({ body }: { body: LoginCredentials }): Promise<ApiResponse<LoginResponse>> {
+export async function loginUser({
+  body,
+}: {
+  body: LoginCredentials;
+}): Promise<ApiResponse<LoginResponse>> {
   const response = await apiServices.post<LoginResponse>(`/users/login`, body);
   return response;
 }
@@ -214,7 +221,9 @@ export async function getUserProfilePhoto(userId: number | string): Promise<Prof
  * @param {number | string} userId - The ID of the user.
  * @returns {Promise<ApiResponse<DeleteResponse>>} The response from the API.
  */
-export async function deleteUserProfilePhoto(userId: number | string): Promise<ApiResponse<DeleteResponse>> {
+export async function deleteUserProfilePhoto(
+  userId: number | string,
+): Promise<ApiResponse<DeleteResponse>> {
   const response = await apiServices.delete<DeleteResponse>(`/users/${userId}/profile-photo`);
   return response;
 }

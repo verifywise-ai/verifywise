@@ -46,7 +46,7 @@ export class ModelInventoryProjectFrameworkModel
       throw new ValidationException(
         "Either project_id or framework_id must be provided",
         "project_framework",
-        null
+        null,
       );
     }
   }
@@ -87,10 +87,10 @@ export class ModelInventoryProjectFrameworkModel
   /**
    * Get relation type
    */
-  getRelationType(): 'project' | 'framework' | 'both' {
-    if (this.hasBoth()) return 'both';
-    if (this.hasProject()) return 'project';
-    return 'framework';
+  getRelationType(): "project" | "framework" | "both" {
+    if (this.hasBoth()) return "both";
+    if (this.hasProject()) return "project";
+    return "framework";
   }
 
   /**

@@ -16,9 +16,7 @@ export function useActiveModule() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const activeModule = useSelector(
-    (state: RootState) => state.ui.appModule?.active ?? "main"
-  );
+  const activeModule = useSelector((state: RootState) => state.ui.appModule?.active ?? "main");
 
   // Detect module from URL path
   const getModuleFromPath = useCallback((pathname: string): AppModule => {
@@ -80,13 +78,16 @@ export function useActiveModule() {
           break;
       }
     },
-    [activeModule, dispatch, navigate]
+    [activeModule, dispatch, navigate],
   );
 
   // Initialize from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as AppModule | null;
-    if (stored && ["main", "evals", "ai-detection", "shadow-ai", "ai-gateway", "super-admin"].includes(stored)) {
+    if (
+      stored &&
+      ["main", "evals", "ai-detection", "shadow-ai", "ai-gateway", "super-admin"].includes(stored)
+    ) {
       // Only set if URL doesn't already indicate a different module
       const urlModule = getModuleFromPath(location.pathname);
       if (urlModule === "main" && stored !== "main") {

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Box, Typography, Avatar } from '@mui/material';
-import { Building2 } from 'lucide-react';
-import { getBrandFetchUrl } from '../../../config/brandfetch.config';
+import React, { useState } from "react";
+import { Box, Typography, Avatar } from "@mui/material";
+import { Building2 } from "lucide-react";
+import { getBrandFetchUrl } from "../../../config/brandfetch.config";
 import { text, background } from "../../themes/palette";
 
 interface VendorLogoProps {
@@ -20,18 +20,18 @@ interface VendorLogoProps {
  * Each vendor gets a consistent color based on their name
  */
 const COLOR_PALETTE = [
-  { bg: '#EF4444', text: `${background.main}` }, // Red
-  { bg: '#F59E0B', text: `${background.main}` }, // Amber
-  { bg: '#10B981', text: `${background.main}` }, // Emerald
-  { bg: '#3B82F6', text: `${background.main}` }, // Blue
-  { bg: '#8B5CF6', text: `${background.main}` }, // Violet
-  { bg: '#EC4899', text: `${background.main}` }, // Pink
-  { bg: '#06B6D4', text: `${background.main}` }, // Cyan
-  { bg: '#F97316', text: `${background.main}` }, // Orange
-  { bg: '#14B8A6', text: `${background.main}` }, // Teal
-  { bg: '#6366F1', text: `${background.main}` }, // Indigo
-  { bg: '#A855F7', text: `${background.main}` }, // Purple
-  { bg: '#84CC16', text: `${background.main}` }, // Lime
+  { bg: "#EF4444", text: `${background.main}` }, // Red
+  { bg: "#F59E0B", text: `${background.main}` }, // Amber
+  { bg: "#10B981", text: `${background.main}` }, // Emerald
+  { bg: "#3B82F6", text: `${background.main}` }, // Blue
+  { bg: "#8B5CF6", text: `${background.main}` }, // Violet
+  { bg: "#EC4899", text: `${background.main}` }, // Pink
+  { bg: "#06B6D4", text: `${background.main}` }, // Cyan
+  { bg: "#F97316", text: `${background.main}` }, // Orange
+  { bg: "#14B8A6", text: `${background.main}` }, // Teal
+  { bg: "#6366F1", text: `${background.main}` }, // Indigo
+  { bg: "#A855F7", text: `${background.main}` }, // Purple
+  { bg: "#84CC16", text: `${background.main}` }, // Lime
 ];
 
 /**
@@ -74,10 +74,10 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
   const [logoLoading, setLogoLoading] = useState(true);
 
   const brandFetchUrl = getBrandFetchUrl(website);
-  const hasValidUrl = brandFetchUrl && website && website.trim() !== '';
+  const hasValidUrl = brandFetchUrl && website && website.trim() !== "";
 
   // Get first letter of vendor name for fallback
-  const firstLetter = vendorName?.charAt(0)?.toUpperCase() || '?';
+  const firstLetter = vendorName?.charAt(0)?.toUpperCase() || "?";
 
   // Get consistent color for this vendor
   const vendorColor = getVendorColor(vendorName);
@@ -95,8 +95,8 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
   return (
     <Box
       sx={{
-        display: 'flex',
-        alignItems: 'center',
+        display: "flex",
+        alignItems: "center",
         gap: 1.5,
       }}
     >
@@ -106,13 +106,13 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
           sx={{
             width: size,
             height: size,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '6px',
-            border: '1px solid status.default.border',
-            backgroundColor: 'background.main',
-            overflow: 'hidden',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "6px",
+            border: "1px solid status.default.border",
+            backgroundColor: "background.main",
+            overflow: "hidden",
             flexShrink: 0,
           }}
         >
@@ -122,21 +122,21 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
             onLoad={handleImageLoad}
             onError={handleImageError}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              display: logoLoading ? 'none' : 'block',
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              display: logoLoading ? "none" : "block",
             }}
           />
           {logoLoading && (
             <Box
               sx={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'background.hover',
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "background.hover",
               }}
             >
               <Building2 size={size * 0.5} color={text.disabled} />
@@ -152,7 +152,7 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
             color: vendorColor.text,
             fontSize: size * 0.5,
             fontWeight: 600,
-            border: 'none',
+            border: "none",
           }}
         >
           {firstLetter}
@@ -165,10 +165,10 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
           sx={{
             fontSize: 14,
             fontWeight: 400,
-            color: '#111827',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            color: "#111827",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {vendorName}

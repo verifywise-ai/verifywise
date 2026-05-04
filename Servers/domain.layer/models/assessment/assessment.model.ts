@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../project/project.model";
 import { IAssessment } from "../../interfaces/i.assessment";
 import { numberValidation } from "../../validations/number.valid";
@@ -15,10 +9,7 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class AssessmentModel
-  extends Model<AssessmentModel>
-  implements IAssessment
-{
+export class AssessmentModel extends Model<AssessmentModel> implements IAssessment {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -56,17 +47,14 @@ export class AssessmentModel
    * Create a new assessment with validation
    */
   static async CreateNewAssessment(
-    assessmentAttributes: Partial<IAssessment>
+    assessmentAttributes: Partial<IAssessment>,
   ): Promise<AssessmentModel> {
     // Validate project_id
-    if (
-      !assessmentAttributes.project_id ||
-      !numberValidation(assessmentAttributes.project_id, 1)
-    ) {
+    if (!assessmentAttributes.project_id || !numberValidation(assessmentAttributes.project_id, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        assessmentAttributes.project_id
+        assessmentAttributes.project_id,
       );
     }
 
@@ -85,14 +73,14 @@ export class AssessmentModel
    */
   static async UpdateAssessment(
     assessmentId: number,
-    assessmentAttributes: Partial<IAssessment>
+    assessmentAttributes: Partial<IAssessment>,
   ): Promise<[number, AssessmentModel[]]> {
     // Validate assessment_id
     if (!numberValidation(assessmentId, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -104,7 +92,7 @@ export class AssessmentModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        assessmentAttributes.project_id
+        assessmentAttributes.project_id,
       );
     }
 
@@ -119,14 +107,12 @@ export class AssessmentModel
   /**
    * Find assessment by ID with project relationship
    */
-  static async FindAssessmentById(
-    assessmentId: number
-  ): Promise<AssessmentModel | null> {
+  static async FindAssessmentById(assessmentId: number): Promise<AssessmentModel | null> {
     if (!numberValidation(assessmentId, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -138,14 +124,12 @@ export class AssessmentModel
   /**
    * Find all assessments for a project
    */
-  static async FindAssessmentsByProjectId(
-    projectId: number
-  ): Promise<AssessmentModel[]> {
+  static async FindAssessmentsByProjectId(projectId: number): Promise<AssessmentModel[]> {
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -166,7 +150,7 @@ export class AssessmentModel
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 
@@ -185,7 +169,7 @@ export class AssessmentModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }

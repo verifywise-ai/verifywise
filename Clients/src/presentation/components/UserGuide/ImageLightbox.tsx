@@ -1,6 +1,6 @@
-import React, { useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
-import { typography, spacing } from './styles/theme';
+import React, { useEffect, useCallback } from "react";
+import { X } from "lucide-react";
+import { typography, spacing } from "./styles/theme";
 import { background } from "../../themes/palette";
 
 interface ImageLightboxProps {
@@ -12,19 +12,22 @@ interface ImageLightboxProps {
 
 const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClose }) => {
   // Close on escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [handleKeyDown]);
 
@@ -40,43 +43,43 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
       className="confirmation-backdrop"
       onClick={handleBackdropClick}
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: "rgba(0, 0, 0, 0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         zIndex: 2000,
         padding: spacing.xl,
-        cursor: 'zoom-out',
+        cursor: "zoom-out",
       }}
     >
       {/* Close button */}
       <button
         onClick={onClose}
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 16,
           right: 16,
           width: 40,
           height: 40,
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'background-color 150ms ease',
+          borderRadius: "50%",
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "background-color 150ms ease",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
         }}
         title="Close (Esc)"
       >
@@ -88,23 +91,23 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
         role="dialog"
         aria-modal="true"
         style={{
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          maxWidth: "90vw",
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
         <img
           src={src}
           alt={alt}
           style={{
-            maxWidth: '100%',
-            maxHeight: caption ? 'calc(90vh - 40px)' : '90vh',
-            objectFit: 'contain',
-            borderRadius: '4px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            cursor: 'default',
+            maxWidth: "100%",
+            maxHeight: caption ? "calc(90vh - 40px)" : "90vh",
+            objectFit: "contain",
+            borderRadius: "4px",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            cursor: "default",
           }}
           onClick={(e) => e.stopPropagation()}
         />
@@ -113,9 +116,9 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
             style={{
               marginTop: spacing.md,
               fontSize: typography.fontSize.sm,
-              color: 'rgba(255, 255, 255, 0.8)',
-              textAlign: 'center',
-              fontStyle: 'italic',
+              color: "rgba(255, 255, 255, 0.8)",
+              textAlign: "center",
+              fontStyle: "italic",
             }}
           >
             {caption}

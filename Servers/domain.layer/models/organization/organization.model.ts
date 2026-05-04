@@ -29,20 +29,14 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IOrganization } from "../../interfaces/i.organization";
 import { numberValidation } from "../../validations/number.valid";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "organizations",
   timestamps: true,
   underscored: true,
 })
-export class OrganizationModel
-  extends Model<OrganizationModel>
-  implements IOrganization
-{
+export class OrganizationModel extends Model<OrganizationModel> implements IOrganization {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -75,7 +69,7 @@ export class OrganizationModel
   @Column({
     type: DataType.STRING(20),
     allowNull: false,
-    defaultValue: 'pending',
+    defaultValue: "pending",
   })
   onboarding_status?: string;
 
@@ -88,7 +82,7 @@ export class OrganizationModel
   @Column({
     type: DataType.STRING(20),
     allowNull: false,
-    defaultValue: 'qualitative',
+    defaultValue: "qualitative",
   })
   risk_assessment_mode?: "qualitative" | "quantitative";
 
@@ -123,7 +117,7 @@ export class OrganizationModel
     name: string,
     logo?: string,
     members?: number[],
-    projects?: number[]
+    projects?: number[],
   ): Promise<OrganizationModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
@@ -131,29 +125,17 @@ export class OrganizationModel
     }
 
     if (name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", name);
     }
 
     if (name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", name);
     }
 
     // Validate logo URL if provided
     if (logo !== undefined && logo !== null) {
       if (logo.trim().length === 0) {
-        throw new ValidationException(
-          "Logo URL cannot be empty if provided",
-          "logo",
-          logo
-        );
+        throw new ValidationException("Logo URL cannot be empty if provided", "logo", logo);
       }
 
       // Basic URL validation
@@ -167,11 +149,7 @@ export class OrganizationModel
     // Validate members array if provided
     if (members !== undefined && members !== null) {
       if (!Array.isArray(members)) {
-        throw new ValidationException(
-          "Members must be an array",
-          "members",
-          members
-        );
+        throw new ValidationException("Members must be an array", "members", members);
       }
 
       for (const memberId of members) {
@@ -179,7 +157,7 @@ export class OrganizationModel
           throw new ValidationException(
             "All member IDs must be positive integers",
             "members",
-            members
+            members,
           );
         }
       }
@@ -188,11 +166,7 @@ export class OrganizationModel
     // Validate projects array if provided
     if (projects !== undefined && projects !== null) {
       if (!Array.isArray(projects)) {
-        throw new ValidationException(
-          "Projects must be an array",
-          "projects",
-          projects
-        );
+        throw new ValidationException("Projects must be an array", "projects", projects);
       }
 
       for (const projectId of projects) {
@@ -200,7 +174,7 @@ export class OrganizationModel
           throw new ValidationException(
             "All project IDs must be positive integers",
             "projects",
-            projects
+            projects,
           );
         }
       }
@@ -243,18 +217,14 @@ export class OrganizationModel
     // Validate name if provided
     if (updateData.name !== undefined) {
       if (!updateData.name || updateData.name.trim().length === 0) {
-        throw new ValidationException(
-          "Name is required",
-          "name",
-          updateData.name
-        );
+        throw new ValidationException("Name is required", "name", updateData.name);
       }
 
       if (updateData.name.trim().length < 2) {
         throw new ValidationException(
           "Name must be at least 2 characters long",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -262,7 +232,7 @@ export class OrganizationModel
         throw new ValidationException(
           "Name must not exceed 255 characters",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -275,7 +245,7 @@ export class OrganizationModel
         throw new ValidationException(
           "Logo URL cannot be empty if provided",
           "logo",
-          updateData.logo
+          updateData.logo,
         );
       }
 
@@ -284,11 +254,7 @@ export class OrganizationModel
         try {
           new URL(updateData.logo);
         } catch {
-          throw new ValidationException(
-            "Logo must be a valid URL",
-            "logo",
-            updateData.logo
-          );
+          throw new ValidationException("Logo must be a valid URL", "logo", updateData.logo);
         }
       }
 
@@ -320,19 +286,11 @@ export class OrganizationModel
     }
 
     if (this.name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", this.name);
     }
 
     if (this.name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", this.name);
     }
 
     // Validate logo if present
@@ -340,11 +298,7 @@ export class OrganizationModel
       try {
         new URL(this.logo);
       } catch {
-        throw new ValidationException(
-          "Logo must be a valid URL",
-          "logo",
-          this.logo
-        );
+        throw new ValidationException("Logo must be a valid URL", "logo", this.logo);
       }
     }
   }
@@ -423,11 +377,7 @@ export class OrganizationModel
    */
   static async findByIdWithValidation(id: number): Promise<OrganizationModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const organization = await OrganizationModel.findByPk(id);
@@ -443,14 +393,10 @@ export class OrganizationModel
    */
   static async updateOrganizationById(
     id: number,
-    updateData: Partial<IOrganization>
+    updateData: Partial<IOrganization>,
   ): Promise<[number, OrganizationModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await OrganizationModel.update(updateData, {
@@ -464,11 +410,7 @@ export class OrganizationModel
    */
   static async deleteOrganizationById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await OrganizationModel.destroy({

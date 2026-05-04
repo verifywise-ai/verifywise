@@ -17,15 +17,7 @@ import {
   alpha,
   InputAdornment,
 } from "@mui/material";
-import {
-  Trophy,
-  Swords,
-  Target,
-  Plus,
-  X,
-  Search,
-  Info,
-} from "lucide-react";
+import { Trophy, Swords, Target, Plus, X, Search, Info } from "lucide-react";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
@@ -68,31 +60,36 @@ const EVALUATION_CRITERIA = [
     id: "helpfulness",
     name: "Helpfulness",
     description: "How well does the response address the user's needs?",
-    prompt: "Evaluate which response better addresses the user's question or request and provides more useful, actionable information.",
+    prompt:
+      "Evaluate which response better addresses the user's question or request and provides more useful, actionable information.",
   },
   {
     id: "accuracy",
     name: "Accuracy",
     description: "Is the information factually correct?",
-    prompt: "Evaluate which response contains more accurate and factually correct information with fewer errors or hallucinations.",
+    prompt:
+      "Evaluate which response contains more accurate and factually correct information with fewer errors or hallucinations.",
   },
   {
     id: "coherence",
     name: "Coherence",
     description: "Is the response well-structured and logical?",
-    prompt: "Evaluate which response is better organized, flows more naturally, and presents ideas in a clear, logical manner.",
+    prompt:
+      "Evaluate which response is better organized, flows more naturally, and presents ideas in a clear, logical manner.",
   },
   {
     id: "conciseness",
     name: "Conciseness",
     description: "Is the response appropriately brief without losing meaning?",
-    prompt: "Evaluate which response communicates the necessary information more efficiently without unnecessary verbosity.",
+    prompt:
+      "Evaluate which response communicates the necessary information more efficiently without unnecessary verbosity.",
   },
   {
     id: "relevance",
     name: "Relevance",
     description: "Does the response stay on topic?",
-    prompt: "Evaluate which response stays more focused on the topic and avoids irrelevant tangents or information.",
+    prompt:
+      "Evaluate which response stays more focused on the topic and avoids irrelevant tangents or information.",
   },
   {
     id: "safety",
@@ -104,13 +101,15 @@ const EVALUATION_CRITERIA = [
     id: "creativity",
     name: "Creativity",
     description: "Does the response show original thinking?",
-    prompt: "Evaluate which response demonstrates more creative, original, or innovative thinking when appropriate.",
+    prompt:
+      "Evaluate which response demonstrates more creative, original, or innovative thinking when appropriate.",
   },
   {
     id: "instruction_following",
     name: "Instruction Following",
     description: "Does the response follow the given instructions?",
-    prompt: "Evaluate which response more closely follows and adheres to the specific instructions or constraints given.",
+    prompt:
+      "Evaluate which response more closely follows and adheres to the specific instructions or constraints given.",
   },
 ];
 
@@ -145,15 +144,15 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  
+
   // Polling ref (same pattern as experiments)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Datasets
   const [myDatasets, setMyDatasets] = useState<UserDataset[]>([]);
   const [templateDatasets, setTemplateDatasets] = useState<TemplateDataset[]>([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
-  
+
   // Configured providers (API keys)
   const [configuredProviders, setConfiguredProviders] = useState<LLMApiKey[]>([]);
 
@@ -184,9 +183,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   ];
 
   // Group by options
-  const groupByOptions: GroupByOption[] = [
-    { id: "status", label: "Status" },
-  ];
+  const groupByOptions: GroupByOption[] = [{ id: "status", label: "Status" }];
 
   // Wizard step state
   const [activeStep, setActiveStep] = useState(0);
@@ -200,18 +197,26 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     judgeModel: "gpt-4o",
     datasetPath: "", // Single dataset for all contestants
     contestants: [
-      { name: "Select Model", hyperparameters: { model: "", provider: "openai" }, testCases: [] as { input: string; actualOutput: string }[] },
-      { name: "Select Model", hyperparameters: { model: "", provider: "openai" }, testCases: [] as { input: string; actualOutput: string }[] },
+      {
+        name: "Select Model",
+        hyperparameters: { model: "", provider: "openai" },
+        testCases: [] as { input: string; actualOutput: string }[],
+      },
+      {
+        name: "Select Model",
+        hyperparameters: { model: "", provider: "openai" },
+        testCases: [] as { input: string; actualOutput: string }[],
+      },
     ] as (ArenaContestant & { hyperparameters: { model: string; provider?: string } })[],
   });
 
   // Toggle criteria selection
   const toggleCriteria = (criteriaId: string) => {
-    setNewComparison(prev => ({
+    setNewComparison((prev) => ({
       ...prev,
       selectedCriteria: prev.selectedCriteria.includes(criteriaId)
-        ? prev.selectedCriteria.filter(id => id !== criteriaId)
-        : [...prev.selectedCriteria, criteriaId]
+        ? prev.selectedCriteria.filter((id) => id !== criteriaId)
+        : [...prev.selectedCriteria, criteriaId],
     }));
   };
 
@@ -246,7 +251,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
       // Load user datasets
       const myData = await listMyDatasets();
       setMyDatasets(myData.datasets || []);
-      
+
       // Load template datasets
       const templateData = await listDatasets();
       const allTemplates: TemplateDataset[] = [];
@@ -278,13 +283,13 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     loadComparisons();
     loadDatasets();
     loadConfiguredProviders();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   // Auto-poll when there are running comparisons (same pattern as experiments)
   useEffect(() => {
     const hasRunningComparisons = comparisons.some(
-      (c) => c.status === "running" || c.status === "pending"
+      (c) => c.status === "running" || c.status === "pending",
     );
 
     // Clear existing interval
@@ -305,20 +310,20 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comparisons]);
 
   const handleCreateComparison = async () => {
     if (!newComparison.name.trim() || newComparison.selectedCriteria.length === 0) return;
 
     // Build combined metric name and criteria from selected criteria
-    const selectedCriteriaObjects = EVALUATION_CRITERIA.filter(c => 
-      newComparison.selectedCriteria.includes(c.id)
+    const selectedCriteriaObjects = EVALUATION_CRITERIA.filter((c) =>
+      newComparison.selectedCriteria.includes(c.id),
     );
-    const metricName = selectedCriteriaObjects.map(c => c.name).join(", ");
-    const combinedCriteria = selectedCriteriaObjects.map(c => 
-      `**${c.name}**: ${c.prompt}`
-    ).join("\n\n");
+    const metricName = selectedCriteriaObjects.map((c) => c.name).join(", ");
+    const combinedCriteria = selectedCriteriaObjects
+      .map((c) => `**${c.name}**: ${c.prompt}`)
+      .join("\n\n");
 
     setCreating(true);
     try {
@@ -429,7 +434,10 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
       .split("-")
       .map((part) => {
         // Keep version numbers and common abbreviations as-is
-        if (/^\d/.test(part) || /^(gpt|mini|nano|opus|sonnet|haiku|pro|flash|gemini|claude|mistral|mixtral)$/i.test(part)) {
+        if (
+          /^\d/.test(part) ||
+          /^(gpt|mini|nano|opus|sonnet|haiku|pro|flash|gemini|claude|mistral|mixtral)$/i.test(part)
+        ) {
           return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
         }
         return part.charAt(0).toUpperCase() + part.slice(1);
@@ -458,7 +466,11 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     if (field === "name") {
       updated[index].name = value;
     } else if (field === "provider") {
-      updated[index].hyperparameters = { ...updated[index].hyperparameters, provider: value, model: "" };
+      updated[index].hyperparameters = {
+        ...updated[index].hyperparameters,
+        provider: value,
+        model: "",
+      };
       updated[index].name = "Select Model"; // Reset name when provider changes
     } else if (field === "model") {
       updated[index].hyperparameters = { ...updated[index].hyperparameters, model: value };
@@ -630,9 +642,17 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
             <Typography sx={{ fontSize: 20, fontWeight: 700, color: palette.text.primary, mb: 1 }}>
               No battles yet
             </Typography>
-            <Typography sx={{ fontSize: 14, color: palette.text.tertiary, maxWidth: 400, mx: "auto", mb: "16px" }}>
-              Create your first arena battle to pit different model versions against each other
-              and discover which one performs better.
+            <Typography
+              sx={{
+                fontSize: 14,
+                color: palette.text.tertiary,
+                maxWidth: 400,
+                mx: "auto",
+                mb: "16px",
+              }}
+            >
+              Create your first arena battle to pit different model versions against each other and
+              discover which one performs better.
             </Typography>
           </Box>
         </>
@@ -640,12 +660,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
         /* Comparisons with toolbar */
         <>
           {/* Filter/Group/Search Toolbar + New battle button */}
-          <Stack
-            direction="row"
-            spacing={2}
-            alignItems="center"
-            sx={{ mt: 2, mb: 8 }}
-          >
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2, mb: 8 }}>
             <FilterBy
               columns={filterColumns}
               onFilterChange={(conditions, logic) => {
@@ -756,7 +771,9 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               <ModelSelector
                 provider={newComparison.judgeProvider}
                 model={newComparison.judgeModel}
-                onProviderChange={(provider) => setNewComparison({ ...newComparison, judgeProvider: provider, judgeModel: "" })}
+                onProviderChange={(provider) =>
+                  setNewComparison({ ...newComparison, judgeProvider: provider, judgeModel: "" })
+                }
                 onModelChange={(model) => setNewComparison({ ...newComparison, judgeModel: model })}
                 configuredProviders={configuredProviders}
                 onNavigateToSettings={() => navigate("/evals/settings")}
@@ -777,11 +794,22 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                   header="How criteria are used"
                   content={
                     <>
-                      <p>The judge model evaluates each response against all selected criteria and picks an overall winner.</p>
+                      <p>
+                        The judge model evaluates each response against all selected criteria and
+                        picks an overall winner.
+                      </p>
                       {EVALUATION_CRITERIA.map((c) => (
                         <Box key={c.id} sx={{ mb: 0.75 }}>
-                          <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.background.main }}>{c.name}</Typography>
-                          <Typography sx={{ fontSize: 13, opacity: 0.8, color: palette.background.main }}>{c.description}</Typography>
+                          <Typography
+                            sx={{ fontSize: 13, fontWeight: 600, color: palette.background.main }}
+                          >
+                            {c.name}
+                          </Typography>
+                          <Typography
+                            sx={{ fontSize: 13, opacity: 0.8, color: palette.background.main }}
+                          >
+                            {c.description}
+                          </Typography>
                         </Box>
                       ))}
                     </>
@@ -840,7 +868,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               </Box>
 
               {newComparison.selectedCriteria.length === 0 && (
-                <Typography sx={{ fontSize: 12, color: palette.status.error.text, mt: 1.5, textAlign: "center" }}>
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: palette.status.error.text,
+                    mt: 1.5,
+                    textAlign: "center",
+                  }}
+                >
                   Please select at least one evaluation criterion
                 </Typography>
               )}
@@ -859,7 +894,9 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               <GroupedSelect
                 id="dataset-select"
                 value={newComparison.datasetPath || ""}
-                onChange={(value) => setNewComparison({ ...newComparison, datasetPath: String(value) })}
+                onChange={(value) =>
+                  setNewComparison({ ...newComparison, datasetPath: String(value) })
+                }
                 placeholder="Select a dataset"
                 loading={datasetsLoading}
                 loadingText="Loading datasets..."
@@ -911,7 +948,11 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               <CustomizableButton
                 variant="contained"
                 text="Add player"
-                icon={<Box sx={{ display: "flex" }}><Plus size={14} /></Box>}
+                icon={
+                  <Box sx={{ display: "flex" }}>
+                    <Plus size={14} />
+                  </Box>
+                }
                 onClick={addContestant}
                 sx={{
                   background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
@@ -938,12 +979,36 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               {newComparison.contestants.map((contestant, index) => {
                 // Cycle through colors for multiple contestants
                 const colors = [
-                  { border: "#3b82f6", bg: alpha("#3b82f6", 0.03), gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" },
-                  { border: "#ef4444", bg: alpha("#ef4444", 0.03), gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" },
-                  { border: "#10b981", bg: alpha("#10b981", 0.03), gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)" },
-                  { border: "#f59e0b", bg: alpha("#f59e0b", 0.03), gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" },
-                  { border: "#8b5cf6", bg: alpha("#8b5cf6", 0.03), gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" },
-                  { border: "#ec4899", bg: alpha("#ec4899", 0.03), gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)" },
+                  {
+                    border: "#3b82f6",
+                    bg: alpha("#3b82f6", 0.03),
+                    gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  },
+                  {
+                    border: "#ef4444",
+                    bg: alpha("#ef4444", 0.03),
+                    gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  },
+                  {
+                    border: "#10b981",
+                    bg: alpha("#10b981", 0.03),
+                    gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  },
+                  {
+                    border: "#f59e0b",
+                    bg: alpha("#f59e0b", 0.03),
+                    gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  },
+                  {
+                    border: "#8b5cf6",
+                    bg: alpha("#8b5cf6", 0.03),
+                    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  },
+                  {
+                    border: "#ec4899",
+                    bg: alpha("#ec4899", 0.03),
+                    gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+                  },
                 ];
                 const colorScheme = colors[index % colors.length];
                 const hasRemoveButton = newComparison.contestants.length > 2;
@@ -961,7 +1026,12 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                     }}
                   >
                     {/* Header with badge and remove button */}
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={2.5}
+                    >
                       <Box
                         sx={{
                           px: 2,
@@ -1005,7 +1075,9 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                         <ModelSelector
                           provider={contestant.hyperparameters?.provider || "openai"}
                           model={contestant.hyperparameters?.model || ""}
-                          onProviderChange={(newProvider) => updateContestant(index, "provider", newProvider)}
+                          onProviderChange={(newProvider) =>
+                            updateContestant(index, "provider", newProvider)
+                          }
                           onModelChange={(newModel) => updateContestant(index, "model", newModel)}
                           configuredProviders={configuredProviders}
                           onNavigateToSettings={() => navigate("/evals/settings")}
@@ -1020,7 +1092,6 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
           </Box>
         )}
       </StepperModal>
-
     </Stack>
   );
 }

@@ -14,11 +14,11 @@ export const formatRelativeDate = (dateString: string): string => {
   let normalizedDateString = dateString.trim();
 
   // Replace space with 'T' for ISO format
-  normalizedDateString = normalizedDateString.replace(' ', 'T');
+  normalizedDateString = normalizedDateString.replace(" ", "T");
 
   // Append 'Z' if no timezone indicator present
-  if (!normalizedDateString.endsWith('Z') && !normalizedDateString.match(/[+-]\d{2}:?\d{2}$/)) {
-    normalizedDateString += 'Z';
+  if (!normalizedDateString.endsWith("Z") && !normalizedDateString.match(/[+-]\d{2}:?\d{2}$/)) {
+    normalizedDateString += "Z";
   }
 
   const date = new Date(normalizedDateString);

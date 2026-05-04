@@ -20,7 +20,9 @@ const C = DASHBOARD_COLORS;
 function LegendItem({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <Stack direction="row" alignItems="center" gap="8px">
-      <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+      <Box
+        sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }}
+      />
       <Typography sx={TEXT_STYLES.legendItem}>
         {label}: {value}
       </Typography>
@@ -152,39 +154,39 @@ export function EvidenceCoverageCard({
   coveragePercentage,
 }: EvidenceCoverageProps) {
   return (
-  <Box>
-    <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
-      <Typography sx={TEXT_STYLES.percentage}>{coveragePercentage}%</Typography>
-      <Typography sx={{ fontSize: 12, color: C.textSecondary }}>model coverage</Typography>
-    </Stack>
-    <LinearProgress
-      variant="determinate"
-      value={coveragePercentage}
-      sx={{
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: C.progressBackground,
-        mb: "32px",
-        "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: 4 },
-      }}
-    />
-    <Stack direction="row" justifyContent="space-between">
-      <Stack alignItems="center">
-        <Typography sx={TEXT_STYLES.valueSmall}>{total}</Typography>
-        <Typography sx={TEXT_STYLES.label}>Evidence items</Typography>
+    <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+        <Typography sx={TEXT_STYLES.percentage}>{coveragePercentage}%</Typography>
+        <Typography sx={{ fontSize: 12, color: C.textSecondary }}>model coverage</Typography>
       </Stack>
-      <Stack alignItems="center">
-        <Typography sx={TEXT_STYLES.valueSmall}>{totalFiles}</Typography>
-        <Typography sx={TEXT_STYLES.label}>Files uploaded</Typography>
+      <LinearProgress
+        variant="determinate"
+        value={coveragePercentage}
+        sx={{
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: C.progressBackground,
+          mb: "32px",
+          "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: 4 },
+        }}
+      />
+      <Stack direction="row" justifyContent="space-between">
+        <Stack alignItems="center">
+          <Typography sx={TEXT_STYLES.valueSmall}>{total}</Typography>
+          <Typography sx={TEXT_STYLES.label}>Evidence items</Typography>
+        </Stack>
+        <Stack alignItems="center">
+          <Typography sx={TEXT_STYLES.valueSmall}>{totalFiles}</Typography>
+          <Typography sx={TEXT_STYLES.label}>Files uploaded</Typography>
+        </Stack>
+        <Stack alignItems="center">
+          <Typography sx={{ ...TEXT_STYLES.valueSmall, color: C.primary }}>
+            {modelsWithEvidence}/{totalModels}
+          </Typography>
+          <Typography sx={TEXT_STYLES.label}>Models covered</Typography>
+        </Stack>
       </Stack>
-      <Stack alignItems="center">
-        <Typography sx={{ ...TEXT_STYLES.valueSmall, color: C.primary }}>
-          {modelsWithEvidence}/{totalModels}
-        </Typography>
-        <Typography sx={TEXT_STYLES.label}>Models covered</Typography>
-      </Stack>
-    </Stack>
-  </Box>
+    </Box>
   );
 }
 

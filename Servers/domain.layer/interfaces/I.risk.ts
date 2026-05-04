@@ -33,22 +33,12 @@ export interface IRisk {
     | "Deferred"
     | "Canceled"
     | "Requires review";
-  current_risk_level:
-    | "Very Low risk"
-    | "Low risk"
-    | "Medium risk"
-    | "High risk"
-    | "Very high risk";
+  current_risk_level: "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   deadline: Date;
   mitigation_plan: string;
   implementation_strategy: string;
   mitigation_evidence_document: string;
-  likelihood_mitigation:
-    | "Rare"
-    | "Unlikely"
-    | "Possible"
-    | "Likely"
-    | "Almost Certain";
+  likelihood_mitigation: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   risk_severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
   final_risk_level: string;
   risk_approval: number;

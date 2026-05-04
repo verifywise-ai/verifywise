@@ -10,7 +10,7 @@
 
 export function emailValidation(email: string): boolean {
   // Input sanitization and length limits (RFC 5321 compliance)
-  if (!email || typeof email !== 'string') {
+  if (!email || typeof email !== "string") {
     return false;
   }
 
@@ -21,7 +21,7 @@ export function emailValidation(email: string): boolean {
 
   // RFC 5322 local part max 64 characters, domain part max 255 characters
   // But total length must be <= 254, so we check local part specifically
-  const [localPart, ...domainParts] = email.split('@');
+  const [localPart, ...domainParts] = email.split("@");
 
   // Basic structure validation
   if (domainParts.length !== 1 || !localPart || !domainParts[0]) {
@@ -32,7 +32,7 @@ export function emailValidation(email: string): boolean {
     return false;
   }
 
-  const domain = domainParts.join('@');
+  const domain = domainParts.join("@");
 
   // Secure regex patterns that avoid catastrophic backtracking
   // Using atomic groups and possessive quantifiers where supported
@@ -43,7 +43,7 @@ export function emailValidation(email: string): boolean {
 
   // Domain part: simplified but effective validation
   // Split domain into labels for validation
-  const domainLabels = domain.split('.');
+  const domainLabels = domain.split(".");
 
   // Domain must have at least 2 labels (e.g., example.com)
   if (domainLabels.length < 2) {

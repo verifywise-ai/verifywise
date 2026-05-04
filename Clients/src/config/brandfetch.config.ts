@@ -16,12 +16,12 @@ export const BRANDFETCH_CONFIG = {
    * Used in the URL parameter: https://cdn.brandfetch.io/{domain}?c={apiKey}
    * Loaded from environment variable VITE_BRANDFETCH_API_KEY
    */
-  API_KEY: import.meta.env.VITE_BRANDFETCH_API_KEY || '',
+  API_KEY: import.meta.env.VITE_BRANDFETCH_API_KEY || "",
 
   /**
    * Base URL for BrandFetch CDN
    */
-  CDN_BASE_URL: 'https://cdn.brandfetch.io',
+  CDN_BASE_URL: "https://cdn.brandfetch.io",
 };
 
 /**
@@ -35,22 +35,22 @@ export const BRANDFETCH_CONFIG = {
  * extractDomain('www.apple.com') // returns 'apple.com'
  */
 export const extractDomain = (url: string): string => {
-  if (!url) return '';
+  if (!url) return "";
 
   try {
     // Remove protocol if present
-    let domain = url.replace(/^https?:\/\//, '');
+    let domain = url.replace(/^https?:\/\//, "");
 
     // Remove www. prefix
-    domain = domain.replace(/^www\./, '');
+    domain = domain.replace(/^www\./, "");
 
     // Remove path and query parameters
-    domain = domain.split('/')[0].split('?')[0];
+    domain = domain.split("/")[0].split("?")[0];
 
     return domain.toLowerCase();
   } catch (error) {
-    console.error('Error extracting domain:', error);
-    return '';
+    console.error("Error extracting domain:", error);
+    return "";
   }
 };
 
@@ -64,7 +64,7 @@ export const extractDomain = (url: string): string => {
  */
 export const getBrandFetchUrl = (website: string): string => {
   const domain = extractDomain(website);
-  if (!domain) return '';
+  if (!domain) return "";
 
   return `${BRANDFETCH_CONFIG.CDN_BASE_URL}/${domain}?c=${BRANDFETCH_CONFIG.API_KEY}`;
 };

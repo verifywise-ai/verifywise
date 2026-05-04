@@ -1,10 +1,7 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { ITrainingRegister } from "../../interfaces/i.trainingRegister";
 import { numberValidation } from "../../validations/number.valid";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "trainingregistar",
@@ -80,46 +77,30 @@ export class TrainingRegistarModel
     department: string,
     status: "Planned" | "In Progress" | "Completed" = "Planned",
     numberOfPeople: number,
-    description: string
+    description: string,
   ): Promise<TrainingRegistarModel> {
     // Validate required fields
     if (!training_name || training_name.trim().length === 0) {
-      throw new ValidationException(
-        "Training name is required",
-        "training_name",
-        training_name
-      );
+      throw new ValidationException("Training name is required", "training_name", training_name);
     }
 
     if (!duration || duration.trim().length === 0) {
-      throw new ValidationException(
-        "Duration is required",
-        "duration",
-        duration
-      );
+      throw new ValidationException("Duration is required", "duration", duration);
     }
 
     if (!provider || provider.trim().length === 0) {
-      throw new ValidationException(
-        "Provider is required",
-        "provider",
-        provider
-      );
+      throw new ValidationException("Provider is required", "provider", provider);
     }
 
     if (!department || department.trim().length === 0) {
-      throw new ValidationException(
-        "Department is required",
-        "department",
-        department
-      );
+      throw new ValidationException("Department is required", "department", department);
     }
 
     if (!numberValidation(numberOfPeople, 1)) {
       throw new ValidationException(
         "Number of people must be a positive integer",
         "numberOfPeople",
-        numberOfPeople
+        numberOfPeople,
       );
     }
 
@@ -131,7 +112,7 @@ export class TrainingRegistarModel
       throw new ValidationException(
         "Status must be one of: Planned, In Progress, Completed",
         "status",
-        status
+        status,
       );
     }
 
@@ -162,14 +143,11 @@ export class TrainingRegistarModel
   }): Promise<void> {
     // Validate training_name if provided
     if (updateData.training_name !== undefined) {
-      if (
-        !updateData.training_name ||
-        updateData.training_name.trim().length === 0
-      ) {
+      if (!updateData.training_name || updateData.training_name.trim().length === 0) {
         throw new ValidationException(
           "Training name is required",
           "training_name",
-          updateData.training_name
+          updateData.training_name,
         );
       }
       this.training_name = updateData.training_name.trim();
@@ -178,11 +156,7 @@ export class TrainingRegistarModel
     // Validate duration if provided
     if (updateData.duration !== undefined) {
       if (!updateData.duration || updateData.duration.trim().length === 0) {
-        throw new ValidationException(
-          "Duration is required",
-          "duration",
-          updateData.duration
-        );
+        throw new ValidationException("Duration is required", "duration", updateData.duration);
       }
       this.duration = updateData.duration.trim();
     }
@@ -190,11 +164,7 @@ export class TrainingRegistarModel
     // Validate provider if provided
     if (updateData.provider !== undefined) {
       if (!updateData.provider || updateData.provider.trim().length === 0) {
-        throw new ValidationException(
-          "Provider is required",
-          "provider",
-          updateData.provider
-        );
+        throw new ValidationException("Provider is required", "provider", updateData.provider);
       }
       this.provider = updateData.provider.trim();
     }
@@ -205,7 +175,7 @@ export class TrainingRegistarModel
         throw new ValidationException(
           "Department is required",
           "department",
-          updateData.department
+          updateData.department,
         );
       }
       this.department = updateData.department.trim();
@@ -218,7 +188,7 @@ export class TrainingRegistarModel
         throw new ValidationException(
           "Status must be one of: Planned, In Progress, Completed",
           "status",
-          updateData.status
+          updateData.status,
         );
       }
       this.status = updateData.status;
@@ -230,7 +200,7 @@ export class TrainingRegistarModel
         throw new ValidationException(
           "Number of people must be a positive integer",
           "numberOfPeople",
-          updateData.numberOfPeople
+          updateData.numberOfPeople,
         );
       }
       this.numberOfPeople = updateData.numberOfPeople;
@@ -250,39 +220,27 @@ export class TrainingRegistarModel
       throw new ValidationException(
         "Training name is required",
         "training_name",
-        this.training_name
+        this.training_name,
       );
     }
 
     if (!this.duration || this.duration.trim().length === 0) {
-      throw new ValidationException(
-        "Duration is required",
-        "duration",
-        this.duration
-      );
+      throw new ValidationException("Duration is required", "duration", this.duration);
     }
 
     if (!this.provider || this.provider.trim().length === 0) {
-      throw new ValidationException(
-        "Provider is required",
-        "provider",
-        this.provider
-      );
+      throw new ValidationException("Provider is required", "provider", this.provider);
     }
 
     if (!this.department || this.department.trim().length === 0) {
-      throw new ValidationException(
-        "Department is required",
-        "department",
-        this.department
-      );
+      throw new ValidationException("Department is required", "department", this.department);
     }
 
     if (!this.numberOfPeople || !numberValidation(this.numberOfPeople, 1)) {
       throw new ValidationException(
         "Valid number of people is required",
         "numberOfPeople",
-        this.numberOfPeople
+        this.numberOfPeople,
       );
     }
 
@@ -290,11 +248,7 @@ export class TrainingRegistarModel
 
     const validStatuses = ["Planned", "In Progress", "Completed"];
     if (!validStatuses.includes(this.status)) {
-      throw new ValidationException(
-        "Valid status is required",
-        "status",
-        this.status
-      );
+      throw new ValidationException("Valid status is required", "status", this.status);
     }
   }
 
@@ -388,24 +342,14 @@ export class TrainingRegistarModel
   /**
    * Static method to find training register by ID with validation
    */
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TrainingRegistarModel> {
+  static async findByIdWithValidation(id: number): Promise<TrainingRegistarModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const trainingRegister = await TrainingRegistarModel.findByPk(id);
     if (!trainingRegister) {
-      throw new NotFoundException(
-        "Training register not found",
-        "TrainingRegister",
-        id
-      );
+      throw new NotFoundException("Training register not found", "TrainingRegister", id);
     }
 
     return trainingRegister;
@@ -415,15 +359,11 @@ export class TrainingRegistarModel
    * Static method to find training registers by status
    */
   static async findByStatus(
-    status: "Planned" | "In Progress" | "Completed"
+    status: "Planned" | "In Progress" | "Completed",
   ): Promise<TrainingRegistarModel[]> {
     const validStatuses = ["Planned", "In Progress", "Completed"];
     if (!validStatuses.includes(status)) {
-      throw new ValidationException(
-        "Valid status is required",
-        "status",
-        status
-      );
+      throw new ValidationException("Valid status is required", "status", status);
     }
 
     return await TrainingRegistarModel.findAll({
@@ -435,15 +375,9 @@ export class TrainingRegistarModel
   /**
    * Static method to find training registers by department
    */
-  static async findByDepartment(
-    department: string
-  ): Promise<TrainingRegistarModel[]> {
+  static async findByDepartment(department: string): Promise<TrainingRegistarModel[]> {
     if (!department || department.trim().length === 0) {
-      throw new ValidationException(
-        "Department is required",
-        "department",
-        department
-      );
+      throw new ValidationException("Department is required", "department", department);
     }
 
     return await TrainingRegistarModel.findAll({
@@ -457,14 +391,10 @@ export class TrainingRegistarModel
    */
   static async updateTrainingRegisterById(
     id: number,
-    updateData: Partial<ITrainingRegister>
+    updateData: Partial<ITrainingRegister>,
   ): Promise<[number, TrainingRegistarModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await TrainingRegistarModel.update(updateData, {
@@ -478,11 +408,7 @@ export class TrainingRegistarModel
    */
   static async deleteTrainingRegisterById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await TrainingRegistarModel.destroy({

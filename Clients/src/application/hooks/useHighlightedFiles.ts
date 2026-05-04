@@ -10,10 +10,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  getHighlightedFiles,
-  HighlightedFilesResponse,
-} from "../repository/file.repository";
+import { getHighlightedFiles, HighlightedFilesResponse } from "../repository/file.repository";
 
 export type HighlightType = "dueForUpdate" | "pendingApproval" | "recentlyModified";
 
@@ -51,7 +48,7 @@ interface UseHighlightedFilesReturn {
  * Hook for managing highlighted files (files that need attention)
  */
 export function useHighlightedFiles(
-  options: UseHighlightedFilesOptions = {}
+  options: UseHighlightedFilesOptions = {},
 ): UseHighlightedFilesReturn {
   const {
     daysUntilExpiry = 30,
@@ -119,7 +116,7 @@ export function useHighlightedFiles(
 
       return null;
     },
-    [dueForUpdate, pendingApproval, recentlyModified]
+    [dueForUpdate, pendingApproval, recentlyModified],
   );
 
   /**
@@ -130,7 +127,7 @@ export function useHighlightedFiles(
       const id = typeof fileId === "string" ? parseInt(fileId, 10) : fileId;
       return dueForUpdate.has(id) || pendingApproval.has(id) || recentlyModified.has(id);
     },
-    [dueForUpdate, pendingApproval, recentlyModified]
+    [dueForUpdate, pendingApproval, recentlyModified],
   );
 
   /**
@@ -147,7 +144,7 @@ export function useHighlightedFiles(
 
       return types;
     },
-    [dueForUpdate, pendingApproval, recentlyModified]
+    [dueForUpdate, pendingApproval, recentlyModified],
   );
 
   return {

@@ -285,9 +285,7 @@ describe("task.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(createTask({ body: { title: "Test" } })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createTask({ body: { title: "Test" } })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -407,9 +405,7 @@ describe("task.repository", () => {
 
       vi.mocked(apiServices.put).mockRejectedValue(mockError);
 
-      await expect(
-        updateTaskStatus({ id: 1, status: "invalid" as TaskStatus }),
-      ).rejects.toThrow();
+      await expect(updateTaskStatus({ id: 1, status: "invalid" as TaskStatus })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -465,9 +461,9 @@ describe("task.repository", () => {
 
       vi.mocked(apiServices.put).mockRejectedValue(networkError);
 
-      await expect(
-        updateTaskPriority({ id: 1, priority: "low" as TaskPriority }),
-      ).rejects.toThrow("Network timeout");
+      await expect(updateTaskPriority({ id: 1, priority: "low" as TaskPriority })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 

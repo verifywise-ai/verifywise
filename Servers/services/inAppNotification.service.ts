@@ -1,10 +1,7 @@
 import redisClient from "../database/redis";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
-import {
-  createNotificationQuery,
-  createBulkNotificationsQuery,
-} from "../utils/notification.utils";
+import { createNotificationQuery, createBulkNotificationsQuery } from "../utils/notification.utils";
 import {
   ICreateNotification,
   IBulkNotification,
@@ -17,6 +14,43 @@ import { notificationService } from "./notificationService";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 /**
+ * Build a frontend-compatible URL for a given entity type and id.
+ * The frontend routes don't all follow a single `/:entityType/:id` pattern,
+ * so each entity type is mapped to the actual route that exists.
+ */
+const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
+  switch (entityType) {
+    case NotificationEntityType.TASK:
+      return `/tasks?taskId=${entityId}`;
+    case NotificationEntityType.TRAINING:
+      return `/training?trainingId=${entityId}`;
+    case NotificationEntityType.VENDOR:
+      return `/vendors?vendorId=${entityId}`;
+    case NotificationEntityType.POLICY:
+      return `/policies/${entityId}/edit`;
+    case NotificationEntityType.USE_CASE:
+    case NotificationEntityType.PROJECT:
+      return `/project-view?projectId=${entityId}`;
+    case NotificationEntityType.MODEL:
+      return `/model-inventory/models/${entityId}`;
+    case NotificationEntityType.RISK:
+      return `/risk-management?riskId=${entityId}`;
+    case NotificationEntityType.ASSESSMENT:
+      return `/project-view?projectId=${entityId}`;
+    case NotificationEntityType.FILE:
+      return `/file-manager?fileId=${entityId}`;
+    case NotificationEntityType.SHADOW_AI_TOOL:
+      return `/shadow-ai/tools/${entityId}`;
+    case NotificationEntityType.AI_GATEWAY:
+      return `/ai-gateway/settings`;
+    case NotificationEntityType.COMMENT:
+    case NotificationEntityType.USER:
+    default:
+      return `/overview`;
+  }
+};
+
+/**
  * Send a notification to a user via both in-app storage and real-time SSE
  * Optionally also sends an email notification
  */
@@ -24,7 +58,7 @@ export const sendInAppNotification = async (
   organizationId: number,
   notification: ICreateNotification,
   sendEmailNotification?: boolean,
-  emailConfig?: IEmailNotificationConfig
+  emailConfig?: IEmailNotificationConfig,
 ): Promise<INotificationJSON> => {
   try {
     // 1. Store notification in database
@@ -38,10 +72,12 @@ export const sendInAppNotification = async (
         userId: notification.user_id,
         notification: storedNotification,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
-    console.log(`📤 In-app notification sent to user ${notification.user_id}: ${notification.title}`);
+    console.log(
+      `📤 In-app notification sent to user ${notification.user_id}: ${notification.title}`,
+    );
 
     // 3. Optionally send email notification using existing NotificationService (with rate limiting)
     if (sendEmailNotification && emailConfig) {
@@ -53,7 +89,7 @@ export const sendInAppNotification = async (
             user.email,
             emailConfig.subject,
             emailConfig.template,
-            emailConfig.variables
+            emailConfig.variables,
           );
           console.log(`📧 Email notification sent to ${user.email}`);
         }
@@ -77,7 +113,7 @@ export const sendBulkInAppNotifications = async (
   organizationId: number,
   bulk: IBulkNotification,
   sendEmailNotification?: boolean,
-  emailConfig?: IEmailNotificationConfig
+  emailConfig?: IEmailNotificationConfig,
 ): Promise<INotificationJSON[]> => {
   try {
     // 1. Store all notifications in database
@@ -92,7 +128,7 @@ export const sendBulkInAppNotifications = async (
           userId: notification.user_id,
           notification,
           timestamp: new Date().toISOString(),
-        })
+        }),
       );
     }
 
@@ -110,7 +146,7 @@ export const sendBulkInAppNotifications = async (
             {
               ...emailConfig.variables,
               recipient_name: `${user.name} ${user.surname}`,
-            }
+            },
           );
         } catch (emailError) {
           console.error(`Failed to send email to ${user.email}:`, emailError);
@@ -181,7 +217,7 @@ async function buildEntityUrlAsync(
   baseUrl: string,
   entityType: string,
   entityId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<string | null> {
   switch (entityType) {
     case "vendor":
@@ -199,7 +235,7 @@ async function buildEntityUrlAsync(
          JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
          JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
          WHERE s.organization_id = :organizationId AND s.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         // Tabs expect lowercase: govern, map, measure, manage
@@ -216,7 +252,7 @@ async function buildEntityUrlAsync(
          FROM subclauses_iso sc
          JOIN subclauses_struct_iso scs ON sc.subclause_meta_id = scs.id
          WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-42001&clauseId=${result[0].clause_id}&subClauseId=${entityId}`;
@@ -231,7 +267,7 @@ async function buildEntityUrlAsync(
          FROM annexcategories_iso ac
          JOIN annexcategories_struct_iso acs ON ac.annexcategory_meta_id = acs.id
          WHERE ac.organization_id = :organizationId AND ac.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-42001&annexId=${result[0].annex_id}&annexCategoryId=${entityId}`;
@@ -246,7 +282,7 @@ async function buildEntityUrlAsync(
          FROM subclauses_iso27001 sc
          JOIN subclauses_struct_iso27001 scs ON sc.subclause_meta_id = scs.id
          WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-27001&clause27001Id=${result[0].clause_id}&subClause27001Id=${entityId}`;
@@ -261,7 +297,7 @@ async function buildEntityUrlAsync(
          FROM annexcontrols_iso27001 ac
          JOIN annexcontrols_struct_iso27001 acs ON ac.annexcontrol_meta_id = acs.id
          WHERE ac.organization_id = :organizationId AND ac.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/framework?framework=iso-27001&annex27001Id=${result[0].annex_id}&annexControl27001Id=${entityId}`;
@@ -276,7 +312,7 @@ async function buildEntityUrlAsync(
          FROM controls_eu c
          JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
          WHERE c.organization_id = :organizationId AND c.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${entityId}`;
@@ -292,7 +328,7 @@ async function buildEntityUrlAsync(
          JOIN controls_eu c ON sc.control_id = c.id AND c.organization_id = sc.organization_id
          JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
          WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${result[0].control_id}&subControlId=${entityId}`;
@@ -303,7 +339,11 @@ async function buildEntityUrlAsync(
     case "eu_assessment": {
       // EU AI Act assessment - need project_id, question_id, and topic_id for navigation
       // Frontend uses topicId to select tab and questionId to scroll to question
-      const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
+      const result = await sequelize.query<{
+        project_id: number;
+        question_id: number;
+        topic_id: number;
+      }>(
         `SELECT pf.project_id, ae.question_id, st.topic_id
          FROM answers_eu ae
          JOIN assessments a ON ae.assessment_id = a.id AND a.organization_id = ae.organization_id
@@ -311,7 +351,7 @@ async function buildEntityUrlAsync(
          JOIN questions_struct_eu q ON ae.question_id = q.id
          JOIN subtopics_struct_eu st ON q.subtopic_id = st.id
          WHERE ae.organization_id = :organizationId AND ae.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -322,7 +362,11 @@ async function buildEntityUrlAsync(
     case "iso42001_assessment": {
       // ISO 42001 assessment - need project_id, question_id, and topic_id for navigation
       // Frontend uses topicId to select tab and questionId to scroll to question
-      const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
+      const result = await sequelize.query<{
+        project_id: number;
+        question_id: number;
+        topic_id: number;
+      }>(
         `SELECT pf.project_id, ai.question_id, st.topic_id
          FROM answers_iso ai
          JOIN assessments a ON ai.assessment_id = a.id AND a.organization_id = ai.organization_id
@@ -330,7 +374,7 @@ async function buildEntityUrlAsync(
          JOIN questions_struct_iso q ON ai.question_id = q.id
          JOIN subtopics_struct_iso st ON q.subtopic_id = st.id
          WHERE ai.organization_id = :organizationId AND ai.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=iso-42001&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -341,7 +385,11 @@ async function buildEntityUrlAsync(
     case "iso27001_assessment": {
       // ISO 27001 assessment - need project_id, question_id, and topic_id for navigation
       // Frontend uses topicId to select tab and questionId to scroll to question
-      const result = await sequelize.query<{ project_id: number; question_id: number; topic_id: number }>(
+      const result = await sequelize.query<{
+        project_id: number;
+        question_id: number;
+        topic_id: number;
+      }>(
         `SELECT pf.project_id, ai.question_id, st.topic_id
          FROM answers_iso27001 ai
          JOIN assessments a ON ai.assessment_id = a.id AND a.organization_id = ai.organization_id
@@ -349,7 +397,7 @@ async function buildEntityUrlAsync(
          JOIN questions_struct_iso27001 q ON ai.question_id = q.id
          JOIN subtopics_struct_iso27001 st ON q.subtopic_id = st.id
          WHERE ai.organization_id = :organizationId AND ai.id = :entityId`,
-        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT }
+        { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
       if (result[0]?.project_id && result[0]?.question_id) {
         return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=iso-27001&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
@@ -369,7 +417,7 @@ async function buildEntityUrlAsync(
 async function buildEntityLinksHtml(
   baseUrl: string,
   entityLinks: ITaskEntityLinkForEmail[],
-  organizationId: number
+  organizationId: number,
 ): Promise<string> {
   if (!entityLinks || entityLinks.length === 0) {
     return "";
@@ -391,7 +439,9 @@ async function buildEntityLinksHtml(
       ? `<a href="${url}" style="color: #13715B; text-decoration: none; font-weight: 500;">${displayName}</a>`
       : `<span style="font-weight: 500;">${displayName}</span>`;
 
-    linkRows.push(`<tr><td style="color: #667085; padding: 4px 0; font-size: 13px; vertical-align: top;">${typeLabel}:</td><td style="color: #344054; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`);
+    linkRows.push(
+      `<tr><td style="color: #667085; padding: 4px 0; font-size: 13px; vertical-align: top;">${typeLabel}:</td><td style="color: #344054; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`,
+    );
   }
 
   return `<table style="width: 100%; margin: 16px 0;"><tr><td colspan="2" style="color: #344054; font-weight: 500; padding-bottom: 8px;">Items to complete:</td></tr>${linkRows.join("")}</table>`;
@@ -412,12 +462,16 @@ export const notifyTaskAssigned = async (
     entity_links?: ITaskEntityLinkForEmail[];
   },
   assignerName: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const assignee = await getUserById(assigneeId);
 
   // Build entity links HTML for email (async - queries DB for parent context)
-  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], organizationId);
+  const entityLinksHtml = await buildEntityLinksHtml(
+    baseUrl,
+    task.entity_links || [],
+    organizationId,
+  );
 
   await sendInAppNotification(
     organizationId,
@@ -445,7 +499,7 @@ export const notifyTaskAssigned = async (
         task_url: `${baseUrl}/tasks?taskId=${task.id}`,
         entity_links_html: entityLinksHtml,
       },
-    }
+    },
   );
 };
 
@@ -465,12 +519,16 @@ export const notifyTaskUpdated = async (
     entity_links?: ITaskEntityLinkForEmail[];
   },
   updaterName: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const assignee = await getUserById(assigneeId);
 
   // Build entity links HTML for email (async - queries DB for parent context)
-  const entityLinksHtml = await buildEntityLinksHtml(baseUrl, task.entity_links || [], organizationId);
+  const entityLinksHtml = await buildEntityLinksHtml(
+    baseUrl,
+    task.entity_links || [],
+    organizationId,
+  );
 
   await sendInAppNotification(
     organizationId,
@@ -499,7 +557,7 @@ export const notifyTaskUpdated = async (
         task_url: `${baseUrl}/tasks?taskId=${task.id}`,
         entity_links_html: entityLinksHtml,
       },
-    }
+    },
   );
 };
 
@@ -517,7 +575,7 @@ export const notifyReviewRequested = async (
   },
   requesterName: string,
   message: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const reviewer = await getUserById(reviewerId);
   const entityTypeLabel = entity.type.replace("_", " ");
@@ -532,7 +590,7 @@ export const notifyReviewRequested = async (
       entity_type: entity.type,
       entity_id: entity.id,
       entity_name: entity.name,
-      action_url: `/${entity.type}s/${entity.id}`,
+      action_url: buildEntityUrl(entity.type, entity.id),
     },
     true,
     {
@@ -545,9 +603,9 @@ export const notifyReviewRequested = async (
         entity_name: entity.name,
         project_name: entity.projectName,
         review_message: message || "Please review this item.",
-        review_url: `${baseUrl}/${entity.type}s/${entity.id}`,
+        review_url: `${baseUrl}${buildEntityUrl(entity.type, entity.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -565,7 +623,7 @@ export const notifyReviewApproved = async (
   },
   reviewerName: string,
   comment: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const owner = await getUserById(ownerId);
   const entityTypeLabel = entity.type.replace("_", " ");
@@ -580,7 +638,7 @@ export const notifyReviewApproved = async (
       entity_type: entity.type,
       entity_id: entity.id,
       entity_name: entity.name,
-      action_url: `/${entity.type}s/${entity.id}`,
+      action_url: buildEntityUrl(entity.type, entity.id),
     },
     true,
     {
@@ -593,9 +651,9 @@ export const notifyReviewApproved = async (
         entity_name: entity.name,
         project_name: entity.projectName,
         review_comment: comment || "Looks good!",
-        entity_url: `${baseUrl}/${entity.type}s/${entity.id}`,
+        entity_url: `${baseUrl}${buildEntityUrl(entity.type, entity.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -613,7 +671,7 @@ export const notifyReviewRejected = async (
   },
   reviewerName: string,
   comment: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const owner = await getUserById(ownerId);
   const entityTypeLabel = entity.type.replace("_", " ");
@@ -628,7 +686,7 @@ export const notifyReviewRejected = async (
       entity_type: entity.type,
       entity_id: entity.id,
       entity_name: entity.name,
-      action_url: `/${entity.type}s/${entity.id}`,
+      action_url: buildEntityUrl(entity.type, entity.id),
     },
     true,
     {
@@ -641,9 +699,9 @@ export const notifyReviewRejected = async (
         entity_name: entity.name,
         project_name: entity.projectName,
         review_comment: comment || "Please make the requested changes.",
-        entity_url: `${baseUrl}/${entity.type}s/${entity.id}`,
+        entity_url: `${baseUrl}${buildEntityUrl(entity.type, entity.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -661,7 +719,7 @@ export const notifyApprovalRequested = async (
     totalSteps: number;
   },
   requesterName: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const approver = await getUserById(approverId);
 
@@ -675,7 +733,7 @@ export const notifyApprovalRequested = async (
       entity_type: NotificationEntityType.USE_CASE,
       entity_id: useCase.id,
       entity_name: useCase.name,
-      action_url: `/use-cases/${useCase.id}`,
+      action_url: buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id),
       metadata: { stepNumber: useCase.stepNumber },
     },
     true,
@@ -689,9 +747,9 @@ export const notifyApprovalRequested = async (
         workflow_name: useCase.workflowName,
         step_number: String(useCase.stepNumber),
         total_steps: String(useCase.totalSteps),
-        approval_url: `${baseUrl}/use-cases/${useCase.id}`,
+        approval_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -706,7 +764,7 @@ export const notifyApprovalComplete = async (
     name: string;
     totalSteps: number;
   },
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
 
@@ -720,7 +778,7 @@ export const notifyApprovalComplete = async (
       entity_type: NotificationEntityType.USE_CASE,
       entity_id: useCase.id,
       entity_name: useCase.name,
-      action_url: `/use-cases/${useCase.id}`,
+      action_url: buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id),
     },
     true,
     {
@@ -730,9 +788,9 @@ export const notifyApprovalComplete = async (
         requester_name: requester ? `${requester.name}` : "User",
         use_case_name: useCase.name,
         total_steps: String(useCase.totalSteps),
-        use_case_url: `${baseUrl}/use-cases/${useCase.id}`,
+        use_case_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -750,7 +808,7 @@ export const notifyVendorReviewDue = async (
     lastReviewDate?: string;
     projectCount: number;
   },
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const reviewer = await getUserById(reviewerId);
 
@@ -764,7 +822,7 @@ export const notifyVendorReviewDue = async (
       entity_type: NotificationEntityType.VENDOR,
       entity_id: vendor.id,
       entity_name: vendor.name,
-      action_url: `/vendors/${vendor.id}`,
+      action_url: buildEntityUrl(NotificationEntityType.VENDOR, vendor.id),
     },
     true,
     {
@@ -777,9 +835,9 @@ export const notifyVendorReviewDue = async (
         risk_level: vendor.riskLevel,
         last_review_date: vendor.lastReviewDate || "Never",
         project_count: String(vendor.projectCount),
-        vendor_url: `${baseUrl}/vendors/${vendor.id}`,
+        vendor_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.VENDOR, vendor.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -795,7 +853,7 @@ export const notifyPolicyDueSoon = async (
     projectName: string;
     dueDate: string;
   },
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const admin = await getUserById(adminId);
 
@@ -809,7 +867,7 @@ export const notifyPolicyDueSoon = async (
       entity_type: NotificationEntityType.POLICY,
       entity_id: policy.id,
       entity_name: policy.name,
-      action_url: `/policies/${policy.id}`,
+      action_url: buildEntityUrl(NotificationEntityType.POLICY, policy.id),
     },
     true,
     {
@@ -820,9 +878,9 @@ export const notifyPolicyDueSoon = async (
         policy_name: policy.name,
         project_name: policy.projectName,
         due_date: policy.dueDate,
-        policy_url: `${baseUrl}/policies/${policy.id}`,
+        policy_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policy.id)}`,
       },
-    }
+    },
   );
 };
 
@@ -840,7 +898,7 @@ export const notifyTrainingAssigned = async (
     dueDate?: string;
   },
   assignerName: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> => {
   const user = await getUserById(userId);
 
@@ -854,7 +912,7 @@ export const notifyTrainingAssigned = async (
       entity_type: NotificationEntityType.TRAINING,
       entity_id: training.id,
       entity_name: training.name,
-      action_url: `/training/${training.id}`,
+      action_url: buildEntityUrl(NotificationEntityType.TRAINING, training.id),
     },
     true,
     {
@@ -867,20 +925,22 @@ export const notifyTrainingAssigned = async (
         training_description: training.description || "No description provided",
         training_duration: training.duration || "Not specified",
         training_due_date: training.dueDate || "No due date",
-        training_url: `${baseUrl}/training/${training.id}`,
+        training_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.TRAINING, training.id)}`,
       },
-    }
+    },
   );
 };
 
 // Helper functions
-async function getUserById(userId: number): Promise<{ name: string; surname: string; email: string } | null> {
+async function getUserById(
+  userId: number,
+): Promise<{ name: string; surname: string; email: string } | null> {
   const result = await sequelize.query<{ name: string; surname: string; email: string }>(
     `SELECT name, surname, email FROM users WHERE id = :userId`,
     {
       replacements: { userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result[0] || null;
 }
@@ -891,21 +951,25 @@ async function getUserEmail(userId: number): Promise<{ email: string } | null> {
     {
       replacements: { userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result[0] || null;
 }
 
-async function getUserEmails(userIds: number[]): Promise<Array<{ id: number; name: string; surname: string; email: string }>> {
+async function getUserEmails(
+  userIds: number[],
+): Promise<Array<{ id: number; name: string; surname: string; email: string }>> {
   if (userIds.length === 0) return [];
 
-  const result = await sequelize.query<{ id: number; name: string; surname: string; email: string }>(
-    `SELECT id, name, surname, email FROM users WHERE id IN (:userIds)`,
-    {
-      replacements: { userIds },
-      type: QueryTypes.SELECT,
-    }
-  );
+  const result = await sequelize.query<{
+    id: number;
+    name: string;
+    surname: string;
+    email: string;
+  }>(`SELECT id, name, surname, email FROM users WHERE id IN (:userIds)`, {
+    replacements: { userIds },
+    type: QueryTypes.SELECT,
+  });
   return result;
 }
 
@@ -1023,11 +1087,11 @@ function getNotificationEntityType(entityType: string): NotificationEntityType {
  * Entity context for additional details in assignment emails
  */
 export interface AssignmentEntityContext {
-  frameworkName?: string;    // e.g., "ISO 27001", "NIST AI RMF"
-  parentType?: string;       // e.g., "Annex", "Clause", "Control"
-  parentName?: string;       // e.g., "A.5 Organizational controls"
-  projectName?: string;      // Project this belongs to
-  description?: string;      // Brief description of the entity
+  frameworkName?: string; // e.g., "ISO 27001", "NIST AI RMF"
+  parentType?: string; // e.g., "Annex", "Clause", "Control"
+  parentName?: string; // e.g., "A.5 Organizational controls"
+  projectName?: string; // Project this belongs to
+  description?: string; // Brief description of the entity
 }
 
 /**
@@ -1039,19 +1103,27 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   const rows: string[] = [];
 
   if (context.frameworkName) {
-    rows.push(`<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.frameworkName}</td></tr>`);
+    rows.push(
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.frameworkName}</td></tr>`,
+    );
   }
 
   if (context.projectName) {
-    rows.push(`<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.projectName}</td></tr>`);
+    rows.push(
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.projectName}</td></tr>`,
+    );
   }
 
   if (context.parentType && context.parentName) {
-    rows.push(`<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${context.parentType}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.parentName}</td></tr>`);
+    rows.push(
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${context.parentType}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.parentName}</td></tr>`,
+    );
   }
 
   if (context.description) {
-    rows.push(`<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${context.description}</td></tr>`);
+    rows.push(
+      `<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${context.description}</td></tr>`,
+    );
   }
 
   if (rows.length === 0) return "";
@@ -1073,15 +1145,15 @@ export const notifyUserAssigned = async (
   organizationId: number,
   assigneeId: number,
   assignment: {
-    entityType: string;      // "vendor", "project", "model_inventory", etc.
+    entityType: string; // "vendor", "project", "model_inventory", etc.
     entityId: number;
     entityName: string;
     roleType: AssignmentRoleType;
-    entityUrl: string;       // Full URL path (relative or absolute)
+    entityUrl: string; // Full URL path (relative or absolute)
   },
   assignerName: string,
   baseUrl: string,
-  entityContext?: AssignmentEntityContext
+  entityContext?: AssignmentEntityContext,
 ): Promise<void> => {
   try {
     const assignee = await getUserById(assigneeId);
@@ -1090,7 +1162,8 @@ export const notifyUserAssigned = async (
       return;
     }
 
-    const displayEntityType = ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
+    const displayEntityType =
+      ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
     const notificationType = getNotificationTypeForRole(assignment.roleType);
     const notificationEntityType = getNotificationEntityType(assignment.entityType);
 
@@ -1129,10 +1202,12 @@ export const notifyUserAssigned = async (
           role_description: getRoleDescription(assignment.roleType),
           entity_context_html: entityContextHtml,
         },
-      }
+      },
     );
 
-    console.log(`📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`);
+    console.log(
+      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
+    );
   } catch (error) {
     console.error(`Failed to send assignment notification to user ${assigneeId}:`, error);
     // Don't rethrow - notifications should not break the main flow

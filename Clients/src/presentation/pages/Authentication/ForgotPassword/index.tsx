@@ -36,11 +36,9 @@ const ForgotPassword: React.FC = () => {
   const [values, setValues] = useState<FormValues>(initialState);
 
   // Handle changes in input fields
-  const handleChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues({ ...values, [prop]: event.target.value });
-    };
+  const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [prop]: event.target.value });
+  };
 
   // Handle form submission
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -132,12 +130,8 @@ const ForgotPassword: React.FC = () => {
             <Key size={24} />
           </Stack>
           <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
-            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-              Forgot password?
-            </Typography>
-            <Typography fontSize={13}>
-              No worries, we'll send you reset instructions.
-            </Typography>
+            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Forgot password?</Typography>
+            <Typography fontSize={13}>No worries, we'll send you reset instructions.</Typography>
           </Stack>
           <Stack sx={{ gap: theme.spacing(12) }}>
             <Field

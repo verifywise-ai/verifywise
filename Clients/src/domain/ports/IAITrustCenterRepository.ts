@@ -95,7 +95,7 @@ export interface IAITrustCenterRepository {
     file: File,
     name: string,
     description: string,
-    visible?: boolean
+    visible?: boolean,
   ): Promise<AITrustCenterResource>;
 
   /**
@@ -107,7 +107,7 @@ export interface IAITrustCenterRepository {
     description: string,
     visible: boolean,
     file?: File,
-    oldFileId?: number
+    oldFileId?: number,
   ): Promise<AITrustCenterResource>;
 
   /**
@@ -127,7 +127,7 @@ export interface IAITrustCenterRepository {
     name: string,
     purpose: string,
     location: string,
-    url: string
+    url: string,
   ): Promise<AITrustCenterSubprocessor>;
 
   /**
@@ -138,7 +138,7 @@ export interface IAITrustCenterRepository {
     name: string,
     purpose: string,
     location: string,
-    url: string
+    url: string,
   ): Promise<AITrustCenterSubprocessor>;
 
   /**

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 
 export interface GroupedData<T> {
   group: string;
@@ -8,7 +8,7 @@ export interface GroupedData<T> {
 export interface UseTableGroupingProps<T> {
   data: T[];
   groupByField: string | null;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
   getGroupKey: (item: T, field: string) => string | string[];
 }
 
@@ -37,7 +37,7 @@ export function useTableGrouping<T>({
 
     // Sort group keys
     const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
-      if (sortOrder === 'asc') {
+      if (sortOrder === "asc") {
         return a.localeCompare(b);
       } else {
         return b.localeCompare(a);
@@ -52,11 +52,11 @@ export function useTableGrouping<T>({
   }, [data, groupByField, sortOrder, getGroupKey]);
 }
 
-export function useGroupByState(defaultGroupBy?: string, defaultSortOrder: 'asc' | 'desc' = 'asc') {
+export function useGroupByState(defaultGroupBy?: string, defaultSortOrder: "asc" | "desc" = "asc") {
   const [groupBy, setGroupBy] = useState<string | null>(defaultGroupBy || null);
-  const [groupSortOrder, setGroupSortOrder] = useState<'asc' | 'desc'>(defaultSortOrder);
+  const [groupSortOrder, setGroupSortOrder] = useState<"asc" | "desc">(defaultSortOrder);
 
-  const handleGroupChange = (field: string | null, sortOrder: 'asc' | 'desc') => {
+  const handleGroupChange = (field: string | null, sortOrder: "asc" | "desc") => {
     setGroupBy(field);
     setGroupSortOrder(sortOrder);
   };

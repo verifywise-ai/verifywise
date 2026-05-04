@@ -76,7 +76,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 mb: 1,
                 fontSize: 11,
                 textTransform: "uppercase",
-                letterSpacing: "0.5px"
+                letterSpacing: "0.5px",
               }}
             >
               Risk Velocity
@@ -90,7 +90,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 0.5
+                gap: 0.5,
               }}
             >
               {getVelocityDirection(metrics.riskVelocity)} {Math.abs(metrics.riskVelocity)}/week
@@ -109,7 +109,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 mb: 1,
                 fontSize: 11,
                 textTransform: "uppercase",
-                letterSpacing: "0.5px"
+                letterSpacing: "0.5px",
               }}
             >
               Mitigation Progress
@@ -119,7 +119,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
               sx={{
                 fontWeight: 700,
                 color: "#111827",
-                fontSize: 18
+                fontSize: 18,
               }}
             >
               {metrics.mitigationProgress}%
@@ -139,7 +139,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                   mb: 1,
                   fontSize: 11,
                   textTransform: "uppercase",
-                  letterSpacing: "0.5px"
+                  letterSpacing: "0.5px",
                 }}
               >
                 New This Week
@@ -149,7 +149,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 sx={{
                   fontWeight: 700,
                   color: "#111827",
-                  fontSize: 18
+                  fontSize: 18,
                 }}
               >
                 {velocity.newRisksThisWeek}
@@ -170,7 +170,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                   mb: 1,
                   fontSize: 11,
                   textTransform: "uppercase",
-                  letterSpacing: "0.5px"
+                  letterSpacing: "0.5px",
                 }}
               >
                 Resolved This Week
@@ -180,7 +180,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 sx={{
                   fontWeight: 700,
                   color: "#111827",
-                  fontSize: 18
+                  fontSize: 18,
                 }}
               >
                 {velocity.resolvedRisksThisWeek}

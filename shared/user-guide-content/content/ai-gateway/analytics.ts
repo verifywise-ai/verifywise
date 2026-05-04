@@ -39,7 +39,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the dropdown in the top right to switch between Today, 7 days, 30 days, and 90 days. Your selection is saved and persists across sessions. When "Today" is selected, the cost chart shows hourly bars instead of a daily trend line.',
+      text: 'Use the dropdown in the top right to switch between Last 24 hours, 7 days, 30 days, and 90 days. Your selection is saved and persists across sessions. When "Last 24 hours" is selected, the cost chart shows hourly bars instead of a daily trend line.',
     },
     {
       type: 'heading',
@@ -49,7 +49,7 @@ export const analyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For "Today", a bar chart shows cost per hour across all 24 hours of the day. For longer periods (7d, 30d, 90d), a line chart shows the daily cost trend. Hover over any data point to see the exact cost.',
+      text: 'For "Last 24 hours", a bar chart shows cost per hour. For longer periods (7d, 30d, 90d), a line chart shows the daily cost trend. Hover over any data point to see the exact cost.',
     },
     {
       type: 'heading',

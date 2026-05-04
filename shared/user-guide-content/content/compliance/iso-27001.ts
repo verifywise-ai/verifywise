@@ -93,7 +93,7 @@ export const iso27001Content: ArticleContent = {
         'A.5 - Organizational controls for AI governance policies',
         'A.6 - People controls for AI training and awareness',
         'A.7 - Physical controls for AI infrastructure protection',
-        'A.8 - Technology controls for AI system security',
+        'A.8 - Technological controls for AI system security',
       ],
     },
     {

@@ -25,9 +25,7 @@ import {
 /**
  * Get all folders for an organization (flat list)
  */
-export const getAllFoldersQuery = async (
-  organizationId: number
-): Promise<IFolderWithCount[]> => {
+export const getAllFoldersQuery = async (organizationId: number): Promise<IFolderWithCount[]> => {
   const result = await sequelize.query(
     `SELECT
       vf.*,
@@ -40,7 +38,7 @@ export const getAllFoldersQuery = async (
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result as IFolderWithCount[];
 };
@@ -48,9 +46,7 @@ export const getAllFoldersQuery = async (
 /**
  * Get folder tree (hierarchical structure)
  */
-export const getFolderTreeQuery = async (
-  organizationId: number
-): Promise<IFolderTreeNode[]> => {
+export const getFolderTreeQuery = async (organizationId: number): Promise<IFolderTreeNode[]> => {
   // Get all folders with file counts
   const folders = await getAllFoldersQuery(organizationId);
 
@@ -97,7 +93,7 @@ export const getFolderTreeQuery = async (
  */
 export const getFolderByIdQuery = async (
   organizationId: number,
-  id: number
+  id: number,
 ): Promise<IFolderWithCount | null> => {
   const result = await sequelize.query(
     `SELECT
@@ -110,7 +106,7 @@ export const getFolderByIdQuery = async (
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result.length > 0 ? (result[0] as IFolderWithCount) : null;
 };
@@ -122,7 +118,7 @@ export const createFolderQuery = async (
   folder: IVirtualFolderInput,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IVirtualFolder> => {
   const result = await sequelize.query<IVirtualFolder>(
     `INSERT INTO virtual_folders (
@@ -142,7 +138,7 @@ export const createFolderQuery = async (
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -154,7 +150,7 @@ export const updateFolderByIdQuery = async (
   id: number,
   folder: IVirtualFolderUpdate,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IVirtualFolder | null> => {
   // Build dynamic SET clause
   const updates: string[] = [];
@@ -196,7 +192,7 @@ export const updateFolderByIdQuery = async (
       replacements,
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0 ? result[0] : null;
@@ -209,7 +205,7 @@ export const updateFolderByIdQuery = async (
 export const deleteFolderByIdQuery = async (
   organizationId: number,
   id: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   const result = await sequelize.query<{ id: number }>(
     `DELETE FROM virtual_folders
@@ -219,7 +215,7 @@ export const deleteFolderByIdQuery = async (
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -231,7 +227,7 @@ export const checkFolderNameExistsQuery = async (
   organizationId: number,
   name: string,
   parentId: number | null,
-  excludeId?: number
+  excludeId?: number,
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `SELECT 1 FROM virtual_folders
@@ -241,12 +237,12 @@ export const checkFolderNameExistsQuery = async (
        (:parentId IS NULL AND parent_id IS NULL)
        OR parent_id = :parentId
      )
-     ${excludeId ? 'AND id != :excludeId' : ''}
+     ${excludeId ? "AND id != :excludeId" : ""}
      LIMIT 1`,
     {
       replacements: { organizationId, name: name.trim(), parentId, excludeId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -261,7 +257,7 @@ export const checkFolderNameExistsQuery = async (
  */
 export const getFilesInFolderQuery = async (
   organizationId: number,
-  folderId: number
+  folderId: number,
 ): Promise<IFileWithFolders[]> => {
   // Get files in the specified folder
   const filesResult = await sequelize.query(
@@ -286,7 +282,7 @@ export const getFilesInFolderQuery = async (
     {
       replacements: { organizationId, folderId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const files = filesResult as IFileWithFolders[];
@@ -295,7 +291,7 @@ export const getFilesInFolderQuery = async (
   }
 
   // Get all folder assignments for these files in a single query
-  const fileIds = files.map(f => f.id);
+  const fileIds = files.map((f) => f.id);
   const folderAssignments = await sequelize.query<{
     file_id: number;
     folder_id: number;
@@ -328,7 +324,7 @@ export const getFilesInFolderQuery = async (
     {
       replacements: { organizationId, fileIds },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   // Group folder assignments by file ID
@@ -365,7 +361,7 @@ export const getFilesInFolderQuery = async (
  * Get uncategorized files (files not assigned to any folder)
  */
 export const getUncategorizedFilesQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<IFileWithFolders[]> => {
   const result = await sequelize.query(
     `SELECT
@@ -391,11 +387,11 @@ export const getUncategorizedFilesQuery = async (
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   // Add empty folders array for uncategorized files
-  return (result as IFileWithFolders[]).map(file => ({
+  return (result as IFileWithFolders[]).map((file) => ({
     ...file,
     folders: [],
   }));
@@ -406,7 +402,7 @@ export const getUncategorizedFilesQuery = async (
  */
 export const getFileFoldersQuery = async (
   organizationId: number,
-  fileId: number
+  fileId: number,
 ): Promise<IVirtualFolder[]> => {
   const result = await sequelize.query(
     `SELECT vf.*
@@ -417,7 +413,7 @@ export const getFileFoldersQuery = async (
     {
       replacements: { organizationId, fileId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result as IVirtualFolder[];
 };
@@ -430,7 +426,7 @@ export const assignFilesToFolderQuery = async (
   folderId: number,
   fileIds: number[],
   userId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> => {
   if (fileIds.length === 0) return 0;
 
@@ -457,7 +453,7 @@ export const assignFilesToFolderQuery = async (
       replacements,
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length;
@@ -470,7 +466,7 @@ export const removeFileFromFolderQuery = async (
   organizationId: number,
   folderId: number,
   fileId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   const result = await sequelize.query<{ id: number }>(
     `DELETE FROM file_folder_mappings
@@ -480,7 +476,7 @@ export const removeFileFromFolderQuery = async (
       replacements: { organizationId, folderId, fileId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -493,7 +489,7 @@ export const bulkUpdateFileFoldersQuery = async (
   fileId: number,
   folderIds: number[],
   userId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   // Delete existing assignments
   await sequelize.query(
@@ -501,7 +497,7 @@ export const bulkUpdateFileFoldersQuery = async (
     {
       replacements: { organizationId, fileId },
       transaction,
-    }
+    },
   );
 
   // Add new assignments
@@ -525,7 +521,7 @@ export const bulkUpdateFileFoldersQuery = async (
       {
         replacements,
         transaction,
-      }
+      },
     );
   }
 };
@@ -535,7 +531,7 @@ export const bulkUpdateFileFoldersQuery = async (
  */
 export const getFolderPathQuery = async (
   organizationId: number,
-  folderId: number
+  folderId: number,
 ): Promise<IVirtualFolder[]> => {
   const result = await sequelize.query(
     `WITH RECURSIVE folder_path AS (
@@ -554,7 +550,7 @@ export const getFolderPathQuery = async (
     {
       replacements: { organizationId, folderId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result as IVirtualFolder[];
 };
@@ -565,7 +561,7 @@ export const getFolderPathQuery = async (
 export const wouldCreateCircularReferenceQuery = async (
   organizationId: number,
   folderId: number,
-  newParentId: number
+  newParentId: number,
 ): Promise<boolean> => {
   if (folderId === newParentId) return true;
 
@@ -582,7 +578,7 @@ export const wouldCreateCircularReferenceQuery = async (
     {
       replacements: { organizationId, folderId, newParentId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result.length > 0;
 };

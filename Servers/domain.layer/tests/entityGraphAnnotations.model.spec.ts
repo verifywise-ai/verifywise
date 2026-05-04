@@ -48,7 +48,7 @@ class TestEntityGraphAnnotationsModel {
     userId: number,
     entityType: string,
     entityId: string,
-    organizationId: number
+    organizationId: number,
   ): Promise<TestEntityGraphAnnotationsModel> {
     // Validate content
     if (!content || content.trim().length === 0) {
@@ -129,7 +129,7 @@ describe("EntityGraphAnnotationsModel", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.organizationId
+        validAnnotationData.organizationId,
       );
 
       expect(annotation).toBeInstanceOf(TestEntityGraphAnnotationsModel);
@@ -148,7 +148,7 @@ describe("EntityGraphAnnotationsModel", () => {
         validAnnotationData.userId,
         validAnnotationData.entityType,
         validAnnotationData.entityId,
-        validAnnotationData.organizationId
+        validAnnotationData.organizationId,
       );
 
       expect(annotation.content).toBe("Test content");
@@ -160,7 +160,7 @@ describe("EntityGraphAnnotationsModel", () => {
         validAnnotationData.userId,
         "  model  ",
         "  model-123  ",
-        validAnnotationData.organizationId
+        validAnnotationData.organizationId,
       );
 
       expect(annotation.entity_type).toBe("model");
@@ -174,8 +174,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Annotation content is required");
     });
 
@@ -186,8 +186,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Annotation content is required");
     });
 
@@ -199,8 +199,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Annotation content cannot exceed 2000 characters");
     });
 
@@ -211,8 +211,8 @@ describe("EntityGraphAnnotationsModel", () => {
           0,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -223,8 +223,8 @@ describe("EntityGraphAnnotationsModel", () => {
           -1,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Valid user ID is required");
     });
 
@@ -235,8 +235,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           "",
           validAnnotationData.entityId,
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Entity type is required");
     });
 
@@ -247,8 +247,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           "",
-          validAnnotationData.organizationId
-        )
+          validAnnotationData.organizationId,
+        ),
       ).rejects.toThrow("Entity ID is required");
     });
 
@@ -259,8 +259,8 @@ describe("EntityGraphAnnotationsModel", () => {
           validAnnotationData.userId,
           validAnnotationData.entityType,
           validAnnotationData.entityId,
-          0
-        )
+          0,
+        ),
       ).rejects.toThrow("Valid organization ID is required");
     });
   });

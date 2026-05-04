@@ -2,30 +2,26 @@ export const HumanOversight = [
   {
     order_no: 1,
     title: "Human Intervention Mechanisms",
-    description:
-      "Assign competent individuals with authority to oversee AI system usage.",
+    description: "Assign competent individuals with authority to oversee AI system usage.",
     implementation_details: "Implementing comprehensive human oversight protocols",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We define mechanisms for human intervention or override of AI outputs.",
+        title: "We define mechanisms for human intervention or override of AI outputs.",
         description:
           "Human intervention mechanisms ensure appropriate oversight, preventing harmful or unintended AI outcomes.",
         implementation_details: "Designing intervention frameworks",
       },
       {
         order_no: 2,
-        title:
-          "We assign competent individuals with authority to oversee AI system usage.",
+        title: "We assign competent individuals with authority to oversee AI system usage.",
         description:
           "Competent oversight personnel are essential for monitoring and ensuring safe and lawful AI usage.",
         implementation_details: "Selecting oversight personnel",
       },
       {
         order_no: 3,
-        title:
-          "We align oversight measures with provider''s instructions for use.",
+        title: "We align oversight measures with provider''s instructions for use.",
         description:
           "Aligning measures with provider instructions ensures system use remains within intended boundaries and purposes.",
         implementation_details: "Reviewing provider guidelines",
@@ -71,8 +67,7 @@ export const HumanOversight = [
       },
       {
         order_no: 2,
-        title:
-          "We proportion oversight measures to match AI system''s risk level and autonomy.",
+        title: "We proportion oversight measures to match AI system''s risk level and autonomy.",
         description:
           "Oversight measures are scaled appropriately to reflect the system''s complexity, risk, and decision-making autonomy.",
         implementation_details: "Evaluating risk-based oversight",

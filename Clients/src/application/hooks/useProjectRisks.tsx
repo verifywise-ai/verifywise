@@ -45,17 +45,21 @@ export interface ProjectRisk {
   recommendations?: any;
 }
 
-const PROJECT_RISKS_QUERY_KEY = ['projectRisks'] as const;
+const PROJECT_RISKS_QUERY_KEY = ["projectRisks"] as const;
 
-const useProjectRisks = ({ projectId, refreshKey }: { projectId: number, refreshKey?: any }) => {
-  const { data: projectRisks = [], isLoading: loadingProjectRisks, error } = useQuery({
+const useProjectRisks = ({ projectId, refreshKey }: { projectId: number; refreshKey?: any }) => {
+  const {
+    data: projectRisks = [],
+    isLoading: loadingProjectRisks,
+    error,
+  } = useQuery({
     queryKey: [...PROJECT_RISKS_QUERY_KEY, projectId, refreshKey],
     queryFn: async ({ signal }) => {
       const response = await getAllProjectRisksByProjectId({
         projectId: String(projectId),
         signal,
       });
-      return response.data as ProjectRisk[] || [];
+      return (response.data as ProjectRisk[]) || [];
     },
     enabled: !!projectId,
     staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
@@ -67,8 +71,13 @@ const useProjectRisks = ({ projectId, refreshKey }: { projectId: number, refresh
       (acc, risk) => {
         const _risk = convertToCamelCaseRiskKey(risk.risk_level_autocalculated);
         const key = `${_risk.replace(/risks?$/i, "")}Risks`;
-        if (key in acc && key !== 'total') {
-          const riskKey = key as 'veryHighRisks' | 'highRisks' | 'mediumRisks' | 'lowRisks' | 'veryLowRisks';
+        if (key in acc && key !== "total") {
+          const riskKey = key as
+            | "veryHighRisks"
+            | "highRisks"
+            | "mediumRisks"
+            | "lowRisks"
+            | "veryLowRisks";
           acc[riskKey] = acc[riskKey] + 1;
         }
         acc.total = acc.total + 1;
@@ -81,7 +90,7 @@ const useProjectRisks = ({ projectId, refreshKey }: { projectId: number, refresh
         mediumRisks: 0,
         lowRisks: 0,
         veryLowRisks: 0,
-      }
+      },
     );
   }, [projectRisks]);
 

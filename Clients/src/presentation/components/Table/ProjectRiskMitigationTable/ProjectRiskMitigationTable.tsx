@@ -1,10 +1,4 @@
-import {
-  Table,
-  TableCell,
-  TableContainer,
-  TableRow,
-  TableBody,
-} from "@mui/material";
+import { Table, TableCell, TableContainer, TableRow, TableBody } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { tableWrapper } from "../styles";
 import TableHeader from "../TableHead";
@@ -20,9 +14,7 @@ interface ProjectRiskMitigationTableProps {
   rows: ProjectRiskMitigation[];
 }
 
-export const ProjectRiskMitigationTable: React.FC<
-  ProjectRiskMitigationTableProps
-> = ({ rows }) => {
+export const ProjectRiskMitigationTable: React.FC<ProjectRiskMitigationTableProps> = ({ rows }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const setCurrentPagingation = (page: number) => {
     setCurrentPage(page);

@@ -1,12 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 import { X as CloseGreyIcon } from "lucide-react";
 import { IBannerProps } from "../../../../domain/interfaces/i.widget";
-import {
-  bannerBoxStyle,
-  bannerPaperStyle,
-  bannerTextStyle,
-  closeIconStyle,
-} from "./style";
+import { bannerBoxStyle, bannerPaperStyle, bannerTextStyle, closeIconStyle } from "./style";
 
 const index = ({ onClose, bannerText, bannerWidth }: IBannerProps) => {
   return (

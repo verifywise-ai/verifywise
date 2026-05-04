@@ -60,10 +60,7 @@ export const validateUserIdParam = (id: any): ValidationResult => {
 /**
  * Validates pagination parameters
  */
-export const validatePaginationParams = (
-  page: any,
-  pageSize: any
-): ValidationError[] => {
+export const validatePaginationParams = (page: any, pageSize: any): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   if (page !== undefined) {
@@ -106,16 +103,12 @@ export const validatePaginationParams = (
  */
 export const validateFileUploadBody = async (
   body: any,
-  _organizationId: number
+  _organizationId: number,
 ): Promise<ValidationError[]> => {
   const errors: ValidationError[] = [];
 
   // Validate question_id (required)
-  const questionIdValidation = validateForeignKey(
-    body.question_id,
-    "Question ID",
-    true
-  );
+  const questionIdValidation = validateForeignKey(body.question_id, "Question ID", true);
   if (!questionIdValidation.isValid) {
     errors.push({
       field: "question_id",
@@ -125,11 +118,7 @@ export const validateFileUploadBody = async (
   }
 
   // Validate project_id (required)
-  const projectIdValidation = validateForeignKey(
-    body.project_id,
-    "Project ID",
-    true
-  );
+  const projectIdValidation = validateForeignKey(body.project_id, "Project ID", true);
   if (!projectIdValidation.isValid) {
     errors.push({
       field: "project_id",
@@ -164,7 +153,7 @@ export const validateFileUploadBody = async (
           const fileIdValidation = validateForeignKey(
             deleteArray[i],
             `Delete file ID at index ${i}`,
-            true
+            true,
           );
           if (!fileIdValidation.isValid) {
             errors.push({
@@ -245,10 +234,7 @@ export const validateUploadedFiles = (files: any): ValidationError[] => {
     }
 
     // Validate MIME type
-    if (
-      file.mimetype &&
-      !FILE_VALIDATION_LIMITS.ALLOWED_MIME_TYPES.includes(file.mimetype)
-    ) {
+    if (file.mimetype && !FILE_VALIDATION_LIMITS.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       errors.push({
         field: `files[${index}]`,
         message: `File "${file.originalname}" has unsupported MIME type: ${file.mimetype}`,
@@ -258,21 +244,16 @@ export const validateUploadedFiles = (files: any): ValidationError[] => {
 
     // Validate filename
     if (file.originalname) {
-      const filenameValidation = validateString(
-        file.originalname,
-        `File name at index ${index}`,
-        {
-          required: true,
-          minLength: 1,
-          maxLength: 255,
-          trimWhitespace: true,
-        }
-      );
+      const filenameValidation = validateString(file.originalname, `File name at index ${index}`, {
+        required: true,
+        minLength: 1,
+        maxLength: 255,
+        trimWhitespace: true,
+      });
       if (!filenameValidation.isValid) {
         errors.push({
           field: `files[${index}]`,
-          message:
-            filenameValidation.message || `Invalid filename at index ${index}`,
+          message: filenameValidation.message || `Invalid filename at index ${index}`,
           code: filenameValidation.code || "INVALID_FILENAME",
         });
       }
@@ -288,7 +269,7 @@ export const validateUploadedFiles = (files: any): ValidationError[] => {
 export const validateFileUploadRequest = async (
   body: any,
   files: any,
-  organizationId: number
+  organizationId: number,
 ): Promise<ValidationError[]> => {
   const bodyErrors = await validateFileUploadBody(body, organizationId);
   const fileErrors = validateUploadedFiles(files);
@@ -299,10 +280,7 @@ export const validateFileUploadRequest = async (
 /**
  * Business rule validation for file operations
  */
-export const validateFileBusinessRules = (
-  body: any,
-  files: any
-): ValidationError[] => {
+export const validateFileBusinessRules = (body: any, files: any): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // If files are being uploaded, ensure required fields are present
@@ -325,10 +303,7 @@ export const validateFileBusinessRules = (
   }
 
   // If deleting files but no files to upload, ensure delete array is provided
-  if (
-    (!files || files.length === 0) &&
-    (!body.delete || body.delete === "[]")
-  ) {
+  if ((!files || files.length === 0) && (!body.delete || body.delete === "[]")) {
     errors.push({
       field: "request",
       message: "Either files to upload or files to delete must be specified",
@@ -345,7 +320,7 @@ export const validateFileBusinessRules = (
 export const validateCompleteFileUpload = async (
   body: any,
   files: any,
-  organizationId: number
+  organizationId: number,
 ): Promise<ValidationError[]> => {
   const validationErrors = await validateFileUploadRequest(body, files, organizationId);
   const businessErrors = validateFileBusinessRules(body, files);

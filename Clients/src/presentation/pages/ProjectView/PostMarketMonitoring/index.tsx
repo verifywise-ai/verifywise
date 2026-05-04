@@ -6,13 +6,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  useTheme,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, useTheme, CircularProgress } from "@mui/material";
 import { Plus, Trash2, GripVertical, Edit2 } from "lucide-react";
 import {
   DndContext,
@@ -82,14 +76,10 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
   disabled = false,
 }) => {
   const theme = useTheme();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: question.id!, disabled });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id!,
+    disabled,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -125,30 +115,22 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
           "&:active": { cursor: disabled ? "not-allowed" : "grabbing" },
         }}
       >
-        <GripVertical
-          size={16}
-          color={theme.palette.other.icon}
-          style={{ flexShrink: 0 }}
-        />
+        <GripVertical size={16} color={theme.palette.other.icon} style={{ flexShrink: 0 }} />
       </Box>
       <Stack flex={1} spacing={0.5}>
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
             {index + 1}. {question.question_text}
           </Typography>
-          {question.is_system_default && (
-            <Chip label="Default" variant="default" size="small" />
-          )}
-          {question.is_required && (
-            <Chip label="Required" variant="warning" size="small" />
-          )}
+          {question.is_system_default && <Chip label="Default" variant="default" size="small" />}
+          {question.is_required && <Chip label="Required" variant="warning" size="small" />}
         </Stack>
         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
           {question.question_type === "yes_no"
             ? "Yes/No"
             : question.question_type === "multi_select"
-            ? "Multiple choice"
-            : "Text response"}
+              ? "Multiple choice"
+              : "Text response"}
           {question.eu_ai_act_article && ` • ${question.eu_ai_act_article}`}
         </Typography>
       </Stack>
@@ -201,7 +183,9 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
               borderRadius: "4px",
               display: "flex",
               opacity: disabled ? 0.5 : 1,
-              "&:hover": { backgroundColor: disabled ? "transparent" : theme.palette.status.error.light },
+              "&:hover": {
+                backgroundColor: disabled ? "transparent" : theme.palette.status.error.light,
+              },
               "&:focus": {
                 outline: disabled ? "none" : `2px solid ${theme.palette.status.error.text}`,
                 outlineOffset: "2px",
@@ -252,7 +236,7 @@ const PostMarketMonitoring: React.FC = () => {
   // Memoize sorted questions to avoid re-sorting on every render
   const sortedQuestions = useMemo(
     () => [...questions].sort((a, b) => a.display_order - b.display_order),
-    [questions]
+    [questions],
   );
 
   // DnD sensors for drag and drop
@@ -260,7 +244,7 @@ const PostMarketMonitoring: React.FC = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Show alert helper - defined early so other callbacks can use it
@@ -269,7 +253,7 @@ const PostMarketMonitoring: React.FC = () => {
       setAlert({ variant, body, title, isToast: true, visible: true });
       setTimeout(() => setAlert(null), 3000);
     },
-    []
+    [],
   );
 
   // Handle drag end for question reordering
@@ -313,7 +297,7 @@ const PostMarketMonitoring: React.FC = () => {
         }
       }
     },
-    [questions, showAlert]
+    [questions, showAlert],
   );
 
   // Load config and questions
@@ -388,9 +372,7 @@ const PostMarketMonitoring: React.FC = () => {
         setConfig({ ...config, is_active: newActive });
         showAlert(
           "success",
-          newActive
-            ? "Post-market monitoring enabled"
-            : "Post-market monitoring disabled"
+          newActive ? "Post-market monitoring enabled" : "Post-market monitoring disabled",
         );
       }
     } catch (error) {
@@ -467,9 +449,7 @@ const PostMarketMonitoring: React.FC = () => {
         if (editingQuestion?.id) {
           // Update existing question
           const updated = await pmmService.updateQuestion(editingQuestion.id, questionData);
-          setQuestions((prev) =>
-            prev.map((q) => (q.id === updated.id ? updated : q))
-          );
+          setQuestions((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
           showAlert("success", "Question updated");
         } else {
           // Create new question
@@ -489,7 +469,7 @@ const PostMarketMonitoring: React.FC = () => {
         showAlert("error", "Failed to save question");
       }
     },
-    [config, editingQuestion, questions.length, showAlert]
+    [config, editingQuestion, questions.length, showAlert],
   );
 
   // Delete question
@@ -504,7 +484,7 @@ const PostMarketMonitoring: React.FC = () => {
         showAlert("error", "Failed to delete question");
       }
     },
-    [showAlert]
+    [showAlert],
   );
 
   // Styles
@@ -551,40 +531,43 @@ const PostMarketMonitoring: React.FC = () => {
 
       {/* Enable/Disable Card */}
       <Box sx={cardStyle}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-        >
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack spacing={0.5}>
-            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-              Post-market monitoring
-            </Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Post-market monitoring</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
               {project?.project_title || "Use case"} (EU AI Act Article 9, Article 72)
             </Typography>
           </Stack>
-          <Toggle
-            checked={isActive}
-            onChange={handleToggleActive}
-            disabled={!canEdit}
-          />
+          <Toggle checked={isActive} onChange={handleToggleActive} disabled={!canEdit} />
         </Stack>
       </Box>
 
       {/* Configuration Card - only show when config exists */}
       {config?.id && (
-        <Box sx={{ ...cardStyle, opacity: isActive && canEdit ? 1 : 0.6, pointerEvents: isActive && canEdit ? "auto" : "none" }}>
+        <Box
+          sx={{
+            ...cardStyle,
+            opacity: isActive && canEdit ? 1 : 0.6,
+            pointerEvents: isActive && canEdit ? "auto" : "none",
+          }}
+        >
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
             <Stack spacing={0.5}>
               <Stack direction="row" alignItems="center" spacing={2}>
-                <Typography sx={{ ...sectionTitleStyle, marginBottom: 0 }}>Monitoring schedule</Typography>
+                <Typography sx={{ ...sectionTitleStyle, marginBottom: 0 }}>
+                  Monitoring schedule
+                </Typography>
                 {(!isActive || !canEdit) && (
-                  <Chip label={!canEdit ? "View only" : "Disabled"} variant="default" size="small" />
+                  <Chip
+                    label={!canEdit ? "View only" : "Disabled"}
+                    variant="default"
+                    size="small"
+                  />
                 )}
               </Stack>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
-                Emails will be sent to use case stakeholders. Escalation contact is notified if monitoring is overdue.
+                Emails will be sent to use case stakeholders. Escalation contact is notified if
+                monitoring is overdue.
               </Typography>
             </Stack>
           </Stack>
@@ -600,9 +583,7 @@ const PostMarketMonitoring: React.FC = () => {
           >
             {/* Frequency */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Frequency
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Frequency</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 How often to run monitoring
               </Typography>
@@ -618,14 +599,14 @@ const PostMarketMonitoring: React.FC = () => {
                 sx={{ ...fieldStyle, minWidth: "unset" }}
                 disabled={!isActive || !canEdit}
               />
-              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>days</Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>
+                days
+              </Typography>
             </Stack>
 
             {/* Start date */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Start date
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start date</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 When to begin monitoring
               </Typography>
@@ -633,18 +614,14 @@ const PostMarketMonitoring: React.FC = () => {
             <DatePicker
               label=""
               date={startDate ? dayjs(startDate) : null}
-              handleDateChange={(date: Dayjs | null) =>
-                setStartDate(date?.toISOString() || "")
-              }
+              handleDateChange={(date: Dayjs | null) => setStartDate(date?.toISOString() || "")}
               sx={{ width: 180 }}
               disabled={!isActive || !canEdit}
             />
 
             {/* Notification hour */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Notification time
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Notification time</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 Time of day to send notifications
               </Typography>
@@ -653,9 +630,7 @@ const PostMarketMonitoring: React.FC = () => {
               id="notification-hour"
               label=""
               value={notificationHour}
-              onChange={(e) =>
-                setNotificationHour(parseInt(e.target.value as string, 10))
-              }
+              onChange={(e) => setNotificationHour(parseInt(e.target.value as string, 10))}
               items={notificationHourItems}
               sx={{ width: 180, backgroundColor: theme.palette.background.main }}
               disabled={!isActive || !canEdit}
@@ -663,9 +638,7 @@ const PostMarketMonitoring: React.FC = () => {
 
             {/* Reminder days */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Reminder after
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Reminder after</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 Days before sending reminder
               </Typography>
@@ -681,14 +654,14 @@ const PostMarketMonitoring: React.FC = () => {
                 sx={{ ...fieldStyle, minWidth: "unset" }}
                 disabled={!isActive || !canEdit}
               />
-              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>days</Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>
+                days
+              </Typography>
             </Stack>
 
             {/* Escalation days */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Escalate after
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Escalate after</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 Days before escalating
               </Typography>
@@ -699,21 +672,19 @@ const PostMarketMonitoring: React.FC = () => {
                 label=""
                 type="number"
                 value={escalationDays.toString()}
-                onChange={(e) =>
-                  setEscalationDays(parseInt(e.target.value, 10) || 1)
-                }
+                onChange={(e) => setEscalationDays(parseInt(e.target.value, 10) || 1)}
                 width={180}
                 sx={{ ...fieldStyle, minWidth: "unset" }}
                 disabled={!isActive || !canEdit}
               />
-              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>days</Typography>
+              <Typography sx={{ fontSize: 13, color: theme.palette.other.icon, ml: "8px" }}>
+                days
+              </Typography>
             </Stack>
 
             {/* Escalation contact */}
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Escalation contact
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Escalation contact</Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: 0.5 }}>
                 Who to notify on escalation
               </Typography>
@@ -724,7 +695,7 @@ const PostMarketMonitoring: React.FC = () => {
               value={escalationContactId || ""}
               onChange={(e) =>
                 setEscalationContactId(
-                  e.target.value ? parseInt(e.target.value as string, 10) : undefined
+                  e.target.value ? parseInt(e.target.value as string, 10) : undefined,
                 )
               }
               items={
@@ -760,19 +731,16 @@ const PostMarketMonitoring: React.FC = () => {
       {/* Questions Card - only show when config exists */}
       {config?.id && (
         <Box sx={{ ...cardStyle, opacity: isActive && canEdit ? 1 : 0.6 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
             <Stack spacing={0.5}>
               <Stack direction="row" alignItems="center" spacing={2}>
-                <Typography sx={sectionTitleStyle}>
-                  Monitoring questions
-                </Typography>
+                <Typography sx={sectionTitleStyle}>Monitoring questions</Typography>
                 {(!isActive || !canEdit) && (
-                  <Chip label={!canEdit ? "View only" : "Disabled"} variant="default" size="small" />
+                  <Chip
+                    label={!canEdit ? "View only" : "Disabled"}
+                    variant="default"
+                    size="small"
+                  />
                 )}
               </Stack>
               <Typography sx={{ fontSize: 12, color: theme.palette.other.icon, mt: -1 }}>

@@ -19,12 +19,12 @@ export interface IAITrustCentrePublic {
     title: string;
     header_color: string;
     logo: number;
-  },
+  };
   intro: {
     purpose: string;
     statement: string;
     mission: string;
-  },
+  };
   compliance_badges: {
     SOC2_Type_I: boolean;
     SOC2_Type_II: boolean;
@@ -34,17 +34,17 @@ export interface IAITrustCentrePublic {
     GDPR: boolean;
     HIPAA: boolean;
     EU_AI_Act: boolean;
-  },
+  };
   company_description: {
     background: string;
     core_benefits: string;
     compliance_doc: string;
-  },
+  };
   terms_and_contact: {
     terms: string;
     privacy: string;
     email: string;
-  },
-  resources: IAITrustCentreResources[],
-  subprocessors: IAITrustCentreSubprocessors[]
+  };
+  resources: IAITrustCentreResources[];
+  subprocessors: IAITrustCentreSubprocessors[];
 }

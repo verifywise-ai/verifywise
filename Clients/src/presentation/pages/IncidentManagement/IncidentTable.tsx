@@ -19,11 +19,7 @@ import { displayFormattedDate } from "../../tools/isoDateToString";
 import { singleTheme } from "../../themes";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
 import { IncidentTableProps } from "../../types/interfaces/i.table";
-import {
-  incidentRowHover,
-  incidentLoadingContainer,
-  incidentTableRowDeletingStyle,
-} from "./style";
+import { incidentRowHover, incidentLoadingContainer, incidentTableRowDeletingStyle } from "./style";
 import CustomIconButton from "../../components/IconButton";
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
@@ -48,9 +44,7 @@ const TABLE_COLUMNS: StandardColumn[] = [
 const TooltipCell: React.FC<{ value?: string | null }> = ({ value }) => {
   const displayValue = value || "-";
   const shouldTruncate = displayValue.length > 30;
-  const truncatedValue = shouldTruncate
-    ? `${displayValue.substring(0, 30)}...`
-    : displayValue;
+  const truncatedValue = shouldTruncate ? `${displayValue.substring(0, 30)}...` : displayValue;
 
   return shouldTruncate ? (
     <Tooltip title={displayValue} arrow>
@@ -77,12 +71,12 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       if (!visibleColumns) return true;
       return visibleColumns.has(key);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const visibleTableColumns = useMemo(
     () => TABLE_COLUMNS.filter((col) => isVisible(col.id)),
-    [isVisible]
+    [isVisible],
   );
 
   const sortComparator = useCallback(
@@ -130,7 +124,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       if (aValue > bValue) return 1;
       return 0;
     },
-    []
+    [],
   );
 
   const {
@@ -160,7 +154,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
               hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
                 ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage
+                : validPage * rowsPerPage + rowsPerPage,
             )
             .map((incident) => (
               <TableRow
@@ -168,8 +162,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
                   ...incidentRowHover,
-                  ...(archivedId === incident.id?.toString() &&
-                    incidentTableRowDeletingStyle),
+                  ...(archivedId === incident.id?.toString() && incidentTableRowDeletingStyle),
                 }}
                 onClick={() => onEdit?.(incident.id?.toString(), "edit")}
               >
@@ -179,10 +172,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                       ...cellStyle,
                       width: "110px",
                       maxWidth: "110px",
-                      backgroundColor:
-                        sortConfig.key === "incident_id"
-                          ? "#e8e8e8"
-                          : "#fafafa",
+                      backgroundColor: sortConfig.key === "incident_id" ? "#e8e8e8" : "#fafafa",
                     }}
                   >
                     {incident.incident_id}{" "}
@@ -193,9 +183,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     sx={{
                       ...cellStyle,
                       backgroundColor:
-                        sortConfig.key === "ai_project"
-                          ? "background.surface"
-                          : "inherit",
+                        sortConfig.key === "ai_project" ? "background.surface" : "inherit",
                     }}
                   >
                     <TooltipCell value={incident.ai_project} />
@@ -205,10 +193,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                   <TableCell
                     sx={{
                       ...cellStyle,
-                      backgroundColor:
-                        sortConfig.key === "type"
-                          ? "background.surface"
-                          : "inherit",
+                      backgroundColor: sortConfig.key === "type" ? "background.surface" : "inherit",
                     }}
                   >
                     <TooltipCell value={incident.type} />
@@ -219,9 +204,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     sx={{
                       ...cellStyle,
                       backgroundColor:
-                        sortConfig.key === "severity"
-                          ? "background.surface"
-                          : "inherit",
+                        sortConfig.key === "severity" ? "background.surface" : "inherit",
                     }}
                   >
                     <Chip label={incident.severity} />
@@ -232,9 +215,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     sx={{
                       ...cellStyle,
                       backgroundColor:
-                        sortConfig.key === "status"
-                          ? "background.surface"
-                          : "inherit",
+                        sortConfig.key === "status" ? "background.surface" : "inherit",
                     }}
                   >
                     <Chip label={incident.status} />
@@ -245,14 +226,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     sx={{
                       ...cellStyle,
                       backgroundColor:
-                        sortConfig.key === "occurred_date"
-                          ? "background.surface"
-                          : "inherit",
+                        sortConfig.key === "occurred_date" ? "background.surface" : "inherit",
                     }}
                   >
-                    {incident.occurred_date
-                      ? displayFormattedDate(incident.occurred_date)
-                      : "-"}
+                    {incident.occurred_date ? displayFormattedDate(incident.occurred_date) : "-"}
                   </TableCell>
                 )}
                 {isVisible("approved_by") && (
@@ -260,9 +237,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     sx={{
                       ...cellStyle,
                       backgroundColor:
-                        sortConfig.key === "approved_by"
-                          ? "background.surface"
-                          : "inherit",
+                        sortConfig.key === "approved_by" ? "background.surface" : "inherit",
                     }}
                   >
                     <TooltipCell value={incident.approved_by} />
@@ -279,9 +254,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         id={incident.id}
                         type="Incident"
                         onEdit={() => onEdit?.(incident.id?.toString(), "edit")}
-                        onDelete={() =>
-                          onArchive?.(incident.id?.toString(), "archive")
-                        }
+                        onDelete={() => onArchive?.(incident.id?.toString(), "archive")}
                         onView={() => onView?.(incident.id?.toString(), "view")}
                         onMouseEvent={() => {}}
                         warningTitle="Are you sure?"
@@ -305,16 +278,24 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
         )}
       </TableBody>
     ),
-    [sortedRows, validPage, rowsPerPage, archivedId, onEdit, onArchive, onView, isVisible, sortConfig.key, visibleTableColumns.length, hidePagination]
+    [
+      sortedRows,
+      validPage,
+      rowsPerPage,
+      archivedId,
+      onEdit,
+      onArchive,
+      onView,
+      isVisible,
+      sortConfig.key,
+      visibleTableColumns.length,
+      hidePagination,
+    ],
   );
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={incidentLoadingContainer()}
-      >
+      <Stack alignItems="center" justifyContent="center" sx={incidentLoadingContainer()}>
         <Typography>Loading...</Typography>
       </Stack>
     );
@@ -322,7 +303,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
 
   if (!sortedRows || sortedRows.length === 0) {
     return (
-      <EmptyState icon={AlertTriangle} message="No incidents reported yet. Track and manage AI-related incidents to maintain compliance.">
+      <EmptyState
+        icon={AlertTriangle}
+        message="No incidents reported yet. Track and manage AI-related incidents to maintain compliance."
+      >
         <EmptyStateTip
           icon={FileWarning}
           title="What counts as an incident?"

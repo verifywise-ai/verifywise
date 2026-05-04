@@ -78,8 +78,7 @@ export const AgentUpdateRiskSchema = z
       return keys.length > 0;
     },
     {
-      message:
-        "At least one field besides risk_id must be provided — nothing to update",
+      message: "At least one field besides risk_id must be provided — nothing to update",
       path: [],
     },
   );

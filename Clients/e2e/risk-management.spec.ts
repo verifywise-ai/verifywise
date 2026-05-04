@@ -17,14 +17,10 @@ test.describe("Risk Management", () => {
     await expect(page).toHaveURL(/\/risk-management/);
 
     // Page should show risk-related content or empty state
-    await expect(
-      page.getByText(/risk/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/risk/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
     await page.waitForLoadState("domcontentloaded");
 
@@ -61,9 +57,7 @@ test.describe("Risk Management", () => {
 
   // --- Tier 1: Summary cards ---
 
-  test("risk severity summary cards are visible", async ({
-    authedPage: page,
-  }) => {
+  test("risk severity summary cards are visible", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
 
     // Risk page shows severity summary cards
@@ -78,15 +72,16 @@ test.describe("Risk Management", () => {
 
   // --- Tier 2: Search & Filter ---
 
-  test("searching for nonexistent risk filters results", async ({
-    authedPage: page,
-  }) => {
+  test("searching for nonexistent risk filters results", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
-    const searchInput = page
-      .getByPlaceholder(/search risks/i)
-      .or(page.getByPlaceholder(/search/i));
+    const searchInput = page.getByPlaceholder(/search risks/i).or(page.getByPlaceholder(/search/i));
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-risk");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -94,15 +89,18 @@ test.describe("Risk Management", () => {
     }
   });
 
-  test("filter button opens filter options", async ({
-    authedPage: page,
-  }) => {
+  test("filter button opens filter options", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
     const filterBtn = page
       .getByRole("button", { name: /filter/i })
       .or(page.getByText(/filter by/i));
 
-    if (await filterBtn.first().isVisible().catch(() => false)) {
+    if (
+      await filterBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await filterBtn.first().click();
       await page.waitForTimeout(300);
       await page.keyboard.press("Escape");
@@ -111,9 +109,7 @@ test.describe("Risk Management", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Add new risk dropdown shows database options", async ({
-    authedPage: page,
-  }) => {
+  test("Add new risk dropdown shows database options", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
     const addBtn = page.getByRole("button", { name: /add new risk/i });
 
@@ -123,7 +119,12 @@ test.describe("Risk Management", () => {
       const ibmOption = page.getByText(/IBM AI Risk/i);
       const mitOption = page.getByText(/MIT AI Risk/i);
       const menuOption = ibmOption.or(mitOption);
-      if (await menuOption.first().isVisible().catch(() => false)) {
+      if (
+        await menuOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await page.keyboard.press("Escape");
       } else {
         // May have opened a modal directly instead
@@ -145,11 +146,14 @@ test.describe("Risk Management", () => {
         .getByText(/add manually/i)
         .or(page.getByText(/custom risk/i))
         .or(page.getByText(/add a new risk/i));
-      if (await manualOption.first().isVisible().catch(() => false)) {
+      if (
+        await manualOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await manualOption.first().click();
-        await expect(
-          page.getByText(/add a new risk/i).first()
-        ).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByText(/add a new risk/i).first()).toBeVisible({ timeout: 10_000 });
       }
       await page.keyboard.press("Escape");
     }
@@ -165,92 +169,120 @@ projectTest.describe("Risk Management CRUD", () => {
     });
   });
 
-  projectTest(
-    "CRUD: create and delete risk",
-    async ({ projectPage: page, projectName }) => {
-      await page.goto("/risk-management");
-      const riskTitle = `E2E Test Risk ${Date.now()}`;
+  projectTest("CRUD: create and delete risk", async ({ projectPage: page, projectName }) => {
+    await page.goto("/risk-management");
+    const riskTitle = `E2E Test Risk ${Date.now()}`;
 
-      // Open "Add new risk" dropdown
-      const addBtn = page.getByRole("button", { name: /add new risk/i });
-      if (!(await addBtn.isVisible().catch(() => false))) {
-        projectTest.skip();
-        return;
-      }
-      await addBtn.click();
-      await page.waitForTimeout(300);
+    // Open "Add new risk" dropdown
+    const addBtn = page.getByRole("button", { name: /add new risk/i });
+    if (!(await addBtn.isVisible().catch(() => false))) {
+      projectTest.skip();
+      return;
+    }
+    await addBtn.click();
+    await page.waitForTimeout(300);
 
-      // Click "Add manually"
-      const manualOption = page
-        .getByText(/add manually/i)
-        .or(page.getByText(/custom risk/i))
-        .or(page.getByText(/add a new risk/i));
-      if (await manualOption.first().isVisible().catch(() => false)) {
-        await manualOption.first().click();
-      }
+    // Click "Add manually"
+    const manualOption = page
+      .getByText(/add manually/i)
+      .or(page.getByText(/custom risk/i))
+      .or(page.getByText(/add a new risk/i));
+    if (
+      await manualOption
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await manualOption.first().click();
+    }
 
-      // Fill risk title
-      const titleInput = page
-        .getByRole("textbox", { name: /title/i })
-        .or(page.getByPlaceholder(/title/i))
-        .or(page.getByPlaceholder(/risk name/i))
-        .or(page.getByRole("textbox").first());
-      await projectExpect(titleInput.first()).toBeVisible({ timeout: 10_000 });
-      await titleInput.first().fill(riskTitle);
+    // Fill risk title
+    const titleInput = page
+      .getByRole("textbox", { name: /title/i })
+      .or(page.getByPlaceholder(/title/i))
+      .or(page.getByPlaceholder(/risk name/i))
+      .or(page.getByRole("textbox").first());
+    await projectExpect(titleInput.first()).toBeVisible({ timeout: 10_000 });
+    await titleInput.first().fill(riskTitle);
 
-      // Select project if dropdown exists
-      const projectSelect = page
-        .getByRole("combobox", { name: /project/i })
-        .or(page.getByText(/select.*project/i));
-      if (await projectSelect.first().isVisible().catch(() => false)) {
-        await projectSelect.first().click();
-        const projectOption = page
-          .getByRole("option", { name: new RegExp(projectName, "i") })
-          .or(page.getByRole("option").first());
-        if (await projectOption.first().isVisible().catch(() => false)) {
-          await projectOption.first().click();
-        }
-      }
-
-      // Submit
-      const submitBtn = page
-        .getByRole("button", { name: /create|save|submit|add/i })
-        .last();
-      await submitBtn.click();
-      await page.waitForTimeout(1000);
-
-      // Verify: Search for the created risk
-      const searchInput = page
-        .getByPlaceholder(/search risks/i)
-        .or(page.getByPlaceholder(/search/i));
-      if (await searchInput.first().isVisible().catch(() => false)) {
-        await searchInput.first().fill(riskTitle);
-        await page.waitForTimeout(500);
-      }
-
-      // Clean up: Delete via row action
-      const moreBtn = page
-        .getByRole("button", { name: /more/i })
-        .or(page.locator('[aria-label="more"]'))
-        .or(page.locator('[data-testid="MoreVertIcon"]'));
-      if (await moreBtn.first().isVisible().catch(() => false)) {
-        await moreBtn.first().click();
-        const deleteBtn = page.getByRole("menuitem", {
-          name: /delete|archive|remove/i,
-        });
-        if (await deleteBtn.first().isVisible().catch(() => false)) {
-          await deleteBtn.first().click();
-          const confirmBtn = page.getByRole("button", {
-            name: /confirm|yes|delete/i,
-          });
-          if (await confirmBtn.first().isVisible().catch(() => false)) {
-            await confirmBtn.first().click();
-          }
-          await page.waitForTimeout(500);
-        } else {
-          await page.keyboard.press("Escape");
-        }
+    // Select project if dropdown exists
+    const projectSelect = page
+      .getByRole("combobox", { name: /project/i })
+      .or(page.getByText(/select.*project/i));
+    if (
+      await projectSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await projectSelect.first().click();
+      const projectOption = page
+        .getByRole("option", { name: new RegExp(projectName, "i") })
+        .or(page.getByRole("option").first());
+      if (
+        await projectOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await projectOption.first().click();
       }
     }
-  );
+
+    // Submit
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
+    await submitBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Verify: Search for the created risk
+    const searchInput = page.getByPlaceholder(/search risks/i).or(page.getByPlaceholder(/search/i));
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await searchInput.first().fill(riskTitle);
+      await page.waitForTimeout(500);
+    }
+
+    // Clean up: Delete via row action
+    const moreBtn = page
+      .getByRole("button", { name: /more/i })
+      .or(page.locator('[aria-label="more"]'))
+      .or(page.locator('[data-testid="MoreVertIcon"]'));
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await moreBtn.first().click();
+      const deleteBtn = page.getByRole("menuitem", {
+        name: /delete|archive|remove/i,
+      });
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await deleteBtn.first().click();
+        const confirmBtn = page.getByRole("button", {
+          name: /confirm|yes|delete/i,
+        });
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
+          await confirmBtn.first().click();
+        }
+        await page.waitForTimeout(500);
+      } else {
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
 });

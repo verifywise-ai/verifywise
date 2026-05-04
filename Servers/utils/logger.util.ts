@@ -17,7 +17,7 @@ export const getEventsQuery = async (organizationId: number) => {
     {
       replacements: { organization_id: organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return events;
 };
@@ -39,7 +39,7 @@ export const getLogsQuery = async (organizationId: number) => {
       "..",
       "logs",
       String(organizationId),
-      logFileName
+      logFileName,
     );
 
     // Check if the log file exists

@@ -15,7 +15,7 @@ export function pipeStreamWithCleanup(
   stream: Readable,
   req: Request,
   res: Response,
-  cleanup: () => Promise<void>
+  cleanup: () => Promise<void>,
 ): void {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

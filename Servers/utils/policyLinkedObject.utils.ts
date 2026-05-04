@@ -15,7 +15,7 @@ export const getAllPolicyLinkedObjectsQuery = async (organizationId: number) => 
       replacements: { organizationId },
       mapToModel: true,
       model: PolicyLinkedObjectsModel,
-    }
+    },
   );
 
   return rows;
@@ -26,116 +26,112 @@ export const getAllPolicyLinkedObjectsQuery = async (organizationId: number) => 
  */
 
 export const getPolicyLinkedObjectByIdQuery = async (policy_id: number, organizationId: number) => {
-    logger.debug(`📥 Fetching linked objects for policy ${policy_id}`);
+  logger.debug(`📥 Fetching linked objects for policy ${policy_id}`);
 
-    const rows = await sequelize.query(
-      `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId AND policy_id = :policy_id`,
-      {
-        replacements: { organizationId, policy_id },
-        mapToModel: true,
-        model: PolicyLinkedObjectsModel,
-      }
-    );
+  const rows = await sequelize.query(
+    `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId AND policy_id = :policy_id`,
+    {
+      replacements: { organizationId, policy_id },
+      mapToModel: true,
+      model: PolicyLinkedObjectsModel,
+    },
+  );
 
-    return rows;
-  };
-
+  return rows;
+};
 
 /**
  * CREATE linked object
  */
 export const createPolicyLinkedObjectQuery = async (
-    policy_id: number,
-    object_type: string,
-    object_id: number,
-    organizationId: number,
-    transaction?: Transaction
-  ) => {
-    logger.debug(
-      `🟢 Creating policy_linked_object → policy:${policy_id}, type:${object_type}, id:${object_id}`
-    );
+  policy_id: number,
+  object_type: string,
+  object_id: number,
+  organizationId: number,
+  transaction?: Transaction,
+) => {
+  logger.debug(
+    `🟢 Creating policy_linked_object → policy:${policy_id}, type:${object_type}, id:${object_id}`,
+  );
 
-    const result = await sequelize.query(
-      `INSERT INTO policy_linked_objects
+  const result = await sequelize.query(
+    `INSERT INTO policy_linked_objects
         (organization_id, policy_id, object_type, object_id, created_at, updated_at)
        VALUES (:organizationId, :policy_id, :object_type, :object_id, NOW(), NOW())
        RETURNING *`,
-      {
-        replacements: { organizationId, policy_id, object_type, object_id },
-        mapToModel: true,
-        model: PolicyLinkedObjectsModel,
-        transaction,
-      }
-    );
+    {
+      replacements: { organizationId, policy_id, object_type, object_id },
+      mapToModel: true,
+      model: PolicyLinkedObjectsModel,
+      transaction,
+    },
+  );
 
-    return result[0];
-  };
+  return result[0];
+};
 
 /**
  * UPDATE linked object (by id)
  */
 export const updatePolicyLinkedObjectQuery = async (
-    policy_id: number,
-    old_object_type: string,
-    old_object_id: number,
-    new_object_type: string,
-    new_object_id: number,
-    organizationId: number,
-    transaction?: Transaction
-  ) => {
-    logger.debug(
-      `♻️ Updating policy_linked_object for policy:${policy_id}: ${old_object_type}(${old_object_id}) → ${new_object_type}(${new_object_id})`
-    );
+  policy_id: number,
+  old_object_type: string,
+  old_object_id: number,
+  new_object_type: string,
+  new_object_id: number,
+  organizationId: number,
+  transaction?: Transaction,
+) => {
+  logger.debug(
+    `♻️ Updating policy_linked_object for policy:${policy_id}: ${old_object_type}(${old_object_id}) → ${new_object_type}(${new_object_id})`,
+  );
 
-    const result = await sequelize.query(
-      `UPDATE policy_linked_objects
+  const result = await sequelize.query(
+    `UPDATE policy_linked_objects
        SET object_type = :new_object_type,
            object_id = :new_object_id,
            updated_at = NOW()
        WHERE organization_id = :organizationId AND policy_id = :policy_id AND object_type = :old_object_type AND object_id = :old_object_id
        RETURNING *`,
-      {
-        replacements: {
-          organizationId,
-          policy_id,
-          old_object_type,
-          old_object_id,
-          new_object_type,
-          new_object_id,
-        },
-        mapToModel: true,
-        model: PolicyLinkedObjectsModel,
-        transaction,
-      }
-    );
+    {
+      replacements: {
+        organizationId,
+        policy_id,
+        old_object_type,
+        old_object_id,
+        new_object_type,
+        new_object_id,
+      },
+      mapToModel: true,
+      model: PolicyLinkedObjectsModel,
+      transaction,
+    },
+  );
 
-    return result[0];
+  return result[0];
 };
 
 /**
  * DELETE linked object (by id)
  */
 export const deletePolicyLinkedObjectQuery = async (
-    id: number,
-    organizationId: number,
-    transaction?: Transaction
-  ) => {
-    logger.debug(
-      `🗑 Deleting policy_linked_object → policy:${id}`
-    );
+  id: number,
+  organizationId: number,
+  transaction?: Transaction,
+) => {
+  logger.debug(`🗑 Deleting policy_linked_object → policy:${id}`);
 
-    const result = await sequelize.query(
-      `DELETE FROM policy_linked_objects
+  const result = await sequelize.query(
+    `DELETE FROM policy_linked_objects
        WHERE organization_id = :organizationId AND id = :id
        RETURNING *`,
-      {
-        replacements: { organizationId, id },
-        mapToModel: true,
-        model: PolicyLinkedObjectsModel,
-        transaction,
-      }
-    );
+    {
+      replacements: { organizationId, id },
+      mapToModel: true,
+      model: PolicyLinkedObjectsModel,
+      transaction,
+    },
+  );
 
-    return result[0];
-  };
-  
+  return result[0];
+};

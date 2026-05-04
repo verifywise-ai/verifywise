@@ -15,8 +15,8 @@ import { persistor, store } from "./application/redux/store.ts";
 import { PersistGate } from "redux-persist/integration/react";
 // import { StyledEngineProvider } from "@mui/material";
 import { BrowserRouter as Router } from "react-router-dom";
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './application/config/queryClient';
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./application/config/queryClient";
 
 // Expose React and related libraries as globals for plugin UI bundles
 (window as any).React = React;
@@ -31,7 +31,14 @@ createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
     <PersistGate
       loading={
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+          }}
+        >
           Loading...
         </div>
       }
@@ -43,5 +50,5 @@ createRoot(document.getElementById("root")!).render(
         </Router>
       </QueryClientProvider>
     </PersistGate>
-  </Provider>
+  </Provider>,
 );

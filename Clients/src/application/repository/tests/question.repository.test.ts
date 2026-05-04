@@ -177,15 +177,11 @@ describe("question.repository", () => {
 
       const result = await updateEUAIActAnswerById({ answerId: 10, body });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/eu-ai-act/saveAnswer/10",
-        body,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+      expect(apiServices.patch).toHaveBeenCalledWith("/eu-ai-act/saveAnswer/10", body, {
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -205,15 +201,11 @@ describe("question.repository", () => {
         body: formData,
       });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/eu-ai-act/saveAnswer/15",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      expect(apiServices.patch).toHaveBeenCalledWith("/eu-ai-act/saveAnswer/15", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+      });
       expect(result).toEqual(mockResponse);
     });
 

@@ -8,7 +8,7 @@ async function testSchemaQuery() {
        FROM information_schema.schemata
        WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast')
        AND schema_name NOT LIKE 'pg_%'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT },
     );
 
     console.log("Found tenant schemas:", schemas);

@@ -19,8 +19,7 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "langchain",
     provider: "LangChain",
-    description:
-      "Framework for building applications with LLMs through composable components",
+    description: "Framework for building applications with LLMs through composable components",
     documentationUrl: "https://python.langchain.com/docs/",
     confidence: "high",
     keywords: [
@@ -81,17 +80,10 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "llamaindex",
     provider: "LlamaIndex",
-    description:
-      "Data framework for LLM applications with indexing and retrieval",
+    description: "Data framework for LLM applications with indexing and retrieval",
     documentationUrl: "https://docs.llamaindex.ai/",
     confidence: "high",
-    keywords: [
-      "llama_index",
-      "llamaindex",
-      "llama-index",
-      "query_engine",
-      "vectorstoreindex",
-    ],
+    keywords: ["llama_index", "llamaindex", "llama-index", "query_engine", "vectorstoreindex"],
     patterns: {
       imports: [
         /from\s+llama_index/,
@@ -131,17 +123,12 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "haystack",
     provider: "Haystack",
-    description:
-      "End-to-end NLP framework for building search and QA systems",
+    description: "End-to-end NLP framework for building search and QA systems",
     documentationUrl: "https://haystack.deepset.ai/",
     confidence: "high",
     keywords: ["haystack", "deepset", "farm-haystack"],
     patterns: {
-      imports: [
-        /from\s+haystack/,
-        /import\s+haystack/,
-        /from\s+["']haystack/,
-      ],
+      imports: [/from\s+haystack/, /import\s+haystack/, /from\s+["']haystack/],
       dependencies: [
         /"haystack-ai":\s*"/,
         /"farm-haystack":\s*"/,
@@ -192,10 +179,8 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "semantic-kernel",
     provider: "Semantic Kernel",
-    description:
-      "Microsoft's SDK for integrating LLMs into applications",
-    documentationUrl:
-      "https://learn.microsoft.com/en-us/semantic-kernel/overview/",
+    description: "Microsoft's SDK for integrating LLMs into applications",
+    documentationUrl: "https://learn.microsoft.com/en-us/semantic-kernel/overview/",
     confidence: "high",
     keywords: ["semantic_kernel", "semantic-kernel", "semantickernel"],
     patterns: {
@@ -230,17 +215,12 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "autogen",
     provider: "AutoGen",
-    description:
-      "Microsoft's framework for multi-agent conversational systems",
+    description: "Microsoft's framework for multi-agent conversational systems",
     documentationUrl: "https://microsoft.github.io/autogen/",
     confidence: "high",
     keywords: ["autogen", "pyautogen", "autogen-agentchat"],
     patterns: {
-      imports: [
-        /from\s+autogen/,
-        /import\s+autogen/,
-        /from\s+pyautogen/,
-      ],
+      imports: [/from\s+autogen/, /import\s+autogen/, /from\s+pyautogen/],
       dependencies: [
         /"pyautogen":\s*"/,
         /"autogen-agentchat":\s*"/,
@@ -266,8 +246,7 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "instructor",
     provider: "Instructor",
-    description:
-      "Library for structured outputs from LLMs using Pydantic",
+    description: "Library for structured outputs from LLMs using Pydantic",
     documentationUrl: "https://python.useinstructor.com/",
     confidence: "high",
     keywords: ["instructor"],
@@ -289,8 +268,7 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "guidance",
     provider: "Guidance",
-    description:
-      "Microsoft's language for controlling LLM generation",
+    description: "Microsoft's language for controlling LLM generation",
     documentationUrl: "https://github.com/guidance-ai/guidance",
     confidence: "high",
     keywords: ["guidance"],
@@ -311,8 +289,7 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "dspy",
     provider: "DSPy",
-    description:
-      "Framework for programming with foundation models",
+    description: "Framework for programming with foundation models",
     documentationUrl: "https://dspy-docs.vercel.app/",
     confidence: "high",
     keywords: ["dspy"],
@@ -336,8 +313,7 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "litellm",
     provider: "LiteLLM",
-    description:
-      "Unified interface for calling 100+ LLM APIs",
+    description: "Unified interface for calling 100+ LLM APIs",
     documentationUrl: "https://docs.litellm.ai/",
     confidence: "high",
     keywords: ["litellm"],
@@ -359,21 +335,13 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "phidata",
     provider: "Phidata",
-    description:
-      "Framework for building AI assistants with memory and tools",
+    description: "Framework for building AI assistants with memory and tools",
     documentationUrl: "https://docs.phidata.com/",
     confidence: "high",
     keywords: ["phidata", "phi", "assistant"],
     patterns: {
-      imports: [
-        /from\s+phi\./,
-        /import\s+phi\./,
-        /from\s+phidata/,
-      ],
-      dependencies: [
-        /"phidata":\s*"/,
-        /phidata[>=<~^]/,
-      ],
+      imports: [/from\s+phi\./, /import\s+phi\./, /from\s+phidata/],
+      dependencies: [/"phidata":\s*"/, /phidata[>=<~^]/],
       apiCalls: [
         // Agent creation
         /Assistant\s*\(/,
@@ -394,25 +362,14 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "pydantic-ai",
     provider: "Pydantic AI",
-    description:
-      "Type-safe AI agent framework from Pydantic team",
+    description: "Type-safe AI agent framework from Pydantic team",
     documentationUrl: "https://ai.pydantic.dev/",
     confidence: "high",
     keywords: ["pydantic_ai", "pydantic-ai"],
     patterns: {
-      imports: [
-        /from\s+pydantic_ai/,
-        /import\s+pydantic_ai/,
-      ],
-      dependencies: [
-        /"pydantic-ai":\s*"/,
-        /pydantic-ai[>=<~^]/,
-      ],
-      apiCalls: [
-        /Agent\s*\(/,
-        /\.run\s*\(/,
-        /\.run_sync\s*\(/,
-      ],
+      imports: [/from\s+pydantic_ai/, /import\s+pydantic_ai/],
+      dependencies: [/"pydantic-ai":\s*"/, /pydantic-ai[>=<~^]/],
+      apiCalls: [/Agent\s*\(/, /\.run\s*\(/, /\.run_sync\s*\(/],
     },
   },
 
@@ -422,26 +379,14 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "smolagents",
     provider: "Hugging Face",
-    description:
-      "Lightweight AI agent library from Hugging Face",
+    description: "Lightweight AI agent library from Hugging Face",
     documentationUrl: "https://huggingface.co/docs/smolagents/",
     confidence: "high",
     keywords: ["smolagents"],
     patterns: {
-      imports: [
-        /from\s+smolagents/,
-        /import\s+smolagents/,
-      ],
-      dependencies: [
-        /"smolagents":\s*"/,
-        /smolagents[>=<~^]/,
-      ],
-      apiCalls: [
-        /CodeAgent\s*\(/,
-        /ToolCallingAgent\s*\(/,
-        /ManagedAgent\s*\(/,
-        /HfApiModel\s*\(/,
-      ],
+      imports: [/from\s+smolagents/, /import\s+smolagents/],
+      dependencies: [/"smolagents":\s*"/, /smolagents[>=<~^]/],
+      apiCalls: [/CodeAgent\s*\(/, /ToolCallingAgent\s*\(/, /ManagedAgent\s*\(/, /HfApiModel\s*\(/],
     },
   },
 
@@ -451,25 +396,14 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "agency-swarm",
     provider: "Agency Swarm",
-    description:
-      "Framework for creating collaborative AI agent systems",
+    description: "Framework for creating collaborative AI agent systems",
     documentationUrl: "https://github.com/VRSEN/agency-swarm",
     confidence: "high",
     keywords: ["agency_swarm", "agency-swarm"],
     patterns: {
-      imports: [
-        /from\s+agency_swarm/,
-        /import\s+agency_swarm/,
-      ],
-      dependencies: [
-        /"agency-swarm":\s*"/,
-        /agency-swarm[>=<~^]/,
-      ],
-      apiCalls: [
-        /Agency\s*\(/,
-        /Agent\s*\(/,
-        /\.run_demo\s*\(/,
-      ],
+      imports: [/from\s+agency_swarm/, /import\s+agency_swarm/],
+      dependencies: [/"agency-swarm":\s*"/, /agency-swarm[>=<~^]/],
+      apiCalls: [/Agency\s*\(/, /Agent\s*\(/, /\.run_demo\s*\(/],
     },
   },
 
@@ -479,26 +413,14 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "controlflow",
     provider: "ControlFlow",
-    description:
-      "Agentic workflow framework from Prefect team",
+    description: "Agentic workflow framework from Prefect team",
     documentationUrl: "https://controlflow.ai/",
     confidence: "high",
     keywords: ["controlflow"],
     patterns: {
-      imports: [
-        /from\s+controlflow/,
-        /import\s+controlflow/,
-      ],
-      dependencies: [
-        /"controlflow":\s*"/,
-        /controlflow[>=<~^]/,
-      ],
-      apiCalls: [
-        /cf\.run\s*\(/,
-        /cf\.Agent\s*\(/,
-        /cf\.Task\s*\(/,
-        /@cf\.flow/,
-      ],
+      imports: [/from\s+controlflow/, /import\s+controlflow/],
+      dependencies: [/"controlflow":\s*"/, /controlflow[>=<~^]/],
+      apiCalls: [/cf\.run\s*\(/, /cf\.Agent\s*\(/, /cf\.Task\s*\(/, /@cf\.flow/],
     },
   },
 
@@ -508,20 +430,13 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "marvin",
     provider: "Marvin",
-    description:
-      "AI engineering toolkit from Prefect team",
+    description: "AI engineering toolkit from Prefect team",
     documentationUrl: "https://www.askmarvin.ai/",
     confidence: "high",
     keywords: ["marvin"],
     patterns: {
-      imports: [
-        /from\s+marvin/,
-        /import\s+marvin/,
-      ],
-      dependencies: [
-        /"marvin":\s*"/,
-        /marvin[>=<~^]/,
-      ],
+      imports: [/from\s+marvin/, /import\s+marvin/],
+      dependencies: [/"marvin":\s*"/, /marvin[>=<~^]/],
       apiCalls: [
         /marvin\.classify\s*\(/,
         /marvin\.extract\s*\(/,
@@ -538,17 +453,12 @@ export const FRAMEWORK_PATTERNS: DetectionPattern[] = [
   {
     name: "vercel-ai",
     provider: "Vercel",
-    description:
-      "Vercel AI SDK for building AI-powered applications",
+    description: "Vercel AI SDK for building AI-powered applications",
     documentationUrl: "https://sdk.vercel.ai/docs",
     confidence: "high",
     keywords: ["@ai-sdk", "ai-sdk", "vercel-ai", "streamText", "generateText", "useChat"],
     patterns: {
-      imports: [
-        /from\s+["']ai["']/,
-        /from\s+["']@ai-sdk\//,
-        /import\s+.*\s+from\s+["']ai["']/,
-      ],
+      imports: [/from\s+["']ai["']/, /from\s+["']@ai-sdk\//, /import\s+.*\s+from\s+["']ai["']/],
       dependencies: [
         /"ai":\s*"/,
         /"@ai-sdk\/openai":\s*"/,

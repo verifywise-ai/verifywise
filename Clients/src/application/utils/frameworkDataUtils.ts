@@ -5,7 +5,7 @@
  * to reduce code duplication and improve maintainability.
  */
 
-import { isISO27001 } from '../constants/frameworks';
+import { isISO27001 } from "../constants/frameworks";
 
 /**
  * Common interfaces used across framework components
@@ -67,13 +67,13 @@ export interface ValidationResult {
 export const validateApiResponse = (
   response: any,
   frameworkName: string,
-  dataType: string
+  dataType: string,
 ): ValidationResult => {
   if (!response) {
     return {
       isValid: false,
       data: [],
-      error: `Null response received for ${frameworkName} ${dataType}`
+      error: `Null response received for ${frameworkName} ${dataType}`,
     };
   }
 
@@ -91,14 +91,14 @@ export const validateApiResponse = (
       return {
         isValid: false,
         data: [],
-        error: `Invalid nested data structure in ${frameworkName} ${dataType} response`
+        error: `Invalid nested data structure in ${frameworkName} ${dataType} response`,
       };
     }
   } else {
     return {
       isValid: false,
       data: [],
-      error: `Unexpected response structure for ${frameworkName} ${dataType}`
+      error: `Unexpected response structure for ${frameworkName} ${dataType}`,
     };
   }
 
@@ -106,14 +106,14 @@ export const validateApiResponse = (
     return {
       isValid: false,
       data: [],
-      error: `Data is not an array for ${frameworkName} ${dataType}`
+      error: `Data is not an array for ${frameworkName} ${dataType}`,
     };
   }
 
   return {
     isValid: true,
     data: extractedData,
-    error: undefined
+    error: undefined,
   };
 };
 
@@ -127,7 +127,7 @@ export const validateApiResponse = (
 export const processSubItems = (
   items: any[],
   parentId: string | number,
-  frameworkName: string
+  frameworkName: string,
 ): SubClauseData[] => {
   if (!Array.isArray(items)) {
     console.warn(`Invalid subclauses structure in ${frameworkName} item ${parentId}: not an array`);
@@ -136,7 +136,7 @@ export const processSubItems = (
 
   return items
     .map((item: any) => {
-      if (!item || typeof item !== 'object') {
+      if (!item || typeof item !== "object") {
         console.warn(`Invalid subclause structure in ${frameworkName} item ${parentId}:`, item);
         return null;
       }
@@ -160,21 +160,23 @@ export const calculateItemPercentages = (items: SubClauseData[]) => {
   if (items.length === 0) {
     return {
       completionPercentage: 0,
-      assignmentPercentage: 0
+      assignmentPercentage: 0,
     };
   }
 
   // Calculate completion percentage (implemented items)
-  const implementedCount = items.filter(item => item.status === "Implemented").length;
+  const implementedCount = items.filter((item) => item.status === "Implemented").length;
   const completionPercentage = Math.round((implementedCount / items.length) * 100);
 
   // Calculate assignment percentage (items with owner assigned)
-  const assignedCount = items.filter(item => item.owner !== null && item.owner !== undefined).length;
+  const assignedCount = items.filter(
+    (item) => item.owner !== null && item.owner !== undefined,
+  ).length;
   const assignmentPercentage = Math.round((assignedCount / items.length) * 100);
 
   return {
     completionPercentage,
-    assignmentPercentage
+    assignmentPercentage,
   };
 };
 
@@ -195,14 +197,14 @@ export const isValidClauseNumber = (clause: any, frameworkName: string): boolean
 
   if (isISO27001(0, frameworkName)) {
     // ISO 27001 uses 'arrangement' field
-    if (typeof clause.arrangement === 'undefined' && typeof clause.clause_no === 'undefined') {
+    if (typeof clause.arrangement === "undefined" && typeof clause.clause_no === "undefined") {
       console.warn(`Missing clause number in ${frameworkName} data:`, clause);
       return false;
     }
     clauseNumber = parseInt(clause.arrangement || clause.clause_no);
   } else {
     // ISO 42001 uses 'clause_no' field
-    if (typeof clause.clause_no === 'undefined') {
+    if (typeof clause.clause_no === "undefined") {
       console.warn(`Missing clause_no in ${frameworkName} data:`, clause);
       return false;
     }
@@ -242,11 +244,11 @@ export const validateDataConsistency = (
   assigned: number,
   total: number,
   dataType: string,
-  frameworkName: string
+  frameworkName: string,
 ): number => {
   if (assigned > total) {
     console.warn(
-      `Inconsistent ${dataType} data for ${frameworkName}: assigned (${assigned}) > total (${total})`
+      `Inconsistent ${dataType} data for ${frameworkName}: assigned (${assigned}) > total (${total})`,
     );
     return total;
   }
@@ -267,10 +269,7 @@ export interface AnnexNumberResult {
  * @param frameworkName - Framework name to determine numbering strategy
  * @returns Processed display number and clean title
  */
-export const processAnnexNumber = (
-  annex: AnnexData,
-  frameworkName: string
-): AnnexNumberResult => {
+export const processAnnexNumber = (annex: AnnexData, frameworkName: string): AnnexNumberResult => {
   let cleanTitle = annex.title;
   let displayNumber = "";
 
@@ -299,7 +298,7 @@ export const processAnnexNumber = (
 
   return {
     displayNumber,
-    cleanTitle
+    cleanTitle,
   };
 };
 
@@ -336,11 +335,11 @@ export const createErrorLogData = (
     operation: string;
     routeUrl?: string;
     [key: string]: any;
-  }
+  },
 ) => {
   return {
     error: error instanceof Error ? error.message : error,
     timestamp: new Date().toISOString(),
-    ...context
+    ...context,
   };
 };

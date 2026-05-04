@@ -25,25 +25,22 @@ import { QueryTypes } from "sequelize";
  */
 export const calculateComplianceScore = async (
   organizationId: number,
-  weights: IComplianceWeights = DEFAULT_COMPLIANCE_WEIGHTS
+  weights: IComplianceWeights = DEFAULT_COMPLIANCE_WEIGHTS,
 ): Promise<IComplianceScore> => {
   // Validate weights sum to 1.0
   const weightSum = Object.values(weights).reduce((sum, w) => sum + w, 0);
   if (Math.abs(weightSum - 1.0) > 0.001) {
-    throw new Error(
-      `Compliance module weights must sum to 1.0, got ${weightSum.toFixed(3)}`
-    );
+    throw new Error(`Compliance module weights must sum to 1.0, got ${weightSum.toFixed(3)}`);
   }
 
   // Gather data for all modules in parallel
-  const [riskData, vendorData, projectData, modelData, policyData] =
-    await Promise.all([
-      getRiskManagementData(organizationId),
-      getVendorManagementData(organizationId),
-      getProjectGovernanceData(organizationId),
-      getModelLifecycleData(organizationId),
-      getPolicyDocumentationData(organizationId),
-    ]);
+  const [riskData, vendorData, projectData, modelData, policyData] = await Promise.all([
+    getRiskManagementData(organizationId),
+    getVendorManagementData(organizationId),
+    getProjectGovernanceData(organizationId),
+    getModelLifecycleData(organizationId),
+    getPolicyDocumentationData(organizationId),
+  ]);
 
   // Calculate module scores
   const riskScore = calculateRiskManagementScore(riskData);
@@ -58,7 +55,7 @@ export const calculateComplianceScore = async (
       vendorScore.score * weights.vendorManagement +
       projectScore.score * weights.projectGovernance +
       modelScore.score * weights.modelLifecycle +
-      policyScore.score * weights.policyDocumentation
+      policyScore.score * weights.policyDocumentation,
   );
 
   // Build metadata
@@ -101,16 +98,14 @@ interface RiskManagementData {
   criticalRisks: number;
 }
 
-async function getRiskManagementData(
-  organizationId: number
-): Promise<RiskManagementData> {
+async function getRiskManagementData(organizationId: number): Promise<RiskManagementData> {
   try {
     // Total risks (excluding soft deleted)
     const totalResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM project_risks
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Mitigated risks
@@ -119,7 +114,7 @@ async function getRiskManagementData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status = 'Completed'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // High risks (unmitigated)
@@ -129,7 +124,7 @@ async function getRiskManagementData(
        AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status != 'Completed'
        AND (current_risk_level = 'High risk' OR current_risk_level = 'Very high risk')`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Critical risks
@@ -139,7 +134,7 @@ async function getRiskManagementData(
        AND (is_deleted = false OR is_deleted IS NULL)
        AND mitigation_status != 'Completed'
        AND current_risk_level = 'Very high risk'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     return {
@@ -159,16 +154,14 @@ interface VendorManagementData {
   highRiskVendors: number;
 }
 
-async function getVendorManagementData(
-  organizationId: number
-): Promise<VendorManagementData> {
+async function getVendorManagementData(organizationId: number): Promise<VendorManagementData> {
   try {
     // Total vendors
     const totalResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM vendors
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Assessed vendors (reviewed)
@@ -177,7 +170,7 @@ async function getVendorManagementData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND review_status = 'Reviewed'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // High risk vendors (based on risk_score)
@@ -186,7 +179,7 @@ async function getVendorManagementData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND (risk_score >= 70 OR review_result = 'High risk')`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     return {
@@ -205,16 +198,14 @@ interface ProjectGovernanceData {
   projectsWithFrameworks: number;
 }
 
-async function getProjectGovernanceData(
-  organizationId: number
-): Promise<ProjectGovernanceData> {
+async function getProjectGovernanceData(organizationId: number): Promise<ProjectGovernanceData> {
   try {
     // Total projects (excluding organizational)
     const totalResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM projects
        WHERE organization_id = :organizationId
        AND (is_organizational = false OR is_organizational IS NULL)`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Completed projects
@@ -223,7 +214,7 @@ async function getProjectGovernanceData(
        WHERE organization_id = :organizationId
        AND (is_organizational = false OR is_organizational IS NULL)
        AND status = 'Completed'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Projects with frameworks
@@ -232,7 +223,7 @@ async function getProjectGovernanceData(
        INNER JOIN projects_frameworks pf ON p.id = pf.project_id AND pf.organization_id = :organizationId
        WHERE p.organization_id = :organizationId
        AND (p.is_organizational = false OR p.is_organizational IS NULL)`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     return {
@@ -256,16 +247,14 @@ interface ModelLifecycleData {
   blockedModels: number;
 }
 
-async function getModelLifecycleData(
-  organizationId: number
-): Promise<ModelLifecycleData> {
+async function getModelLifecycleData(organizationId: number): Promise<ModelLifecycleData> {
   try {
     // Total models
     const totalResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM model_inventories
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Approved models
@@ -274,7 +263,7 @@ async function getModelLifecycleData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Approved'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Pending models
@@ -283,7 +272,7 @@ async function getModelLifecycleData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Pending'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Blocked models
@@ -292,7 +281,7 @@ async function getModelLifecycleData(
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
        AND status = 'Blocked'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     return {
@@ -313,14 +302,14 @@ interface PolicyDocumentationData {
 }
 
 async function getPolicyDocumentationData(
-  organizationId: number
+  organizationId: number,
 ): Promise<PolicyDocumentationData> {
   try {
     // Total policies
     const totalResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Active policies
@@ -328,7 +317,7 @@ async function getPolicyDocumentationData(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId
        AND status = 'Active'`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Overdue policies
@@ -336,7 +325,7 @@ async function getPolicyDocumentationData(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId
        AND (status = 'Overdue' OR (next_review_date < NOW() AND status != 'Active'))`,
-      { type: QueryTypes.SELECT, replacements: { organizationId } }
+      { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     return {
@@ -356,8 +345,7 @@ function calculateRiskManagementScore(data: RiskManagementData): IModuleScore {
 
   // Risk Mitigation Rate (50% weight)
   // Return 0 when no data exists (empty database should show 0, not 100)
-  const mitigationRate =
-    data.totalRisks > 0 ? (data.mitigatedRisks / data.totalRisks) * 100 : 0;
+  const mitigationRate = data.totalRisks > 0 ? (data.mitigatedRisks / data.totalRisks) * 100 : 0;
   components.push({
     name: "Risk Mitigation Rate",
     score: Math.min(100, mitigationRate),
@@ -370,7 +358,9 @@ function calculateRiskManagementScore(data: RiskManagementData): IModuleScore {
   // Return 0 when no data exists
   const criticalRiskScore =
     data.totalRisks > 0
-      ? (data.criticalRisks > 0 ? Math.max(0, 100 - data.criticalRisks * 20) : 100)
+      ? data.criticalRisks > 0
+        ? Math.max(0, 100 - data.criticalRisks * 20)
+        : 100
       : 0;
   components.push({
     name: "Critical Risk Management",
@@ -380,10 +370,7 @@ function calculateRiskManagementScore(data: RiskManagementData): IModuleScore {
     details: { criticalRisks: data.criticalRisks, highRisks: data.highRisks },
   });
 
-  const weightedScore = components.reduce(
-    (sum, comp) => sum + comp.score * comp.weight,
-    0
-  );
+  const weightedScore = components.reduce((sum, comp) => sum + comp.score * comp.weight, 0);
   const totalDataPoints = data.totalRisks;
   const qualityScore = Math.min(1, totalDataPoints / 10);
 
@@ -396,17 +383,13 @@ function calculateRiskManagementScore(data: RiskManagementData): IModuleScore {
   };
 }
 
-function calculateVendorManagementScore(
-  data: VendorManagementData
-): IModuleScore {
+function calculateVendorManagementScore(data: VendorManagementData): IModuleScore {
   const components: IComponentScore[] = [];
 
   // Vendor Assessment Rate (60% weight)
   // Return 0 when no data exists (empty database should show 0, not 100)
   const assessmentRate =
-    data.totalVendors > 0
-      ? (data.assessedVendors / data.totalVendors) * 100
-      : 0;
+    data.totalVendors > 0 ? (data.assessedVendors / data.totalVendors) * 100 : 0;
   components.push({
     name: "Vendor Assessment Rate",
     score: Math.min(100, assessmentRate),
@@ -417,10 +400,7 @@ function calculateVendorManagementScore(
 
   // High-Risk Vendor Management (40% weight)
   // Return 0 when no data exists
-  const highRiskRate =
-    data.totalVendors > 0
-      ? (data.highRiskVendors / data.totalVendors) * 100
-      : 0;
+  const highRiskRate = data.totalVendors > 0 ? (data.highRiskVendors / data.totalVendors) * 100 : 0;
   const highRiskScore = data.totalVendors > 0 ? Math.max(0, 100 - highRiskRate * 2) : 0;
   components.push({
     name: "High-Risk Vendor Control",
@@ -430,10 +410,7 @@ function calculateVendorManagementScore(
     details: { highRisk: data.highRiskVendors, total: data.totalVendors },
   });
 
-  const weightedScore = components.reduce(
-    (sum, comp) => sum + comp.score * comp.weight,
-    0
-  );
+  const weightedScore = components.reduce((sum, comp) => sum + comp.score * comp.weight, 0);
   const totalDataPoints = data.totalVendors;
   const qualityScore = Math.min(1, totalDataPoints / 5);
 
@@ -446,16 +423,12 @@ function calculateVendorManagementScore(
   };
 }
 
-function calculateProjectGovernanceScore(
-  data: ProjectGovernanceData
-): IModuleScore {
+function calculateProjectGovernanceScore(data: ProjectGovernanceData): IModuleScore {
   const components: IComponentScore[] = [];
 
   // Project Completion Rate (50% weight)
   const completionRate =
-    data.totalProjects > 0
-      ? (data.completedProjects / data.totalProjects) * 100
-      : 0;
+    data.totalProjects > 0 ? (data.completedProjects / data.totalProjects) * 100 : 0;
   components.push({
     name: "Project Completion Rate",
     score: Math.min(100, completionRate),
@@ -466,9 +439,7 @@ function calculateProjectGovernanceScore(
 
   // Framework Adoption Rate (50% weight)
   const frameworkRate =
-    data.totalProjects > 0
-      ? (data.projectsWithFrameworks / data.totalProjects) * 100
-      : 0;
+    data.totalProjects > 0 ? (data.projectsWithFrameworks / data.totalProjects) * 100 : 0;
   components.push({
     name: "Framework Adoption",
     score: Math.min(100, frameworkRate),
@@ -480,10 +451,7 @@ function calculateProjectGovernanceScore(
     },
   });
 
-  const weightedScore = components.reduce(
-    (sum, comp) => sum + comp.score * comp.weight,
-    0
-  );
+  const weightedScore = components.reduce((sum, comp) => sum + comp.score * comp.weight, 0);
   const totalDataPoints = data.totalProjects;
   const qualityScore = Math.min(1, totalDataPoints / 5);
 
@@ -500,8 +468,7 @@ function calculateModelLifecycleScore(data: ModelLifecycleData): IModuleScore {
   const components: IComponentScore[] = [];
 
   // Model Approval Rate (60% weight)
-  const approvalRate =
-    data.totalModels > 0 ? (data.approvedModels / data.totalModels) * 100 : 0;
+  const approvalRate = data.totalModels > 0 ? (data.approvedModels / data.totalModels) * 100 : 0;
   components.push({
     name: "Model Approval Rate",
     score: Math.min(100, approvalRate),
@@ -522,10 +489,7 @@ function calculateModelLifecycleScore(data: ModelLifecycleData): IModuleScore {
     details: { pending: data.pendingModels, blocked: data.blockedModels },
   });
 
-  const weightedScore = components.reduce(
-    (sum, comp) => sum + comp.score * comp.weight,
-    0
-  );
+  const weightedScore = components.reduce((sum, comp) => sum + comp.score * comp.weight, 0);
   const totalDataPoints = data.totalModels;
   const qualityScore = Math.min(1, totalDataPoints / 5);
 
@@ -538,16 +502,11 @@ function calculateModelLifecycleScore(data: ModelLifecycleData): IModuleScore {
   };
 }
 
-function calculatePolicyDocumentationScore(
-  data: PolicyDocumentationData
-): IModuleScore {
+function calculatePolicyDocumentationScore(data: PolicyDocumentationData): IModuleScore {
   const components: IComponentScore[] = [];
 
   // Active Policy Rate (70% weight)
-  const activeRate =
-    data.totalPolicies > 0
-      ? (data.activePolicies / data.totalPolicies) * 100
-      : 0;
+  const activeRate = data.totalPolicies > 0 ? (data.activePolicies / data.totalPolicies) * 100 : 0;
   components.push({
     name: "Active Policy Rate",
     score: Math.min(100, activeRate),
@@ -559,9 +518,7 @@ function calculatePolicyDocumentationScore(
   // Policy Review Compliance (30% weight)
   // Return 0 when no data exists
   const overdueRate =
-    data.totalPolicies > 0
-      ? (data.overduePolicies / data.totalPolicies) * 100
-      : 0;
+    data.totalPolicies > 0 ? (data.overduePolicies / data.totalPolicies) * 100 : 0;
   const reviewScore = data.totalPolicies > 0 ? Math.max(0, 100 - overdueRate * 2) : 0;
   components.push({
     name: "Policy Review Compliance",
@@ -571,10 +528,7 @@ function calculatePolicyDocumentationScore(
     details: { overdue: data.overduePolicies, total: data.totalPolicies },
   });
 
-  const weightedScore = components.reduce(
-    (sum, comp) => sum + comp.score * comp.weight,
-    0
-  );
+  const weightedScore = components.reduce((sum, comp) => sum + comp.score * comp.weight, 0);
   const totalDataPoints = data.totalPolicies;
   const qualityScore = Math.min(1, totalDataPoints / 3);
 

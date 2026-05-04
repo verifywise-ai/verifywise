@@ -1,21 +1,19 @@
 <div>
   <h3>Policy Manager</h3>
   <p>
-    The Policy Manager serves as a comprehensive governance platform for
-    creating, managing, and maintaining AI policies within your organization.
-    This centralized system ensures consistent policy implementation, compliance
-    tracking, and effective policy lifecycle management across all AI
-    initiatives.
+    The Policy Manager serves as a comprehensive governance platform for creating, managing, and
+    maintaining AI policies within your organization. This centralized system ensures consistent
+    policy implementation, compliance tracking, and effective policy lifecycle management across all
+    AI initiatives.
   </p>
 
   <section>
     <h4>System Overview</h4>
     <p>
-      The Policy Manager provides a complete solution for AI policy governance,
-      from initial creation through review, approval, and ongoing maintenance.
-      It helps organizations establish clear AI governance frameworks, maintain
-      compliance with regulatory requirements, and ensure consistent policy
-      application across departments.
+      The Policy Manager provides a complete solution for AI policy governance, from initial
+      creation through review, approval, and ongoing maintenance. It helps organizations establish
+      clear AI governance frameworks, maintain compliance with regulatory requirements, and ensure
+      consistent policy application across departments.
     </p>
   </section>
 
@@ -25,77 +23,45 @@
     <h5>Policy Creation and Management</h5>
     <ul>
       <li>
-        <strong>New Policy Creation:</strong> Create comprehensive AI policies
-        with rich text content
+        <strong>New Policy Creation:</strong> Create comprehensive AI policies with rich text
+        content
       </li>
-      <li>
-        <strong>Policy Editing:</strong> Update existing policies with version
-        control
-      </li>
-      <li>
-        <strong>Policy Deletion:</strong> Remove outdated or superseded policies
-      </li>
-      <li>
-        <strong>Status Tracking:</strong> Monitor policy progress through
-        approval workflow
-      </li>
+      <li><strong>Policy Editing:</strong> Update existing policies with version control</li>
+      <li><strong>Policy Deletion:</strong> Remove outdated or superseded policies</li>
+      <li><strong>Status Tracking:</strong> Monitor policy progress through approval workflow</li>
     </ul>
 
     <h5>Policy Information Fields</h5>
     <ul>
+      <li><strong>Title:</strong> Descriptive policy title (required, 1-64 characters)</li>
+      <li><strong>Status:</strong> Current policy status in the approval workflow (required)</li>
       <li>
-        <strong>Title:</strong> Descriptive policy title (required, 1-64
-        characters)
+        <strong>Tags:</strong> Categorization labels for policy organization (required, minimum 1
+        tag)
       </li>
+      <li><strong>Next Review Date:</strong> Scheduled date for policy review (required)</li>
       <li>
-        <strong>Status:</strong> Current policy status in the approval workflow
-        (required)
+        <strong>Assigned Reviewers:</strong> Users responsible for policy review (required, minimum
+        1 reviewer)
       </li>
-      <li>
-        <strong>Tags:</strong> Categorization labels for policy organization
-        (required, minimum 1 tag)
-      </li>
-      <li>
-        <strong>Next Review Date:</strong> Scheduled date for policy review
-        (required)
-      </li>
-      <li>
-        <strong>Assigned Reviewers:</strong> Users responsible for policy review
-        (required, minimum 1 reviewer)
-      </li>
-      <li>
-        <strong>Content:</strong> Rich text policy content with formatting
-        options (optional)
-      </li>
+      <li><strong>Content:</strong> Rich text policy content with formatting options (optional)</li>
     </ul>
   </section>
 
   <section>
     <h4>Policy Status Management</h4>
     <p>
-      The system supports five distinct policy statuses, each representing a
-      different stage in the policy lifecycle:
+      The system supports five distinct policy statuses, each representing a different stage in the
+      policy lifecycle:
     </p>
 
     <ul>
+      <li><strong>Draft:</strong> Initial policy creation stage (Gray badge)</li>
+      <li><strong>In Review:</strong> Policy under review by assigned reviewers (Orange badge)</li>
+      <li><strong>Approved:</strong> Policy approved and ready for publication (Green badge)</li>
+      <li><strong>Published:</strong> Policy officially published and active (Blue badge)</li>
       <li>
-        <strong>Draft:</strong> Initial policy creation stage (Gray badge)
-      </li>
-      <li>
-        <strong>In Review:</strong> Policy under review by assigned reviewers
-        (Orange badge)
-      </li>
-      <li>
-        <strong>Approved:</strong> Policy approved and ready for publication
-        (Green badge)
-      </li>
-      <li>
-        <strong>Published:</strong> Policy officially published and active (Blue
-        badge)
-      </li>
-      <li>
-        <strong>Archived:</strong> Policy no longer active but retained for
-        reference (Gray badge)
+        <strong>Archived:</strong> Policy no longer active but retained for reference (Gray badge)
       </li>
     </ul>
   </section>
@@ -105,8 +71,8 @@
 
     <h5>Status Overview Cards</h5>
     <p>
-      The dashboard displays policy counts by status in color-coded cards,
-      providing quick visual insights into your policy portfolio:
+      The dashboard displays policy counts by status in color-coded cards, providing quick visual
+      insights into your policy portfolio:
     </p>
     <ul>
       <li>Real-time count of policies in each status</li>
@@ -116,21 +82,14 @@
 
     <h5>Policy Table Structure</h5>
     <p>
-      The policy table displays all policies in a comprehensive, sortable format
-      with the following columns:
+      The policy table displays all policies in a comprehensive, sortable format with the following
+      columns:
     </p>
 
     <ul>
-      <li>
-        <strong>Title:</strong> Policy title (truncated if over 30 characters)
-      </li>
-      <li>
-        <strong>Status:</strong> Current policy status with color-coded badges
-      </li>
-      <li>
-        <strong>Tags:</strong> Policy categorization tags (truncated if over 30
-        characters)
-      </li>
+      <li><strong>Title:</strong> Policy title (truncated if over 30 characters)</li>
+      <li><strong>Status:</strong> Current policy status with color-coded badges</li>
+      <li><strong>Tags:</strong> Policy categorization tags (truncated if over 30 characters)</li>
       <li><strong>Next Review:</strong> Scheduled review date</li>
       <li><strong>Author:</strong> Policy creator</li>
       <li><strong>Last Updated:</strong> Most recent modification timestamp</li>
@@ -145,9 +104,7 @@
     <h5>Status Filtering</h5>
     <p>Filter policies by status using the dropdown selector:</p>
     <ul>
-      <li>
-        <strong>All Policies:</strong> View all policies regardless of status
-      </li>
+      <li><strong>All Policies:</strong> View all policies regardless of status</li>
       <li><strong>Draft:</strong> Show only draft policies</li>
       <li><strong>In Review:</strong> Show only policies under review</li>
       <li><strong>Approved:</strong> Show only approved policies</li>
@@ -168,15 +125,12 @@
   <section>
     <h4>Rich Text Editor Features</h4>
     <p>
-      The policy content editor provides comprehensive formatting options for
-      creating professional policy documents:
+      The policy content editor provides comprehensive formatting options for creating professional
+      policy documents:
     </p>
 
     <ul>
-      <li>
-        <strong>Text Formatting:</strong> Bold, italic, and underline text
-        styling
-      </li>
+      <li><strong>Text Formatting:</strong> Bold, italic, and underline text styling</li>
       <li><strong>Heading Styles:</strong> H1, H2, and H3 heading options</li>
       <li><strong>Blockquotes:</strong> Highlight important policy sections</li>
       <li><strong>HTML Output:</strong> Content saved as structured HTML</li>
@@ -222,123 +176,55 @@
 
   <section>
     <h4>User Management and Permissions</h4>
-    <p>
-      The Policy Manager integrates with your organization's user management
-      system:
-    </p>
+    <p>The Policy Manager integrates with your organization's user management system:</p>
 
     <ul>
       <li>
-        <strong>Author Assignment:</strong> Policies are automatically assigned
-        to the creator
+        <strong>Author Assignment:</strong> Policies are automatically assigned to the creator
       </li>
-      <li>
-        <strong>Reviewer Assignment:</strong> Assign specific users as policy
-        reviewers
-      </li>
-      <li>
-        <strong>Update Tracking:</strong> Track who made the last update to each
-        policy
-      </li>
-      <li>
-        <strong>User Lookup:</strong> Automatic user name resolution from user
-        IDs
-      </li>
+      <li><strong>Reviewer Assignment:</strong> Assign specific users as policy reviewers</li>
+      <li><strong>Update Tracking:</strong> Track who made the last update to each policy</li>
+      <li><strong>User Lookup:</strong> Automatic user name resolution from user IDs</li>
     </ul>
   </section>
 
   <section>
     <h4>Policy Lifecycle Management</h4>
     <ul>
-      <li>
-        <strong>Draft Creation:</strong> Initial policy development and content
-        creation
-      </li>
-      <li>
-        <strong>Review Process:</strong> Assigned reviewers evaluate policy
-        content
-      </li>
-      <li>
-        <strong>Approval Workflow:</strong> Formal approval before publication
-      </li>
-      <li>
-        <strong>Publication:</strong> Official policy release to the
-        organization
-      </li>
-      <li>
-        <strong>Regular Reviews:</strong> Scheduled policy updates and
-        maintenance
-      </li>
-      <li>
-        <strong>Archival:</strong> Retire outdated policies while maintaining
-        records
-      </li>
+      <li><strong>Draft Creation:</strong> Initial policy development and content creation</li>
+      <li><strong>Review Process:</strong> Assigned reviewers evaluate policy content</li>
+      <li><strong>Approval Workflow:</strong> Formal approval before publication</li>
+      <li><strong>Publication:</strong> Official policy release to the organization</li>
+      <li><strong>Regular Reviews:</strong> Scheduled policy updates and maintenance</li>
+      <li><strong>Archival:</strong> Retire outdated policies while maintaining records</li>
     </ul>
   </section>
 
   <section>
     <h4>Policy Manager Benefits</h4>
     <ul>
-      <li>
-        <strong>Compliance Tracking:</strong> Maintain audit trails for
-        regulatory compliance
-      </li>
-      <li>
-        <strong>Version Control:</strong> Track policy changes and updates over
-        time
-      </li>
-      <li>
-        <strong>Review Management:</strong> Structured review process with
-        assigned reviewers
-      </li>
-      <li>
-        <strong>Status Visibility:</strong> Clear visibility into policy
-        approval status
-      </li>
-      <li>
-        <strong>Tag Organization:</strong> Categorize policies for easy
-        management
-      </li>
-      <li>
-        <strong>Search and Filter:</strong> Quickly locate specific policies
-      </li>
-      <li>
-        <strong>Rich Content:</strong> Professional policy formatting and
-        presentation
-      </li>
+      <li><strong>Compliance Tracking:</strong> Maintain audit trails for regulatory compliance</li>
+      <li><strong>Version Control:</strong> Track policy changes and updates over time</li>
+      <li><strong>Review Management:</strong> Structured review process with assigned reviewers</li>
+      <li><strong>Status Visibility:</strong> Clear visibility into policy approval status</li>
+      <li><strong>Tag Organization:</strong> Categorize policies for easy management</li>
+      <li><strong>Search and Filter:</strong> Quickly locate specific policies</li>
+      <li><strong>Rich Content:</strong> Professional policy formatting and presentation</li>
     </ul>
   </section>
 
   <section>
     <h4>Best Practices</h4>
     <ul>
+      <li><strong>Clear Titles:</strong> Use descriptive, specific policy titles</li>
+      <li><strong>Comprehensive Tags:</strong> Use consistent tagging for easy categorization</li>
+      <li><strong>Regular Reviews:</strong> Set appropriate review dates for policy maintenance</li>
+      <li><strong>Reviewer Assignment:</strong> Assign qualified reviewers for each policy</li>
       <li>
-        <strong>Clear Titles:</strong> Use descriptive, specific policy titles
+        <strong>Status Management:</strong> Keep policy status current throughout the lifecycle
       </li>
-      <li>
-        <strong>Comprehensive Tags:</strong> Use consistent tagging for easy
-        categorization
-      </li>
-      <li>
-        <strong>Regular Reviews:</strong> Set appropriate review dates for
-        policy maintenance
-      </li>
-      <li>
-        <strong>Reviewer Assignment:</strong> Assign qualified reviewers for
-        each policy
-      </li>
-      <li>
-        <strong>Status Management:</strong> Keep policy status current
-        throughout the lifecycle
-      </li>
-      <li>
-        <strong>Rich Content:</strong> Use formatting to improve policy
-        readability
-      </li>
-      <li>
-        <strong>Documentation:</strong> Maintain detailed policy content for
-        clarity
-      </li>
+      <li><strong>Rich Content:</strong> Use formatting to improve policy readability</li>
+      <li><strong>Documentation:</strong> Maintain detailed policy content for clarity</li>
     </ul>
   </section>
 
@@ -346,28 +232,14 @@
     <h4>Troubleshooting</h4>
     <ul>
       <li>
-        <strong>Form Validation:</strong> Ensure all required fields are
-        completed before saving
+        <strong>Form Validation:</strong> Ensure all required fields are completed before saving
       </li>
+      <li><strong>Tag Requirements:</strong> Add at least one tag to categorize the policy</li>
+      <li><strong>Reviewer Assignment:</strong> Assign at least one reviewer before saving</li>
+      <li><strong>Date Format:</strong> Use the date picker for proper date formatting</li>
+      <li><strong>Content Saving:</strong> Verify rich text content is properly formatted</li>
       <li>
-        <strong>Tag Requirements:</strong> Add at least one tag to categorize
-        the policy
-      </li>
-      <li>
-        <strong>Reviewer Assignment:</strong> Assign at least one reviewer
-        before saving
-      </li>
-      <li>
-        <strong>Date Format:</strong> Use the date picker for proper date
-        formatting
-      </li>
-      <li>
-        <strong>Content Saving:</strong> Verify rich text content is properly
-        formatted
-      </li>
-      <li>
-        <strong>Status Updates:</strong> Confirm status changes are saved by
-        checking the table
+        <strong>Status Updates:</strong> Confirm status changes are saved by checking the table
       </li>
     </ul>
   </section>

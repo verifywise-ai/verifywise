@@ -13,7 +13,16 @@
  * @module contexts/AIDetectionSidebar.context
  */
 
-import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode, FC } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  ReactNode,
+  FC,
+} from "react";
 import { getActiveScan, getScans, getScanStatus } from "../repository/aiDetection.repository";
 import { getRepositoryCount } from "../repository/aiDetectionRepository.repository";
 import { ScanStatus, ScansResponse } from "../../domain/ai-detection/types";
@@ -153,7 +162,7 @@ export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ childr
         response.scans.map((s) => ({
           id: s.id,
           name: `${s.repository_owner}/${s.repository_name}`,
-        }))
+        })),
       );
     } catch (error) {
       console.error("Failed to load recent scans:", error);

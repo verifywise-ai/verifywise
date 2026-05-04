@@ -1,11 +1,4 @@
-import {
-  Box,
-  Typography,
-  Button,
-  useTheme,
-  Dialog,
-  Stack,
-} from "@mui/material";
+import { Box, Typography, Button, useTheme, Dialog, Stack } from "@mui/material";
 import React, { useState } from "react";
 import RichTextEditor from "../../../components/RichTextEditor/index";
 import FileManagementDialog from "../../Inputs/FileUpload/FileManagementDialog";
@@ -46,9 +39,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
 }) => {
   const theme = useTheme();
   const [isFileUploadOpen, setIsFileUploadOpen] = useState<boolean>(false);
-  const [evidenceFiles, setEvidenceFiles] = useState<FileData[]>(() =>
-    files.map(parseFileData)
-  );
+  const [evidenceFiles, setEvidenceFiles] = useState<FileData[]>(() => files.map(parseFileData));
   const [alert, setAlert] = useState<AlertProps | null>(null);
 
   const handleContentChange = (content: string) => {
@@ -83,9 +74,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
     const isEvidenceFile = evidenceFiles.some((file) => file.id === fileId);
 
     if (isEvidenceFile) {
-      const newEvidenceFiles = evidenceFiles.filter(
-        (file) => file.id !== fileId
-      );
+      const newEvidenceFiles = evidenceFiles.filter((file) => file.id !== fileId);
       setEvidenceFiles(newEvidenceFiles);
       onFilesChange?.(newEvidenceFiles);
       onDeletedFilesChange([...deletedFilesIds, fileIdNumber]);
@@ -135,9 +124,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
               border: `1px solid ${borderPalette.dark}`,
             },
           }}
-          disableRipple={
-            theme.components?.MuiButton?.defaultProps?.disableRipple
-          }
+          disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
           onClick={() => setIsFileUploadOpen(true)}
           disabled={readOnly}
         >
@@ -189,9 +176,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
           disabled={readOnly}
         />
       </Dialog>
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
     </Box>
   );
 };

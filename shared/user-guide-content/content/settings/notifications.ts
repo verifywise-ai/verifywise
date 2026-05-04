@@ -20,7 +20,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise can notify you about various governance events:',
+      text: 'VerifyWise can notify you about various governance events. The categories below are the user-facing groupings; the underlying notification types are managed centrally and routed by the system to the appropriate channel:',
     },
     {
       type: 'bullet-list',

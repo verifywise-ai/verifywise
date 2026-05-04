@@ -3,7 +3,7 @@ import { IControl } from "../../interfaces/i.control";
 export const mockControls = (
   controlCategoryIds: number[],
   userId1: number,
-  userId2: number
+  userId2: number,
 ): IControl[] => {
   return [
     {
@@ -17,8 +17,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Rolling out comprehensive AI literacy program across departments",
+      implementation_details: "Rolling out comprehensive AI literacy program across departments",
       control_category_id: controlCategoryIds[0],
       numberOfSubcontrols: 3,
       numberOfDoneSubcontrols: 1,
@@ -34,16 +33,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Planning phase for regulatory compliance training",
+      implementation_details: "Planning phase for regulatory compliance training",
       control_category_id: controlCategoryIds[0],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Intended Use Description",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       order_no: 1,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -51,16 +48,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Documentation review process initiated with key stakeholders",
+      implementation_details: "Documentation review process initiated with key stakeholders",
       control_category_id: controlCategoryIds[1],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Technical Documentation Review",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       order_no: 2,
       status: "Waiting",
       risk_review: "Residual risk",
@@ -101,16 +96,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-15"),
-      implementation_details:
-        "Completed system documentation with all required details",
+      implementation_details: "Completed system documentation with all required details",
       control_category_id: controlCategoryIds[1],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 2,
     },
     {
       title: "Dataset Description",
-      description:
-        "Describe training, validation, and testing datasets used in AI systems.",
+      description: "Describe training, validation, and testing datasets used in AI systems.",
       order_no: 5,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -118,16 +111,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Documenting datasets used for training and validation.",
+      implementation_details: "Documenting datasets used for training and validation.",
       control_category_id: controlCategoryIds[1],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Mitigation Strategies and Bias Testing",
-      description:
-        "Explain mitigation strategies and document bias testing results.",
+      description: "Explain mitigation strategies and document bias testing results.",
       order_no: 6,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -152,16 +143,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Gathering metrics and security information for AI systems.",
+      implementation_details: "Gathering metrics and security information for AI systems.",
       control_category_id: controlCategoryIds[1],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Human Intervention Mechanisms",
-      description:
-        "Assign competent individuals with authority to oversee AI system usage.",
+      description: "Assign competent individuals with authority to oversee AI system usage.",
       order_no: 1,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -169,8 +158,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing comprehensive human oversight protocols",
+      implementation_details: "Implementing comprehensive human oversight protocols",
       control_category_id: controlCategoryIds[2],
       numberOfSubcontrols: 3,
       numberOfDoneSubcontrols: 1,
@@ -250,8 +238,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing corrective actions as required by Article 20.",
+      implementation_details: "Implementing corrective actions as required by Article 20.",
       control_category_id: controlCategoryIds[3],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
@@ -266,15 +253,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Maintaining detailed records of corrective actions.",
+      implementation_details: "Maintaining detailed records of corrective actions.",
       control_category_id: controlCategoryIds[3],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Define and allocate responsibilities among distributors, importers, deployers, and third parties to ensure compliance with AI regulations.",
       order_no: 1,
@@ -291,10 +276,8 @@ export const mockControls = (
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
-      description:
-        "Establish clear contractual agreements with AI system providers.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
+      description: "Establish clear contractual agreements with AI system providers.",
       order_no: 2,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -302,15 +285,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-20"),
-      implementation_details:
-        "Drafting contracts with AI system providers to ensure compliance",
+      implementation_details: "Drafting contracts with AI system providers to ensure compliance",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Define responsibilities in agreements with third-party suppliers of AI components.",
       order_no: 3,
@@ -320,15 +301,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-25"),
-      implementation_details:
-        "Clarifying roles and responsibilities in supplier agreements",
+      implementation_details: "Clarifying roles and responsibilities in supplier agreements",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Specify information, technical access, and support required for regulatory compliance.",
       order_no: 4,
@@ -344,8 +323,7 @@ export const mockControls = (
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "We ensure third-party impacts, such as IP infringement, meet organizational standards.",
       order_no: 5,
@@ -355,8 +333,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-05"),
-      implementation_details:
-        "Assessing third-party compliance with IP standards",
+      implementation_details: "Assessing third-party compliance with IP standards",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -372,16 +349,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-01"),
-      implementation_details:
-        "Emergency shutdown procedures implemented and tested",
+      implementation_details: "Emergency shutdown procedures implemented and tested",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Monitor and respond to incidents involving third-party components.",
+      description: "Monitor and respond to incidents involving third-party components.",
       order_no: 7,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -389,16 +364,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning phase - defining monitoring requirements",
+      implementation_details: "Planning phase - defining monitoring requirements",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Implement measures to enhance AI system resilience against errors and faults.",
+      description: "Implement measures to enhance AI system resilience against errors and faults.",
       order_no: 8,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -413,8 +386,7 @@ export const mockControls = (
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Identify and assess potential non-conformities with regulations.",
+      description: "Identify and assess potential non-conformities with regulations.",
       order_no: 9,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -422,8 +394,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Conducting assessments for regulatory compliance",
+      implementation_details: "Conducting assessments for regulatory compliance",
       control_category_id: controlCategoryIds[4],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -480,8 +451,7 @@ export const mockControls = (
     },
     {
       title: "System Risk Controls Documentation",
-      description:
-        "Document system risk controls, including those for third-party components.",
+      description: "Document system risk controls, including those for third-party components.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -497,8 +467,7 @@ export const mockControls = (
     },
     {
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Regularly update compliance measures based on system or regulatory changes.",
+      description: "Regularly update compliance measures based on system or regulatory changes.",
       order_no: 5,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -506,8 +475,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Updating compliance measures to align with regulatory changes.",
+      implementation_details: "Updating compliance measures to align with regulatory changes.",
       control_category_id: controlCategoryIds[5],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -523,16 +491,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Providing explanations for AI models to enhance transparency.",
+      implementation_details: "Providing explanations for AI models to enhance transparency.",
       control_category_id: controlCategoryIds[5],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Maintain and update technical documentation reflecting AI system changes.",
+      description: "Maintain and update technical documentation reflecting AI system changes.",
       order_no: 7,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -540,8 +506,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Updating technical documentation to reflect recent changes.",
+      implementation_details: "Updating technical documentation to reflect recent changes.",
       control_category_id: controlCategoryIds[5],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -573,8 +538,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up automatic logging for AI system operations.",
+      implementation_details: "Setting up automatic logging for AI system operations.",
       control_category_id: controlCategoryIds[5],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -639,8 +603,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Assessing data compliance with legal frameworks.",
+      implementation_details: "Assessing data compliance with legal frameworks.",
       control_category_id: controlCategoryIds[6],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -695,8 +658,7 @@ export const mockControls = (
     },
     {
       title: "Assessment Process Documentation",
-      description:
-        "Maintain documentation of the fundamental rights impact assessment process.",
+      description: "Maintain documentation of the fundamental rights impact assessment process.",
       order_no: 8,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -727,8 +689,7 @@ export const mockControls = (
     },
     {
       title: "Assessment Process Documentation",
-      description:
-        "Regularly evaluate bias and fairness issues related to AI systems.",
+      description: "Regularly evaluate bias and fairness issues related to AI systems.",
       order_no: 10,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -769,16 +730,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning phase - designing user communication strategy",
+      implementation_details: "Planning phase - designing user communication strategy",
       control_category_id: controlCategoryIds[7],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "AI System Scope and Impact Definition",
-      description:
-        "Define and document AI system scope, goals, methods, and potential impacts.",
+      description: "Define and document AI system scope, goals, methods, and potential impacts.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -821,16 +780,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-12-31"),
-      implementation_details:
-        "Currently working on registration documentation for our AI systems",
+      implementation_details: "Currently working on registration documentation for our AI systems",
       control_category_id: controlCategoryIds[8],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "Conformity Assessment Completion",
-      description:
-        "Complete relevant conformity assessment procedures for AI systems.",
+      description: "Complete relevant conformity assessment procedures for AI systems.",
       order_no: 2,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -845,8 +802,7 @@ export const mockControls = (
     },
     {
       title: "Conformity Assessment Completion",
-      description:
-        "Identify necessary technical standards and certifications for AI systems.",
+      description: "Identify necessary technical standards and certifications for AI systems.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -870,8 +826,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-12-31"),
-      implementation_details:
-        "Working on compliance with common specifications.",
+      implementation_details: "Working on compliance with common specifications.",
       control_category_id: controlCategoryIds[8],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -935,8 +890,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up documentation system for AI registration records",
+      implementation_details: "Setting up documentation system for AI registration records",
       control_category_id: controlCategoryIds[9],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -968,8 +922,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Maintaining thorough documentation of AI system conformity.",
+      implementation_details: "Maintaining thorough documentation of AI system conformity.",
       control_category_id: controlCategoryIds[9],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
@@ -985,8 +938,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-15"),
-      implementation_details:
-        "Automated data entry system implementation complete",
+      implementation_details: "Automated data entry system implementation complete",
       control_category_id: controlCategoryIds[9],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 1,
@@ -1002,8 +954,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up automated monitoring dashboards and alert systems",
+      implementation_details: "Setting up automated monitoring dashboards and alert systems",
       control_category_id: controlCategoryIds[10],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1037,8 +988,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing tracking and response measures for incidents.",
+      implementation_details: "Implementing tracking and response measures for incidents.",
       control_category_id: controlCategoryIds[10],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1055,16 +1005,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning consultations with experts and end-users.",
+      implementation_details: "Planning consultations with experts and end-users.",
       control_category_id: controlCategoryIds[10],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "AI System Change Documentation",
-      description:
-        "Document changes to AI systems and their performance post-deployment.",
+      description: "Document changes to AI systems and their performance post-deployment.",
       order_no: 5,
       status: "Waiting",
       risk_review: "Residual risk",
@@ -1072,8 +1020,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Establishing change management documentation process",
+      implementation_details: "Establishing change management documentation process",
       control_category_id: controlCategoryIds[10],
       numberOfSubcontrols: 4,
       numberOfDoneSubcontrols: 1,
@@ -1089,8 +1036,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementation of automated incident reporting system in progress",
+      implementation_details: "Implementation of automated incident reporting system in progress",
       control_category_id: controlCategoryIds[11],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1114,8 +1060,7 @@ export const mockControls = (
     },
     {
       title: "AI System Logging Implementation",
-      description:
-        "Ensure providers implement systems for capturing and storing AI system logs.",
+      description: "Ensure providers implement systems for capturing and storing AI system logs.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1123,16 +1068,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementing logging systems for traceability and compliance.",
+      implementation_details: "Implementing logging systems for traceability and compliance.",
       control_category_id: controlCategoryIds[11],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Post-Deployment Incident Monitoring",
-      description:
-        "Monitor incidents related to AI systems and respond post-deployment.",
+      description: "Monitor incidents related to AI systems and respond post-deployment.",
       order_no: 3,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -1173,8 +1116,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementation of automated incident reporting system in progress",
+      implementation_details: "Implementation of automated incident reporting system in progress",
       control_category_id: controlCategoryIds[12],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1198,8 +1140,7 @@ export const mockControls = (
     },
     {
       title: "Post-Deployment Incident Monitoring",
-      description:
-        "Monitor incidents related to AI systems and respond post-deployment.",
+      description: "Monitor incidents related to AI systems and respond post-deployment.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1207,16 +1148,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Setting up monitoring infrastructure for incident response.",
+      implementation_details: "Setting up monitoring infrastructure for incident response.",
       control_category_id: controlCategoryIds[12],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "AI System Logging Implementation",
-      description:
-        "Ensure providers implement systems for capturing and storing AI system logs.",
+      description: "Ensure providers implement systems for capturing and storing AI system logs.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1224,8 +1163,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementing logging systems for traceability and compliance.",
+      implementation_details: "Implementing logging systems for traceability and compliance.",
       control_category_id: controlCategoryIds[12],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1259,8 +1197,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Rolling out comprehensive AI literacy program across departments",
+      implementation_details: "Rolling out comprehensive AI literacy program across departments",
       control_category_id: controlCategoryIds[13],
       numberOfSubcontrols: 3,
       numberOfDoneSubcontrols: 1,
@@ -1276,16 +1213,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Planning phase for regulatory compliance training",
+      implementation_details: "Planning phase for regulatory compliance training",
       control_category_id: controlCategoryIds[13],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Intended Use Description",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       order_no: 1,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1293,16 +1228,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Documentation review process initiated with key stakeholders",
+      implementation_details: "Documentation review process initiated with key stakeholders",
       control_category_id: controlCategoryIds[14],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Technical Documentation Review",
-      description:
-        "Review and verify technical documentation from AI system providers.",
+      description: "Review and verify technical documentation from AI system providers.",
       order_no: 2,
       status: "Waiting",
       risk_review: "Residual risk",
@@ -1343,16 +1276,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-15"),
-      implementation_details:
-        "Completed system documentation with all required details",
+      implementation_details: "Completed system documentation with all required details",
       control_category_id: controlCategoryIds[14],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 2,
     },
     {
       title: "Dataset Description",
-      description:
-        "Describe training, validation, and testing datasets used in AI systems.",
+      description: "Describe training, validation, and testing datasets used in AI systems.",
       order_no: 5,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1360,16 +1291,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Documenting datasets used for training and validation.",
+      implementation_details: "Documenting datasets used for training and validation.",
       control_category_id: controlCategoryIds[14],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Mitigation Strategies and Bias Testing",
-      description:
-        "Explain mitigation strategies and document bias testing results.",
+      description: "Explain mitigation strategies and document bias testing results.",
       order_no: 6,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1394,16 +1323,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Gathering metrics and security information for AI systems.",
+      implementation_details: "Gathering metrics and security information for AI systems.",
       control_category_id: controlCategoryIds[14],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Human Intervention Mechanisms",
-      description:
-        "Assign competent individuals with authority to oversee AI system usage.",
+      description: "Assign competent individuals with authority to oversee AI system usage.",
       order_no: 1,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1411,8 +1338,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing comprehensive human oversight protocols",
+      implementation_details: "Implementing comprehensive human oversight protocols",
       control_category_id: controlCategoryIds[15],
       numberOfSubcontrols: 3,
       numberOfDoneSubcontrols: 1,
@@ -1492,8 +1418,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing corrective actions as required by Article 20.",
+      implementation_details: "Implementing corrective actions as required by Article 20.",
       control_category_id: controlCategoryIds[16],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
@@ -1508,15 +1433,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Maintaining detailed records of corrective actions.",
+      implementation_details: "Maintaining detailed records of corrective actions.",
       control_category_id: controlCategoryIds[16],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Define and allocate responsibilities among distributors, importers, deployers, and third parties to ensure compliance with AI regulations.",
       order_no: 1,
@@ -1533,10 +1456,8 @@ export const mockControls = (
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
-      description:
-        "Establish clear contractual agreements with AI system providers.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
+      description: "Establish clear contractual agreements with AI system providers.",
       order_no: 2,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1544,15 +1465,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-20"),
-      implementation_details:
-        "Drafting contracts with AI system providers to ensure compliance",
+      implementation_details: "Drafting contracts with AI system providers to ensure compliance",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Define responsibilities in agreements with third-party suppliers of AI components.",
       order_no: 3,
@@ -1562,15 +1481,13 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-25"),
-      implementation_details:
-        "Clarifying roles and responsibilities in supplier agreements",
+      implementation_details: "Clarifying roles and responsibilities in supplier agreements",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "Specify information, technical access, and support required for regulatory compliance.",
       order_no: 4,
@@ -1586,8 +1503,7 @@ export const mockControls = (
       numberOfDoneSubcontrols: 0,
     },
     {
-      title:
-        "Conduct thorough due diligence before associating with high-risk AI systems.",
+      title: "Conduct thorough due diligence before associating with high-risk AI systems.",
       description:
         "We ensure third-party impacts, such as IP infringement, meet organizational standards.",
       order_no: 5,
@@ -1597,8 +1513,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-05"),
-      implementation_details:
-        "Assessing third-party compliance with IP standards",
+      implementation_details: "Assessing third-party compliance with IP standards",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1614,16 +1529,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-01"),
-      implementation_details:
-        "Emergency shutdown procedures implemented and tested",
+      implementation_details: "Emergency shutdown procedures implemented and tested",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Monitor and respond to incidents involving third-party components.",
+      description: "Monitor and respond to incidents involving third-party components.",
       order_no: 7,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -1631,16 +1544,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning phase - defining monitoring requirements",
+      implementation_details: "Planning phase - defining monitoring requirements",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Implement measures to enhance AI system resilience against errors and faults.",
+      description: "Implement measures to enhance AI system resilience against errors and faults.",
       order_no: 8,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1655,8 +1566,7 @@ export const mockControls = (
     },
     {
       title: "Incident Monitoring for Third-Party Components",
-      description:
-        "Identify and assess potential non-conformities with regulations.",
+      description: "Identify and assess potential non-conformities with regulations.",
       order_no: 9,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1664,8 +1574,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Conducting assessments for regulatory compliance",
+      implementation_details: "Conducting assessments for regulatory compliance",
       control_category_id: controlCategoryIds[17],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1722,8 +1631,7 @@ export const mockControls = (
     },
     {
       title: "System Risk Controls Documentation",
-      description:
-        "Document system risk controls, including those for third-party components.",
+      description: "Document system risk controls, including those for third-party components.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1739,8 +1647,7 @@ export const mockControls = (
     },
     {
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Regularly update compliance measures based on system or regulatory changes.",
+      description: "Regularly update compliance measures based on system or regulatory changes.",
       order_no: 5,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1748,8 +1655,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Updating compliance measures to align with regulatory changes.",
+      implementation_details: "Updating compliance measures to align with regulatory changes.",
       control_category_id: controlCategoryIds[18],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1765,16 +1671,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Providing explanations for AI models to enhance transparency.",
+      implementation_details: "Providing explanations for AI models to enhance transparency.",
       control_category_id: controlCategoryIds[18],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Transparency and Explainability Evaluation",
-      description:
-        "Maintain and update technical documentation reflecting AI system changes.",
+      description: "Maintain and update technical documentation reflecting AI system changes.",
       order_no: 7,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1782,8 +1686,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Updating technical documentation to reflect recent changes.",
+      implementation_details: "Updating technical documentation to reflect recent changes.",
       control_category_id: controlCategoryIds[18],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1815,8 +1718,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up automatic logging for AI system operations.",
+      implementation_details: "Setting up automatic logging for AI system operations.",
       control_category_id: controlCategoryIds[18],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1881,8 +1783,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Assessing data compliance with legal frameworks.",
+      implementation_details: "Assessing data compliance with legal frameworks.",
       control_category_id: controlCategoryIds[19],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -1937,8 +1838,7 @@ export const mockControls = (
     },
     {
       title: "Assessment Process Documentation",
-      description:
-        "Maintain documentation of the fundamental rights impact assessment process.",
+      description: "Maintain documentation of the fundamental rights impact assessment process.",
       order_no: 8,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -1969,8 +1869,7 @@ export const mockControls = (
     },
     {
       title: "Assessment Process Documentation",
-      description:
-        "Regularly evaluate bias and fairness issues related to AI systems.",
+      description: "Regularly evaluate bias and fairness issues related to AI systems.",
       order_no: 10,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2011,16 +1910,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning phase - designing user communication strategy",
+      implementation_details: "Planning phase - designing user communication strategy",
       control_category_id: controlCategoryIds[20],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "AI System Scope and Impact Definition",
-      description:
-        "Define and document AI system scope, goals, methods, and potential impacts.",
+      description: "Define and document AI system scope, goals, methods, and potential impacts.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2063,16 +1960,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-12-31"),
-      implementation_details:
-        "Currently working on registration documentation for our AI systems",
+      implementation_details: "Currently working on registration documentation for our AI systems",
       control_category_id: controlCategoryIds[21],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 1,
     },
     {
       title: "Conformity Assessment Completion",
-      description:
-        "Complete relevant conformity assessment procedures for AI systems.",
+      description: "Complete relevant conformity assessment procedures for AI systems.",
       order_no: 2,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -2087,8 +1982,7 @@ export const mockControls = (
     },
     {
       title: "Conformity Assessment Completion",
-      description:
-        "Identify necessary technical standards and certifications for AI systems.",
+      description: "Identify necessary technical standards and certifications for AI systems.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2112,8 +2006,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-12-31"),
-      implementation_details:
-        "Working on compliance with common specifications.",
+      implementation_details: "Working on compliance with common specifications.",
       control_category_id: controlCategoryIds[21],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2177,8 +2070,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up documentation system for AI registration records",
+      implementation_details: "Setting up documentation system for AI registration records",
       control_category_id: controlCategoryIds[22],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2210,8 +2102,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Maintaining thorough documentation of AI system conformity.",
+      implementation_details: "Maintaining thorough documentation of AI system conformity.",
       control_category_id: controlCategoryIds[22],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
@@ -2227,8 +2118,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-06-15"),
-      implementation_details:
-        "Automated data entry system implementation complete",
+      implementation_details: "Automated data entry system implementation complete",
       control_category_id: controlCategoryIds[22],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 1,
@@ -2244,8 +2134,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Setting up automated monitoring dashboards and alert systems",
+      implementation_details: "Setting up automated monitoring dashboards and alert systems",
       control_category_id: controlCategoryIds[23],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2279,8 +2168,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-07-15"),
-      implementation_details:
-        "Implementing tracking and response measures for incidents.",
+      implementation_details: "Implementing tracking and response measures for incidents.",
       control_category_id: controlCategoryIds[23],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2297,16 +2185,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Planning consultations with experts and end-users.",
+      implementation_details: "Planning consultations with experts and end-users.",
       control_category_id: controlCategoryIds[23],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "AI System Change Documentation",
-      description:
-        "Document changes to AI systems and their performance post-deployment.",
+      description: "Document changes to AI systems and their performance post-deployment.",
       order_no: 5,
       status: "Waiting",
       risk_review: "Residual risk",
@@ -2314,8 +2200,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-30"),
-      implementation_details:
-        "Establishing change management documentation process",
+      implementation_details: "Establishing change management documentation process",
       control_category_id: controlCategoryIds[23],
       numberOfSubcontrols: 4,
       numberOfDoneSubcontrols: 1,
@@ -2331,8 +2216,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementation of automated incident reporting system in progress",
+      implementation_details: "Implementation of automated incident reporting system in progress",
       control_category_id: controlCategoryIds[24],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2356,8 +2240,7 @@ export const mockControls = (
     },
     {
       title: "AI System Logging Implementation",
-      description:
-        "Ensure providers implement systems for capturing and storing AI system logs.",
+      description: "Ensure providers implement systems for capturing and storing AI system logs.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2365,16 +2248,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementing logging systems for traceability and compliance.",
+      implementation_details: "Implementing logging systems for traceability and compliance.",
       control_category_id: controlCategoryIds[24],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "Post-Deployment Incident Monitoring",
-      description:
-        "Monitor incidents related to AI systems and respond post-deployment.",
+      description: "Monitor incidents related to AI systems and respond post-deployment.",
       order_no: 3,
       status: "Waiting",
       risk_review: "Unacceptable risk",
@@ -2415,8 +2296,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementation of automated incident reporting system in progress",
+      implementation_details: "Implementation of automated incident reporting system in progress",
       control_category_id: controlCategoryIds[25],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,
@@ -2440,8 +2320,7 @@ export const mockControls = (
     },
     {
       title: "Post-Deployment Incident Monitoring",
-      description:
-        "Monitor incidents related to AI systems and respond post-deployment.",
+      description: "Monitor incidents related to AI systems and respond post-deployment.",
       order_no: 3,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2449,16 +2328,14 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Setting up monitoring infrastructure for incident response.",
+      implementation_details: "Setting up monitoring infrastructure for incident response.",
       control_category_id: controlCategoryIds[25],
       numberOfSubcontrols: 2,
       numberOfDoneSubcontrols: 0,
     },
     {
       title: "AI System Logging Implementation",
-      description:
-        "Ensure providers implement systems for capturing and storing AI system logs.",
+      description: "Ensure providers implement systems for capturing and storing AI system logs.",
       order_no: 4,
       status: "In progress",
       risk_review: "Acceptable risk",
@@ -2466,8 +2343,7 @@ export const mockControls = (
       owner: userId2,
       reviewer: userId1,
       due_date: new Date("2024-08-15"),
-      implementation_details:
-        "Implementing logging systems for traceability and compliance.",
+      implementation_details: "Implementing logging systems for traceability and compliance.",
       control_category_id: controlCategoryIds[25],
       numberOfSubcontrols: 1,
       numberOfDoneSubcontrols: 0,

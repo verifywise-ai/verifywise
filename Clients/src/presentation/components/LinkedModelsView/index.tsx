@@ -53,7 +53,7 @@ function StatusBadge({ status }: { status: ModelInventoryStatus }) {
       {status}
     </span>
   );
-};
+}
 
 interface LinkedModelsViewProps {
   // Function to fetch models - should return Promise<IModelInventory[]>
@@ -128,10 +128,9 @@ export function LinkedModelsView({
               maxWidth: 500,
             }}
           >
-            To link a model to this framework, you first need to add it to your model inventory. When adding a model, you can select which framework(s) to link it to.{" "}
-            <VWLink onClick={() => navigate("/model-inventory")}>
-              Go to Model Inventory
-            </VWLink>
+            To link a model to this framework, you first need to add it to your model inventory.
+            When adding a model, you can select which framework(s) to link it to.{" "}
+            <VWLink onClick={() => navigate("/model-inventory")}>Go to Model Inventory</VWLink>
           </Typography>
         </Stack>
       </Stack>
@@ -151,16 +150,12 @@ export function LinkedModelsView({
           <Table sx={singleTheme.tableStyles.primary.frame}>
             <TableHead
               sx={{
-                backgroundColor:
-                  singleTheme.tableStyles.primary.header.backgroundColors,
+                backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
               }}
             >
               <TableRow sx={singleTheme.tableStyles.primary.header.row}>
                 {TABLE_COLUMNS.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    sx={singleTheme.tableStyles.primary.header.cell}
-                  >
+                  <TableCell key={column.id} sx={singleTheme.tableStyles.primary.header.cell}>
                     {column.label}
                   </TableCell>
                 ))}
@@ -222,5 +217,4 @@ export function LinkedModelsView({
       </Stack>
     </Stack>
   );
-};
-
+}

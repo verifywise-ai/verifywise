@@ -9,19 +9,14 @@ import {
  * Returns { mode, isQuantitative, isLoading, toggleMode, refetch }.
  */
 export function useRiskAssessmentMode() {
-  const [mode, setMode] = useState<"qualitative" | "quantitative">(
-    "qualitative"
-  );
+  const [mode, setMode] = useState<"qualitative" | "quantitative">("qualitative");
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchMode = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await getRiskAssessmentMode();
-      setMode(
-        (data.risk_assessment_mode as "qualitative" | "quantitative") ||
-          "qualitative"
-      );
+      setMode((data.risk_assessment_mode as "qualitative" | "quantitative") || "qualitative");
     } catch (error) {
       console.error("Failed to fetch risk assessment mode:", error);
     } finally {
@@ -37,10 +32,7 @@ export function useRiskAssessmentMode() {
     const newMode = mode === "qualitative" ? "quantitative" : "qualitative";
     try {
       const data = await updateRiskAssessmentMode(newMode);
-      setMode(
-        (data.risk_assessment_mode as "qualitative" | "quantitative") ||
-          newMode
-      );
+      setMode((data.risk_assessment_mode as "qualitative" | "quantitative") || newMode);
       return data;
     } catch (error) {
       console.error("Failed to update risk assessment mode:", error);
@@ -48,22 +40,16 @@ export function useRiskAssessmentMode() {
     }
   }, [mode]);
 
-  const setModeDirectly = useCallback(
-    async (newMode: "qualitative" | "quantitative") => {
-      try {
-        const data = await updateRiskAssessmentMode(newMode);
-        setMode(
-          (data.risk_assessment_mode as "qualitative" | "quantitative") ||
-            newMode
-        );
-        return data;
-      } catch (error) {
-        console.error("Failed to update risk assessment mode:", error);
-        throw error;
-      }
-    },
-    []
-  );
+  const setModeDirectly = useCallback(async (newMode: "qualitative" | "quantitative") => {
+    try {
+      const data = await updateRiskAssessmentMode(newMode);
+      setMode((data.risk_assessment_mode as "qualitative" | "quantitative") || newMode);
+      return data;
+    } catch (error) {
+      console.error("Failed to update risk assessment mode:", error);
+      throw error;
+    }
+  }, []);
 
   return {
     mode,

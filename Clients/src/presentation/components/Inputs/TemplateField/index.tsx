@@ -3,7 +3,7 @@
  * Used for automation email templates with dynamic variable insertion
  */
 
-import React, { useState, useRef, useEffect, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from "react";
 import {
   Stack,
   TextField,
@@ -14,8 +14,8 @@ import {
   ListItemButton,
   useTheme,
   Box,
-} from '@mui/material';
-import { ForwardedRef } from 'react';
+} from "@mui/material";
+import { ForwardedRef } from "react";
 
 interface TemplateVariable {
   var: string;
@@ -25,7 +25,7 @@ interface TemplateVariable {
 interface TemplateFieldProps {
   id: string;
   label: string;
-  type?: 'text' | 'description';
+  type?: "text" | "description";
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onFocus?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -41,7 +41,7 @@ const TemplateField = forwardRef(
     {
       id,
       label,
-      type = 'text',
+      type = "text",
       value,
       onChange,
       onFocus,
@@ -51,7 +51,7 @@ const TemplateField = forwardRef(
       variables = [],
       disabled = false,
     }: TemplateFieldProps,
-    ref: ForwardedRef<HTMLInputElement | HTMLTextAreaElement>
+    ref: ForwardedRef<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const theme = useTheme();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -65,7 +65,7 @@ const TemplateField = forwardRef(
     // Combine refs
     const setRefs = (el: HTMLInputElement | HTMLTextAreaElement | null) => {
       inputRef.current = el;
-      if (typeof ref === 'function') {
+      if (typeof ref === "function") {
         ref(el);
       } else if (ref) {
         (ref as React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>).current = el;
@@ -79,17 +79,17 @@ const TemplateField = forwardRef(
 
       // Look for {{ before cursor
       const textBeforeCursor = newValue.slice(0, cursorPosition);
-      const lastOpenBraces = textBeforeCursor.lastIndexOf('{{');
-      const lastCloseBraces = textBeforeCursor.lastIndexOf('}}');
+      const lastOpenBraces = textBeforeCursor.lastIndexOf("{{");
+      const lastCloseBraces = textBeforeCursor.lastIndexOf("}}");
 
       // Show dropdown if we have {{ without closing }} and field is not disabled
       if (!disabled && lastOpenBraces > lastCloseBraces && lastOpenBraces !== -1) {
         const searchQuery = textBeforeCursor.slice(lastOpenBraces + 2).toLowerCase();
 
         // Filter variables based on search query
-        const filtered = variables.filter((v) =>
-          v.var.toLowerCase().includes(searchQuery) ||
-          v.desc.toLowerCase().includes(searchQuery)
+        const filtered = variables.filter(
+          (v) =>
+            v.var.toLowerCase().includes(searchQuery) || v.desc.toLowerCase().includes(searchQuery),
         );
 
         setFilteredVariables(filtered);
@@ -161,23 +161,21 @@ const TemplateField = forwardRef(
       if (!showDropdown) return;
 
       switch (e.key) {
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev < filteredVariables.length - 1 ? prev + 1 : prev
-          );
+          setSelectedIndex((prev) => (prev < filteredVariables.length - 1 ? prev + 1 : prev));
           break;
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
-        case 'Enter':
+        case "Enter":
           e.preventDefault();
           if (filteredVariables[selectedIndex]) {
             insertVariable(filteredVariables[selectedIndex]);
           }
           break;
-        case 'Escape':
+        case "Escape":
           e.preventDefault();
           setShowDropdown(false);
           setTriggerPosition(null);
@@ -198,15 +196,17 @@ const TemplateField = forwardRef(
         }
       };
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Scroll selected item into view
     useEffect(() => {
       if (showDropdown && dropdownRef.current) {
-        const selectedElement = dropdownRef.current.querySelector(`[data-index="${selectedIndex}"]`);
-        selectedElement?.scrollIntoView({ block: 'nearest' });
+        const selectedElement = dropdownRef.current.querySelector(
+          `[data-index="${selectedIndex}"]`,
+        );
+        selectedElement?.scrollIntoView({ block: "nearest" });
       }
     }, [selectedIndex, showDropdown]);
 
@@ -215,16 +215,16 @@ const TemplateField = forwardRef(
         gap={theme.spacing(2)}
         className={`field field-${type}`}
         sx={{
-          position: 'relative',
-          '& fieldset': {
+          position: "relative",
+          "& fieldset": {
             borderColor: theme.palette.border.dark,
             borderRadius: theme.shape.borderRadius,
           },
-          '&:not(:has(.Mui-disabled)):not(:has(.input-error)) .MuiOutlinedInput-root:hover:not(:has(input:focus)):not(:has(textarea:focus)) fieldset':
+          "&:not(:has(.Mui-disabled)):not(:has(.input-error)) .MuiOutlinedInput-root:hover:not(:has(input:focus)):not(:has(textarea:focus)) fieldset":
             {
               borderColor: theme.palette.border.dark,
             },
-          '.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          ".Mui-focused .MuiOutlinedInput-notchedOutline": {
             border: `1px solid ${theme.palette.border.dark}!important`,
           },
         }}
@@ -236,15 +236,11 @@ const TemplateField = forwardRef(
             color={theme.palette.text.secondary}
             fontWeight={500}
             fontSize="13px"
-            sx={{ margin: 0, height: '22px' }}
+            sx={{ margin: 0, height: "22px" }}
           >
             {label}
             {isRequired && (
-              <Typography
-                component="span"
-                ml={theme.spacing(1)}
-                color={theme.palette.error.text}
-              >
+              <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
                 *
               </Typography>
             )}
@@ -259,18 +255,18 @@ const TemplateField = forwardRef(
           onFocus={onFocus}
           onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLDivElement>}
           placeholder={placeholder}
-          multiline={type === 'description'}
-          rows={type === 'description' ? (rows || 4) : 1}
+          multiline={type === "description"}
+          rows={type === "description" ? rows || 4 : 1}
           disabled={disabled}
           inputRef={setRefs}
           inputProps={{
             sx: {
               color: theme.palette.text.secondary,
-              '&:-webkit-autofill': {
+              "&:-webkit-autofill": {
                 WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
                 WebkitTextFillColor: theme.palette.text.secondary,
               },
-              overflowY: 'auto',
+              overflowY: "auto",
             },
           }}
         />
@@ -280,45 +276,41 @@ const TemplateField = forwardRef(
           <Paper
             ref={dropdownRef}
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: dropdownPosition.top,
               left: dropdownPosition.left,
               zIndex: 9999,
               maxHeight: 200,
               width: 280,
-              overflow: 'auto',
+              overflow: "auto",
               boxShadow: theme.shadows[2],
               border: `1px solid ${theme.palette.border.light}`,
             }}
           >
             <List sx={{ p: 0 }}>
               {filteredVariables.map((variable, index) => (
-                <ListItem
-                  key={variable.var}
-                  disablePadding
-                  data-index={index}
-                >
+                <ListItem key={variable.var} disablePadding data-index={index}>
                   <ListItemButton
                     selected={index === selectedIndex}
                     onClick={() => insertVariable(variable)}
                     sx={{
-                      '&.Mui-selected': {
-                        backgroundColor: theme.palette.primary.main + '20',
+                      "&.Mui-selected": {
+                        backgroundColor: theme.palette.primary.main + "20",
                       },
-                      '&:hover': {
+                      "&:hover": {
                         backgroundColor: theme.palette.action.hover,
                       },
                       py: 0.5,
                       px: 1,
                     }}
                   >
-                    <Stack spacing={0} sx={{ width: '100%' }}>
+                    <Stack spacing={0} sx={{ width: "100%" }}>
                       <Typography
                         sx={{
-                          fontFamily: 'monospace',
+                          fontFamily: "monospace",
                           fontWeight: 600,
                           color: theme.palette.primary.main,
-                          fontSize: '12px',
+                          fontSize: "12px",
                         }}
                       >
                         {variable.var}
@@ -327,7 +319,7 @@ const TemplateField = forwardRef(
                         variant="caption"
                         sx={{
                           color: theme.palette.text.secondary,
-                          fontSize: '10px',
+                          fontSize: "10px",
                         }}
                       >
                         {variable.desc}
@@ -351,8 +343,8 @@ const TemplateField = forwardRef(
                 variant="caption"
                 sx={{
                   color: theme.palette.text.disabled,
-                  fontStyle: 'italic',
-                  fontSize: '9px',
+                  fontStyle: "italic",
+                  fontSize: "9px",
                 }}
               >
                 ↑↓ Navigate • Enter to select • Esc to close
@@ -362,9 +354,9 @@ const TemplateField = forwardRef(
         )}
       </Stack>
     );
-  }
+  },
 );
 
-TemplateField.displayName = 'TemplateField';
+TemplateField.displayName = "TemplateField";
 
 export default TemplateField;

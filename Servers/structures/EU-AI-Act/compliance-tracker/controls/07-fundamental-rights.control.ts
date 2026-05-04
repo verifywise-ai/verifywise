@@ -4,12 +4,12 @@ export const FundamentalRightsImpactAssessments = [
     title: "Fundamental Rights Impact Assessment Process Development",
     description:
       "Conduct assessments to evaluate AI systems'' impact on fundamental rights and notify authorities of findings.",
-    implementation_details: "Currently developing assessment frameworks and documentation processes",
+    implementation_details:
+      "Currently developing assessment frameworks and documentation processes",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We develop a comprehensive process for fundamental rights impact assessments.",
+        title: "We develop a comprehensive process for fundamental rights impact assessments.",
         description:
           "A structured assessment process identifies and mitigates risks to fundamental rights posed by AI systems.",
         implementation_details: "Initiating workshops for impact assessment",
@@ -46,8 +46,7 @@ export const FundamentalRightsImpactAssessments = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "Identify all natural persons and groups potentially affected by AI system usage.",
+        title: "Identify all natural persons and groups potentially affected by AI system usage.",
         description:
           "Identifying impacted individuals and groups helps address potential risks and design systems responsibly.",
         implementation_details: "Conducted stakeholder mapping and impact assessment",
@@ -84,8 +83,7 @@ export const FundamentalRightsImpactAssessments = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We create and periodically re-evaluate strategies for measuring AI system impacts.",
+        title: "We create and periodically re-evaluate strategies for measuring AI system impacts.",
         description:
           "Re-evaluating strategies ensures continued relevance and effectiveness in managing AI system impacts.",
         implementation_details: "Setting up strategy evaluation workshops",
@@ -122,8 +120,7 @@ export const FundamentalRightsImpactAssessments = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We document known or foreseeable risks to health, safety, or fundamental rights.",
+        title: "We document known or foreseeable risks to health, safety, or fundamental rights.",
         description:
           "Documenting risks provides transparency and helps stakeholders make informed decisions regarding system deployment.",
         implementation_details: "Created a risk registry with identified health and safety risks",
@@ -135,14 +132,12 @@ export const FundamentalRightsImpactAssessments = [
   {
     order_no: 8,
     title: "Assessment Process Documentation",
-    description:
-      "Maintain documentation of the fundamental rights impact assessment process.",
+    description: "Maintain documentation of the fundamental rights impact assessment process.",
     implementation_details: "Maintaining assessment documentation.",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We maintain assessment documentation, including dates, results, and actions taken.",
+        title: "We maintain assessment documentation, including dates, results, and actions taken.",
         description:
           "Detailed assessment records ensure accountability and facilitate compliance reviews or audits.",
         implementation_details: "Documented assessment outcomes and actions taken",
@@ -164,7 +159,8 @@ export const FundamentalRightsImpactAssessments = [
           "We integrate fundamental rights impact assessments with existing data protection assessments.",
         description:
           "Combining assessments provides a holistic view of risks and ensures consistency across regulatory compliance efforts.",
-        implementation_details: "Integrated fundamental rights considerations into data protection reviews",
+        implementation_details:
+          "Integrated fundamental rights considerations into data protection reviews",
         evidence_description: "Integrated assessment reports and impact analyses",
         feedback_description: "Awaiting feedback from legal team",
       },
@@ -173,8 +169,7 @@ export const FundamentalRightsImpactAssessments = [
   {
     order_no: 10,
     title: "Assessment Process Documentation",
-    description:
-      "Regularly evaluate bias and fairness issues related to AI systems.",
+    description: "Regularly evaluate bias and fairness issues related to AI systems.",
     implementation_details: "Evaluating datasets for relevance and bias.",
     subControls: [
       {
@@ -189,8 +184,7 @@ export const FundamentalRightsImpactAssessments = [
       },
       {
         order_no: 2,
-        title:
-          "We ensure representative evaluations when using human subjects.",
+        title: "We ensure representative evaluations when using human subjects.",
         description:
           "Representative evaluations protect fairness and ensure that findings are applicable across relevant user groups.",
         implementation_details: "Initiated recruitment for representative sample evaluations",

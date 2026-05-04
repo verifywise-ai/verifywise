@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { VendorModel } from "../vendor/vendor.model";
 import { UserModel } from "../user/user.model";
 import { IVendorRisk } from "../../interfaces/i.vendorRisk";
@@ -14,10 +8,7 @@ import { IVendorRisk } from "../../interfaces/i.vendorRisk";
   timestamps: true,
   underscored: true,
 })
-export class VendorRiskModel
-  extends Model<VendorRiskModel>
-  implements IVendorRisk
-{
+export class VendorRiskModel extends Model<VendorRiskModel> implements IVendorRisk {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -52,31 +43,14 @@ export class VendorRiskModel
   impact!: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
 
   @Column({
-    type: DataType.ENUM(
-      "Rare",
-      "Unlikely",
-      "Possible",
-      "Likely",
-      "Almost certain"
-    ),
+    type: DataType.ENUM("Rare", "Unlikely", "Possible", "Likely", "Almost certain"),
   })
   likelihood!: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost certain";
 
   @Column({
-    type: DataType.ENUM(
-      "Negligible",
-      "Minor",
-      "Moderate",
-      "Major",
-      "Catastrophic"
-    ),
+    type: DataType.ENUM("Negligible", "Minor", "Moderate", "Major", "Catastrophic"),
   })
-  risk_severity!:
-    | "Negligible"
-    | "Minor"
-    | "Moderate"
-    | "Major"
-    | "Catastrophic";
+  risk_severity!: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
 
   @Column({
     type: DataType.STRING,
@@ -125,9 +99,7 @@ export class VendorRiskModel
   })
   deleted_at?: Date;
 
-  static async createNewVendorRisk(
-    vendorRisk: IVendorRisk
-  ): Promise<VendorRiskModel> {
+  static async createNewVendorRisk(vendorRisk: IVendorRisk): Promise<VendorRiskModel> {
     const vendorRiskModel = new VendorRiskModel();
     vendorRiskModel.vendor_id = vendorRisk.vendor_id!;
     vendorRiskModel.risk_description = vendorRisk.risk_description;
@@ -146,12 +118,7 @@ export class VendorRiskModel
     impact_description?: string;
     action_owner?: number;
     action_plan?: string;
-    risk_severity?:
-      | "Negligible"
-      | "Minor"
-      | "Moderate"
-      | "Major"
-      | "Catastrophic";
+    risk_severity?: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
     risk_level?: string;
     likelihood?: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost certain";
   }): Promise<void> {

@@ -7,7 +7,7 @@ import { frameworkDashboardCardStyles } from "./styles";
 import {
   validateDataConsistency,
   createErrorLogData,
-  type BaseFrameworkData
+  type BaseFrameworkData,
 } from "../../../../application/utils/frameworkDataUtils";
 
 /**
@@ -52,7 +52,9 @@ interface AssignmentStatusCardProps {
 }
 
 const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => {
-  const [assignmentCounts, setAssignmentCounts] = useState<Map<number, AssignmentCounts>>(new Map());
+  const [assignmentCounts, setAssignmentCounts] = useState<Map<number, AssignmentCounts>>(
+    new Map(),
+  );
   const [loading, setLoading] = useState(true);
 
   /**
@@ -94,29 +96,36 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
               clauseAssigned = validateDataConsistency(
                 clauseAssigned,
                 clauseTotal,
-                'clause assignment',
-                framework.frameworkName
+                "clause assignment",
+                framework.frameworkName,
               );
             } else {
-              console.warn(`Invalid clause assignment response structure for ${framework.frameworkName}:`, {
-                projectFrameworkId: framework.projectFrameworkId,
-                routeUrl,
-                responseStructure: clausesResponse ? Object.keys(clausesResponse) : 'null response'
-              });
+              console.warn(
+                `Invalid clause assignment response structure for ${framework.frameworkName}:`,
+                {
+                  projectFrameworkId: framework.projectFrameworkId,
+                  routeUrl,
+                  responseStructure: clausesResponse
+                    ? Object.keys(clausesResponse)
+                    : "null response",
+                },
+              );
             }
-
           } catch (error) {
             if (!abortController.signal.aborted) {
               const errorData = createErrorLogData(error, {
                 frameworkName: framework.frameworkName,
                 projectFrameworkId: framework.projectFrameworkId,
-                operation: 'fetching clause assignments',
+                operation: "fetching clause assignments",
                 isISO27001,
                 routeUrl: isISO27001
                   ? `/iso-27001/clauses/assignments/${framework.projectFrameworkId}`
-                  : `/iso-42001/clauses/assignments/${framework.projectFrameworkId}`
+                  : `/iso-42001/clauses/assignments/${framework.projectFrameworkId}`,
               });
-              console.error(`Error fetching clause assignments for ${framework.frameworkName} (ID: ${framework.frameworkId}):`, errorData);
+              console.error(
+                `Error fetching clause assignments for ${framework.frameworkName} (ID: ${framework.frameworkId}):`,
+                errorData,
+              );
             }
           }
 
@@ -143,36 +152,47 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
               annexAssigned = validateDataConsistency(
                 annexAssigned,
                 annexTotal,
-                'annex assignment',
-                framework.frameworkName
+                "annex assignment",
+                framework.frameworkName,
               );
             } else {
-              console.warn(`Invalid annex assignment response structure for ${framework.frameworkName}:`, {
-                projectFrameworkId: framework.projectFrameworkId,
-                routeUrl,
-                isISO27001,
-                responseStructure: annexesResponse ? {
-                  hasData: !!annexesResponse.data,
-                  hasNestedData: !!annexesResponse.data?.data,
-                  topLevelKeys: annexesResponse.data ? Object.keys(annexesResponse.data) : [],
-                  nestedKeys: annexesResponse.data?.data ? Object.keys(annexesResponse.data.data) : []
-                } : 'null response'
-              });
+              console.warn(
+                `Invalid annex assignment response structure for ${framework.frameworkName}:`,
+                {
+                  projectFrameworkId: framework.projectFrameworkId,
+                  routeUrl,
+                  isISO27001,
+                  responseStructure: annexesResponse
+                    ? {
+                        hasData: !!annexesResponse.data,
+                        hasNestedData: !!annexesResponse.data?.data,
+                        topLevelKeys: annexesResponse.data ? Object.keys(annexesResponse.data) : [],
+                        nestedKeys: annexesResponse.data?.data
+                          ? Object.keys(annexesResponse.data.data)
+                          : [],
+                      }
+                    : "null response",
+                },
+              );
             }
-
           } catch (error) {
             if (!abortController.signal.aborted) {
               const errorData = createErrorLogData(error, {
                 frameworkName: framework.frameworkName,
                 projectFrameworkId: framework.projectFrameworkId,
-                operation: 'fetching annex assignments',
+                operation: "fetching annex assignments",
                 isISO27001,
-                expectedFields: isISO27001 ? ['totalAnnexControls', 'assignedAnnexControls'] : ['totalAnnexcategories', 'assignedAnnexcategories'],
+                expectedFields: isISO27001
+                  ? ["totalAnnexControls", "assignedAnnexControls"]
+                  : ["totalAnnexcategories", "assignedAnnexcategories"],
                 routeUrl: isISO27001
                   ? `/iso-27001/annexes/assignments/${framework.projectFrameworkId}`
-                  : `/iso-42001/annexes/assignments/${framework.projectFrameworkId}`
+                  : `/iso-42001/annexes/assignments/${framework.projectFrameworkId}`,
               });
-              console.error(`Error fetching annex assignments for ${framework.frameworkName} (ID: ${framework.frameworkId}):`, errorData);
+              console.error(
+                `Error fetching annex assignments for ${framework.frameworkName} (ID: ${framework.frameworkId}):`,
+                errorData,
+              );
             }
           }
 
@@ -237,9 +257,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
     <Box sx={frameworkDashboardCardStyles.cardContainer}>
       {/* Header Section */}
       <Box sx={frameworkDashboardCardStyles.cardHeader}>
-        <Typography sx={frameworkDashboardCardStyles.cardHeaderTitle}>
-          Assignment status
-        </Typography>
+        <Typography sx={frameworkDashboardCardStyles.cardHeaderTitle}>Assignment status</Typography>
       </Box>
 
       {/* Content Section */}
@@ -254,30 +272,142 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
             fontSize: 12,
             color: "#666666",
             mb: 6,
-            lineHeight: "16px"
+            lineHeight: "16px",
           }}
         >
-          Monitor task assignment coverage for clauses and annexes. Displays how many items have been assigned to team members.
+          Monitor task assignment coverage for clauses and annexes. Displays how many items have
+          been assigned to team members.
         </Typography>
 
-      <Stack spacing={0}>
-        {frameworksData.map((framework, index) => {
-          // Detect framework type for appropriate API endpoints and terminology
-          const isISO27001 = framework.frameworkName.toLowerCase().includes("iso 27001");
-          const isISO42001 = framework.frameworkName.toLowerCase().includes("iso 42001");
-          const isNISTAIRMF = framework.frameworkName.toLowerCase().includes("nist ai rmf");
+        <Stack spacing={0}>
+          {frameworksData.map((framework, index) => {
+            // Detect framework type for appropriate API endpoints and terminology
+            const isISO27001 = framework.frameworkName.toLowerCase().includes("iso 27001");
+            const isISO42001 = framework.frameworkName.toLowerCase().includes("iso 42001");
+            const isNISTAIRMF = framework.frameworkName.toLowerCase().includes("nist ai rmf");
 
-          // Handle NIST AI RMF separately - uses pre-fetched data from Dashboard
-          if (isNISTAIRMF) {
-            const nistAssignmentsByFunction = framework.nistAssignmentsByFunction;
+            // Handle NIST AI RMF separately - uses pre-fetched data from Dashboard
+            if (isNISTAIRMF) {
+              const nistAssignmentsByFunction = framework.nistAssignmentsByFunction;
 
-            // Function display order and labels
-            const functions = [
-              { key: 'govern' as const, label: 'Govern' },
-              { key: 'map' as const, label: 'Map' },
-              { key: 'measure' as const, label: 'Measure' },
-              { key: 'manage' as const, label: 'Manage' },
-            ];
+              // Function display order and labels
+              const functions = [
+                { key: "govern" as const, label: "Govern" },
+                { key: "map" as const, label: "Map" },
+                { key: "measure" as const, label: "Measure" },
+                { key: "manage" as const, label: "Manage" },
+              ];
+
+              return (
+                <Box key={framework.frameworkId}>
+                  {/* Divider between framework sections */}
+                  {index > 0 && (
+                    <Box
+                      sx={{
+                        height: "1px",
+                        backgroundColor: "status.default.border",
+                        mx: "-16px", // Extend to card edges
+                        mb: 4,
+                        mt: 1,
+                      }}
+                    />
+                  )}
+
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      mb: 2,
+                      color: "text.black",
+                    }}
+                  >
+                    {framework.frameworkName}
+                  </Typography>
+
+                  <Stack spacing={1.5}>
+                    {functions.map((func) => {
+                      const data = nistAssignmentsByFunction?.[func.key] || {
+                        total: 0,
+                        assigned: 0,
+                      };
+                      return (
+                        <Box
+                          key={func.key}
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                            {func.label}
+                          </Typography>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            {getAssignmentIcon(data.assigned, data.total)}
+                            <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                              {data.assigned}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                              /
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                              {data.total}
+                            </Typography>
+                            <Typography
+                              sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}
+                            >
+                              assigned
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+
+                  {/* Add bottom margin for spacing before next section */}
+                  {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
+                </Box>
+              );
+            }
+
+            const counts = assignmentCounts.get(framework.frameworkId);
+
+            // Show loading state while data is being fetched
+            if (loading || !counts) {
+              return (
+                <Box key={framework.frameworkId}>
+                  {/* Divider between framework sections */}
+                  {index > 0 && (
+                    <Box
+                      sx={{
+                        height: "1px",
+                        backgroundColor: "status.default.border",
+                        mx: "-16px", // Extend to card edges
+                        mb: 4,
+                        mt: 1,
+                      }}
+                    />
+                  )}
+
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      mb: 2,
+                      color: "text.black",
+                    }}
+                  >
+                    {framework.frameworkName}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                    Loading assignment data...
+                  </Typography>
+
+                  {/* Add bottom margin for spacing before next section */}
+                  {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
+                </Box>
+              );
+            }
 
             return (
               <Box key={framework.frameworkId}>
@@ -306,178 +436,70 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                 </Typography>
 
                 <Stack spacing={1.5}>
-                  {functions.map((func) => {
-                    const data = nistAssignmentsByFunction?.[func.key] || { total: 0, assigned: 0 };
-                    return (
-                      <Box
-                        key={func.key}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                          {func.label}
-                        </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          {getAssignmentIcon(data.assigned, data.total)}
-                          <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                            {data.assigned}
-                          </Typography>
-                          <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                            /
-                          </Typography>
-                          <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                            {data.total}
-                          </Typography>
-                          <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
-                            assigned
-                          </Typography>
-                        </Box>
-                      </Box>
-                    );
-                  })}
+                  {/* Clauses Assignment Display - Shows subclauses assignment status */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                      {/* Use appropriate terminology based on framework type */}
+                      {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {/* Status icon with color-coded completion indicator */}
+                      {getAssignmentIcon(counts.clauseAssigned, counts.clauseTotal)}
+                      <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                        {counts.clauseAssigned}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                        /
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                        {counts.clauseTotal}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                        assigned
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Annexes Assignment Display - Shows annex controls/categories assignment status */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {/* Status icon with color-coded completion indicator */}
+                      {getAssignmentIcon(counts.annexAssigned, counts.annexTotal)}
+                      <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                        {counts.annexAssigned}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                        /
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                        {counts.annexTotal}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                        assigned
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Stack>
 
                 {/* Add bottom margin for spacing before next section */}
                 {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
               </Box>
             );
-          }
-
-          const counts = assignmentCounts.get(framework.frameworkId);
-
-          // Show loading state while data is being fetched
-          if (loading || !counts) {
-            return (
-              <Box key={framework.frameworkId}>
-                {/* Divider between framework sections */}
-                {index > 0 && (
-                  <Box
-                    sx={{
-                      height: "1px",
-                      backgroundColor: "status.default.border",
-                      mx: "-16px", // Extend to card edges
-                      mb: 4,
-                      mt: 1,
-                    }}
-                  />
-                )}
-
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    mb: 2,
-                    color: "text.black",
-                  }}
-                >
-                  {framework.frameworkName}
-                </Typography>
-                <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                  Loading assignment data...
-                </Typography>
-
-                {/* Add bottom margin for spacing before next section */}
-                {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
-              </Box>
-            );
-          }
-
-          return (
-            <Box key={framework.frameworkId}>
-              {/* Divider between framework sections */}
-              {index > 0 && (
-                <Box
-                  sx={{
-                    height: "1px",
-                    backgroundColor: "status.default.border",
-                    mx: "-16px", // Extend to card edges
-                    mb: 4,
-                    mt: 1,
-                  }}
-                />
-              )}
-
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  mb: 2,
-                  color: "text.black",
-                }}
-              >
-                {framework.frameworkName}
-              </Typography>
-
-              <Stack spacing={1.5}>
-                {/* Clauses Assignment Display - Shows subclauses assignment status */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                    {/* Use appropriate terminology based on framework type */}
-                    {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {/* Status icon with color-coded completion indicator */}
-                    {getAssignmentIcon(counts.clauseAssigned, counts.clauseTotal)}
-                    <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                      {counts.clauseAssigned}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                      /
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                      {counts.clauseTotal}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
-                      assigned
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* Annexes Assignment Display - Shows annex controls/categories assignment status */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                    Annexes
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {/* Status icon with color-coded completion indicator */}
-                    {getAssignmentIcon(counts.annexAssigned, counts.annexTotal)}
-                    <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                      {counts.annexAssigned}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
-                      /
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                      {counts.annexTotal}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
-                      assigned
-                    </Typography>
-                  </Box>
-                </Box>
-              </Stack>
-
-              {/* Add bottom margin for spacing before next section */}
-              {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
-            </Box>
-          );
-        })}
-      </Stack>
+          })}
+        </Stack>
       </Box>
     </Box>
   );

@@ -7,7 +7,7 @@ import { IRiskBenchmark } from "../domain.layer/interfaces/I.quantitativeRisk";
  */
 export async function getAllBenchmarksQuery(
   industry?: string,
-  aiRiskType?: string
+  aiRiskType?: string,
 ): Promise<IRiskBenchmark[]> {
   let whereClause = "";
   const replacements: Record<string, string> = {};
@@ -30,22 +30,20 @@ export async function getAllBenchmarksQuery(
     {
       replacements,
       type: QueryTypes.SELECT,
-    }
+    },
   );
 }
 
 /**
  * Get a single risk benchmark by ID.
  */
-export async function getBenchmarkByIdQuery(
-  id: number
-): Promise<IRiskBenchmark | null> {
+export async function getBenchmarkByIdQuery(id: number): Promise<IRiskBenchmark | null> {
   const results = await sequelize.query<IRiskBenchmark>(
     `SELECT * FROM risk_benchmarks WHERE id = :id`,
     {
       replacements: { id },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return results[0] || null;
 }
@@ -56,7 +54,7 @@ export async function getBenchmarkByIdQuery(
 export async function getBenchmarkIndustriesQuery(): Promise<string[]> {
   const results = await sequelize.query<{ industry: string }>(
     `SELECT DISTINCT industry FROM risk_benchmarks ORDER BY industry`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
   return results.map((r) => r.industry);
 }
@@ -67,7 +65,7 @@ export async function getBenchmarkIndustriesQuery(): Promise<string[]> {
 export async function getBenchmarkAiRiskTypesQuery(): Promise<string[]> {
   const results = await sequelize.query<{ ai_risk_type: string }>(
     `SELECT DISTINCT ai_risk_type FROM risk_benchmarks ORDER BY ai_risk_type`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
   return results.map((r) => r.ai_risk_type);
 }
@@ -79,7 +77,7 @@ export async function getBenchmarkAiRiskTypesQuery(): Promise<string[]> {
 export async function applyBenchmarkToRiskQuery(
   riskId: number,
   benchmarkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<boolean> {
   const benchmark = await getBenchmarkByIdQuery(benchmarkId);
   if (!benchmark) return false;
@@ -124,7 +122,7 @@ export async function applyBenchmarkToRiskQuery(
         loss_reputational_likely: benchmark.loss_reputational_likely,
         loss_reputational_max: benchmark.loss_reputational_max,
       },
-    }
+    },
   );
 
   return (affectedRows as number) > 0;

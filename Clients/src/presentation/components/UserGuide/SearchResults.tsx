@@ -1,8 +1,8 @@
-import React from 'react';
-import { FileText, ArrowRight } from 'lucide-react';
-import { searchArticles, type SearchResult } from '@user-guide-content/userGuideConfig';
-import { colors, typography, spacing, border } from './styles/theme';
-import './SearchResults.css';
+import React from "react";
+import { FileText, ArrowRight } from "lucide-react";
+import { searchArticles, type SearchResult } from "@user-guide-content/userGuideConfig";
+import { colors, typography, spacing, border } from "./styles/theme";
+import "./SearchResults.css";
 
 interface SearchResultsProps {
   query: string;
@@ -26,7 +26,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.sm,
             color: colors.text.muted,
-            textAlign: 'center',
+            textAlign: "center",
             margin: 0,
           }}
         >
@@ -44,7 +44,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.base,
             color: colors.text.primary,
-            textAlign: 'center',
+            textAlign: "center",
             marginBottom: spacing.sm,
             marginTop: 0,
           }}
@@ -56,7 +56,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.sm,
             color: colors.text.muted,
-            textAlign: 'center',
+            textAlign: "center",
             margin: 0,
           }}
         >
@@ -70,9 +70,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
     <div style={{ padding: spacing.lg }}>
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: spacing.md,
         }}
       >
@@ -83,17 +83,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
             color: colors.text.muted,
           }}
         >
-          {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+          {results.length} result{results.length !== 1 ? "s" : ""} for "{query}"
         </span>
         <button
           onClick={onClearSearch}
           style={{
-            background: 'none',
-            border: 'none',
+            background: "none",
+            border: "none",
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.sm,
             color: colors.brand.primary,
-            cursor: 'pointer',
+            cursor: "pointer",
             padding: 0,
           }}
         >
@@ -101,21 +101,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}>
         {results.map((result) => (
           <div
             key={`${result.collectionId}-${result.articleId}`}
             onClick={() => handleResultClick(result)}
             className="search-result-item"
             style={{
-              display: 'flex',
-              alignItems: 'flex-start',
+              display: "flex",
+              alignItems: "flex-start",
               gap: spacing.md,
               padding: spacing.md,
               backgroundColor: colors.background.white,
               border: border.default,
               borderRadius: border.radius,
-              cursor: 'pointer',
+              cursor: "pointer",
             }}
           >
             <FileText
@@ -127,7 +127,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
             <div style={{ flex: 1, minWidth: 0 }}>
               <span
                 style={{
-                  display: 'block',
+                  display: "block",
                   fontFamily: typography.fontFamily.sans,
                   fontSize: typography.fontSize.base,
                   fontWeight: typography.fontWeight.medium,
@@ -139,21 +139,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onNavigate, onClea
               </span>
               <span
                 style={{
-                  display: 'block',
+                  display: "block",
                   fontFamily: typography.fontFamily.sans,
                   fontSize: typography.fontSize.sm,
                   color: colors.text.secondary,
                   lineHeight: typography.lineHeight.normal,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {result.articleDescription}
               </span>
               <span
                 style={{
-                  display: 'block',
+                  display: "block",
                   fontFamily: typography.fontFamily.sans,
                   fontSize: typography.fontSize.xs,
                   color: colors.text.muted,

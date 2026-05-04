@@ -1,21 +1,21 @@
-import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } from '@mui/material';
-import { AssistantRuntimeProvider } from '@assistant-ui/react';
-import { useAdvisorRuntime } from './useAdvisorRuntime';
-import { CustomThread } from './CustomThread';
-import { AdvisorHeader } from './AdvisorHeader';
-import { AdvisorDomain } from './advisorConfig';
-import { useAdvisorConversationSafe } from '../../../application/contexts/AdvisorConversation.context';
-import { useEffect, useRef, useMemo, memo } from 'react';
-import { useAuth } from '../../../application/hooks/useAuth';
-import { Settings } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } from "@mui/material";
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
+import { useAdvisorRuntime } from "./useAdvisorRuntime";
+import { CustomThread } from "./CustomThread";
+import { AdvisorHeader } from "./AdvisorHeader";
+import { AdvisorDomain } from "./advisorConfig";
+import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
+import { useEffect, useRef, useMemo, memo } from "react";
+import { useAuth } from "../../../application/hooks/useAuth";
+import { Settings } from "lucide-react";
+import { useNavigate } from "react-router";
 
 // Extracted style functions for performance (created once per theme)
 const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
   border: 1,
   borderColor: theme.palette.border?.light ?? theme.palette.divider,
   borderRadius: 3,
@@ -24,9 +24,9 @@ const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
 
 const createCenteredBoxStyles = (theme: Theme): SxProps<Theme> => ({
   flex: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
 });
 
@@ -54,7 +54,7 @@ const AdvisorChatInner = ({
     <Box
       sx={{
         flex: 1,
-        overflow: 'hidden',
+        overflow: "hidden",
         bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
       }}
     >
@@ -66,8 +66,8 @@ const AdvisorChatInner = ({
         <Box
           sx={{
             padding: theme.spacing(3),
-            textAlign: 'center',
-            color: 'text.secondary',
+            textAlign: "center",
+            color: "text.secondary",
           }}
         >
           <Typography variant="body2" sx={{ fontSize: theme.typography.body2.fontSize }}>
@@ -91,7 +91,7 @@ const AdvisorChat = ({
   const conversationContext = useAdvisorConversationSafe();
   const loadAttemptedRef = useRef<Set<string>>(new Set());
 
-  const isAdmin = userRoleName?.toLowerCase() === 'admin';
+  const isAdmin = userRoleName?.toLowerCase() === "admin";
 
   // Memoize styles to prevent recreation on each render
   const paperStyles = useMemo(() => createPaperStyles(theme), [theme]);
@@ -109,29 +109,31 @@ const AdvisorChat = ({
   }, [conversationContext, pageContext]);
 
   // Derive readiness from context state — no local isReady state to go stale
-  const isConversationReady = !conversationContext || !pageContext || conversationContext.isLoaded(pageContext);
+  const isConversationReady =
+    !conversationContext || !pageContext || conversationContext.isLoaded(pageContext);
 
   // Active conversation id is used as part of the inner component key so
   // switching conversations or starting a new one forces a clean remount
   // of the assistant-ui runtime with fresh initial messages.
-  const activeId = conversationContext && pageContext ? conversationContext.getActiveId(pageContext) : null;
+  const activeId =
+    conversationContext && pageContext ? conversationContext.getActiveId(pageContext) : null;
 
   // Show message when no LLM keys are configured (only after loading completes)
   if (!isLoadingLLMKeys && hasLLMKeys === false) {
     return (
       <Paper elevation={0} sx={paperStyles}>
         <Box sx={centeredBoxStyles}>
-          <Box sx={{ textAlign: 'center', maxWidth: 320, px: 3 }}>
+          <Box sx={{ textAlign: "center", maxWidth: 320, px: 3 }}>
             <Box
               sx={{
                 width: 48,
                 height: 48,
-                borderRadius: '50%',
+                borderRadius: "50%",
                 bgcolor: theme.palette.background.fill ?? theme.palette.grey[100],
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
               }}
             >
               <Settings size={24} color={theme.palette.text.secondary} />
@@ -140,7 +142,7 @@ const AdvisorChat = ({
               variant="subtitle1"
               sx={{
                 fontWeight: 600,
-                color: 'text.primary',
+                color: "text.primary",
                 mb: 1,
               }}
             >
@@ -150,31 +152,31 @@ const AdvisorChat = ({
               variant="body2"
               sx={{
                 fontSize: theme.typography.body2.fontSize,
-                color: 'text.secondary',
+                color: "text.secondary",
                 lineHeight: 1.5,
               }}
             >
               {isAdmin ? (
                 <>
-                  To use the AI advisor, you need to configure an LLM API key.{' '}
+                  To use the AI advisor, you need to configure an LLM API key.{" "}
                   <Box
                     component="span"
-                    onClick={() => navigate('/settings/apikeys')}
+                    onClick={() => navigate("/settings/apikeys")}
                     sx={{
-                      color: 'primary.main',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      '&:hover': {
-                        textDecoration: 'none',
+                      color: "primary.main",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      "&:hover": {
+                        textDecoration: "none",
                       },
                     }}
                   >
                     Go to settings
-                  </Box>{' '}
+                  </Box>{" "}
                   to add your API key.
                 </>
               ) : (
-                'The AI advisor requires an LLM API key to be configured. Please contact your administrator to set this up.'
+                "The AI advisor requires an LLM API key to be configured. Please contact your administrator to set this up."
               )}
             </Typography>
           </Box>
@@ -189,9 +191,12 @@ const AdvisorChat = ({
     return (
       <Paper elevation={0} sx={paperStyles}>
         <Box sx={centeredBoxStyles}>
-          <Box sx={{ textAlign: 'center' }}>
-            <CircularProgress size={24} sx={{ color: 'primary.main', mb: 1 }} />
-            <Typography variant="body2" sx={{ fontSize: theme.typography.body2.fontSize, color: 'text.secondary' }}>
+          <Box sx={{ textAlign: "center" }}>
+            <CircularProgress size={24} sx={{ color: "primary.main", mb: 1 }} />
+            <Typography
+              variant="body2"
+              sx={{ fontSize: theme.typography.body2.fontSize, color: "text.secondary" }}
+            >
               Loading conversation...
             </Typography>
           </Box>
@@ -203,7 +208,7 @@ const AdvisorChat = ({
   // Only render the inner component (with runtime) after everything is ready.
   // The key includes `activeId` so that switching between past conversations
   // or starting a new chat remounts the runtime with fresh initial messages.
-  const innerKey = `${pageContext ?? 'none'}:${activeId ?? 'new'}`;
+  const innerKey = `${pageContext ?? "none"}:${activeId ?? "new"}`;
 
   return (
     <Paper elevation={0} sx={paperStyles}>

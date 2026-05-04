@@ -47,7 +47,7 @@ class ChunkErrorBoundary extends Component<Props, State> {
       "ChunkErrorBoundary: a lazy-loaded module failed to load. " +
         "This usually means a new version has been deployed.",
       error,
-      info
+      info,
     );
   }
 
@@ -69,8 +69,8 @@ class ChunkErrorBoundary extends Component<Props, State> {
               A new version is available
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              The application has been updated since you last loaded the page.
-              Please reload to get the latest version.
+              The application has been updated since you last loaded the page. Please reload to get
+              the latest version.
             </Typography>
             <Button
               variant="contained"

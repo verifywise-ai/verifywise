@@ -81,60 +81,58 @@ const ISO42001Annex = ({
   const [lastProcessedLink, setLastProcessedLink] = useState<string | null>(null);
 
   // Shared function to filter controls based on all active filters
-  const filterControls = useCallback((controls: any[]) => {
-    let filtered = controls;
+  const filterControls = useCallback(
+    (controls: any[]) => {
+      let filtered = controls;
 
-    // Apply status filter
-    if (statusFilter && statusFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) =>
-          control.status?.toLowerCase() === statusFilter.toLowerCase(),
-      );
-    }
+      // Apply status filter
+      if (statusFilter && statusFilter !== "") {
+        filtered = filtered.filter(
+          (control: any) => control.status?.toLowerCase() === statusFilter.toLowerCase(),
+        );
+      }
 
-    // Apply applicability filter
-    if (
-      applicabilityFilter &&
-      applicabilityFilter !== "all" &&
-      applicabilityFilter !== ""
-    ) {
-      const isApplicable = applicabilityFilter === "true";
-      filtered = filtered.filter(
-        (control: any) => Boolean(control.is_applicable) === isApplicable,
-      );
-    }
+      // Apply applicability filter
+      if (applicabilityFilter && applicabilityFilter !== "all" && applicabilityFilter !== "") {
+        const isApplicable = applicabilityFilter === "true";
+        filtered = filtered.filter(
+          (control: any) => Boolean(control.is_applicable) === isApplicable,
+        );
+      }
 
-    // Apply owner filter
-    if (ownerFilter && ownerFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) => control.owner?.toString() === ownerFilter,
-      );
-    }
+      // Apply owner filter
+      if (ownerFilter && ownerFilter !== "") {
+        filtered = filtered.filter((control: any) => control.owner?.toString() === ownerFilter);
+      }
 
-    // Apply reviewer filter
-    if (reviewerFilter && reviewerFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) => control.reviewer?.toString() === reviewerFilter,
-      );
-    }
+      // Apply reviewer filter
+      if (reviewerFilter && reviewerFilter !== "") {
+        filtered = filtered.filter(
+          (control: any) => control.reviewer?.toString() === reviewerFilter,
+        );
+      }
 
-    // Apply due date filter
-    if (dueDateFilter && dueDateFilter !== "") {
-      filtered = filtered.filter((control: any) => {
-        if (control.due_date) {
-          const dueDate = new Date(control.due_date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const filterDays = parseInt(dueDateFilter);
-          return daysUntilDue >= 0 && daysUntilDue <= filterDays;
-        }
-        return false;
-      });
-    }
+      // Apply due date filter
+      if (dueDateFilter && dueDateFilter !== "") {
+        filtered = filtered.filter((control: any) => {
+          if (control.due_date) {
+            const dueDate = new Date(control.due_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const daysUntilDue = Math.ceil(
+              (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            const filterDays = parseInt(dueDateFilter);
+            return daysUntilDue >= 0 && daysUntilDue <= filterDays;
+          }
+          return false;
+        });
+      }
 
-    return filtered;
-  }, [statusFilter, applicabilityFilter, ownerFilter, reviewerFilter, dueDateFilter]);
+      return filtered;
+    },
+    [statusFilter, applicabilityFilter, ownerFilter, reviewerFilter, dueDateFilter],
+  );
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
@@ -198,13 +196,12 @@ const ISO42001Annex = ({
     }
   }, [annexId, annexes, annexControlId, lastProcessedLink]);
 
-
   const filteredAnnexes = useMemo(() => {
     if (!searchTerm.trim()) {
       return annexes;
     }
     return annexes.filter((annex: any) =>
-      annex.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      annex.title?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [annexes, searchTerm]);
 
@@ -231,16 +228,10 @@ const ISO42001Annex = ({
     }
   };
 
-  const handleSaveSuccess = async (
-    success: boolean,
-    message?: string,
-    savedControlId?: number,
-  ) => {
+  const handleSaveSuccess = async (success: boolean, message?: string, savedControlId?: number) => {
     handleAlert({
       variant: success ? "success" : "error",
-      body:
-        message ||
-        (success ? "Changes saved successfully" : "Failed to save changes"),
+      body: message || (success ? "Changes saved successfully" : "Failed to save changes"),
       setAlert,
     });
 
@@ -252,10 +243,7 @@ const ISO42001Annex = ({
     }
   };
 
-  const handleStatusChange = async (
-    control: any,
-    newStatus: string,
-  ): Promise<boolean> => {
+  const handleStatusChange = async (control: any, newStatus: string): Promise<boolean> => {
     try {
       const success = await updateISO42001AnnexStatus({
         id: control.id,
@@ -324,9 +312,7 @@ const ISO42001Annex = ({
               </Stack>
               <StatusDropdown
                 currentStatus={control.status || "Not started"}
-                onStatusChange={(newStatus) =>
-                  handleStatusChange(control, newStatus)
-                }
+                onStatusChange={(newStatus) => handleStatusChange(control, newStatus)}
                 size="small"
                 allowedRoles={allowedRoles.frameworks.edit}
                 userRole={userRoleName}
@@ -334,9 +320,7 @@ const ISO42001Annex = ({
             </Stack>
           ))
         ) : (
-          <Stack sx={styles.noSubClausesContainer}>
-            No matching categories
-          </Stack>
+          <Stack sx={styles.noSubClausesContainer}>No matching categories</Stack>
         )}
       </AccordionDetails>
     );
@@ -344,12 +328,8 @@ const ISO42001Annex = ({
 
   return (
     <Stack className="iso-42001-annexes">
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
-      <Typography sx={{ ...styles.title, mt: 4 }}>
-        {"Information Security Controls"}
-      </Typography>
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
+      <Typography sx={{ ...styles.title, mt: 4 }}>{"Information Security Controls"}</Typography>
       <TabFilterBar
         statusFilter={statusFilter}
         onStatusChange={onStatusChange}
@@ -376,9 +356,10 @@ const ISO42001Annex = ({
       {filteredAnnexes &&
         filteredAnnexes.map((annex: any) => {
           const count = filteredControlsCountMemo[annex.id ?? 0];
-          const chipColor = count !== undefined && count > 0
-            ? { bg: "#E6F4EA", color: "status.success.text" }
-            : { bg: "#FFF8E1", color: "#795548" };
+          const chipColor =
+            count !== undefined && count > 0
+              ? { bg: "#E6F4EA", color: "status.success.text" }
+              : { bg: "#FFF8E1", color: "#795548" };
           return (
             <Stack key={annex.id} sx={styles.container}>
               <Accordion
@@ -388,22 +369,26 @@ const ISO42001Annex = ({
                 onChange={handleAccordionChange(annex.id ?? 0)}
               >
                 <AccordionSummary sx={styles.accordionSummary}>
-                  <RightArrowBlack size={16}
+                  <RightArrowBlack
+                    size={16}
                     style={styles.expandIcon(expanded === annex.id) as React.CSSProperties}
-                     />
+                  />
                   <Typography sx={{ paddingLeft: "2.5px", fontSize: 13 }}>
                     {annex.arrangement} {annex.title}
                   </Typography>
                   {hasActiveFilters && count !== undefined && (
-                    <Box component="span" sx={{
-                      backgroundColor: chipColor.bg,
-                      color: chipColor.color,
-                      padding: "4px 8px",
-                      borderRadius: "2px",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      ml: 4,
-                    }}>
+                    <Box
+                      component="span"
+                      sx={{
+                        backgroundColor: chipColor.bg,
+                        color: chipColor.color,
+                        padding: "4px 8px",
+                        borderRadius: "2px",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        ml: 4,
+                      }}
+                    >
                       {count} filtered
                     </Box>
                   )}

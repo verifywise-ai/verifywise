@@ -10,14 +10,7 @@ import {
 } from "@mui/material";
 import { VWLink } from "../../../components/Link";
 import { ChevronDown } from "lucide-react";
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useEffect,
-  useRef,
-  useContext,
-} from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef, useContext } from "react";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import dayjs, { Dayjs } from "dayjs";
@@ -147,11 +140,7 @@ const initialState: FormValues = {
 };
 
 const ProjectSettings = React.memo(
-  ({
-    triggerRefresh = () => {},
-  }: {
-    triggerRefresh?: (isUpdate: boolean) => void;
-  }) => {
+  ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
     const { userRoleName, userId } = useAuth();
     const [searchParams] = useSearchParams();
@@ -169,8 +158,7 @@ const ProjectSettings = React.memo(
 
     // Check if project has pending approval
     const hasPendingApproval = project && (project as any).has_pending_approval;
-    const [isFrameworkRemoveModalOpen, setIsFrameworkRemoveModalOpen] =
-      useState(false);
+    const [isFrameworkRemoveModalOpen, setIsFrameworkRemoveModalOpen] = useState(false);
     const [frameworkToRemove, setFrameworkToRemove] = useState<{
       _id: number;
       name: string;
@@ -185,10 +173,8 @@ const ProjectSettings = React.memo(
       visible: boolean;
     } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isFrameworkOperationInProgress, setIsFrameworkOperationInProgress] =
-      useState(false);
-    const [showCustomizableSkeleton, setShowCustomizableSkeleton] =
-      useState<boolean>(false);
+    const [isFrameworkOperationInProgress, setIsFrameworkOperationInProgress] = useState(false);
+    const [showCustomizableSkeleton, setShowCustomizableSkeleton] = useState<boolean>(false);
     const initialValuesRef = useRef<FormValues>({ ...initialState });
     const isModified = useMemo(() => {
       if (!initialValuesRef.current.projectTitle) return false;
@@ -199,13 +185,10 @@ const ProjectSettings = React.memo(
         values.goal !== initialValuesRef.current.goal ||
         values.status !== initialValuesRef.current.status ||
         values.owner !== initialValuesRef.current.owner ||
-        JSON.stringify(values.members) !==
-          JSON.stringify(initialValuesRef.current.members) ||
+        JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
         values.startDate !== initialValuesRef.current.startDate ||
-        values.riskClassification !==
-          initialValuesRef.current.riskClassification ||
-        values.typeOfHighRiskRole !==
-          initialValuesRef.current.typeOfHighRiskRole ||
+        values.riskClassification !== initialValuesRef.current.riskClassification ||
+        values.typeOfHighRiskRole !== initialValuesRef.current.typeOfHighRiskRole ||
         values.geography !== initialValuesRef.current.geography ||
         values.targetIndustry !== initialValuesRef.current.targetIndustry ||
         values.description !== initialValuesRef.current.description;
@@ -214,9 +197,7 @@ const ProjectSettings = React.memo(
       const frameworksModified =
         !isFrameworkOperationInProgress &&
         JSON.stringify(values.monitoredRegulationsAndStandards) !==
-          JSON.stringify(
-            initialValuesRef.current.monitoredRegulationsAndStandards,
-          );
+          JSON.stringify(initialValuesRef.current.monitoredRegulationsAndStandards);
 
       return basicFieldsModified || frameworksModified;
     }, [values, isFrameworkOperationInProgress]);
@@ -226,17 +207,10 @@ const ProjectSettings = React.memo(
       if (isFrameworkOperationInProgress) return true;
       if (!isModified) return true;
 
-      const hasErrors = Object.values(errors).some(
-        (error) => error && error.length > 0,
-      );
+      const hasErrors = Object.values(errors).some((error) => error && error.length > 0);
 
       return hasErrors;
-    }, [
-      isModified,
-      errors,
-      showCustomizableSkeleton,
-      isFrameworkOperationInProgress,
-    ]);
+    }, [isModified, errors, showCustomizableSkeleton, isFrameworkOperationInProgress]);
 
     const [removedFramework, setRemovedFramework] = useState<boolean>(false);
 
@@ -249,10 +223,9 @@ const ProjectSettings = React.memo(
 
     const { users } = useUsers();
 
-    const { filteredFrameworks: monitoredFrameworks, allFrameworks } =
-      useFrameworks({
-        listOfFrameworks: project?.framework || [],
-      });
+    const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
+      listOfFrameworks: project?.framework || [],
+    });
 
     // Filter frameworks to only show non-organizational ones
     const nonOrganizationalFrameworks = useMemo(
@@ -262,20 +235,20 @@ const ProjectSettings = React.memo(
     useEffect(() => {
       setShowCustomizableSkeleton(true);
       if (project) {
-        const frameworksForProject = monitoredFrameworks.length > 0 ? monitoredFrameworks.map(
-          (fw: Framework) => {
-            const projectFramework = project.framework?.find(
-              (pf) => Number(pf.framework_id) === Number(fw.id),
-            );
-            return {
-              _id: Number(fw.id),
-              name: fw.name,
-              project_framework_id:
-                projectFramework?.project_framework_id || Number(fw.id),
-              framework_id: Number(fw.id),
-            };
-          },
-        ) : [];
+        const frameworksForProject =
+          monitoredFrameworks.length > 0
+            ? monitoredFrameworks.map((fw: Framework) => {
+                const projectFramework = project.framework?.find(
+                  (pf) => Number(pf.framework_id) === Number(fw.id),
+                );
+                return {
+                  _id: Number(fw.id),
+                  name: fw.name,
+                  project_framework_id: projectFramework?.project_framework_id || Number(fw.id),
+                  framework_id: Number(fw.id),
+                };
+              })
+            : [];
 
         const returnedData: FormValues = {
           ...initialState,
@@ -283,26 +256,20 @@ const ProjectSettings = React.memo(
           goal: project.goal ?? "",
           status:
             projectStatusItems.find(
-              (item) =>
-                item.name.toLowerCase() ===
-                (project.status || "Not started").toLowerCase(),
+              (item) => item.name.toLowerCase() === (project.status || "Not started").toLowerCase(),
             )?._id || 1,
           owner: project.owner ?? 0,
-          startDate: project.start_date
-            ? dayjs(project.start_date).toISOString()
-            : "",
+          startDate: project.start_date ? dayjs(project.start_date).toISOString() : "",
           members: project.members ? project.members.map(Number) : [],
           riskClassification:
             riskClassificationItems.find(
               (item) =>
-                item.name.toLowerCase() ===
-                (project.ai_risk_classification || "").toLowerCase(),
+                item.name.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
             )?._id || 0,
           typeOfHighRiskRole:
             highRiskRoleItems.find(
               (item) =>
-                item.name.toLowerCase() ===
-                (project.type_of_high_risk_role || "").toLowerCase(),
+                item.name.toLowerCase() === (project.type_of_high_risk_role || "").toLowerCase(),
             )?._id || 0,
           geography: project.geography ?? 1,
           targetIndustry: project.target_industry ?? "",
@@ -325,31 +292,30 @@ const ProjectSettings = React.memo(
     }, []);
 
     const handleOnSelectChange = useCallback(
-      (prop: keyof FormValues) =>
-        (event: SelectChangeEvent<string | number>) => {
-          const selectedValue = Number(event.target.value);
+      (prop: keyof FormValues) => (event: SelectChangeEvent<string | number>) => {
+        const selectedValue = Number(event.target.value);
 
-          if (prop === "owner") {
-            if (values.members.includes(selectedValue)) {
-              let oldOwner = null;
-              let newOwnerId = null;
-              for (const user of users) {
-                if (user.id === selectedValue) {
-                  newOwnerId = user;
-                }
-                if (user.id === values.owner) {
-                  oldOwner = user;
-                }
+        if (prop === "owner") {
+          if (values.members.includes(selectedValue)) {
+            let oldOwner = null;
+            let newOwnerId = null;
+            for (const user of users) {
+              if (user.id === selectedValue) {
+                newOwnerId = user;
               }
-              setRemovedOwner(oldOwner);
-              setPendingOwnerId(newOwnerId);
-              setIsChangeOwnerModalOpen(true);
-              return;
+              if (user.id === values.owner) {
+                oldOwner = user;
+              }
             }
+            setRemovedOwner(oldOwner);
+            setPendingOwnerId(newOwnerId);
+            setIsChangeOwnerModalOpen(true);
+            return;
           }
-          setValues({ ...values, [prop]: selectedValue });
-          setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
-        },
+        }
+        setValues({ ...values, [prop]: selectedValue });
+        setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
+      },
       [users, values],
     );
 
@@ -358,9 +324,7 @@ const ProjectSettings = React.memo(
       setValues((prevValues) => ({
         ...prevValues,
         owner: pendingOwnerId.id,
-        members: values.members.filter(
-          (member) => member !== pendingOwnerId.id,
-        ),
+        members: values.members.filter((member) => member !== pendingOwnerId.id),
       }));
       setErrors((prevErrors) => ({ ...prevErrors, owner: "" }));
       setIsChangeOwnerModalOpen(false);
@@ -373,131 +337,119 @@ const ProjectSettings = React.memo(
     }, []);
 
     const handleOnTextFieldChange = useCallback(
-      (prop: keyof FormValues) =>
-        (event: React.ChangeEvent<HTMLInputElement>) => {
-          setValues((prevValues) => ({
-            ...prevValues,
-            [prop]: event.target.value,
-          }));
-          setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
-        },
+      (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+        setValues((prevValues) => ({
+          ...prevValues,
+          [prop]: event.target.value,
+        }));
+        setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
+      },
       [],
     );
 
     const handleOnMultiSelect = useCallback(
-      (prop: keyof FormValues) =>
-        async (_event: React.SyntheticEvent, newValue: any[]) => {
-          if (prop === "monitoredRegulationsAndStandards") {
-            // If removing a framework (newValue has fewer items than current value)
-            if (
-              newValue.length < values.monitoredRegulationsAndStandards.length
-            ) {
-              const removedFramework =
-                values.monitoredRegulationsAndStandards.find(
-                  (fw) => !newValue.some((nv) => nv._id === fw._id),
-                );
-              setRemovedFramework(prop === "monitoredRegulationsAndStandards");
-              if (removedFramework) {
-                setIsFrameworkOperationInProgress(true);
-                setFrameworkToRemove(removedFramework);
-                setIsFrameworkRemoveModalOpen(
-                  values.monitoredRegulationsAndStandards.length > 1,
-                );
-                // Don't update values state yet
-                return;
-              }
+      (prop: keyof FormValues) => async (_event: React.SyntheticEvent, newValue: any[]) => {
+        if (prop === "monitoredRegulationsAndStandards") {
+          // If removing a framework (newValue has fewer items than current value)
+          if (newValue.length < values.monitoredRegulationsAndStandards.length) {
+            const removedFramework = values.monitoredRegulationsAndStandards.find(
+              (fw) => !newValue.some((nv) => nv._id === fw._id),
+            );
+            setRemovedFramework(prop === "monitoredRegulationsAndStandards");
+            if (removedFramework) {
+              setIsFrameworkOperationInProgress(true);
+              setFrameworkToRemove(removedFramework);
+              setIsFrameworkRemoveModalOpen(values.monitoredRegulationsAndStandards.length > 1);
+              // Don't update values state yet
+              return;
             }
-            // If adding a framework
-            else if (
-              newValue.length > values.monitoredRegulationsAndStandards.length
-            ) {
-              const addedFramework = newValue.find(
-                (nv) =>
-                  !values.monitoredRegulationsAndStandards.some(
-                    (fw) => fw._id === nv._id,
-                  ),
-              );
+          }
+          // If adding a framework
+          else if (newValue.length > values.monitoredRegulationsAndStandards.length) {
+            const addedFramework = newValue.find(
+              (nv) => !values.monitoredRegulationsAndStandards.some((fw) => fw._id === nv._id),
+            );
 
-              if (addedFramework) {
-                setIsFrameworkOperationInProgress(true);
-                setIsLoading(true);
-                try {
-                  const response = await assignFrameworkToProject({
-                    frameworkId: addedFramework._id,
-                    projectId: projectId,
+            if (addedFramework) {
+              setIsFrameworkOperationInProgress(true);
+              setIsLoading(true);
+              try {
+                const response = await assignFrameworkToProject({
+                  frameworkId: addedFramework._id,
+                  projectId: projectId,
+                });
+
+                if (response.status === 200 || response.status === 201) {
+                  // Update local state only after successful API call
+                  setValues((prevValues) => ({
+                    ...prevValues,
+                    [prop]: newValue,
+                  }));
+                  // Update initialValuesRef to prevent isModified from becoming true
+                  initialValuesRef.current = {
+                    ...initialValuesRef.current,
+                    [prop]: newValue,
+                  };
+
+                  setAlert({
+                    variant: "success",
+                    body: "Framework added successfully",
+                    isToast: true,
+                    visible: true,
                   });
 
-                  if (response.status === 200 || response.status === 201) {
-                    // Update local state only after successful API call
-                    setValues((prevValues) => ({
-                      ...prevValues,
-                      [prop]: newValue,
-                    }));
-                    // Update initialValuesRef to prevent isModified from becoming true
-                    initialValuesRef.current = {
-                      ...initialValuesRef.current,
-                      [prop]: newValue,
-                    };
-
-                    setAlert({
-                      variant: "success",
-                      body: "Framework added successfully",
-                      isToast: true,
-                      visible: true,
-                    });
-
-                    // Trigger refresh after successful framework addition
-                    triggerRefresh(true);
-                  } else {
-                    setAlert({
-                      variant: "error",
-                      body: "Failed to add framework. Please try again.",
-                      isToast: true,
-                      visible: true,
-                    });
-                    return;
-                  }
-                } catch (_error) {
-                  logEngine({
-                    type: "error",
-                    message: "An error occurred while adding the framework.",
-                  });
+                  // Trigger refresh after successful framework addition
+                  triggerRefresh(true);
+                } else {
                   setAlert({
                     variant: "error",
-                    body: "An unexpected error occurred. Please try again.",
+                    body: "Failed to add framework. Please try again.",
                     isToast: true,
                     visible: true,
                   });
                   return;
-                } finally {
-                  setIsLoading(false);
-                  setIsFrameworkOperationInProgress(false);
-                  setTimeout(() => {
-                    setAlert(null);
-                  }, 3000);
                 }
+              } catch (_error) {
+                logEngine({
+                  type: "error",
+                  message: "An error occurred while adding the framework.",
+                });
+                setAlert({
+                  variant: "error",
+                  body: "An unexpected error occurred. Please try again.",
+                  isToast: true,
+                  visible: true,
+                });
+                return;
+              } finally {
+                setIsLoading(false);
+                setIsFrameworkOperationInProgress(false);
+                setTimeout(() => {
+                  setAlert(null);
+                }, 3000);
               }
             }
-            // If no change in length (e.g., reordering), just update the state
-            else {
-              setValues((prevValues) => ({
-                ...prevValues,
-                [prop]: newValue,
-              }));
-              // Update initialValuesRef to prevent isModified from becoming true
-              initialValuesRef.current = {
-                ...initialValuesRef.current,
-                [prop]: newValue,
-              };
-            }
-          } else {
+          }
+          // If no change in length (e.g., reordering), just update the state
+          else {
             setValues((prevValues) => ({
               ...prevValues,
-              [prop]: newValue.map((user) => user.id),
+              [prop]: newValue,
             }));
-            setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
+            // Update initialValuesRef to prevent isModified from becoming true
+            initialValuesRef.current = {
+              ...initialValuesRef.current,
+              [prop]: newValue,
+            };
           }
-        },
+        } else {
+          setValues((prevValues) => ({
+            ...prevValues,
+            [prop]: newValue.map((user) => user.id),
+          }));
+          setErrors((prevErrors) => ({ ...prevErrors, [prop]: "" }));
+        }
+      },
       [values.monitoredRegulationsAndStandards, projectId, triggerRefresh],
     );
 
@@ -570,12 +522,7 @@ const ProjectSettings = React.memo(
           setAlert(null);
         }, 3000);
       }
-    }, [
-      frameworkToRemove,
-      projectId,
-      values.monitoredRegulationsAndStandards,
-      triggerRefresh,
-    ]);
+    }, [frameworkToRemove, projectId, values.monitoredRegulationsAndStandards, triggerRefresh]);
 
     const handleFrameworkRemoveCancel = useCallback(() => {
       setIsFrameworkRemoveModalOpen(false);
@@ -587,12 +534,7 @@ const ProjectSettings = React.memo(
     const validateForm = useCallback((): boolean => {
       const newErrors: FormErrors = {};
 
-      const projectTitle = checkStringValidation(
-        "Use case title",
-        values.projectTitle,
-        1,
-        64,
-      );
+      const projectTitle = checkStringValidation("Use case title", values.projectTitle, 1, 64);
       if (!projectTitle.accepted) {
         newErrors.projectTitle = projectTitle.message;
       }
@@ -604,11 +546,7 @@ const ProjectSettings = React.memo(
       if (!status.accepted) {
         newErrors.status = status.message;
       }
-      const startDate = checkStringValidation(
-        "Start date",
-        values.startDate,
-        1,
-      );
+      const startDate = checkStringValidation("Start date", values.startDate, 1);
       if (!startDate.accepted) {
         newErrors.startDate = startDate.message;
       }
@@ -625,8 +563,7 @@ const ProjectSettings = React.memo(
           values.monitoredRegulationsAndStandards.length,
         );
         if (!monitoredRegulationsAndStandards.accepted) {
-          newErrors.monitoredRegulationsAndStandards =
-            monitoredRegulationsAndStandards.message;
+          newErrors.monitoredRegulationsAndStandards = monitoredRegulationsAndStandards.message;
         }
       }
 
@@ -671,22 +608,15 @@ const ProjectSettings = React.memo(
     // saves the project
     const handleSaveConfirm = useCallback(async () => {
       const selectedRiskClass =
-        riskClassificationItems.find(
-          (item) => item._id === values.riskClassification,
-        )?.name || "";
+        riskClassificationItems.find((item) => item._id === values.riskClassification)?.name || "";
       const selectedHighRiskRole =
-        highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)
-          ?.name || "";
+        highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || "";
       const selectedStatus =
-        projectStatusItems.find((item) => item._id === values.status)?.name ||
-        "";
-      const selectedRegulations = values.monitoredRegulationsAndStandards.map(
-        (reg) => reg.name,
-      );
+        projectStatusItems.find((item) => item._id === values.status)?.name || "";
+      const selectedRegulations = values.monitoredRegulationsAndStandards.map((reg) => reg.name);
 
-      const selectedGeography = geographyItems.find(
-        (item) => item._id === values.geography
-      )?._id || "";
+      const selectedGeography =
+        geographyItems.find((item) => item._id === values.geography)?._id || "";
 
       await updateProject({
         id: Number(projectId),
@@ -802,11 +732,7 @@ const ProjectSettings = React.memo(
           />
         )}
         {showCustomizableSkeleton ? (
-          <CustomizableSkeleton
-            variant="rectangular"
-            width="50%"
-            height={200}
-          />
+          <CustomizableSkeleton variant="rectangular" width="50%" height={200} />
         ) : (
           <Box sx={styles.root}>
             <Stack component="form" onSubmit={handleSubmit} rowGap="15px">
@@ -825,12 +751,8 @@ const ProjectSettings = React.memo(
                 >
                   {/* Use case title Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Use case title
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", mt: 0.5 }}
-                    >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case title</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
                       A concise name for your AI use case
                     </Typography>
                   </Box>
@@ -847,12 +769,8 @@ const ProjectSettings = React.memo(
 
                   {/* Description Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Description
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", mt: 0.5 }}
-                    >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Description</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
                       Overview of this use case
                     </Typography>
                   </Box>
@@ -871,12 +789,8 @@ const ProjectSettings = React.memo(
 
                   {/* Goal Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Goal
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", mt: 0.5 }}
-                    >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Goal</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
                       What you aim to achieve
                     </Typography>
                   </Box>
@@ -896,12 +810,8 @@ const ProjectSettings = React.memo(
 
                   {/* Target industry Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Target industry
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", mt: 0.5 }}
-                    >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Target industry</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
                       Industry sector for this use case
                     </Typography>
                   </Box>
@@ -935,9 +845,7 @@ const ProjectSettings = React.memo(
                 >
                   {/* Owner Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Owner
-                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Owner</Typography>
                   </Box>
                   <Select
                     id="owner"
@@ -990,9 +898,7 @@ const ProjectSettings = React.memo(
 
                   {/* Start date Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Start date
-                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start date</Typography>
                   </Box>
                   <DatePicker
                     label=""
@@ -1005,9 +911,7 @@ const ProjectSettings = React.memo(
 
                   {/* Geography Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Geography
-                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Geography</Typography>
                   </Box>
                   <Select
                     id="geography-type-input"
@@ -1020,12 +924,8 @@ const ProjectSettings = React.memo(
 
                   {/* Use case status Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Use case status
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", mt: 0.5 }}
-                    >
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case status</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
                       Development stage of this use case
                     </Typography>
                   </Box>
@@ -1066,15 +966,17 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           Applicable regulations *
                         </Typography>
-                        <Typography
-                          sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-                        >
+                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                           Add all monitored regulations and standards of the use case.
-                        </Typography> 
+                        </Typography>
                       </Box>
                       <Stack>
                         <Tooltip
-                          title={hasPendingApproval ? "This field is unavailable because the use case has a pending approval request. You can view Overview and edit other Settings." : ""}
+                          title={
+                            hasPendingApproval
+                              ? "This field is unavailable because the use case has a pending approval request. You can view Overview and edit other Settings."
+                              : ""
+                          }
                           arrow
                           placement="top"
                           PopperProps={{
@@ -1114,22 +1016,15 @@ const ProjectSettings = React.memo(
                                 _id: Number(fw.id),
                                 name: fw.name,
                               }))}
-                              onChange={handleOnMultiSelect(
-                                "monitoredRegulationsAndStandards",
-                              )}
-                              getOptionLabel={(item: { _id: number; name: string }) =>
-                                item.name
-                              }
+                              onChange={handleOnMultiSelect("monitoredRegulationsAndStandards")}
+                              getOptionLabel={(item: { _id: number; name: string }) => item.name}
                               noOptionsText={
                                 values.monitoredRegulationsAndStandards.length ===
                                 nonOrganizationalFrameworks.length
                                   ? "All regulations selected"
                                   : "No options"
                               }
-                              renderOption={(
-                                props: any,
-                                option: { _id: number; name: string },
-                              ) => {
+                              renderOption={(props: any, option: { _id: number; name: string }) => {
                                 const isComingSoon = option.name.includes("coming soon");
                                 return (
                                   <Box
@@ -1139,18 +1034,14 @@ const ProjectSettings = React.memo(
                                       opacity: isComingSoon ? 0.5 : 1,
                                       cursor: isComingSoon ? "not-allowed" : "pointer",
                                       "&:hover": {
-                                        backgroundColor: isComingSoon
-                                          ? "transparent"
-                                          : undefined,
+                                        backgroundColor: isComingSoon ? "transparent" : undefined,
                                       },
                                     }}
                                   >
                                     <Typography
                                       sx={{
                                         fontSize: "13px",
-                                        color: isComingSoon
-                                          ? "text.secondary"
-                                          : "text.primary",
+                                        color: isComingSoon ? "text.secondary" : "text.primary",
                                       }}
                                     >
                                       {option.name}
@@ -1167,10 +1058,7 @@ const ProjectSettings = React.memo(
                               }
                               filterSelectedOptions
                               popupIcon={
-                                <ChevronDown
-                                  size={16}
-                                  color={theme.palette.text.tertiary}
-                                />
+                                <ChevronDown size={16} color={theme.palette.text.tertiary} />
                               }
                               renderInput={(params) => (
                                 <TextField
@@ -1203,14 +1091,18 @@ const ProjectSettings = React.memo(
                                 />
                               )}
                               sx={{
-                                ...getAutocompleteStyles(theme, { hasError: !!errors.monitoredRegulationsAndStandards }),
+                                ...getAutocompleteStyles(theme, {
+                                  hasError: !!errors.monitoredRegulationsAndStandards,
+                                }),
                                 width: "400px",
                                 backgroundColor: theme.palette.background.main,
                                 ".MuiAutocomplete-clearIndicator": {
                                   display: "none",
                                 },
                                 "& .MuiOutlinedInput-root": {
-                                  ...getAutocompleteStyles(theme, { hasError: !!errors.monitoredRegulationsAndStandards })["& .MuiOutlinedInput-root"],
+                                  ...getAutocompleteStyles(theme, {
+                                    hasError: !!errors.monitoredRegulationsAndStandards,
+                                  })["& .MuiOutlinedInput-root"],
                                   borderRadius: "4px",
                                 },
                                 "& .MuiChip-root": {
@@ -1263,32 +1155,24 @@ const ProjectSettings = React.memo(
 
                   {/* Team members Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Team members
-                    </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-                    >
-                      Add all team members of the use case.<br />Only those who are added
-                      will be able to see the use case.
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Team members</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                      Add all team members of the use case.
+                      <br />
+                      Only those who are added will be able to see the use case.
                     </Typography>
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={
-                      !allowedRoles.projects.editTeamMembers.includes(userRoleName)
-                    }
+                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
                     id="users-input"
                     size="small"
-                    value={users.filter((user) =>
-                      values.members.includes(Number(user.id)),
-                    )}
+                    value={users.filter((user) => values.members.includes(Number(user.id)))}
                     options={
                       users
                         ?.filter(
                           (user) =>
-                            user.id !== values.owner &&
-                            !values.members.includes(Number(user.id)),
+                            user.id !== values.owner && !values.members.includes(Number(user.id)),
                         )
                         .map((user) => ({
                           id: user.id,
@@ -1301,9 +1185,7 @@ const ProjectSettings = React.memo(
                     renderOption={(props, option) => {
                       const { key, ...optionProps } = props;
                       const userEmail =
-                        option.email.length > 30
-                          ? `${option.email.slice(0, 30)}...`
-                          : option.email;
+                        option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
                       return (
                         <Box component="li" key={key} {...optionProps}>
                           <Typography sx={{ fontSize: "13px" }}>
@@ -1323,14 +1205,10 @@ const ProjectSettings = React.memo(
                       );
                     }}
                     noOptionsText={
-                      values.members.length === users.length
-                        ? "All members selected"
-                        : "No options"
+                      values.members.length === users.length ? "All members selected" : "No options"
                     }
                     onChange={handleOnMultiSelect("members")}
-                    popupIcon={
-                      <ChevronDown size={16} color={theme.palette.text.tertiary} />
-                    }
+                    popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -1366,7 +1244,9 @@ const ProjectSettings = React.memo(
                       width: "400px",
                       backgroundColor: theme.palette.background.main,
                       "& .MuiOutlinedInput-root": {
-                        ...getAutocompleteStyles(theme, { hasError: !!errors.members })["& .MuiOutlinedInput-root"],
+                        ...getAutocompleteStyles(theme, { hasError: !!errors.members })[
+                          "& .MuiOutlinedInput-root"
+                        ],
                         borderRadius: "4px",
                       },
                       "& .MuiChip-root": {
@@ -1402,9 +1282,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       AI risk classification
                     </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-                    >
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                       Not sure about your risk level?&nbsp;
                       <VWLink onClick={() => setIsRiskModalOpen(true)}>
                         Calculate your AI risk classification
@@ -1431,9 +1309,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Type of high risk role
                     </Typography>
-                    <Typography
-                      sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}
-                    >
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                       If you are not sure about the high risk role,&nbsp;
                       <VWLink
                         url="https://artificialintelligenceact.eu/high-level-summary/"
@@ -1467,9 +1343,7 @@ const ProjectSettings = React.memo(
                   <CustomizableButton
                     sx={{
                       ...styles.saveButton,
-                      backgroundColor: isSaveDisabled
-                        ? "#ccc"
-                        : "brand.primary",
+                      backgroundColor: isSaveDisabled ? "#ccc" : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
                         : "1px solid brand.primary",
@@ -1502,9 +1376,8 @@ const ProjectSettings = React.memo(
                     mb: 8,
                   }}
                 >
-                  Note that deleting a use case will remove all data related to
-                  that use case from your system. This is permanent and
-                  non-recoverable.
+                  Note that deleting a use case will remove all data related to that use case from
+                  your system. This is permanent and non-recoverable.
                 </Typography>
                 <CustomizableButton
                   sx={{
@@ -1519,9 +1392,7 @@ const ProjectSettings = React.memo(
                   variant="contained"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={
-                    !allowedRoles.projects.delete.includes(userRoleName)
-                  }
+                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
                 />
               </Stack>
             </Stack>
@@ -1532,9 +1403,7 @@ const ProjectSettings = React.memo(
           <ConfirmationModal
             title="Confirm delete"
             body={
-              <Typography fontSize={13}>
-                Are you sure you want to delete the use case?
-              </Typography>
+              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"
@@ -1551,8 +1420,7 @@ const ProjectSettings = React.memo(
             title="Confirm framework removal"
             body={
               <Typography fontSize={13}>
-                Are you sure you want to remove {frameworkToRemove?.name} from
-                the use case?
+                Are you sure you want to remove {frameworkToRemove?.name} from the use case?
               </Typography>
             }
             cancelText="Cancel"
@@ -1572,17 +1440,15 @@ const ProjectSettings = React.memo(
           projectId={projectId}
           setAlert={setAlert}
           updateClassification={(classification: string) => {
-            const match = riskClassificationItems.find(
-              (item) => item.name === classification,
-            ); 
-            if(!match) {
+            const match = riskClassificationItems.find((item) => item.name === classification);
+            if (!match) {
               console.error(`Unknown classification: ${classification}`);
               return;
             }
             setValues({
               ...values,
               riskClassification: match._id,
-            })
+            });
           }}
         />
       </Stack>

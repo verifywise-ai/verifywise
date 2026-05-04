@@ -1,19 +1,12 @@
 import { Request, Response } from "express";
 import { getEntityChangeHistory } from "../utils/changeHistory.base.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 /**
  * Get change history for a specific task with pagination support
  */
-export async function getTaskChangeHistoryById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getTaskChangeHistoryById(req: Request, res: Response): Promise<any> {
   const taskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   if (isNaN(taskId) || taskId <= 0) {
@@ -32,13 +25,7 @@ export async function getTaskChangeHistoryById(
   });
 
   try {
-    const result = await getEntityChangeHistory(
-      "task",
-      taskId,
-      req.organizationId!,
-      limit,
-      offset
-    );
+    const result = await getEntityChangeHistory("task", taskId, req.organizationId!, limit, offset);
 
     await logSuccess({
       eventType: "Read",

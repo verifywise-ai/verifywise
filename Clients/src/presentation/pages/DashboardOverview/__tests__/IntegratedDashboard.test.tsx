@@ -29,7 +29,6 @@ vi.mock("../../../../application/hooks/useNavigateSearch", () => ({
   default: () => mockNavigateSearch,
 }));
 
-
 vi.mock("../../../../application/utils/dateFormatter", () => ({
   formatRelativeDate: (d: string) => d,
 }));
@@ -64,15 +63,18 @@ vi.mock("../../../components/Modals/ChangeOrganizationName", () => ({
 }));
 
 vi.mock("../../../components/StepProgressDialog", () => ({
-  StepProgressDialog: ({ open }: any) =>
-    open ? <div data-testid="step-progress-dialog" /> : null,
+  StepProgressDialog: ({ open }: any) => (open ? <div data-testid="step-progress-dialog" /> : null),
 }));
 
 vi.mock("../../../components/button-toggle", () => ({
   ButtonToggle: ({ options, value, onChange }: any) => (
     <div data-testid="view-toggle">
       {options.map((opt: any) => (
-        <button key={opt.value} onClick={() => onChange(opt.value)} data-active={opt.value === value}>
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          data-active={opt.value === value}
+        >
           {opt.label}
         </button>
       ))}
@@ -82,19 +84,26 @@ vi.mock("../../../components/button-toggle", () => ({
 
 vi.mock("../../../components/Cards/DashboardHeaderCard", () => ({
   DashboardHeaderCard: ({ title, count }: any) => (
-    <div data-testid={`header-card-${title.toLowerCase()}`}>{title}: {count}</div>
+    <div data-testid={`header-card-${title.toLowerCase()}`}>
+      {title}: {count}
+    </div>
   ),
 }));
 
 vi.mock("../../../components/Cards/DashboardCard", () => ({
   DashboardCard: ({ title, children }: any) => (
-    <div data-testid={`card-${title.toLowerCase().replace(/\s+/g, "-")}`}>{title}{children}</div>
+    <div data-testid={`card-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+      {title}
+      {children}
+    </div>
   ),
 }));
 
 vi.mock("../../../components/Cards/TaskRadarCard", () => ({
   TaskRadarCard: ({ overdue, due, upcoming }: any) => (
-    <div data-testid="task-radar">Task Radar: {overdue}/{due}/{upcoming}</div>
+    <div data-testid="task-radar">
+      Task Radar: {overdue}/{due}/{upcoming}
+    </div>
   ),
 }));
 
@@ -176,16 +185,51 @@ let mockDashboardData: any = {
 let mockMetricsData: any = {
   riskMetrics: { total: 10, distribution: { high: 3, medium: 5, low: 2, resolved: 0 }, recent: [] },
   evidenceMetrics: { total: 5, recent: [] },
-  vendorRiskMetrics: { total: 4, distribution: { veryHigh: 0, high: 1, medium: 2, low: 1, veryLow: 0 }, recent: [] },
+  vendorRiskMetrics: {
+    total: 4,
+    distribution: { veryHigh: 0, high: 1, medium: 2, low: 1, veryLow: 0 },
+    recent: [],
+  },
   vendorMetrics: { total: 3, recent: [] },
   policyMetrics: { total: 7, pendingReviewCount: 2, recent: [] },
   incidentMetrics: { total: 2, openCount: 1, recent: [] },
-  modelRiskMetrics: { total: 6, distribution: { critical: 1, high: 2, medium: 2, low: 1 }, recent: [] },
-  trainingMetrics: { total: 3, distribution: { planned: 1, inProgress: 1, completed: 1 }, completionPercentage: 33, totalPeople: 50 },
-  policyStatusMetrics: { total: 7, distribution: { draft: 2, underReview: 1, approved: 3, published: 1, archived: 0, deprecated: 0 } },
-  incidentStatusMetrics: { total: 2, distribution: { open: 1, investigating: 1, mitigated: 0, closed: 0 } },
-  evidenceHubMetrics: { total: 10, totalFiles: 20, modelsWithEvidence: 3, totalModels: 5, coveragePercentage: 60 },
-  modelLifecycleMetrics: { total: 5, distribution: { pending: 2, approved: 2, restricted: 1, blocked: 0 } },
+  modelRiskMetrics: {
+    total: 6,
+    distribution: { critical: 1, high: 2, medium: 2, low: 1 },
+    recent: [],
+  },
+  trainingMetrics: {
+    total: 3,
+    distribution: { planned: 1, inProgress: 1, completed: 1 },
+    completionPercentage: 33,
+    totalPeople: 50,
+  },
+  policyStatusMetrics: {
+    total: 7,
+    distribution: {
+      draft: 2,
+      underReview: 1,
+      approved: 3,
+      published: 1,
+      archived: 0,
+      deprecated: 0,
+    },
+  },
+  incidentStatusMetrics: {
+    total: 2,
+    distribution: { open: 1, investigating: 1, mitigated: 0, closed: 0 },
+  },
+  evidenceHubMetrics: {
+    total: 10,
+    totalFiles: 20,
+    modelsWithEvidence: 3,
+    totalModels: 5,
+    coveragePercentage: 60,
+  },
+  modelLifecycleMetrics: {
+    total: 5,
+    distribution: { pending: 2, approved: 2, restricted: 1, blocked: 0 },
+  },
   organizationalFrameworks: [],
   taskMetrics: { total: 8, recent: [] },
   useCaseMetrics: { total: 2, recent: [] },

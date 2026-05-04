@@ -6,9 +6,7 @@ import { AnnexCategoryStructISO } from "../../../../domain.layer/frameworks/ISO-
  * Responsible use, intended-use documentation, and transparency for users of
  * AI systems operated by the organization.
  */
-export const UseOfAISystems: Partial<
-  AnnexCategoryStructISO & AnnexCategoryISO
->[] = [
+export const UseOfAISystems: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
   {
     sub_id: 1.1,
     order_no: 1,

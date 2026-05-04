@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Update audit_ledger triggers to support org/user deletion:
@@ -108,5 +108,5 @@ module.exports = {
       END;
       $func$;
     `);
-  }
+  },
 };

@@ -123,9 +123,9 @@ export const modalMixins = {
 
   closeButton: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
-    "&:hover": { 
-      color: theme.palette.text.primary, 
-      backgroundColor: theme.palette.action?.hover || "#e3f5e6"
+    "&:hover": {
+      color: theme.palette.text.primary,
+      backgroundColor: theme.palette.action?.hover || "#e3f5e6",
     },
     padding: theme.spacing(0.5),
   }),

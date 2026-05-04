@@ -165,7 +165,7 @@ export class IntakeSubmissionModel
         throw new ValidationException(
           "Submitter email is required",
           "submitterEmail",
-          this.submitterEmail
+          this.submitterEmail,
         );
       }
 
@@ -173,17 +173,13 @@ export class IntakeSubmissionModel
         throw new ValidationException(
           "Submitter name is required",
           "submitterName",
-          this.submitterName
+          this.submitterName,
         );
       }
     }
 
     if (!Object.values(IntakeEntityType).includes(this.entityType)) {
-      throw new ValidationException(
-        "Invalid entity type",
-        "entityType",
-        this.entityType
-      );
+      throw new ValidationException("Invalid entity type", "entityType", this.entityType);
     }
   }
 
@@ -231,11 +227,7 @@ export class IntakeSubmissionModel
    */
   async reject(reviewedBy: number, reason: string): Promise<void> {
     if (!reason?.trim()) {
-      throw new ValidationException(
-        "Rejection reason is required",
-        "rejectionReason",
-        reason
-      );
+      throw new ValidationException("Rejection reason is required", "rejectionReason", reason);
     }
 
     this.status = IntakeSubmissionStatus.REJECTED;
@@ -275,9 +267,7 @@ export class IntakeSubmissionModel
   /**
    * Create a new IntakeSubmissionModel instance
    */
-  static createNewSubmission(
-    data: ICreateIntakeSubmissionInput
-  ): IntakeSubmissionModel {
+  static createNewSubmission(data: ICreateIntakeSubmissionInput): IntakeSubmissionModel {
     const submission = new IntakeSubmissionModel({
       formId: data.formId,
       submitterEmail: data.submitterEmail,

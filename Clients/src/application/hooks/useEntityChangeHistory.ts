@@ -31,7 +31,7 @@ export interface EntityChangeHistoryEntry {
  */
 export const useEntityChangeHistory = (
   entityType: EntityType | undefined,
-  entityId: number | undefined
+  entityId: number | undefined,
 ) => {
   return useInfiniteQuery({
     queryKey: ["changeHistory", entityType, entityId],

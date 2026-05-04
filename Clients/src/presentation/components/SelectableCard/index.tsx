@@ -50,25 +50,47 @@ const SelectableCard = ({
     sx={{
       p: "8px",
       border: "1px solid",
-      borderColor: disabled ? `${status.default.border}` : isSelected ? accentColor : `${status.default.border}`,
+      borderColor: disabled
+        ? `${status.default.border}`
+        : isSelected
+          ? accentColor
+          : `${status.default.border}`,
       borderRadius: "4px",
       cursor: disabled ? "not-allowed" : "pointer",
-      backgroundColor: disabled ? `${background.accent}` : isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : `${background.main}`,
+      backgroundColor: disabled
+        ? `${background.accent}`
+        : isSelected
+          ? accentColor === "#6366F1"
+            ? "#EEF2FF"
+            : "#F0FDF4"
+          : `${background.main}`,
       opacity: disabled ? 0.6 : 1,
       display: "flex",
       alignItems: "center",
       gap: "8px",
       transition: "all 0.15s ease",
-      "&:hover": disabled ? {} : {
-        borderColor: accentColor,
-        backgroundColor: isSelected ? (accentColor === "#6366F1" ? "#EEF2FF" : "#F0FDF4") : `${background.accent}`,
-      },
+      "&:hover": disabled
+        ? {}
+        : {
+            borderColor: accentColor,
+            backgroundColor: isSelected
+              ? accentColor === "#6366F1"
+                ? "#EEF2FF"
+                : "#F0FDF4"
+              : `${background.accent}`,
+          },
     }}
   >
     {icon}
     <Box sx={{ flex: 1 }}>
-      <Typography sx={{ fontSize: "13px", fontWeight: 500, color: disabled ? `${text.disabled}` : "#374151" }}>{title}</Typography>
-      <Typography sx={{ fontSize: "11px", color: disabled ? "#D1D5DB" : `${text.disabled}` }}>{description}</Typography>
+      <Typography
+        sx={{ fontSize: "13px", fontWeight: 500, color: disabled ? `${text.disabled}` : "#374151" }}
+      >
+        {title}
+      </Typography>
+      <Typography sx={{ fontSize: "11px", color: disabled ? "#D1D5DB" : `${text.disabled}` }}>
+        {description}
+      </Typography>
     </Box>
     {chip}
     {isSelected && !disabled && <Check size={14} color={accentColor} />}

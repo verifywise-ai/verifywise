@@ -15,9 +15,7 @@ export class ControlCategoryModel {
     this.created_at = data.created_at;
   }
 
-  static createNewControlCategory(
-    data: ControlCategoryModel
-  ): ControlCategoryModel {
+  static createNewControlCategory(data: ControlCategoryModel): ControlCategoryModel {
     return new ControlCategoryModel(data);
   }
 }

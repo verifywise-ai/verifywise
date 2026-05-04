@@ -119,18 +119,18 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             // Handle nested data structure: response could be {data: project} or project directly
             const projectData = detailResponse?.data || detailResponse;
             // Framework array could be at different levels depending on serialization
-            const frameworks = projectData?.framework
-              || projectData?.dataValues?.framework
-              || (projectData?.data?.framework)
-              || (projectData?.data?.dataValues?.framework)
-              || [];
+            const frameworks =
+              projectData?.framework ||
+              projectData?.dataValues?.framework ||
+              projectData?.data?.framework ||
+              projectData?.data?.dataValues?.framework ||
+              [];
 
             // Add ALL frameworks from this organizational project, not just the first one
             frameworks.forEach((framework: any) => {
               // Extract project_framework_id - might be named differently
-              const pfId = framework?.project_framework_id
-                || framework?.projectFrameworkId
-                || framework?.id;
+              const pfId =
+                framework?.project_framework_id || framework?.projectFrameworkId || framework?.id;
 
               if (pfId && framework?.framework_id) {
                 orgFrameworksWithDetails.push({
@@ -152,7 +152,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
               uniqueKey: `${project.id}_unknown`,
             });
           }
-        })
+        }),
       );
 
       setFrameworks(orgFrameworksWithDetails);
@@ -186,7 +186,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           if (projectFrameworkId) {
             // Fetch compliance controls
             const euResponse = await getAllEntities({
-              routeUrl: `/eu-ai-act/compliances/byProjectId/${projectFrameworkId}`
+              routeUrl: `/eu-ai-act/compliances/byProjectId/${projectFrameworkId}`,
             });
             // Response is array of control categories, each with controls
             const euData = euResponse?.data || euResponse || [];
@@ -199,9 +199,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                 const controlNo = control.order_no || "";
                 const controlTitle = control.title;
                 // Format: "1.1 - Control Title" or "Category - Control Title"
-                const displayName = categoryNo && controlNo
-                  ? `${categoryNo}.${controlNo} - ${controlTitle}`
-                  : `${category.title} - ${controlTitle}`;
+                const displayName =
+                  categoryNo && controlNo
+                    ? `${categoryNo}.${controlNo} - ${controlTitle}`
+                    : `${category.title} - ${controlTitle}`;
                 subEntityList.push({
                   _id: `eu_control_${controlId}`,
                   entity_id: controlId,
@@ -214,9 +215,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                   const subNo = sub.order_no || sub.dataValues?.order_no || "";
                   const subTitle = sub.title || sub.dataValues?.title || "Control";
                   // Format: "1.1.a - Subcontrol Title"
-                  const subDisplayName = categoryNo && controlNo && subNo
-                    ? `${categoryNo}.${controlNo}.${subNo} - ${subTitle}`
-                    : `${controlTitle || "Control"} - ${subTitle}`;
+                  const subDisplayName =
+                    categoryNo && controlNo && subNo
+                      ? `${categoryNo}.${controlNo}.${subNo} - ${subTitle}`
+                      : `${controlTitle || "Control"} - ${subTitle}`;
                   subEntityList.push({
                     _id: `eu_subcontrol_${subId}`,
                     entity_id: subId,
@@ -229,7 +231,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
             // Fetch assessment questions
             const euAssessmentResponse = await getAllEntities({
-              routeUrl: `/eu-ai-act/assessments/byProjectId/${projectFrameworkId}`
+              routeUrl: `/eu-ai-act/assessments/byProjectId/${projectFrameworkId}`,
             });
             const euAssessmentData = euAssessmentResponse?.data || euAssessmentResponse || [];
             euAssessmentData.forEach((topic: any) => {
@@ -246,9 +248,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                   const questionNo = questionData.order_no || "";
                   const questionTitle = questionData.question || questionData.title || "Question";
                   // Format: "1.1.1 - Question text"
-                  const displayName = topicNo && subTopicNo && questionNo
-                    ? `${topicNo}.${subTopicNo}.${questionNo} - ${questionTitle.substring(0, 80)}${questionTitle.length > 80 ? "..." : ""}`
-                    : questionTitle.substring(0, 100);
+                  const displayName =
+                    topicNo && subTopicNo && questionNo
+                      ? `${topicNo}.${subTopicNo}.${questionNo} - ${questionTitle.substring(0, 80)}${questionTitle.length > 80 ? "..." : ""}`
+                      : questionTitle.substring(0, 100);
                   subEntityList.push({
                     _id: `eu_assessment_${answerId}`,
                     entity_id: answerId,
@@ -265,7 +268,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           if (projectFrameworkId) {
             // Fetch subclauses
             const isoClausesResponse = await getAllEntities({
-              routeUrl: `/iso-42001/clauses/byProjectId/${projectFrameworkId}`
+              routeUrl: `/iso-42001/clauses/byProjectId/${projectFrameworkId}`,
             });
             const isoClauses = isoClausesResponse?.data || isoClausesResponse || [];
             isoClauses.forEach((clause: any) => {
@@ -275,7 +278,8 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
                 const subData = sub.dataValues || sub;
                 // Format: "Clause 6.1.1 - General — actions to address..."
                 // Prefer canonical subclause_id when present (handles 3-level ids like 6.1.1)
-                const displayId = subData.subclause_id ?? `${clauseData.clause_no}.${subData.order_no}`;
+                const displayId =
+                  subData.subclause_id ?? `${clauseData.clause_no}.${subData.order_no}`;
                 subEntityList.push({
                   _id: `iso42001_subclause_${subData.id}`,
                   entity_id: subData.id,
@@ -287,7 +291,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
             // Fetch annex categories - backend returns data in 'subClauses' field
             const isoAnnexesResponse = await getAllEntities({
-              routeUrl: `/iso-42001/annexes/byProjectId/${projectFrameworkId}`
+              routeUrl: `/iso-42001/annexes/byProjectId/${projectFrameworkId}`,
             });
             const isoAnnexes = isoAnnexesResponse?.data || isoAnnexesResponse || [];
             isoAnnexes.forEach((annex: any) => {
@@ -313,7 +317,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           if (projectFrameworkId) {
             // Fetch subclauses
             const iso27ClausesResponse = await getAllEntities({
-              routeUrl: `/iso-27001/clauses/byProjectId/${projectFrameworkId}`
+              routeUrl: `/iso-27001/clauses/byProjectId/${projectFrameworkId}`,
             });
             const iso27Clauses = iso27ClausesResponse?.data || iso27ClausesResponse || [];
             iso27Clauses.forEach((clause: any) => {
@@ -334,7 +338,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
             // Fetch annex controls - backend uses 'subClauses' field (naming inconsistency)
             const iso27AnnexesResponse = await getAllEntities({
-              routeUrl: `/iso-27001/annexes/byProjectId/${projectFrameworkId}`
+              routeUrl: `/iso-27001/annexes/byProjectId/${projectFrameworkId}`,
             });
             const iso27Annexes = iso27AnnexesResponse?.data || iso27AnnexesResponse || [];
             iso27Annexes.forEach((annex: any) => {
@@ -358,7 +362,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
         case 4: // NIST AI RMF
           if (projectFrameworkId) {
             const nistResponse = await getAllEntities({
-              routeUrl: `/nist-ai-rmf/overview`
+              routeUrl: `/nist-ai-rmf/overview`,
             });
             const nistData = nistResponse?.data || nistResponse;
             const functions = nistData?.functions || [];
@@ -429,15 +433,17 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
       if (selectedTopLevel === "use_case") {
         // For use-case, selectedFramework is the project_framework_id
-        const pf = projectFrameworks.find((f: any) =>
-          f.project_framework_id === selectedFramework || f.id === selectedFramework
+        const pf = projectFrameworks.find(
+          (f: any) => f.project_framework_id === selectedFramework || f.id === selectedFramework,
         );
         frameworkId = pf?.framework_id;
         projectFrameworkId = selectedFramework as number;
       } else {
         // For organizational framework, selectedFramework is the uniqueKey (projectId_frameworkId)
         // We need to get framework_id and project_framework_id from the frameworks array
-        const orgFramework = frameworks.find((f: any) => f.uniqueKey === selectedFramework || f.id === selectedFramework);
+        const orgFramework = frameworks.find(
+          (f: any) => f.uniqueKey === selectedFramework || f.id === selectedFramework,
+        );
         frameworkId = orgFramework?.framework_id;
         projectFrameworkId = orgFramework?.project_framework_id;
       }
@@ -552,9 +558,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
     // Check for duplicates
     const isDuplicate = value.some(
-      (link) =>
-        link.entity_id === newLink.entity_id &&
-        link.entity_type === newLink.entity_type
+      (link) => link.entity_id === newLink.entity_id && link.entity_type === newLink.entity_type,
     );
 
     if (!isDuplicate) {
@@ -582,10 +586,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   const handleUndoRemove = (link: EntityLink) => {
     // Remove from pending removals
     setPendingRemovals((prev) =>
-      prev.filter(
-        (l) =>
-          !(l.entity_id === link.entity_id && l.entity_type === link.entity_type)
-      )
+      prev.filter((l) => !(l.entity_id === link.entity_id && l.entity_type === link.entity_type)),
     );
     // Add back to value
     onChange([...value, link]);
@@ -630,7 +631,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           width: "200px",
           backgroundColor: theme.palette.background.main,
         }}
-      />
+      />,
     );
 
     if (!selectedTopLevel) return dropdowns;
@@ -651,7 +652,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             width: "280px",
             backgroundColor: theme.palette.background.main,
           }}
-        />
+        />,
       );
     }
 
@@ -671,7 +672,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             width: "200px",
             backgroundColor: theme.palette.background.main,
           }}
-        />
+        />,
       );
 
       if (selectedProject) {
@@ -689,7 +690,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
               width: "180px",
               backgroundColor: theme.palette.background.main,
             }}
-          />
+          />,
         );
       }
 
@@ -708,7 +709,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
               width: "280px",
               backgroundColor: theme.palette.background.main,
             }}
-          />
+          />,
         );
       }
     }
@@ -729,7 +730,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             width: "200px",
             backgroundColor: theme.palette.background.main,
           }}
-        />
+        />,
       );
 
       if (selectedFramework && subEntities.length > 0) {
@@ -747,7 +748,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
               width: "280px",
               backgroundColor: theme.palette.background.main,
             }}
-          />
+          />,
         );
       }
     }

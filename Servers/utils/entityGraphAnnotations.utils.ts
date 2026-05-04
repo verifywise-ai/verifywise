@@ -30,7 +30,7 @@ import { QueryTypes } from "sequelize";
  */
 export async function createAnnotationQuery(
   annotation: EntityGraphAnnotationsModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel> {
   try {
     const result = await sequelize.query(
@@ -49,17 +49,11 @@ export async function createAnnotationQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
     // Extract the generated data from the result
-    if (
-      result &&
-      Array.isArray(result) &&
-      result[0] &&
-      Array.isArray(result[0]) &&
-      result[0][0]
-    ) {
+    if (result && Array.isArray(result) && result[0] && Array.isArray(result[0]) && result[0][0]) {
       const row = result[0][0];
       annotation.id = row.id;
       annotation.created_at = row.created_at;
@@ -83,7 +77,7 @@ export async function createAnnotationQuery(
  */
 export async function getAnnotationsByUserQuery(
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel[]> {
   try {
     const annotations = await sequelize.query(
@@ -97,7 +91,7 @@ export async function getAnnotationsByUserQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return (annotations as any[]).map((row) => {
@@ -132,7 +126,7 @@ export async function getAnnotationByEntityQuery(
   userId: number,
   entityType: string,
   entityId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel | null> {
   try {
     const result = await sequelize.query(
@@ -149,7 +143,7 @@ export async function getAnnotationByEntityQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -183,7 +177,7 @@ export async function getAnnotationByEntityQuery(
  */
 export async function getAnnotationByIdQuery(
   annotationId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel | null> {
   try {
     const result = await sequelize.query(
@@ -194,7 +188,7 @@ export async function getAnnotationByIdQuery(
       {
         replacements: { id: annotationId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (result && (result as any[]).length > 0) {
@@ -230,7 +224,7 @@ export async function getAnnotationByIdQuery(
 export async function updateAnnotationContentQuery(
   annotationId: number,
   content: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel | null> {
   try {
     const updatedAt = new Date();
@@ -247,7 +241,7 @@ export async function updateAnnotationContentQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     // Fetch the updated annotation
@@ -271,7 +265,7 @@ export async function updateAnnotationContentQuery(
  */
 export async function upsertAnnotationQuery(
   annotation: EntityGraphAnnotationsModel,
-  organizationId: number
+  organizationId: number,
 ): Promise<EntityGraphAnnotationsModel> {
   try {
     const result = await sequelize.query(
@@ -292,16 +286,10 @@ export async function upsertAnnotationQuery(
           updated_at: new Date(),
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
-    if (
-      result &&
-      Array.isArray(result) &&
-      result[0] &&
-      Array.isArray(result[0]) &&
-      result[0][0]
-    ) {
+    if (result && Array.isArray(result) && result[0] && Array.isArray(result[0]) && result[0][0]) {
       const row = result[0][0];
       return new EntityGraphAnnotationsModel({
         id: row.id,
@@ -332,7 +320,7 @@ export async function upsertAnnotationQuery(
  */
 export async function deleteAnnotationByIdQuery(
   annotationId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -342,7 +330,7 @@ export async function deleteAnnotationByIdQuery(
       {
         replacements: { id: annotationId, organization_id: organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return Array.isArray(result) && result.length > 0 ? 1 : 0;
@@ -366,7 +354,7 @@ export async function deleteAnnotationByEntityQuery(
   userId: number,
   entityType: string,
   entityId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> {
   try {
     const result = await sequelize.query(
@@ -382,13 +370,11 @@ export async function deleteAnnotationByEntityQuery(
           organization_id: organizationId,
         },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return Array.isArray(result) && result.length > 0 ? 1 : 0;
   } catch (error) {
-    throw new Error(
-      `Failed to delete annotation by entity: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to delete annotation by entity: ${(error as Error).message}`);
   }
 }

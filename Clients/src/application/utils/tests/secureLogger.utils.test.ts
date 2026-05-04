@@ -90,13 +90,13 @@ describe("secureLogger.utils", () => {
       process.env.NODE_ENV = "production";
 
       SecureLogger.secureLog({
-          level: "error",
-          message: "Sensitive info",
-          context: "Ctx",
+        level: "error",
+        message: "Sensitive info",
+        context: "Ctx",
       });
 
       expect(console.error).toHaveBeenCalledWith(
-          "[Error] An error occurred. Please contact support if the issue persists."
+        "[Error] An error occurred. Please contact support if the issue persists.",
       );
     });
 
@@ -143,17 +143,13 @@ describe("secureLogger.utils", () => {
 
   describe("sanitizeErrorMessage", () => {
     it('returns "Unknown error occurred" for null/undefined', () => {
-      expect(SecureLogger.sanitizeErrorMessage(null)).toBe(
-        "Unknown error occurred"
-      );
-      expect(SecureLogger.sanitizeErrorMessage(undefined)).toBe(
-        "Unknown error occurred"
-      );
+      expect(SecureLogger.sanitizeErrorMessage(null)).toBe("Unknown error occurred");
+      expect(SecureLogger.sanitizeErrorMessage(undefined)).toBe("Unknown error occurred");
     });
 
     it("sanitizes Error message (emails, ids, file names)", () => {
       const err = new Error(
-        "User john.doe@email.com failed accessing file secret.pdf with id 123456"
+        "User john.doe@email.com failed accessing file secret.pdf with id 123456",
       );
 
       const result = SecureLogger.sanitizeErrorMessage(err);
@@ -174,20 +170,14 @@ describe("secureLogger.utils", () => {
     });
 
     it("sanitizes string error by replacing email only", () => {
-      const result = SecureLogger.sanitizeErrorMessage(
-        "Contact me at test@mail.com"
-      );
+      const result = SecureLogger.sanitizeErrorMessage("Contact me at test@mail.com");
 
       expect(result).not.toContain("test@mail.com");
     });
 
     it('returns "An error occurred" for non-string, non-Error values', () => {
-      expect(SecureLogger.sanitizeErrorMessage(123 as any)).toBe(
-        "An error occurred"
-      );
-      expect(SecureLogger.sanitizeErrorMessage({} as any)).toBe(
-        "An error occurred"
-      );
+      expect(SecureLogger.sanitizeErrorMessage(123 as any)).toBe("An error occurred");
+      expect(SecureLogger.sanitizeErrorMessage({} as any)).toBe("An error occurred");
     });
   });
 });

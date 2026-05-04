@@ -25,7 +25,7 @@ export const createInvitationQuery = async (
   surname: string,
   roleId: number,
   invitedBy: number,
-  expiresAt: Date
+  expiresAt: Date,
 ): Promise<InvitationRow> => {
   const result = (await sequelize.query(
     `INSERT INTO invitations (organization_id, email, name, surname, role_id, status, invited_by, expires_at)
@@ -50,7 +50,7 @@ export const createInvitationQuery = async (
         invitedBy,
         expiresAt: expiresAt.toISOString(),
       },
-    }
+    },
   )) as [InvitationRow[], number];
 
   return result[0][0];
@@ -60,7 +60,7 @@ export const createInvitationQuery = async (
  * Get all pending invitations for an organization, joined with role name.
  */
 export const getInvitationsByOrganizationQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<InvitationRow[]> => {
   const result = (await sequelize.query(
     `SELECT i.id, i.email, i.name, i.surname, i.role_id, i.status, i.invited_by,
@@ -72,7 +72,7 @@ export const getInvitationsByOrganizationQuery = async (
      LEFT JOIN roles r ON r.id = i.role_id
      WHERE i.organization_id = :organizationId AND i.status = 'pending'
      ORDER BY i.created_at DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [InvitationRow[], number];
 
   return result[0];
@@ -88,14 +88,14 @@ export const getInvitationsByTenantQuery = getInvitationsByOrganizationQuery;
  */
 export const getInvitationByIdQuery = async (
   organizationId: number,
-  id: number
+  id: number,
 ): Promise<InvitationRow | null> => {
   const result = (await sequelize.query(
     `SELECT i.*, r.name AS role_name
      FROM invitations i
      LEFT JOIN roles r ON r.id = i.role_id
      WHERE i.organization_id = :organizationId AND i.id = :id AND i.status = 'pending'`,
-    { replacements: { organizationId, id } }
+    { replacements: { organizationId, id } },
   )) as [InvitationRow[], number];
 
   return result[0][0] || null;
@@ -106,13 +106,13 @@ export const getInvitationByIdQuery = async (
  */
 export const revokeInvitationQuery = async (
   organizationId: number,
-  id: number
+  id: number,
 ): Promise<boolean> => {
   const result = (await sequelize.query(
     `DELETE FROM invitations
      WHERE organization_id = :organizationId AND id = :id AND status = 'pending'
      RETURNING id`,
-    { replacements: { organizationId, id } }
+    { replacements: { organizationId, id } },
   )) as [InvitationRow[], number];
 
   return result[0].length > 0;
@@ -123,13 +123,13 @@ export const revokeInvitationQuery = async (
  */
 export const markInvitationAcceptedQuery = async (
   organizationId: number,
-  email: string
+  email: string,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE invitations
      SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
      WHERE organization_id = :organizationId AND email = :email AND status = 'pending'`,
-    { replacements: { organizationId, email } }
+    { replacements: { organizationId, email } },
   );
 };
 
@@ -139,13 +139,13 @@ export const markInvitationAcceptedQuery = async (
 export const updateInvitationExpiryQuery = async (
   organizationId: number,
   id: number,
-  expiresAt: Date
+  expiresAt: Date,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE invitations
      SET created_at = CURRENT_TIMESTAMP, expires_at = :expiresAt, updated_at = CURRENT_TIMESTAMP
      WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id, expiresAt: expiresAt.toISOString() } }
+    { replacements: { organizationId, id, expiresAt: expiresAt.toISOString() } },
   );
 };
 
@@ -155,13 +155,13 @@ export const updateInvitationExpiryQuery = async (
  */
 export const checkPendingInvitationQuery = async (
   organizationId: number,
-  email: string
+  email: string,
 ): Promise<boolean> => {
   const result = (await sequelize.query(
     `SELECT id FROM invitations
      WHERE organization_id = :organizationId AND email = :email AND status = 'pending'
      LIMIT 1`,
-    { replacements: { organizationId, email } }
+    { replacements: { organizationId, email } },
   )) as [InvitationRow[], number];
 
   return result[0].length > 0;

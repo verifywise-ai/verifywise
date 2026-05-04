@@ -8,10 +8,7 @@
  * - Mitigation cost: non-negative
  */
 
-import {
-  validateNumber,
-  ValidationError,
-} from "./validation.utils";
+import { validateNumber, ValidationError } from "./validation.utils";
 
 /**
  * Validate a three-point estimate (min ≤ likely ≤ max).
@@ -21,7 +18,7 @@ function validateThreePointEstimate(
   min: unknown,
   likely: unknown,
   max: unknown,
-  fieldPrefix: string
+  fieldPrefix: string,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -101,8 +98,8 @@ export function validateQuantitativeRiskFields(data: Record<string, unknown>): V
       data.event_frequency_min,
       data.event_frequency_likely,
       data.event_frequency_max,
-      "event_frequency"
-    )
+      "event_frequency",
+    ),
   );
 
   // Loss Magnitude: Regulatory
@@ -111,8 +108,8 @@ export function validateQuantitativeRiskFields(data: Record<string, unknown>): V
       data.loss_regulatory_min,
       data.loss_regulatory_likely,
       data.loss_regulatory_max,
-      "loss_regulatory"
-    )
+      "loss_regulatory",
+    ),
   );
 
   // Loss Magnitude: Operational
@@ -121,8 +118,8 @@ export function validateQuantitativeRiskFields(data: Record<string, unknown>): V
       data.loss_operational_min,
       data.loss_operational_likely,
       data.loss_operational_max,
-      "loss_operational"
-    )
+      "loss_operational",
+    ),
   );
 
   // Loss Magnitude: Litigation
@@ -131,8 +128,8 @@ export function validateQuantitativeRiskFields(data: Record<string, unknown>): V
       data.loss_litigation_min,
       data.loss_litigation_likely,
       data.loss_litigation_max,
-      "loss_litigation"
-    )
+      "loss_litigation",
+    ),
   );
 
   // Loss Magnitude: Reputational
@@ -141,8 +138,8 @@ export function validateQuantitativeRiskFields(data: Record<string, unknown>): V
       data.loss_reputational_min,
       data.loss_reputational_likely,
       data.loss_reputational_max,
-      "loss_reputational"
-    )
+      "loss_reputational",
+    ),
   );
 
   // Control effectiveness: 0-100%

@@ -2,9 +2,7 @@ import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("AI Detection", () => {
-  test("renders the AI detection scan page", async ({
-    authedPage: page,
-  }) => {
+  test("renders the AI detection scan page", async ({ authedPage: page }) => {
     await page.goto("/ai-detection/scan");
     await expect(page).toHaveURL(/\/ai-detection/);
 
@@ -13,13 +11,11 @@ test.describe("AI Detection", () => {
       page
         .getByText(/ai detection/i)
         .or(page.getByText(/scan/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/ai-detection/scan");
     await page.waitForLoadState("domcontentloaded");
 
@@ -55,9 +51,7 @@ test.describe("AI Detection", () => {
 
   // --- Tier 5: Scan workflow ---
 
-  test("scan page shows URL input and scan button", async ({
-    authedPage: page,
-  }) => {
+  test("scan page shows URL input and scan button", async ({ authedPage: page }) => {
     await page.goto("/ai-detection/scan");
     await page.waitForTimeout(2000);
 
@@ -68,7 +62,12 @@ test.describe("AI Detection", () => {
       .or(page.getByPlaceholder(/repo/i))
       .or(page.getByRole("textbox"));
 
-    if (await urlInput.first().isVisible().catch(() => false)) {
+    if (
+      await urlInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(urlInput.first()).toBeVisible();
     }
 
@@ -77,14 +76,17 @@ test.describe("AI Detection", () => {
       .getByRole("button", { name: /^scan$/i })
       .or(page.getByRole("button", { name: /start scan/i }));
 
-    if (await scanBtn.first().isVisible().catch(() => false)) {
+    if (
+      await scanBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(scanBtn.first()).toBeVisible();
     }
   });
 
-  test("history page shows past scans or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("history page shows past scans or empty state", async ({ authedPage: page }) => {
     await page.goto("/ai-detection/history");
     await page.waitForTimeout(2000);
 

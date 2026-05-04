@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  BusinessLogicException,
-} from "../exceptions/custom.exception";
+import { ValidationException, BusinessLogicException } from "../exceptions/custom.exception";
 
 // Mock sequelize-typescript
 jest.mock("sequelize-typescript", () => ({
@@ -59,7 +56,7 @@ class TestControlModel {
     approver?: number,
     due_date?: Date,
     implementation_details?: string,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestControlModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
@@ -67,26 +64,18 @@ class TestControlModel {
     }
 
     if (title.trim().length < 3) {
-      throw new ValidationException(
-        "Title must be at least 3 characters long",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must be at least 3 characters long", "title", title);
     }
 
     if (!description || description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        description
-      );
+      throw new ValidationException("Description is required", "description", description);
     }
 
     if (description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        description
+        description,
       );
     }
 
@@ -95,7 +84,7 @@ class TestControlModel {
       throw new ValidationException(
         "Valid control_category_id is required (must be >= 1)",
         "control_category_id",
-        control_category_id
+        control_category_id,
       );
     }
 
@@ -132,17 +121,13 @@ class TestControlModel {
   }): Promise<void> {
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Title is required", "title", updateData.title);
       }
       if (updateData.title.trim().length < 3) {
         throw new ValidationException(
           "Title must be at least 3 characters long",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
       this.title = updateData.title.trim();
@@ -151,11 +136,7 @@ class TestControlModel {
     if (updateData.status !== undefined) {
       const validStatuses = ["Waiting", "In progress", "Done"];
       if (!validStatuses.includes(updateData.status)) {
-        throw new ValidationException(
-          "Invalid status value",
-          "status",
-          updateData.status
-        );
+        throw new ValidationException("Invalid status value", "status", updateData.status);
       }
       this.status = updateData.status;
     }
@@ -181,7 +162,7 @@ class TestControlModel {
       throw new BusinessLogicException(
         "Demo controls cannot be modified",
         "DEMO_CONTROL_RESTRICTION",
-        { controlId: this.id, userId }
+        { controlId: this.id, userId },
       );
     }
 
@@ -189,11 +170,7 @@ class TestControlModel {
       return true;
     }
 
-    return (
-      this.owner === userId ||
-      this.reviewer === userId ||
-      this.approver === userId
-    );
+    return this.owner === userId || this.reviewer === userId || this.approver === userId;
   }
 
   getProgressPercentage(): number {
@@ -223,14 +200,12 @@ describe("ControlModel", () => {
       const control = await TestControlModel.createNewControl(
         validControlData.title,
         validControlData.description,
-        validControlData.control_category_id
+        validControlData.control_category_id,
       );
 
       expect(control).toBeInstanceOf(TestControlModel);
       expect(control.title).toBe("Test Control");
-      expect(control.description).toBe(
-        "This is a test control description that is long enough"
-      );
+      expect(control.description).toBe("This is a test control description that is long enough");
       expect(control.control_category_id).toBe(1);
       expect(control.status).toBe("Waiting");
       expect(control.is_demo).toBe(false);
@@ -241,8 +216,8 @@ describe("ControlModel", () => {
         TestControlModel.createNewControl(
           "AB",
           validControlData.description,
-          validControlData.control_category_id
-        )
+          validControlData.control_category_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -251,18 +226,14 @@ describe("ControlModel", () => {
         TestControlModel.createNewControl(
           validControlData.title,
           "Short",
-          validControlData.control_category_id
-        )
+          validControlData.control_category_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid control_category_id", async () => {
       await expect(
-        TestControlModel.createNewControl(
-          validControlData.title,
-          validControlData.description,
-          0
-        )
+        TestControlModel.createNewControl(validControlData.title, validControlData.description, 0),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -287,9 +258,9 @@ describe("ControlModel", () => {
     it("should throw ValidationException for invalid status", async () => {
       const control = new TestControlModel(validControlData);
 
-      await expect(
-        control.updateControl({ status: "Invalid" as any })
-      ).rejects.toThrow(ValidationException);
+      await expect(control.updateControl({ status: "Invalid" as any })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -346,9 +317,7 @@ describe("ControlModel", () => {
         ...validControlData,
         is_demo: true,
       });
-      expect(() => control.canBeModifiedBy(1, false)).toThrow(
-        BusinessLogicException
-      );
+      expect(() => control.canBeModifiedBy(1, false)).toThrow(BusinessLogicException);
     });
   });
 

@@ -9,29 +9,29 @@ export const createProjectFormStyles = {
     rowGap: 8,
     mt: 13.5,
   },
-  
+
   leftColumn: {
     rowGap: 8,
   },
-  
+
   fieldStyle: (theme: Theme) => ({
     backgroundColor: theme.palette.background.main,
     "& input": {
       padding: "0 14px",
     },
   }),
-  
+
   selectStyle: (theme: Theme) => ({
     width: "350px",
     backgroundColor: theme.palette.background.main,
   }),
-  
+
   teamMembersTitle: (theme: Theme) => ({
     fontSize: theme.typography.fontSize,
     fontWeight: 500,
     mb: 2,
   }),
-  
+
   autocompleteContainer: (theme: Theme) => ({
     width: "350px",
     backgroundColor: theme.palette.background.main,
@@ -49,7 +49,7 @@ export const createProjectFormStyles = {
       borderRadius: "4px",
     },
   }),
-  
+
   autocompleteTextField: {
     "& .MuiOutlinedInput-root": {
       paddingTop: "3.8px !important",
@@ -59,18 +59,18 @@ export const createProjectFormStyles = {
       fontSize: "13px",
     },
   },
-  
+
   autocompleteOptionText: {
     fontSize: "13px",
   },
-  
+
   autocompleteEmailText: {
     fontSize: "11px",
     color: "rgb(157, 157, 157)",
     position: "absolute",
     right: "9px",
   },
-  
+
   autocompleteSlotProps: {
     paper: {
       sx: {
@@ -93,26 +93,26 @@ export const createProjectFormStyles = {
       },
     },
   },
-  
+
   errorText: {
     mt: 4,
     color: "#f04438",
     fontWeight: 300,
   },
-  
+
   rightColumnContainer: {
     rowGap: 8,
     mt: 8,
   },
-  
+
   datePicker: {
     width: "130px",
   },
-  
+
   goalField: (theme: Theme) => ({
     backgroundColor: theme.palette.background.main,
   }),
-  
+
   submitButton: {
     borderRadius: 2,
     maxHeight: 34,
@@ -123,8 +123,8 @@ export const createProjectFormStyles = {
     ml: "auto",
     mr: 0,
     mt: "30px",
-    "&:hover": { 
-      boxShadow: "none", 
+    "&:hover": {
+      boxShadow: "none",
       backgroundColor: "#175CD3",
     },
   },

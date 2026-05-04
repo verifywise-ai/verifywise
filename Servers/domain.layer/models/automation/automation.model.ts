@@ -76,7 +76,7 @@ export class AutomationModel extends Model<AutomationModel> implements IAutomati
     name: string,
     trigger_id: number,
     created_by?: number,
-    is_active: boolean = true
+    is_active: boolean = true,
   ): Promise<AutomationModel> {
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -225,8 +225,8 @@ export class AutomationModel extends Model<AutomationModel> implements IAutomati
       is_active: this.is_active,
       created_by: this.created_by,
       creator: this.creator?.toSafeJSON(),
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

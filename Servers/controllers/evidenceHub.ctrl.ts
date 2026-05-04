@@ -21,32 +21,28 @@ export async function getAllEvidences(req: Request, res: Response) {
     "processing",
     "starting getAllEvidences",
     "getAllEvidences",
-    "evidenceHub.controller.ts"
+    "evidenceHub.controller.ts",
   );
   logger.debug("🔍 Fetching all evidences");
 
   try {
-    const evidences = (await getAllEvidencesQuery(
-      req.organizationId!
-    )) as EvidenceHubModel[];
+    const evidences = (await getAllEvidencesQuery(req.organizationId!)) as EvidenceHubModel[];
 
     if (evidences && evidences.length > 0) {
       logStructured(
         "successful",
         "evidences found",
         "getAllEvidences",
-        "evidenceHub.controller.ts"
+        "evidenceHub.controller.ts",
       );
-      return res
-        .status(200)
-        .json(STATUS_CODE[200](evidences.map((e) => e.toSafeJSON())));
+      return res.status(200).json(STATUS_CODE[200](evidences.map((e) => e.toSafeJSON())));
     }
 
     logStructured(
       "successful",
       "no evidences found",
       "getAllEvidences",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     return res.status(200).json(STATUS_CODE[200](evidences));
   } catch (error) {
@@ -54,7 +50,7 @@ export async function getAllEvidences(req: Request, res: Response) {
       "error",
       "failed to retrieve evidences",
       "getAllEvidences",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     logger.error("❌ Error in getAllEvidences:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -72,7 +68,7 @@ export async function getEvidenceById(req: Request, res: Response) {
       "error",
       `Invalid evidence ID parameter: ${req.params.id}`,
       "getEvidenceById",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     return res.status(400).json({
       status: "error",
@@ -84,14 +80,14 @@ export async function getEvidenceById(req: Request, res: Response) {
   try {
     const evidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.organizationId!
+      req.organizationId!,
     )) as EvidenceHubModel;
     if (evidence) {
       logStructured(
         "successful",
         `evidence found: ${evidenceId}`,
         "getEvidenceById",
-        "evidenceHub.controller.ts"
+        "evidenceHub.controller.ts",
       );
       return res.status(200).json(STATUS_CODE[200](evidence.toSafeJSON()));
     }
@@ -100,7 +96,7 @@ export async function getEvidenceById(req: Request, res: Response) {
       "successful",
       `no evidence found: ${evidenceId}`,
       "getEvidenceById",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     return res.status(204).json(STATUS_CODE[204](null));
   } catch (error) {
@@ -108,7 +104,7 @@ export async function getEvidenceById(req: Request, res: Response) {
       "error",
       "failed to retrieve evidence",
       "getEvidenceById",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     logger.error("❌ Error in getEvidenceById:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -130,17 +126,10 @@ export async function createNewEvidence(req: Request, res: Response) {
       updated_at: new Date(),
     });
 
-    const savedEvidence = await createNewEvidenceQuery(
-      evidence,
-      req.organizationId!,
-      transaction
-    );
+    const savedEvidence = await createNewEvidenceQuery(evidence, req.organizationId!, transaction);
 
     // Track evidence addition for all mapped models
-    if (
-      savedEvidence.mapped_model_ids &&
-      savedEvidence.mapped_model_ids.length > 0
-    ) {
+    if (savedEvidence.mapped_model_ids && savedEvidence.mapped_model_ids.length > 0) {
       for (const modelId of savedEvidence.mapped_model_ids) {
         await recordEvidenceAddedToModel(
           modelId,
@@ -148,7 +137,7 @@ export async function createNewEvidence(req: Request, res: Response) {
           req.organizationId!,
           savedEvidence.evidence_name,
           savedEvidence.evidence_type,
-          transaction
+          transaction,
         );
       }
     }
@@ -159,7 +148,7 @@ export async function createNewEvidence(req: Request, res: Response) {
       "successful",
       "new evidence created",
       "createNewEvidence",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     return res.status(201).json(STATUS_CODE[201](savedEvidence.toSafeJSON()));
   } catch (error) {
@@ -168,7 +157,7 @@ export async function createNewEvidence(req: Request, res: Response) {
       "error",
       "failed to create new evidence",
       "createNewEvidence",
-      "evidenceHub.controller.ts"
+      "evidenceHub.controller.ts",
     );
     logger.error("❌ Error in createNewEvidence:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -192,7 +181,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
   try {
     const existingEvidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.organizationId!
+      req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
       return res.status(404).json(STATUS_CODE[404]("Evidence not found"));
@@ -203,25 +192,19 @@ export async function updateEvidenceById(req: Request, res: Response) {
     const newMappedModels = req.body.mapped_model_ids || [];
 
     // Models that were added
-    const addedModels = newMappedModels.filter(
-      (id: number) => !oldMappedModels.includes(id)
-    );
+    const addedModels = newMappedModels.filter((id: number) => !oldMappedModels.includes(id));
     // Models that were removed
-    const removedModels = oldMappedModels.filter(
-      (id) => !newMappedModels.includes(id)
-    );
+    const removedModels = oldMappedModels.filter((id) => !newMappedModels.includes(id));
 
     // Track field changes for models that remain mapped
-    const continuingModels = newMappedModels.filter((id: number) =>
-      oldMappedModels.includes(id)
-    );
+    const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
     Object.assign(existingEvidence, { ...req.body, updated_at: new Date() });
     const updatedEvidence = await updateEvidenceByIdQuery(
       evidenceId,
       existingEvidence,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     // Record evidence added to new models
@@ -232,7 +215,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
         req.organizationId!,
         updatedEvidence.evidence_name,
         updatedEvidence.evidence_type,
-        transaction
+        transaction,
       );
     }
 
@@ -244,7 +227,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
         req.organizationId!,
         existingEvidence.evidence_name,
         existingEvidence.evidence_type,
-        transaction
+        transaction,
       );
     }
 
@@ -277,7 +260,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
                 label,
                 oldStr,
                 newStr,
-                transaction
+                transaction,
               );
             }
           }
@@ -312,17 +295,14 @@ export async function deleteEvidenceById(req: Request, res: Response) {
   try {
     const existingEvidence = (await getEvidenceByIdQuery(
       evidenceId,
-      req.organizationId!
+      req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
       return res.status(404).json(STATUS_CODE[404]("Evidence not found"));
     }
 
     // Track evidence removal for all mapped models
-    if (
-      existingEvidence.mapped_model_ids &&
-      existingEvidence.mapped_model_ids.length > 0
-    ) {
+    if (existingEvidence.mapped_model_ids && existingEvidence.mapped_model_ids.length > 0) {
       for (const modelId of existingEvidence.mapped_model_ids) {
         await recordEvidenceRemovedFromModel(
           modelId,
@@ -330,7 +310,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
           req.organizationId!,
           existingEvidence.evidence_name,
           existingEvidence.evidence_type,
-          transaction
+          transaction,
         );
       }
     }
@@ -338,9 +318,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
     await deleteEvidenceByIdQuery(evidenceId, req.organizationId!, transaction);
     await transaction.commit();
 
-    return res
-      .status(200)
-      .json(STATUS_CODE[200]("Evidence deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200]("Evidence deleted successfully"));
   } catch (error) {
     await transaction.rollback();
     logger.error("❌ Error in deleteEvidenceById:", error);

@@ -259,10 +259,10 @@ export const nistAiRmfContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'GOVERN (6 categories, ~19 subcategories), establishes AI risk management culture and policies',
-        'MAP (5 categories, ~18 subcategories), frames context and scope of AI risks',
-        'MEASURE (4 categories, ~25 subcategories), evaluates AI risks and trustworthiness',
-        'MANAGE (4 categories, ~15 subcategories), addresses identified risks',
+        'GOVERN (6 categories, 25 subcategories), establishes AI risk management culture and policies',
+        'MAP (5 categories, 23 subcategories), frames context and scope of AI risks',
+        'MEASURE (4 categories, 26 subcategories), evaluates AI risks and trustworthiness',
+        'MANAGE (4 categories, 19 subcategories), addresses identified risks',
       ],
     },
     {

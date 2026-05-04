@@ -150,8 +150,10 @@ export default function AddRepositoryModal({
         default_branch: defaultBranch,
         schedule_enabled: scheduleEnabled,
         schedule_frequency: scheduleEnabled ? scheduleFrequency : null,
-        schedule_day_of_week: scheduleEnabled && scheduleFrequency === "weekly" ? scheduleDayOfWeek : null,
-        schedule_day_of_month: scheduleEnabled && scheduleFrequency === "monthly" ? scheduleDayOfMonth : null,
+        schedule_day_of_week:
+          scheduleEnabled && scheduleFrequency === "weekly" ? scheduleDayOfWeek : null,
+        schedule_day_of_month:
+          scheduleEnabled && scheduleFrequency === "monthly" ? scheduleDayOfMonth : null,
         schedule_hour: scheduleHour,
         schedule_minute: scheduleMinute,
         ...ciFields,
@@ -164,8 +166,10 @@ export default function AddRepositoryModal({
         default_branch: defaultBranch,
         schedule_enabled: scheduleEnabled,
         schedule_frequency: scheduleEnabled ? scheduleFrequency : null,
-        schedule_day_of_week: scheduleEnabled && scheduleFrequency === "weekly" ? scheduleDayOfWeek : null,
-        schedule_day_of_month: scheduleEnabled && scheduleFrequency === "monthly" ? scheduleDayOfMonth : null,
+        schedule_day_of_week:
+          scheduleEnabled && scheduleFrequency === "weekly" ? scheduleDayOfWeek : null,
+        schedule_day_of_month:
+          scheduleEnabled && scheduleFrequency === "monthly" ? scheduleDayOfMonth : null,
         schedule_hour: scheduleHour,
         schedule_minute: scheduleMinute,
         ...ciFields,
@@ -174,8 +178,9 @@ export default function AddRepositoryModal({
     }
   };
 
-  const backendBaseUrl = import.meta.env.VITE_APP_API_BASE_URL
-    || `${window.location.protocol}//${window.location.hostname}:3000`;
+  const backendBaseUrl =
+    import.meta.env.VITE_APP_API_BASE_URL ||
+    `${window.location.protocol}//${window.location.hostname}:3000`;
   const webhookUrl = `${backendBaseUrl}/api/webhooks/github`;
 
   const copyToClipboard = (text: string, field: string) => {
@@ -252,11 +257,7 @@ export default function AddRepositoryModal({
         {/* Schedule section */}
         <Stack spacing={4}>
           <Stack spacing={1}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-            >
+            <Stack direction="row" alignItems="center" spacing={4}>
               <Toggle
                 checked={scheduleEnabled}
                 onChange={() => setScheduleEnabled(!scheduleEnabled)}
@@ -280,9 +281,7 @@ export default function AddRepositoryModal({
                 id="schedule-frequency"
                 label="Frequency"
                 value={scheduleFrequency}
-                onChange={(e) =>
-                  setScheduleFrequency(e.target.value as ScheduleFrequency)
-                }
+                onChange={(e) => setScheduleFrequency(e.target.value as ScheduleFrequency)}
                 items={FREQUENCY_OPTIONS}
                 sx={{ maxWidth: 220 }}
               />
@@ -334,16 +333,8 @@ export default function AddRepositoryModal({
         {/* CI/CD Integration section */}
         <Stack spacing={4}>
           <Stack spacing={1}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={4}
-            >
-              <Toggle
-                checked={ciEnabled}
-                onChange={() => setCiEnabled(!ciEnabled)}
-                size="small"
-              />
+            <Stack direction="row" alignItems="center" spacing={4}>
+              <Toggle checked={ciEnabled} onChange={() => setCiEnabled(!ciEnabled)} size="small" />
               <Typography
                 variant="subtitle2"
                 sx={{ fontWeight: 600, color: theme.palette.text.primary }}
@@ -367,15 +358,8 @@ export default function AddRepositoryModal({
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title={copiedField === "url" ? "Copied!" : "Copy"}>
-                        <IconButton
-                          size="small"
-                          onClick={() => copyToClipboard(webhookUrl, "url")}
-                        >
-                          {copiedField === "url" ? (
-                            <Check size={16} />
-                          ) : (
-                            <Copy size={16} />
-                          )}
+                        <IconButton size="small" onClick={() => copyToClipboard(webhookUrl, "url")}>
+                          {copiedField === "url" ? <Check size={16} /> : <Copy size={16} />}
                         </IconButton>
                       </Tooltip>
                     </InputAdornment>
@@ -416,7 +400,11 @@ export default function AddRepositoryModal({
                             >
                               <RefreshCw
                                 size={16}
-                                style={isGeneratingSecret ? { animation: "spin 1s linear infinite" } : undefined}
+                                style={
+                                  isGeneratingSecret
+                                    ? { animation: "spin 1s linear infinite" }
+                                    : undefined
+                                }
                               />
                             </IconButton>
                           </Tooltip>
@@ -424,10 +412,7 @@ export default function AddRepositoryModal({
                       ),
                     }}
                   />
-                  <Typography
-                    variant="caption"
-                    sx={{ color: theme.palette.text.secondary }}
-                  >
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                     Use this secret when configuring the webhook in your GitHub repository settings.
                   </Typography>
                 </Stack>
@@ -439,7 +424,9 @@ export default function AddRepositoryModal({
                   label="Risk score threshold"
                   type="number"
                   value={String(ciMinScore)}
-                  onChange={(e) => setCiMinScore(Math.max(0, Math.min(100, Number(e.target.value))))}
+                  onChange={(e) =>
+                    setCiMinScore(Math.max(0, Math.min(100, Number(e.target.value))))
+                  }
                   helperText="Scans scoring above this will fail the check"
                   sx={{ flex: 1 }}
                 />
@@ -455,11 +442,7 @@ export default function AddRepositoryModal({
 
               {/* Toggles */}
               <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
                     Post PR comments
                   </Typography>
@@ -469,11 +452,7 @@ export default function AddRepositoryModal({
                     size="small"
                   />
                 </Stack>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
                     Post status checks
                   </Typography>

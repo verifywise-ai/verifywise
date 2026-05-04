@@ -7,14 +7,10 @@ test.describe("Incident Management", () => {
     await expect(page).toHaveURL(/\/ai-incident-managements/);
 
     // Page should show incident-related content or empty state
-    await expect(
-      page.getByText(/incident/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/incident/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
     await page.waitForLoadState("domcontentloaded");
 
@@ -37,9 +33,7 @@ test.describe("Incident Management", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("incident list or empty state is visible", async ({
-    authedPage: page,
-  }) => {
+  test("incident list or empty state is visible", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
 
     const content = page
@@ -52,15 +46,18 @@ test.describe("Incident Management", () => {
 
   // --- Tier 2: Search ---
 
-  test("search box accepts input and filters results", async ({
-    authedPage: page,
-  }) => {
+  test("search box accepts input and filters results", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
     const searchInput = page
       .getByPlaceholder(/search/i)
       .or(page.locator('[data-testid="search-input"]'));
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-incident");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -70,9 +67,7 @@ test.describe("Incident Management", () => {
 
   // --- Tier 2: Status cards ---
 
-  test("status cards or summary are visible", async ({
-    authedPage: page,
-  }) => {
+  test("status cards or summary are visible", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
 
     const statusCard = page
@@ -82,16 +77,19 @@ test.describe("Incident Management", () => {
       .or(page.getByText(/critical/i))
       .or(page.getByText(/severity/i));
 
-    if (await statusCard.first().isVisible().catch(() => false)) {
+    if (
+      await statusCard
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(statusCard.first()).toBeVisible();
     }
   });
 
   // --- Tier 3: Drawer open/close ---
 
-  test("Add new incident button opens drawer", async ({
-    authedPage: page,
-  }) => {
+  test("Add new incident button opens drawer", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
     const addBtn = page.getByRole("button", { name: /add new incident/i });
 
@@ -103,7 +101,7 @@ test.describe("Incident Management", () => {
           .locator(".MuiDrawer-root")
           .or(page.getByText(/new incident/i))
           .or(page.getByText(/create incident/i))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -111,9 +109,7 @@ test.describe("Incident Management", () => {
 
   // --- Tier 4: CRUD ---
 
-  test("CRUD: create and archive an incident", async ({
-    authedPage: page,
-  }) => {
+  test("CRUD: create and archive an incident", async ({ authedPage: page }) => {
     await page.goto("/ai-incident-managements");
     const incidentTitle = `E2E Test Incident ${Date.now()}`;
 
@@ -138,7 +134,12 @@ test.describe("Incident Management", () => {
     const severitySelect = page
       .getByRole("combobox", { name: /severity/i })
       .or(page.getByText(/select.*severity/i));
-    if (await severitySelect.first().isVisible().catch(() => false)) {
+    if (
+      await severitySelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await severitySelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible().catch(() => false)) {
@@ -150,20 +151,28 @@ test.describe("Incident Management", () => {
     const descInput = page
       .getByRole("textbox", { name: /description/i })
       .or(page.getByPlaceholder(/description/i));
-    if (await descInput.first().isVisible().catch(() => false)) {
+    if (
+      await descInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await descInput.first().fill("E2E test incident description");
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add|report/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add|report/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
     // Verify: Search for the created incident
     const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill(incidentTitle);
       await page.waitForTimeout(500);
     }
@@ -173,17 +182,32 @@ test.describe("Incident Management", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const archiveBtn = page.getByRole("menuitem", {
         name: /archive|delete|remove|close/i,
       });
-      if (await archiveBtn.first().isVisible().catch(() => false)) {
+      if (
+        await archiveBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await archiveBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|archive|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);

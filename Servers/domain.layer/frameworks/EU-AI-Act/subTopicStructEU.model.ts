@@ -15,7 +15,7 @@ export type SubtopicStructEU = {
 };
 
 @Table({
-  tableName: "subtopics"
+  tableName: "subtopics",
 })
 export class SubtopicStructEUModel extends Model<SubtopicStructEU> {
   @Column({
@@ -26,27 +26,25 @@ export class SubtopicStructEUModel extends Model<SubtopicStructEU> {
   id?: number;
 
   @Column({
-    type: DataType.STRING
+    type: DataType.STRING,
   })
   title!: string;
 
   @Column({
-    type: DataType.INTEGER
+    type: DataType.INTEGER,
   })
   order_no?: number;
 
   @ForeignKey(() => TopicStructEUModel)
   @Column({
-    type: DataType.INTEGER
+    type: DataType.INTEGER,
   })
   topic_id!: number;
 
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
   })
   is_demo?: boolean;
-
 }
-

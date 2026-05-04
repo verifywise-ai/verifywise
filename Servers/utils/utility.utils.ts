@@ -10,10 +10,12 @@ export const validateRiskArray = (riskArray: any[], arrayName: string): number[]
     const item = riskArray[i];
 
     // Check if it's a number or a string that can be converted to a number
-    if (typeof item === 'number' && !isNaN(item) && Number.isInteger(item)) {
+    if (typeof item === "number" && !isNaN(item) && Number.isInteger(item)) {
       validatedArray.push(item);
     } else {
-      throw new Error(`${arrayName}[${i}] contains invalid value: "${item}". All items must be valid integers.`);
+      throw new Error(
+        `${arrayName}[${i}] contains invalid value: "${item}". All items must be valid integers.`,
+      );
     }
   }
 
@@ -25,7 +27,7 @@ export const validateRiskArray = (riskArray: any[], arrayName: string): number[]
  * If array, returns first element; if undefined, returns empty string
  */
 export const toStringParam = (value: string | string[] | undefined): string => {
-  if (value === undefined) return '';
+  if (value === undefined) return "";
   return Array.isArray(value) ? value[0] : value;
 };
 
@@ -34,7 +36,7 @@ export const toStringParam = (value: string | string[] | undefined): string => {
  * Returns the first element if array, or the value if string, or empty string if undefined
  */
 export const getStringParam = (value: string | string[] | undefined): string => {
-  return Array.isArray(value) ? value[0] : (value || '');
+  return Array.isArray(value) ? value[0] : value || "";
 };
 
 /**
@@ -42,7 +44,7 @@ export const getStringParam = (value: string | string[] | undefined): string => 
  * Handles ParsedQs by converting to string, arrays by taking first element
  */
 export const toStringQuery = (value: string | string[] | undefined | any): string => {
-  if (value === undefined || value === null) return '';
-  if (Array.isArray(value)) return String(value[0] || '');
+  if (value === undefined || value === null) return "";
+  if (Array.isArray(value)) return String(value[0] || "");
   return String(value);
 };

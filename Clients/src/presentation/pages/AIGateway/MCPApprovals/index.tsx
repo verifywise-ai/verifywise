@@ -50,9 +50,7 @@ export default function MCPApprovalsPage() {
 
   const loadPending = useCallback(async () => {
     try {
-      const res = await apiServices.get<Record<string, any>>(
-        "/ai-gateway/mcp/approvals"
-      );
+      const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/approvals");
       setPending(res?.data?.data || []);
     } catch {
       // silent
@@ -64,7 +62,7 @@ export default function MCPApprovalsPage() {
   const loadHistory = useCallback(async () => {
     try {
       const res = await apiServices.get<Record<string, any>>(
-        "/ai-gateway/mcp/approvals/history?limit=50"
+        "/ai-gateway/mcp/approvals/history?limit=50",
       );
       setHistory(res?.data?.data || []);
     } catch {
@@ -82,7 +80,7 @@ export default function MCPApprovalsPage() {
     try {
       await apiServices.post(
         `/ai-gateway/mcp/approvals/${decisionTarget.id}/${decisionTarget.action}`,
-        { reason: reason || undefined }
+        { reason: reason || undefined },
       );
       setDecisionTarget(null);
       setReason("");
@@ -102,8 +100,7 @@ export default function MCPApprovalsPage() {
 
   const isEmpty =
     !loading &&
-    ((tab === "pending" && pending.length === 0) ||
-      (tab === "history" && history.length === 0));
+    ((tab === "pending" && pending.length === 0) || (tab === "history" && history.length === 0));
 
   const items = tab === "pending" ? pending : history;
 
@@ -117,7 +114,11 @@ export default function MCPApprovalsPage() {
         <TabContext value={tab}>
           <TabBar
             tabs={[
-              { label: `Pending${pending.length > 0 ? ` (${pending.length})` : ""}`, value: "pending", icon: "Clock" as const },
+              {
+                label: `Pending${pending.length > 0 ? ` (${pending.length})` : ""}`,
+                value: "pending",
+                icon: "Clock" as const,
+              },
               { label: "History", value: "history", icon: "History" as const },
             ]}
             activeTab={tab}
@@ -130,11 +131,7 @@ export default function MCPApprovalsPage() {
         <Box sx={{ px: 3, pt: 2 }}>
           <EmptyState
             icon={ShieldCheck}
-            message={
-              tab === "pending"
-                ? "No pending approvals"
-                : "No approval history yet"
-            }
+            message={tab === "pending" ? "No pending approvals" : "No approval history yet"}
             showBorder
           >
             <EmptyStateTip
@@ -168,11 +165,7 @@ export default function MCPApprovalsPage() {
                   <Box key={item.id} sx={cardSx}>
                     <Stack spacing={1.5}>
                       {/* Top row: tool + status + actions */}
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
+                      <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack direction="row" alignItems="center" spacing={2}>
                           <Typography
                             sx={{
@@ -245,9 +238,7 @@ export default function MCPApprovalsPage() {
                         <Typography variant="body2" color="text.secondary">
                           Agent:{" "}
                           <strong>
-                            {item.key_name ||
-                              item.agent_key_name ||
-                              `Key #${item.agent_key_id}`}
+                            {item.key_name || item.agent_key_name || `Key #${item.agent_key_id}`}
                           </strong>
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -312,9 +303,7 @@ export default function MCPApprovalsPage() {
             label="Reason (optional)"
             placeholder="Add a reason for this decision..."
             value={reason}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setReason(e.target.value)
-            }
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReason(e.target.value)}
           />
         </StandardModal>
       )}

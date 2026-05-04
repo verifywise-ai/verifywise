@@ -1,14 +1,14 @@
 /**
  * StepperModal - A modal with built-in stepper for multi-step forms
- * 
+ *
  * Combines StandardModal's styling with Material-UI Stepper functionality.
  * Maintains the clean footer with division line and proper button positioning.
- * 
+ *
  * @component
  * @example
  * ```tsx
  * const steps = ["Step 1", "Step 2", "Step 3"];
- * 
+ *
  * <StepperModal
  *   isOpen={isOpen}
  *   onClose={handleClose}
@@ -140,11 +140,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
             zIndex: 0,
           }}
         >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0.5}>
               <Stack direction="row" alignItems="center" spacing={1.5}>
                 <Typography
@@ -326,4 +322,3 @@ const StepperModal: React.FC<StepperModalProps> = ({
 };
 
 export default StepperModal;
-

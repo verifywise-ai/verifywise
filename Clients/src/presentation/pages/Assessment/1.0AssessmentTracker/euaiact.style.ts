@@ -78,7 +78,7 @@ export const styles = {
       transition: "transform 300ms ease",
       marginRight: "8px",
       flexShrink: 0,
-    } as SxProps<Theme>),
+    }) as SxProps<Theme>,
 
   /**
    * Question row styling
@@ -98,7 +98,7 @@ export const styles = {
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
       },
-    } as SxProps<Theme>),
+    }) as SxProps<Theme>,
 
   /**
    * Question text styling

@@ -31,10 +31,7 @@ async function findAiActionWorkflow(
   organizationId: number,
   transaction?: Transaction,
 ): Promise<ApprovalWorkflowModel | null> {
-  const workflows = await getAllApprovalWorkflowsQuery(
-    organizationId,
-    transaction ?? null,
-  );
+  const workflows = await getAllApprovalWorkflowsQuery(organizationId, transaction ?? null);
   return (
     workflows.find(
       (w) => (w as unknown as { entity_type: string }).entity_type === EntityType.AI_ACTION,
@@ -80,9 +77,7 @@ export async function ensureAiActionWorkflow(
 
   const adminIds = await getAdminUserIds(organizationId, transaction);
   if (adminIds.length === 0) {
-    throw new Error(
-      "Cannot create AI Action workflow: no Admin users exist in this organization.",
-    );
+    throw new Error("Cannot create AI Action workflow: no Admin users exist in this organization.");
   }
 
   const workflow = await createApprovalWorkflowQuery(
@@ -94,8 +89,7 @@ export async function ensureAiActionWorkflow(
       steps: [
         {
           step_name: "Admin Review",
-          description:
-            "Any organization Admin can approve or reject the AI's proposed action.",
+          description: "Any organization Admin can approve or reject the AI's proposed action.",
           approver_ids: adminIds,
           requires_all_approvers: false,
         },

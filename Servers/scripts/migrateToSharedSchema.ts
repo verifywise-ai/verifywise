@@ -48,11 +48,11 @@ import {
  * If verifywise schema has JSONB but tenant has ARRAY, the array needs to be stringified.
  */
 const POSTGRES_ARRAY_COLUMNS: Record<string, string[]> = {
-  answers_eu: ['dropdown_options'],
-  evidence_hub: ['mapped_model_ids'],
-  policy_manager: ['tags'],
-  risks: ['risk_category'],
-  shadow_ai_tools: ['domains'],
+  answers_eu: ["dropdown_options"],
+  evidence_hub: ["mapped_model_ids"],
+  policy_manager: ["tags"],
+  risks: ["risk_category"],
+  shadow_ai_tools: ["domains"],
 };
 
 /**
@@ -69,7 +69,7 @@ const isPostgresArrayColumn = (tableName: string, columnName: string): boolean =
 async function checkTableHasIdColumn(
   schemaName: string,
   tableName: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `SELECT EXISTS (
@@ -78,7 +78,7 @@ async function checkTableHasIdColumn(
         AND table_name = :tableName
         AND column_name = 'id'
     ) as exists`,
-    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction }
+    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction },
   );
   return (result[0] as any).exists;
 }
@@ -98,15 +98,12 @@ const getTenantHash = (orgId: number): string => {
 /**
  * Check if a schema exists
  */
-async function schemaExists(
-  schemaName: string,
-  transaction?: Transaction
-): Promise<boolean> {
+async function schemaExists(schemaName: string, transaction?: Transaction): Promise<boolean> {
   const result = await sequelize.query(
     `SELECT EXISTS (
       SELECT 1 FROM information_schema.schemata WHERE schema_name = :schemaName
     ) as exists`,
-    { replacements: { schemaName }, type: QueryTypes.SELECT, transaction }
+    { replacements: { schemaName }, type: QueryTypes.SELECT, transaction },
   );
   return (result[0] as any).exists;
 }
@@ -117,14 +114,14 @@ async function schemaExists(
 async function tableExists(
   schemaName: string,
   tableName: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `SELECT EXISTS (
       SELECT 1 FROM information_schema.tables
       WHERE table_schema = :schemaName AND table_name = :tableName
     ) as exists`,
-    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction }
+    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction },
   );
   return (result[0] as any).exists;
 }
@@ -136,7 +133,7 @@ async function getRowCount(
   schemaName: string,
   tableName: string,
   transaction?: Transaction,
-  organizationId?: number
+  organizationId?: number,
 ): Promise<number> {
   const exists = await tableExists(schemaName, tableName, transaction);
   if (!exists) return 0;
@@ -165,28 +162,28 @@ async function getRowCount(
  * These IDs are application-generated, not auto-incremented by PostgreSQL.
  */
 const TABLES_WITH_STRING_ID: string[] = [
-  'llm_evals_organizations',
-  'llm_evals_projects',
-  'llm_evals_models',
-  'llm_evals_scorers',
-  'llm_evals_experiments',
-  'llm_evals_arena_comparisons',
-  'llm_evals_bias_audits',
-  'llm_evals_logs',
-  'llm_evals_metrics',
+  "llm_evals_organizations",
+  "llm_evals_projects",
+  "llm_evals_models",
+  "llm_evals_scorers",
+  "llm_evals_experiments",
+  "llm_evals_arena_comparisons",
+  "llm_evals_bias_audits",
+  "llm_evals_logs",
+  "llm_evals_metrics",
 ];
 
 async function getTableColumns(
   schemaName: string,
   tableName: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<string[]> {
   const result = await sequelize.query(
     `SELECT column_name
      FROM information_schema.columns
      WHERE table_schema = :schemaName AND table_name = :tableName
      ORDER BY ordinal_position`,
-    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction }
+    { replacements: { schemaName, tableName }, type: QueryTypes.SELECT, transaction },
   );
 
   const keepId = TABLES_WITH_STRING_ID.includes(tableName);
@@ -200,7 +197,7 @@ async function getTableColumns(
  */
 async function hasOrganizationIdColumn(
   tableName: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `SELECT EXISTS (
@@ -209,7 +206,7 @@ async function hasOrganizationIdColumn(
         AND table_name = :tableName
         AND column_name = 'organization_id'
     ) as exists`,
-    { replacements: { tableName }, type: QueryTypes.SELECT, transaction }
+    { replacements: { tableName }, type: QueryTypes.SELECT, transaction },
   );
   return (result[0] as any).exists;
 }
@@ -226,7 +223,7 @@ async function migrateTable(
   tenantHash: string,
   tableName: string,
   idMapping: IdMapping,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<{ sourceCount: number; migratedCount: number }> {
   // Check if source table exists
   const sourceExists = await tableExists(tenantHash, tableName, transaction);
@@ -248,12 +245,14 @@ async function migrateTable(
   const targetColumns = await getTableColumns("verifywise", targetTableName, transaction);
 
   const targetColumnSet = new Set(targetColumns);
-  const commonColumns = sourceColumns.filter(col => targetColumnSet.has(col));
+  const commonColumns = sourceColumns.filter((col) => targetColumnSet.has(col));
 
   // Debug logging for column detection
   if (sourceColumns.length !== commonColumns.length) {
-    const skippedCols = sourceColumns.filter(col => !targetColumnSet.has(col));
-    console.log(`    ℹ️  ${tableName}: skipping columns not in verifywise schema: ${skippedCols.join(', ')}`);
+    const skippedCols = sourceColumns.filter((col) => !targetColumnSet.has(col));
+    console.log(
+      `    ℹ️  ${tableName}: skipping columns not in verifywise schema: ${skippedCols.join(", ")}`,
+    );
   }
 
   if (commonColumns.length === 0) {
@@ -263,16 +262,22 @@ async function migrateTable(
 
   // Check for NOT NULL target columns that are missing from source (would cause insert failure)
   const sourceColumnSet = new Set(sourceColumns);
-  const notNullMissing = (await sequelize.query(
-    `SELECT column_name FROM information_schema.columns
+  const notNullMissing = (
+    (await sequelize.query(
+      `SELECT column_name FROM information_schema.columns
      WHERE table_schema = 'verifywise' AND table_name = :tableName
        AND is_nullable = 'NO' AND column_default IS NULL
        AND column_name != 'id' AND column_name != 'organization_id'`,
-    { replacements: { tableName: targetTableName }, type: QueryTypes.SELECT, transaction }
-  ) as any[]).filter(r => !sourceColumnSet.has(r.column_name)).map(r => r.column_name);
+      { replacements: { tableName: targetTableName }, type: QueryTypes.SELECT, transaction },
+    )) as any[]
+  )
+    .filter((r) => !sourceColumnSet.has(r.column_name))
+    .map((r) => r.column_name);
 
   if (notNullMissing.length > 0) {
-    console.log(`    ⊘ ${tableName}: skipping — target has NOT NULL columns missing from source: ${notNullMissing.join(', ')}`);
+    console.log(
+      `    ⊘ ${tableName}: skipping — target has NOT NULL columns missing from source: ${notNullMissing.join(", ")}`,
+    );
     return { sourceCount, migratedCount: 0 };
   }
 
@@ -298,14 +303,14 @@ async function migrateTable(
   let migratedCount = 0;
 
   while (offset < sourceCount) {
-    const orderClause = hasIdColumn ? 'ORDER BY id' : 'ORDER BY 1';
+    const orderClause = hasIdColumn ? "ORDER BY id" : "ORDER BY 1";
     const rows = (await sequelize.query(
       `SELECT * FROM "${tenantHash}"."${tableName}" ${orderClause} LIMIT :limit OFFSET :offset`,
       {
         replacements: { limit: BATCH_SIZE, offset },
         type: QueryTypes.SELECT,
         transaction,
-      }
+      },
     )) as any[];
 
     if (rows.length === 0) break;
@@ -334,7 +339,9 @@ async function migrateTable(
             // FK target not found - debug info
             const hasTable = !!idMapping[sourceTable];
             const mappingKeys = hasTable ? Object.keys(idMapping[sourceTable]).slice(0, 5) : [];
-            console.log(`    ⚠️ ${tableName}.${col}: FK ${value} not found in idMapping['${sourceTable}'] (exists=${hasTable}, keys=${JSON.stringify(mappingKeys)}) → NULL`);
+            console.log(
+              `    ⚠️ ${tableName}.${col}: FK ${value} not found in idMapping['${sourceTable}'] (exists=${hasTable}, keys=${JSON.stringify(mappingKeys)}) → NULL`,
+            );
             insertData[col] = null;
           }
         } else {
@@ -343,9 +350,7 @@ async function migrateTable(
       }
 
       // Build INSERT statement
-      const targetCols = hasOrgId
-        ? ["organization_id", ...commonColumns]
-        : commonColumns;
+      const targetCols = hasOrgId ? ["organization_id", ...commonColumns] : commonColumns;
 
       // Helper to serialize values based on column type
       // - PostgreSQL ARRAY columns: keep as JavaScript array
@@ -361,7 +366,7 @@ async function migrateTable(
         }
 
         // For JSONB columns and other object types, stringify
-        if (typeof val === 'object') {
+        if (typeof val === "object") {
           return JSON.stringify(val);
         }
 
@@ -387,7 +392,7 @@ async function migrateTable(
             bind: targetValues,
             type: QueryTypes.SELECT,
             transaction,
-          }
+          },
         );
 
         if (insertResult.length > 0) {
@@ -410,7 +415,7 @@ async function migrateTable(
                 bind: [orgId, migratedCount],
                 type: QueryTypes.SELECT,
                 transaction,
-              }
+              },
             );
             if (existing.length > 0) {
               idMapping[tableName][oldId] = (existing[0] as any).id;
@@ -427,7 +432,7 @@ async function migrateTable(
             bind: targetValues,
             type: QueryTypes.INSERT,
             transaction,
-          }
+          },
         );
         migratedCount++;
       }
@@ -451,12 +456,12 @@ async function migrateTable(
  * Convert JS array to PostgreSQL array literal
  */
 function toPgArray(arr: any[] | null | undefined): string {
-  if (!arr || !Array.isArray(arr) || arr.length === 0) return '{}';
+  if (!arr || !Array.isArray(arr) || arr.length === 0) return "{}";
   const escaped = arr.map((item) => {
-    const escapedItem = String(item).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const escapedItem = String(item).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     return `"${escapedItem}"`;
   });
-  return `{${escaped.join(',')}}`;
+  return `{${escaped.join(",")}}`;
 }
 
 /**
@@ -464,11 +469,11 @@ function toPgArray(arr: any[] | null | undefined): string {
  * Tracks which plugin_keys already have struct rows populated.
  */
 interface GlobalStructMap {
-  definitions: Record<string, number>;       // pluginKey → definition_id
-  structPopulated: Record<string, boolean>;  // pluginKey → true
-  level1: Record<string, Record<number, number>>;  // pluginKey → { order_no → struct_id }
-  level2: Record<string, Record<string, number>>;  // pluginKey → { "l1StructId-orderNo" → struct_id }
-  level3: Record<string, Record<string, number>>;  // pluginKey → { "l2StructId-orderNo" → struct_id }
+  definitions: Record<string, number>; // pluginKey → definition_id
+  structPopulated: Record<string, boolean>; // pluginKey → true
+  level1: Record<string, Record<number, number>>; // pluginKey → { order_no → struct_id }
+  level2: Record<string, Record<string, number>>; // pluginKey → { "l1StructId-orderNo" → struct_id }
+  level3: Record<string, Record<string, number>>; // pluginKey → { "l2StructId-orderNo" → struct_id }
 }
 
 /**
@@ -499,17 +504,23 @@ async function migrateCustomFrameworkPhase1(
   orgId: number,
   tenantHash: string,
   globalStructMap: GlobalStructMap,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<CfPhase1Result> {
   let totalMigrated = 0;
-  const emptyResult: CfPhase1Result = { totalMigrated: 0, l2IdMap: {}, l3IdMap: {}, fwIdMap: {}, l1IdMap: {} };
+  const emptyResult: CfPhase1Result = {
+    totalMigrated: 0,
+    l2IdMap: {},
+    l3IdMap: {},
+    fwIdMap: {},
+    l1IdMap: {},
+  };
 
-  const hasCF = await tableExists(tenantHash, 'custom_frameworks', transaction);
+  const hasCF = await tableExists(tenantHash, "custom_frameworks", transaction);
   if (!hasCF) return emptyResult;
 
   const tenantFrameworks = (await sequelize.query(
     `SELECT * FROM "${tenantHash}".custom_frameworks ORDER BY id`,
-    { type: QueryTypes.SELECT, transaction }
+    { type: QueryTypes.SELECT, transaction },
   )) as any[];
   if (tenantFrameworks.length === 0) return emptyResult;
 
@@ -529,7 +540,7 @@ async function migrateCustomFrameworkPhase1(
     } else {
       const existingDef = (await sequelize.query(
         `SELECT id FROM custom_framework_definitions WHERE plugin_key = :pluginKey LIMIT 1`,
-        { replacements: { pluginKey }, type: QueryTypes.SELECT, transaction }
+        { replacements: { pluginKey }, type: QueryTypes.SELECT, transaction },
       )) as any[];
 
       if (existingDef.length > 0) {
@@ -547,11 +558,11 @@ async function migrateCustomFrameworkPhase1(
               pluginKey,
               name: fw.name,
               description: fw.description,
-              version: fw.version || '1.0.0',
+              version: fw.version || "1.0.0",
               isOrg: fw.is_organizational || false,
-              hierarchyType: fw.hierarchy_type || 'two_level',
-              l1Name: fw.level_1_name || 'Category',
-              l2Name: fw.level_2_name || 'Control',
+              hierarchyType: fw.hierarchy_type || "two_level",
+              l1Name: fw.level_1_name || "Category",
+              l2Name: fw.level_2_name || "Control",
               l3Name: fw.level_3_name || null,
               fileSource: fw.file_source || null,
               createdAt: fw.created_at || new Date(),
@@ -559,7 +570,7 @@ async function migrateCustomFrameworkPhase1(
             },
             type: QueryTypes.SELECT,
             transaction,
-          }
+          },
         )) as any[];
         defId = insertedDef[0].id;
       }
@@ -578,15 +589,24 @@ async function migrateCustomFrameworkPhase1(
        RETURNING id`,
       {
         replacements: {
-          orgId, defId, pluginKey,
-          name: fw.name, description: fw.description, version: fw.version || '1.0.0',
-          isOrg: fw.is_organizational || false, hierarchyType: fw.hierarchy_type || 'two_level',
-          l1Name: fw.level_1_name || 'Category', l2Name: fw.level_2_name || 'Control',
-          l3Name: fw.level_3_name || null, fileSource: fw.file_source || null,
-          createdAt: fw.created_at || new Date(), updatedAt: fw.updated_at || new Date(),
+          orgId,
+          defId,
+          pluginKey,
+          name: fw.name,
+          description: fw.description,
+          version: fw.version || "1.0.0",
+          isOrg: fw.is_organizational || false,
+          hierarchyType: fw.hierarchy_type || "two_level",
+          l1Name: fw.level_1_name || "Category",
+          l2Name: fw.level_2_name || "Control",
+          l3Name: fw.level_3_name || null,
+          fileSource: fw.file_source || null,
+          createdAt: fw.created_at || new Date(),
+          updatedAt: fw.updated_at || new Date(),
         },
-        type: QueryTypes.SELECT, transaction,
-      }
+        type: QueryTypes.SELECT,
+        transaction,
+      },
     )) as any[];
     fwIdMap[fw.id] = insertedFw[0].id;
     totalMigrated++;
@@ -595,11 +615,11 @@ async function migrateCustomFrameworkPhase1(
     const needsStruct = !globalStructMap.structPopulated[pluginKey];
 
     if (needsStruct) {
-      const hasL1 = await tableExists(tenantHash, 'custom_framework_level1', transaction);
+      const hasL1 = await tableExists(tenantHash, "custom_framework_level1", transaction);
       if (hasL1) {
         const l1Rows = (await sequelize.query(
           `SELECT * FROM "${tenantHash}".custom_framework_level1 WHERE framework_id = :fwId ORDER BY order_no, id`,
-          { replacements: { fwId: fw.id }, type: QueryTypes.SELECT, transaction }
+          { replacements: { fwId: fw.id }, type: QueryTypes.SELECT, transaction },
         )) as any[];
 
         for (const l1 of l1Rows) {
@@ -610,12 +630,16 @@ async function migrateCustomFrameworkPhase1(
              RETURNING id`,
             {
               replacements: {
-                defId, title: l1.title, description: l1.description,
-                orderNo: l1.order_no || 1, metadata: JSON.stringify(l1.metadata || {}),
+                defId,
+                title: l1.title,
+                description: l1.description,
+                orderNo: l1.order_no || 1,
+                metadata: JSON.stringify(l1.metadata || {}),
                 createdAt: l1.created_at || new Date(),
               },
-              type: QueryTypes.SELECT, transaction,
-            }
+              type: QueryTypes.SELECT,
+              transaction,
+            },
           )) as any[];
           l1IdMap[l1.id] = inserted[0].id;
           if (!globalStructMap.level1[pluginKey]) globalStructMap.level1[pluginKey] = {};
@@ -623,13 +647,13 @@ async function migrateCustomFrameworkPhase1(
           totalMigrated++;
         }
 
-        const hasL2 = await tableExists(tenantHash, 'custom_framework_level2', transaction);
+        const hasL2 = await tableExists(tenantHash, "custom_framework_level2", transaction);
         if (hasL2) {
           const oldL1Ids = Object.keys(l1IdMap).map(Number);
           if (oldL1Ids.length > 0) {
             const l2Rows = (await sequelize.query(
               `SELECT * FROM "${tenantHash}".custom_framework_level2 WHERE level1_id IN (:l1Ids) ORDER BY level1_id, order_no, id`,
-              { replacements: { l1Ids: oldL1Ids }, type: QueryTypes.SELECT, transaction }
+              { replacements: { l1Ids: oldL1Ids }, type: QueryTypes.SELECT, transaction },
             )) as any[];
 
             for (const l2 of l2Rows) {
@@ -642,13 +666,19 @@ async function migrateCustomFrameworkPhase1(
                  RETURNING id`,
                 {
                   replacements: {
-                    l1Id: newL1Id, title: l2.title, description: l2.description,
-                    orderNo: l2.order_no || 1, summary: l2.summary || null,
-                    questions: toPgArray(l2.questions), evidenceExamples: toPgArray(l2.evidence_examples),
-                    metadata: JSON.stringify(l2.metadata || {}), createdAt: l2.created_at || new Date(),
+                    l1Id: newL1Id,
+                    title: l2.title,
+                    description: l2.description,
+                    orderNo: l2.order_no || 1,
+                    summary: l2.summary || null,
+                    questions: toPgArray(l2.questions),
+                    evidenceExamples: toPgArray(l2.evidence_examples),
+                    metadata: JSON.stringify(l2.metadata || {}),
+                    createdAt: l2.created_at || new Date(),
                   },
-                  type: QueryTypes.SELECT, transaction,
-                }
+                  type: QueryTypes.SELECT,
+                  transaction,
+                },
               )) as any[];
               l2IdMap[l2.id] = inserted[0].id;
               if (!globalStructMap.level2[pluginKey]) globalStructMap.level2[pluginKey] = {};
@@ -656,13 +686,13 @@ async function migrateCustomFrameworkPhase1(
               totalMigrated++;
             }
 
-            const hasL3 = await tableExists(tenantHash, 'custom_framework_level3', transaction);
+            const hasL3 = await tableExists(tenantHash, "custom_framework_level3", transaction);
             if (hasL3) {
               const oldL2Ids = Object.keys(l2IdMap).map(Number);
               if (oldL2Ids.length > 0) {
                 const l3Rows = (await sequelize.query(
                   `SELECT * FROM "${tenantHash}".custom_framework_level3 WHERE level2_id IN (:l2Ids) ORDER BY level2_id, order_no, id`,
-                  { replacements: { l2Ids: oldL2Ids }, type: QueryTypes.SELECT, transaction }
+                  { replacements: { l2Ids: oldL2Ids }, type: QueryTypes.SELECT, transaction },
                 )) as any[];
 
                 for (const l3 of l3Rows) {
@@ -675,17 +705,24 @@ async function migrateCustomFrameworkPhase1(
                      RETURNING id`,
                     {
                       replacements: {
-                        l2Id: newL2Id, title: l3.title, description: l3.description,
-                        orderNo: l3.order_no || 1, summary: l3.summary || null,
-                        questions: toPgArray(l3.questions), evidenceExamples: toPgArray(l3.evidence_examples),
-                        metadata: JSON.stringify(l3.metadata || {}), createdAt: l3.created_at || new Date(),
+                        l2Id: newL2Id,
+                        title: l3.title,
+                        description: l3.description,
+                        orderNo: l3.order_no || 1,
+                        summary: l3.summary || null,
+                        questions: toPgArray(l3.questions),
+                        evidenceExamples: toPgArray(l3.evidence_examples),
+                        metadata: JSON.stringify(l3.metadata || {}),
+                        createdAt: l3.created_at || new Date(),
                       },
-                      type: QueryTypes.SELECT, transaction,
-                    }
+                      type: QueryTypes.SELECT,
+                      transaction,
+                    },
                   )) as any[];
                   l3IdMap[l3.id] = inserted[0].id;
                   if (!globalStructMap.level3[pluginKey]) globalStructMap.level3[pluginKey] = {};
-                  globalStructMap.level3[pluginKey][`${newL2Id}-${l3.order_no || 1}`] = inserted[0].id;
+                  globalStructMap.level3[pluginKey][`${newL2Id}-${l3.order_no || 1}`] =
+                    inserted[0].id;
                   totalMigrated++;
                 }
               }
@@ -696,44 +733,46 @@ async function migrateCustomFrameworkPhase1(
       globalStructMap.structPopulated[pluginKey] = true;
     } else {
       // Struct already populated — build ID maps via position matching
-      const hasL1 = await tableExists(tenantHash, 'custom_framework_level1', transaction);
+      const hasL1 = await tableExists(tenantHash, "custom_framework_level1", transaction);
       if (hasL1) {
         const l1Rows = (await sequelize.query(
           `SELECT * FROM "${tenantHash}".custom_framework_level1 WHERE framework_id = :fwId ORDER BY order_no, id`,
-          { replacements: { fwId: fw.id }, type: QueryTypes.SELECT, transaction }
+          { replacements: { fwId: fw.id }, type: QueryTypes.SELECT, transaction },
         )) as any[];
         for (const l1 of l1Rows) {
           const structId = globalStructMap.level1[pluginKey]?.[l1.order_no || 1];
           if (structId) l1IdMap[l1.id] = structId;
         }
 
-        const hasL2 = await tableExists(tenantHash, 'custom_framework_level2', transaction);
+        const hasL2 = await tableExists(tenantHash, "custom_framework_level2", transaction);
         if (hasL2) {
           const oldL1Ids = Object.keys(l1IdMap).map(Number);
           if (oldL1Ids.length > 0) {
             const l2Rows = (await sequelize.query(
               `SELECT * FROM "${tenantHash}".custom_framework_level2 WHERE level1_id IN (:l1Ids) ORDER BY level1_id, order_no, id`,
-              { replacements: { l1Ids: oldL1Ids }, type: QueryTypes.SELECT, transaction }
+              { replacements: { l1Ids: oldL1Ids }, type: QueryTypes.SELECT, transaction },
             )) as any[];
             for (const l2 of l2Rows) {
               const newL1Id = l1IdMap[l2.level1_id];
               if (!newL1Id) continue;
-              const structId = globalStructMap.level2[pluginKey]?.[`${newL1Id}-${l2.order_no || 1}`];
+              const structId =
+                globalStructMap.level2[pluginKey]?.[`${newL1Id}-${l2.order_no || 1}`];
               if (structId) l2IdMap[l2.id] = structId;
             }
 
-            const hasL3 = await tableExists(tenantHash, 'custom_framework_level3', transaction);
+            const hasL3 = await tableExists(tenantHash, "custom_framework_level3", transaction);
             if (hasL3) {
               const oldL2Ids = Object.keys(l2IdMap).map(Number);
               if (oldL2Ids.length > 0) {
                 const l3Rows = (await sequelize.query(
                   `SELECT * FROM "${tenantHash}".custom_framework_level3 WHERE level2_id IN (:l2Ids) ORDER BY level2_id, order_no, id`,
-                  { replacements: { l2Ids: oldL2Ids }, type: QueryTypes.SELECT, transaction }
+                  { replacements: { l2Ids: oldL2Ids }, type: QueryTypes.SELECT, transaction },
                 )) as any[];
                 for (const l3 of l3Rows) {
                   const newL2Id = l2IdMap[l3.level2_id];
                   if (!newL2Id) continue;
-                  const structId = globalStructMap.level3[pluginKey]?.[`${newL2Id}-${l3.order_no || 1}`];
+                  const structId =
+                    globalStructMap.level3[pluginKey]?.[`${newL2Id}-${l3.order_no || 1}`];
                   if (structId) l3IdMap[l3.id] = structId;
                 }
               }
@@ -744,7 +783,10 @@ async function migrateCustomFrameworkPhase1(
     }
   }
 
-  if (totalMigrated > 0) console.log(`    ✓ custom_frameworks (phase 1 - defs/struct): ${tenantFrameworks.length} frameworks, ${totalMigrated} rows`);
+  if (totalMigrated > 0)
+    console.log(
+      `    ✓ custom_frameworks (phase 1 - defs/struct): ${tenantFrameworks.length} frameworks, ${totalMigrated} rows`,
+    );
   return { totalMigrated, l2IdMap, l3IdMap, fwIdMap, l1IdMap };
 }
 
@@ -757,12 +799,17 @@ async function migrateCustomFrameworkPhase2(
   tenantHash: string,
   phase1: CfPhase1Result,
   idMapping: IdMapping,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<CustomFrameworkIdMaps> {
-  const emptyMaps: CustomFrameworkIdMaps = { l2IdMap: phase1.l2IdMap, l3IdMap: phase1.l3IdMap, l2ImplIdMap: {}, l3ImplIdMap: {} };
+  const emptyMaps: CustomFrameworkIdMaps = {
+    l2IdMap: phase1.l2IdMap,
+    l3IdMap: phase1.l3IdMap,
+    l2ImplIdMap: {},
+    l3ImplIdMap: {},
+  };
   let totalMigrated = 0;
 
-  const hasCF = await tableExists(tenantHash, 'custom_frameworks', transaction);
+  const hasCF = await tableExists(tenantHash, "custom_frameworks", transaction);
   if (!hasCF) return emptyMaps;
 
   const { fwIdMap, l2IdMap, l3IdMap } = phase1;
@@ -773,11 +820,11 @@ async function migrateCustomFrameworkPhase2(
   const l3ImplIdMap: Record<number, number> = {};
 
   // 3. custom_framework_projects — remap project_id using idMapping['projects']
-  const hasCFP = await tableExists(tenantHash, 'custom_framework_projects', transaction);
+  const hasCFP = await tableExists(tenantHash, "custom_framework_projects", transaction);
   if (hasCFP) {
     const projRows = (await sequelize.query(
       `SELECT * FROM "${tenantHash}".custom_framework_projects ORDER BY id`,
-      { type: QueryTypes.SELECT, transaction }
+      { type: QueryTypes.SELECT, transaction },
     )) as any[];
 
     for (const proj of projRows) {
@@ -786,21 +833,27 @@ async function migrateCustomFrameworkPhase2(
 
       // Remap project_id: old tenant ID → new verifywise ID
       let newProjectId = proj.project_id;
-      if (idMapping['projects'] && idMapping['projects'][proj.project_id]) {
-        newProjectId = idMapping['projects'][proj.project_id];
+      if (idMapping["projects"] && idMapping["projects"][proj.project_id]) {
+        newProjectId = idMapping["projects"][proj.project_id];
       }
 
-      const insertResult = await sequelize.query(
+      const insertResult = (await sequelize.query(
         `INSERT INTO custom_framework_projects
          (organization_id, framework_id, project_id, created_at)
          VALUES (:orgId, :fwId, :projectId, :createdAt)
          ON CONFLICT DO NOTHING
          RETURNING id`,
         {
-          replacements: { orgId, fwId: newFwId, projectId: newProjectId, createdAt: proj.created_at || new Date() },
-          type: QueryTypes.SELECT, transaction,
-        }
-      ) as any[];
+          replacements: {
+            orgId,
+            fwId: newFwId,
+            projectId: newProjectId,
+            createdAt: proj.created_at || new Date(),
+          },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      )) as any[];
       if (insertResult.length > 0) {
         projFwIdMap[proj.id] = insertResult[0].id;
       } else {
@@ -808,21 +861,26 @@ async function migrateCustomFrameworkPhase2(
         const existing = (await sequelize.query(
           `SELECT id FROM custom_framework_projects
            WHERE organization_id = :orgId AND framework_id = :fwId AND project_id = :projectId LIMIT 1`,
-          { replacements: { orgId, fwId: newFwId, projectId: newProjectId }, type: QueryTypes.SELECT, transaction }
+          {
+            replacements: { orgId, fwId: newFwId, projectId: newProjectId },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
         )) as any[];
         if (existing[0]?.id) projFwIdMap[proj.id] = existing[0].id;
       }
       totalMigrated++;
     }
-    if (Object.keys(projFwIdMap).length > 0) console.log(`    ✓ custom_framework_projects: ${Object.keys(projFwIdMap).length} rows`);
+    if (Object.keys(projFwIdMap).length > 0)
+      console.log(`    ✓ custom_framework_projects: ${Object.keys(projFwIdMap).length} rows`);
   }
 
   // 4. level2_impl
-  const hasL2Impl = await tableExists(tenantHash, 'custom_framework_level2_impl', transaction);
+  const hasL2Impl = await tableExists(tenantHash, "custom_framework_level2_impl", transaction);
   if (hasL2Impl) {
     const implRows = (await sequelize.query(
       `SELECT * FROM "${tenantHash}".custom_framework_level2_impl ORDER BY id`,
-      { type: QueryTypes.SELECT, transaction }
+      { type: QueryTypes.SELECT, transaction },
     )) as any[];
 
     for (const impl of implRows) {
@@ -840,30 +898,39 @@ async function migrateCustomFrameworkPhase2(
          RETURNING id`,
         {
           replacements: {
-            orgId, l2Id: newL2Id, projFwId: newProjFwId,
-            status: impl.status || 'Not started', owner: impl.owner || null,
-            reviewer: impl.reviewer || null, approver: impl.approver || null,
-            dueDate: impl.due_date || null, implDetails: impl.implementation_details || null,
+            orgId,
+            l2Id: newL2Id,
+            projFwId: newProjFwId,
+            status: impl.status || "Not started",
+            owner: impl.owner || null,
+            reviewer: impl.reviewer || null,
+            approver: impl.approver || null,
+            dueDate: impl.due_date || null,
+            implDetails: impl.implementation_details || null,
             evidenceLinks: JSON.stringify(impl.evidence_links || []),
             feedbackLinks: JSON.stringify(impl.feedback_links || []),
-            auditorFeedback: impl.auditor_feedback || null, isDemo: impl.is_demo || false,
-            createdAt: impl.created_at || new Date(), updatedAt: impl.updated_at || new Date(),
+            auditorFeedback: impl.auditor_feedback || null,
+            isDemo: impl.is_demo || false,
+            createdAt: impl.created_at || new Date(),
+            updatedAt: impl.updated_at || new Date(),
           },
-          type: QueryTypes.SELECT, transaction,
-        }
+          type: QueryTypes.SELECT,
+          transaction,
+        },
       )) as any[];
       l2ImplIdMap[impl.id] = inserted[0].id;
       totalMigrated++;
     }
-    if (Object.keys(l2ImplIdMap).length > 0) console.log(`    ✓ custom_framework_level2_impl: ${Object.keys(l2ImplIdMap).length} rows`);
+    if (Object.keys(l2ImplIdMap).length > 0)
+      console.log(`    ✓ custom_framework_level2_impl: ${Object.keys(l2ImplIdMap).length} rows`);
   }
 
   // 5. level3_impl
-  const hasL3Impl = await tableExists(tenantHash, 'custom_framework_level3_impl', transaction);
+  const hasL3Impl = await tableExists(tenantHash, "custom_framework_level3_impl", transaction);
   if (hasL3Impl) {
     const implRows = (await sequelize.query(
       `SELECT * FROM "${tenantHash}".custom_framework_level3_impl ORDER BY id`,
-      { type: QueryTypes.SELECT, transaction }
+      { type: QueryTypes.SELECT, transaction },
     )) as any[];
 
     for (const impl of implRows) {
@@ -881,35 +948,44 @@ async function migrateCustomFrameworkPhase2(
          RETURNING id`,
         {
           replacements: {
-            orgId, l3Id: newL3Id, l2ImplId: newL2ImplId,
-            status: impl.status || 'Not started', owner: impl.owner || null,
-            reviewer: impl.reviewer || null, approver: impl.approver || null,
-            dueDate: impl.due_date || null, implDetails: impl.implementation_details || null,
+            orgId,
+            l3Id: newL3Id,
+            l2ImplId: newL2ImplId,
+            status: impl.status || "Not started",
+            owner: impl.owner || null,
+            reviewer: impl.reviewer || null,
+            approver: impl.approver || null,
+            dueDate: impl.due_date || null,
+            implDetails: impl.implementation_details || null,
             evidenceLinks: JSON.stringify(impl.evidence_links || []),
             feedbackLinks: JSON.stringify(impl.feedback_links || []),
-            auditorFeedback: impl.auditor_feedback || null, isDemo: impl.is_demo || false,
-            createdAt: impl.created_at || new Date(), updatedAt: impl.updated_at || new Date(),
+            auditorFeedback: impl.auditor_feedback || null,
+            isDemo: impl.is_demo || false,
+            createdAt: impl.created_at || new Date(),
+            updatedAt: impl.updated_at || new Date(),
           },
-          type: QueryTypes.SELECT, transaction,
-        }
+          type: QueryTypes.SELECT,
+          transaction,
+        },
       )) as any[];
       l3ImplIdMap[impl.id] = inserted[0].id;
       totalMigrated++;
     }
-    if (Object.keys(l3ImplIdMap).length > 0) console.log(`    ✓ custom_framework_level3_impl: ${Object.keys(l3ImplIdMap).length} rows`);
+    if (Object.keys(l3ImplIdMap).length > 0)
+      console.log(`    ✓ custom_framework_level3_impl: ${Object.keys(l3ImplIdMap).length} rows`);
   }
 
   // 6. Risk tables — remap risk_id using idMapping['risks']
   for (const [riskTable, implIdMap, implCol] of [
-    ['custom_framework_level2_risks', l2ImplIdMap, 'level2_impl_id'],
-    ['custom_framework_level3_risks', l3ImplIdMap, 'level3_impl_id'],
+    ["custom_framework_level2_risks", l2ImplIdMap, "level2_impl_id"],
+    ["custom_framework_level3_risks", l3ImplIdMap, "level3_impl_id"],
   ] as const) {
     const hasRisks = await tableExists(tenantHash, riskTable, transaction);
     if (!hasRisks) continue;
-    const riskRows = (await sequelize.query(
-      `SELECT * FROM "${tenantHash}"."${riskTable}"`,
-      { type: QueryTypes.SELECT, transaction }
-    )) as any[];
+    const riskRows = (await sequelize.query(`SELECT * FROM "${tenantHash}"."${riskTable}"`, {
+      type: QueryTypes.SELECT,
+      transaction,
+    })) as any[];
 
     let riskCount = 0;
     for (const risk of riskRows) {
@@ -918,22 +994,26 @@ async function migrateCustomFrameworkPhase2(
 
       // Remap risk_id: old tenant ID → new verifywise ID
       let newRiskId = risk.risk_id;
-      if (idMapping['risks'] && idMapping['risks'][risk.risk_id]) {
-        newRiskId = idMapping['risks'][risk.risk_id];
+      if (idMapping["risks"] && idMapping["risks"][risk.risk_id]) {
+        newRiskId = idMapping["risks"][risk.risk_id];
       }
 
       await sequelize.query(
         `INSERT INTO "${riskTable}" (organization_id, "${implCol}", risk_id)
          VALUES (:orgId, :implId, :riskId)
          ON CONFLICT ("${implCol}", risk_id) DO NOTHING`,
-        { replacements: { orgId, implId: newImplId, riskId: newRiskId }, transaction }
+        { replacements: { orgId, implId: newImplId, riskId: newRiskId }, transaction },
       );
       riskCount++;
     }
-    if (riskCount > 0) { console.log(`    ✓ ${riskTable}: ${riskCount} rows`); totalMigrated += riskCount; }
+    if (riskCount > 0) {
+      console.log(`    ✓ ${riskTable}: ${riskCount} rows`);
+      totalMigrated += riskCount;
+    }
   }
 
-  if (totalMigrated > 0) console.log(`    ✓ custom_frameworks (phase 2 - projects/impl/risks): ${totalMigrated} rows`);
+  if (totalMigrated > 0)
+    console.log(`    ✓ custom_frameworks (phase 2 - projects/impl/risks): ${totalMigrated} rows`);
   return { l2IdMap, l3IdMap, l2ImplIdMap, l3ImplIdMap };
 }
 
@@ -961,16 +1041,16 @@ async function migrateNistAiRmfData(
   orgId: number,
   tenantHash: string,
   idMapping: IdMapping,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<{ subcategoriesMigrated: number; risksMigrated: number }> {
   // Check if tenant has nist_ai_rmf_subcategories table
-  const hasSubcats = await tableExists(tenantHash, 'nist_ai_rmf_subcategories', transaction);
+  const hasSubcats = await tableExists(tenantHash, "nist_ai_rmf_subcategories", transaction);
   if (!hasSubcats) return { subcategoriesMigrated: 0, risksMigrated: 0 };
 
   // Read old subcategories from tenant schema
   const oldRows = (await sequelize.query(
     `SELECT * FROM "${tenantHash}".nist_ai_rmf_subcategories ORDER BY id`,
-    { type: QueryTypes.SELECT, transaction }
+    { type: QueryTypes.SELECT, transaction },
   )) as any[];
 
   if (!oldRows.length) return { subcategoriesMigrated: 0, risksMigrated: 0 };
@@ -979,7 +1059,7 @@ async function migrateNistAiRmfData(
   const structRows = (await sequelize.query(
     `SELECT id, function, subcategory_id, description, category_struct_id
      FROM nist_ai_rmf_subcategories_struct`,
-    { type: QueryTypes.SELECT, transaction }
+    { type: QueryTypes.SELECT, transaction },
   )) as any[];
 
   // Build lookup by description (most reliable matching key for NIST standard text)
@@ -1000,7 +1080,7 @@ async function migrateNistAiRmfData(
   // Old tenant category_id may reference these struct IDs directly
   const categoryStructRows = (await sequelize.query(
     `SELECT id, function, category_id FROM nist_ai_rmf_categories_struct`,
-    { type: QueryTypes.SELECT, transaction }
+    { type: QueryTypes.SELECT, transaction },
   )) as any[];
   const categoryFunctionMap: Record<number, string> = {};
   for (const c of categoryStructRows) {
@@ -1008,18 +1088,18 @@ async function migrateNistAiRmfData(
   }
 
   // Also check if old tenant has its own nist_ai_rmf_categories table
-  const hasOldCategories = await tableExists(tenantHash, 'nist_ai_rmf_categories', transaction);
+  const hasOldCategories = await tableExists(tenantHash, "nist_ai_rmf_categories", transaction);
   let oldCategoryFunctionMap: Record<number, { function: string; index: number }> = {};
   if (hasOldCategories) {
     const oldCats = (await sequelize.query(
       `SELECT * FROM "${tenantHash}".nist_ai_rmf_categories ORDER BY id`,
-      { type: QueryTypes.SELECT, transaction }
+      { type: QueryTypes.SELECT, transaction },
     )) as any[];
 
     // Old categories might have: id, title/function, index, function_id, etc.
     // Try to extract function name from available fields
     for (const cat of oldCats) {
-      const funcName = cat.function || cat.title || '';
+      const funcName = cat.function || cat.title || "";
       oldCategoryFunctionMap[cat.id] = {
         function: funcName.toUpperCase(),
         index: cat.index ?? cat.category_id ?? cat.id,
@@ -1036,8 +1116,8 @@ async function migrateNistAiRmfData(
     // Resolve projects_frameworks_id via FK mapping
     let newPfId = row.projects_frameworks_id;
     if (newPfId !== null && newPfId !== undefined) {
-      if (idMapping['projects_frameworks']?.[newPfId]) {
-        newPfId = idMapping['projects_frameworks'][newPfId];
+      if (idMapping["projects_frameworks"]?.[newPfId]) {
+        newPfId = idMapping["projects_frameworks"][newPfId];
       } else {
         // projects_frameworks_id not found in mapping — orphaned row, skip
         skipped++;
@@ -1078,7 +1158,9 @@ async function migrateNistAiRmfData(
     }
 
     if (!structId) {
-      console.log(`    ⚠️ NIST subcategory ${row.id}: no matching struct entry (title=${row.title?.substring(0, 40)}..., cat=${row.category_id}, idx=${row.index})`);
+      console.log(
+        `    ⚠️ NIST subcategory ${row.id}: no matching struct entry (title=${row.title?.substring(0, 40)}..., cat=${row.category_id}, idx=${row.index})`,
+      );
       skipped++;
       continue;
     }
@@ -1102,7 +1184,7 @@ async function migrateNistAiRmfData(
           structId,
           pfId: newPfId,
           implDesc: row.implementation_description || null,
-          status: row.status || 'Not started',
+          status: row.status || "Not started",
           auditorFeedback: row.auditor_feedback || null,
           owner: row.owner || null,
           reviewer: row.reviewer || null,
@@ -1114,7 +1196,7 @@ async function migrateNistAiRmfData(
         },
         type: QueryTypes.SELECT,
         transaction,
-      }
+      },
     )) as any[];
 
     if (insertResult.length > 0) {
@@ -1127,15 +1209,20 @@ async function migrateNistAiRmfData(
       const newSubcatId = insertResult[0].id;
       let evidenceArray: any[] = [];
       try {
-        evidenceArray = typeof row.evidence_links === 'string'
-          ? JSON.parse(row.evidence_links)
-          : Array.isArray(row.evidence_links) ? row.evidence_links : [];
-      } catch { /* ignore parse errors */ }
+        evidenceArray =
+          typeof row.evidence_links === "string"
+            ? JSON.parse(row.evidence_links)
+            : Array.isArray(row.evidence_links)
+              ? row.evidence_links
+              : [];
+      } catch {
+        /* ignore parse errors */
+      }
 
       for (const evidence of evidenceArray) {
         const oldFileId = evidence.id || evidence.file_id;
         if (!oldFileId) continue;
-        const newFileId = idMapping['files']?.[oldFileId] || oldFileId;
+        const newFileId = idMapping["files"]?.[oldFileId] || oldFileId;
         await sequelize.query(
           `INSERT INTO file_entity_links
             (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
@@ -1144,27 +1231,31 @@ async function migrateNistAiRmfData(
           {
             replacements: { orgId, fileId: newFileId, entityId: newSubcatId },
             transaction,
-          }
+          },
         );
       }
     }
   }
 
   // Store in idMapping for use by risk junction table and downstream mappings
-  idMapping['nist_ai_rmf_subcategories'] = nistIdMapping;
+  idMapping["nist_ai_rmf_subcategories"] = nistIdMapping;
 
   // Migrate nist_ai_rmf_subcategories__risks junction table
   let risksMigrated = 0;
-  const hasRisksTable = await tableExists(tenantHash, 'nist_ai_rmf_subcategories__risks', transaction);
+  const hasRisksTable = await tableExists(
+    tenantHash,
+    "nist_ai_rmf_subcategories__risks",
+    transaction,
+  );
   if (hasRisksTable) {
     const oldRisks = (await sequelize.query(
       `SELECT * FROM "${tenantHash}".nist_ai_rmf_subcategories__risks`,
-      { type: QueryTypes.SELECT, transaction }
+      { type: QueryTypes.SELECT, transaction },
     )) as any[];
 
     for (const risk of oldRisks) {
       const newSubcatId = nistIdMapping[risk.nist_ai_rmf_subcategory_id];
-      const newRiskId = idMapping['risks']?.[risk.projects_risks_id];
+      const newRiskId = idMapping["risks"]?.[risk.projects_risks_id];
       if (!newSubcatId || !newRiskId) continue;
 
       await sequelize.query(
@@ -1175,14 +1266,16 @@ async function migrateNistAiRmfData(
         {
           replacements: { orgId, subcatId: newSubcatId, riskId: newRiskId },
           transaction,
-        }
+        },
       );
       risksMigrated++;
     }
   }
 
   if (migrated > 0 || risksMigrated > 0) {
-    console.log(`    ✓ nist_ai_rmf (dedicated): ${migrated} subcategories, ${risksMigrated} risks${skipped > 0 ? ` (${skipped} skipped)` : ''}`);
+    console.log(
+      `    ✓ nist_ai_rmf (dedicated): ${migrated} subcategories, ${risksMigrated} risks${skipped > 0 ? ` (${skipped} skipped)` : ""}`,
+    );
   }
   return { subcategoriesMigrated: migrated, risksMigrated };
 }
@@ -1200,7 +1293,7 @@ async function migrateOrganization(
   tenantHash: string,
   globalStructMap: GlobalStructMap,
   transaction: Transaction,
-  dropSchemaAfter: boolean = false
+  dropSchemaAfter: boolean = false,
 ): Promise<{
   success: boolean;
   error?: string;
@@ -1222,9 +1315,17 @@ async function migrateOrganization(
 
   // Phase 1: Migrate custom framework definitions and struct data
   // This must run before general migration so struct ID maps are available
-  const cfPhase1 = await migrateCustomFrameworkPhase1(orgId, tenantHash, globalStructMap, transaction);
+  const cfPhase1 = await migrateCustomFrameworkPhase1(
+    orgId,
+    tenantHash,
+    globalStructMap,
+    transaction,
+  );
   if (cfPhase1.totalMigrated > 0) {
-    tableCounts['custom_frameworks (phase 1)'] = { source: cfPhase1.totalMigrated, migrated: cfPhase1.totalMigrated };
+    tableCounts["custom_frameworks (phase 1)"] = {
+      source: cfPhase1.totalMigrated,
+      migrated: cfPhase1.totalMigrated,
+    };
   }
 
   // Get all tables in dependency order
@@ -1238,13 +1339,7 @@ async function migrateOrganization(
     }
 
     try {
-      const result = await migrateTable(
-        orgId,
-        tenantHash,
-        tableName,
-        idMapping,
-        transaction
-      );
+      const result = await migrateTable(orgId, tenantHash, tableName, idMapping, transaction);
       tableCounts[tableName] = {
         source: result.sourceCount,
         migrated: result.migratedCount,
@@ -1257,7 +1352,13 @@ async function migrateOrganization(
 
   // Phase 2: Migrate custom framework projects, impl data, and risks
   // Runs AFTER general migration so project_id and risk_id can be remapped
-  const cfIdMaps = await migrateCustomFrameworkPhase2(orgId, tenantHash, cfPhase1, idMapping, transaction);
+  const cfIdMaps = await migrateCustomFrameworkPhase2(
+    orgId,
+    tenantHash,
+    cfPhase1,
+    idMapping,
+    transaction,
+  );
 
   // NIST AI RMF: dedicated migration (old schema has different column structure)
   // Runs AFTER general migration so idMapping['projects_frameworks'], ['risks'], ['files'] are available
@@ -1269,7 +1370,7 @@ async function migrateOrganization(
       await sequelize.query(
         `UPDATE file_entity_links SET entity_id = :newId
          WHERE organization_id = :orgId AND entity_type = 'level2_impl' AND entity_id = :oldId`,
-        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction }
+        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction },
       );
     }
   }
@@ -1278,7 +1379,7 @@ async function migrateOrganization(
       await sequelize.query(
         `UPDATE file_entity_links SET entity_id = :newId
          WHERE organization_id = :orgId AND entity_type = 'level3_impl' AND entity_id = :oldId`,
-        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction }
+        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction },
       );
     }
   }
@@ -1288,7 +1389,7 @@ async function migrateOrganization(
       await sequelize.query(
         `UPDATE file_entity_links SET entity_id = :newId
          WHERE organization_id = :orgId AND entity_type = 'level2' AND entity_id = :oldId`,
-        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction }
+        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction },
       );
     }
   }
@@ -1297,7 +1398,7 @@ async function migrateOrganization(
       await sequelize.query(
         `UPDATE file_entity_links SET entity_id = :newId
          WHERE organization_id = :orgId AND entity_type = 'level3' AND entity_id = :oldId`,
-        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction }
+        { replacements: { orgId, oldId: Number(oldId), newId: Number(newId) }, transaction },
       );
     }
   }
@@ -1322,7 +1423,7 @@ async function migrateOrganization(
  * Validate migration by comparing row counts
  */
 async function validateMigration(
-  organizations: { id: number; name: string }[]
+  organizations: { id: number; name: string }[],
 ): Promise<ValidationReport> {
   const report: ValidationReport = {
     organizations: {},
@@ -1380,7 +1481,7 @@ async function migrationStatusTableExists(): Promise<boolean> {
       SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'verifywise' AND table_name = 'migration_status'
     ) as exists`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
   return (result[0] as any).exists;
 }
@@ -1398,7 +1499,7 @@ async function getMigrationStatus(): Promise<{
   const result = await sequelize.query(
     `SELECT status, organizations_migrated, organizations_total, current_organization_id, current_table
      FROM migration_status WHERE migration_key = :key`,
-    { replacements: { key: MIGRATION_KEY }, type: QueryTypes.SELECT }
+    { replacements: { key: MIGRATION_KEY }, type: QueryTypes.SELECT },
   );
   return (result[0] as any) || null;
 }
@@ -1452,7 +1553,7 @@ async function updateMigrationStatus(params: {
 
     await sequelize.query(
       `UPDATE migration_status SET ${updates.join(", ")} WHERE migration_key = :key`,
-      { replacements }
+      { replacements },
     );
   } else {
     await sequelize.query(
@@ -1467,7 +1568,7 @@ async function updateMigrationStatus(params: {
           organizations_total: params.organizations_total || 0,
           now,
         },
-      }
+      },
     );
   }
 }
@@ -1483,18 +1584,35 @@ async function updateMigrationStatus(params: {
  * Idempotent — uses ON CONFLICT DO NOTHING.
  */
 async function copySharedTables(): Promise<{ tablesProcessed: number; rowsCopied: number }> {
-  const sharedTables = ['roles', 'organizations', 'users', 'tiers', 'subscriptions', 'subscription_history', 'frameworks'];
+  const sharedTables = [
+    "roles",
+    "organizations",
+    "users",
+    "tiers",
+    "subscriptions",
+    "subscription_history",
+    "frameworks",
+  ];
   let tablesProcessed = 0;
   let rowsCopied = 0;
 
   // Default values by PostgreSQL type family (used when source has NULL but target is NOT NULL)
   const NOT_NULL_DEFAULTS: Record<string, string> = {
-    'integer': '0', 'bigint': '0', 'smallint': '0', 'numeric': '0', 'real': '0', 'double precision': '0',
-    'character varying': "''", 'text': "''", 'character': "''",
-    'boolean': 'false',
-    'timestamp without time zone': 'NOW()', 'timestamp with time zone': 'NOW()',
-    'date': 'CURRENT_DATE',
-    'jsonb': "'{}'::jsonb", 'json': "'{}'::json",
+    integer: "0",
+    bigint: "0",
+    smallint: "0",
+    numeric: "0",
+    real: "0",
+    "double precision": "0",
+    "character varying": "''",
+    text: "''",
+    character: "''",
+    boolean: "false",
+    "timestamp without time zone": "NOW()",
+    "timestamp with time zone": "NOW()",
+    date: "CURRENT_DATE",
+    jsonb: "'{}'::jsonb",
+    json: "'{}'::json",
   };
 
   console.log("  Copying shared tables from public → verifywise...");
@@ -1505,36 +1623,43 @@ async function copySharedTables(): Promise<{ tablesProcessed: number; rowsCopied
 
     for (const table of sharedTables) {
       // Check source exists
-      const [srcCheck] = await sequelize.query(
+      const [srcCheck] = (await sequelize.query(
         `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :table) as exists`,
-        { replacements: { table }, type: QueryTypes.SELECT, transaction }
-      ) as any[];
+        { replacements: { table }, type: QueryTypes.SELECT, transaction },
+      )) as any[];
       if (!srcCheck.exists) continue;
 
       // Check target exists
-      const [tgtCheck] = await sequelize.query(
+      const [tgtCheck] = (await sequelize.query(
         `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'verifywise' AND table_name = :table) as exists`,
-        { replacements: { table }, type: QueryTypes.SELECT, transaction }
-      ) as any[];
+        { replacements: { table }, type: QueryTypes.SELECT, transaction },
+      )) as any[];
       if (!tgtCheck.exists) continue;
 
       // Get column metadata from both schemas
       const srcColMeta = (await sequelize.query(
         `SELECT column_name, data_type FROM information_schema.columns
          WHERE table_schema = 'public' AND table_name = :table ORDER BY ordinal_position`,
-        { replacements: { table }, type: QueryTypes.SELECT, transaction }
-      ) as any[]);
-      const srcColMap = new Map(srcColMeta.map(r => [r.column_name, r.data_type]));
+        { replacements: { table }, type: QueryTypes.SELECT, transaction },
+      )) as any[];
+      const srcColMap = new Map(srcColMeta.map((r) => [r.column_name, r.data_type]));
 
       const tgtColMeta = (await sequelize.query(
         `SELECT column_name, data_type, is_nullable FROM information_schema.columns
          WHERE table_schema = 'verifywise' AND table_name = :table ORDER BY ordinal_position`,
-        { replacements: { table }, type: QueryTypes.SELECT, transaction }
-      ) as any[]);
-      const tgtColMap = new Map(tgtColMeta.map(r => [r.column_name, { data_type: r.data_type, is_nullable: r.is_nullable }]));
+        { replacements: { table }, type: QueryTypes.SELECT, transaction },
+      )) as any[];
+      const tgtColMap = new Map(
+        tgtColMeta.map((r) => [
+          r.column_name,
+          { data_type: r.data_type, is_nullable: r.is_nullable },
+        ]),
+      );
 
       // Only copy columns that exist in BOTH schemas
-      const commonCols = srcColMeta.filter(r => tgtColMap.has(r.column_name)).map(r => r.column_name);
+      const commonCols = srcColMeta
+        .filter((r) => tgtColMap.has(r.column_name))
+        .map((r) => r.column_name);
       if (commonCols.length === 0) continue;
 
       // Build SELECT expressions with type casts and COALESCE for NOT NULL mismatches
@@ -1544,7 +1669,7 @@ async function copySharedTables(): Promise<{ tablesProcessed: number; rowsCopied
         const srcType = srcColMap.get(col)!;
         const tgt = tgtColMap.get(col)!;
         const tgtType = tgt.data_type;
-        const tgtNullable = tgt.is_nullable === 'YES';
+        const tgtNullable = tgt.is_nullable === "YES";
 
         let expr = `"${col}"`;
 
@@ -1563,35 +1688,37 @@ async function copySharedTables(): Promise<{ tablesProcessed: number; rowsCopied
         selectExprs.push(expr);
       }
 
-      const [countResult] = await sequelize.query(
+      const [countResult] = (await sequelize.query(
         `SELECT COUNT(*) as count FROM public."${table}"`,
-        { type: QueryTypes.SELECT, transaction }
-      ) as any[];
+        { type: QueryTypes.SELECT, transaction },
+      )) as any[];
       const count = parseInt(countResult.count, 10);
       if (count === 0) continue;
 
       await sequelize.query(
-        `INSERT INTO verifywise."${table}" (${insertCols.join(', ')})
-         SELECT ${selectExprs.join(', ')} FROM public."${table}"
+        `INSERT INTO verifywise."${table}" (${insertCols.join(", ")})
+         SELECT ${selectExprs.join(", ")} FROM public."${table}"
          ON CONFLICT DO NOTHING`,
-        { transaction }
+        { transaction },
       );
 
       // Reset sequence so new inserts get correct IDs
-      if (commonCols.includes('id')) {
+      if (commonCols.includes("id")) {
         await sequelize.query(
           `SELECT setval(pg_get_serial_sequence('verifywise."${table}"', 'id'), COALESCE((SELECT MAX(id) FROM verifywise."${table}"), 0))`,
-          { transaction }
+          { transaction },
         );
       }
 
-      const [insertedCount] = await sequelize.query(
+      const [insertedCount] = (await sequelize.query(
         `SELECT COUNT(*) as count FROM verifywise."${table}"`,
-        { type: QueryTypes.SELECT, transaction }
-      ) as any[];
+        { type: QueryTypes.SELECT, transaction },
+      )) as any[];
       const inserted = parseInt(insertedCount.count, 10);
       if (inserted < count) {
-        console.log(`    ✓ ${table}: ${inserted}/${count} rows (${count - inserted} skipped — constraint violations)`);
+        console.log(
+          `    ✓ ${table}: ${inserted}/${count} rows (${count - inserted} skipped — constraint violations)`,
+        );
       } else {
         console.log(`    ✓ ${table}: ${count} rows`);
       }
@@ -1617,10 +1744,12 @@ async function copySharedTables(): Promise<{ tablesProcessed: number; rowsCopied
 /**
  * Run the full migration
  */
-export async function migrateToSharedSchema(options: {
-  dropSchemasAfter?: boolean;
-  skipValidation?: boolean;
-} = {}): Promise<MigrationResult> {
+export async function migrateToSharedSchema(
+  options: {
+    dropSchemasAfter?: boolean;
+    skipValidation?: boolean;
+  } = {},
+): Promise<MigrationResult> {
   const { dropSchemasAfter = false, skipValidation = false } = options;
 
   console.log("╔════════════════════════════════════════════════════════════╗");
@@ -1640,15 +1769,15 @@ export async function migrateToSharedSchema(options: {
   try {
     // ── Step 1: Copy shared tables (public → verifywise) ──
     // Must run first so verifywise.organizations has data for the org query below.
-    const { tablesProcessed: sharedTablesCount, rowsCopied: sharedRowsCount } = await copySharedTables();
+    const { tablesProcessed: sharedTablesCount, rowsCopied: sharedRowsCount } =
+      await copySharedTables();
     tablesProcessed += sharedTablesCount;
     rowsMigrated += sharedRowsCount;
 
     // ── Step 2: Discover organizations (now from verifywise via search_path) ──
-    const organizations = (await sequelize.query(
-      `SELECT id, name FROM organizations ORDER BY id`,
-      { type: QueryTypes.SELECT }
-    )) as { id: number; name: string }[];
+    const organizations = (await sequelize.query(`SELECT id, name FROM organizations ORDER BY id`, {
+      type: QueryTypes.SELECT,
+    })) as { id: number; name: string }[];
 
     if (organizations.length === 0) {
       console.log("No organizations found.");
@@ -1696,7 +1825,13 @@ export async function migrateToSharedSchema(options: {
           current_organization_id: org.id,
         });
 
-        const result = await migrateOrganization(org.id, tenantHash, globalStructMap, transaction, dropSchemasAfter);
+        const result = await migrateOrganization(
+          org.id,
+          tenantHash,
+          globalStructMap,
+          transaction,
+          dropSchemasAfter,
+        );
 
         if (result.success) {
           organizationsMigrated++;
@@ -1766,7 +1901,9 @@ export async function migrateToSharedSchema(options: {
     if (dropSchemasAfter && errors.length === 0) {
       console.log("\n  🗑️  Old tenant schemas have been dropped.");
     } else if (dropSchemasAfter && errors.length > 0) {
-      console.log("\n  📁 Old tenant schemas preserved (migration had errors - schemas not dropped).");
+      console.log(
+        "\n  📁 Old tenant schemas preserved (migration had errors - schemas not dropped).",
+      );
     } else {
       console.log("\n  📁 Old tenant schemas have been preserved.");
     }
@@ -1844,10 +1981,9 @@ export async function checkAndRunMigration(): Promise<MigrationResult> {
   await copySharedTables();
 
   // Now query organizations from verifywise (via search_path)
-  const organizations = (await sequelize.query(
-    `SELECT id FROM organizations ORDER BY id`,
-    { type: QueryTypes.SELECT }
-  )) as { id: number }[];
+  const organizations = (await sequelize.query(`SELECT id FROM organizations ORDER BY id`, {
+    type: QueryTypes.SELECT,
+  })) as { id: number }[];
 
   if (organizations.length === 0) {
     console.log("ℹ️  No organizations found, skipping migration");
@@ -1894,8 +2030,8 @@ export async function checkAndRunMigration(): Promise<MigrationResult> {
   // Run the migration
   console.log("\n🚀 Starting tenant-to-shared-schema migration...");
   return migrateToSharedSchema({
-    dropSchemasAfter: false,  // Drop schemas after successful migration
-    skipValidation: true,     // Skip validation since we're dropping schemas
+    dropSchemasAfter: false, // Drop schemas after successful migration
+    skipValidation: true, // Skip validation since we're dropping schemas
   });
 }
 
@@ -1910,14 +2046,14 @@ export function printValidationReport(report: ValidationReport): void {
 
   for (const [orgId, orgData] of Object.entries(report.organizations)) {
     const mismatchedTables = Object.entries(orgData.tables).filter(
-      ([_, counts]) => !counts.match && counts.source_count > 0
+      ([_, counts]) => !counts.match && counts.source_count > 0,
     );
 
     if (mismatchedTables.length > 0) {
       console.log(`\nOrganization ${orgId} (${orgData.tenant_hash}):`);
       for (const [table, counts] of mismatchedTables) {
         console.log(
-          `  ❌ ${table}: ${counts.source_count} source → ${counts.migrated_count} migrated`
+          `  ❌ ${table}: ${counts.source_count} source → ${counts.migrated_count} migrated`,
         );
       }
     }

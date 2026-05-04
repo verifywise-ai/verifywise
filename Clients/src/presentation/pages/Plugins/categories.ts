@@ -17,7 +17,8 @@ export const CATEGORIES: PluginCategory[] = [
   {
     id: "communication",
     name: "Communication",
-    description: "Integrate with messaging platforms and notification services to keep your team informed.",
+    description:
+      "Integrate with messaging platforms and notification services to keep your team informed.",
     icon: MessageSquare,
   },
   {
@@ -35,13 +36,15 @@ export const CATEGORIES: PluginCategory[] = [
   {
     id: "monitoring",
     name: "Monitoring",
-    description: "Add observability and monitoring capabilities to track system health and performance.",
+    description:
+      "Add observability and monitoring capabilities to track system health and performance.",
     icon: Activity,
   },
   {
     id: "security",
     name: "Security",
-    description: "Enhance security with vulnerability scanning, access control, and compliance tools.",
+    description:
+      "Enhance security with vulnerability scanning, access control, and compliance tools.",
     icon: Shield,
   },
 ];

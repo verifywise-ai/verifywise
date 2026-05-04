@@ -134,15 +134,11 @@ const StateBadge: React.FC<{ state: string }> = ({ state }) => {
   );
 };
 
-const LogsTable: React.FC<LogsTableProps> = ({
-  data,
-  isLoading = false,
-  paginated = true,
-}) => {
+const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginated = true }) => {
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("logsTable", DEFAULT_ROWS_PER_PAGE)
+    getPaginationRowCount("logsTable", DEFAULT_ROWS_PER_PAGE),
   );
 
   // Initialize sorting state from localStorage or default to no sorting
@@ -174,15 +170,12 @@ const LogsTable: React.FC<LogsTableProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newRowsPerPage = parseInt(event.target.value, 10);
-      setRowsPerPage(newRowsPerPage);
-      setPaginationRowCount("logsTable", newRowsPerPage);
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    setPaginationRowCount("logsTable", newRowsPerPage);
+    setPage(0);
+  }, []);
 
   // Sorting handlers
   const handleSort = useCallback((columnId: string) => {
@@ -266,8 +259,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
     () => (
       <TableHead
         sx={{
-          backgroundColor:
-            singleTheme.tableStyles.primary.header.backgroundColors,
+          backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
         }}
       >
         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -280,10 +272,10 @@ const LogsTable: React.FC<LogsTableProps> = ({
                   column.id === "description"
                     ? "auto"
                     : column.id === "id"
-                    ? "60px"
-                    : column.id === "timestamp"
-                    ? "180px"
-                    : "fit-content",
+                      ? "60px"
+                      : column.id === "timestamp"
+                        ? "180px"
+                        : "fit-content",
                 whiteSpace: column.id === "description" ? "normal" : "nowrap",
                 cursor: "pointer",
                 userSelect: "none",
@@ -304,10 +296,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                 <div
                   style={{
                     fontWeight: 400,
-                    color:
-                      sortConfig.key === column.label
-                        ? "primary.main"
-                        : "inherit",
+                    color: sortConfig.key === column.label ? "primary.main" : "inherit",
                   }}
                 >
                   {column.label}
@@ -316,17 +305,16 @@ const LogsTable: React.FC<LogsTableProps> = ({
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    color:
-                      sortConfig.key === column.label ? "primary.main" : `${text.disabled}`,
+                    color: sortConfig.key === column.label ? "primary.main" : `${text.disabled}`,
                   }}
                 >
-                  {sortConfig.key === column.label &&
-                    sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                  {sortConfig.key === column.label &&
-                    sortConfig.direction === "desc" && <ChevronDown size={16} />}
-                  {sortConfig.key !== column.label && (
-                    <ChevronsUpDown size={16} />
+                  {sortConfig.key === column.label && sortConfig.direction === "asc" && (
+                    <ChevronUp size={16} />
                   )}
+                  {sortConfig.key === column.label && sortConfig.direction === "desc" && (
+                    <ChevronDown size={16} />
+                  )}
+                  {sortConfig.key !== column.label && <ChevronsUpDown size={16} />}
                 </Box>
               </Box>
             </TableCell>
@@ -334,7 +322,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
         </TableRow>
       </TableHead>
     ),
-    [sortConfig, handleSort, theme]
+    [sortConfig, handleSort, theme],
   );
 
   const tableBody = useMemo(
@@ -359,8 +347,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     fontFamily: "monospace",
                     fontSize: "12px",
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("id")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("id")
                         ? "#e8e8e8"
                         : "#fafafa",
                   }}
@@ -375,8 +362,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     fontFamily: "monospace",
                     fontSize: "12px",
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("timestamp")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("timestamp")
                         ? "background.surface"
                         : "inherit",
                   }}
@@ -389,8 +375,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     width: "fit-content",
                     whiteSpace: "nowrap",
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("state")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("state")
                         ? "background.surface"
                         : "inherit",
                   }}
@@ -403,8 +388,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     width: "auto",
                     whiteSpace: "normal",
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("description")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("description")
                         ? "background.surface"
                         : "inherit",
                   }}
@@ -420,8 +404,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     fontSize: "12px",
                     color: theme.palette.text.secondary,
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("function")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("function")
                         ? "background.surface"
                         : "inherit",
                   }}
@@ -437,8 +420,7 @@ const LogsTable: React.FC<LogsTableProps> = ({
                     fontSize: "12px",
                     color: theme.palette.text.secondary,
                     backgroundColor:
-                      sortConfig.key &&
-                      sortConfig.key.toLowerCase().includes("file")
+                      sortConfig.key && sortConfig.key.toLowerCase().includes("file")
                         ? "background.surface"
                         : "inherit",
                   }}
@@ -449,18 +431,14 @@ const LogsTable: React.FC<LogsTableProps> = ({
             ))
         ) : (
           <TableRow>
-            <TableCell
-              colSpan={TABLE_COLUMNS.length}
-              align="center"
-              sx={{ py: 4 }}
-            >
+            <TableCell colSpan={TABLE_COLUMNS.length} align="center" sx={{ py: 4 }}>
               No log data available.
             </TableCell>
           </TableRow>
         )}
       </TableBody>
     ),
-    [sortedData, page, rowsPerPage, sortConfig, theme]
+    [sortedData, page, rowsPerPage, sortConfig, theme],
   );
 
   if (isLoading) {
@@ -505,13 +483,15 @@ const LogsTable: React.FC<LogsTableProps> = ({
   return (
     <Stack spacing={0}>
       <TableContainer sx={{ overflowX: "auto" }}>
-        <Table sx={{
-          ...singleTheme.tableStyles.primary.frame,
-          ...(paginated && {
-            borderRadius: "4px 4px 0 0",
-            borderBottom: "none",
-          }),
-        }}>
+        <Table
+          sx={{
+            ...singleTheme.tableStyles.primary.frame,
+            ...(paginated && {
+              borderRadius: "4px 4px 0 0",
+              borderBottom: "none",
+            }),
+          }}
+        >
           {tableHeader}
           {tableBody}
         </Table>
@@ -528,15 +508,10 @@ const LogsTable: React.FC<LogsTableProps> = ({
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25, 50]}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => (
-                  <TablePaginationActions {...props} />
-                )}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(
-                    0,
-                    Math.ceil(count / rowsPerPage)
-                  )}`
+                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                 }
                 slotProps={{
                   select: {

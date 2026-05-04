@@ -110,10 +110,7 @@ describe("Test AI Detection Repository", () => {
 
       const response = await getScanStatus(scanId, signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/status",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/status", { signal });
       expect(response).toEqual(mockResponse.data.data);
     });
   });
@@ -130,10 +127,7 @@ describe("Test AI Detection Repository", () => {
       const signal: AbortSignal = new AbortController().signal;
 
       const response = await getScan(scanId, signal);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345", { signal });
 
       expect(response).toEqual(mockResponse.data.data);
     });
@@ -430,9 +424,7 @@ describe("Test AI Detection Repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValueOnce(new Error("API Error"));
 
-      await expect(getScanSecurityFindings(scanId, {}, signal)).rejects.toThrow(
-        "API Error",
-      );
+      await expect(getScanSecurityFindings(scanId, {}, signal)).rejects.toThrow("API Error");
     });
   });
   describe("getScanSecuritySummary", () => {
@@ -449,10 +441,9 @@ describe("Test AI Detection Repository", () => {
 
       const response = await getScanSecuritySummary(scanId, signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/security-summary",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/security-summary", {
+        signal,
+      });
       expect(response).toEqual(mockResponse.data.data);
     });
   });
@@ -505,10 +496,9 @@ describe("Test AI Detection Repository", () => {
         signal,
       );
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans?limit=10&status=pending",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans?limit=10&status=pending", {
+        signal,
+      });
     });
     it("should skip the limit parameter if not provided", async () => {
       const mockResponse = {
@@ -530,10 +520,9 @@ describe("Test AI Detection Repository", () => {
         signal,
       );
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans?page=1&status=pending",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans?page=1&status=pending", {
+        signal,
+      });
     });
     it("should skip the status parameter if not provided", async () => {
       const mockResponse = {
@@ -555,10 +544,9 @@ describe("Test AI Detection Repository", () => {
         signal,
       );
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans?page=1&limit=10",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans?page=1&limit=10", {
+        signal,
+      });
     });
   });
   describe("cancelScan", () => {
@@ -602,12 +590,9 @@ describe("Test AI Detection Repository", () => {
       const scanId = 12345;
       const response = await deleteScan(scanId);
 
-      expect(apiServices.delete).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345`,
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.delete).toHaveBeenCalledWith(`/ai-detection/scans/12345`, {
+        signal: undefined,
+      });
       expect(response).toEqual(mockResponse.data.data);
     });
   });
@@ -627,12 +612,9 @@ describe("Test AI Detection Repository", () => {
 
       const response = await getActiveScan(signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/active",
-        {
-          signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/active", {
+        signal,
+      });
       expect(response).toEqual(activeScan);
     });
     it("should null if api throws an error", async () => {
@@ -640,12 +622,9 @@ describe("Test AI Detection Repository", () => {
       const signal: AbortSignal = new AbortController().signal;
 
       const response = await getActiveScan(signal);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/active",
-        {
-          signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/active", {
+        signal,
+      });
       expect(response).toBeNull();
     });
   });
@@ -657,9 +636,9 @@ describe("Test AI Detection Repository", () => {
 
       abortController.abort();
 
-      await expect(
-        pollScanStatus(scanId, undefined, undefined, signal),
-      ).rejects.toThrow("Polling aborted");
+      await expect(pollScanStatus(scanId, undefined, undefined, signal)).rejects.toThrow(
+        "Polling aborted",
+      );
     });
     it("should add a listener to the signal to stop polling when the signal is aborted", async () => {
       const scanId = 12345;
@@ -674,12 +653,7 @@ describe("Test AI Detection Repository", () => {
 
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const pollingPromise = pollScanStatus(
-        scanId,
-        undefined,
-        undefined,
-        signal,
-      );
+      const pollingPromise = pollScanStatus(scanId, undefined, undefined, signal);
 
       abortController.abort();
 
@@ -786,10 +760,9 @@ describe("Test AI Detection Repository", () => {
       const result = await pollScanStatus(scanId);
 
       expect(result).toEqual(finalStatus);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/status",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/status", {
+        signal: undefined,
+      });
     });
 
     it("should handle errors during polling appropriately", async () => {
@@ -798,10 +771,9 @@ describe("Test AI Detection Repository", () => {
       vi.mocked(apiServices.get).mockRejectedValueOnce(new Error("API Error"));
 
       await expect(pollScanStatus(scanId)).rejects.toThrow("API Error");
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/status",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/status", {
+        signal: undefined,
+      });
     });
 
     it("should return early on the next poll tick when signal is already aborted", async () => {
@@ -828,13 +800,10 @@ describe("Test AI Detection Repository", () => {
           statusText: "OK",
         };
 
-        vi.mocked(apiServices.get).mockResolvedValueOnce(
-          mockInProgressResponse,
-        );
+        vi.mocked(apiServices.get).mockResolvedValueOnce(mockInProgressResponse);
 
         const pollingPromise = pollScanStatus(scanId, undefined, 1000, signal);
-        const rejectionAssertion =
-          expect(pollingPromise).rejects.toThrow("Polling aborted");
+        const rejectionAssertion = expect(pollingPromise).rejects.toThrow("Polling aborted");
 
         await Promise.resolve();
         await Promise.resolve();
@@ -929,11 +898,7 @@ describe("Test AI Detection Repository", () => {
 
       vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
 
-      const response = await updateFindingGovernanceStatus(
-        scanId,
-        findingId,
-        governanceStatus,
-      );
+      const response = await updateFindingGovernanceStatus(scanId, findingId, governanceStatus);
 
       expect(response).toEqual(mockData);
     });
@@ -951,10 +916,9 @@ describe("Test AI Detection Repository", () => {
 
       await getGovernanceSummary(scanId);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/governance-summary",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/governance-summary", {
+        signal: undefined,
+      });
     });
 
     it("should return the correct governance summary data", async () => {
@@ -1018,10 +982,9 @@ describe("Test AI Detection Repository", () => {
 
       await exportAIBOM(scanId);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/export/ai-bom",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/export/ai-bom", {
+        signal: undefined,
+      });
     });
 
     it("should return the correct export data", async () => {
@@ -1053,10 +1016,9 @@ describe("Test AI Detection Repository", () => {
 
       await getDependencyGraph(scanId);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/dependency-graph",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/dependency-graph", {
+        signal: undefined,
+      });
     });
 
     it("should return the correct dependency graph data", async () => {
@@ -1088,10 +1050,9 @@ describe("Test AI Detection Repository", () => {
 
       await getComplianceMapping(scanId);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/compliance",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/compliance", {
+        signal: undefined,
+      });
     });
 
     it("should return the correct compliance mapping data", async () => {
@@ -1124,10 +1085,9 @@ describe("Test AI Detection Repository", () => {
 
       const response = await getRiskScore(scanId, signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/risk-score",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/scans/12345/risk-score", {
+        signal,
+      });
       expect(response).toEqual(mockResponse.data.data);
     });
   });
@@ -1180,10 +1140,7 @@ describe("Test AI Detection Repository", () => {
 
       const response = await getRiskScoringConfig(signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-detection/risk-scoring/config",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/ai-detection/risk-scoring/config", { signal });
       expect(response).toEqual(mockResponse.data.data);
     });
   });
@@ -1192,10 +1149,7 @@ describe("Test AI Detection Repository", () => {
     it("should make a patch request to update risk scoring configuration", async () => {
       const signal: AbortSignal = new AbortController().signal;
       const config: Partial<
-        Pick<
-          RiskScoringConfig,
-          "llm_enabled" | "llm_key_id" | "dimension_weights"
-        >
+        Pick<RiskScoringConfig, "llm_enabled" | "llm_key_id" | "dimension_weights">
       > = {
         llm_enabled: true,
         llm_key_id: 7,
@@ -1217,32 +1171,23 @@ describe("Test AI Detection Repository", () => {
 
       const response = await updateRiskScoringConfig(config, signal);
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/ai-detection/risk-scoring/config",
-        config,
-        { signal },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/ai-detection/risk-scoring/config", config, {
+        signal,
+      });
       expect(response).toEqual(config);
     });
 
     it("should throw when api request fails", async () => {
       const signal: AbortSignal = new AbortController().signal;
       const config: Partial<
-        Pick<
-          RiskScoringConfig,
-          "llm_enabled" | "llm_key_id" | "dimension_weights"
-        >
+        Pick<RiskScoringConfig, "llm_enabled" | "llm_key_id" | "dimension_weights">
       > = {
         llm_enabled: false,
       };
 
-      vi.mocked(apiServices.patch).mockRejectedValueOnce(
-        new Error("API Error"),
-      );
+      vi.mocked(apiServices.patch).mockRejectedValueOnce(new Error("API Error"));
 
-      await expect(updateRiskScoringConfig(config, signal)).rejects.toThrow(
-        "API Error",
-      );
+      await expect(updateRiskScoringConfig(config, signal)).rejects.toThrow("API Error");
     });
   });
 });

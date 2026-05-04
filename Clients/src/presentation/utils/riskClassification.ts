@@ -7,9 +7,7 @@ import {
  * Main classification function
  * Evaluates answers and returns risk classification with rationale
  */
-export const classifyRisk = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult => {
+export const classifyRisk = (answers: IQuestionnaireAnswers): ClassificationResult => {
   // 1) Immediate prohibited checks - biometric
   const biometricProhibited = checkBiometricProhibited(answers);
   if (biometricProhibited) return biometricProhibited;
@@ -43,9 +41,7 @@ export const classifyRisk = (
 /**
  * 1. Check for prohibited biometric practices
  */
-const checkBiometricProhibited = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult | null => {
+const checkBiometricProhibited = (answers: IQuestionnaireAnswers): ClassificationResult | null => {
   const { Q1b, Q2, Q3 } = answers;
 
   if (!Q1b) return null;
@@ -54,8 +50,7 @@ const checkBiometricProhibited = (
   if (Q1b === "emotion_recognition") {
     const isEducationContext = Array.isArray(Q2) && Q2.includes("students");
     const isWorkplaceContext =
-      Array.isArray(Q2) &&
-      (Q2.includes("employees") || Q2.includes("job_applicants"));
+      Array.isArray(Q2) && (Q2.includes("employees") || Q2.includes("job_applicants"));
     const isEducationProvider = Q3 === "education_provider";
 
     if (isEducationContext || isWorkplaceContext || isEducationProvider) {
@@ -94,9 +89,7 @@ const checkBiometricProhibited = (
 /**
  * 2. Check if AI is a safety component
  */
-const checkSafetyComponent = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult | null => {
+const checkSafetyComponent = (answers: IQuestionnaireAnswers): ClassificationResult | null => {
   if (answers.Q1d === "yes") {
     return {
       level: "HIGH_RISK",
@@ -109,9 +102,7 @@ const checkSafetyComponent = (
 /**
  * 3. Check Annex III high-risk classifications by domain
  */
-const checkAnnexIIIHighRisk = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult | null => {
+const checkAnnexIIIHighRisk = (answers: IQuestionnaireAnswers): ClassificationResult | null => {
   const { Q1, Q1a, Q1b } = answers;
 
   // Check for decisions about people (routes to Q1a)
@@ -154,9 +145,7 @@ const checkCriticalInfrastructure = (
 /**
  * 5. General prohibited checks (non-biometric)
  */
-const checkGeneralProhibited = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult | null => {
+const checkGeneralProhibited = (answers: IQuestionnaireAnswers): ClassificationResult | null => {
   // Social scoring
   if (answers.Q4 === "yes") {
     return {
@@ -177,9 +166,7 @@ const checkGeneralProhibited = (
 /**
  * 6. Check limited-risk transparency requirements
  */
-const checkLimitedRisk = (
-  answers: IQuestionnaireAnswers,
-): ClassificationResult | null => {
+const checkLimitedRisk = (answers: IQuestionnaireAnswers): ClassificationResult | null => {
   const { Q1, Q1c, Q1b } = answers;
 
   // Conversational assistance (chatbots, virtual assistants)

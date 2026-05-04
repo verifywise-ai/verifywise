@@ -7,7 +7,7 @@ const mockVendorRisks = (
   vendor3: number,
   vendor4: number,
   userId1: number,
-  userId2: number
+  userId2: number,
 ): IVendorRisk[] => {
   return [
     {

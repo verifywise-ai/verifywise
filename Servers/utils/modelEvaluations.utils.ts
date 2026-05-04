@@ -17,7 +17,7 @@ export async function getAllLinkedEvaluations(organizationId: number) {
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     ),
     sequelize.query(
       `SELECT b.id, b.preset_name AS name, b.status, b.config, b.results, b.error,
@@ -33,7 +33,7 @@ export async function getAllLinkedEvaluations(organizationId: number) {
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     ),
   ]);
 
@@ -42,7 +42,7 @@ export async function getAllLinkedEvaluations(organizationId: number) {
 
 export async function getEvaluationsByModelInventoryId(
   modelInventoryId: number,
-  organizationId: number
+  organizationId: number,
 ) {
   const [experiments, biasAudits] = await Promise.all([
     sequelize.query(
@@ -56,7 +56,7 @@ export async function getEvaluationsByModelInventoryId(
       {
         replacements: { modelInventoryId, organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     ),
     sequelize.query(
       `SELECT id, preset_name AS name, status, config, results, error,
@@ -69,7 +69,7 @@ export async function getEvaluationsByModelInventoryId(
       {
         replacements: { modelInventoryId, organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     ),
   ]);
 

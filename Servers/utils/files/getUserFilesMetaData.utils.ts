@@ -9,7 +9,7 @@ const getUserFilesMetaDataQuery = async (
   role: string,
   userId: number,
   organizationId: number,
-  options?: { limit?: number; offset?: number }
+  options?: { limit?: number; offset?: number },
 ): Promise<FileList[]> => {
   const { limit, offset } = options ?? {};
 
@@ -62,7 +62,7 @@ const getUserFilesMetaDataQuery = async (
     const results = queryResults[0];
 
     // Get all entity links for these files in a single query
-    const fileIds = results.map(r => Number(r.id));
+    const fileIds = results.map((r) => Number(r.id));
     if (fileIds.length > 0) {
       // Use IN clause with array spread for Sequelize compatibility
       const linksQuery = `
@@ -97,13 +97,13 @@ const getUserFilesMetaDataQuery = async (
         result.meta_id = link.entity_id;
 
         // Determine if evidence or feedback
-        if (link.link_type === 'feedback') {
+        if (link.link_type === "feedback") {
           result.is_evidence = false;
         }
 
         // Fetch parent info based on entity type and framework
         switch (link.entity_type) {
-          case 'subcontrol': {
+          case "subcontrol": {
             // EU AI Act subcontrol - get parent control
             const parentQuery = `
               SELECT c.control_meta_id as parent_id
@@ -118,7 +118,7 @@ const getUserFilesMetaDataQuery = async (
             }
             break;
           }
-          case 'assessment': {
+          case "assessment": {
             // EU AI Act assessment answer - get topic/subtopic
             const parentQuery = `
               SELECT topic.id AS topic_id, subtopic.id AS subtopic_id
@@ -136,14 +136,14 @@ const getUserFilesMetaDataQuery = async (
             }
             break;
           }
-          case 'subclause': {
+          case "subclause": {
             // ISO subclause - get parent clause
-            const table = link.framework_type === 'iso_27001'
-              ? 'subclauses_iso27001'
-              : 'subclauses_iso';
-            const structTable = link.framework_type === 'iso_27001'
-              ? 'subclauses_struct_iso27001'
-              : 'subclauses_struct_iso';
+            const table =
+              link.framework_type === "iso_27001" ? "subclauses_iso27001" : "subclauses_iso";
+            const structTable =
+              link.framework_type === "iso_27001"
+                ? "subclauses_struct_iso27001"
+                : "subclauses_struct_iso";
             const parentQuery = `
               SELECT scs.clause_id as clause_id
               FROM ${table} sc
@@ -157,7 +157,7 @@ const getUserFilesMetaDataQuery = async (
             }
             break;
           }
-          case 'annex_control': {
+          case "annex_control": {
             // ISO 27001 annex control - get parent annex
             const parentQuery = `
               SELECT acs.annex_id as annex_id
@@ -172,7 +172,7 @@ const getUserFilesMetaDataQuery = async (
             }
             break;
           }
-          case 'annex_category': {
+          case "annex_category": {
             // ISO 42001 annex category - get parent annex
             const parentQuery = `
               SELECT acs.annex_id as annex_id

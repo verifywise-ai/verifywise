@@ -6,11 +6,7 @@ export function stringToColor(firstName: string, lastName: string) {
   let firstThreeDigits = "";
 
   const firstThreeDigitsCounter = lenghtOfFirstName % 10;
-  for (
-    let index = firstThreeDigitsCounter;
-    index < 10 && firstThreeDigits.length < 3;
-    index++
-  ) {
+  for (let index = firstThreeDigitsCounter; index < 10 && firstThreeDigits.length < 3; index++) {
     firstThreeDigits = firstThreeDigits.concat(index.toString());
   }
 

@@ -104,9 +104,7 @@ describe("devAutoBootstrap", () => {
     expect(mockedSequelize.query).toHaveBeenCalledTimes(1);
     expect(mockedSequelize.transaction).not.toHaveBeenCalled();
     expect(mockedCreateOrg).not.toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith(
-      "[dev-bootstrap] organizations already exist, skipping"
-    );
+    expect(logSpy).toHaveBeenCalledWith("[dev-bootstrap] organizations already exist, skipping");
   });
 
   it("skips silently when a required env var is missing", async () => {
@@ -117,9 +115,7 @@ describe("devAutoBootstrap", () => {
     expect(mockedSequelize.query).not.toHaveBeenCalled();
     expect(mockedCreateOrg).not.toHaveBeenCalled();
     expect(mockedCreateUser).not.toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining("DEV_ADMIN_PASSWORD")
-    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("DEV_ADMIN_PASSWORD"));
   });
 
   it("throws fast when DEV_ADMIN_PASSWORD is too weak", async () => {
@@ -143,7 +139,7 @@ describe("devAutoBootstrap", () => {
     expect(mockedCreateOrg).toHaveBeenCalledTimes(1);
     expect(mockedCreateOrg).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Acme Dev" }),
-      txn
+      txn,
     );
     expect(mockedCreateUser).toHaveBeenCalledTimes(1);
     expect(mockedCreateUser).toHaveBeenCalledWith(
@@ -155,12 +151,12 @@ describe("devAutoBootstrap", () => {
         roleId: 1,
         organizationId: 42,
       },
-      txn
+      txn,
     );
     expect(txn.commit).toHaveBeenCalledTimes(1);
     expect(txn.rollback).not.toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalledWith(
-      '[dev-bootstrap] created org "Acme Dev" (id=42) and admin admin@local.dev'
+      '[dev-bootstrap] created org "Acme Dev" (id=42) and admin admin@local.dev',
     );
   });
 

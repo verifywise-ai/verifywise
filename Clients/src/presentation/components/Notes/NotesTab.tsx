@@ -69,8 +69,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
       // Ensure response is always an array
       setNotes(Array.isArray(response) ? response : []);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to load notes";
+      const errorMessage = error instanceof Error ? error.message : "Failed to load notes";
       setAlert({
         variant: "error",
         body: errorMessage,
@@ -113,9 +112,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
         // Validate attachedTo one more time before sending (defensive check)
         const entityType = attachedTo?.trim();
         if (!entityType || entityType.length === 0) {
-          throw new Error(
-            "Entity type is missing. Please refresh and try again."
-          );
+          throw new Error("Entity type is missing. Please refresh and try again.");
         }
 
         // Explicitly use the attachedTo prop value to ensure correct entity type
@@ -134,8 +131,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
           isToast: true,
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to add note";
+        const errorMessage = error instanceof Error ? error.message : "Failed to add note";
         setAlert({
           variant: "error",
           body: errorMessage,
@@ -145,7 +141,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
         setIsSaving(false);
       }
     },
-    [attachedTo, attachedToId, fetchNotes]
+    [attachedTo, attachedToId, fetchNotes],
   );
 
   const handleEditNote = useCallback((noteId: number, content: string) => {
@@ -184,8 +180,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
           isToast: true,
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to update note";
+        const errorMessage = error instanceof Error ? error.message : "Failed to update note";
         setAlert({
           variant: "error",
           body: errorMessage,
@@ -195,7 +190,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
         setIsSaving(false);
       }
     },
-    [editingNoteId, fetchNotes]
+    [editingNoteId, fetchNotes],
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -218,8 +213,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
           isToast: true,
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to delete note";
+        const errorMessage = error instanceof Error ? error.message : "Failed to delete note";
         setAlert({
           variant: "error",
           body: errorMessage,
@@ -229,7 +223,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
         setIsSaving(false);
       }
     },
-    [fetchNotes]
+    [fetchNotes],
   );
 
   const handleCloseAlert = () => {
@@ -249,10 +243,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
   }, [alert]);
 
   return (
-    <Stack
-      spacing={theme.spacing(3)}
-      sx={{ height: "100%", p: theme.spacing(3, 0) }}
-    >
+    <Stack spacing={theme.spacing(3)} sx={{ height: "100%", p: theme.spacing(3, 0) }}>
       {/* Alert */}
       {alert && (
         <Alert
@@ -274,11 +265,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ attachedTo, attachedToId }) => {
             isEditing={true}
           />
         ) : (
-          <NoteComposer
-            onSubmit={handleAddNote}
-            isLoading={isSaving}
-            isEditing={false}
-          />
+          <NoteComposer onSubmit={handleAddNote} isLoading={isSaving} isEditing={false} />
         )}
       </Stack>
 

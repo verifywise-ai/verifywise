@@ -2,12 +2,7 @@ import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import "./drop-file-input.css";
 import { FileProps, FileUploadProps } from "./types";
-import {
-  DragDropArea,
-  fileListStyleFrame,
-  fileListText,
-  filesListItem,
-} from "./FileUpload.styles";
+import { DragDropArea, fileListStyleFrame, fileListText, filesListItem } from "./FileUpload.styles";
 import {
   List,
   ListItem,
@@ -31,9 +26,7 @@ export const FileUploadComponent = ({
   const theme = useTheme();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const [fileList, setFileList] = useState<FileProps[]>(
-    assessmentsValues[topicId]?.file || []
-  );
+  const [fileList, setFileList] = useState<FileProps[]>(assessmentsValues[topicId]?.file || []);
 
   const onDragEnter = () => wrapperRef?.current?.classList.add("dragover");
 
@@ -48,10 +41,7 @@ export const FileUploadComponent = ({
       const fileHeightIncrement = 55;
       const maxHeight = 600;
 
-      const newHeight = Math.min(
-        baseHeight + fileList.length * fileHeightIncrement,
-        maxHeight
-      );
+      const newHeight = Math.min(baseHeight + fileList.length * fileHeightIncrement, maxHeight);
 
       onHeightChange?.(newHeight);
     }
@@ -71,7 +61,7 @@ export const FileUploadComponent = ({
     // Prevent duplicate files
     if (newFile) {
       const fileExists = fileList.some(
-        (f: FileProps) => f.name === newFile.name || f.size === newFile.size
+        (f: FileProps) => f.name === newFile.name || f.size === newFile.size,
       );
       if (fileExists) {
         console.warn(`File ${newFile.name} already exists.`);
@@ -121,10 +111,7 @@ export const FileUploadComponent = ({
           pt: 0,
         }}
       >
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 600, fontSize: "16px", pb: 2 }}
-        >
+        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "16px", pb: 2 }}>
           Upload a new file
         </Typography>
 
@@ -139,8 +126,7 @@ export const FileUploadComponent = ({
             <div className="drop-file-input__label">
               <UploadIcon size={24} style={{ marginBottom: 16, color: theme.palette.other.icon }} />
               <Typography variant="body2">
-                <span style={{ color: "#3b82f6" }}>Click to upload</span> or
-                drag and drop
+                <span style={{ color: "#3b82f6" }}>Click to upload</span> or drag and drop
               </Typography>
             </div>
             <input type="file" value="" onChange={onFileDrop} />
@@ -185,4 +171,3 @@ export const FileUploadComponent = ({
     </>
   );
 };
-

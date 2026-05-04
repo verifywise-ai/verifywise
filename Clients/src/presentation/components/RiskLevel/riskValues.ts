@@ -64,8 +64,7 @@ export const newRiskMitigation: RiskMitigationForm = {
   mitigationStatus: MitigationStatus.InProgress,
   currentRiskLevel: RiskLevel.High,
   deadline: new Date("2024-01-06"),
-  mitigationPlan:
-    "Implement additional security measures and conduct thorough testing.",
+  mitigationPlan: "Implement additional security measures and conduct thorough testing.",
   implementationStrategy:
     "Engage security team for review and integrate new protocols into development pipeline.",
   mitigationEvidenceDocument: null, // No file uploaded yet
@@ -75,6 +74,5 @@ export const newRiskMitigation: RiskMitigationForm = {
   approver: "Jane Smith",
   approvalStatus: ApprovalStatus.Pending,
   dateOfAssessment: new Date("2024-01-06"),
-  recommendations:
-    "Consider additional employee training on new security protocols.",
+  recommendations: "Consider additional employee training on new security protocols.",
 };

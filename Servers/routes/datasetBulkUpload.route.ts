@@ -34,19 +34,15 @@ const storage = multer.memoryStorage();
 const DATASET_MIME_TYPES: Record<string, string[]> = {
   "text/csv": [".csv"],
   "application/vnd.ms-excel": [".xls", ".csv"],
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-    ".xlsx",
-  ],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
 };
 
 const fileFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  cb: multer.FileFilterCallback,
 ) => {
-  const ext = file.originalname
-    .toLowerCase()
-    .substring(file.originalname.lastIndexOf("."));
+  const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf("."));
   const allowedExts = DATASET_MIME_TYPES[file.mimetype];
 
   if (allowedExts && allowedExts.includes(ext)) {
@@ -65,19 +61,12 @@ const upload = multer({
 /**
  * Multer error handling middleware
  */
-const handleMulterError = (
-  err: any,
-  _req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res
         .status(413)
-        .json(
-          STATUS_CODE[413]("File size exceeds maximum allowed size of 30MB")
-        );
+        .json(STATUS_CODE[413]("File size exceeds maximum allowed size of 30MB"));
     }
     return res.status(400).json(STATUS_CODE[400](err.message));
   }
@@ -85,11 +74,7 @@ const handleMulterError = (
   if (err && err.message === "UNSUPPORTED_FILE_TYPE") {
     return res
       .status(415)
-      .json(
-        STATUS_CODE[415](
-          "Unsupported file type. Allowed types: CSV, XLS, XLSX"
-        )
-      );
+      .json(STATUS_CODE[415]("Unsupported file type. Allowed types: CSV, XLS, XLSX"));
   }
 
   return next(err);
@@ -105,7 +90,7 @@ router.post(
   authorize(["Admin", "Editor"]),
   upload.single("file"),
   handleMulterError,
-  uploadDatasetFile
+  uploadDatasetFile,
 );
 
 export default router;

@@ -21,12 +21,18 @@ import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { ChevronsUpDown, ChevronUp, ChevronDown, Database, FileSpreadsheet, Tag, Link2 } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Database,
+  FileSpreadsheet,
+  Tag,
+  Link2,
+} from "lucide-react";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
-import {
-  DatasetTableProps,
-} from "../../../domain/interfaces/i.dataset";
+import { DatasetTableProps } from "../../../domain/interfaces/i.dataset";
 import {
   getPaginationRowCount,
   setPaginationRowCount,
@@ -78,9 +84,7 @@ const TABLE_COLUMNS = [
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 
-const TooltipCell: React.FC<{ value: string | null | undefined }> = ({
-  value,
-}) => {
+const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) => {
   const displayValue = value || "-";
   const shouldShowTooltip = displayValue.length > 24;
 
@@ -116,12 +120,13 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
   deletingId,
   hidePagination = false,
   flashRowId,
+  visibleColumns,
 }) => {
   const theme = useTheme();
   const { userRoleName } = useAuth();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("datasets", DEFAULT_ROWS_PER_PAGE)
+    getPaginationRowCount("datasets", DEFAULT_ROWS_PER_PAGE),
   );
 
   // Sorting state
@@ -190,7 +195,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
     (_event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
       setPage(newPage);
     },
-    []
+    [],
   );
 
   const handleChangeRowsPerPage = useCallback(
@@ -200,7 +205,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
       setPaginationRowCount("datasets", newRowsPerPage);
       setPage(0);
     },
-    []
+    [],
   );
 
   const getSortIcon = useCallback(
@@ -213,33 +218,41 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
       }
       return <ChevronDown size={16} style={{ marginLeft: 4 }} />;
     },
-    [sortConfig]
+    [sortConfig],
   );
 
   const hasEditPermission = useMemo(
-    () =>
-      allowedRoles.modelInventory.edit?.includes(userRoleName || "") ?? false,
-    [userRoleName]
+    () => allowedRoles.modelInventory.edit?.includes(userRoleName || "") ?? false,
+    [userRoleName],
   );
   const hasDeletePermission = useMemo(
-    () =>
-      allowedRoles.modelInventory.delete?.includes(userRoleName || "") ?? false,
-    [userRoleName]
+    () => allowedRoles.modelInventory.delete?.includes(userRoleName || "") ?? false,
+    [userRoleName],
+  );
+
+  const isVisible = useCallback(
+    (key: string) => {
+      if (!visibleColumns) return true;
+      return visibleColumns.has(key);
+    },
+    [visibleColumns],
+  );
+
+  const visibleTableColumns = useMemo(
+    () => TABLE_COLUMNS.filter((col) => isVisible(col.id)),
+    [isVisible],
   );
 
   const handleRowClick = useCallback(
     (e: React.MouseEvent, datasetId: string) => {
-      if (
-        (e.target as HTMLElement).closest("button") ||
-        (e.target as HTMLElement).closest("a")
-      ) {
+      if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a")) {
         return;
       }
       if (hasEditPermission && onEdit) {
         onEdit(datasetId);
       }
     },
-    [hasEditPermission, onEdit]
+    [hasEditPermission, onEdit],
   );
 
   if (isLoading) {
@@ -285,7 +298,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
           }}
         >
           <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-            {TABLE_COLUMNS.map((column) => (
+            {visibleTableColumns.map((column) => (
               <TableCell
                 key={column.id}
                 onClick={column.sortable ? () => handleSort(column.id) : undefined}
@@ -332,52 +345,68 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                     : {}),
                 }}
               >
-                <TableCell>
-                  <TooltipCell value={dataset.name} />
-                </TableCell>
-                <TableCell>
-                  <TooltipCell value={dataset.version} />
-                </TableCell>
-                <TableCell>
-                  <Chip label={dataset.type} />
-                </TableCell>
-                <TableCell>
-                  <TooltipCell value={dataset.source} />
-                </TableCell>
-                <TableCell>
-                  <ClassificationBadge classification={dataset.classification} />
-                </TableCell>
-                <TableCell>
-                  <PIIBadge containsPii={dataset.contains_pii} />
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={dataset.status} />
-                </TableCell>
-                <TableCell>
-                  <TooltipCell value={dataset.owner} />
-                </TableCell>
-                <TableCell>
-                  {dataset.updated_at
-                    ? displayFormattedDate(dataset.updated_at)
-                    : "-"}
-                </TableCell>
-                <TableCell
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
-                    {(hasEditPermission || hasDeletePermission) && onEdit && onDelete && (
-                      <CustomIconButton
-                        id={dataset.id || 0}
-                        onEdit={() => onEdit(String(dataset.id))}
-                        onDelete={() => onDelete(String(dataset.id))}
-                        onMouseEvent={() => {}}
-                        warningTitle="Delete this dataset?"
-                        warningMessage="When you delete this dataset, all data related to this dataset will be removed. This action is non-recoverable."
-                        type=""
-                      />
-                    )}
-                  </Stack>
-                </TableCell>
+                {isVisible("name") && (
+                  <TableCell>
+                    <TooltipCell value={dataset.name} />
+                  </TableCell>
+                )}
+                {isVisible("version") && (
+                  <TableCell>
+                    <TooltipCell value={dataset.version} />
+                  </TableCell>
+                )}
+                {isVisible("type") && (
+                  <TableCell>
+                    <Chip label={dataset.type} />
+                  </TableCell>
+                )}
+                {isVisible("source") && (
+                  <TableCell>
+                    <TooltipCell value={dataset.source} />
+                  </TableCell>
+                )}
+                {isVisible("classification") && (
+                  <TableCell>
+                    <ClassificationBadge classification={dataset.classification} />
+                  </TableCell>
+                )}
+                {isVisible("contains_pii") && (
+                  <TableCell>
+                    <PIIBadge containsPii={dataset.contains_pii} />
+                  </TableCell>
+                )}
+                {isVisible("status") && (
+                  <TableCell>
+                    <StatusBadge status={dataset.status} />
+                  </TableCell>
+                )}
+                {isVisible("owner") && (
+                  <TableCell>
+                    <TooltipCell value={dataset.owner} />
+                  </TableCell>
+                )}
+                {isVisible("updated_at") && (
+                  <TableCell>
+                    {dataset.updated_at ? displayFormattedDate(dataset.updated_at) : "-"}
+                  </TableCell>
+                )}
+                {isVisible("actions") && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Stack direction="row" alignItems="center" gap={0.5}>
+                      {(hasEditPermission || hasDeletePermission) && onEdit && onDelete && (
+                        <CustomIconButton
+                          id={dataset.id || 0}
+                          onEdit={() => onEdit(String(dataset.id))}
+                          onDelete={() => onDelete(String(dataset.id))}
+                          onMouseEvent={() => {}}
+                          warningTitle="Delete this dataset?"
+                          warningMessage="When you delete this dataset, all data related to this dataset will be removed. This action is non-recoverable."
+                          type=""
+                        />
+                      )}
+                    </Stack>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

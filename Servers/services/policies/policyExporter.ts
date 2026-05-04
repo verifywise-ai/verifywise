@@ -66,7 +66,7 @@ export async function closeBrowser(): Promise<void> {
  */
 async function fetchImageAsBase64(
   fileId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<{ base64: string; mimeType: string } | null> {
   try {
     const fileIdNum = parseInt(fileId, 10);
@@ -88,10 +88,7 @@ async function fetchImageAsBase64(
 /**
  * Process HTML content and replace file-manager URLs with base64 data URLs
  */
-async function processImagesInHtml(
-  html: string,
-  organizationId: number
-): Promise<string> {
+async function processImagesInHtml(html: string, organizationId: number): Promise<string> {
   // Match file-manager URLs: /api/file-manager/123 or similar patterns
   const imgRegex = /<img[^>]+src=["']([^"']*\/api\/file-manager\/(\d+)[^"']*)["'][^>]*>/gi;
 
@@ -126,7 +123,7 @@ async function processImagesInHtml(
 export async function generatePolicyPDF(
   title: string,
   contentHtml: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<Buffer> {
   // Process images - replace file-manager URLs with base64
   const processedHtml = await processImagesInHtml(contentHtml, organizationId);
@@ -301,7 +298,7 @@ export async function generatePolicyPDF(
  */
 async function parseHtmlToDocxElements(
   html: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<(Paragraph | Table)[]> {
   const dom = new JSDOM(html);
   const document = dom.window.document;
@@ -315,7 +312,7 @@ async function parseHtmlToDocxElements(
         elements.push(
           new Paragraph({
             children: [new TextRun({ text })],
-          })
+          }),
         );
       }
       return;
@@ -340,7 +337,7 @@ async function parseHtmlToDocxElements(
             ],
             heading: HeadingLevel.HEADING_1,
             spacing: { before: 400, after: 200 },
-          })
+          }),
         );
         break;
 
@@ -357,7 +354,7 @@ async function parseHtmlToDocxElements(
             ],
             heading: HeadingLevel.HEADING_2,
             spacing: { before: 320, after: 160 },
-          })
+          }),
         );
         break;
 
@@ -374,7 +371,7 @@ async function parseHtmlToDocxElements(
             ],
             heading: HeadingLevel.HEADING_3,
             spacing: { before: 280, after: 120 },
-          })
+          }),
         );
         break;
 
@@ -393,7 +390,7 @@ async function parseHtmlToDocxElements(
             ],
             heading: HeadingLevel.HEADING_4,
             spacing: { before: 240, after: 100 },
-          })
+          }),
         );
         break;
 
@@ -404,7 +401,7 @@ async function parseHtmlToDocxElements(
             new Paragraph({
               children: pChildren,
               spacing: { after: 200 },
-            })
+            }),
           );
         }
         break;
@@ -425,7 +422,7 @@ async function parseHtmlToDocxElements(
               ],
               indent: { left: convertInchesToTwip(0.25) },
               spacing: { after: 80 },
-            })
+            }),
           );
         }
         break;
@@ -459,7 +456,7 @@ async function parseHtmlToDocxElements(
               },
             },
             spacing: { before: 200, after: 200 },
-          })
+          }),
         );
         break;
 
@@ -512,7 +509,7 @@ async function parseHtmlToDocxElements(
             elements.push(
               new Paragraph({
                 children: [new TextRun({ text })],
-              })
+              }),
             );
           }
         }
@@ -530,18 +527,18 @@ async function parseHtmlToDocxElements(
 /**
  * Parse inline elements (bold, italic, links, etc.)
  */
-async function parseInlineElements(
-  element: Element,
-  _organizationId: number
-): Promise<TextRun[]> {
+async function parseInlineElements(element: Element, _organizationId: number): Promise<TextRun[]> {
   const runs: TextRun[] = [];
 
-  function processInline(node: Node, styles: {
-    bold?: boolean;
-    italics?: boolean;
-    underline?: object;
-    color?: string;
-  } = {}): void {
+  function processInline(
+    node: Node,
+    styles: {
+      bold?: boolean;
+      italics?: boolean;
+      underline?: object;
+      color?: string;
+    } = {},
+  ): void {
     if (node.nodeType === 3) {
       // Text node
       const text = node.textContent;
@@ -594,10 +591,7 @@ async function parseInlineElements(
 /**
  * Parse table element to DOCX Table
  */
-async function parseTable(
-  tableEl: Element,
-  _organizationId: number
-): Promise<Table | null> {
+async function parseTable(tableEl: Element, _organizationId: number): Promise<Table | null> {
   console.log("Processing table element");
   const rows: TableRow[] = [];
 
@@ -625,16 +619,14 @@ async function parseTable(
               ],
             }),
           ],
-          shading: isHeader
-            ? { fill: COLORS.BACKGROUND_LIGHT }
-            : undefined,
+          shading: isHeader ? { fill: COLORS.BACKGROUND_LIGHT } : undefined,
           borders: {
             top: { style: BorderStyle.SINGLE, size: 1, color: COLORS.BORDER },
             bottom: { style: BorderStyle.SINGLE, size: 1, color: COLORS.BORDER },
             left: { style: BorderStyle.SINGLE, size: 1, color: COLORS.BORDER },
             right: { style: BorderStyle.SINGLE, size: 1, color: COLORS.BORDER },
           },
-        })
+        }),
       );
     }
 
@@ -671,7 +663,7 @@ function createTableSpacing(): Paragraph {
 function getImageDimensions(buffer: Buffer): { width: number; height: number } | null {
   try {
     // Check for PNG signature
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
       // PNG: width at bytes 16-19, height at bytes 20-23 (big-endian)
       const width = buffer.readUInt32BE(16);
       const height = buffer.readUInt32BE(20);
@@ -679,14 +671,14 @@ function getImageDimensions(buffer: Buffer): { width: number; height: number } |
     }
 
     // Check for JPEG signature
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
       // JPEG: need to find SOF0 marker (0xFFC0) or similar
       let offset = 2;
       while (offset < buffer.length - 8) {
-        if (buffer[offset] === 0xFF) {
+        if (buffer[offset] === 0xff) {
           const marker = buffer[offset + 1];
           // SOF0, SOF1, SOF2 markers contain dimensions
-          if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+          if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
             const height = buffer.readUInt16BE(offset + 5);
             const width = buffer.readUInt16BE(offset + 7);
             return { width, height };
@@ -718,10 +710,7 @@ function getImageDimensions(buffer: Buffer): { width: number; height: number } |
 /**
  * Parse image element to DOCX ImageRun wrapped in Paragraph
  */
-async function parseImage(
-  imgEl: Element,
-  organizationId: number
-): Promise<Paragraph | null> {
+async function parseImage(imgEl: Element, organizationId: number): Promise<Paragraph | null> {
   const src = imgEl.getAttribute("src");
   if (!src) {
     console.log("Image element has no src attribute");
@@ -733,9 +722,10 @@ async function parseImage(
   let imageBuffer: Buffer | null = null;
 
   // Check if it's a file-manager URL (various patterns)
-  const fileManagerMatch = src.match(/\/api\/file-manager\/(\d+)/) ||
-                           src.match(/file-manager\/(\d+)/) ||
-                           src.match(/\/files\/(\d+)/);
+  const fileManagerMatch =
+    src.match(/\/api\/file-manager\/(\d+)/) ||
+    src.match(/file-manager\/(\d+)/) ||
+    src.match(/\/files\/(\d+)/);
 
   if (fileManagerMatch) {
     console.log("Matched file-manager URL, fileId:", fileManagerMatch[1]);
@@ -827,7 +817,7 @@ async function parseImage(
 export async function generatePolicyDOCX(
   title: string,
   contentHtml: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<Buffer> {
   console.log("Generating DOCX for policy:", title);
   console.log("Content HTML length:", contentHtml.length);
@@ -946,10 +936,7 @@ function escapeHtml(text: string): string {
 /**
  * Generate sanitized filename from title
  */
-export function generateFilename(
-  title: string,
-  extension: "pdf" | "docx"
-): string {
+export function generateFilename(title: string, extension: "pdf" | "docx"): string {
   const sanitized = title
     .replace(/[^a-zA-Z0-9\s-]/g, "")
     .replace(/\s+/g, "_")

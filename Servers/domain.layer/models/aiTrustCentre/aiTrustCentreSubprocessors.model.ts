@@ -6,7 +6,10 @@ import { IAITrustCentreSubprocessors } from "../../interfaces/i.aiTrustCentreSub
   timestamps: true,
   underscored: true,
 })
-export class AITrustCenterSubprocessorsModel extends Model<AITrustCenterSubprocessorsModel> implements IAITrustCentreSubprocessors {
+export class AITrustCenterSubprocessorsModel
+  extends Model<AITrustCenterSubprocessorsModel>
+  implements IAITrustCentreSubprocessors
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -49,5 +52,4 @@ export class AITrustCenterSubprocessorsModel extends Model<AITrustCenterSubproce
     allowNull: false,
   })
   updated_at?: Date;
-
 }

@@ -83,80 +83,249 @@ function ArchDiagram() {
   };
 
   const HArrow = () => (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, flexShrink: 0 }}>
-      <Box sx={{ position: "relative", width: 26, height: 1.5, backgroundColor: palette.border.dark }}>
-        <Box sx={{
-          position: "absolute", right: -1, top: "50%",
-          transform: "translateY(-50%) rotate(-45deg)",
-          width: 6, height: 6,
-          borderRight: `1.5px solid ${palette.border.dark}`,
-          borderBottom: `1.5px solid ${palette.border.dark}`,
-        }} />
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 40,
+        flexShrink: 0,
+      }}
+    >
+      <Box
+        sx={{ position: "relative", width: 26, height: 1.5, backgroundColor: palette.border.dark }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            right: -1,
+            top: "50%",
+            transform: "translateY(-50%) rotate(-45deg)",
+            width: 6,
+            height: 6,
+            borderRight: `1.5px solid ${palette.border.dark}`,
+            borderBottom: `1.5px solid ${palette.border.dark}`,
+          }}
+        />
       </Box>
     </Box>
   );
 
-  const FeatureRow = ({ icon, label, colorScheme }: {
-    icon: React.ReactNode; label: string; colorScheme: { bg: string; color: string };
+  const FeatureRow = ({
+    icon,
+    label,
+    colorScheme,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    colorScheme: { bg: string; color: string };
   }) => (
     <Stack direction="row" alignItems="center" gap="6px" sx={{ py: "1px" }}>
-      <Box sx={{ ...featureIconBase, background: colorScheme.bg, color: colorScheme.color }}>{icon}</Box>
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: palette.text.secondary }}>{label}</Typography>
+      <Box sx={{ ...featureIconBase, background: colorScheme.bg, color: colorScheme.color }}>
+        {icon}
+      </Box>
+      <Typography sx={{ fontSize: 12, fontWeight: 500, color: palette.text.secondary }}>
+        {label}
+      </Typography>
     </Stack>
   );
 
   const SectionLabel = ({ children }: { children: string }) => (
-    <Typography sx={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: palette.text.disabled, borderTop: `0.5px solid #f2f4f7`, pt: "4px", mt: "6px", mb: "2px" }}>
+    <Typography
+      sx={{
+        fontSize: 8,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "1px",
+        color: palette.text.disabled,
+        borderTop: `0.5px solid #f2f4f7`,
+        pt: "4px",
+        mt: "6px",
+        mb: "2px",
+      }}
+    >
       {children}
     </Typography>
   );
 
-  const PROVIDER_LABELS = ["OpenAI", "Anthropic", "Google Gemini", "AWS Bedrock", "Azure OpenAI", "Mistral"];
+  const PROVIDER_LABELS = [
+    "OpenAI",
+    "Anthropic",
+    "Google Gemini",
+    "AWS Bedrock",
+    "Azure OpenAI",
+    "Mistral",
+  ];
 
   return (
     <Stack direction="row" alignItems="stretch" justifyContent="center">
-      <Box sx={{ ...cardBase, minWidth: 150, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: palette.text.primary, letterSpacing: "-0.2px", mb: "2px" }}>Your app</Typography>
-        <Typography sx={{ fontSize: 11, color: palette.text.disabled, mb: "10px" }}>Any language or framework</Typography>
-        <Stack direction="row" alignItems="center" gap="6px" sx={{ background: palette.background.accent, border: `0.5px solid ${palette.border.light}`, borderRadius: "4px", p: "6px 10px" }}>
+      <Box
+        sx={{
+          ...cardBase,
+          minWidth: 150,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: palette.text.primary,
+            letterSpacing: "-0.2px",
+            mb: "2px",
+          }}
+        >
+          Your app
+        </Typography>
+        <Typography sx={{ fontSize: 11, color: palette.text.disabled, mb: "10px" }}>
+          Any language or framework
+        </Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap="6px"
+          sx={{
+            background: palette.background.accent,
+            border: `0.5px solid ${palette.border.light}`,
+            borderRadius: "4px",
+            p: "6px 10px",
+          }}
+        >
           <Code2 size={12} color={palette.text.disabled} strokeWidth={1.8} />
-          <Box component="code" sx={{ fontSize: 10, color: palette.text.tertiary, background: "#f2f4f7", px: "5px", py: "1px", borderRadius: "3px", fontFamily: "monospace" }}>REST API</Box>
+          <Box
+            component="code"
+            sx={{
+              fontSize: 10,
+              color: palette.text.tertiary,
+              background: "#f2f4f7",
+              px: "5px",
+              py: "1px",
+              borderRadius: "3px",
+              fontFamily: "monospace",
+            }}
+          >
+            REST API
+          </Box>
         </Stack>
-        <Typography sx={{ fontSize: 9, color: palette.text.disabled, mt: "4px" }}>OpenAI-compatible format</Typography>
+        <Typography sx={{ fontSize: 9, color: palette.text.disabled, mt: "4px" }}>
+          OpenAI-compatible format
+        </Typography>
       </Box>
 
       <HArrow />
 
-      <Box sx={{ ...cardBase, flex: 1, maxWidth: 320, borderColor: `${palette.brand.primary}28`, background: "linear-gradient(180deg, #ffffff 0%, #f7fdfb 100%)" }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: palette.brand.primary, letterSpacing: "-0.2px", mb: "2px" }}>VerifyWise AI gateway</Typography>
-        <Typography sx={{ fontSize: 10, color: palette.text.disabled, mb: "4px" }}>Unified proxy with governance controls</Typography>
+      <Box
+        sx={{
+          ...cardBase,
+          flex: 1,
+          maxWidth: 320,
+          borderColor: `${palette.brand.primary}28`,
+          background: "linear-gradient(180deg, #ffffff 0%, #f7fdfb 100%)",
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: palette.brand.primary,
+            letterSpacing: "-0.2px",
+            mb: "2px",
+          }}
+        >
+          VerifyWise AI gateway
+        </Typography>
+        <Typography sx={{ fontSize: 10, color: palette.text.disabled, mb: "4px" }}>
+          Unified proxy with governance controls
+        </Typography>
         <SectionLabel>Security &amp; guardrails</SectionLabel>
-        <FeatureRow icon={<Fingerprint size={12} strokeWidth={1.8} />} label="PII detection" colorScheme={{ bg: "#ecfdf3", color: "#13715B" }} />
-        <FeatureRow icon={<ShieldCheck size={12} strokeWidth={1.8} />} label="Content filter" colorScheme={{ bg: "#ecfdf3", color: "#13715B" }} />
+        <FeatureRow
+          icon={<Fingerprint size={12} strokeWidth={1.8} />}
+          label="PII detection"
+          colorScheme={{ bg: "#ecfdf3", color: "#13715B" }}
+        />
+        <FeatureRow
+          icon={<ShieldCheck size={12} strokeWidth={1.8} />}
+          label="Content filter"
+          colorScheme={{ bg: "#ecfdf3", color: "#13715B" }}
+        />
         <SectionLabel>Traffic controls</SectionLabel>
-        <FeatureRow icon={<Gauge size={12} strokeWidth={1.8} />} label="Rate limiting" colorScheme={{ bg: "#eff8ff", color: "#1570EF" }} />
-        <FeatureRow icon={<Wallet size={12} strokeWidth={1.8} />} label="Budget controls" colorScheme={{ bg: "#eff8ff", color: "#1570EF" }} />
-        <FeatureRow icon={<GitBranch size={12} strokeWidth={1.8} />} label="Fallback chains" colorScheme={{ bg: "#eff8ff", color: "#1570EF" }} />
+        <FeatureRow
+          icon={<Gauge size={12} strokeWidth={1.8} />}
+          label="Rate limiting"
+          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+        />
+        <FeatureRow
+          icon={<Wallet size={12} strokeWidth={1.8} />}
+          label="Budget controls"
+          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+        />
+        <FeatureRow
+          icon={<GitBranch size={12} strokeWidth={1.8} />}
+          label="Fallback chains"
+          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+        />
         <SectionLabel>Governance</SectionLabel>
-        <FeatureRow icon={<Lock size={12} strokeWidth={1.8} />} label="Role-based access" colorScheme={{ bg: "#fffaeb", color: "#B54708" }} />
-        <FeatureRow icon={<History size={12} strokeWidth={1.8} />} label="Audit trail" colorScheme={{ bg: "#fffaeb", color: "#B54708" }} />
+        <FeatureRow
+          icon={<Lock size={12} strokeWidth={1.8} />}
+          label="Role-based access"
+          colorScheme={{ bg: "#fffaeb", color: "#B54708" }}
+        />
+        <FeatureRow
+          icon={<History size={12} strokeWidth={1.8} />}
+          label="Audit trail"
+          colorScheme={{ bg: "#fffaeb", color: "#B54708" }}
+        />
       </Box>
 
       <HArrow />
 
       <Box sx={{ ...cardBase, minWidth: 170 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: palette.brand.primary, letterSpacing: "-0.2px", mb: "2px" }}>LLM providers</Typography>
-        <Typography sx={{ fontSize: 10, color: palette.text.disabled, mb: "8px" }}>100+ supported models</Typography>
+        <Typography
+          sx={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: palette.brand.primary,
+            letterSpacing: "-0.2px",
+            mb: "2px",
+          }}
+        >
+          LLM providers
+        </Typography>
+        <Typography sx={{ fontSize: 10, color: palette.text.disabled, mb: "8px" }}>
+          100+ supported models
+        </Typography>
         <Stack gap="3px">
           {PROVIDER_LABELS.map((name) => (
             <Stack key={name} direction="row" alignItems="center" gap="6px">
-              <Box sx={{ width: 20, height: 20, borderRadius: "3px", background: palette.background.accent, border: `0.5px solid ${palette.border.light}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Typography sx={{ fontSize: 7, fontWeight: 700, color: palette.text.tertiary, lineHeight: 1 }}>{name.slice(0, 2).toUpperCase()}</Typography>
+              <Box
+                sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "3px",
+                  background: palette.background.accent,
+                  border: `0.5px solid ${palette.border.light}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  sx={{ fontSize: 7, fontWeight: 700, color: palette.text.tertiary, lineHeight: 1 }}
+                >
+                  {name.slice(0, 2).toUpperCase()}
+                </Typography>
               </Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 500, color: palette.text.secondary }}>{name}</Typography>
+              <Typography sx={{ fontSize: 12, fontWeight: 500, color: palette.text.secondary }}>
+                {name}
+              </Typography>
             </Stack>
           ))}
-          <Typography sx={{ fontSize: 10, color: palette.text.disabled, pl: "26px", mt: "2px" }}>+ xAI, Cohere, Ollama, Groq...</Typography>
+          <Typography sx={{ fontSize: 10, color: palette.text.disabled, pl: "26px", mt: "2px" }}>
+            + xAI, Cohere, Ollama, Groq...
+          </Typography>
         </Stack>
       </Box>
     </Stack>
@@ -184,14 +353,23 @@ function ChecklistItem({ label, done, onClick }: ChecklistItemProps) {
         borderRadius: "4px",
         px: "2px",
         py: "2px",
-        "&:hover": isClickable
-          ? { "& .checklist-label": { textDecoration: "underline" } }
-          : {},
+        "&:hover": isClickable ? { "& .checklist-label": { textDecoration: "underline" } } : {},
         transition: "background-color 0.15s",
       }}
     >
       {done ? (
-        <Box sx={{ width: 18, height: 18, borderRadius: "50%", background: palette.brand.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Box
+          sx={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: palette.brand.primaryLight,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
           <Check size={11} color={palette.brand.primary} strokeWidth={2.5} />
         </Box>
       ) : (
@@ -214,8 +392,14 @@ function ChecklistItem({ label, done, onClick }: ChecklistItemProps) {
 
 // ─── Main overlay ─────────────────────────────────────────────────────────────
 
-export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCompleted }: OnboardingOverlayProps) {
-  const [activeModal, setActiveModal] = useState<"api-key" | "endpoint" | "virtual-key" | "first-request" | null>(null);
+export default function OnboardingOverlay({
+  onGetStarted,
+  setupStatus,
+  onStepCompleted,
+}: OnboardingOverlayProps) {
+  const [activeModal, setActiveModal] = useState<
+    "api-key" | "endpoint" | "virtual-key" | "first-request" | null
+  >(null);
 
   // ── API key modal state ──
   const [keyForm, setKeyForm] = useState({ key_name: "", provider: "", api_key: "" });
@@ -227,7 +411,13 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
   const [topProviderCount, setTopProviderCount] = useState(TOP_PROVIDERS.length);
 
   // ── Endpoint modal state ──
-  const [endpointForm, setEndpointForm] = useState({ display_name: "", slug: "", provider: "", model: "", api_key_id: "" });
+  const [endpointForm, setEndpointForm] = useState({
+    display_name: "",
+    slug: "",
+    provider: "",
+    model: "",
+    api_key_id: "",
+  });
   const { providerItems: gatewayProviders, getModelsForProvider } = useGatewayModels();
   const [endpointError, setEndpointError] = useState("");
   const [endpointSubmitting, setEndpointSubmitting] = useState(false);
@@ -252,17 +442,20 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
   useEffect(() => {
     if (activeModal !== "api-key") return;
     const topIds = new Set(TOP_PROVIDERS.map((p) => p._id));
-    apiServices.get<Record<string, any>>("/ai-gateway/providers").then((res) => {
-      const dynamic: string[] = res?.data?.data?.providers || [];
-      const others = dynamic
-        .filter((p) => !topIds.has(p))
-        .sort()
-        .map((p) => ({ _id: p, name: p }));
-      if (others.length > 0) {
-        setProviderItems([...TOP_PROVIDERS, ...others]);
-        setTopProviderCount(TOP_PROVIDERS.length);
-      }
-    }).catch(() => {});
+    apiServices
+      .get<Record<string, any>>("/ai-gateway/providers")
+      .then((res) => {
+        const dynamic: string[] = res?.data?.data?.providers || [];
+        const others = dynamic
+          .filter((p) => !topIds.has(p))
+          .sort()
+          .map((p) => ({ _id: p, name: p }));
+        if (others.length > 0) {
+          setProviderItems([...TOP_PROVIDERS, ...others]);
+          setTopProviderCount(TOP_PROVIDERS.length);
+        }
+      })
+      .catch(() => {});
   }, [activeModal]);
 
   // Fetch available keys when endpoint modal opens (with abort guard)
@@ -270,15 +463,22 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
     if (activeModal !== "endpoint") return;
     let cancelled = false;
     setAvailableKeys([]);
-    apiServices.get<Record<string, any>>("/ai-gateway/keys").then((res) => {
-      if (cancelled) return;
-      const keys = (res?.data?.data || []).filter((k: { is_active: boolean }) => k.is_active);
-      setAvailableKeys(keys.map((k: { id: number; key_name: string; provider: string }) => ({
-        _id: String(k.id),
-        name: `${k.key_name} (${k.provider})`,
-      })));
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    apiServices
+      .get<Record<string, any>>("/ai-gateway/keys")
+      .then((res) => {
+        if (cancelled) return;
+        const keys = (res?.data?.data || []).filter((k: { is_active: boolean }) => k.is_active);
+        setAvailableKeys(
+          keys.map((k: { id: number; key_name: string; provider: string }) => ({
+            _id: String(k.id),
+            name: `${k.key_name} (${k.provider})`,
+          })),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [activeModal]);
 
   // Fetch endpoint slug and virtual key prefix when first-request modal opens
@@ -297,20 +497,27 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
       const activeVk = vkeys.find((k: { is_active: boolean }) => k.is_active);
       if (activeVk) setFirstReqVirtualKey(activeVk.key_prefix);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeModal]);
 
   useEffect(() => {
-    return () => { if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); };
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
   }, []);
 
-  const openModal = useCallback((modal: "api-key" | "endpoint" | "virtual-key" | "first-request") => {
-    // Clear any prior errors before opening
-    setKeyError("");
-    setEndpointError("");
-    setVkeyError("");
-    setActiveModal(modal);
-  }, []);
+  const openModal = useCallback(
+    (modal: "api-key" | "endpoint" | "virtual-key" | "first-request") => {
+      // Clear any prior errors before opening
+      setKeyError("");
+      setEndpointError("");
+      setVkeyError("");
+      setActiveModal(modal);
+    },
+    [],
+  );
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
@@ -388,7 +595,8 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
       closeModal();
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
       setKeyError(errData?.detail || errData?.message || "Failed to create API key");
     } finally {
       setKeySubmitting(false);
@@ -396,7 +604,13 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
   };
 
   const handleCreateEndpoint = async () => {
-    if (!endpointForm.display_name || !endpointForm.slug || !endpointForm.provider || !endpointForm.model || !endpointForm.api_key_id) {
+    if (
+      !endpointForm.display_name ||
+      !endpointForm.slug ||
+      !endpointForm.provider ||
+      !endpointForm.model ||
+      !endpointForm.api_key_id
+    ) {
       setEndpointError("Name, provider, model, and API key are required");
       return;
     }
@@ -413,7 +627,8 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
       closeModal();
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
       setEndpointError(errData?.detail || errData?.message || "Failed to create endpoint");
     } finally {
       setEndpointSubmitting(false);
@@ -428,7 +643,9 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
     setVkeySubmitting(true);
     setVkeyError("");
     try {
-      const res = await apiServices.post<Record<string, any>>("/ai-gateway/virtual-keys", { name: vkeyName.trim() });
+      const res = await apiServices.post<Record<string, any>>("/ai-gateway/virtual-keys", {
+        name: vkeyName.trim(),
+      });
       const created = res?.data?.data;
       if (created?.plain_key) {
         setCreatedKey(created.plain_key);
@@ -437,7 +654,8 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         setVkeyError("Key was created but could not be retrieved. Refresh the page.");
       }
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
       setVkeyError(errData?.detail || errData?.message || "Failed to create virtual key");
     } finally {
       setVkeySubmitting(false);
@@ -462,18 +680,39 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
       setFirstReqResponse(text);
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
-      setFirstReqError(errData?.detail || errData?.message || "Request failed. Check that your endpoint and API key are configured correctly.");
+      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
+        ?.response?.data;
+      setFirstReqError(
+        errData?.detail ||
+          errData?.message ||
+          "Request failed. Check that your endpoint and API key are configured correctly.",
+      );
     } finally {
       setFirstReqRunning(false);
     }
   };
 
   const CHECKLIST_ITEMS: ChecklistItemProps[] = [
-    { label: "Add a provider API key", done: setupStatus.hasApiKey, onClick: () => openModal("api-key") },
-    { label: "Create an endpoint", done: setupStatus.hasEndpoint, onClick: () => openModal("endpoint") },
-    { label: "Create a virtual key", done: setupStatus.hasVirtualKey, onClick: () => openModal("virtual-key") },
-    { label: "Make your first request", done: setupStatus.hasRequests, onClick: () => openModal("first-request") },
+    {
+      label: "Add a provider API key",
+      done: setupStatus.hasApiKey,
+      onClick: () => openModal("api-key"),
+    },
+    {
+      label: "Create an endpoint",
+      done: setupStatus.hasEndpoint,
+      onClick: () => openModal("endpoint"),
+    },
+    {
+      label: "Create a virtual key",
+      done: setupStatus.hasVirtualKey,
+      onClick: () => openModal("virtual-key"),
+    },
+    {
+      label: "Make your first request",
+      done: setupStatus.hasRequests,
+      onClick: () => openModal("first-request"),
+    },
   ];
 
   const isKeyDisplayPhase = createdKey !== "";
@@ -497,9 +736,22 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         }}
       >
         <Box sx={{ width: "100%", maxWidth: 820 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: "24px" }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="flex-start"
+            sx={{ mb: "24px" }}
+          >
             <Box>
-              <Typography sx={{ fontSize: 15, fontWeight: 700, color: palette.text.primary, letterSpacing: "-0.2px", mb: "4px" }}>
+              <Typography
+                sx={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: palette.text.primary,
+                  letterSpacing: "-0.2px",
+                  mb: "4px",
+                }}
+              >
                 Visualize your LLM traffic
               </Typography>
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "14px" }}>
@@ -535,10 +787,38 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         maxWidth="480px"
       >
         <Stack gap="16px">
-          <Field label="Key name" placeholder="e.g., Production OpenAI key" value={keyForm.key_name} onChange={(e) => setKeyForm((p) => ({ ...p, key_name: e.target.value }))} isRequired />
-          <Select id="onboarding-provider" label="Provider" placeholder="Select provider" value={keyForm.provider} items={providerItems} onChange={(e) => setKeyForm((p) => ({ ...p, provider: e.target.value as string }))} getOptionValue={(item) => item._id} dividerAfterIndex={topProviderCount} dividerLabel="Other providers" isRequired />
-          <Field label="API key" placeholder="sk-..." value={keyForm.api_key} onChange={(e) => setKeyForm((p) => ({ ...p, api_key: e.target.value }))} autoComplete="off" isRequired />
-          {keyError && <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>{keyError}</Typography>}
+          <Field
+            label="Key name"
+            placeholder="e.g., Production OpenAI key"
+            value={keyForm.key_name}
+            onChange={(e) => setKeyForm((p) => ({ ...p, key_name: e.target.value }))}
+            isRequired
+          />
+          <Select
+            id="onboarding-provider"
+            label="Provider"
+            placeholder="Select provider"
+            value={keyForm.provider}
+            items={providerItems}
+            onChange={(e) => setKeyForm((p) => ({ ...p, provider: e.target.value as string }))}
+            getOptionValue={(item) => item._id}
+            dividerAfterIndex={topProviderCount}
+            dividerLabel="Other providers"
+            isRequired
+          />
+          <Field
+            label="API key"
+            placeholder="sk-..."
+            value={keyForm.api_key}
+            onChange={(e) => setKeyForm((p) => ({ ...p, api_key: e.target.value }))}
+            autoComplete="off"
+            isRequired
+          />
+          {keyError && (
+            <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
+              {keyError}
+            </Typography>
+          )}
         </Stack>
       </StandardModal>
 
@@ -554,10 +834,16 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         maxWidth="480px"
       >
         <Stack gap="16px">
-          <Field label="Endpoint name" placeholder="e.g., Production GPT-4o" value={endpointForm.display_name} onChange={(e) => {
-            const val = e.target.value;
-            setEndpointForm((p) => ({ ...p, display_name: val, slug: slugify(val) }));
-          }} isRequired />
+          <Field
+            label="Endpoint name"
+            placeholder="e.g., Production GPT-4o"
+            value={endpointForm.display_name}
+            onChange={(e) => {
+              const val = e.target.value;
+              setEndpointForm((p) => ({ ...p, display_name: val, slug: slugify(val) }));
+            }}
+            isRequired
+          />
           {endpointForm.slug && (
             <Typography sx={{ fontSize: 11, color: palette.text.tertiary, mt: "-8px" }}>
               Endpoint slug: <strong>{endpointForm.slug}</strong>
@@ -565,22 +851,69 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
           )}
           <Stack direction="row" gap="8px">
             <Box flex={1}>
-              <Select id="onboarding-provider" label="Provider" placeholder="Select provider" value={endpointForm.provider} items={gatewayProviders} onChange={(e) => setEndpointForm((p) => ({ ...p, provider: e.target.value as string, model: "" }))} getOptionValue={(item) => item._id} isRequired />
+              <Select
+                id="onboarding-provider"
+                label="Provider"
+                placeholder="Select provider"
+                value={endpointForm.provider}
+                items={gatewayProviders}
+                onChange={(e) =>
+                  setEndpointForm((p) => ({ ...p, provider: e.target.value as string, model: "" }))
+                }
+                getOptionValue={(item) => item._id}
+                isRequired
+              />
             </Box>
             <Box flex={2}>
-              <Select id="onboarding-model" label="Model" placeholder={endpointForm.provider ? "Select a model" : "Select a provider first"} value={endpointForm.model} items={endpointForm.provider ? getModelsForProvider(endpointForm.provider) : []} onChange={(e) => setEndpointForm((p) => ({ ...p, model: e.target.value as string }))} getOptionValue={(item) => item._id} isRequired />
+              <Select
+                id="onboarding-model"
+                label="Model"
+                placeholder={endpointForm.provider ? "Select a model" : "Select a provider first"}
+                value={endpointForm.model}
+                items={endpointForm.provider ? getModelsForProvider(endpointForm.provider) : []}
+                onChange={(e) =>
+                  setEndpointForm((p) => ({ ...p, model: e.target.value as string }))
+                }
+                getOptionValue={(item) => item._id}
+                isRequired
+              />
             </Box>
           </Stack>
           {availableKeys.length > 0 ? (
-            <Select id="onboarding-api-key" label="API key" placeholder="Select an API key" value={endpointForm.api_key_id} items={availableKeys} onChange={(e) => setEndpointForm((p) => ({ ...p, api_key_id: e.target.value as string }))} getOptionValue={(item) => item._id} isRequired />
+            <Select
+              id="onboarding-api-key"
+              label="API key"
+              placeholder="Select an API key"
+              value={endpointForm.api_key_id}
+              items={availableKeys}
+              onChange={(e) =>
+                setEndpointForm((p) => ({ ...p, api_key_id: e.target.value as string }))
+              }
+              getOptionValue={(item) => item._id}
+              isRequired
+            />
           ) : (
-            <Stack direction="row" alignItems="flex-start" gap="6px" sx={{ p: "8px 12px", bgcolor: palette.background.accent, borderRadius: "4px", border: `1px solid ${palette.border.light}` }}>
+            <Stack
+              direction="row"
+              alignItems="flex-start"
+              gap="6px"
+              sx={{
+                p: "8px 12px",
+                bgcolor: palette.background.accent,
+                borderRadius: "4px",
+                border: `1px solid ${palette.border.light}`,
+              }}
+            >
               <Typography sx={{ fontSize: 12, lineHeight: 1.5, color: palette.text.tertiary }}>
                 No API keys available. Complete step 1 first.
               </Typography>
             </Stack>
           )}
-          {endpointError && <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>{endpointError}</Typography>}
+          {endpointError && (
+            <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
+              {endpointError}
+            </Typography>
+          )}
         </Stack>
       </StandardModal>
 
@@ -596,8 +929,18 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         maxWidth="480px"
       >
         <Stack gap="16px">
-          <Field label="Name" placeholder="e.g., Backend production key" value={vkeyName} onChange={(e) => setVkeyName(e.target.value)} isRequired />
-          {vkeyError && <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>{vkeyError}</Typography>}
+          <Field
+            label="Name"
+            placeholder="e.g., Backend production key"
+            value={vkeyName}
+            onChange={(e) => setVkeyName(e.target.value)}
+            isRequired
+          />
+          {vkeyError && (
+            <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
+              {vkeyError}
+            </Typography>
+          )}
         </Stack>
       </StandardModal>
 
@@ -613,21 +956,60 @@ export default function OnboardingOverlay({ onGetStarted, setupStatus, onStepCom
         showCancelButton={false}
       >
         <Stack gap="16px">
-          <Box sx={{ p: "12px 16px", backgroundColor: KEY_DISPLAY_BG, border: `1px solid ${palette.border.dark}`, borderRadius: "4px", fontFamily: "monospace", fontSize: 13, wordBreak: "break-all", position: "relative" }}>
+          <Box
+            sx={{
+              p: "12px 16px",
+              backgroundColor: KEY_DISPLAY_BG,
+              border: `1px solid ${palette.border.dark}`,
+              borderRadius: "4px",
+              fontFamily: "monospace",
+              fontSize: 13,
+              wordBreak: "break-all",
+              position: "relative",
+            }}
+          >
             {createdKey}
-            <IconButton size="small" onClick={copyToClipboard} sx={{ position: "absolute", top: 8, right: 8, p: 0.5 }} aria-label="Copy key">
-              {copied ? <Check size={14} strokeWidth={1.5} color={palette.status.success.text} /> : <Copy size={14} strokeWidth={1.5} color={palette.text.tertiary} />}
+            <IconButton
+              size="small"
+              onClick={copyToClipboard}
+              sx={{ position: "absolute", top: 8, right: 8, p: 0.5 }}
+              aria-label="Copy key"
+            >
+              {copied ? (
+                <Check size={14} strokeWidth={1.5} color={palette.status.success.text} />
+              ) : (
+                <Copy size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+              )}
             </IconButton>
           </Box>
-          <Box sx={{ p: "12px 16px", backgroundColor: WARNING_BG, border: `1px solid ${WARNING_BORDER}`, borderRadius: "4px" }}>
+          <Box
+            sx={{
+              p: "12px 16px",
+              backgroundColor: WARNING_BG,
+              border: `1px solid ${WARNING_BORDER}`,
+              borderRadius: "4px",
+            }}
+          >
             <Typography sx={{ fontSize: 12, color: WARNING_TEXT, fontWeight: 500 }}>
               This key won't be shown again. Store it securely.
             </Typography>
           </Box>
           <Box>
             <Typography sx={{ fontSize: 12, fontWeight: 500, mb: 1 }}>Usage example</Typography>
-            <Box sx={{ p: "12px 16px", backgroundColor: CODE_BLOCK_BG, borderRadius: "4px", fontFamily: "monospace", fontSize: 12, color: CODE_BLOCK_TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap", overflow: "auto" }}>
-{`from openai import OpenAI
+            <Box
+              sx={{
+                p: "12px 16px",
+                backgroundColor: CODE_BLOCK_BG,
+                borderRadius: "4px",
+                fontFamily: "monospace",
+                fontSize: 12,
+                color: CODE_BLOCK_TEXT,
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+                overflow: "auto",
+              }}
+            >
+              {`from openai import OpenAI
 
 client = OpenAI(
     base_url="${GATEWAY_URL}/v1",
@@ -655,8 +1037,20 @@ response = client.chat.completions.create(
         <Stack gap="16px">
           <Box>
             <Typography sx={{ fontSize: 12, fontWeight: 500, mb: 1 }}>Code</Typography>
-            <Box sx={{ p: "12px 16px", backgroundColor: CODE_BLOCK_BG, borderRadius: "4px", fontFamily: "monospace", fontSize: 12, color: CODE_BLOCK_TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap", overflow: "auto" }}>
-{`from openai import OpenAI
+            <Box
+              sx={{
+                p: "12px 16px",
+                backgroundColor: CODE_BLOCK_BG,
+                borderRadius: "4px",
+                fontFamily: "monospace",
+                fontSize: 12,
+                color: CODE_BLOCK_TEXT,
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+                overflow: "auto",
+              }}
+            >
+              {`from openai import OpenAI
 
 client = OpenAI(
     base_url="${GATEWAY_URL}/v1",
@@ -673,22 +1067,50 @@ print(response.choices[0].message.content)`}
 
           <CustomizableButton
             text={firstReqRunning ? "Running..." : firstReqResponse ? "Done" : "Run"}
-            icon={firstReqRunning ? <Loader2 size={14} strokeWidth={1.8} style={{ animation: "spin 1s linear infinite" }} /> : firstReqResponse ? <CheckCircle size={14} strokeWidth={1.8} /> : <Play size={14} strokeWidth={1.8} />}
+            icon={
+              firstReqRunning ? (
+                <Loader2
+                  size={14}
+                  strokeWidth={1.8}
+                  style={{ animation: "spin 1s linear infinite" }}
+                />
+              ) : firstReqResponse ? (
+                <CheckCircle size={14} strokeWidth={1.8} />
+              ) : (
+                <Play size={14} strokeWidth={1.8} />
+              )
+            }
             onClick={handleRunFirstRequest}
             sx={{ alignSelf: "flex-start" }}
           />
 
           {firstReqResponse && (
             <Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 500, mb: 1, color: palette.status.success.text }}>Response</Typography>
-              <Box sx={{ p: "12px 16px", backgroundColor: palette.background.accent, border: `1px solid ${palette.border.light}`, borderRadius: "4px", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <Typography
+                sx={{ fontSize: 12, fontWeight: 500, mb: 1, color: palette.status.success.text }}
+              >
+                Response
+              </Typography>
+              <Box
+                sx={{
+                  p: "12px 16px",
+                  backgroundColor: palette.background.accent,
+                  border: `1px solid ${palette.border.light}`,
+                  borderRadius: "4px",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
                 {firstReqResponse}
               </Box>
             </Box>
           )}
 
           {firstReqError && (
-            <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>{firstReqError}</Typography>
+            <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
+              {firstReqError}
+            </Typography>
           )}
         </Stack>
       </StandardModal>

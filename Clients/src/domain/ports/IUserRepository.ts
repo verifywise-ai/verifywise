@@ -97,7 +97,7 @@ export interface IUserRepository {
   updatePassword(
     userId: number | string,
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<ApiResponse<{ message: string }>>;
 
   /**
@@ -115,7 +115,7 @@ export interface IUserRepository {
    */
   uploadProfilePhoto(
     userId: number | string,
-    photoFile: File
+    photoFile: File,
   ): Promise<ApiResponse<{ photoUrl?: string; message?: string }>>;
 
   /**

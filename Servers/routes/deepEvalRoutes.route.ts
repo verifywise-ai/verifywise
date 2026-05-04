@@ -1,7 +1,10 @@
 import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
 import authenticateJWT from "../middleware/auth.middleware";
 import express, { NextFunction, Request, Response, Router } from "express";
-import { LLMProvider, VALID_PROVIDERS } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
+import {
+  LLMProvider,
+  VALID_PROVIDERS,
+} from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { getDecryptedKeyForProviderQuery } from "../utils/evaluationLlmApiKey.utils";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
@@ -45,7 +48,10 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
         const provider = contestant.hyperparameters?.provider?.toLowerCase();
         if (provider && VALID_PROVIDERS.includes(provider as LLMProvider) && !apiKeys[provider]) {
           try {
-            const apiKey = await getDecryptedKeyForProviderQuery(tenantId!, provider as LLMProvider);
+            const apiKey = await getDecryptedKeyForProviderQuery(
+              tenantId!,
+              provider as LLMProvider,
+            );
             if (apiKey) {
               apiKeys[provider] = apiKey;
             }
@@ -60,12 +66,16 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
       let judgeProvider = "openai";
       if (judgeModel.includes("claude")) judgeProvider = "anthropic";
       else if (judgeModel.includes("gemini")) judgeProvider = "google";
-      else if (judgeModel.includes("mistral") || judgeModel.includes("magistral")) judgeProvider = "mistral";
+      else if (judgeModel.includes("mistral") || judgeModel.includes("magistral"))
+        judgeProvider = "mistral";
       else if (judgeModel.includes("grok")) judgeProvider = "xai";
 
       if (!apiKeys[judgeProvider]) {
         try {
-          const apiKey = await getDecryptedKeyForProviderQuery(tenantId!, judgeProvider as LLMProvider);
+          const apiKey = await getDecryptedKeyForProviderQuery(
+            tenantId!,
+            judgeProvider as LLMProvider,
+          );
           if (apiKey) {
             apiKeys[judgeProvider] = apiKey;
           }
@@ -86,7 +96,10 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
       const judgeProvider = (body.judgeProvider || "").toLowerCase();
       if (judgeProvider && VALID_PROVIDERS.includes(judgeProvider as LLMProvider)) {
         try {
-          const apiKey = await getDecryptedKeyForProviderQuery(tenantId!, judgeProvider as LLMProvider);
+          const apiKey = await getDecryptedKeyForProviderQuery(
+            tenantId!,
+            judgeProvider as LLMProvider,
+          );
           if (apiKey) {
             req.body.apiKey = apiKey;
           }
@@ -122,16 +135,25 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
 
       if (Object.keys(scorerApiKeys).length > 0) {
         req.body.config.scorerApiKeys = scorerApiKeys;
-        console.log(`[DeepEval Proxy] Injecting API keys for scorer providers: ${Object.keys(scorerApiKeys).join(", ")}`);
+        console.log(
+          `[DeepEval Proxy] Injecting API keys for scorer providers: ${Object.keys(scorerApiKeys).join(", ")}`,
+        );
       }
     }
 
     // 2. Inject API key for standard judge LLM (standard or both mode)
     if ((evaluationMode === "standard" || evaluationMode === "both") && body?.config?.judgeLlm) {
       const judgeProvider = body.config.judgeLlm.provider?.toLowerCase();
-      const hasJudgeApiKey = body.config.judgeLlm.apiKey && body.config.judgeLlm.apiKey !== "***" && body.config.judgeLlm.apiKey !== "";
+      const hasJudgeApiKey =
+        body.config.judgeLlm.apiKey &&
+        body.config.judgeLlm.apiKey !== "***" &&
+        body.config.judgeLlm.apiKey !== "";
 
-      if (judgeProvider && !hasJudgeApiKey && VALID_PROVIDERS.includes(judgeProvider as LLMProvider)) {
+      if (
+        judgeProvider &&
+        !hasJudgeApiKey &&
+        VALID_PROVIDERS.includes(judgeProvider as LLMProvider)
+      ) {
         const apiKey = await getDecryptedKeyForProviderQuery(
           tenantId!,
           judgeProvider as LLMProvider,
@@ -146,10 +168,21 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
     // 3. Inject API key for the model being tested (if it's a cloud provider)
     if (body?.config?.model) {
       // accessMethod tells us the provider (openai, anthropic, google, etc.)
-      const modelProvider = (body.config.model.provider || body.config.model.accessMethod || "").toLowerCase();
-      const hasModelApiKey = body.config.model.apiKey && body.config.model.apiKey !== "***" && body.config.model.apiKey !== "";
+      const modelProvider = (
+        body.config.model.provider ||
+        body.config.model.accessMethod ||
+        ""
+      ).toLowerCase();
+      const hasModelApiKey =
+        body.config.model.apiKey &&
+        body.config.model.apiKey !== "***" &&
+        body.config.model.apiKey !== "";
 
-      if (modelProvider && !hasModelApiKey && VALID_PROVIDERS.includes(modelProvider as LLMProvider)) {
+      if (
+        modelProvider &&
+        !hasModelApiKey &&
+        VALID_PROVIDERS.includes(modelProvider as LLMProvider)
+      ) {
         const apiKey = await getDecryptedKeyForProviderQuery(
           tenantId!,
           modelProvider as LLMProvider,
@@ -167,7 +200,10 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
 
     // 4. Inject judge provider's key into scorerApiKeys for DeepEval metrics (G-Eval, etc.)
     // Only inject the specific key needed - the judge LLM provider
-    if ((evaluationMode === "standard" || evaluationMode === "both") && body?.config?.judgeLlm?.provider) {
+    if (
+      (evaluationMode === "standard" || evaluationMode === "both") &&
+      body?.config?.judgeLlm?.provider
+    ) {
       const judgeProvider = body.config.judgeLlm.provider.toLowerCase();
 
       if (VALID_PROVIDERS.includes(judgeProvider as LLMProvider)) {
@@ -202,8 +238,7 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
 function deepEvalRoutes() {
   const router = Router();
 
-  const targetUrl =
-    process.env.LLM_EVALS_URL || "http://127.0.0.1:8000";
+  const targetUrl = process.env.LLM_EVALS_URL || "http://127.0.0.1:8000";
 
   const proxy = createProxyMiddleware({
     target: targetUrl,
@@ -234,7 +269,7 @@ function deepEvalRoutes() {
         const errAny = err as any;
         console.error(
           `[DeepEval Proxy] Error for ${req.url}:`,
-          errAny.message || errAny.code || errAny
+          errAny.message || errAny.code || errAny,
         );
         if (res && "writeHead" in res) {
           (res as any).writeHead(502, { "Content-Type": "application/json" });
@@ -242,7 +277,7 @@ function deepEvalRoutes() {
             JSON.stringify({
               error: "Proxy error",
               message: errAny.message || errAny.code || "Unknown error",
-            })
+            }),
           );
         }
       },

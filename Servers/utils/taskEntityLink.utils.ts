@@ -86,7 +86,7 @@ export async function entityExistsQuery(
   entityId: number,
   entityType: EntityType,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const tableName = getEntityTableName(entityType);
 
@@ -96,7 +96,7 @@ export async function entityExistsQuery(
       replacements: { organizationId, entityId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result[0]?.exists ?? false;
@@ -108,7 +108,7 @@ export async function entityExistsQuery(
 export async function createTaskEntityLinkQuery(
   link: Omit<ITaskEntityLink, "id" | "created_at" | "updated_at"> & { entity_name?: string },
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<ITaskEntityLink> {
   const result = await sequelize.query<ITaskEntityLink>(
     `INSERT INTO task_entity_links (organization_id, task_id, entity_id, entity_type, entity_name, created_at, updated_at)
@@ -124,7 +124,7 @@ export async function createTaskEntityLinkQuery(
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result[0];
@@ -136,7 +136,7 @@ export async function createTaskEntityLinkQuery(
 export async function getTaskEntityLinksQuery(
   taskId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<ITaskEntityLinkWithDetails[]> {
   const links = await sequelize.query<ITaskEntityLink & { entity_name?: string }>(
     `SELECT * FROM task_entity_links
@@ -146,7 +146,7 @@ export async function getTaskEntityLinksQuery(
       replacements: { organizationId, taskId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   // Enrich each link with entity details (only if entity_name not already stored)
@@ -187,12 +187,14 @@ export async function getTaskEntityLinksQuery(
             replacements: { organizationId, entityId: link.entity_id },
             type: QueryTypes.SELECT,
             transaction,
-          }
+          },
         );
         if (nistResult[0]) {
           const { subcategory_id, description } = nistResult[0];
           // Build detailed name like "GV.1.1: Subcategory description"
-          const descPart = description ? `: ${description.substring(0, 50)}${description.length > 50 ? "..." : ""}` : "";
+          const descPart = description
+            ? `: ${description.substring(0, 50)}${description.length > 50 ? "..." : ""}`
+            : "";
           entityName = `${subcategory_id}${descPart}`.trim();
         }
       } else {
@@ -205,7 +207,7 @@ export async function getTaskEntityLinksQuery(
             replacements: { organizationId, entityId: link.entity_id },
             type: QueryTypes.SELECT,
             transaction,
-          }
+          },
         );
         entityName = entityResult[0]?.name || null;
       }
@@ -233,7 +235,7 @@ export async function deleteTaskEntityLinkQuery(
   linkId: number,
   taskId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const result = await sequelize.query(
     `DELETE FROM task_entity_links
@@ -243,7 +245,7 @@ export async function deleteTaskEntityLinkQuery(
       replacements: { organizationId, linkId, taskId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0;
@@ -255,7 +257,7 @@ export async function deleteTaskEntityLinkQuery(
 export async function deleteAllTaskEntityLinksQuery(
   taskId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> {
   const result = await sequelize.query(
     `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND task_id = :taskId`,
@@ -263,7 +265,7 @@ export async function deleteAllTaskEntityLinksQuery(
       replacements: { organizationId, taskId },
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
 
   return (result as unknown as [unknown, number])[1];
@@ -277,7 +279,7 @@ export async function linkExistsQuery(
   entityId: number,
   entityType: EntityType,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const result = await sequelize.query<{ exists: boolean }>(
     `SELECT EXISTS(
@@ -288,7 +290,7 @@ export async function linkExistsQuery(
       replacements: { organizationId, taskId, entityId, entityType },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result[0]?.exists ?? false;
@@ -301,7 +303,7 @@ export async function getTasksForEntityQuery(
   entityId: number,
   entityType: EntityType,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number[]> {
   const result = await sequelize.query<{ task_id: number }>(
     `SELECT task_id FROM task_entity_links
@@ -310,7 +312,7 @@ export async function getTasksForEntityQuery(
       replacements: { organizationId, entityId, entityType },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.map((r) => r.task_id);

@@ -13,11 +13,11 @@ const userDto: UserResponseDTO = {
   is_demo: false,
   organization_id: 10,
   pwd_set: true,
-}
+};
 
 export class UserResponseBuilder {
   private readonly dto: UserResponseDTO;
-  
+
   constructor(id: number = 1) {
     this.dto = { ...userDto };
     this.dto.id = id;
@@ -51,11 +51,11 @@ const user: User = {
   is_demo: false,
   organization_id: 10,
   pwd_set: true,
-}
+};
 
 export class UserBuilder {
   private readonly user: Partial<User>;
-  
+
   constructor(id: number = 1) {
     this.user = { ...user };
     this.user.id = id;
@@ -65,7 +65,7 @@ export class UserBuilder {
     this.user.name = undefined;
     return this;
   }
-  
+
   withoutSurname(): this {
     this.user.surname = undefined;
     return this;

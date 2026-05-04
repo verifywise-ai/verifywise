@@ -112,8 +112,7 @@ export const ControlCategories: ControlCategoryRegistration[] = [
   },
   {
     order_no: 8,
-    title:
-      "Transparency obligations for providers and users of certain AI systems",
+    title: "Transparency obligations for providers and users of certain AI systems",
     article: "Art. 50",
     controls: TransparencyObligationsForProviders,
   },

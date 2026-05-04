@@ -14,9 +14,7 @@ test.describe("Assessment Tracker", () => {
 
   // --- Tier 0: Navigate to assessment via project view ---
 
-  test("can reach the frameworks tab in project view", async ({
-    authedPage: page,
-  }) => {
+  test("can reach the frameworks tab in project view", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
     await expect(page).toHaveURL(/\/project-view/);
 
@@ -28,13 +26,11 @@ test.describe("Assessment Tracker", () => {
         .or(page.getByText(/control/i))
         .or(page.getByText(/assessment/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("frameworks tab has Controls and Assessments toggle", async ({
-    authedPage: page,
-  }) => {
+  test("frameworks tab has Controls and Assessments toggle", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     // Look for the Controls / Assessments toggle buttons
@@ -46,7 +42,10 @@ test.describe("Assessment Tracker", () => {
       .or(page.getByText(/assessments/i));
 
     if (
-      !(await controlsBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await controlsBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -58,9 +57,7 @@ test.describe("Assessment Tracker", () => {
 
   // --- Tier 1: Assessment view content ---
 
-  test("switching to Assessments tab shows assessment content", async ({
-    authedPage: page,
-  }) => {
+  test("switching to Assessments tab shows assessment content", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     const assessmentsBtn = page
@@ -68,7 +65,10 @@ test.describe("Assessment Tracker", () => {
       .or(page.getByText(/assessments/i));
 
     if (
-      !(await assessmentsBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await assessmentsBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -96,7 +96,10 @@ test.describe("Assessment Tracker", () => {
       .or(page.getByText(/assessments/i));
 
     if (
-      !(await assessmentsBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await assessmentsBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -114,7 +117,12 @@ test.describe("Assessment Tracker", () => {
       .or(page.locator('[class*="stats" i]'))
       .or(page.locator('[class*="progress" i]'));
 
-    if (await progressContent.first().isVisible().catch(() => false)) {
+    if (
+      await progressContent
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(progressContent.first()).toBeVisible();
     }
   });
@@ -129,7 +137,10 @@ test.describe("Assessment Tracker", () => {
       .or(page.getByText(/assessments/i));
 
     if (
-      !(await assessmentsBtn.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await assessmentsBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -144,7 +155,12 @@ test.describe("Assessment Tracker", () => {
       .or(page.locator('[class*="topic" i]'))
       .or(page.locator(".MuiListItem-root"));
 
-    if (await topicItems.first().isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (
+      await topicItems
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false)
+    ) {
       await topicItems.first().click();
       await page.waitForTimeout(1000);
 
@@ -155,7 +171,12 @@ test.describe("Assessment Tracker", () => {
         .or(page.getByRole("button", { name: /expand/i }))
         .or(page.locator('[class*="subtopic" i]'));
 
-      if (await subtopicContent.first().isVisible().catch(() => false)) {
+      if (
+        await subtopicContent
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(subtopicContent.first()).toBeVisible();
       }
     }
@@ -163,9 +184,7 @@ test.describe("Assessment Tracker", () => {
 
   // --- Accessibility ---
 
-  test("assessment view has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("assessment view has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
     await page.waitForLoadState("domcontentloaded");
 
@@ -174,7 +193,12 @@ test.describe("Assessment Tracker", () => {
       .getByRole("button", { name: /assessments/i })
       .or(page.getByText(/assessments/i));
 
-    if (await assessmentsBtn.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await assessmentsBtn
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await assessmentsBtn.first().click();
       await page.waitForTimeout(1000);
     }

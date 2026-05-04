@@ -4,11 +4,7 @@ import { keyframes } from "@emotion/react";
 import { X } from "lucide-react";
 import { useFramePlayer } from "./useFramePlayer";
 import { PlayerControls } from "./PlayerControls";
-import {
-  VideoComposition,
-  calcTotalFrames,
-  type VideoConfig,
-} from "./VideoComposition";
+import { VideoComposition, calcTotalFrames, type VideoConfig } from "./VideoComposition";
 
 const enterAnim = keyframes`
   0% { opacity: 0; transform: scale(0.85) translateY(30px); }
@@ -35,11 +31,7 @@ interface VideoPlayerModalProps {
   config: VideoConfig;
 }
 
-export function VideoPlayerModal({
-  open,
-  onClose,
-  config,
-}: VideoPlayerModalProps) {
+export function VideoPlayerModal({ open, onClose, config }: VideoPlayerModalProps) {
   const totalFrames = calcTotalFrames(config);
   const fps = config.fps ?? 30;
   const player = useFramePlayer(totalFrames, fps, false);
@@ -141,11 +133,7 @@ export function VideoPlayerModal({
         </IconButton>
 
         <Box sx={{ position: "absolute", inset: 0 }}>
-          <VideoComposition
-            config={config}
-            frame={player.frame}
-            playing={player.playing}
-          />
+          <VideoComposition config={config} frame={player.frame} playing={player.playing} />
         </Box>
         <PlayerControls player={player} />
       </Box>

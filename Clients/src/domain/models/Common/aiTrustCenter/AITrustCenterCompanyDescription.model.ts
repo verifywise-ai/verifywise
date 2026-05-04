@@ -18,7 +18,7 @@ export class AITrustCenterCompanyDescriptionModel {
   }
 
   static createNewAITrustCenterCompanyDescription(
-    data: AITrustCenterCompanyDescriptionModel
+    data: AITrustCenterCompanyDescriptionModel,
   ): AITrustCenterCompanyDescriptionModel {
     return new AITrustCenterCompanyDescriptionModel(data);
   }

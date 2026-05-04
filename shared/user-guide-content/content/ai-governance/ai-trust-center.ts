@@ -49,13 +49,13 @@ export const aiTrustCenterContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI trust center can include the following sections:',
+      text: 'The AI trust center is configured from a single Overview form, with per-field visibility toggles for each of these content areas:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Introduction', text: 'Share your purpose, AI statement and mission to set the tone for stakeholders' },
-        { bold: 'Compliance badges', text: 'Display certifications like EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF' },
+        { bold: 'Compliance badges', text: 'Display certifications like EU AI Act, ISO 42001, ISO 27001, SOC 2, GDPR, HIPAA and CCPA' },
         { bold: 'Company description', text: 'Describe your organization, core values and commitment to responsible AI' },
         { bold: 'Privacy and contact', text: 'Link to your privacy policy, terms of service and provide contact details' },
       ],

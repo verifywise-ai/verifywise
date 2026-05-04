@@ -236,7 +236,17 @@ export const DEFAULT_MODEL_SECURITY_CONFIG: IModelSecurityConfig = {
   scanMode: "quick",
   severityThreshold: "low",
   maxModelFileSize: 100 * 1024 * 1024, // 100MB
-  enabledExtensions: [".pkl", ".pickle", ".pt", ".pth", ".bin", ".h5", ".keras", ".hdf5", ".safetensors"],
+  enabledExtensions: [
+    ".pkl",
+    ".pickle",
+    ".pt",
+    ".pth",
+    ".bin",
+    ".h5",
+    ".keras",
+    ".hdf5",
+    ".safetensors",
+  ],
   scanLambdaLayers: true,
 };
 

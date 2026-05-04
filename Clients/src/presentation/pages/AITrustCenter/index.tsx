@@ -2,17 +2,14 @@ import React from "react";
 import { Box, Stack } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
-import { Eye as VisibilityIcon } from "lucide-react"
+import { Eye as VisibilityIcon } from "lucide-react";
 import TrustCenterResources from "./Resources";
 import AITrustCenterSubprocessors from "./Subprocessors";
 import AITrustCenterSettings from "./Settings";
 import AITrustCenterOverview from "./Overview";
 import PageTour from "../../components/PageTour";
 import AITrustCenterSteps from "./AITrustCenterSteps";
-import {
-  aiTrustCenterTabPanelStyle,
-  aiTrustCenterPreviewButtonStyle,
-} from "./styles";
+import { aiTrustCenterTabPanelStyle, aiTrustCenterPreviewButtonStyle } from "./styles";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { useSelector } from "react-redux";
@@ -23,23 +20,22 @@ import { useAITrustCentreResourcesQuery } from "../../../application/hooks/useAI
 import { useAITrustCentreSubprocessorsQuery } from "../../../application/hooks/useAITrustCentreSubprocessorsQuery";
 
 const AITrustCenter: React.FC = () => {
-const params = useParams<{ tab?: string }>();
-const navigate = useNavigate();
+  const params = useParams<{ tab?: string }>();
+  const navigate = useNavigate();
 
-// active tab based on URL or default to "overview"
-const tabValue = params.tab || "overview";
+  // active tab based on URL or default to "overview"
+  const tabValue = params.tab || "overview";
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) =>
     navigate(`/ai-trust-center/${newValue}`);
-  const authToken = useSelector(
-    (state: { auth: { authToken: string } }) => state.auth.authToken
-  );
+  const authToken = useSelector((state: { auth: { authToken: string } }) => state.auth.authToken);
   const userToken = extractUserToken(authToken);
   const tenantHash = userToken?.tenantId;
 
   // Fetch data for tab counts
   const { data: resources, isLoading: resourcesLoading } = useAITrustCentreResourcesQuery();
-  const { data: subprocessors, isLoading: subprocessorsLoading } = useAITrustCentreSubprocessorsQuery();
+  const { data: subprocessors, isLoading: subprocessorsLoading } =
+    useAITrustCentreSubprocessorsQuery();
 
   const handlePreviewMode = () => {
     try {
@@ -123,7 +119,11 @@ const tabValue = params.tab || "overview";
             </Box>
           </Box>
 
-          <TabPanel value="overview" sx={aiTrustCenterTabPanelStyle} data-joyride-id="trust-center-overview">
+          <TabPanel
+            value="overview"
+            sx={aiTrustCenterTabPanelStyle}
+            data-joyride-id="trust-center-overview"
+          >
             <AITrustCenterOverview />
           </TabPanel>
           <TabPanel value="resources" sx={aiTrustCenterTabPanelStyle}>

@@ -25,12 +25,7 @@ let tipMountCounter = 0;
  * Collapsible tip block for empty states.
  * Uses native <details> with animated height transition and colored accents.
  */
-const EmptyStateTip: FC<EmptyStateTipProps> = ({
-  icon: Icon,
-  title,
-  description,
-  accentIndex,
-}) => {
+const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description, accentIndex }) => {
   const theme = useTheme();
   const contentRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -49,19 +44,24 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({
     }
   }, [description]);
 
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const details = detailsRef.current;
-    if (!details) return;
+  const handleToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const details = detailsRef.current;
+      if (!details) return;
 
-    if (isOpen) {
-      setIsOpen(false);
-      setTimeout(() => { details.open = false; }, 200);
-    } else {
-      details.open = true;
-      requestAnimationFrame(() => setIsOpen(true));
-    }
-  }, [isOpen]);
+      if (isOpen) {
+        setIsOpen(false);
+        setTimeout(() => {
+          details.open = false;
+        }, 200);
+      } else {
+        details.open = true;
+        requestAnimationFrame(() => setIsOpen(true));
+      }
+    },
+    [isOpen],
+  );
 
   return (
     <Box

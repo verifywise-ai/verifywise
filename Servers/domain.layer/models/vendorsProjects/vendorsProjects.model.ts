@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../project/project.model";
 import { VendorModel } from "../vendor/vendor.model";
 import { IVendorsProjects } from "../../interfaces/i.vendorProjects";
@@ -14,10 +8,7 @@ import { IVendorsProjects } from "../../interfaces/i.vendorProjects";
   timestamps: true,
   underscored: true,
 })
-export class VendorsProjectsModel
-  extends Model<VendorsProjectsModel>
-  implements IVendorsProjects
-{
+export class VendorsProjectsModel extends Model<VendorsProjectsModel> implements IVendorsProjects {
   @ForeignKey(() => VendorModel)
   @Column({
     type: DataType.INTEGER,
@@ -54,7 +45,7 @@ export class VendorsProjectsModel
   static async createNewVendorProject(
     vendorId: number,
     projectId: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<VendorsProjectsModel> {
     const vendorProject = new VendorsProjectsModel();
     vendorProject.vendor_id = vendorId;

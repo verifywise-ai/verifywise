@@ -11,9 +11,7 @@ export class AnnexStructISO42001Model {
     this.framework_id = data.framework_id;
   }
 
-  static createNewAnnexStructISO42001(
-    data: AnnexStructISO42001Model
-  ): AnnexStructISO42001Model {
+  static createNewAnnexStructISO42001(data: AnnexStructISO42001Model): AnnexStructISO42001Model {
     return new AnnexStructISO42001Model(data);
   }
 }

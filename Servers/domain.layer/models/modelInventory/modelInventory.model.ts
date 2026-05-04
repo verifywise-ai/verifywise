@@ -8,10 +8,7 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class ModelInventoryModel
-  extends Model<ModelInventoryModel>
-  implements IModelInventory
-{
+export class ModelInventoryModel extends Model<ModelInventoryModel> implements IModelInventory {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -130,74 +127,46 @@ export class ModelInventoryModel
    */
   async validateModelInventoryData(): Promise<void> {
     if (!this.provider?.trim()) {
-      throw new ValidationException(
-        "Provider is required",
-        "provider",
-        this.provider
-      );
+      throw new ValidationException("Provider is required", "provider", this.provider);
     }
 
     if (!this.model?.trim()) {
-      throw new ValidationException(
-        "Model is required",
-        "model",
-        this.model
-      );
+      throw new ValidationException("Model is required", "model", this.model);
     }
 
     if (!this.version?.trim()) {
-      throw new ValidationException(
-        "Version is required",
-        "version",
-        this.version
-      );
+      throw new ValidationException("Version is required", "version", this.version);
     }
 
     if (!this.capabilities?.trim()) {
-      throw new ValidationException(
-        "Capabilities are required",
-        "capabilities",
-        this.capabilities
-      );
+      throw new ValidationException("Capabilities are required", "capabilities", this.capabilities);
     }
 
     if (!this.status_date) {
-      throw new ValidationException(
-        "Status date is required",
-        "status_date",
-        this.status_date
-      );
+      throw new ValidationException("Status date is required", "status_date", this.status_date);
     }
 
     if (!this.reference_link?.trim()) {
       throw new ValidationException(
         "Reference link is required",
         "reference_link",
-        this.reference_link
+        this.reference_link,
       );
     }
 
     if (!this.biases?.trim()) {
-      throw new ValidationException(
-        "Biases is required",
-        "biases",
-        this.biases
-      );
+      throw new ValidationException("Biases is required", "biases", this.biases);
     }
 
     if (!this.limitations?.trim()) {
-      throw new ValidationException(
-        "Limitations are required",
-        "limitations",
-        this.limitations
-      );
+      throw new ValidationException("Limitations are required", "limitations", this.limitations);
     }
 
     if (!this.hosting_provider?.trim()) {
       throw new ValidationException(
         "Hosting provider is required",
         "hosting_provider",
-        this.hosting_provider
+        this.hosting_provider,
       );
     }
   }
@@ -227,11 +196,7 @@ export class ModelInventoryModel
    */
   async updateStatus(newStatus: ModelInventoryStatus): Promise<void> {
     if (!Object.values(ModelInventoryStatus).includes(newStatus)) {
-      throw new ValidationException(
-        "Invalid status value",
-        "status",
-        newStatus
-      );
+      throw new ValidationException("Invalid status value", "status", newStatus);
     }
 
     this.status = newStatus;
@@ -304,7 +269,8 @@ export class ModelInventoryModel
       biases: this.biases,
       limitations: this.limitations,
       hosting_provider: this.hosting_provider,
-      security_assessment_data: this.security_assessment_data!= undefined ? this.security_assessment_data : [],
+      security_assessment_data:
+        this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
@@ -342,7 +308,8 @@ export class ModelInventoryModel
       biases: this.biases,
       limitations: this.limitations,
       hosting_provider: this.hosting_provider,
-      security_assessment_data: this.security_assessment_data!= undefined ? this.security_assessment_data : [],
+      security_assessment_data:
+        this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
@@ -399,9 +366,7 @@ export class ModelInventoryModel
   /**
    * Create a new ModelInventoryModel instance with minimal validations
    */
-  static createNewModelInventory(
-    data: Partial<IModelInventory>
-  ): ModelInventoryModel {
+  static createNewModelInventory(data: Partial<IModelInventory>): ModelInventoryModel {
     const modelInventory = new ModelInventoryModel({
       provider_model: data.provider_model || "", // Keep for backward compatibility
       provider: data.provider || "",
@@ -418,7 +383,7 @@ export class ModelInventoryModel
       biases: data.biases || "",
       limitations: data.limitations || "",
       hosting_provider: data.hosting_provider || "",
-      security_assessment_data : data.security_assessment_data || [],
+      security_assessment_data: data.security_assessment_data || [],
       is_demo: data.is_demo || false,
       created_at: new Date(),
       updated_at: new Date(),
@@ -432,7 +397,7 @@ export class ModelInventoryModel
    */
   static updateModelInventory(
     existingModel: ModelInventoryModel,
-    data: Partial<ModelInventoryModel>
+    data: Partial<ModelInventoryModel>,
   ): ModelInventoryModel {
     // Update only the fields that are provided
     if (data.provider_model !== undefined) {

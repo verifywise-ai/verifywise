@@ -1,5 +1,7 @@
 .search-result-item {
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .search-result-item:hover {

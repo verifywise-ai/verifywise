@@ -15,7 +15,8 @@ export const TechnicalDocumentation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The model we are using is pre-existing, sourced from a well-known AI provider specializing in computer vision. It was selected based on its proven accuracy, scalability, and the comprehensive documentation that aligns with our project objectives. There were no modifications to the model, but we have integrated it into our system with customized parameters to fit our use case."
+        answer:
+          "The model we are using is pre-existing, sourced from a well-known AI provider specializing in computer vision. It was selected based on its proven accuracy, scalability, and the comprehensive documentation that aligns with our project objectives. There were no modifications to the model, but we have integrated it into our system with customized parameters to fit our use case.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const TechnicalDocumentation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our validation strategy includes rigorous testing using a variety of datasets to ensure the model performs well under different conditions. We conduct cross-validation to assess model stability and ensure that it meets our objectives. In sensitive use cases, we incorporate fairness and bias mitigation checks to minimize unintended consequences."
+        answer:
+          "Our validation strategy includes rigorous testing using a variety of datasets to ensure the model performs well under different conditions. We conduct cross-validation to assess model stability and ensure that it meets our objectives. In sensitive use cases, we incorporate fairness and bias mitigation checks to minimize unintended consequences.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const TechnicalDocumentation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "AI performance is documented through comprehensive logging during the training process, including metrics such as accuracy, precision, recall, and F1-score. These metrics are aligned with our agreed project objectives, specifically improving the model''s prediction accuracy while minimizing false positives. Regular updates are made based on performance evaluations after each training cycle."
+        answer:
+          "AI performance is documented through comprehensive logging during the training process, including metrics such as accuracy, precision, recall, and F1-score. These metrics are aligned with our agreed project objectives, specifically improving the model''s prediction accuracy while minimizing false positives. Regular updates are made based on performance evaluations after each training cycle.",
       },
     ],
   },

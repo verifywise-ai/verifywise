@@ -13,11 +13,7 @@ interface CodeBlockProps {
   onCopy?: (text: string) => void;
 }
 
-const CodeBlock: React.FC<CodeBlockProps> = ({
-  code,
-  language = "tsx",
-  onCopy,
-}) => {
+const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = "tsx", onCopy }) => {
   const codeRef = useRef<HTMLElement>(null);
   const [copied, setCopied] = useState(false);
 

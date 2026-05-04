@@ -1,6 +1,6 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
-import { Box, Typography, Button, Card, CardContent } from '@mui/material';
-import { AlertCircle, RotateCcw } from 'lucide-react';
+import { Component, ErrorInfo, ReactNode } from "react";
+import { Box, Typography, Button, Card, CardContent } from "@mui/material";
+import { AlertCircle, RotateCcw } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -19,7 +19,7 @@ class DashboardErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
@@ -27,23 +27,23 @@ class DashboardErrorBoundary extends Component<Props, State> {
     return {
       hasError: true,
       error,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to console for development
-    console.error('Dashboard Error Boundary caught an error:', error, errorInfo);
+    console.error("Dashboard Error Boundary caught an error:", error, errorInfo);
 
     // In production, send to error tracking service (Sentry, etc.)
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       // TODO: Send to error tracking service
       // errorTrackingService.captureException(error, { extra: errorInfo });
     }
 
     this.setState({
       error,
-      errorInfo
+      errorInfo,
     });
   }
 
@@ -51,7 +51,7 @@ class DashboardErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     });
   };
 
@@ -66,45 +66,36 @@ class DashboardErrorBoundary extends Component<Props, State> {
       return (
         <Box
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '400px',
-            p: 4
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "400px",
+            p: 4,
           }}
         >
           <Card
             sx={{
               maxWidth: 500,
-              width: '100%',
-              textAlign: 'center'
+              width: "100%",
+              textAlign: "center",
             }}
           >
             <CardContent sx={{ p: 4 }}>
-              <Box sx={{ color: 'error.main', display: 'inline-flex', mb: 2 }}>
+              <Box sx={{ color: "error.main", display: "inline-flex", mb: 2 }}>
                 <AlertCircle size={64} />
               </Box>
 
-              <Typography
-                variant="h5"
-                component="h2"
-                gutterBottom
-                sx={{ fontWeight: 500 }}
-              >
+              <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 500 }}>
                 Dashboard Error
               </Typography>
 
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{ mb: 3 }}
-              >
-                Something went wrong while loading the dashboard.
-                This could be due to a temporary issue with one of the widgets.
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Something went wrong while loading the dashboard. This could be due to a temporary
+                issue with one of the widgets.
               </Typography>
 
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
                   variant="contained"
                   startIcon={<RotateCcw size={20} />}
@@ -113,27 +104,24 @@ class DashboardErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
 
-                <Button
-                  variant="outlined"
-                  onClick={() => window.location.reload()}
-                >
+                <Button variant="outlined" onClick={() => window.location.reload()}>
                   Reload Page
                 </Button>
               </Box>
 
               {/* Show error details in development */}
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV === "development" && this.state.error && (
                 <Box
                   sx={{
                     mt: 3,
                     p: 2,
-                    backgroundColor: 'grey.100',
+                    backgroundColor: "grey.100",
                     borderRadius: 1,
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontFamily: 'monospace',
-                    overflow: 'auto',
-                    maxHeight: 200
+                    textAlign: "left",
+                    fontSize: "0.875rem",
+                    fontFamily: "monospace",
+                    overflow: "auto",
+                    maxHeight: 200,
                   }}
                 >
                   <Typography variant="subtitle2" gutterBottom>

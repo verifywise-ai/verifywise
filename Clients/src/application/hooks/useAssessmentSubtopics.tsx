@@ -25,9 +25,7 @@ const useAssessmentSubtopics = ({
   projectFrameworkId?: number;
   refreshKey?: boolean;
 }) => {
-  const [assessmentSubtopics, setAssessmentSubtopics] = useState<Subtopic[]>(
-    []
-  );
+  const [assessmentSubtopics, setAssessmentSubtopics] = useState<Subtopic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchAssessmentTopics = useCallback(
@@ -62,7 +60,7 @@ const useAssessmentSubtopics = ({
         setLoading(false);
       }
     },
-    [activeAssessmentTopicId, projectFrameworkId, refreshKey]
+    [activeAssessmentTopicId, projectFrameworkId, refreshKey],
   );
   useEffect(() => {
     const controller = new AbortController();

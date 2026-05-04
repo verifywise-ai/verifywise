@@ -17,7 +17,7 @@ function DropDowns({
   setState,
   projectId,
   readOnly = false,
-  setAuditedStatusModalOpen
+  setAuditedStatusModalOpen,
 }: DropDownsProps) {
   const [status, setStatus] = useState("");
   const [approver, setApprover] = useState("");
@@ -27,7 +27,7 @@ function DropDowns({
   const [date, setDate] = useState<Dayjs | null>(null);
   const [implementationDetails, setImplementationDetails] = useState("");
   const theme = useTheme();
-  const { users } = useUsers(); 
+  const { users } = useUsers();
   const { project } = useProjectData({ projectId: String(projectId) || "0" });
 
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
@@ -38,7 +38,7 @@ function DropDowns({
       const members = users.filter(
         (user: User) =>
           typeof user.id === "number" &&
-          project.members.some((memberId) => Number(memberId) === user.id)
+          project.members.some((memberId) => Number(memberId) === user.id),
       );
       setProjectMembers(members);
     }
@@ -52,9 +52,7 @@ function DropDowns({
       // Only set user-related states if the value exists in projectMembers
       if (
         state?.approver &&
-        projectMembers.some(
-          (user) => user.id?.toString() === state.approver.toString()
-        )
+        projectMembers.some((user) => user.id?.toString() === state.approver.toString())
       ) {
         setApprover(state.approver.toString());
       } else {
@@ -62,15 +60,11 @@ function DropDowns({
       }
 
       if (state?.risk_review) {
-        const validRiskReviews = [
-          "Acceptable risk",
-          "Residual risk",
-          "Unacceptable risk",
-        ];
+        const validRiskReviews = ["Acceptable risk", "Residual risk", "Unacceptable risk"];
         setRiskReview(
           validRiskReviews.includes(state.risk_review.toString())
             ? state.risk_review.toString()
-            : ""
+            : "",
         );
       } else {
         setRiskReview("");
@@ -78,9 +72,7 @@ function DropDowns({
 
       if (
         state?.owner &&
-        projectMembers.some(
-          (user) => user.id?.toString() === state.owner.toString()
-        )
+        projectMembers.some((user) => user.id?.toString() === state.owner.toString())
       ) {
         setOwner(state.owner.toString());
       } else {
@@ -89,9 +81,7 @@ function DropDowns({
 
       if (
         state?.reviewer &&
-        projectMembers.some(
-          (user) => user.id?.toString() === state.reviewer.toString()
-        )
+        projectMembers.some((user) => user.id?.toString() === state.reviewer.toString())
       ) {
         setReviewer(state.reviewer.toString());
       } else {
@@ -106,7 +96,7 @@ function DropDowns({
   const handleChange = (
     e: SelectChangeEvent<string | number>,
     setter: (value: string) => void,
-    field: string
+    field: string,
   ) => {
     const stringValue = e.target.value.toString();
     setter(stringValue);
@@ -250,10 +240,9 @@ function DropDowns({
           type="description"
           sx={{
             cursor: "text",
-            "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-              {
-                height: "73px",
-              },
+            "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
+              height: "73px",
+            },
           }}
           value={implementationDetails}
           onChange={(e) => {

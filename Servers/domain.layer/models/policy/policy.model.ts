@@ -1,10 +1,4 @@
-import {
-  Table,
-  Column,
-  DataType,
-  Model,
-  ForeignKey,
-} from "sequelize-typescript";
+import { Table, Column, DataType, Model, ForeignKey } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IPolicy, PolicyTag } from "../../interfaces/i.policy";
 

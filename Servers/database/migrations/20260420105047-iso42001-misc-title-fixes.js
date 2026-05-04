@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Miscellaneous ISO 42001 struct-row title fixes applied to the DB so existing

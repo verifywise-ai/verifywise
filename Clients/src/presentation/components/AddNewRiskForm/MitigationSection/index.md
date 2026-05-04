@@ -44,8 +44,7 @@ const [mitigationValues, setMitigationValues] =
     recommendations: "",
   };
 
-const [mitigationErrors, setMitigationErrors] =
-  useState < MitigationFormErrors > {};
+const [mitigationErrors, setMitigationErrors] = useState < MitigationFormErrors > {};
 
 return (
   <MitigationSection

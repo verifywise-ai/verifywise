@@ -7,16 +7,9 @@
  * @returns `true` if the value is a valid number and falls within the specified range, otherwise `false`.
  */
 
-export function numberValidation(
-  value: string | number,
-  min?: number,
-  max?: number
-): boolean {
+export function numberValidation(value: string | number, min?: number, max?: number): boolean {
   if (typeof value === "number") {
-    if (
-      (min !== undefined && value < min) ||
-      (max !== undefined && value > max)
-    ) {
+    if ((min !== undefined && value < min) || (max !== undefined && value > max)) {
       return false;
     }
     return true;

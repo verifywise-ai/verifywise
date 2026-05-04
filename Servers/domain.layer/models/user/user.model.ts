@@ -36,21 +36,12 @@
  * @module domain.layer/models/user
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { RoleModel } from "../role/role.model";
 import { emailValidation } from "../../validations/email.valid";
 import { numberValidation } from "../../validations/number.valid";
 import { passwordValidation } from "../../validations/password.valid";
-import {
-  ValidationException,
-  BusinessLogicException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, BusinessLogicException } from "../../exceptions/custom.exception";
 import bcrypt from "bcrypt";
 import { OrganizationModel } from "../organization/organization.model";
 
@@ -165,7 +156,7 @@ export class UserModel extends Model<UserModel> {
     email: string,
     password: string,
     role_id: number,
-    organization_id: number
+    organization_id: number,
   ): Promise<UserModel> {
     // Validate email
     if (!emailValidation(email)) {
@@ -179,7 +170,7 @@ export class UserModel extends Model<UserModel> {
         "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
         "password",
         undefined,
-        { metadata: { validationDetails: passwordValidationResult } }
+        { metadata: { validationDetails: passwordValidationResult } },
       );
     }
 
@@ -189,11 +180,7 @@ export class UserModel extends Model<UserModel> {
     }
     // Validate organization_id
     if (!numberValidation(organization_id, 1)) {
-      throw new ValidationException(
-        "Invalid organization_id",
-        "organization_id",
-        organization_id
-      );
+      throw new ValidationException("Invalid organization_id", "organization_id", organization_id);
     }
 
     // Hash the password
@@ -240,17 +227,13 @@ export class UserModel extends Model<UserModel> {
     // Validate name if provided
     if (updateData.name !== undefined) {
       if (!updateData.name || updateData.name.trim().length === 0) {
-        throw new ValidationException(
-          "Name is required",
-          "name",
-          updateData.name
-        );
+        throw new ValidationException("Name is required", "name", updateData.name);
       }
       if (updateData.name.trim().length < 2) {
         throw new ValidationException(
           "Name must be at least 2 characters long",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
       this.name = updateData.name.trim();
@@ -259,17 +242,13 @@ export class UserModel extends Model<UserModel> {
     // Validate surname if provided
     if (updateData.surname !== undefined) {
       if (!updateData.surname || updateData.surname.trim().length === 0) {
-        throw new ValidationException(
-          "Surname is required",
-          "surname",
-          updateData.surname
-        );
+        throw new ValidationException("Surname is required", "surname", updateData.surname);
       }
       if (updateData.surname.trim().length < 2) {
         throw new ValidationException(
           "Surname must be at least 2 characters long",
           "surname",
-          updateData.surname
+          updateData.surname,
         );
       }
       this.surname = updateData.surname.trim();
@@ -278,11 +257,7 @@ export class UserModel extends Model<UserModel> {
     // Validate email if provided
     if (updateData.email !== undefined) {
       if (!emailValidation(updateData.email)) {
-        throw new ValidationException(
-          "Valid email is required",
-          "email",
-          updateData.email
-        );
+        throw new ValidationException("Valid email is required", "email", updateData.email);
       }
       this.email = updateData.email.trim();
     }
@@ -315,50 +290,34 @@ export class UserModel extends Model<UserModel> {
     }
 
     if (this.name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", this.name);
     }
 
     if (!this.surname || this.surname.trim().length === 0) {
-      throw new ValidationException(
-        "Surname is required",
-        "surname",
-        this.surname
-      );
+      throw new ValidationException("Surname is required", "surname", this.surname);
     }
 
     if (this.surname.trim().length < 2) {
       throw new ValidationException(
         "Surname must be at least 2 characters long",
         "surname",
-        this.surname
+        this.surname,
       );
     }
 
     if (!this.email || !emailValidation(this.email)) {
-      throw new ValidationException(
-        "Valid email is required",
-        "email",
-        this.email
-      );
+      throw new ValidationException("Valid email is required", "email", this.email);
     }
 
     if (!this.role_id || !numberValidation(this.role_id, 1)) {
-      throw new ValidationException(
-        "Valid role_id is required",
-        "role_id",
-        this.role_id
-      );
+      throw new ValidationException("Valid role_id is required", "role_id", this.role_id);
     }
 
     if (this.organization_id && !numberValidation(this.organization_id, 1)) {
       throw new ValidationException(
         "Valid organization_id is required",
         "organization_id",
-        this.organization_id
+        this.organization_id,
       );
     }
   }
@@ -409,10 +368,7 @@ export class UserModel extends Model<UserModel> {
    * await user.updatePassword('NewSecurePass123!', 'OldPassword123');
    * // Password updated in instance but not persisted to database
    */
-  async updatePassword(
-    newPassword: string,
-    currentPassword?: string
-  ): Promise<void> {
+  async updatePassword(newPassword: string, currentPassword?: string): Promise<void> {
     // Validate new password
     const passwordValidationResult = passwordValidation(newPassword);
     if (!passwordValidationResult.isValid) {
@@ -420,19 +376,18 @@ export class UserModel extends Model<UserModel> {
         "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
         "password",
         undefined,
-        { metadata: { validationDetails: passwordValidationResult } }
+        { metadata: { validationDetails: passwordValidationResult } },
       );
     }
 
     // If current password is provided, verify it matches
     if (currentPassword) {
-      const isCurrentPasswordValid =
-        await this.comparePassword(currentPassword);
+      const isCurrentPasswordValid = await this.comparePassword(currentPassword);
       if (!isCurrentPasswordValid) {
         throw new ValidationException(
           "Current password is incorrect",
           "currentPassword",
-          undefined
+          undefined,
         );
       }
     }
@@ -442,7 +397,7 @@ export class UserModel extends Model<UserModel> {
       throw new BusinessLogicException(
         "Demo users cannot change their passwords",
         "DEMO_USER_RESTRICTION",
-        { userId: this.id, userEmail: this.email }
+        { userId: this.id, userEmail: this.email },
       );
     }
 
@@ -479,7 +434,7 @@ export class UserModel extends Model<UserModel> {
       throw new ValidationException(
         "Valid role_id is required (must be >= 1)",
         "role_id",
-        newRoleId
+        newRoleId,
       );
     }
 
@@ -492,7 +447,7 @@ export class UserModel extends Model<UserModel> {
           currentUserId: currentUser.id,
           targetUserId: this.id,
           requestedRoleId: newRoleId,
-        }
+        },
       );
     }
 
@@ -501,7 +456,7 @@ export class UserModel extends Model<UserModel> {
       throw new BusinessLogicException(
         "Demo users cannot be assigned admin roles",
         "DEMO_USER_RESTRICTION",
-        { userId: this.id, requestedRoleId: newRoleId }
+        { userId: this.id, requestedRoleId: newRoleId },
       );
     }
 
@@ -514,7 +469,7 @@ export class UserModel extends Model<UserModel> {
           userId: this.id,
           currentRoleId: this.role_id,
           requestedRoleId: newRoleId,
-        }
+        },
       );
     }
 
@@ -540,7 +495,7 @@ export class UserModel extends Model<UserModel> {
       throw new BusinessLogicException(
         "Demo users cannot perform admin actions",
         "DEMO_USER_RESTRICTION",
-        { userId: this.id, userEmail: this.email }
+        { userId: this.id, userEmail: this.email },
       );
     }
     return this.isAdmin();
@@ -565,7 +520,7 @@ export class UserModel extends Model<UserModel> {
       throw new BusinessLogicException(
         "Demo users cannot modify other users",
         "DEMO_USER_RESTRICTION",
-        { userId: this.id, targetUserId }
+        { userId: this.id, targetUserId },
       );
     }
 
@@ -593,10 +548,7 @@ export class UserModel extends Model<UserModel> {
    *   throw new ValidationException('Email already exists');
    * }
    */
-  static async validateEmailUniqueness(
-    _email: string,
-    _excludeUserId?: number
-  ): Promise<boolean> {
+  static async validateEmailUniqueness(_email: string, _excludeUserId?: number): Promise<boolean> {
     // This is a placeholder implementation
     // In real implementation, you would query the database like:
     // const existingUser = await UserModel.findOne({ where: { email } });

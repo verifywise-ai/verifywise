@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Assessments**
-
   - Route: `/`
   - Handler: `getAllAssessments`
   - Authentication: JWT (currently commented out)
@@ -36,7 +35,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### POST Routes
 
 - **Create Assessment**
-
   - Route: `/`
   - Handler: `createAssessment`
   - Authentication: JWT (currently commented out)
@@ -49,7 +47,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### PUT Routes
 
 - **Update Assessment**
-
   - Route: `/:id`
   - Handler: `updateAssessmentById`
   - Authentication: JWT (currently commented out)

@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { ProjectModel } from "../project/project.model";
 import { OrganizationModel } from "../organization/organization.model";
@@ -32,7 +26,13 @@ export type FileSource =
   | "Post-Market Monitoring report"
   | "dataset_bulk_upload";
 
-export type ReviewStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'expired' | 'superseded';
+export type ReviewStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "superseded";
 
 export interface File {
   filename: string;
@@ -204,14 +204,14 @@ export class FileModel extends Model<File> {
   @Column({
     type: DataType.STRING(20),
     allowNull: true,
-    defaultValue: 'draft',
+    defaultValue: "draft",
   })
   review_status?: ReviewStatus;
 
   @Column({
     type: DataType.STRING(20),
     allowNull: true,
-    defaultValue: '1.0',
+    defaultValue: "1.0",
   })
   version?: string;
 

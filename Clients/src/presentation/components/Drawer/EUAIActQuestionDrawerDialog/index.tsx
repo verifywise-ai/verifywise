@@ -45,16 +45,14 @@ import StandardModal from "../../Modals/StandardModal";
 import { text } from "../../../themes/palette";
 
 // Lazy-loaded components
-const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
+const LinkedRisksPopup = lazy(() =>
+  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
+);
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 
 // Types & Constants
-import {
-  EUAIActQuestionDrawerProps,
-  EUAIActFormData,
-  EUAIACT_STATUS_OPTIONS,
-} from "./types";
+import { EUAIActQuestionDrawerProps, EUAIActFormData, EUAIACT_STATUS_OPTIONS } from "./types";
 import { FileData } from "../../../../domain/types/File";
 import { Question } from "../../../../domain/types/Question";
 import { RiskFormValues } from "../../../../domain/types/riskForm.types";
@@ -67,7 +65,11 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { updateEUAIActAnswerById } from "../../../../application/repository/question.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
-import { getFileById, attachFilesToEntity, getEntityFiles } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+  getEntityFiles,
+} from "../../../../application/repository/file.repository";
 import { getAssessmentTopicById } from "../../../../application/repository/assesment.repository";
 import allowedRoles from "../../../../application/constants/permissions";
 import { FilePickerModal } from "../../FilePickerModal";
@@ -89,8 +91,7 @@ export const inputStyles = {
   height: 34,
 };
 
-const ACCEPTED_FILE_TYPES =
-  "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar";
+const ACCEPTED_FILE_TYPES = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar";
 
 /**
  * Darken a hex color by a percentage
@@ -170,8 +171,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
   // Risk detail modal state
   const [isRiskDetailModalOpen, setIsRiskDetailModalOpen] = useState(false);
-  const [selectedRiskForView, setSelectedRiskForView] =
-    useState<LinkedRisk | null>(null);
+  const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRisk | null>(null);
   const [riskFormData, setRiskFormData] = useState<RiskFormValues | undefined>(undefined);
   const onRiskSubmitRef = useRef<(() => void) | null>(null);
 
@@ -179,8 +179,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
 
   // ========================================================================
   // TAB CONFIGURATION
@@ -230,12 +229,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
   // Fetch question data when drawer opens
   useEffect(() => {
-    if (
-      open &&
-      questionProp?.answer_id &&
-      subtopic?.topic_id &&
-      projectFrameworkId
-    ) {
+    if (open && questionProp?.answer_id && subtopic?.topic_id && projectFrameworkId) {
       fetchQuestionData();
       // Reset pending states
       resetPendingState();
@@ -248,10 +242,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         question.status === "Not started"
           ? "notStarted"
           : question.status === "In progress"
-          ? "inProgress"
-          : question.status === "Done"
-          ? "done"
-          : "notStarted";
+            ? "inProgress"
+            : question.status === "Done"
+              ? "done"
+              : "notStarted";
 
       setFormData({
         answer: question.answer || "",
@@ -281,11 +275,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
   // ========================================================================
 
   const fetchQuestionData = async () => {
-    if (
-      !questionProp?.answer_id ||
-      !subtopic?.topic_id ||
-      !projectFrameworkId
-    ) {
+    if (!questionProp?.answer_id || !subtopic?.topic_id || !projectFrameworkId) {
       return;
     }
 
@@ -302,7 +292,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         for (const topicSubTopic of response.data.subTopics || []) {
           if (topicSubTopic.id === subtopic.id) {
             const question = (topicSubTopic.questions || []).find(
-              (q: { answer_id: number }) => q.answer_id === questionProp.answer_id
+              (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
             );
             if (question) {
               foundQuestion = question;
@@ -319,10 +309,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             foundQuestion.status === "Not started"
               ? "notStarted"
               : foundQuestion.status === "In progress"
-              ? "inProgress"
-              : foundQuestion.status === "Done"
-              ? "done"
-              : "notStarted";
+                ? "inProgress"
+                : foundQuestion.status === "Done"
+                  ? "done"
+                  : "notStarted";
 
           setFormData({
             answer: foundQuestion.answer || "",
@@ -332,9 +322,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
           setEditorKey((prev) => prev + 1);
 
           // Initialize evidence files from both JSONB and file_entity_links
-          const allEvidenceFiles = await loadEvidenceFiles(
-            foundQuestion.evidence_files
-          );
+          const allEvidenceFiles = await loadEvidenceFiles(foundQuestion.evidence_files);
           setEvidenceFiles(allEvidenceFiles);
 
           // Initialize risks
@@ -354,10 +342,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
               questionProp.status === "Not started"
                 ? "notStarted"
                 : questionProp.status === "In progress"
-                ? "inProgress"
-                : questionProp.status === "Done"
-                ? "done"
-                : "notStarted",
+                  ? "inProgress"
+                  : questionProp.status === "Done"
+                    ? "done"
+                    : "notStarted",
           });
           setEditorKey((prev) => prev + 1);
         }
@@ -378,10 +366,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
           questionProp.status === "Not started"
             ? "notStarted"
             : questionProp.status === "In progress"
-            ? "inProgress"
-            : questionProp.status === "Done"
-            ? "done"
-            : "notStarted",
+              ? "inProgress"
+              : questionProp.status === "Done"
+                ? "done"
+                : "notStarted",
       });
       setEditorKey((prev) => prev + 1);
     } finally {
@@ -415,8 +403,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       fileName: file.fileName || file.filename || file.file_name || "",
       size: file.size || 0,
       type: file.type || "",
-      uploadDate:
-        file.uploadDate || file.uploaded_time || new Date().toISOString(),
+      uploadDate: file.uploadDate || file.uploaded_time || new Date().toISOString(),
       uploader: file.uploader || file.uploaded_by?.toString() || "Unknown",
       data: file.data,
       source: file.source || "jsonb",
@@ -426,21 +413,14 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
     let linkedFiles: FileData[] = [];
     if (questionProp?.answer_id) {
       try {
-        const response = await getEntityFiles(
-          "eu_ai_act",
-          "assessment",
-          questionProp.answer_id
-        );
+        const response = await getEntityFiles("eu_ai_act", "assessment", questionProp.answer_id);
         if (response && Array.isArray(response)) {
           linkedFiles = response.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,
             type: file.mimetype || file.type || "",
-            uploadDate:
-              file.upload_date ||
-              file.uploadDate ||
-              new Date().toISOString(),
+            uploadDate: file.upload_date || file.uploadDate || new Date().toISOString(),
             uploader: file.uploader_name
               ? `${file.uploader_name} ${file.uploader_surname || ""}`.trim()
               : file.uploader || "Unknown",
@@ -483,7 +463,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
           routeUrl: `/projectRisks/${riskId}`,
         })
           .then((response) => response.data)
-          .catch(() => null)
+          .catch(() => null),
       );
 
       const riskResults = await Promise.all(riskPromises);
@@ -513,9 +493,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
     handleFieldChange("answer", cleanedAnswer || "");
   };
 
-  const handleSelectChange = (field: keyof EUAIActFormData) => (event: SelectChangeEvent<string | number>) => {
-    handleFieldChange(field, event.target.value.toString());
-  };
+  const handleSelectChange =
+    (field: keyof EUAIActFormData) => (event: SelectChangeEvent<string | number>) => {
+      handleFieldChange(field, event.target.value.toString());
+    };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue);
@@ -701,11 +682,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
   // ========================================================================
 
   const refreshData = async () => {
-    if (
-      !questionProp?.answer_id ||
-      !subtopic?.topic_id ||
-      !projectFrameworkId
-    ) {
+    if (!questionProp?.answer_id || !subtopic?.topic_id || !projectFrameworkId) {
       return;
     }
     try {
@@ -721,7 +698,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         for (const topicSubTopic of response.data.subTopics || []) {
           if (topicSubTopic.id === subtopic.id) {
             const question = (topicSubTopic.questions || []).find(
-              (q: { answer_id: number }) => q.answer_id === questionProp.answer_id
+              (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
             );
             if (question) {
               foundQuestion = question;
@@ -732,9 +709,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
         if (foundQuestion) {
           // Update evidence files from both JSONB and file_entity_links
-          const allEvidenceFiles = await loadEvidenceFiles(
-            foundQuestion.evidence_files
-          );
+          const allEvidenceFiles = await loadEvidenceFiles(foundQuestion.evidence_files);
           setEvidenceFiles(allEvidenceFiles);
 
           // Update risks
@@ -782,10 +757,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("answer", formData.answer);
-      formDataToSend.append(
-        "status",
-        idStatusMap.get(formData.status) || "Not started"
-      );
+      formDataToSend.append("status", idStatusMap.get(formData.status) || "Not started");
       formDataToSend.append("user_id", userId?.toString() || "1");
       formDataToSend.append("project_id", currentProjectId.toString());
       formDataToSend.append("delete", JSON.stringify(deletedFiles));
@@ -837,17 +809,12 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         // Reset pending states
         resetPendingState();
 
-        onSaveSuccess?.(
-          true,
-          "Question updated successfully",
-          questionProp.question_id
-        );
+        onSaveSuccess?.(true, "Question updated successfully", questionProp.question_id);
       } else {
         throw new Error(response.data?.message || "Failed to update question");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An error occurred";
       handleAlertCall({
         variant: "error",
         body: errorMessage,
@@ -947,21 +914,14 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
           {/* TAB NAVIGATION */}
           <TabContext value={activeTab}>
             <Box sx={{ padding: "0 20px" }}>
-              <TabBar
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={handleTabChange}
-              />
+              <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
             </Box>
 
             {/* ================================================================ */}
             {/* DETAILS TAB */}
             {/* ================================================================ */}
 
-            <TabPanel
-              value="details"
-              sx={{ padding: "15px 20px", gap: "15px" }}
-            >
+            <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
               <Stack gap="15px">
                 {/* Question Panel */}
                 {displayQuestion?.question && (
@@ -992,10 +952,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600 }}
-                    >
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
                       Hint:
                     </Typography>
                     <Typography fontSize={13} color="#666">
@@ -1008,9 +965,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 <Stack direction="row" gap={1} alignItems="center">
                   {displayQuestion?.priority_level &&
                     (() => {
-                      const priorityColors = getPriorityColors(
-                        displayQuestion.priority_level
-                      );
+                      const priorityColors = getPriorityColors(displayQuestion.priority_level);
                       // Create gradient colors (very slightly darker at bottom)
                       const gradientTop = priorityColors.bg;
                       const gradientBottom = darkenColor(priorityColors.bg, 3);
@@ -1054,8 +1009,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                         height: 24,
                         padding: "4px 12px",
                         borderRadius: "4px",
-                        background:
-                          "linear-gradient(180deg, #E6F4EA 0%, #D4E8DB 100%)",
+                        background: "linear-gradient(180deg, #E6F4EA 0%, #D4E8DB 100%)",
                         border: "1px solid #B8DCC5",
                         color: "primary.main",
                         fontSize: 11,
@@ -1127,8 +1081,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   Evidence files
                 </Typography>
                 <Typography variant="body2" color="text.tertiary">
-                  Upload evidence files to document compliance with this
-                  question.
+                  Upload evidence files to document compliance with this question.
                 </Typography>
 
                 {/* File Input Button */}
@@ -1217,10 +1170,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 {evidenceFiles.length > 0 && (
                   <Stack spacing={1}>
                     {evidenceFiles
-                      .filter(
-                        (file) =>
-                          !deletedFiles.includes(parseInt(file.id.toString()))
-                      )
+                      .filter((file) => !deletedFiles.includes(parseInt(file.id.toString())))
                       .map((file) => (
                         <Box
                           key={file.id}
@@ -1284,10 +1234,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                               <IconButton
                                 size="small"
                                 onClick={() =>
-                                  handleDownloadFile(
-                                    file.id.toString(),
-                                    file.fileName
-                                  )
+                                  handleDownloadFile(file.id.toString(), file.fileName)
                                 }
                                 sx={{
                                   color: "text.tertiary",
@@ -1303,9 +1250,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                             <Tooltip title="Delete file">
                               <IconButton
                                 size="small"
-                                onClick={() =>
-                                  handleDeleteEvidenceFile(file.id.toString())
-                                }
+                                onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                                 disabled={isEditingDisabled}
                                 sx={{
                                   color: "text.tertiary",
@@ -1327,9 +1272,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 {/* Upload Queue Files */}
                 {uploadFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>
                       Pending upload
                     </Typography>
                     {uploadFiles.map((file) => (
@@ -1378,9 +1321,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                           <Tooltip title="Remove from queue">
                             <IconButton
                               size="small"
-                              onClick={() =>
-                                handleDeleteUploadFile(file.id.toString())
-                              }
+                              onClick={() => handleDeleteUploadFile(file.id.toString())}
                               sx={{
                                 color: "#92400E",
                                 "&:hover": {
@@ -1401,9 +1342,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 {/* Pending Attach Files */}
                 {pendingAttachFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}>
                       Pending attach
                     </Typography>
                     {pendingAttachFiles.map((file) => (
@@ -1471,26 +1410,27 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 )}
 
                 {/* Empty State */}
-                {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
-                  <Box
-                    sx={{
-                      textAlign: "center",
-                      py: 4,
-                      color: "text.tertiary",
-                      border: `2px dashed ${theme.palette.border.dark}`,
-                      borderRadius: 1,
-                      backgroundColor: "background.accent",
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      No evidence files uploaded yet
-                    </Typography>
-                    <Typography variant="caption" color={text.disabled}>
-                      Click "Add evidence files" to upload documentation for
-                      this question
-                    </Typography>
-                  </Box>
-                )}
+                {evidenceFiles.length === 0 &&
+                  uploadFiles.length === 0 &&
+                  pendingAttachFiles.length === 0 && (
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 4,
+                        color: "text.tertiary",
+                        border: `2px dashed ${theme.palette.border.dark}`,
+                        borderRadius: 1,
+                        backgroundColor: "background.accent",
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        No evidence files uploaded yet
+                      </Typography>
+                      <Typography variant="caption" color={text.disabled}>
+                        Click "Add evidence files" to upload documentation for this question
+                      </Typography>
+                    </Box>
+                  )}
               </Stack>
             </TabPanel>
 
@@ -1504,8 +1444,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   Linked risks
                 </Typography>
                 <Typography variant="body2" color="text.tertiary">
-                  Link risks from your risk database to track which risks are
-                  addressed by this question.
+                  Link risks from your risk database to track which risks are addressed by this
+                  question.
                 </Typography>
 
                 {/* Add/Remove Button */}
@@ -1583,9 +1523,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                               {risk.risk_name}
                             </Typography>
                             {risk.risk_level && (
-                              <Typography
-                                sx={{ fontSize: 11, color: "text.tertiary" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "text.tertiary" }}>
                                 Risk level: {risk.risk_level}
                               </Typography>
                             )}
@@ -1652,8 +1590,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                       No risks linked yet
                     </Typography>
                     <Typography variant="caption" color={text.disabled}>
-                      Click "Add/remove risks" to link risks from your risk
-                      database
+                      Click "Add/remove risks" to link risks from your risk database
                     </Typography>
                   </Box>
                 )}
@@ -1750,9 +1687,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       </StandardModal>
 
       {/* ALERT */}
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
       {/* File Picker Modal for attaching existing files */}
       <FilePickerModal

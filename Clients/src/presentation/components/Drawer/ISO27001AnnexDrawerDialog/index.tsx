@@ -25,10 +25,14 @@ import RichTextEditor from "../../RichTextEditor";
 import { inputStyles } from "../ClauseDrawerDialog";
 import DatePicker from "../../Inputs/Datepicker";
 import Select from "../../Inputs/Select";
-import { useState, useEffect, lazy, Suspense, useRef } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense, useRef } from "react";
 import TabBar from "../../TabBar";
 import StandardModal from "../../Modals/StandardModal";
-import { getFileById, attachFilesToEntity, getEntityFiles } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+  getEntityFiles,
+} from "../../../../application/repository/file.repository";
 import { FilePickerModal } from "../../FilePickerModal";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -51,7 +55,9 @@ import { SelectChangeEvent } from "@mui/material";
 import { RiskFormValues } from "../../AddNewRiskForm/interface";
 import { text } from "../../../themes/palette";
 const AuditRiskPopup = lazy(() => import("../../RiskPopup/AuditRiskPopup"));
-const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
+const LinkedRisksPopup = lazy(() =>
+  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
+);
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 
@@ -125,9 +131,20 @@ const VWISO27001AnnexDrawerDialog = ({
   const [fetchedAnnex, setFetchedAnnex] = useState<AnnexControlData>();
   const [isLoading, setIsLoading] = useState(false);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const memberOptions = useMemo(
+    () => [
+      { _id: "", name: "(none)" },
+      ...projectMembers.map((user) => ({
+        _id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        surname: user.surname,
+      })),
+    ],
+    [projectMembers],
+  );
   const [activeTab, setActiveTab] = useState("details");
-  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] =
-    useState<boolean>(false);
+  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] = useState<boolean>(false);
   const [isRiskDetailModalOpen, setIsRiskDetailModalOpen] = useState(false);
   const [riskFormData, setRiskFormData] = useState<RiskFormValues | undefined>(undefined);
   const onRiskSubmitRef = useRef<(() => void) | null>(null);
@@ -142,18 +159,14 @@ const VWISO27001AnnexDrawerDialog = ({
   const [deletedRisks, setDeletedRisks] = useState<number[]>([]);
   const [currentRisks, setCurrentRisks] = useState<number[]>([]);
   const [linkedRiskObjects, setLinkedRiskObjects] = useState<LinkedRisk[]>([]);
-  const [selectedRiskForView, setSelectedRiskForView] =
-    useState<LinkedRisk | null>(null);
-  const [auditedStatusModalOpen, setAuditedStatusModalOpen] =
-    useState<boolean>(false);
+  const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRisk | null>(null);
+  const [auditedStatusModalOpen, setAuditedStatusModalOpen] = useState<boolean>(false);
 
   const { userId, userRoleName } = useAuth();
   const { users } = useUsers();
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled =
-    !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
 
   // Add state for all form fields
   const [formData, setFormData] = useState({
@@ -195,9 +208,9 @@ const VWISO27001AnnexDrawerDialog = ({
       if (open && annex?.id) {
         setIsLoading(true);
         try {
-          const response = await GetAnnexControlISO27001ById({
+          const response = (await GetAnnexControlISO27001ById({
             routeUrl: `/iso-27001/annexControl/byId/${control.id}?projectFrameworkId=${projectFrameworkId}`,
-          }) as AnnexControlResponse;
+          })) as AnnexControlResponse;
           setFetchedAnnex(response.data);
 
           // Initialize form data with fetched values
@@ -207,8 +220,7 @@ const VWISO27001AnnexDrawerDialog = ({
               requirement_summary: response.data.requirement_summary || "",
               key_questions: response.data.key_questions || [],
               evidence_examples: response.data.evidence_examples || [],
-              implementation_description:
-                response.data.implementation_description || "",
+              implementation_description: response.data.implementation_description || "",
               status: response.data.status || "",
               owner: response.data.owner?.toString() || "",
               reviewer: response.data.reviewer?.toString() || "",
@@ -225,7 +237,7 @@ const VWISO27001AnnexDrawerDialog = ({
           // On annex control fetch, set evidence files from both sources
           const allEvidenceFiles = await loadEvidenceFiles(
             response.data.evidence_links,
-            control.id
+            control.id,
           );
           setEvidenceFiles(allEvidenceFiles);
         } catch (error) {
@@ -368,8 +380,7 @@ const VWISO27001AnnexDrawerDialog = ({
       value === "Implemented" &&
       (selectedRisks.length > 0 ||
         formData.risks.length > 0 ||
-        (formData.risks.length > 0 &&
-          deletedRisks.length === formData.risks.length))
+        (formData.risks.length > 0 && deletedRisks.length === formData.risks.length))
     ) {
       setAuditedStatusModalOpen(true);
     }
@@ -383,9 +394,7 @@ const VWISO27001AnnexDrawerDialog = ({
     // Use provided riskIds or fall back to formData.risks + selectedRisks
     const allRiskIds = riskIds
       ? riskIds
-      : [...(formData.risks || []), ...selectedRisks].filter(
-          (id) => !deletedRisks.includes(id)
-        );
+      : [...(formData.risks || []), ...selectedRisks].filter((id) => !deletedRisks.includes(id));
 
     if (allRiskIds.length === 0) {
       setLinkedRiskObjects([]);
@@ -398,7 +407,7 @@ const VWISO27001AnnexDrawerDialog = ({
           routeUrl: `/projectRisks/${riskId}`,
         })
           .then((response) => response.data)
-          .catch(() => null)
+          .catch(() => null),
       );
 
       const riskResults = await Promise.all(riskPromises);
@@ -418,7 +427,10 @@ const VWISO27001AnnexDrawerDialog = ({
    * 2. file_entity_links table (new framework-agnostic approach)
    * Merges and deduplicates by file ID
    */
-  const loadEvidenceFiles = async (evidenceLinks: FileData[] | null | undefined, controlId: number) => {
+  const loadEvidenceFiles = async (
+    evidenceLinks: FileData[] | null | undefined,
+    controlId: number,
+  ) => {
     // Normalize evidence_links files
     const normalizedLinks: FileData[] = Array.isArray(evidenceLinks)
       ? evidenceLinks.map((file: any) => ({
@@ -436,11 +448,7 @@ const VWISO27001AnnexDrawerDialog = ({
     let linkedFiles: FileData[] = [];
     if (controlId) {
       try {
-        const response = await getEntityFiles(
-          "iso_27001",
-          "annex_control",
-          controlId
-        );
+        const response = await getEntityFiles("iso_27001", "annex_control", controlId);
         if (response && Array.isArray(response)) {
           linkedFiles = response.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
@@ -534,22 +542,12 @@ const VWISO27001AnnexDrawerDialog = ({
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append(
-        "implementation_description",
-        formData.implementation_description
-      );
+      formDataToSend.append("implementation_description", formData.implementation_description);
       formDataToSend.append("status", formData.status);
 
-      // Only append user fields if they have valid values
-      if (formData.owner && formData.owner.trim() !== "") {
-        formDataToSend.append("owner", formData.owner);
-      }
-      if (formData.reviewer && formData.reviewer.trim() !== "") {
-        formDataToSend.append("reviewer", formData.reviewer);
-      }
-      if (formData.approver && formData.approver.trim() !== "") {
-        formDataToSend.append("approver", formData.approver);
-      }
+      formDataToSend.append("owner", formData.owner || "");
+      formDataToSend.append("reviewer", formData.reviewer || "");
+      formDataToSend.append("approver", formData.approver || "");
 
       formDataToSend.append("auditor_feedback", formData.auditor_feedback);
       if (date) formDataToSend.append("due_date", date.toString());
@@ -624,27 +622,22 @@ const VWISO27001AnnexDrawerDialog = ({
           onSaveSuccess?.(true, "Annex control saved successfully");
           onClose();
         } else {
-          throw new Error(
-            `Failed to save annex control. Status: ${
-              response?.status || "unknown"
-            }`
-          );
+          throw new Error(`Failed to save annex control. Status: ${response?.status || "unknown"}`);
         }
       } catch (apiError) {
         if (process.env.NODE_ENV === "development") {
           console.error("API call failed:", apiError);
         }
         // If it's an axios error, extract the error message
-        if (
-          apiError &&
-          typeof apiError === "object" &&
-          "response" in apiError
-        ) {
-          const axiosError = apiError as { response?: { status: number; data?: { message?: string } }; message?: string };
+        if (apiError && typeof apiError === "object" && "response" in apiError) {
+          const axiosError = apiError as {
+            response?: { status: number; data?: { message?: string } };
+            message?: string;
+          };
           const errorMessage = String(
             axiosError.response?.data?.message ||
-            axiosError.message ||
-            "Failed to save annex control"
+              axiosError.message ||
+              "Failed to save annex control",
           );
           throw new Error(errorMessage);
         }
@@ -655,9 +648,7 @@ const VWISO27001AnnexDrawerDialog = ({
         console.error("Error saving annex control:", error);
       }
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "An error occurred while saving changes";
+        error instanceof Error ? error.message : "An error occurred while saving changes";
       handleAlert({
         variant: "error",
         body: errorMessage,
@@ -716,10 +707,7 @@ const VWISO27001AnnexDrawerDialog = ({
       }}
       anchor="right"
     >
-      <Stack
-        className="vw-iso-27001-annex-drawer-dialog-content"
-        sx={{ width: 850 }}
-      >
+      <Stack className="vw-iso-27001-annex-drawer-dialog-content" sx={{ width: 850 }}>
         <Stack
           sx={{
             width: 850,
@@ -733,20 +721,12 @@ const VWISO27001AnnexDrawerDialog = ({
           <Typography fontSize={15} fontWeight={700}>
             {title}
           </Typography>
-          <CloseIcon
-            size={20}
-            onClick={onClose}
-            style={{ cursor: "pointer" }}
-          />
+          <CloseIcon size={20} onClick={onClose} style={{ cursor: "pointer" }} />
         </Stack>
         <Divider />
         <TabContext value={activeTab}>
           <Box sx={{ padding: "0 20px" }}>
-            <TabBar
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={handleTabChange}
-            />
+            <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
           </Box>
 
           {/* Tab 1: Details */}
@@ -781,62 +761,51 @@ const VWISO27001AnnexDrawerDialog = ({
                     borderRadius: "4px",
                   }}
                 >
-                  <Typography
-                    fontSize={13}
-                    sx={{ marginBottom: "8px", fontWeight: 600 }}
-                  >
+                  <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
                     Key Questions:
                   </Typography>
                   <Stack spacing={1}>
-                    {formData.key_questions.map(
-                      (question: string, idx: number) => (
-                        <Typography
-                          key={idx}
-                          fontSize={12}
-                          color="#666"
-                          sx={{ pl: 1, position: "relative" }}
-                        >
-                          • {question}
-                        </Typography>
-                      )
-                    )}
+                    {formData.key_questions.map((question: string, idx: number) => (
+                      <Typography
+                        key={idx}
+                        fontSize={12}
+                        color="#666"
+                        sx={{ pl: 1, position: "relative" }}
+                      >
+                        • {question}
+                      </Typography>
+                    ))}
                   </Stack>
                 </Stack>
               )}
 
               {/* Evidence Examples Panel - Green-Tinted Box */}
-              {formData.evidence_examples &&
-                formData.evidence_examples.length > 0 && (
-                  <Stack
-                    sx={{
-                      border: "1px solid #d5e8d5",
-                      padding: "12px",
-                      backgroundColor: "#f5fef5",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600 }}
-                    >
-                      Evidence Examples:
-                    </Typography>
-                    <Stack spacing={1}>
-                      {formData.evidence_examples.map(
-                        (example: string, idx: number) => (
-                          <Typography
-                            key={idx}
-                            fontSize={12}
-                            color="#666"
-                            sx={{ pl: 1, position: "relative" }}
-                          >
-                            • {example}
-                          </Typography>
-                        )
-                      )}
-                    </Stack>
+              {formData.evidence_examples && formData.evidence_examples.length > 0 && (
+                <Stack
+                  sx={{
+                    border: "1px solid #d5e8d5",
+                    padding: "12px",
+                    backgroundColor: "#f5fef5",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                    Evidence Examples:
+                  </Typography>
+                  <Stack spacing={1}>
+                    {formData.evidence_examples.map((example: string, idx: number) => (
+                      <Typography
+                        key={idx}
+                        fontSize={12}
+                        color="#666"
+                        sx={{ pl: 1, position: "relative" }}
+                      >
+                        • {example}
+                      </Typography>
+                    ))}
                   </Stack>
-                )}
+                </Stack>
+              )}
 
               <Stack>
                 <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
@@ -846,10 +815,7 @@ const VWISO27001AnnexDrawerDialog = ({
                   toolbar="full"
                   initialContent={formData.implementation_description}
                   onContentChange={(content) =>
-                    handleFieldChange(
-                      "implementation_description",
-                      content
-                    )
+                    handleFieldChange("implementation_description", content)
                   }
                   placeholder="Describe how this requirement is implemented..."
                   isEditable={!isEditingDisabled}
@@ -878,12 +844,7 @@ const VWISO27001AnnexDrawerDialog = ({
                 label="Owner:"
                 value={formData.owner || ""}
                 onChange={handleSelectChange("owner")}
-                items={projectMembers.map((user) => ({
-                  _id: user.id.toString(),
-                  name: user.name,
-                  email: user.email,
-                  surname: user.surname,
-                }))}
+                items={memberOptions}
                 disabled={isEditingDisabled}
                 sx={inputStyles}
                 placeholder={"Select owner"}
@@ -895,12 +856,7 @@ const VWISO27001AnnexDrawerDialog = ({
                 label="Reviewer:"
                 value={formData.reviewer || ""}
                 onChange={handleSelectChange("reviewer")}
-                items={projectMembers.map((user) => ({
-                  _id: user.id.toString(),
-                  name: user.name,
-                  email: user.email,
-                  surname: user.surname,
-                }))}
+                items={memberOptions}
                 disabled={isEditingDisabled}
                 sx={inputStyles}
                 placeholder={"Select reviewer"}
@@ -912,12 +868,7 @@ const VWISO27001AnnexDrawerDialog = ({
                 label="Approver:"
                 value={formData.approver || ""}
                 onChange={handleSelectChange("approver")}
-                items={projectMembers.map((user) => ({
-                  _id: user.id.toString(),
-                  name: user.name,
-                  email: user.email,
-                  surname: user.surname,
-                }))}
+                items={memberOptions}
                 disabled={isEditingDisabled}
                 sx={inputStyles}
                 placeholder={"Select approver"}
@@ -940,16 +891,13 @@ const VWISO27001AnnexDrawerDialog = ({
                 <Field
                   type="description"
                   value={formData.auditor_feedback}
-                  onChange={(e) =>
-                    handleFieldChange("auditor_feedback", e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                   disabled={isAuditingDisabled}
                   sx={{
                     cursor: "text",
-                    "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
-                      {
-                        height: "73px",
-                      },
+                    "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
+                      height: "73px",
+                    },
                   }}
                   placeholder="Enter any feedback from the internal or external audits..."
                 />
@@ -964,8 +912,7 @@ const VWISO27001AnnexDrawerDialog = ({
                 Evidence files
               </Typography>
               <Typography variant="body2" color="text.tertiary">
-                Upload evidence files to document compliance with this
-                requirement.
+                Upload evidence files to document compliance with this requirement.
               </Typography>
 
               {/* File Input */}
@@ -988,9 +935,7 @@ const VWISO27001AnnexDrawerDialog = ({
                   <Stack direction="row" spacing={1}>
                     <Button
                       variant="contained"
-                      onClick={() =>
-                        document.getElementById("evidence-file-input")?.click()
-                      }
+                      onClick={() => document.getElementById("evidence-file-input")?.click()}
                       disabled={isEditingDisabled}
                       sx={{
                         borderRadius: 2,
@@ -1005,9 +950,7 @@ const VWISO27001AnnexDrawerDialog = ({
                           border: "1px solid #d0d5dd",
                         },
                       }}
-                      disableRipple={
-                        theme.components?.MuiButton?.defaultProps?.disableRipple
-                      }
+                      disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                     >
                       Upload new files
                     </Button>
@@ -1028,9 +971,7 @@ const VWISO27001AnnexDrawerDialog = ({
                           border: "1px solid #3D62C3",
                         },
                       }}
-                      disableRipple={
-                        theme.components?.MuiButton?.defaultProps?.disableRipple
-                      }
+                      disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                     >
                       Attach existing files
                     </Button>
@@ -1066,10 +1007,8 @@ const VWISO27001AnnexDrawerDialog = ({
                     .filter(
                       (file) =>
                         !deletedFilesIds.includes(
-                          typeof file.id === "number"
-                            ? file.id
-                            : parseInt(file.id.toString())
-                        )
+                          typeof file.id === "number" ? file.id : parseInt(file.id.toString()),
+                        ),
                     )
                     .map((file) => (
                       <Box
@@ -1109,9 +1048,7 @@ const VWISO27001AnnexDrawerDialog = ({
                             >
                               {file.fileName}
                             </Typography>
-                            <Typography
-                              sx={{ fontSize: 11, color: "status.default.text" }}
-                            >
+                            <Typography sx={{ fontSize: 11, color: "status.default.text" }}>
                               {file.size ? `${((file.size || 0) / 1024).toFixed(1)} KB` : ""}
                               {file.size && file.source ? " • " : ""}
                               {file.source ? `Source: ${file.source}` : ""}
@@ -1128,7 +1065,7 @@ const VWISO27001AnnexDrawerDialog = ({
                                   typeof file.id === "number"
                                     ? file.id
                                     : parseInt(file.id.toString()),
-                                  file.fileName
+                                  file.fileName,
                                 )
                               }
                               sx={{
@@ -1145,9 +1082,7 @@ const VWISO27001AnnexDrawerDialog = ({
                           <Tooltip title="Delete file">
                             <IconButton
                               size="small"
-                              onClick={() =>
-                                handleDeleteEvidenceFile(file.id.toString())
-                              }
+                              onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                               disabled={isEditingDisabled}
                               sx={{
                                 color: "text.tertiary",
@@ -1169,9 +1104,7 @@ const VWISO27001AnnexDrawerDialog = ({
               {/* Pending Upload Files */}
               {uploadFiles.length > 0 && (
                 <Stack spacing={1}>
-                  <Typography
-                    sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}
-                  >
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>
                     Pending upload
                   </Typography>
                   {uploadFiles.map((file) => (
@@ -1219,9 +1152,7 @@ const VWISO27001AnnexDrawerDialog = ({
                       <Tooltip title="Remove from queue">
                         <IconButton
                           size="small"
-                          onClick={() =>
-                            handleDeleteUploadFile(file.id.toString())
-                          }
+                          onClick={() => handleDeleteUploadFile(file.id.toString())}
                           sx={{
                             color: "#92400E",
                             "&:hover": {
@@ -1241,9 +1172,7 @@ const VWISO27001AnnexDrawerDialog = ({
               {/* Pending Attach Files */}
               {pendingAttachFiles.length > 0 && (
                 <Stack spacing={1}>
-                  <Typography
-                    sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}
-                  >
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}>
                     Pending attach
                   </Typography>
                   {pendingAttachFiles.map((file) => (
@@ -1304,22 +1233,24 @@ const VWISO27001AnnexDrawerDialog = ({
               )}
 
               {/* Empty State */}
-              {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
-                <Box
-                  sx={{
-                    textAlign: "center",
-                    py: 4,
-                    color: "text.tertiary",
-                    border: `2px dashed ${theme.palette.border.dark}`,
-                    borderRadius: 1,
-                    backgroundColor: "background.accent",
-                  }}
-                >
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    No evidence files uploaded yet
-                  </Typography>
-                </Box>
-              )}
+              {evidenceFiles.length === 0 &&
+                uploadFiles.length === 0 &&
+                pendingAttachFiles.length === 0 && (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 4,
+                      color: "text.tertiary",
+                      border: `2px dashed ${theme.palette.border.dark}`,
+                      borderRadius: 1,
+                      backgroundColor: "background.accent",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      No evidence files uploaded yet
+                    </Typography>
+                  </Box>
+                )}
             </Stack>
           </TabPanel>
 
@@ -1330,8 +1261,8 @@ const VWISO27001AnnexDrawerDialog = ({
                 Linked risks
               </Typography>
               <Typography variant="body2" color="text.tertiary">
-                Link risks from your risk database to track which risks are
-                addressed by this requirement.
+                Link risks from your risk database to track which risks are addressed by this
+                requirement.
               </Typography>
 
               <Stack direction="row" spacing={2} alignItems="center">
@@ -1472,8 +1403,7 @@ const VWISO27001AnnexDrawerDialog = ({
                     No risks linked yet
                   </Typography>
                   <Typography variant="caption" color={text.disabled}>
-                    Click "Add/remove risks" to link risks from your risk
-                    database
+                    Click "Add/remove risks" to link risks from your risk database
                   </Typography>
                 </Box>
               )}
@@ -1520,9 +1450,7 @@ const VWISO27001AnnexDrawerDialog = ({
               <StandardModal
                 isOpen={isRiskDetailModalOpen && !!riskFormData}
                 onClose={handleRiskDetailModalClose}
-                title={`Risk: ${
-                  selectedRiskForView?.risk_name || "Risk Details"
-                }`}
+                title={`Risk: ${selectedRiskForView?.risk_name || "Risk Details"}`}
                 description="View and edit risk details"
                 onSubmit={() => onRiskSubmitRef.current?.()}
                 submitButtonText="Update"
@@ -1561,9 +1489,7 @@ const VWISO27001AnnexDrawerDialog = ({
         </TabContext>
 
         {/* Alert */}
-        {alert && (
-          <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-        )}
+        {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
         <Stack
           className="vw-iso-27001-annex-drawer-dialog-footer"

@@ -33,20 +33,20 @@ const getAllTasksQuery = async (organizationId: number): Promise<TaskWithAssigne
       {
         replacements: { organizationId, deletedStatus: TaskStatus.DELETED },
         type: QueryTypes.SELECT,
-      }
+      },
     );
     return tasks as TaskWithAssignees[];
   } catch (error) {
     logger.error("Error fetching all tasks:", error);
     throw new Error(
-      `Failed to fetch tasks: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch tasks: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const fetchTasks = async (
   params: FetchTasksParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<Partial<TaskWithAssignees>[]> => {
   let tasks: TaskWithAssignees[] = [];
 
@@ -64,7 +64,7 @@ const fetchTasks = async (
       tasks = tasks.filter((t) => {
         const categories = t.categories || [];
         return categories.some((cat: string) =>
-          cat.toLowerCase().includes(params.category!.toLowerCase())
+          cat.toLowerCase().includes(params.category!.toLowerCase()),
         );
       });
     }
@@ -97,7 +97,7 @@ const fetchTasks = async (
   } catch (error) {
     logger.error("Error fetching tasks:", error);
     throw new Error(
-      `Failed to fetch tasks: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch tasks: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -136,7 +136,7 @@ export interface TaskAnalytics {
 
 const getTaskAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<TaskAnalytics> => {
   try {
     const tasks = await getAllTasksQuery(organizationId);
@@ -165,8 +165,7 @@ const getTaskAnalytics = async (
 
     tasks.forEach((task) => {
       if (task.priority) {
-        priorityDistribution[task.priority] =
-          (priorityDistribution[task.priority] || 0) + 1;
+        priorityDistribution[task.priority] = (priorityDistribution[task.priority] || 0) + 1;
       }
     });
 
@@ -189,7 +188,10 @@ const getTaskAnalytics = async (
       .sort((a, b) => b.count - a.count);
 
     // 4. Assignee Workload
-    const assigneeMap = new Map<number, { count: number; openCount: number; overdueCount: number }>();
+    const assigneeMap = new Map<
+      number,
+      { count: number; openCount: number; overdueCount: number }
+    >();
     tasks.forEach((task) => {
       const assignees = task.assignees || [];
       assignees.forEach((assigneeId: number) => {
@@ -199,10 +201,7 @@ const getTaskAnalytics = async (
           overdueCount: 0,
         };
         existing.count++;
-        if (
-          task.status === TaskStatus.OPEN ||
-          task.status === TaskStatus.IN_PROGRESS
-        ) {
+        if (task.status === TaskStatus.OPEN || task.status === TaskStatus.IN_PROGRESS) {
           existing.openCount++;
         }
         if (
@@ -242,21 +241,16 @@ const getTaskAnalytics = async (
     overdueTasks.forEach((task) => {
       if (task.due_date) {
         const dueDate = new Date(task.due_date);
-        const daysDiff = Math.floor(
-          (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         if (daysDiff > oldestOverdueDays) {
           oldestOverdueDays = daysDiff;
         }
       }
     });
 
-    const completedTasks = tasks.filter(
-      (t) => t.status === TaskStatus.COMPLETED
-    ).length;
+    const completedTasks = tasks.filter((t) => t.status === TaskStatus.COMPLETED).length;
     const activeTasks = tasks.filter(
-      (t) =>
-        t.status === TaskStatus.OPEN || t.status === TaskStatus.IN_PROGRESS
+      (t) => t.status === TaskStatus.OPEN || t.status === TaskStatus.IN_PROGRESS,
     ).length;
 
     return {
@@ -276,7 +270,7 @@ const getTaskAnalytics = async (
   } catch (error) {
     logger.error("Error getting task analytics:", error);
     throw new Error(
-      `Failed to get task analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get task analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -318,7 +312,7 @@ export interface TaskExecutiveSummary {
 
 const getTaskExecutiveSummary = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<TaskExecutiveSummary> => {
   try {
     const tasks = await getAllTasksQuery(organizationId);
@@ -327,12 +321,8 @@ const getTaskExecutiveSummary = async (
 
     // Count by status
     const openTasks = tasks.filter((t) => t.status === TaskStatus.OPEN).length;
-    const inProgressTasks = tasks.filter(
-      (t) => t.status === TaskStatus.IN_PROGRESS
-    ).length;
-    const completedTasks = tasks.filter(
-      (t) => t.status === TaskStatus.COMPLETED
-    ).length;
+    const inProgressTasks = tasks.filter((t) => t.status === TaskStatus.IN_PROGRESS).length;
+    const completedTasks = tasks.filter((t) => t.status === TaskStatus.COMPLETED).length;
 
     // Count overdue
     const overdueTasks = tasks.filter((t) => {
@@ -342,38 +332,24 @@ const getTaskExecutiveSummary = async (
     }).length;
 
     // Count by priority
-    const highPriorityTasks = tasks.filter(
-      (t) => t.priority === TaskPriority.HIGH
-    ).length;
-    const mediumPriorityTasks = tasks.filter(
-      (t) => t.priority === TaskPriority.MEDIUM
-    ).length;
-    const lowPriorityTasks = tasks.filter(
-      (t) => t.priority === TaskPriority.LOW
-    ).length;
+    const highPriorityTasks = tasks.filter((t) => t.priority === TaskPriority.HIGH).length;
+    const mediumPriorityTasks = tasks.filter((t) => t.priority === TaskPriority.MEDIUM).length;
+    const lowPriorityTasks = tasks.filter((t) => t.priority === TaskPriority.LOW).length;
 
     // Tasks needing attention (overdue or high priority and not completed)
     const tasksNeedingAttention = tasks
       .filter((t) => {
         const isOverdue =
-          t.due_date &&
-          new Date(t.due_date) < now &&
-          t.status !== TaskStatus.COMPLETED;
+          t.due_date && new Date(t.due_date) < now && t.status !== TaskStatus.COMPLETED;
         const isHighPriorityActive =
-          t.priority === TaskPriority.HIGH &&
-          t.status !== TaskStatus.COMPLETED;
+          t.priority === TaskPriority.HIGH && t.status !== TaskStatus.COMPLETED;
         return isOverdue || isHighPriorityActive;
       })
       .map((t) => {
         let daysOverdue = 0;
-        if (
-          t.due_date &&
-          new Date(t.due_date) < now &&
-          t.status !== TaskStatus.COMPLETED
-        ) {
+        if (t.due_date && new Date(t.due_date) < now && t.status !== TaskStatus.COMPLETED) {
           daysOverdue = Math.floor(
-            (now.getTime() - new Date(t.due_date).getTime()) /
-              (1000 * 60 * 60 * 24)
+            (now.getTime() - new Date(t.due_date).getTime()) / (1000 * 60 * 60 * 24),
           );
         }
         return {
@@ -407,8 +383,7 @@ const getTaskExecutiveSummary = async (
     const completionProgress = {
       completed: completedTasks,
       total: totalTasks,
-      percentage:
-        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+      percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
     };
 
     // Recent tasks (last 5)
@@ -444,7 +419,7 @@ const getTaskExecutiveSummary = async (
   } catch (error) {
     logger.error("Error getting task executive summary:", error);
     throw new Error(
-      `Failed to get task executive summary: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get task executive summary: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

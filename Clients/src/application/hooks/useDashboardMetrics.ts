@@ -49,7 +49,9 @@ const setCache = (cache: MetricsCache): void => {
   }
 };
 
-const getCachedValue = <T>(key: keyof MetricsCache): { data: T | null; isFresh: boolean; isStale: boolean } => {
+const getCachedValue = <T>(
+  key: keyof MetricsCache,
+): { data: T | null; isFresh: boolean; isStale: boolean } => {
   const cache = getCache();
   const entry = cache[key] as CacheEntry<T> | undefined;
 
@@ -317,53 +319,54 @@ const PROGRESS_STEPS: ProgressStep[] = [
 export const useDashboardMetrics = () => {
   // Initialize state from cache for instant display
   const [riskMetrics, setRiskMetrics] = useState<RiskMetrics | null>(
-    () => getCachedValue<RiskMetrics>("riskMetrics").data
+    () => getCachedValue<RiskMetrics>("riskMetrics").data,
   );
   const [evidenceMetrics, setEvidenceMetrics] = useState<EvidenceMetrics | null>(
-    () => getCachedValue<EvidenceMetrics>("evidenceMetrics").data
+    () => getCachedValue<EvidenceMetrics>("evidenceMetrics").data,
   );
   const [vendorRiskMetrics, setVendorRiskMetrics] = useState<VendorRiskMetrics | null>(
-    () => getCachedValue<VendorRiskMetrics>("vendorRiskMetrics").data
+    () => getCachedValue<VendorRiskMetrics>("vendorRiskMetrics").data,
   );
   const [vendorMetrics, setVendorMetrics] = useState<VendorMetrics | null>(
-    () => getCachedValue<VendorMetrics>("vendorMetrics").data
+    () => getCachedValue<VendorMetrics>("vendorMetrics").data,
   );
   const [policyMetrics, setPolicyMetrics] = useState<PolicyMetrics | null>(
-    () => getCachedValue<PolicyMetrics>("policyMetrics").data
+    () => getCachedValue<PolicyMetrics>("policyMetrics").data,
   );
   const [incidentMetrics, setIncidentMetrics] = useState<IncidentMetrics | null>(
-    () => getCachedValue<IncidentMetrics>("incidentMetrics").data
+    () => getCachedValue<IncidentMetrics>("incidentMetrics").data,
   );
   const [modelRiskMetrics, setModelRiskMetrics] = useState<ModelRiskMetrics | null>(
-    () => getCachedValue<ModelRiskMetrics>("modelRiskMetrics").data
+    () => getCachedValue<ModelRiskMetrics>("modelRiskMetrics").data,
   );
   const [trainingMetrics, setTrainingMetrics] = useState<TrainingMetrics | null>(
-    () => getCachedValue<TrainingMetrics>("trainingMetrics").data
+    () => getCachedValue<TrainingMetrics>("trainingMetrics").data,
   );
   const [policyStatusMetrics, setPolicyStatusMetrics] = useState<PolicyStatusMetrics | null>(
-    () => getCachedValue<PolicyStatusMetrics>("policyStatusMetrics").data
+    () => getCachedValue<PolicyStatusMetrics>("policyStatusMetrics").data,
   );
   const [incidentStatusMetrics, setIncidentStatusMetrics] = useState<IncidentStatusMetrics | null>(
-    () => getCachedValue<IncidentStatusMetrics>("incidentStatusMetrics").data
+    () => getCachedValue<IncidentStatusMetrics>("incidentStatusMetrics").data,
   );
   const [evidenceHubMetrics, setEvidenceHubMetrics] = useState<EvidenceHubMetrics | null>(
-    () => getCachedValue<EvidenceHubMetrics>("evidenceHubMetrics").data
+    () => getCachedValue<EvidenceHubMetrics>("evidenceHubMetrics").data,
   );
   const [modelLifecycleMetrics, setModelLifecycleMetrics] = useState<ModelLifecycleMetrics | null>(
-    () => getCachedValue<ModelLifecycleMetrics>("modelLifecycleMetrics").data
+    () => getCachedValue<ModelLifecycleMetrics>("modelLifecycleMetrics").data,
   );
-  const [organizationalFrameworks, setOrganizationalFrameworks] = useState<OrganizationalFrameworkData[]>(
-    () => getCachedValue<OrganizationalFrameworkData[]>("organizationalFrameworks").data || []
-  );
+  const [organizationalFrameworks, setOrganizationalFrameworks] = useState<
+    OrganizationalFrameworkData[]
+  >(() => getCachedValue<OrganizationalFrameworkData[]>("organizationalFrameworks").data || []);
   const [taskMetrics, setTaskMetrics] = useState<TaskMetrics | null>(
-    () => getCachedValue<TaskMetrics>("taskMetrics").data
+    () => getCachedValue<TaskMetrics>("taskMetrics").data,
   );
   const [useCaseMetrics, setUseCaseMetrics] = useState<UseCaseMetrics | null>(
-    () => getCachedValue<UseCaseMetrics>("useCaseMetrics").data
+    () => getCachedValue<UseCaseMetrics>("useCaseMetrics").data,
   );
-  const [governanceScoreMetrics, setGovernanceScoreMetrics] = useState<GovernanceScoreMetrics | null>(
-    () => getCachedValue<GovernanceScoreMetrics>("governanceScoreMetrics").data
-  );
+  const [governanceScoreMetrics, setGovernanceScoreMetrics] =
+    useState<GovernanceScoreMetrics | null>(
+      () => getCachedValue<GovernanceScoreMetrics>("governanceScoreMetrics").data,
+    );
   const [loading, setLoading] = useState(false);
   const [isRevalidating, setIsRevalidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -383,16 +386,29 @@ export const useDashboardMetrics = () => {
 
       risksArray.forEach((risk: any) => {
         // Use current_risk_level first, fallback to risk_level_autocalculated
-        const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+        const riskLevel = (
+          risk.current_risk_level ||
+          risk.risk_level_autocalculated ||
+          ""
+        ).toLowerCase();
 
         // Check if resolved (mitigation_status is "Completed")
         if (risk.mitigation_status === "Completed") {
           distribution.resolved++;
-        } else if (riskLevel.includes("high") || riskLevel.includes("very high") || riskLevel.includes("critical")) {
+        } else if (
+          riskLevel.includes("high") ||
+          riskLevel.includes("very high") ||
+          riskLevel.includes("critical")
+        ) {
           distribution.high++;
         } else if (riskLevel.includes("medium") || riskLevel.includes("moderate")) {
           distribution.medium++;
-        } else if (riskLevel.includes("low") || riskLevel.includes("very low") || riskLevel.includes("no risk") || riskLevel.includes("negligible")) {
+        } else if (
+          riskLevel.includes("low") ||
+          riskLevel.includes("very low") ||
+          riskLevel.includes("no risk") ||
+          riskLevel.includes("negligible")
+        ) {
           distribution.low++;
         } else {
           // Default to medium if unknown
@@ -408,10 +424,13 @@ export const useDashboardMetrics = () => {
           title: risk.risk_name || "Untitled Risk",
           severity: (risk.current_risk_level || risk.risk_level_autocalculated || "medium")
             .toLowerCase()
-            .includes("high") ? "high" as const :
-            (risk.current_risk_level || risk.risk_level_autocalculated || "medium")
-              .toLowerCase()
-              .includes("low") ? "low" as const : "medium" as const,
+            .includes("high")
+            ? ("high" as const)
+            : (risk.current_risk_level || risk.risk_level_autocalculated || "medium")
+                  .toLowerCase()
+                  .includes("low")
+              ? ("low" as const)
+              : ("medium" as const),
           created_at: risk.created_at || risk.createdAt || risk.date_of_assessment,
           project_name: risk.project_name || "General",
         })),
@@ -446,15 +465,10 @@ export const useDashboardMetrics = () => {
         recent: filesArray.slice(0, 5).map((file: any, index: number) => ({
           id: file.id || index + 1,
           title: file.filename || file.name || "Evidence File",
-          uploaded_at:
-            file.uploaded_time ||
-            file.created_at ||
-            file.updated_at,
+          uploaded_at: file.uploaded_time || file.created_at || file.updated_at,
           project_name: file.project_title || file.project_name || "General",
           user_name:
-            `${file.uploader_name || ""} ${
-              file.uploader_surname || ""
-            }`.trim() || "System",
+            `${file.uploader_name || ""} ${file.uploader_surname || ""}`.trim() || "System",
         })),
       };
 
@@ -464,7 +478,6 @@ export const useDashboardMetrics = () => {
       setEvidenceMetrics(null);
     }
   }, []);
-
 
   // Fetch vendor risk metrics - using vendorRisks endpoint
   const fetchVendorRiskMetrics = useCallback(async () => {
@@ -503,10 +516,8 @@ export const useDashboardMetrics = () => {
         recent: risksArray.slice(0, 5).map((risk: any, index: number) => ({
           id: risk.id || index + 1,
           title: risk.risk_name || risk.title || "Vendor Risk",
-          severity:
-            risk.risk_level?.toLowerCase().replace(" risk", "") || "medium",
-          created_at:
-            risk.review_date || risk.created_at || risk.createdAt,
+          severity: risk.risk_level?.toLowerCase().replace(" risk", "") || "medium",
+          created_at: risk.review_date || risk.created_at || risk.createdAt,
           vendor_name: risk.vendor_name || "Unknown Vendor",
         })),
       };
@@ -531,13 +542,8 @@ export const useDashboardMetrics = () => {
         total: vendorsArray.length,
         recent: vendorsArray.slice(0, 5).map((vendor: any, index: number) => ({
           id: vendor.id || index + 1,
-          name:
-            vendor.name ||
-            vendor.vendor_name ||
-            vendor.company_name ||
-            "Unknown Vendor",
-          created_at:
-            vendor.created_at || vendor.createdAt,
+          name: vendor.name || vendor.vendor_name || vendor.company_name || "Unknown Vendor",
+          created_at: vendor.created_at || vendor.createdAt,
           status: vendor.status || vendor.vendor_status || "Active",
         })),
       };
@@ -555,13 +561,12 @@ export const useDashboardMetrics = () => {
       const response = await getAllEntities({ routeUrl: "/policies" });
 
       // Handle the special API response structure: { data: { data: Policy[] } }
-      const policiesData =
-        response.data?.data || response.data || response.policies || response;
+      const policiesData = response.data?.data || response.data || response.policies || response;
       const policiesArray = Array.isArray(policiesData) ? policiesData : [];
 
       // Count policies with pending_review status from ALL policies
       const pendingReviewCount = policiesArray.filter(
-        (policy: any) => policy.status === "pending_review"
+        (policy: any) => policy.status === "pending_review",
       ).length;
 
       const metrics = {
@@ -594,7 +599,11 @@ export const useDashboardMetrics = () => {
 
         if (status === "draft") {
           statusDistribution.draft++;
-        } else if (status === "underreview" || status === "under_review" || status === "pending_review") {
+        } else if (
+          status === "underreview" ||
+          status === "under_review" ||
+          status === "pending_review"
+        ) {
           statusDistribution.underReview++;
         } else if (status === "approved") {
           statusDistribution.approved++;
@@ -631,9 +640,7 @@ export const useDashboardMetrics = () => {
       const incidentsArray = Array.isArray(incidentsData) ? incidentsData : [];
 
       // Count open incidents from ALL incidents
-      const openCount = incidentsArray.filter(
-        (incident: any) => incident.status === "Open"
-      ).length;
+      const openCount = incidentsArray.filter((incident: any) => incident.status === "Open").length;
 
       const metrics = {
         total: incidentsArray.length,
@@ -718,7 +725,11 @@ export const useDashboardMetrics = () => {
         recent: modelRisksArray.slice(0, 5).map((risk: any, index: number) => ({
           id: risk.id || index + 1,
           title: risk.risk_name || "Untitled Risk",
-          severity: (risk.risk_level || "medium").toLowerCase() as "critical" | "high" | "medium" | "low",
+          severity: (risk.risk_level || "medium").toLowerCase() as
+            | "critical"
+            | "high"
+            | "medium"
+            | "low",
           created_at: risk.created_at || risk.createdAt,
           model_name: risk.model_name || undefined,
         })),
@@ -763,7 +774,8 @@ export const useDashboardMetrics = () => {
       });
 
       const total = trainingsArray.length;
-      const completionPercentage = total > 0 ? Math.round((distribution.completed / total) * 100) : 0;
+      const completionPercentage =
+        total > 0 ? Math.round((distribution.completed / total) * 100) : 0;
 
       const metrics = {
         total,
@@ -827,11 +839,31 @@ export const useDashboardMetrics = () => {
         const metrics: GovernanceScoreMetrics = {
           score: data.overallScore,
           modules: [
-            { name: "Risk management", score: modules.riskManagement?.score || 0, weight: modules.riskManagement?.weight || 0.3 },
-            { name: "Vendor management", score: modules.vendorManagement?.score || 0, weight: modules.vendorManagement?.weight || 0.3 },
-            { name: "Project governance", score: modules.projectGovernance?.score || 0, weight: modules.projectGovernance?.weight || 0.25 },
-            { name: "Model lifecycle", score: modules.modelLifecycle?.score || 0, weight: modules.modelLifecycle?.weight || 0.1 },
-            { name: "Policy & documentation", score: modules.policyDocumentation?.score || 0, weight: modules.policyDocumentation?.weight || 0.05 },
+            {
+              name: "Risk management",
+              score: modules.riskManagement?.score || 0,
+              weight: modules.riskManagement?.weight || 0.3,
+            },
+            {
+              name: "Vendor management",
+              score: modules.vendorManagement?.score || 0,
+              weight: modules.vendorManagement?.weight || 0.3,
+            },
+            {
+              name: "Project governance",
+              score: modules.projectGovernance?.score || 0,
+              weight: modules.projectGovernance?.weight || 0.25,
+            },
+            {
+              name: "Model lifecycle",
+              score: modules.modelLifecycle?.score || 0,
+              weight: modules.modelLifecycle?.weight || 0.1,
+            },
+            {
+              name: "Policy & documentation",
+              score: modules.policyDocumentation?.score || 0,
+              weight: modules.policyDocumentation?.weight || 0.05,
+            },
           ],
           calculatedAt: data.calculatedAt,
         };
@@ -894,9 +926,8 @@ export const useDashboardMetrics = () => {
       });
 
       const totalModels = modelsArray.length;
-      const coveragePercentage = totalModels > 0
-        ? Math.round((modelsWithEvidence.size / totalModels) * 100)
-        : 0;
+      const coveragePercentage =
+        totalModels > 0 ? Math.round((modelsWithEvidence.size / totalModels) * 100) : 0;
 
       const ehMetrics = {
         total: evidenceArray.length,
@@ -1118,7 +1149,7 @@ export const useDashboardMetrics = () => {
 
     return criticalKeys.every((key) => {
       const entry = cache[key];
-      return entry && (now - entry.timestamp) < CACHE_TTL_MS;
+      return entry && now - entry.timestamp < CACHE_TTL_MS;
     });
   }, []);
 
@@ -1127,84 +1158,79 @@ export const useDashboardMetrics = () => {
 
   // Fetch all dashboard metrics safely with stale-while-revalidate
   // Grouped into 5 sequential stages for progress tracking
-  const fetchAllMetrics = useCallback(async (forceRefresh = false) => {
-    // If we have fresh cache and not forcing refresh, skip fetch
-    if (!forceRefresh && shouldSkipFetch()) {
-      return;
-    }
+  const fetchAllMetrics = useCallback(
+    async (forceRefresh = false) => {
+      // If we have fresh cache and not forcing refresh, skip fetch
+      if (!forceRefresh && shouldSkipFetch()) {
+        return;
+      }
 
-    // Check if we have any cached data to show immediately
-    const hasAnyCache = getCache() && Object.keys(getCache()).length > 0;
+      // Check if we have any cached data to show immediately
+      const hasAnyCache = getCache() && Object.keys(getCache()).length > 0;
 
-    // If we have cached data, show it and revalidate in background
-    if (hasAnyCache && !forceRefresh) {
-      setIsRevalidating(true);
-    } else {
-      setLoading(true);
-    }
+      // If we have cached data, show it and revalidate in background
+      if (hasAnyCache && !forceRefresh) {
+        setIsRevalidating(true);
+      } else {
+        setLoading(true);
+      }
 
-    setError(null);
-    setProgressStep(0);
+      setError(null);
+      setProgressStep(0);
 
-    try {
-      // Group 1: Core - risks, evidence files
-      await Promise.allSettled([
-        fetchRiskMetrics(),
-        fetchEvidenceMetrics(),
-      ]);
-      setProgressStep(1);
+      try {
+        // Group 1: Core - risks, evidence files
+        await Promise.allSettled([fetchRiskMetrics(), fetchEvidenceMetrics()]);
+        setProgressStep(1);
 
-      // Group 2: Vendors & policies
-      await Promise.allSettled([
-        fetchVendorRiskMetrics(),
-        fetchVendorMetrics(),
-        fetchPolicyMetrics(),
-        fetchIncidentMetrics(),
-      ]);
-      setProgressStep(2);
+        // Group 2: Vendors & policies
+        await Promise.allSettled([
+          fetchVendorRiskMetrics(),
+          fetchVendorMetrics(),
+          fetchPolicyMetrics(),
+          fetchIncidentMetrics(),
+        ]);
+        setProgressStep(2);
 
-      // Group 3: Models - merged model metrics (evidenceHub + modelLifecycle), model risks, training
-      await Promise.allSettled([
-        fetchModelMetrics(),
-        fetchModelRiskMetrics(),
-        fetchTrainingMetrics(),
-      ]);
-      setProgressStep(3);
+        // Group 3: Models - merged model metrics (evidenceHub + modelLifecycle), model risks, training
+        await Promise.allSettled([
+          fetchModelMetrics(),
+          fetchModelRiskMetrics(),
+          fetchTrainingMetrics(),
+        ]);
+        setProgressStep(3);
 
-      // Group 4: Frameworks - merged project metrics (useCases + orgFrameworks)
-      await Promise.allSettled([
-        fetchProjectMetrics(),
-      ]);
-      setProgressStep(4);
+        // Group 4: Frameworks - merged project metrics (useCases + orgFrameworks)
+        await Promise.allSettled([fetchProjectMetrics()]);
+        setProgressStep(4);
 
-      // Group 5: Scores - governance score, tasks
-      await Promise.allSettled([
-        fetchGovernanceScoreMetrics(),
-        fetchTaskMetrics(),
-      ]);
-      setProgressStep(5);
-    } catch (err) {
-      setError("Failed to fetch dashboard metrics");
-      console.error("Error fetching dashboard metrics:", err);
-    } finally {
-      setLoading(false);
-      setIsRevalidating(false);
-    }
-  }, [
-    shouldSkipFetch,
-    fetchRiskMetrics,
-    fetchEvidenceMetrics,
-    fetchVendorRiskMetrics,
-    fetchVendorMetrics,
-    fetchPolicyMetrics,
-    fetchIncidentMetrics,
-    fetchModelMetrics,
-    fetchModelRiskMetrics,
-    fetchTrainingMetrics,
-    fetchProjectMetrics,
-    fetchGovernanceScoreMetrics,
-    fetchTaskMetrics,
-  ]);
+        // Group 5: Scores - governance score, tasks
+        await Promise.allSettled([fetchGovernanceScoreMetrics(), fetchTaskMetrics()]);
+        setProgressStep(5);
+      } catch (err) {
+        setError("Failed to fetch dashboard metrics");
+        console.error("Error fetching dashboard metrics:", err);
+      } finally {
+        setLoading(false);
+        setIsRevalidating(false);
+      }
+    },
+    [
+      shouldSkipFetch,
+      fetchRiskMetrics,
+      fetchEvidenceMetrics,
+      fetchVendorRiskMetrics,
+      fetchVendorMetrics,
+      fetchPolicyMetrics,
+      fetchIncidentMetrics,
+      fetchModelMetrics,
+      fetchModelRiskMetrics,
+      fetchTrainingMetrics,
+      fetchProjectMetrics,
+      fetchGovernanceScoreMetrics,
+      fetchTaskMetrics,
+    ],
+  );
 
   fetchAllMetricsRef.current = fetchAllMetrics;
 
@@ -1248,12 +1274,12 @@ export const useDashboardMetrics = () => {
     fetchEvidenceMetrics,
     fetchVendorRiskMetrics,
     fetchVendorMetrics,
-    fetchPolicyMetrics,      // Also refreshes policyStatusMetrics
-    fetchIncidentMetrics,    // Also refreshes incidentStatusMetrics
+    fetchPolicyMetrics, // Also refreshes policyStatusMetrics
+    fetchIncidentMetrics, // Also refreshes incidentStatusMetrics
     fetchModelRiskMetrics,
     fetchTrainingMetrics,
-    fetchModelMetrics,       // Replaces fetchEvidenceHubMetrics + fetchModelLifecycleMetrics
-    fetchProjectMetrics,     // Replaces fetchUseCaseMetrics + fetchOrganizationalFrameworks
+    fetchModelMetrics, // Replaces fetchEvidenceHubMetrics + fetchModelLifecycleMetrics
+    fetchProjectMetrics, // Replaces fetchUseCaseMetrics + fetchOrganizationalFrameworks
     fetchGovernanceScoreMetrics,
     fetchTaskMetrics,
   };

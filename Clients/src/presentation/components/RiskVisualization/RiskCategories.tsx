@@ -1,33 +1,16 @@
 import React, { useMemo, useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  Chip,
-  Paper,
-  Grid,
-  Collapse,
-} from "@mui/material";
+import { Box, Typography, Stack, Chip, Paper, Grid, Collapse } from "@mui/material";
 import type { GridProps } from "@mui/material";
-import {
-  ChevronUp as ExpandLessIcon,
-  ChevronDown as ExpandMoreIcon,
-} from "lucide-react";
+import { ChevronUp as ExpandLessIcon, ChevronDown as ExpandMoreIcon } from "lucide-react";
 import { getAllUsers } from "../../../application/repository/user.repository";
 import { ButtonToggle } from "../button-toggle";
 import { IRiskCategoriesProps } from "../../types/interfaces/i.risk";
 import { ICategoryGroup } from "../../../domain/interfaces/i.categoryGroup";
 import { User } from "../../../domain/types/User";
 
-const RiskCategories: React.FC<IRiskCategoriesProps> = ({
-  risks,
-  selectedRisk,
-  onRiskSelect,
-}) => {
+const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"category" | "lifecycle">(
-    "category"
-  );
+  const [viewMode, setViewMode] = useState<"category" | "lifecycle">("category");
   const [users, setUsers] = useState<User[]>([]);
 
   // Fetch users on component mount
@@ -85,9 +68,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
       if (viewMode === "category") {
         categories = risk.risk_category || [];
       } else {
-        categories = risk.ai_lifecycle_phase
-          ? [risk.ai_lifecycle_phase]
-          : ["Uncategorized"];
+        categories = risk.ai_lifecycle_phase ? [risk.ai_lifecycle_phase] : ["Uncategorized"];
       }
 
       categories.forEach((category) => {
@@ -122,20 +103,14 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
   }, [risks, viewMode]);
 
   const toggleCategory = (categoryName: string) => {
-    setExpandedCategory(
-      expandedCategory === categoryName ? null : categoryName
-    );
+    setExpandedCategory(expandedCategory === categoryName ? null : categoryName);
   };
 
   const getMostCriticalLevel = (category: ICategoryGroup) => {
-    if (category.riskLevels.veryHigh > 0)
-      return { level: 20, color: getRiskLevelColor(20) };
-    if (category.riskLevels.high > 0)
-      return { level: 15, color: getRiskLevelColor(15) };
-    if (category.riskLevels.medium > 0)
-      return { level: 10, color: getRiskLevelColor(10) };
-    if (category.riskLevels.low > 0)
-      return { level: 5, color: getRiskLevelColor(5) };
+    if (category.riskLevels.veryHigh > 0) return { level: 20, color: getRiskLevelColor(20) };
+    if (category.riskLevels.high > 0) return { level: 15, color: getRiskLevelColor(15) };
+    if (category.riskLevels.medium > 0) return { level: 10, color: getRiskLevelColor(10) };
+    if (category.riskLevels.low > 0) return { level: 5, color: getRiskLevelColor(5) };
     return { level: 1, color: getRiskLevelColor(1) };
   };
 
@@ -196,7 +171,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
             md: 6,
             lg: 4,
           } as GridProps & { item: boolean; xs: number; md: number; lg: number };
-          
+
           return (
             <Grid {...gridItemProps} key={category.name}>
               <Paper
@@ -356,9 +331,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                               label={risk.current_risk_level}
                               sx={{
                                 backgroundColor: getRiskLevelColor(
-                                  getRiskLevelFromString(
-                                    risk.current_risk_level
-                                  )
+                                  getRiskLevelFromString(risk.current_risk_level),
                                 ),
                                 color: "white",
                                 fontSize: 10,
@@ -367,12 +340,8 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                               }}
                             />
                             {risk.risk_owner && (
-                              <Typography
-                                variant="caption"
-                                sx={{ color: "status.default.text" }}
-                              >
-                                Owner:{" "}
-                                {getUserNameById(risk.risk_owner.toString())}
+                              <Typography variant="caption" sx={{ color: "status.default.text" }}>
+                                Owner: {getUserNameById(risk.risk_owner.toString())}
                               </Typography>
                             )}
                           </Box>
@@ -382,10 +351,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({
                               sx={{ color: "status.default.text", display: "block" }}
                             >
                               {risk.risk_description.length > 100
-                                ? `${risk.risk_description.substring(
-                                    0,
-                                    100
-                                  )}...`
+                                ? `${risk.risk_description.substring(0, 100)}...`
                                 : risk.risk_description}
                             </Typography>
                           )}

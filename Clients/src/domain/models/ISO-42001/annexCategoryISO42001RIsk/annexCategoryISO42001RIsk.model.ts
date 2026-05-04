@@ -8,7 +8,7 @@ export class AnnexCategoryISO42001RiskModel {
   }
 
   static createNewAnnexCategoryISO42001Risk(
-    data: AnnexCategoryISO42001RiskModel
+    data: AnnexCategoryISO42001RiskModel,
   ): AnnexCategoryISO42001RiskModel {
     return new AnnexCategoryISO42001RiskModel(data);
   }

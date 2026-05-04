@@ -38,7 +38,9 @@ interface EvalsSidebarContextType {
   recentProjects: RecentProject[];
   setRecentProjects: (projects: RecentProject[]) => void;
   onExperimentClick: ((experimentId: string, projectId: string) => void) | undefined;
-  setOnExperimentClick: (handler: ((experimentId: string, projectId: string) => void) | undefined) => void;
+  setOnExperimentClick: (
+    handler: ((experimentId: string, projectId: string) => void) | undefined,
+  ) => void;
   onProjectClick: ((projectId: string) => void) | undefined;
   setOnProjectClick: (handler: ((projectId: string) => void) | undefined) => void;
   // Project selector
@@ -62,11 +64,15 @@ export const EvalsSidebarProvider: FC<{ children: ReactNode }> = ({ children }) 
   const [disabled, setDisabled] = useState(false);
   const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>([]);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
-  const [onExperimentClick, setOnExperimentClick] = useState<((experimentId: string, projectId: string) => void) | undefined>();
+  const [onExperimentClick, setOnExperimentClick] = useState<
+    ((experimentId: string, projectId: string) => void) | undefined
+  >();
   const [onProjectClick, setOnProjectClick] = useState<((projectId: string) => void) | undefined>();
   const [currentProject, setCurrentProject] = useState<EvalProject | null>(null);
   const [allProjects, setAllProjects] = useState<EvalProject[]>([]);
-  const [onProjectChange, setOnProjectChange] = useState<((projectId: string) => void) | undefined>();
+  const [onProjectChange, setOnProjectChange] = useState<
+    ((projectId: string) => void) | undefined
+  >();
 
   return (
     <EvalsSidebarContext.Provider

@@ -35,10 +35,7 @@ const WizardShowcase: React.FC = () => {
         }}
       />
 
-      <AIDetectionOnboarding
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      <AIDetectionOnboarding isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </Box>
   );
 };

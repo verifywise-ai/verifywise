@@ -1,12 +1,4 @@
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  lazy,
-  Suspense,
-  useEffect,
-  type JSX,
-} from "react";
+import React, { useState, useCallback, useMemo, lazy, Suspense, useEffect, type JSX } from "react";
 import {
   Box,
   Typography,
@@ -41,10 +33,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { ButtonToggle } from "../../../components/button-toggle";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useRoles } from "../../../../application/hooks/useRoles";
-import {
-  deleteUserById,
-  updateUserById,
-} from "../../../../application/repository/user.repository";
+import { deleteUserById, updateUserById } from "../../../../application/repository/user.repository";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { UserModel } from "../../../../domain/models/Common/user/user.model";
@@ -102,12 +91,9 @@ const TeamManagement: React.FC = (): JSX.Element => {
 
   const [alert, setAlert] = useState<AlertState | null>(null);
 
-  const showAlert = useCallback(
-    (variant: AlertState["variant"], title: string, body: string) => {
-      setAlert({ variant, title, body, isToast: false });
-    },
-    []
-  );
+  const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
+    setAlert({ variant, title, body, isToast: false });
+  }, []);
 
   // Auto-hide alert after 3 seconds
   React.useEffect(() => {
@@ -120,7 +106,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
 
   const roleItems = useMemo(
     () => roles.map((role) => ({ _id: role.id, name: role.name })),
-    [roles]
+    [roles],
   );
 
   // State management
@@ -161,9 +147,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
     async (memberId: string, newRole: string) => {
       try {
         // Find the member to get their current data
-        const member = teamUsers.find(
-          (user) => user.id.toString() === memberId
-        );
+        const member = teamUsers.find((user) => user.id.toString() === memberId);
         if (!member) {
           showAlert("error", "Error", "User not found.");
           return;
@@ -195,23 +179,17 @@ const TeamManagement: React.FC = (): JSX.Element => {
             refreshUsers();
           }, 500);
         } else {
-          showAlert(
-            "error",
-            "Error",
-            (response as any)?.data?.message || "An error occurred."
-          );
+          showAlert("error", "Error", (response as any)?.data?.message || "An error occurred.");
         }
       } catch (error) {
         showAlert(
           "error",
           "Error",
-          `An error occurred: ${
-            (error as Error).message || "Please try again."
-          }`
+          `An error occurred: ${(error as Error).message || "Please try again."}`,
         );
       }
     },
-    [teamUsers, refreshUsers, showAlert]
+    [teamUsers, refreshUsers, showAlert],
   );
 
   const handleClose = () => {
@@ -234,11 +212,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
         refreshUsers();
       } else if (response && response.status === 403) {
         // Demo user cannot be deleted - show info message
-        showAlert(
-          "info",
-          "Info",
-          response.data?.message || "This user cannot be deleted"
-        );
+        showAlert("info", "Info", response.data?.message || "This user cannot be deleted");
       } else {
         showAlert("error", "Error", "User deletion failed");
       }
@@ -246,7 +220,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       showAlert(
         "error",
         "Error",
-        `An error occurred: ${(error as Error).message || "Please try again."}`
+        `An error occurred: ${(error as Error).message || "Please try again."}`,
       );
     }
 
@@ -259,7 +233,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       const newRole = event.target.value;
       handleUpdateRole(memberId, newRole);
     },
-    [handleUpdateRole]
+    [handleUpdateRole],
   );
 
   // Typography component for role display
@@ -284,7 +258,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       const selectedRole = roles.find((r) => r.id.toString() === roleId);
       return <RoleTypography>{selectedRole?.name || "Admin"}</RoleTypography>;
     },
-    [roles, RoleTypography]
+    [roles, RoleTypography],
   );
 
   // Sorting handlers
@@ -320,14 +294,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
 
       // Handle different column types for team members
       if (sortKey.includes("name")) {
-        const aFullName = [a.name, a.surname]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        const bFullName = [b.name, b.surname]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+        const aFullName = [a.name, a.surname].filter(Boolean).join(" ").toLowerCase();
+        const bFullName = [b.name, b.surname].filter(Boolean).join(" ").toLowerCase();
         aValue = aFullName;
         bValue = bFullName;
       } else if (sortKey.includes("email")) {
@@ -335,12 +303,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
         bValue = b.email?.toLowerCase() || "";
       } else if (sortKey.includes("role")) {
         // Get role names for sorting
-        const aRole = roles.find(
-          (r) => r.id.toString() === a.roleId?.toString()
-        );
-        const bRole = roles.find(
-          (r) => r.id.toString() === b.roleId?.toString()
-        );
+        const aRole = roles.find((r) => r.id.toString() === a.roleId?.toString());
+        const bRole = roles.find((r) => r.id.toString() === b.roleId?.toString());
         aValue = aRole?.name?.toLowerCase() || "";
         bValue = bRole?.name?.toLowerCase() || "";
       } else {
@@ -379,9 +343,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -396,11 +358,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       if (response.status === 200) {
         showAlert("success", "Success", "Invitation resent successfully.");
       } else if (response.status === 206) {
-        showAlert(
-          "info",
-          "Info",
-          "Email service unavailable. A fallback link was generated."
-        );
+        showAlert("info", "Info", "Email service unavailable. A fallback link was generated.");
       } else {
         showAlert("error", "Error", "Failed to resend invitation.");
       }
@@ -409,7 +367,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       showAlert(
         "error",
         "Error",
-        `Failed to resend invitation: ${(error as Error).message || "Please try again."}`
+        `Failed to resend invitation: ${(error as Error).message || "Please try again."}`,
       );
     }
   };
@@ -427,7 +385,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
       showAlert(
         "error",
         "Error",
-        `Failed to revoke invitation: ${(error as Error).message || "Please try again."}`
+        `Failed to revoke invitation: ${(error as Error).message || "Please try again."}`,
       );
     }
   };
@@ -435,26 +393,22 @@ const TeamManagement: React.FC = (): JSX.Element => {
   const handleInvitation = (
     email: string,
     status: number | string,
-    link: string | undefined = undefined
+    link: string | undefined = undefined,
   ) => {
     if (status === 200) {
       showAlert(
         "success",
         "Success",
-        `Invitation sent to ${email}. Please ask them to check their email and follow the link to create an account.`
+        `Invitation sent to ${email}. Please ask them to check their email and follow the link to create an account.`,
       );
     } else if (status === 206) {
       showAlert(
         "info",
         "Info",
-        `Invitation sent to ${email}. Please use this link: ${link} to create an account.`
+        `Invitation sent to ${email}. Please use this link: ${link} to create an account.`,
       );
     } else {
-      showAlert(
-        "error",
-        "Error",
-        `Failed to send invitation to ${email}. Please try again.`
-      );
+      showAlert("error", "Error", `Failed to send invitation to ${email}. Please try again.`);
     }
 
     setInviteUserModalOpen(false);
@@ -510,8 +464,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
                   ...roleItems.map((role) => ({
                     value: role._id.toString(),
                     label: role.name,
-                    count: teamUsers.filter((user) => user.roleId === role._id)
-                      .length,
+                    count: teamUsers.filter((user) => user.roleId === role._id).length,
                   })),
                 ]}
                 value={filter}
@@ -542,8 +495,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
                 <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
                   <TableHead
                     sx={{
-                      backgroundColor:
-                        singleTheme.tableStyles.primary.header.backgroundColors,
+                      backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
                     }}
                   >
                     <TableRow>
@@ -581,9 +533,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                 sx={{
                                   fontWeight: 500,
                                   color:
-                                    sortConfig.key === column.label
-                                      ? "primary.main"
-                                      : "inherit",
+                                    sortConfig.key === column.label ? "primary.main" : "inherit",
                                   textTransform: "uppercase",
                                 }}
                               >
@@ -601,16 +551,10 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                   }}
                                 >
                                   {sortConfig.key === column.label &&
-                                    sortConfig.direction === "asc" && (
-                                      <ChevronUp size={16} />
-                                    )}
+                                    sortConfig.direction === "asc" && <ChevronUp size={16} />}
                                   {sortConfig.key === column.label &&
-                                    sortConfig.direction === "desc" && (
-                                      <ChevronDown size={16} />
-                                    )}
-                                  {sortConfig.key !== column.label && (
-                                    <ChevronsUpDown size={16} />
-                                  )}
+                                    sortConfig.direction === "desc" && <ChevronDown size={16} />}
+                                  {sortConfig.key !== column.label && <ChevronsUpDown size={16} />}
                                 </Box>
                               )}
                             </Box>
@@ -622,36 +566,26 @@ const TeamManagement: React.FC = (): JSX.Element => {
                   <TableBody>
                     {filteredMembers.length > 0 ? (
                       filteredMembers
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((member) => (
-                          <TableRow
-                            key={member.id}
-                            sx={singleTheme.tableStyles.primary.body.row}
-                          >
+                          <TableRow key={member.id} sx={singleTheme.tableStyles.primary.body.row}>
                             <TableCell
                               sx={{
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 backgroundColor:
-                                  sortConfig.key &&
-                                  sortConfig.key.toLowerCase().includes("name")
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("name")
                                     ? "#e8e8e8"
                                     : "#fafafa",
                               }}
                             >
-                              {[member.name, member.surname]
-                                .filter(Boolean)
-                                .join(" ")}
+                              {[member.name, member.surname].filter(Boolean).join(" ")}
                             </TableCell>
                             <TableCell
                               sx={{
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 textTransform: "none",
                                 backgroundColor:
-                                  sortConfig.key &&
-                                  sortConfig.key.toLowerCase().includes("email")
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("email")
                                     ? "background.surface"
                                     : "inherit",
                               }}
@@ -662,17 +596,14 @@ const TeamManagement: React.FC = (): JSX.Element => {
                               sx={{
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 backgroundColor:
-                                  sortConfig.key &&
-                                  sortConfig.key.toLowerCase().includes("role")
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("role")
                                     ? "background.surface"
                                     : "inherit",
                               }}
                             >
                               <Select
                                 value={member.roleId?.toString() || "1"}
-                                onChange={(e) =>
-                                  handleRoleChange(e, member.id.toString())
-                                }
+                                onChange={(e) => handleRoleChange(e, member.id.toString())}
                                 size="small"
                                 displayEmpty
                                 renderValue={renderRoleValue}
@@ -711,10 +642,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 minWidth: "50px",
                                 backgroundColor:
-                                  sortConfig.key &&
-                                  sortConfig.key
-                                    .toLowerCase()
-                                    .includes("action")
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("action")
                                     ? "background.surface"
                                     : "inherit",
                               }}
@@ -732,10 +660,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
                     ) : (
                       <TableRow sx={singleTheme.tableStyles.primary.body.row}>
                         {TABLE_COLUMNS.map((column) => (
-                          <TableCell
-                            key={column.id}
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
+                          <TableCell key={column.id} sx={singleTheme.tableStyles.primary.body.cell}>
                             -
                           </TableCell>
                         ))}
@@ -751,15 +676,10 @@ const TeamManagement: React.FC = (): JSX.Element => {
                         rowsPerPage={rowsPerPage}
                         rowsPerPageOptions={[5, 10, 15, 25]}
                         onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => (
-                          <TablePaginationActions {...props} />
-                        )}
+                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         labelRowsPerPage="Rows per page"
                         labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(
-                            0,
-                            Math.ceil(count / rowsPerPage)
-                          )}`
+                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                         }
                         slotProps={{
                           select: {
@@ -819,8 +739,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
                   title="Confirm delete"
                   body={
                     <Typography fontSize={13}>
-                      Are you sure you want to delete your account? This action
-                      is permanent and cannot be undone.
+                      Are you sure you want to delete your account? This action is permanent and
+                      cannot be undone.
                     </Typography>
                   }
                   cancelText="Cancel"
@@ -848,16 +768,12 @@ const TeamManagement: React.FC = (): JSX.Element => {
               <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
                 <TableHead
                   sx={{
-                    backgroundColor:
-                      singleTheme.tableStyles.primary.header.backgroundColors,
+                    backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
                   }}
                 >
                   <TableRow>
                     {INVITATION_TABLE_COLUMNS.map((column) => (
-                      <TableCell
-                        key={column.id}
-                        sx={singleTheme.tableStyles.primary.header.cell}
-                      >
+                      <TableCell key={column.id} sx={singleTheme.tableStyles.primary.header.cell}>
                         <Typography
                           variant="body2"
                           sx={{
@@ -884,19 +800,11 @@ const TeamManagement: React.FC = (): JSX.Element => {
                     </TableRow>
                   ) : (
                     invitations.map((inv) => {
-                      const isExpired =
-                        new Date(inv.expires_at) <= new Date();
+                      const isExpired = new Date(inv.expires_at) <= new Date();
                       return (
-                        <TableRow
-                          key={inv.id}
-                          sx={singleTheme.tableStyles.primary.body.row}
-                        >
-                          <TableCell
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
-                            {[inv.name, inv.surname]
-                              .filter(Boolean)
-                              .join(" ") || "-"}
+                        <TableRow key={inv.id} sx={singleTheme.tableStyles.primary.body.row}>
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                            {[inv.name, inv.surname].filter(Boolean).join(" ") || "-"}
                           </TableCell>
                           <TableCell
                             sx={{
@@ -906,27 +814,19 @@ const TeamManagement: React.FC = (): JSX.Element => {
                           >
                             {inv.email}
                           </TableCell>
-                          <TableCell
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                             {inv.role_name || "-"}
                           </TableCell>
-                          <TableCell
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                             {formatRelativeDate(inv.created_at)}
                           </TableCell>
-                          <TableCell
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                             <Chip
                               label={isExpired ? "Expired" : "Pending"}
                               variant={isExpired ? "error" : "warning"}
                             />
                           </TableCell>
-                          <TableCell
-                            sx={singleTheme.tableStyles.primary.body.cell}
-                          >
+                          <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                             <Stack direction="row" spacing={1}>
                               <IconButton
                                 onClick={() => handleResendInvitation(inv.id)}

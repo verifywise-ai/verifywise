@@ -14,11 +14,7 @@
  * @returns {JSX.Element} The rendered Checkbox component.
  */
 
-import {
-  FormControlLabel,
-  Checkbox as MuiCheckbox,
-  useTheme,
-} from "@mui/material";
+import { FormControlLabel, Checkbox as MuiCheckbox, useTheme } from "@mui/material";
 import "./index.css";
 
 import { CheckboxProps } from "../../../types/widget.types";

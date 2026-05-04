@@ -6,9 +6,7 @@ export async function getUserPreferencesByUserId(userId: number): Promise<any> {
   return response.data;
 }
 
-export async function createNewUserPreferences(
-  data: Partial<UserPreferencesModel>
-): Promise<any> {
+export async function createNewUserPreferences(data: Partial<UserPreferencesModel>): Promise<any> {
   const response = await apiServices.post(`/user-preferences/`, data);
   return response.data;
 }

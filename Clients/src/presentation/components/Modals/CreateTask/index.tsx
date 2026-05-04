@@ -1,18 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  FC,
-  useState,
-  useCallback,
-  useEffect,
-  Suspense,
-  useMemo,
-} from "react";
-import {
-  useTheme,
-  Stack,
-  Typography,
-  Box,
-} from "@mui/material";
+import React, { FC, useState, useCallback, useEffect, Suspense, useMemo } from "react";
+import { useTheme, Stack, Typography, Box } from "@mui/material";
 import { lazy } from "react";
 const Field = lazy(() => import("../../Inputs/Field"));
 const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
@@ -24,10 +12,7 @@ import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
-import {
-  ICreateTaskFormValues,
-  ICreateTaskProps,
-} from "../../../types/interfaces/i.task";
+import { ICreateTaskFormValues, ICreateTaskProps } from "../../../types/interfaces/i.task";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
 import { datePickerStyle } from "../../Forms/ProjectForm/style";
@@ -37,7 +22,11 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import { TaskPriority, TaskStatus } from "../../../../domain/enums/task.enum";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import { CustomSelect } from "../../CustomSelect";
-import { PRIORITY_COLOR_MAP, PRIORITY_DISPLAY_MAP, TASK_PRIORITY_OPTIONS } from "../../../constants/priorityOptions";
+import {
+  PRIORITY_COLOR_MAP,
+  PRIORITY_DISPLAY_MAP,
+  TASK_PRIORITY_OPTIONS,
+} from "../../../constants/priorityOptions";
 
 const initialState: ICreateTaskFormValues = {
   title: "",
@@ -91,7 +80,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
         return "";
       },
     }),
-    []
+    [],
   );
   const { errors, validateAll, validateField, clearFieldError, resetErrors } =
     useFormValidation<ICreateTaskFormValues>(validators);
@@ -109,60 +98,48 @@ const CreateTask: FC<ICreateTaskProps> = ({
         description: initialData.description || "",
         priority: initialData.priority,
         status: initialData.status,
-        due_date: initialData.due_date
-          ? dayjs(initialData.due_date).format("YYYY-MM-DD")
-          : "",
+        due_date: initialData.due_date ? dayjs(initialData.due_date).format("YYYY-MM-DD") : "",
         assignees: (() => {
           if (!initialData.assignees || !users) return [];
-
 
           // Handle both possible data structures
           return initialData.assignees
             .map((assignee) => {
               // If assignee is a string/number (user ID)
-              if (
-                typeof assignee === "string" ||
-                typeof assignee === "number"
-              ) {
+              if (typeof assignee === "string" || typeof assignee === "number") {
                 const user = users.find((u) => u.id === Number(assignee));
                 return user
                   ? {
-                    id: user.id,
-                    name: user.name,
-                    surname: user.surname || "",
-                    email: user.email,
-                  }
+                      id: user.id,
+                      name: user.name,
+                      surname: user.surname || "",
+                      email: user.email,
+                    }
                   : null;
               }
               // If assignee is an ITaskAssignee object
-              else if (
-                assignee &&
-                typeof assignee === "object" &&
-                "user_id" in assignee
-              ) {
-                const user = users.find(
-                  (u) => u.id === Number(assignee.user_id)
-                );
+              else if (assignee && typeof assignee === "object" && "user_id" in assignee) {
+                const user = users.find((u) => u.id === Number(assignee.user_id));
                 return user
                   ? {
-                    id: user.id,
-                    name: user.name,
-                    surname: user.surname || "",
-                    email: user.email,
-                  }
+                      id: user.id,
+                      name: user.name,
+                      surname: user.surname || "",
+                      email: user.email,
+                    }
                   : null;
               }
               return null;
             })
             .filter(
               (
-                user
+                user,
               ): user is {
                 id: number;
                 name: string;
                 surname: string;
                 email: string;
-              } => user !== null
+              } => user !== null,
             );
         })(),
         categories: initialData.categories || [],
@@ -174,13 +151,12 @@ const CreateTask: FC<ICreateTaskProps> = ({
   }, [isOpen, mode, initialData, users]);
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof ICreateTaskFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
-        setValues((prev) => ({ ...prev, [prop]: value }));
-        clearFieldError(prop);
-      },
-    [clearFieldError]
+    (prop: keyof ICreateTaskFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setValues((prev) => ({ ...prev, [prop]: value }));
+      clearFieldError(prop);
+    },
+    [clearFieldError],
   );
 
   const handleOnSelectChange = useCallback(
@@ -189,14 +165,17 @@ const CreateTask: FC<ICreateTaskProps> = ({
       setValues((prev) => ({ ...prev, [prop]: value }));
       clearFieldError(prop);
     },
-    [clearFieldError]
+    [clearFieldError],
   );
 
-  const handlePrioritySelect = useCallback(async (newValue: string) => {
-    setValues((prev) => ({ ...prev, priority: newValue as TaskPriority }));
-    clearFieldError("priority");
-    return true;
-  }, [clearFieldError]);
+  const handlePrioritySelect = useCallback(
+    async (newValue: string) => {
+      setValues((prev) => ({ ...prev, priority: newValue as TaskPriority }));
+      clearFieldError("priority");
+      return true;
+    },
+    [clearFieldError],
+  );
 
   const handleAssigneesChange = useCallback(
     (_event: React.SyntheticEvent, newValue: any[]) => {
@@ -216,18 +195,21 @@ const CreateTask: FC<ICreateTaskProps> = ({
         clearFieldError("assignees");
       }
     },
-    [clearFieldError, validateField, values]
+    [clearFieldError, validateField, values],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prev) => ({
-        ...prev,
-        due_date: newDate ? newDate.toISOString().split("T")[0] : "",
-      }));
-      clearFieldError("due_date");
-    }
-  }, [clearFieldError]);
+  const handleDateChange = useCallback(
+    (newDate: Dayjs | null) => {
+      if (newDate?.isValid()) {
+        setValues((prev) => ({
+          ...prev,
+          due_date: newDate ? newDate.toISOString().split("T")[0] : "",
+        }));
+        clearFieldError("due_date");
+      }
+    },
+    [clearFieldError],
+  );
 
   const handleEntityLinksChange = useCallback((newLinks: EntityLink[]) => {
     setValues((prev) => ({
@@ -290,7 +272,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
         padding: "0 14px",
       },
     }),
-    [theme.palette.background.main]
+    [theme.palette.background.main],
   );
 
   const isEditMode = mode === "edit";
@@ -325,15 +307,11 @@ const CreateTask: FC<ICreateTaskProps> = ({
             value={values.assignees}
             options={assigneeOptions}
             onChange={handleAssigneesChange}
-            getOptionLabel={(user) =>
-              `${user.name} ${user.surname}`.trim()
-            }
+            getOptionLabel={(user) => `${user.name} ${user.surname}`.trim()}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
               const userEmail =
-                option.email.length > 30
-                  ? `${option.email.slice(0, 30)}...`
-                  : option.email;
+                option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
               return (
                 <Box component="li" key={key} {...optionProps}>
                   <Typography sx={{ fontSize: "13px" }}>
@@ -414,8 +392,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
             currentValue={values.priority}
             onValueChange={handlePrioritySelect}
             options={TASK_PRIORITY_OPTIONS.map((priority) => {
-              const displayPriority =
-                PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
+              const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
               return {
                 value: priority,
                 label: displayPriority,
@@ -521,12 +498,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
           </Box>
           {activeTab === "details" && formContent}
           {activeTab === "activity" && (
-            <HistorySidebar
-              inline
-              isOpen={true}
-              entityType="task"
-              entityId={taskEntityId}
-            />
+            <HistorySidebar inline isOpen={true} entityType="task" entityId={taskEntityId} />
           )}
         </TabContext>
       ) : (

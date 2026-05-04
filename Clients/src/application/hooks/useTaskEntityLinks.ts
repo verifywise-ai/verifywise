@@ -1,9 +1,4 @@
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryResult,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 import {
   getTaskEntityLinks,
   addTaskEntityLink,
@@ -15,15 +10,14 @@ import {
 // Query keys for task entity links
 export const taskEntityLinkQueryKeys = {
   all: ["taskEntityLinks"] as const,
-  byTask: (taskId: number) =>
-    [...taskEntityLinkQueryKeys.all, "byTask", taskId] as const,
+  byTask: (taskId: number) => [...taskEntityLinkQueryKeys.all, "byTask", taskId] as const,
 };
 
 /**
  * Hook to fetch entity links for a task
  */
 export const useTaskEntityLinks = (
-  taskId: number | undefined
+  taskId: number | undefined,
 ): UseQueryResult<ITaskEntityLink[], Error> => {
   return useQuery({
     queryKey: taskEntityLinkQueryKeys.byTask(taskId!),

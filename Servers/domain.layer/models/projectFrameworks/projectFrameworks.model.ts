@@ -1,17 +1,8 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../project/project.model";
 import { FrameworkModel } from "../frameworks/frameworks.model";
 import { IProjectFrameworks } from "../../interfaces/i.projectFramework";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "project_frameworks",
@@ -61,14 +52,14 @@ export class ProjectFrameworksModel
   static async createProjectFramework(
     framework_id: number,
     project_id: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<ProjectFrameworksModel> {
     // Validate framework_id
     if (!framework_id || framework_id < 1) {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 
@@ -77,7 +68,7 @@ export class ProjectFrameworksModel
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -93,9 +84,7 @@ export class ProjectFrameworksModel
   /**
    * Update project-framework association
    */
-  async updateProjectFramework(updateData: {
-    is_demo?: boolean;
-  }): Promise<void> {
+  async updateProjectFramework(updateData: { is_demo?: boolean }): Promise<void> {
     if (updateData.is_demo !== undefined) {
       this.is_demo = updateData.is_demo;
     }
@@ -109,7 +98,7 @@ export class ProjectFrameworksModel
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        this.framework_id
+        this.framework_id,
       );
     }
 
@@ -117,7 +106,7 @@ export class ProjectFrameworksModel
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }
@@ -145,13 +134,13 @@ export class ProjectFrameworksModel
    */
   static async findByProjectAndFramework(
     project_id: number,
-    framework_id: number
+    framework_id: number,
   ): Promise<ProjectFrameworksModel> {
     if (!project_id || project_id < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -159,7 +148,7 @@ export class ProjectFrameworksModel
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 
@@ -171,11 +160,10 @@ export class ProjectFrameworksModel
     });
 
     if (!projectFramework) {
-      throw new NotFoundException(
-        "Project-framework association not found",
-        "ProjectFramework",
-        { project_id, framework_id }
-      );
+      throw new NotFoundException("Project-framework association not found", "ProjectFramework", {
+        project_id,
+        framework_id,
+      });
     }
 
     return projectFramework;
@@ -184,14 +172,12 @@ export class ProjectFrameworksModel
   /**
    * Static method to find all frameworks for a project
    */
-  static async findByProjectId(
-    project_id: number
-  ): Promise<ProjectFrameworksModel[]> {
+  static async findByProjectId(project_id: number): Promise<ProjectFrameworksModel[]> {
     if (!project_id || project_id < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -204,14 +190,12 @@ export class ProjectFrameworksModel
   /**
    * Static method to find all projects for a framework
    */
-  static async findByFrameworkId(
-    framework_id: number
-  ): Promise<ProjectFrameworksModel[]> {
+  static async findByFrameworkId(framework_id: number): Promise<ProjectFrameworksModel[]> {
     if (!framework_id || framework_id < 1) {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 

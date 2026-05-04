@@ -36,7 +36,6 @@ import { ValidationException } from "../../exceptions/custom.exception";
   underscored: true,
 })
 export class RoleModel extends Model<RoleModel> implements IRoleAttributes {
-
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -45,19 +44,19 @@ export class RoleModel extends Model<RoleModel> implements IRoleAttributes {
   id?: number;
 
   @Column({
-    type: DataType.STRING
+    type: DataType.STRING,
   })
   name!: string;
 
   @Column({
-    type: DataType.STRING
+    type: DataType.STRING,
   })
   description!: string;
 
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: false,
   })
   is_demo?: boolean;
 
@@ -99,20 +98,17 @@ export class RoleModel extends Model<RoleModel> implements IRoleAttributes {
    * const adminRole = await RoleModel.createRole('Admin', 'Full system access');
    * const reviewerRole = await RoleModel.createRole('Reviewer', 'Review and approval permissions');
    */
-  static async createRole(
-    name: string,
-    description: string
-  ): Promise<RoleModel> {
+  static async createRole(name: string, description: string): Promise<RoleModel> {
     if (!name) {
       throw new ValidationException("Role name is required", "name", name);
     }
     if (!description) {
       throw new ValidationException("Role description is required", "description", description);
     }
-    const role = new RoleModel()
-    role.name = name
-    role.description = description
-    role.created_at = new Date()
-    return role
+    const role = new RoleModel();
+    role.name = name;
+    role.description = description;
+    role.created_at = new Date();
+    return role;
   }
 }

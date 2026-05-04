@@ -7,10 +7,7 @@ import * as XLSX from "xlsx";
  *
  * Returns plain text or null if the mimetype is unsupported or extraction fails.
  */
-export async function extractText(
-  buffer: Buffer,
-  mimetype: string,
-): Promise<string | null> {
+export async function extractText(buffer: Buffer, mimetype: string): Promise<string | null> {
   try {
     switch (mimetype) {
       case "application/pdf":
@@ -104,4 +101,3 @@ export function normalizeText(raw: string, maxLength = 1_000_000): string {
 
   return text;
 }
-

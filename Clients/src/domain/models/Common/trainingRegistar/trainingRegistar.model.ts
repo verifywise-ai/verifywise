@@ -49,7 +49,7 @@ export interface TrainingRegistarDTO {
   department: string;
   status: TrainingStatus;
   numberOfPeople: number;
-  description?: string;  // Optional field (not validated by form)
+  description?: string; // Optional field (not validated by form)
 }
 
 /**
@@ -68,30 +68,30 @@ export interface TrainingRegistarDTO {
  * OOP PATTERN: Accepts DTO in constructor, can contain business logic methods
  */
 export class TrainingRegistarModel {
-    id?: number;
-    training_name: string;
-    duration: string;
-    provider: string;
-    department: string;
-    status: TrainingStatus;
-    numberOfPeople: number;
-    description?: string;
+  id?: number;
+  training_name: string;
+  duration: string;
+  provider: string;
+  department: string;
+  status: TrainingStatus;
+  numberOfPeople: number;
+  description?: string;
 
-    constructor(data: TrainingRegistarDTO) {
-        this.id = data.id;
-        this.training_name = data.training_name;
-        this.duration = data.duration;
-        this.provider = data.provider;
-        this.department = data.department;
-        this.status = data.status;
-        this.numberOfPeople = data.numberOfPeople;
-        this.description = data.description ?? "";
-    }
+  constructor(data: TrainingRegistarDTO) {
+    this.id = data.id;
+    this.training_name = data.training_name;
+    this.duration = data.duration;
+    this.provider = data.provider;
+    this.department = data.department;
+    this.status = data.status;
+    this.numberOfPeople = data.numberOfPeople;
+    this.description = data.description ?? "";
+  }
 
-    static create(data: TrainingRegistarDTO): TrainingRegistarModel {
-        return new TrainingRegistarModel(data);
-    }
+  static create(data: TrainingRegistarDTO): TrainingRegistarModel {
+    return new TrainingRegistarModel(data);
+  }
 
-    // Future: Add business logic methods here
-    // Example: isEditable(), validate(), toJSON(), etc.
+  // Future: Add business logic methods here
+  // Example: isEditable(), validate(), toJSON(), etc.
 }

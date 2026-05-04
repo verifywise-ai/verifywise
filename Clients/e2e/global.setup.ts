@@ -17,9 +17,7 @@ const AUTH_STATE_PATH = "e2e/.auth/user.json";
 setup("authenticate", async ({ page }) => {
   // 1. Login via the real UI
   await page.goto("/login");
-  await page
-    .getByPlaceholder("name.surname@companyname.com")
-    .fill(TEST_EMAIL);
+  await page.getByPlaceholder("name.surname@companyname.com").fill(TEST_EMAIL);
   await page.getByPlaceholder("Enter your password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 

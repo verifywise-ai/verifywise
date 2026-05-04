@@ -1,11 +1,4 @@
-import {
-  Box,
-  Typography,
-  Stack,
-  CircularProgress,
-  useTheme,
-  Collapse,
-} from "@mui/material";
+import { Box, Typography, Stack, CircularProgress, useTheme, Collapse } from "@mui/material";
 import VWAvatar from "../../Avatar/VWAvatar";
 import React from "react";
 import { Clock } from "lucide-react";
@@ -15,10 +8,7 @@ import {
 } from "../../../../application/hooks/useEntityChangeHistory";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
-import {
-  EntityType,
-  getEntityHistoryConfig,
-} from "../../../../config/changeHistory.config";
+import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -88,17 +78,8 @@ export function HistorySidebar({
 }: HistorySidebarProps) {
   const theme = useTheme();
   const { userId: currentUserId } = useAuth();
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useEntityChangeHistory(
-    isOpen ? entityType : undefined,
-    isOpen ? entityId : undefined
-  );
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useEntityChangeHistory(isOpen ? entityType : undefined, isOpen ? entityId : undefined);
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
 
   // Flatten all pages into a single history array
@@ -139,9 +120,7 @@ export function HistorySidebar({
   // Fetch avatars for all users in the history
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(
-        new Set(history.map((entry) => entry.changed_by_user_id))
-      );
+      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
 
       // Batch fetch all avatars to avoid multiple re-renders
       const newAvatarUrls: { [userId: number]: string | null } = {};
@@ -181,10 +160,7 @@ export function HistorySidebar({
 
     return Object.values(groups).sort((a, b) => {
       // Sort by timestamp descending (newest first)
-      return (
-        new Date(b[0].changed_at).getTime() -
-        new Date(a[0].changed_at).getTime()
-      );
+      return new Date(b[0].changed_at).getTime() - new Date(a[0].changed_at).getTime();
     });
   }, [history]);
 
@@ -202,10 +178,10 @@ export function HistorySidebar({
     const creatorName = !creationEntry.changed_by_user_id
       ? "a deleted user"
       : isCurrentUser
-      ? "you"
-      : creationEntry.user_name && creationEntry.user_surname
-      ? `${creationEntry.user_name} ${creationEntry.user_surname}`
-      : creationEntry.user_email || "an unknown user";
+        ? "you"
+        : creationEntry.user_name && creationEntry.user_surname
+          ? `${creationEntry.user_name} ${creationEntry.user_surname}`
+          : creationEntry.user_email || "an unknown user";
 
     const creationDate = dayjs(creationEntry.changed_at).format("MMMM D, YYYY");
     const creationTime = dayjs(creationEntry.changed_at).format("h:mm A");
@@ -219,7 +195,7 @@ export function HistorySidebar({
 
     // Sort history by timestamp and get the most recent
     const sortedHistory = [...history].sort(
-      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime(),
     );
     const lastEntry = sortedHistory[0];
 
@@ -232,18 +208,13 @@ export function HistorySidebar({
   /**
    * Render a field value with truncation and expand/collapse functionality
    */
-  const renderTruncatedValue = (
-    entryId: number,
-    value: string,
-    type: "old" | "new"
-  ) => {
+  const renderTruncatedValue = (entryId: number, value: string, type: "old" | "new") => {
     const key = `${entryId}-${type}`;
     const isExpanded = expandedValues.has(key);
     const shouldTruncate = value && value.length > MAX_VALUE_LENGTH;
 
-    const displayValue = shouldTruncate && !isExpanded
-      ? `${value.slice(0, MAX_VALUE_LENGTH)}...`
-      : value;
+    const displayValue =
+      shouldTruncate && !isExpanded ? `${value.slice(0, MAX_VALUE_LENGTH)}...` : value;
 
     const isOldValue = type === "old";
 
@@ -297,10 +268,10 @@ export function HistorySidebar({
     const userName = !firstEntry.changed_by_user_id
       ? "Deleted User"
       : isCurrentUser
-      ? "You"
-      : firstEntry.user_name && firstEntry.user_surname
-      ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-      : firstEntry.user_email || "Unknown User";
+        ? "You"
+        : firstEntry.user_name && firstEntry.user_surname
+          ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+          : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -338,14 +309,10 @@ export function HistorySidebar({
                 textDecoration: firstEntry.action === "updated" ? "underline" : "none",
               }}
             >
-              {firstEntry.action === "created" &&
-                `${userName} created this ${config.entityName}`}
+              {firstEntry.action === "created" && `${userName} created this ${config.entityName}`}
               {firstEntry.action === "updated" &&
-                `${userName} updated ${group.length} field${
-                  group.length > 1 ? "s" : ""
-                }`}
-              {firstEntry.action === "deleted" &&
-                `${userName} deleted this ${config.entityName}`}
+                `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
+              {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
             <Stack direction="row" gap="8px" alignItems="center">
               <Clock size={10} color={theme.palette.text.secondary} />
@@ -388,9 +355,7 @@ export function HistorySidebar({
               </Typography>
 
               {/* Show change based on action type */}
-              {entry.action === "created" &&
-              entry.new_value &&
-              entry.new_value !== "-" ? (
+              {entry.action === "created" && entry.new_value && entry.new_value !== "-" ? (
                 <Box
                   sx={{
                     padding: "4px 8px",
@@ -454,69 +419,81 @@ export function HistorySidebar({
   };
 
   const content = (
+    <Box
+      sx={{
+        width: inline ? "100%" : "320px",
+        height: height,
+        marginLeft: inline ? 0 : "16px",
+        marginTop: inline ? "8px" : 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <Box
         sx={{
-          width: inline ? "100%" : "320px",
-          height: height,
-          marginLeft: inline ? 0 : "16px",
-          marginTop: inline ? "8px" : 0,
+          flex: 1,
+          border: `1px solid ${theme.palette.border.light}`,
+          borderRadius: "4px",
           display: "flex",
           flexDirection: "column",
+          background: `linear-gradient(180deg, ${theme.palette.background.alt} 0%, ${theme.palette.background.main} 100%)`,
+          overflow: "hidden",
+          maxHeight: "450px",
         }}
       >
+        {/* Header */}
         <Box
           sx={{
-            flex: 1,
-            border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "4px",
-            display: "flex",
-            flexDirection: "column",
-            background: `linear-gradient(180deg, ${theme.palette.background.alt} 0%, ${theme.palette.background.main} 100%)`,
-            overflow: "hidden",
-            maxHeight: "450px",
+            padding: "16px",
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            background: `linear-gradient(180deg, ${theme.palette.background.main} 0%, ${theme.palette.background.fill} 100%)`,
           }}
         >
-          {/* Header */}
-          <Box
-            sx={{
-              padding: "16px",
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              background: `linear-gradient(180deg, ${theme.palette.background.main} 0%, ${theme.palette.background.fill} 100%)`,
-            }}
-          >
-            {creationInfo ? (
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                }}
-              >
-                <Box component="span" sx={{ fontWeight: 400 }}>Created by</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creatorName}</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 400 }}>on</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creationDate} at {creationInfo.creationTime}</Box>
-              </Typography>
-            ) : lastUpdateInfo ? (
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                }}
-              >
-                <Box component="span" sx={{ fontWeight: 400 }}>Last updated on</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{lastUpdateInfo.updateDate} at {lastUpdateInfo.updateTime}</Box>
-              </Typography>
-            ) : (
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                }}
-              >
-                No activity yet
-              </Typography>
-            )}
-          </Box>
+          {creationInfo ? (
+            <Typography
+              sx={{
+                fontSize: 11,
+                color: theme.palette.text.secondary,
+              }}
+            >
+              <Box component="span" sx={{ fontWeight: 400 }}>
+                Created by
+              </Box>{" "}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {creationInfo.creatorName}
+              </Box>{" "}
+              <Box component="span" sx={{ fontWeight: 400 }}>
+                on
+              </Box>{" "}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {creationInfo.creationDate} at {creationInfo.creationTime}
+              </Box>
+            </Typography>
+          ) : lastUpdateInfo ? (
+            <Typography
+              sx={{
+                fontSize: 11,
+                color: theme.palette.text.secondary,
+              }}
+            >
+              <Box component="span" sx={{ fontWeight: 400 }}>
+                Last updated on
+              </Box>{" "}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {lastUpdateInfo.updateDate} at {lastUpdateInfo.updateTime}
+              </Box>
+            </Typography>
+          ) : (
+            <Typography
+              sx={{
+                fontSize: 11,
+                color: theme.palette.text.secondary,
+              }}
+            >
+              No activity yet
+            </Typography>
+          )}
+        </Box>
 
         {/* Content */}
         <Box
@@ -557,119 +534,125 @@ export function HistorySidebar({
               },
             }}
           >
-          {isError ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 200,
-                textAlign: "center",
-                padding: "0 24px",
-              }}
-            >
-              <Clock size={32} strokeWidth={1.5} color={theme.palette.error.main} opacity={0.6} />
-              <Typography
+            {isError ? (
+              <Box
                 sx={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  marginTop: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: 200,
+                  textAlign: "center",
+                  padding: "0 24px",
                 }}
               >
-                Unable to load history
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                  marginTop: "8px",
-                  lineHeight: 1.6,
-                }}
-              >
-                This {config.entityName.toLowerCase()} may have been deleted, or there was an error loading the activity history.
-              </Typography>
-            </Box>
-          ) : isLoading ? (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: 200,
-              }}
-            >
-              <CircularProgress size={28} />
-            </Box>
-          ) : groupedHistory.length === 0 ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 200,
-                textAlign: "center",
-                padding: "0 24px",
-              }}
-            >
-              <Clock size={32} strokeWidth={1.5} color={theme.palette.primary.main} opacity={0.6} />
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  marginTop: "16px",
-                }}
-              >
-                {config.emptyStateTitle}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                  marginTop: "8px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {config.emptyStateMessage}
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              <Box>{groupedHistory.map(renderHistoryEntry)}</Box>
-
-              {/* Load More Button */}
-              {hasNextPage && (
-                <Box
+                <Clock size={32} strokeWidth={1.5} color={theme.palette.error.main} opacity={0.6} />
+                <Typography
                   sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    paddingTop: "16px",
-                    paddingBottom: "8px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    marginTop: "16px",
                   }}
                 >
-                  <Typography
-                    onClick={() => !isFetchingNextPage && fetchNextPage()}
+                  Unable to load history
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    color: theme.palette.text.secondary,
+                    marginTop: "8px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  This {config.entityName.toLowerCase()} may have been deleted, or there was an
+                  error loading the activity history.
+                </Typography>
+              </Box>
+            ) : isLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  minHeight: 200,
+                }}
+              >
+                <CircularProgress size={28} />
+              </Box>
+            ) : groupedHistory.length === 0 ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: 200,
+                  textAlign: "center",
+                  padding: "0 24px",
+                }}
+              >
+                <Clock
+                  size={32}
+                  strokeWidth={1.5}
+                  color={theme.palette.primary.main}
+                  opacity={0.6}
+                />
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    marginTop: "16px",
+                  }}
+                >
+                  {config.emptyStateTitle}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    color: theme.palette.text.secondary,
+                    marginTop: "8px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {config.emptyStateMessage}
+                </Typography>
+              </Box>
+            ) : (
+              <>
+                <Box>{groupedHistory.map(renderHistoryEntry)}</Box>
+
+                {/* Load More Button */}
+                {hasNextPage && (
+                  <Box
                     sx={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: isFetchingNextPage
-                        ? theme.palette.text.disabled
-                        : theme.palette.primary.main,
-                      cursor: isFetchingNextPage ? "default" : "pointer",
-                      "&:hover": {
-                        textDecoration: isFetchingNextPage ? "none" : "underline",
-                      },
+                      display: "flex",
+                      justifyContent: "center",
+                      paddingTop: "16px",
+                      paddingBottom: "8px",
                     }}
                   >
-                    {isFetchingNextPage ? "Loading..." : "Load more"}
-                  </Typography>
-                </Box>
-              )}
-            </>
-          )}
+                    <Typography
+                      onClick={() => !isFetchingNextPage && fetchNextPage()}
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: isFetchingNextPage
+                          ? theme.palette.text.disabled
+                          : theme.palette.primary.main,
+                        cursor: isFetchingNextPage ? "default" : "pointer",
+                        "&:hover": {
+                          textDecoration: isFetchingNextPage ? "none" : "underline",
+                        },
+                      }}
+                    >
+                      {isFetchingNextPage ? "Loading..." : "Load more"}
+                    </Typography>
+                  </Box>
+                )}
+              </>
+            )}
           </Box>
           {/* Bottom fade overlay - only show when content overflows */}
           {showFade && (
@@ -680,7 +663,8 @@ export function HistorySidebar({
                 left: 0,
                 right: 0,
                 height: "60px",
-                background: "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
+                background:
+                  "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
                 pointerEvents: "none",
                 borderRadius: "0 0 8px 8px",
               }}
@@ -688,7 +672,7 @@ export function HistorySidebar({
           )}
         </Box>
       </Box>
-      </Box>
+    </Box>
   );
 
   if (inline) {

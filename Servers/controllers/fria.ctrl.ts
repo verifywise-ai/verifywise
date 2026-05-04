@@ -58,13 +58,18 @@ export async function getFria(req: Request, res: Response): Promise<Response> {
     }
 
     // Verify project access and resolve owner name
-    const projectResult = await sequelize.query<{ id: number; project_title: string; owner: number | null; owner_name: string | null }>(
+    const projectResult = await sequelize.query<{
+      id: number;
+      project_title: string;
+      owner: number | null;
+      owner_name: string | null;
+    }>(
       `SELECT p.id, p.project_title, p.owner,
               u.name || ' ' || u.surname AS owner_name
        FROM projects p
        LEFT JOIN users u ON p.owner = u.id
        WHERE p.id = :projectId AND p.organization_id = :organizationId`,
-      { replacements: { projectId, organizationId }, type: QueryTypes.SELECT }
+      { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
     );
 
     if (!projectResult || projectResult.length === 0) {
@@ -86,7 +91,7 @@ export async function getFria(req: Request, res: Response): Promise<Response> {
             assessment_owner: project.owner_name || undefined,
           },
           organizationId,
-          transaction
+          transaction,
         );
 
         if (!newFria) {
@@ -144,7 +149,7 @@ export async function getFria(req: Request, res: Response): Promise<Response> {
         rights,
         riskItems,
         modelLinks,
-      })
+      }),
     );
   } catch (error) {
     await logFailure({
@@ -205,7 +210,7 @@ export async function updateFria(req: Request, res: Response): Promise<Response>
         { ...data, ...scores },
         organizationId,
         userId,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -458,7 +463,13 @@ export async function updateRiskItem(req: Request, res: Response): Promise<Respo
       return res.status(400).json(STATUS_CODE[400]("Invalid item ID"));
     }
 
-    const updated = await updateFriaRiskItemQuery(itemId, req.body, organizationId, undefined, friaId);
+    const updated = await updateFriaRiskItemQuery(
+      itemId,
+      req.body,
+      organizationId,
+      undefined,
+      friaId,
+    );
     if (!updated) {
       return res.status(404).json(STATUS_CODE[404]("Risk item not found"));
     }
@@ -736,7 +747,7 @@ export async function submitFria(req: Request, res: Response): Promise<Response>
         userId,
         organizationId,
         snapshotData,
-        transaction
+        transaction,
       );
 
       await updateFriaQuery(
@@ -744,7 +755,7 @@ export async function submitFria(req: Request, res: Response): Promise<Response>
         { status: FriaStatus.SUBMITTED, version: fria.version + 1 },
         organizationId,
         userId,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -923,7 +934,7 @@ export async function getFriaEvidence(req: Request, res: Response): Promise<Resp
         "fria",
         section,
         friaId,
-        "evidence"
+        "evidence",
       );
     } else {
       evidence = await getEvidenceFilesForEntityTypes(
@@ -931,7 +942,7 @@ export async function getFriaEvidence(req: Request, res: Response): Promise<Resp
         "fria",
         FRIA_SECTION_TYPES,
         friaId,
-        "evidence"
+        "evidence",
       );
     }
 
@@ -999,7 +1010,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       entity_type,
       friaId,
       "evidence",
-      userId
+      userId,
     );
 
     await logSuccess({

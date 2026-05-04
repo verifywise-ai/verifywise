@@ -85,9 +85,7 @@ export class AIDetector {
   /**
    * Scan multiple files and aggregate results
    */
-  scanFiles(
-    files: Array<{ path: string; content: string }>
-  ): ScanResult {
+  scanFiles(files: Array<{ path: string; content: string }>): ScanResult {
     const allMatches: PatternMatch[] = [];
     let filesScanned = 0;
 
@@ -128,7 +126,7 @@ export class AIDetector {
   private scanContent(
     content: string,
     filePath: string,
-    fileType: "code" | "dependency"
+    fileType: "code" | "dependency",
   ): PatternMatch[] {
     const matches: PatternMatch[] = [];
     const lines = content.split("\n");
@@ -140,7 +138,7 @@ export class AIDetector {
           lines,
           pattern,
           pattern.patterns.imports,
-          "library"
+          "library",
         );
         matches.push(...importMatches);
       }
@@ -150,7 +148,7 @@ export class AIDetector {
           lines,
           pattern,
           pattern.patterns.dependencies,
-          "dependency"
+          "dependency",
         );
         matches.push(...depMatches);
       }
@@ -161,18 +159,14 @@ export class AIDetector {
           lines,
           pattern,
           pattern.patterns.apiCalls,
-          "api_call"
+          "api_call",
         );
         matches.push(...apiMatches);
       }
 
       // Check secrets (all files)
       if (pattern.patterns.secrets) {
-        const secretMatches = this.scanForSecrets(
-          lines,
-          pattern,
-          pattern.patterns.secrets
-        );
+        const secretMatches = this.scanForSecrets(lines, pattern, pattern.patterns.secrets);
         matches.push(...secretMatches);
       }
     }
@@ -187,7 +181,7 @@ export class AIDetector {
     lines: string[],
     pattern: DetectionPattern,
     regexes: RegExp[],
-    findingType: FindingType
+    findingType: FindingType,
   ): PatternMatch[] {
     const matches: PatternMatch[] = [];
     const seenPatterns = new Set<string>();
@@ -229,7 +223,7 @@ export class AIDetector {
   private scanForSecrets(
     lines: string[],
     pattern: DetectionPattern,
-    regexes: RegExp[]
+    regexes: RegExp[],
   ): PatternMatch[] {
     const matches: PatternMatch[] = [];
     const seenPatterns = new Set<string>();
@@ -277,9 +271,7 @@ export class AIDetector {
   /**
    * Aggregate individual matches into findings
    */
-  private aggregateMatches(
-    matches: Array<PatternMatch & { filePath: string }>
-  ): Finding[] {
+  private aggregateMatches(matches: Array<PatternMatch & { filePath: string }>): Finding[] {
     const findingMap = new Map<string, Finding>();
 
     for (const match of matches) {
@@ -295,7 +287,7 @@ export class AIDetector {
       } else {
         // Find category
         const category = PATTERN_CATEGORIES.find((cat) =>
-          cat.patterns.some((p) => p.name === match.pattern.name)
+          cat.patterns.some((p) => p.name === match.pattern.name),
         );
 
         findingMap.set(key, {
@@ -367,11 +359,11 @@ export class AIDetector {
     // Convert glob to regex
     // Order matters: escape special regex chars first, then convert glob patterns
     const regexStr = pattern
-      .replace(/\\/g, "\\\\")     // Escape backslashes first
-      .replace(/[.+^${}()|[\]]/g, "\\$&")  // Escape other regex metacharacters (except * and ?)
-      .replace(/\*\*/g, ".*")     // Convert ** to match anything
-      .replace(/\*/g, "[^/]*")    // Convert * to match anything except /
-      .replace(/\?/g, ".");       // Convert ? to match single character
+      .replace(/\\/g, "\\\\") // Escape backslashes first
+      .replace(/[.+^${}()|[\]]/g, "\\$&") // Escape other regex metacharacters (except * and ?)
+      .replace(/\*\*/g, ".*") // Convert ** to match anything
+      .replace(/\*/g, "[^/]*") // Convert * to match anything except /
+      .replace(/\?/g, "."); // Convert ? to match single character
 
     return new RegExp(`^${regexStr}$`).test(path);
   }
@@ -391,27 +383,21 @@ export class AIDetector {
    * Get patterns filtered by provider
    */
   getPatternsByProvider(provider: string): DetectionPattern[] {
-    return this.patterns.filter(
-      (p) => p.provider.toLowerCase() === provider.toLowerCase()
-    );
+    return this.patterns.filter((p) => p.provider.toLowerCase() === provider.toLowerCase());
   }
 
   /**
    * Get patterns that can detect secrets
    */
   getSecretPatterns(): DetectionPattern[] {
-    return this.patterns.filter(
-      (p) => p.patterns.secrets && p.patterns.secrets.length > 0
-    );
+    return this.patterns.filter((p) => p.patterns.secrets && p.patterns.secrets.length > 0);
   }
 
   /**
    * Get patterns that can detect API calls
    */
   getApiCallPatterns(): DetectionPattern[] {
-    return this.patterns.filter(
-      (p) => p.patterns.apiCalls && p.patterns.apiCalls.length > 0
-    );
+    return this.patterns.filter((p) => p.patterns.apiCalls && p.patterns.apiCalls.length > 0);
   }
 
   /**
@@ -439,7 +425,7 @@ export class AIDetector {
 export function quickScan(
   content: string,
   filePath: string,
-  options?: ScannerOptions
+  options?: ScannerOptions,
 ): FileScanResult {
   const detector = new AIDetector(options);
   return detector.scanFile(content, filePath);
@@ -451,7 +437,7 @@ export function quickScan(
 export function scanForSecrets(
   content: string,
   filePath: string,
-  options?: ScannerOptions
+  options?: ScannerOptions,
 ): PatternMatch[] {
   const detector = new AIDetector(options);
   const result = detector.scanFile(content, filePath);
@@ -464,7 +450,7 @@ export function scanForSecrets(
 export function scanForApiCalls(
   content: string,
   filePath: string,
-  options?: ScannerOptions
+  options?: ScannerOptions,
 ): PatternMatch[] {
   const detector = new AIDetector(options);
   const result = detector.scanFile(content, filePath);

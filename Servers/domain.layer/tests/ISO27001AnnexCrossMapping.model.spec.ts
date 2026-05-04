@@ -44,14 +44,14 @@ class TestISO27001AnnexCrossMappingModel {
     order_no: number,
     clause_title: string,
     relevance: string,
-    iso27001annex_control_id: number
+    iso27001annex_control_id: number,
   ): Promise<TestISO27001AnnexCrossMappingModel> {
     // Validate clause_no
     if (clause_no < 1) {
       throw new ValidationException(
         "Clause number must be a positive integer",
         "clause_no",
-        clause_no
+        clause_no,
       );
     }
 
@@ -60,24 +60,20 @@ class TestISO27001AnnexCrossMappingModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
     // Validate clause_title
     if (!clause_title || clause_title.trim().length === 0) {
-      throw new ValidationException(
-        "Clause title is required",
-        "clause_title",
-        clause_title
-      );
+      throw new ValidationException("Clause title is required", "clause_title", clause_title);
     }
 
     if (clause_title.trim().length < 3) {
       throw new ValidationException(
         "Clause title must be at least 3 characters long",
         "clause_title",
-        clause_title
+        clause_title,
       );
     }
 
@@ -85,24 +81,20 @@ class TestISO27001AnnexCrossMappingModel {
       throw new ValidationException(
         "Clause title must not exceed 255 characters",
         "clause_title",
-        clause_title
+        clause_title,
       );
     }
 
     // Validate relevance
     if (!relevance || relevance.trim().length === 0) {
-      throw new ValidationException(
-        "Relevance is required",
-        "relevance",
-        relevance
-      );
+      throw new ValidationException("Relevance is required", "relevance", relevance);
     }
 
     if (relevance.trim().length < 5) {
       throw new ValidationException(
         "Relevance must be at least 5 characters long",
         "relevance",
-        relevance
+        relevance,
       );
     }
 
@@ -110,7 +102,7 @@ class TestISO27001AnnexCrossMappingModel {
       throw new ValidationException(
         "Relevance must not exceed 500 characters",
         "relevance",
-        relevance
+        relevance,
       );
     }
 
@@ -119,7 +111,7 @@ class TestISO27001AnnexCrossMappingModel {
       throw new ValidationException(
         "Valid annex control ID is required",
         "iso27001annex_control_id",
-        iso27001annex_control_id
+        iso27001annex_control_id,
       );
     }
 
@@ -148,7 +140,7 @@ class TestISO27001AnnexCrossMappingModel {
         throw new ValidationException(
           "Clause number must be a positive integer",
           "clause_no",
-          updateData.clause_no
+          updateData.clause_no,
         );
       }
       this.clause_no = updateData.clause_no;
@@ -160,7 +152,7 @@ class TestISO27001AnnexCrossMappingModel {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -168,28 +160,25 @@ class TestISO27001AnnexCrossMappingModel {
 
     // Validate clause_title if provided
     if (updateData.clause_title !== undefined) {
-      if (
-        !updateData.clause_title ||
-        updateData.clause_title.trim().length === 0
-      ) {
+      if (!updateData.clause_title || updateData.clause_title.trim().length === 0) {
         throw new ValidationException(
           "Clause title is required",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       if (updateData.clause_title.trim().length < 3) {
         throw new ValidationException(
           "Clause title must be at least 3 characters long",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       if (updateData.clause_title.trim().length > 255) {
         throw new ValidationException(
           "Clause title must not exceed 255 characters",
           "clause_title",
-          updateData.clause_title
+          updateData.clause_title,
         );
       }
       this.clause_title = updateData.clause_title.trim();
@@ -198,24 +187,20 @@ class TestISO27001AnnexCrossMappingModel {
     // Validate relevance if provided
     if (updateData.relevance !== undefined) {
       if (!updateData.relevance || updateData.relevance.trim().length === 0) {
-        throw new ValidationException(
-          "Relevance is required",
-          "relevance",
-          updateData.relevance
-        );
+        throw new ValidationException("Relevance is required", "relevance", updateData.relevance);
       }
       if (updateData.relevance.trim().length < 5) {
         throw new ValidationException(
           "Relevance must be at least 5 characters long",
           "relevance",
-          updateData.relevance
+          updateData.relevance,
         );
       }
       if (updateData.relevance.trim().length > 500) {
         throw new ValidationException(
           "Relevance must not exceed 500 characters",
           "relevance",
-          updateData.relevance
+          updateData.relevance,
         );
       }
       this.relevance = updateData.relevance.trim();
@@ -227,7 +212,7 @@ class TestISO27001AnnexCrossMappingModel {
         throw new ValidationException(
           "Valid annex control ID is required",
           "iso27001annex_control_id",
-          updateData.iso27001annex_control_id
+          updateData.iso27001annex_control_id,
         );
       }
       this.iso27001annex_control_id = updateData.iso27001annex_control_id;
@@ -294,8 +279,7 @@ describe("ISO27001AnnexCrossMappingModel", () => {
     clause_no: 1,
     order_no: 1,
     clause_title: "Information Security Policy",
-    relevance:
-      "This clause is highly relevant for establishing security policies",
+    relevance: "This clause is highly relevant for establishing security policies",
     iso27001annex_control_id: 1,
   };
 
@@ -307,14 +291,13 @@ describe("ISO27001AnnexCrossMappingModel", () => {
   describe("createNewCrossMapping", () => {
     it("should create a new cross mapping with valid data", async () => {
       // Arrange & Act
-      const crossMapping =
-        await TestISO27001AnnexCrossMappingModel.createNewCrossMapping(
-          validCrossMappingData.clause_no,
-          validCrossMappingData.order_no,
-          validCrossMappingData.clause_title,
-          validCrossMappingData.relevance,
-          validCrossMappingData.iso27001annex_control_id
-        );
+      const crossMapping = await TestISO27001AnnexCrossMappingModel.createNewCrossMapping(
+        validCrossMappingData.clause_no,
+        validCrossMappingData.order_no,
+        validCrossMappingData.clause_title,
+        validCrossMappingData.relevance,
+        validCrossMappingData.iso27001annex_control_id,
+      );
 
       // Assert
       expect(crossMapping).toBeInstanceOf(TestISO27001AnnexCrossMappingModel);
@@ -322,7 +305,7 @@ describe("ISO27001AnnexCrossMappingModel", () => {
       expect(crossMapping.order_no).toBe(1);
       expect(crossMapping.clause_title).toBe("Information Security Policy");
       expect(crossMapping.relevance).toBe(
-        "This clause is highly relevant for establishing security policies"
+        "This clause is highly relevant for establishing security policies",
       );
       expect(crossMapping.iso27001annex_control_id).toBe(1);
     });
@@ -335,8 +318,8 @@ describe("ISO27001AnnexCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001annex_control_id
-        )
+          validCrossMappingData.iso27001annex_control_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -348,8 +331,8 @@ describe("ISO27001AnnexCrossMappingModel", () => {
           validCrossMappingData.order_no,
           "", // empty clause title
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001annex_control_id
-        )
+          validCrossMappingData.iso27001annex_control_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -361,8 +344,8 @@ describe("ISO27001AnnexCrossMappingModel", () => {
           validCrossMappingData.order_no,
           "AB", // too short
           validCrossMappingData.relevance,
-          validCrossMappingData.iso27001annex_control_id
-        )
+          validCrossMappingData.iso27001annex_control_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -374,8 +357,8 @@ describe("ISO27001AnnexCrossMappingModel", () => {
           validCrossMappingData.order_no,
           validCrossMappingData.clause_title,
           "Hi", // too short relevance
-          validCrossMappingData.iso27001annex_control_id
-        )
+          validCrossMappingData.iso27001annex_control_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -383,9 +366,7 @@ describe("ISO27001AnnexCrossMappingModel", () => {
   describe("updateCrossMapping", () => {
     it("should update cross mapping with valid data", async () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
       const updateData = {
         clause_title: "Updated Security Policy",
         relevance: "Updated relevance description for the clause",
@@ -396,42 +377,34 @@ describe("ISO27001AnnexCrossMappingModel", () => {
 
       // Assert
       expect(crossMapping.clause_title).toBe("Updated Security Policy");
-      expect(crossMapping.relevance).toBe(
-        "Updated relevance description for the clause"
-      );
+      expect(crossMapping.relevance).toBe("Updated relevance description for the clause");
     });
 
     it("should throw ValidationException for invalid clause title in update", async () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
 
       // Act & Assert
-      await expect(
-        crossMapping.updateCrossMapping({ clause_title: "" })
-      ).rejects.toThrow(ValidationException);
+      await expect(crossMapping.updateCrossMapping({ clause_title: "" })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid relevance in update", async () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
 
       // Act & Assert
-      await expect(
-        crossMapping.updateCrossMapping({ relevance: "Hi" })
-      ).rejects.toThrow(ValidationException);
+      await expect(crossMapping.updateCrossMapping({ relevance: "Hi" })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
   describe("business logic methods", () => {
     it("should correctly identify control ownership", () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
 
       // Act & Assert
       expect(crossMapping.belongsToControl(1)).toBe(true);
@@ -440,9 +413,7 @@ describe("ISO27001AnnexCrossMappingModel", () => {
 
     it("should generate correct clause identifier", () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
 
       // Act & Assert
       expect(crossMapping.getClauseIdentifier()).toBe("Clause 1");
@@ -450,14 +421,10 @@ describe("ISO27001AnnexCrossMappingModel", () => {
 
     it("should generate correct full clause name", () => {
       // Arrange
-      const crossMapping = new TestISO27001AnnexCrossMappingModel(
-        validCrossMappingData
-      );
+      const crossMapping = new TestISO27001AnnexCrossMappingModel(validCrossMappingData);
 
       // Act & Assert
-      expect(crossMapping.getFullClauseName()).toBe(
-        "Clause 1 - Information Security Policy"
-      );
+      expect(crossMapping.getFullClauseName()).toBe("Clause 1 - Information Security Policy");
     });
 
     it("should validate ISO 27001 compliance", () => {

@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { IISO27001AnnexControl } from "../../interfaces/i.iso27001AnnexControl";
 import { UserModel } from "../../models/user/user.model";
 import { ProjectFrameworksModel } from "../../models/projectFrameworks/projectFrameworks.model";

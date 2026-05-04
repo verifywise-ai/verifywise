@@ -44,9 +44,7 @@ test.describe("Vendors Page", () => {
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("vendors page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("vendors page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/vendors");
     await page.waitForLoadState("domcontentloaded");
 
@@ -72,9 +70,7 @@ test.describe("Vendors Page", () => {
 
   // --- Tier 1: Tab switching ---
 
-  test("clicking Risks tab navigates to /vendors/risks", async ({
-    authedPage: page,
-  }) => {
+  test("clicking Risks tab navigates to /vendors/risks", async ({ authedPage: page }) => {
     await page.goto("/vendors");
     const risksTab = page.getByRole("tab", { name: /risks/i });
     await expect(risksTab).toBeVisible({ timeout: 10_000 });
@@ -82,9 +78,7 @@ test.describe("Vendors Page", () => {
     await expect(page).toHaveURL(/\/vendors\/risks/, { timeout: 10_000 });
   });
 
-  test("clicking Vendors tab returns to /vendors", async ({
-    authedPage: page,
-  }) => {
+  test("clicking Vendors tab returns to /vendors", async ({ authedPage: page }) => {
     await page.goto("/vendors/risks");
     const vendorsTab = page.getByRole("tab", { name: /vendors/i });
     await expect(vendorsTab).toBeVisible({ timeout: 10_000 });
@@ -94,9 +88,7 @@ test.describe("Vendors Page", () => {
 
   // --- Tier 2: Search & Filter ---
 
-  test("searching for nonexistent vendor filters results", async ({
-    authedPage: page,
-  }) => {
+  test("searching for nonexistent vendor filters results", async ({ authedPage: page }) => {
     await page.goto("/vendors");
     const searchInput = page
       .getByPlaceholder(/search vendors/i)
@@ -111,9 +103,7 @@ test.describe("Vendors Page", () => {
     await page.waitForTimeout(500);
   });
 
-  test("filter button opens filter options", async ({
-    authedPage: page,
-  }) => {
+  test("filter button opens filter options", async ({ authedPage: page }) => {
     await page.goto("/vendors");
     const filterBtn = page
       .getByRole("button", { name: /filter/i })
@@ -129,9 +119,7 @@ test.describe("Vendors Page", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Add new vendor button opens modal when enabled", async ({
-    authedPage: page,
-  }) => {
+  test("Add new vendor button opens modal when enabled", async ({ authedPage: page }) => {
     await page.goto("/vendors");
     const addBtn = page.getByRole("button", { name: /add new vendor/i });
 
@@ -144,7 +132,7 @@ test.describe("Vendors Page", () => {
           page
             .getByText(/add new vendor/i)
             .or(page.getByText(/create vendor/i))
-            .first()
+            .first(),
         ).toBeVisible({ timeout: 10_000 });
         await page.keyboard.press("Escape");
       }
@@ -162,86 +150,111 @@ projectTest.describe("Vendors CRUD", () => {
     });
   });
 
-  projectTest(
-    "CRUD: create and delete vendor",
-    async ({ projectPage: page, projectName }) => {
-      await page.goto("/vendors");
-      const vendorName = `E2E Test Vendor ${Date.now()}`;
+  projectTest("CRUD: create and delete vendor", async ({ projectPage: page, projectName }) => {
+    await page.goto("/vendors");
+    const vendorName = `E2E Test Vendor ${Date.now()}`;
 
-      // Create: Click "Add new vendor"
-      const addBtn = page.getByRole("button", { name: /add new vendor/i });
-      await projectExpect(addBtn).toBeVisible({ timeout: 10_000 });
+    // Create: Click "Add new vendor"
+    const addBtn = page.getByRole("button", { name: /add new vendor/i });
+    await projectExpect(addBtn).toBeVisible({ timeout: 10_000 });
 
-      // Button should be enabled now that a project exists
-      if (await addBtn.isDisabled()) {
-        projectTest.skip();
-        return;
-      }
-      await addBtn.click();
+    // Button should be enabled now that a project exists
+    if (await addBtn.isDisabled()) {
+      projectTest.skip();
+      return;
+    }
+    await addBtn.click();
 
-      // Fill vendor name
-      const nameInput = page
-        .getByRole("textbox", { name: /name/i })
-        .or(page.getByPlaceholder(/vendor name/i))
-        .or(page.getByPlaceholder(/name/i))
-        .or(page.getByRole("textbox").first());
-      await projectExpect(nameInput.first()).toBeVisible({ timeout: 10_000 });
-      await nameInput.first().fill(vendorName);
+    // Fill vendor name
+    const nameInput = page
+      .getByRole("textbox", { name: /name/i })
+      .or(page.getByPlaceholder(/vendor name/i))
+      .or(page.getByPlaceholder(/name/i))
+      .or(page.getByRole("textbox").first());
+    await projectExpect(nameInput.first()).toBeVisible({ timeout: 10_000 });
+    await nameInput.first().fill(vendorName);
 
-      // Select project if dropdown exists
-      const projectSelect = page
-        .getByRole("combobox", { name: /project/i })
-        .or(page.getByText(/select.*project/i));
-      if (await projectSelect.first().isVisible().catch(() => false)) {
-        await projectSelect.first().click();
-        // Pick the project we created or first available
-        const projectOption = page
-          .getByRole("option", { name: new RegExp(projectName, "i") })
-          .or(page.getByRole("option").first());
-        if (await projectOption.first().isVisible().catch(() => false)) {
-          await projectOption.first().click();
-        }
-      }
-
-      // Submit
-      const submitBtn = page
-        .getByRole("button", { name: /create|save|submit|add/i })
-        .last();
-      await submitBtn.click();
-      await page.waitForTimeout(1000);
-
-      // Verify: Search for the created vendor
-      const searchInput = page
-        .getByPlaceholder(/search vendors/i)
-        .or(page.getByPlaceholder(/search/i));
-      if (await searchInput.first().isVisible().catch(() => false)) {
-        await searchInput.first().fill(vendorName);
-        await page.waitForTimeout(500);
-      }
-
-      // Clean up: Delete via row action
-      const moreBtn = page
-        .getByRole("button", { name: /more/i })
-        .or(page.locator('[aria-label="more"]'))
-        .or(page.locator('[data-testid="MoreVertIcon"]'));
-      if (await moreBtn.first().isVisible().catch(() => false)) {
-        await moreBtn.first().click();
-        const deleteBtn = page.getByRole("menuitem", {
-          name: /delete|remove/i,
-        });
-        if (await deleteBtn.first().isVisible().catch(() => false)) {
-          await deleteBtn.first().click();
-          const confirmBtn = page.getByRole("button", {
-            name: /confirm|yes|delete/i,
-          });
-          if (await confirmBtn.first().isVisible().catch(() => false)) {
-            await confirmBtn.first().click();
-          }
-          await page.waitForTimeout(500);
-        } else {
-          await page.keyboard.press("Escape");
-        }
+    // Select project if dropdown exists
+    const projectSelect = page
+      .getByRole("combobox", { name: /project/i })
+      .or(page.getByText(/select.*project/i));
+    if (
+      await projectSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await projectSelect.first().click();
+      // Pick the project we created or first available
+      const projectOption = page
+        .getByRole("option", { name: new RegExp(projectName, "i") })
+        .or(page.getByRole("option").first());
+      if (
+        await projectOption
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await projectOption.first().click();
       }
     }
-  );
+
+    // Submit
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
+    await submitBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Verify: Search for the created vendor
+    const searchInput = page
+      .getByPlaceholder(/search vendors/i)
+      .or(page.getByPlaceholder(/search/i));
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await searchInput.first().fill(vendorName);
+      await page.waitForTimeout(500);
+    }
+
+    // Clean up: Delete via row action
+    const moreBtn = page
+      .getByRole("button", { name: /more/i })
+      .or(page.locator('[aria-label="more"]'))
+      .or(page.locator('[data-testid="MoreVertIcon"]'));
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await moreBtn.first().click();
+      const deleteBtn = page.getByRole("menuitem", {
+        name: /delete|remove/i,
+      });
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await deleteBtn.first().click();
+        const confirmBtn = page.getByRole("button", {
+          name: /confirm|yes|delete/i,
+        });
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
+          await confirmBtn.first().click();
+        }
+        await page.waitForTimeout(500);
+      } else {
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
 });

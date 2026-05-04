@@ -16,7 +16,7 @@ export async function listOrganizations(_req: Request, res: Response) {
               (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id) AS user_count
        FROM organizations o
        ORDER BY o.created_at DESC`,
-      { type: 'SELECT' as any }
+      { type: "SELECT" as any },
     );
     return res.status(200).json(STATUS_CODE[200](organizations));
   } catch (error) {
@@ -62,7 +62,7 @@ export async function deleteOrg(req: Request, res: Response) {
     // Delete all users in the org first (to clear FK references)
     const users: any[] = await sequelize.query(
       `SELECT id FROM users WHERE organization_id = :orgId`,
-      { replacements: { orgId }, type: 'SELECT' as any, transaction }
+      { replacements: { orgId }, type: "SELECT" as any, transaction },
     );
 
     for (const user of users) {
@@ -70,10 +70,10 @@ export async function deleteOrg(req: Request, res: Response) {
     }
 
     // Delete the organization (cascade will handle remaining references)
-    await sequelize.query(
-      `DELETE FROM organizations WHERE id = :orgId`,
-      { replacements: { orgId }, transaction }
-    );
+    await sequelize.query(`DELETE FROM organizations WHERE id = :orgId`, {
+      replacements: { orgId },
+      transaction,
+    });
 
     await transaction.commit();
     return res.status(200).json(STATUS_CODE[200]({ deleted: true, usersRemoved: users.length }));
@@ -95,11 +95,11 @@ export async function updateOrg(req: Request, res: Response) {
     const replacements: any = { orgId };
 
     if (name !== undefined) {
-      updates.push('name = :name');
+      updates.push("name = :name");
       replacements.name = name;
     }
     if (logo !== undefined) {
-      updates.push('logo = :logo');
+      updates.push("logo = :logo");
       replacements.logo = logo;
     }
 
@@ -108,14 +108,14 @@ export async function updateOrg(req: Request, res: Response) {
     }
 
     await sequelize.query(
-      `UPDATE organizations SET ${updates.join(', ')}, updated_at = NOW() WHERE id = :orgId`,
-      { replacements }
+      `UPDATE organizations SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :orgId`,
+      { replacements },
     );
 
-    const [updated] = await sequelize.query(
-      `SELECT * FROM organizations WHERE id = :orgId`,
-      { replacements: { orgId }, type: 'SELECT' as any }
-    );
+    const [updated] = await sequelize.query(`SELECT * FROM organizations WHERE id = :orgId`, {
+      replacements: { orgId },
+      type: "SELECT" as any,
+    });
 
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
@@ -130,7 +130,7 @@ export async function getUserCount(_req: Request, res: Response) {
   try {
     const [result]: any[] = await sequelize.query(
       `SELECT COUNT(*) AS count FROM users WHERE role_id != 5`,
-      { type: 'SELECT' as any }
+      { type: "SELECT" as any },
     );
     return res.status(200).json(STATUS_CODE[200]({ count: parseInt(result.count, 10) }));
   } catch (error) {
@@ -152,7 +152,7 @@ export async function listAllUsers(_req: Request, res: Response) {
        LEFT JOIN organizations o ON u.organization_id = o.id
        WHERE u.role_id != 5
        ORDER BY u.created_at DESC`,
-      { type: 'SELECT' as any }
+      { type: "SELECT" as any },
     );
     return res.status(200).json(STATUS_CODE[200](users));
   } catch (error) {
@@ -174,7 +174,7 @@ export async function listOrgUsers(req: Request, res: Response) {
        LEFT JOIN roles r ON u.role_id = r.id
        WHERE u.organization_id = :orgId
        ORDER BY u.created_at ASC`,
-      { replacements: { orgId }, type: 'SELECT' as any }
+      { replacements: { orgId }, type: "SELECT" as any },
     );
 
     return res.status(200).json(STATUS_CODE[200](users));
@@ -191,7 +191,9 @@ export async function inviteUserToOrg(req: Request, res: Response) {
   const { email, name, surname, roleId } = req.body;
 
   if (!email || !name || !roleId) {
-    return res.status(400).json(STATUS_CODE[400]({ message: "email, name, and roleId are required" }));
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: "email, name, and roleId are required" }));
   }
 
   // Prevent creating super-admin users via invite
@@ -200,10 +202,10 @@ export async function inviteUserToOrg(req: Request, res: Response) {
   }
 
   // Check if a user with this email already exists
-  const existing: any[] = await sequelize.query(
-    `SELECT id FROM users WHERE email = :email`,
-    { replacements: { email }, type: 'SELECT' as any }
-  );
+  const existing: any[] = await sequelize.query(`SELECT id FROM users WHERE email = :email`, {
+    replacements: { email },
+    type: "SELECT" as any,
+  });
   if (existing.length > 0) {
     return res.status(409).json(STATUS_CODE[409]("A user with this email already exists"));
   }
@@ -230,10 +232,10 @@ export async function updateUser(req: Request, res: Response) {
       return res.status(403).json(STATUS_CODE[403]("Cannot assign SuperAdmin role"));
     }
 
-    const rows: any[] = await sequelize.query(
-      `SELECT id, role_id FROM users WHERE id = :userId`,
-      { replacements: { userId }, type: 'SELECT' as any }
-    );
+    const rows: any[] = await sequelize.query(`SELECT id, role_id FROM users WHERE id = :userId`, {
+      replacements: { userId },
+      type: "SELECT" as any,
+    });
 
     if (rows.length === 0) {
       return res.status(404).json(STATUS_CODE[404]("User not found"));
@@ -247,19 +249,19 @@ export async function updateUser(req: Request, res: Response) {
     const replacements: any = { userId };
 
     if (name !== undefined) {
-      updates.push('name = :name');
+      updates.push("name = :name");
       replacements.name = name;
     }
     if (surname !== undefined) {
-      updates.push('surname = :surname');
+      updates.push("surname = :surname");
       replacements.surname = surname;
     }
     if (email !== undefined) {
-      updates.push('email = :email');
+      updates.push("email = :email");
       replacements.email = email;
     }
     if (roleId !== undefined) {
-      updates.push('role_id = :roleId');
+      updates.push("role_id = :roleId");
       replacements.roleId = roleId;
     }
 
@@ -269,7 +271,7 @@ export async function updateUser(req: Request, res: Response) {
 
     const [updated] = await sequelize.query(
       `WITH updated AS (
-        UPDATE users SET ${updates.join(', ')}, updated_at = NOW() WHERE id = :userId
+        UPDATE users SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :userId
         RETURNING *
       )
       SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
@@ -278,7 +280,7 @@ export async function updateUser(req: Request, res: Response) {
       FROM updated u
       LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN organizations o ON u.organization_id = o.id`,
-      { replacements, type: 'SELECT' as any }
+      { replacements, type: "SELECT" as any },
     );
 
     return res.status(200).json(STATUS_CODE[200](updated));
@@ -297,7 +299,7 @@ export async function removeUser(req: Request, res: Response) {
 
     const rows: any[] = await sequelize.query(
       `SELECT id, organization_id, role_id FROM users WHERE id = :userId`,
-      { replacements: { userId }, type: 'SELECT' as any, transaction }
+      { replacements: { userId }, type: "SELECT" as any, transaction },
     );
     const user = rows[0];
 

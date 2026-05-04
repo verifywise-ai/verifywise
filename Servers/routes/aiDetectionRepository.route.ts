@@ -75,7 +75,12 @@ router.post("/:id/scan", authenticateJWT, authorize(WRITE_ROLES), triggerReposit
  * @desc    Generate a new webhook secret for CI/CD integration
  * @access  Private - Admin, Editor
  */
-router.post("/:id/webhook-secret", authenticateJWT, authorize(WRITE_ROLES), generateWebhookSecretController);
+router.post(
+  "/:id/webhook-secret",
+  authenticateJWT,
+  authorize(WRITE_ROLES),
+  generateWebhookSecretController,
+);
 
 /**
  * @route   GET /ai-detection/repositories/:id/scans

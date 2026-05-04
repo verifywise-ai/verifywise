@@ -1,11 +1,5 @@
 import { ReactNode } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 interface FriaSectionCardProps {
@@ -15,12 +9,7 @@ interface FriaSectionCardProps {
   children: ReactNode;
 }
 
-function FriaSectionCard({
-  title,
-  subtitle,
-  euActContent,
-  children,
-}: FriaSectionCardProps) {
+function FriaSectionCard({ title, subtitle, euActContent, children }: FriaSectionCardProps) {
   const theme = useTheme();
 
   return (

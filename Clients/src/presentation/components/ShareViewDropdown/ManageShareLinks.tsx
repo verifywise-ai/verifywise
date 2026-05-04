@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Typography,
-  IconButton,
-  Tooltip,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Typography, IconButton, Tooltip, CircularProgress } from "@mui/material";
 import { Copy, Trash2, ExternalLink, RotateCw } from "lucide-react";
 import Toggle from "../Inputs/Toggle";
 import {
@@ -55,10 +49,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
 }) => {
   const [copySuccess, setCopySuccess] = useState<number | null>(null);
 
-  const { data: shareLinks = [], isLoading, refetch } = useShareLinks(
-    resourceType,
-    resourceId
-  );
+  const { data: shareLinks = [], isLoading, refetch } = useShareLinks(resourceType, resourceId);
   const updateMutation = useUpdateShareLink();
   const deleteMutation = useDeleteShareLink();
 
@@ -90,7 +81,11 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
   };
 
   const handleDeleteLink = async (id: number) => {
-    if (window.confirm("Are you sure you want to revoke this share link? This action cannot be undone.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to revoke this share link? This action cannot be undone.",
+      )
+    ) {
       try {
         await deleteMutation.mutateAsync(id);
       } catch (error) {
@@ -175,7 +170,9 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
               border: "1px solid #e0e0e0",
               borderRadius: "6px",
               p: 1.5,
-              backgroundColor: shareLink.is_enabled ? `${background.main}` : `${background.surface}`,
+              backgroundColor: shareLink.is_enabled
+                ? `${background.main}`
+                : `${background.surface}`,
             }}
           >
             <Box
@@ -211,9 +208,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
               </Box>
               <Toggle
                 checked={shareLink.is_enabled}
-                onChange={() =>
-                  handleToggleEnabled(shareLink.id, shareLink.is_enabled)
-                }
+                onChange={() => handleToggleEnabled(shareLink.id, shareLink.is_enabled)}
               />
             </Box>
 
@@ -228,14 +223,10 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
               }}
             >
               <Box sx={{ display: "flex", gap: 0.5 }}>
-                <Tooltip
-                  title={copySuccess === shareLink.id ? "Copied!" : "Copy link"}
-                >
+                <Tooltip title={copySuccess === shareLink.id ? "Copied!" : "Copy link"}>
                   <IconButton
                     size="small"
-                    onClick={() =>
-                      handleCopyLink(shareLink.shareable_url, shareLink.id)
-                    }
+                    onClick={() => handleCopyLink(shareLink.shareable_url, shareLink.id)}
                     disabled={!shareLink.is_enabled}
                     sx={{
                       p: 0.5,

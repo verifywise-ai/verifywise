@@ -19,12 +19,12 @@ export interface IShareLink {
 export interface IShareLinkCreate {
   resource_type: string;
   resource_id: number;
-  settings?: IShareLink['settings'];
+  settings?: IShareLink["settings"];
   expires_at?: Date;
 }
 
 export interface IShareLinkUpdate {
-  settings?: IShareLink['settings'];
+  settings?: IShareLink["settings"];
   is_enabled?: boolean;
   expires_at?: Date;
 }

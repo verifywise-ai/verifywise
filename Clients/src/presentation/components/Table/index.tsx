@@ -20,7 +20,7 @@ import { getAllVendors } from "../../../application/repository/vendor.repository
 import { background } from "../../themes/palette";
 
 const DEFAULT_ROWS_PER_PAGE = 10;
-const RISKS_ROWS_PER_PAGE_KEY = 'verifywise_risks_rows_per_page';
+const RISKS_ROWS_PER_PAGE_KEY = "verifywise_risks_rows_per_page";
 
 // Define proper interfaces for type safety
 interface TableColumn {
@@ -55,7 +55,6 @@ interface TableProps {
   setAnchorEl?: (element: HTMLElement | null) => void;
 }
 
-
 const CustomizableBasicTable = ({
   data,
   paginated = false,
@@ -72,8 +71,7 @@ const CustomizableBasicTable = ({
     const saved = localStorage.getItem(RISKS_ROWS_PER_PAGE_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_ROWS_PER_PAGE;
   });
-  const { setInputValues, dashboardValues, setDashboardValues } =
-    useContext(VerifyWiseContext);
+  const { setInputValues, dashboardValues, setDashboardValues } = useContext(VerifyWiseContext);
 
   useEffect(() => setPage(0), [data]);
 
@@ -82,17 +80,11 @@ const CustomizableBasicTable = ({
     localStorage.setItem(RISKS_ROWS_PER_PAGE_KEY, rowsPerPage.toString());
   }, [rowsPerPage]);
 
-  const handleChangePage = useCallback(
-    (_: unknown, newPage: number) => setPage(newPage),
-    []
-  );
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangePage = useCallback((_: unknown, newPage: number) => setPage(newPage), []);
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   const fetchVendors = useCallback(async () => {
     try {
@@ -110,10 +102,7 @@ const CustomizableBasicTable = ({
     if (label !== "Project risk") fetchVendors();
   }, [label, fetchVendors]);
 
-  const onRowClickHandler = (
-    event: React.MouseEvent<HTMLTableRowElement>,
-    rowData: TableRow
-  ) => {
+  const onRowClickHandler = (event: React.MouseEvent<HTMLTableRowElement>, rowData: TableRow) => {
     setSelectedRow?.(rowData);
     setInputValues(rowData as InputValues);
     setAnchorEl?.(event.currentTarget);
@@ -121,7 +110,7 @@ const CustomizableBasicTable = ({
   };
 
   const riskLevelChecker = (score: string | undefined) => {
-    if (!score) return '';
+    if (!score) return "";
     const parsedScore = parseInt(score, 10);
     if (!isNaN(parsedScore)) {
       if (parsedScore <= 3) return RISK_LABELS.low.text;
@@ -138,16 +127,12 @@ const CustomizableBasicTable = ({
         <Table sx={singleTheme.tableStyles.primary.frame}>
           <TableHead
             sx={{
-              backgroundColor:
-                singleTheme.tableStyles.primary.header.backgroundColors,
+              backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
             }}
           >
             <TableRow sx={singleTheme.tableStyles.primary.header.row}>
               {data.cols.map((col) => (
-                <TableCell
-                  key={col.id}
-                  style={singleTheme.tableStyles.primary.header.cell}
-                >
+                <TableCell key={col.id} style={singleTheme.tableStyles.primary.header.cell}>
                   {col.name}
                 </TableCell>
               ))}
@@ -167,21 +152,20 @@ const CustomizableBasicTable = ({
                 <TableCell>
                   {row.risk_name && row.risk_name.length > 30
                     ? `${row.risk_name.slice(0, 30)}...`
-                    : row.risk_name || ''}
+                    : row.risk_name || ""}
                 </TableCell>
                 <TableCell>
                   {row.impact && row.impact.length > 30
                     ? `${row.impact.slice(0, 30)}...`
-                    : row.impact || ''}
+                    : row.impact || ""}
                 </TableCell>
                 <TableCell>
                   {(dashboardValues.users as User[])?.find(
-                    (user: User) => user.id === parseInt(String(row.risk_owner))
-                  )?.name || (typeof row.risk_owner === 'string' ? row.risk_owner : String(row.risk_owner))}
+                    (user: User) => user.id === parseInt(String(row.risk_owner)),
+                  )?.name ||
+                    (typeof row.risk_owner === "string" ? row.risk_owner : String(row.risk_owner))}
                 </TableCell>
-                <TableCell>
-                  {riskLevelChecker(row.risk_level_autocalculated)}
-                </TableCell>
+                <TableCell>{riskLevelChecker(row.risk_level_autocalculated)}</TableCell>
                 <TableCell>{row.likelihood}</TableCell>
                 <TableCell>{row.risk_level_autocalculated}</TableCell>
                 <TableCell>{row.mitigation_status}</TableCell>
@@ -204,8 +188,8 @@ const CustomizableBasicTable = ({
         >
           <Typography px={theme.spacing(2)} fontSize={12} sx={{ opacity: 0.7 }}>
             Showing {page * rowsPerPage + 1} -{" "}
-            {Math.min(page * rowsPerPage + rowsPerPage, data.rows.length)} of{" "}
-            {data.rows.length} items
+            {Math.min(page * rowsPerPage + rowsPerPage, data.rows.length)} of {data.rows.length}{" "}
+            items
           </Typography>
           <TablePagination
             count={data.rows.length}

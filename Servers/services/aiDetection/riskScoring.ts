@@ -32,7 +32,10 @@ import {
   FindingForScoring,
 } from "../../utils/aiDetectionRiskScoring.utils";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
-import { IServiceContext, VULNERABILITY_FINDING_TYPES } from "../../domain.layer/interfaces/i.aiDetection";
+import {
+  IServiceContext,
+  VULNERABILITY_FINDING_TYPES,
+} from "../../domain.layer/interfaces/i.aiDetection";
 
 /** Pre-built Set for O(1) lookups in buildLLMPrompt */
 const VULNERABILITY_FINDING_TYPES_SET = new Set<string>(VULNERABILITY_FINDING_TYPES);
@@ -186,7 +189,7 @@ function calculatePenalty(finding: FindingForScoring): number {
  * Calculate dimension scores from findings.
  */
 export function calculateDimensionScores(
-  findings: FindingForScoring[]
+  findings: FindingForScoring[],
 ): Record<DimensionKey, DimensionScore> {
   const scores: Record<DimensionKey, DimensionScore> = {} as Record<DimensionKey, DimensionScore>;
 
@@ -205,10 +208,10 @@ export function calculateDimensionScores(
   }
 
   // Track penalties per dimension for contributor ranking
-  const dimensionPenalties: Record<DimensionKey, { finding: FindingForScoring; penalty: number }[]> = {} as Record<
+  const dimensionPenalties: Record<
     DimensionKey,
     { finding: FindingForScoring; penalty: number }[]
-  >;
+  > = {} as Record<DimensionKey, { finding: FindingForScoring; penalty: number }[]>;
   for (const dim of DIMENSION_DEFINITIONS) {
     dimensionPenalties[dim.key] = [];
   }
@@ -251,15 +254,12 @@ export function calculateDimensionScores(
     scores[dim.key].score = Math.max(0, Math.round((100 - totalPenalty) * 100) / 100);
 
     // Get top 3 contributors (highest penalty findings)
-    const sorted = [...penalties]
-      .sort((a, b) => b.penalty - a.penalty);
-    scores[dim.key].top_contributors = sorted
-      .slice(0, 3)
-      .map((p) => {
-        const conf = p.finding.confidence;
-        const provider = p.finding.provider ? ` (${p.finding.provider})` : "";
-        return `${p.finding.name}${provider} [${conf}]`;
-      });
+    const sorted = [...penalties].sort((a, b) => b.penalty - a.penalty);
+    scores[dim.key].top_contributors = sorted.slice(0, 3).map((p) => {
+      const conf = p.finding.confidence;
+      const provider = p.finding.provider ? ` (${p.finding.provider})` : "";
+      return `${p.finding.name}${provider} [${conf}]`;
+    });
   }
 
   return scores;
@@ -270,7 +270,7 @@ export function calculateDimensionScores(
  */
 function computeOverallScore(
   dimensionScores: Record<DimensionKey, DimensionScore>,
-  weights: Record<DimensionKey, number>
+  weights: Record<DimensionKey, number>,
 ): number {
   let total = 0;
   for (const dim of DIMENSION_DEFINITIONS) {
@@ -285,7 +285,7 @@ function computeOverallScore(
 // ============================================================================
 
 // Module-level cached dynamic imports to avoid re-importing on every call (Fix 8)
-let _generateText: typeof import("ai")["generateText"] | null = null;
+let _generateText: (typeof import("ai"))["generateText"] | null = null;
 async function getGenerateText() {
   if (!_generateText) {
     const mod = await import("ai");
@@ -294,7 +294,7 @@ async function getGenerateText() {
   return _generateText;
 }
 
-let _createOpenAI: typeof import("@ai-sdk/openai")["createOpenAI"] | null = null;
+let _createOpenAI: (typeof import("@ai-sdk/openai"))["createOpenAI"] | null = null;
 async function getCreateOpenAI() {
   if (!_createOpenAI) {
     const mod = await import("@ai-sdk/openai");
@@ -303,7 +303,7 @@ async function getCreateOpenAI() {
   return _createOpenAI;
 }
 
-let _createAnthropic: typeof import("@ai-sdk/anthropic")["createAnthropic"] | null = null;
+let _createAnthropic: (typeof import("@ai-sdk/anthropic"))["createAnthropic"] | null = null;
 async function getCreateAnthropic() {
   if (!_createAnthropic) {
     const mod = await import("@ai-sdk/anthropic");
@@ -314,18 +314,32 @@ async function getCreateAnthropic() {
 
 // Validation sets for LLM suggested risks (Fix 7 -- hoisted to module scope)
 const VALID_CATEGORIES = new Set([
-  "Strategic risk", "Operational risk", "Compliance risk", "Financial risk",
-  "Cybersecurity risk", "Reputational risk", "Legal risk", "Technological risk",
-  "Third-party/vendor risk", "Environmental risk", "Human resources risk",
-  "Geopolitical risk", "Fraud risk", "Data privacy risk", "Health and safety risk",
+  "Strategic risk",
+  "Operational risk",
+  "Compliance risk",
+  "Financial risk",
+  "Cybersecurity risk",
+  "Reputational risk",
+  "Legal risk",
+  "Technological risk",
+  "Third-party/vendor risk",
+  "Environmental risk",
+  "Human resources risk",
+  "Geopolitical risk",
+  "Fraud risk",
+  "Data privacy risk",
+  "Health and safety risk",
 ]);
 const VALID_PHASES = new Set([
-  "Problem definition & planning", "Data collection & processing",
-  "Model development & training", "Model validation & testing",
-  "Deployment & integration", "Monitoring & maintenance",
+  "Problem definition & planning",
+  "Data collection & processing",
+  "Model development & training",
+  "Model validation & testing",
+  "Deployment & integration",
+  "Monitoring & maintenance",
   "Decommissioning & retirement",
 ]);
-const VALID_DIMENSIONS = new Set<string>(DIMENSION_DEFINITIONS.map(d => d.key));
+const VALID_DIMENSIONS = new Set<string>(DIMENSION_DEFINITIONS.map((d) => d.key));
 
 /**
  * Build the LLM prompt from findings and dimension scores.
@@ -333,7 +347,7 @@ const VALID_DIMENSIONS = new Set<string>(DIMENSION_DEFINITIONS.map(d => d.key));
 function buildLLMPrompt(
   repositoryName: string,
   findings: FindingForScoring[],
-  dimensionScores: Record<DimensionKey, DimensionScore>
+  dimensionScores: Record<DimensionKey, DimensionScore>,
 ): string {
   // Summary by type
   const byType: Record<string, number> = {};
@@ -346,9 +360,15 @@ function buildLLMPrompt(
   }
 
   const findingsSummary = [
-    `By type: ${Object.entries(byType).map(([k, v]) => `${k}=${v}`).join(", ")}`,
-    `By confidence: ${Object.entries(byConfidence).map(([k, v]) => `${k}=${v}`).join(", ")}`,
-    `By risk level: ${Object.entries(byRiskLevel).map(([k, v]) => `${k}=${v}`).join(", ")}`,
+    `By type: ${Object.entries(byType)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(", ")}`,
+    `By confidence: ${Object.entries(byConfidence)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(", ")}`,
+    `By risk level: ${Object.entries(byRiskLevel)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(", ")}`,
   ].join("\n");
 
   // Top 10 findings
@@ -362,20 +382,24 @@ function buildLLMPrompt(
     .join("\n");
 
   // Dimension scores
-  const dimScores = DIMENSION_DEFINITIONS
-    .map((d) => `${d.label}: ${dimensionScores[d.key].score}/100 (${dimensionScores[d.key].penalty_count} penalties)`)
-    .join("\n");
+  const dimScores = DIMENSION_DEFINITIONS.map(
+    (d) =>
+      `${d.label}: ${dimensionScores[d.key].score}/100 (${dimensionScores[d.key].penalty_count} penalties)`,
+  ).join("\n");
 
   // Vulnerability findings summary -- use the canonical VULNERABILITY_FINDING_TYPES set
   const vulnFindings = findings.filter((f) => VULNERABILITY_FINDING_TYPES_SET.has(f.finding_type));
-  const vulnerabilityFindings = vulnFindings.length > 0
-    ? vulnFindings
-        .map((f, i) => `${i + 1}. [${f.finding_type}] ${f.name} - confidence: ${f.confidence}, risk: ${f.risk_level}`)
-        .join("\n")
-    : "No LLM vulnerability findings detected.";
+  const vulnerabilityFindings =
+    vulnFindings.length > 0
+      ? vulnFindings
+          .map(
+            (f, i) =>
+              `${i + 1}. [${f.finding_type}] ${f.name} - confidence: ${f.confidence}, risk: ${f.risk_level}`,
+          )
+          .join("\n")
+      : "No LLM vulnerability findings detected.";
 
-  return LLM_RISK_SCORING_PROMPT
-    .replace("{{repository_name}}", repositoryName)
+  return LLM_RISK_SCORING_PROMPT.replace("{{repository_name}}", repositoryName)
     .replace("{{total_findings}}", String(findings.length))
     .replace("{{findings_summary}}", findingsSummary)
     .replace("{{top_findings}}", topFindings)
@@ -389,8 +413,8 @@ function buildLLMPrompt(
  */
 export async function resolveLLMModel(
   llmKeyId: number,
-  organizationId: number
-): Promise<{ model: Parameters<typeof import("ai")["generateText"]>[0]["model"]; } | null> {
+  organizationId: number,
+): Promise<{ model: Parameters<(typeof import("ai"))["generateText"]>[0]["model"] } | null> {
   const keys = await getLLMKeysWithKeyQuery(organizationId);
   const llmKey = keys.find((k: { id: number }) => k.id === llmKeyId);
   if (!llmKey || !llmKey.key) {
@@ -508,9 +532,7 @@ function parseLLMScoringResponse(text: string): {
     recommendations: Array.isArray(rawRecommendations)
       ? rawRecommendations.map(String).slice(0, 5)
       : [],
-    correlations: Array.isArray(rawCorrelations)
-      ? rawCorrelations.map(String).slice(0, 5)
-      : [],
+    correlations: Array.isArray(rawCorrelations) ? rawCorrelations.map(String).slice(0, 5) : [],
     suggested_risks: suggestedRisks,
   };
 }
@@ -524,7 +546,7 @@ async function enhanceWithLLM(
   findings: FindingForScoring[],
   dimensionScores: Record<DimensionKey, DimensionScore>,
   llmKeyId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   adjustments: Record<DimensionKey, number>;
   narrative: string;
@@ -562,7 +584,7 @@ async function enhanceWithLLM(
 export async function calculateAndStoreRiskScore(
   scanId: number,
   repositoryName: string,
-  ctx: IServiceContext
+  ctx: IServiceContext,
 ): Promise<RiskScoreResult | null> {
   try {
     logger.info(`Calculating risk score for scan ${scanId}, tenant ${ctx.organizationId}`);
@@ -583,7 +605,13 @@ export async function calculateAndStoreRiskScore(
         details.dimensions[dim.key] = { score: 100, penalty_count: 0, top_contributors: [] };
       }
       const { grade, label } = getGradeForScore(100);
-      await updateScanRiskScoreQuery(scanId, 100, grade, details as unknown as Record<string, unknown>, ctx.organizationId);
+      await updateScanRiskScoreQuery(
+        scanId,
+        100,
+        grade,
+        details as unknown as Record<string, unknown>,
+        ctx.organizationId,
+      );
       return { score: 100, grade, label, details };
     }
 
@@ -609,7 +637,7 @@ export async function calculateAndStoreRiskScore(
         findings,
         dimensionScores,
         config.llm_key_id,
-        ctx.organizationId
+        ctx.organizationId,
       );
 
       // Apply LLM adjustments (subtract adjustments from scores - positive adjustment = more risk = lower score)
@@ -618,7 +646,7 @@ export async function calculateAndStoreRiskScore(
           const adj = llmResult.adjustments[dim.key] || 0;
           dimensionScores[dim.key].score = Math.max(
             0,
-            Math.min(100, dimensionScores[dim.key].score - adj)
+            Math.min(100, dimensionScores[dim.key].score - adj),
           );
         }
       }
@@ -639,7 +667,13 @@ export async function calculateAndStoreRiskScore(
     };
 
     // 7. Store in database
-    await updateScanRiskScoreQuery(scanId, overallScore, grade, details as unknown as Record<string, unknown>, ctx.organizationId);
+    await updateScanRiskScoreQuery(
+      scanId,
+      overallScore,
+      grade,
+      details as unknown as Record<string, unknown>,
+      ctx.organizationId,
+    );
 
     logger.info(`Risk score calculated for scan ${scanId}: ${overallScore} (${grade})`);
 

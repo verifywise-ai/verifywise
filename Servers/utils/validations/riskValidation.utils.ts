@@ -12,10 +12,7 @@ import {
   ValidationResult,
   ValidationError,
 } from "./validation.utils";
-import {
-  validateRiskFrameworksQuery,
-  validateRiskProjectsQuery,
-} from "../risk.utils";
+import { validateRiskFrameworksQuery, validateRiskProjectsQuery } from "../risk.utils";
 
 /**
  * Validation constants for risks
@@ -62,24 +59,12 @@ export const LIKELIHOOD_ENUM = [
 /**
  * Severity enum values
  */
-export const SEVERITY_ENUM = [
-  "Negligible",
-  "Minor",
-  "Moderate",
-  "Major",
-  "Catastrophic",
-] as const;
+export const SEVERITY_ENUM = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"] as const;
 
 /**
  * Risk severity enum values (different from severity)
  */
-export const RISK_SEVERITY_ENUM = [
-  "Negligible",
-  "Minor",
-  "Moderate",
-  "Major",
-  "Critical",
-] as const;
+export const RISK_SEVERITY_ENUM = ["Negligible", "Minor", "Moderate", "Major", "Critical"] as const;
 
 /**
  * Mitigation status enum values
@@ -117,12 +102,7 @@ export const validateRiskOwner = (value: any): ValidationResult => {
  * Validates AI lifecycle phase field
  */
 export const validateAiLifecyclePhase = (value: any): ValidationResult => {
-  return validateEnum(
-    value,
-    "AI lifecycle phase",
-    AI_LIFECYCLE_PHASE_ENUM,
-    true
-  );
+  return validateEnum(value, "AI lifecycle phase", AI_LIFECYCLE_PHASE_ENUM, true);
 };
 
 /**
@@ -282,11 +262,7 @@ export const validateFrameworksArray = (value: any): ValidationResult => {
   // Validate each framework ID
   for (let i = 0; i < value.length; i++) {
     const frameworkId = value[i];
-    const frameworkValidation = validateForeignKey(
-      frameworkId,
-      `Framework ${i + 1}`,
-      true
-    );
+    const frameworkValidation = validateForeignKey(frameworkId, `Framework ${i + 1}`, true);
     if (!frameworkValidation.isValid) {
       return {
         isValid: false,
@@ -334,11 +310,7 @@ export const validateProjectsArray = (value: any): ValidationResult => {
   // Validate each project ID
   for (let i = 0; i < value.length; i++) {
     const projectId = value[i];
-    const projectValidation = validateForeignKey(
-      projectId,
-      `Project ${i + 1}`,
-      true
-    );
+    const projectValidation = validateForeignKey(projectId, `Project ${i + 1}`, true);
     if (!projectValidation.isValid) {
       return {
         isValid: false,
@@ -387,28 +359,22 @@ export const createRiskSchema = {
  * All fields are optional for updates
  */
 export const updateRiskSchema = {
-  risk_name: (value: any) =>
-    value !== undefined ? validateRiskName(value) : { isValid: true },
-  risk_owner: (value: any) =>
-    value !== undefined ? validateRiskOwner(value) : { isValid: true },
+  risk_name: (value: any) => (value !== undefined ? validateRiskName(value) : { isValid: true }),
+  risk_owner: (value: any) => (value !== undefined ? validateRiskOwner(value) : { isValid: true }),
   ai_lifecycle_phase: (value: any) =>
     value !== undefined ? validateAiLifecyclePhase(value) : { isValid: true },
   risk_description: (value: any) =>
     value !== undefined ? validateRiskDescription(value) : { isValid: true },
   risk_category: (value: any) =>
     value !== undefined ? validateRiskCategory(value) : { isValid: true },
-  impact: (value: any) =>
-    value !== undefined ? validateImpact(value) : { isValid: true },
-  likelihood: (value: any) =>
-    value !== undefined ? validateLikelihood(value) : { isValid: true },
-  severity: (value: any) =>
-    value !== undefined ? validateSeverity(value) : { isValid: true },
+  impact: (value: any) => (value !== undefined ? validateImpact(value) : { isValid: true }),
+  likelihood: (value: any) => (value !== undefined ? validateLikelihood(value) : { isValid: true }),
+  severity: (value: any) => (value !== undefined ? validateSeverity(value) : { isValid: true }),
   risk_severity: (value: any) =>
     value !== undefined ? validateRiskSeverity(value) : { isValid: true },
   mitigation_status: (value: any) =>
     value !== undefined ? validateMitigationStatus(value) : { isValid: true },
-  deadline: (value: any) =>
-    value !== undefined ? validateDeadline(value) : { isValid: true },
+  deadline: (value: any) => (value !== undefined ? validateDeadline(value) : { isValid: true }),
   date_of_assessment: (value: any) =>
     value !== undefined ? validateDateOfAssessment(value) : { isValid: true },
   risk_approval: (value: any) =>
@@ -433,9 +399,7 @@ export const validateUpdateRisk = (data: any): ValidationError[] => {
   // Check if at least one field is provided for update
   // Use blacklist approach - exclude system/readonly fields instead of whitelist
   const readOnlyFields = ["id", "created_at", "updated_at", "tenant_id"];
-  const updateableFields = Object.keys(data).filter(
-    (field) => !readOnlyFields.includes(field)
-  );
+  const updateableFields = Object.keys(data).filter((field) => !readOnlyFields.includes(field));
 
   if (updateableFields.length === 0) {
     return [
@@ -506,14 +470,9 @@ export const RISK_CALCULATION_WEIGHTS = {
  * Formula: (likelihood × 1) + (severity × 3)
  * This matches the frontend RiskCalculator implementation
  */
-export const calculateRiskLevel = (
-  severity: string,
-  likelihood: string
-): string => {
-  const likelihoodValue =
-    LIKELIHOOD_SCALE[likelihood as keyof typeof LIKELIHOOD_SCALE] || 1;
-  const severityValue =
-    SEVERITY_SCALE[severity as keyof typeof SEVERITY_SCALE] || 1;
+export const calculateRiskLevel = (severity: string, likelihood: string): string => {
+  const likelihoodValue = LIKELIHOOD_SCALE[likelihood as keyof typeof LIKELIHOOD_SCALE] || 1;
+  const severityValue = SEVERITY_SCALE[severity as keyof typeof SEVERITY_SCALE] || 1;
 
   const score =
     likelihoodValue * RISK_CALCULATION_WEIGHTS.LIKELIHOOD_WEIGHT +
@@ -539,7 +498,7 @@ export const calculateRiskLevel = (
 export const validateRiskLevelConsistency = (
   severity: string,
   likelihood: string,
-  riskLevel?: string
+  riskLevel?: string,
 ): ValidationResult => {
   const expectedRiskLevel = calculateRiskLevel(severity, likelihood);
 
@@ -560,7 +519,7 @@ export const validateRiskLevelConsistency = (
 export const validateCurrentRiskLevel = (
   originalRiskLevel: string,
   currentRiskLevel: string,
-  mitigationStatus: string
+  mitigationStatus: string,
 ): ValidationResult => {
   // Current risk level should be lower or equal to original after mitigation
   const riskLevels = [
@@ -579,10 +538,7 @@ export const validateCurrentRiskLevel = (
   }
 
   // If mitigation is in progress or completed, current risk should not be higher than original
-  if (
-    ["In Progress", "Completed"].includes(mitigationStatus) &&
-    currentIndex > originalIndex
-  ) {
+  if (["In Progress", "Completed"].includes(mitigationStatus) && currentIndex > originalIndex) {
     return {
       isValid: false,
       message:
@@ -599,16 +555,12 @@ export const validateCurrentRiskLevel = (
  */
 export const validateFrameworksAndProjectsBusinessRules = async (
   data: any,
-  organizationId: number
+  organizationId: number,
 ): Promise<ValidationError[]> => {
   const errors: ValidationError[] = [];
 
   // Validate that frameworks contain only organization framework IDs
-  if (
-    data.frameworks &&
-    Array.isArray(data.frameworks) &&
-    data.frameworks.length > 0
-  ) {
+  if (data.frameworks && Array.isArray(data.frameworks) && data.frameworks.length > 0) {
     // Validate frameworks array structure
     for (let i = 0; i < data.frameworks.length; i++) {
       const frameworkId = data.frameworks[i];
@@ -623,9 +575,7 @@ export const validateFrameworksAndProjectsBusinessRules = async (
       }
     }
 
-    const validatedFrameworks = await validateRiskFrameworksQuery(
-      data.frameworks
-    );
+    const validatedFrameworks = await validateRiskFrameworksQuery(data.frameworks);
     if (!validatedFrameworks) {
       errors.push({
         field: "frameworks",
@@ -636,11 +586,7 @@ export const validateFrameworksAndProjectsBusinessRules = async (
   }
 
   // Validate that projects contain only non-organization project IDs
-  if (
-    data.projects &&
-    Array.isArray(data.projects) &&
-    data.projects.length > 0
-  ) {
+  if (data.projects && Array.isArray(data.projects) && data.projects.length > 0) {
     // Validate projects array structure
     for (let i = 0; i < data.projects.length; i++) {
       const projectId = data.projects[i];
@@ -654,10 +600,7 @@ export const validateFrameworksAndProjectsBusinessRules = async (
         });
       }
 
-      const isValidProject = await validateRiskProjectsQuery(
-        data.projects,
-        organizationId
-      );
+      const isValidProject = await validateRiskProjectsQuery(data.projects, organizationId);
       if (!isValidProject) {
         errors.push({
           field: "projects",
@@ -676,13 +619,15 @@ export const validateFrameworksAndProjectsBusinessRules = async (
  */
 export const validateCompleteRiskWithBusinessRules = async (
   data: any,
-  organizationId: number
+  organizationId: number,
 ): Promise<ValidationError[]> => {
   const errors = validateCompleteRisk(data);
 
   // Add frameworks and projects business rule validation
-  const frameworksProjectsErrors =
-    await validateFrameworksAndProjectsBusinessRules(data, organizationId);
+  const frameworksProjectsErrors = await validateFrameworksAndProjectsBusinessRules(
+    data,
+    organizationId,
+  );
   errors.push(...frameworksProjectsErrors);
 
   // Add business rule validations if basic validation passes
@@ -718,35 +663,29 @@ export const validateCompleteRiskWithBusinessRules = async (
       const riskLevelCheck = validateRiskLevelConsistency(
         data.severity,
         data.likelihood,
-        data.risk_level_autocalculated
+        data.risk_level_autocalculated,
       );
       if (!riskLevelCheck.isValid) {
         errors.push({
           field: "risk_level_autocalculated",
           message:
-            riskLevelCheck.message ||
-            "Risk level is inconsistent with severity and likelihood",
+            riskLevelCheck.message || "Risk level is inconsistent with severity and likelihood",
           code: riskLevelCheck.code || "BUSINESS_RULE_VIOLATION",
         });
       }
     }
 
     // Check current risk level consistency
-    if (
-      data.risk_level_autocalculated &&
-      data.current_risk_level &&
-      data.mitigation_status
-    ) {
+    if (data.risk_level_autocalculated && data.current_risk_level && data.mitigation_status) {
       const currentRiskCheck = validateCurrentRiskLevel(
         data.risk_level_autocalculated,
         data.current_risk_level,
-        data.mitigation_status
+        data.mitigation_status,
       );
       if (!currentRiskCheck.isValid) {
         errors.push({
           field: "current_risk_level",
-          message:
-            currentRiskCheck.message || "Current risk level is inconsistent",
+          message: currentRiskCheck.message || "Current risk level is inconsistent",
           code: currentRiskCheck.code || "BUSINESS_RULE_VIOLATION",
         });
       }
@@ -762,24 +701,20 @@ export const validateCompleteRiskWithBusinessRules = async (
 export const validateUpdateRiskWithBusinessRules = async (
   data: any,
   organizationId: number,
-  currentRisk?: any
+  currentRisk?: any,
 ): Promise<ValidationError[]> => {
   const errors = validateUpdateRisk(data);
 
   // Add frameworks and projects business rule validation for updates
   if (data.frameworks !== undefined || data.projects !== undefined) {
     const updateData = {
-      frameworks:
-        data.frameworks !== undefined
-          ? data.frameworks
-          : currentRisk?.frameworks || [],
-      projects:
-        data.projects !== undefined
-          ? data.projects
-          : currentRisk?.projects || [],
+      frameworks: data.frameworks !== undefined ? data.frameworks : currentRisk?.frameworks || [],
+      projects: data.projects !== undefined ? data.projects : currentRisk?.projects || [],
     };
-    const frameworksProjectsErrors =
-      await validateFrameworksAndProjectsBusinessRules(updateData, organizationId);
+    const frameworksProjectsErrors = await validateFrameworksAndProjectsBusinessRules(
+      updateData,
+      organizationId,
+    );
     errors.push(...frameworksProjectsErrors);
   }
 
@@ -813,12 +748,9 @@ export const validateUpdateRiskWithBusinessRules = async (
 
     // Check risk level consistency if severity or likelihood is being updated
     if (currentRisk) {
-      const newSeverity =
-        data.severity !== undefined ? data.severity : currentRisk.severity;
+      const newSeverity = data.severity !== undefined ? data.severity : currentRisk.severity;
       const newLikelihood =
-        data.likelihood !== undefined
-          ? data.likelihood
-          : currentRisk.likelihood;
+        data.likelihood !== undefined ? data.likelihood : currentRisk.likelihood;
       const newRiskLevel =
         data.risk_level_autocalculated !== undefined
           ? data.risk_level_autocalculated
@@ -828,14 +760,13 @@ export const validateUpdateRiskWithBusinessRules = async (
         const riskLevelCheck = validateRiskLevelConsistency(
           newSeverity,
           newLikelihood,
-          newRiskLevel
+          newRiskLevel,
         );
         if (!riskLevelCheck.isValid) {
           errors.push({
             field: "risk_level_autocalculated",
             message:
-              riskLevelCheck.message ||
-              "Risk level is inconsistent with severity and likelihood",
+              riskLevelCheck.message || "Risk level is inconsistent with severity and likelihood",
             code: riskLevelCheck.code || "BUSINESS_RULE_VIOLATION",
           });
         }
@@ -859,13 +790,12 @@ export const validateUpdateRiskWithBusinessRules = async (
         const currentRiskCheck = validateCurrentRiskLevel(
           newOriginalRiskLevel,
           newCurrentRiskLevel,
-          newMitigationStatus
+          newMitigationStatus,
         );
         if (!currentRiskCheck.isValid) {
           errors.push({
             field: "current_risk_level",
-            message:
-              currentRiskCheck.message || "Current risk level is inconsistent",
+            message: currentRiskCheck.message || "Current risk level is inconsistent",
             code: currentRiskCheck.code || "BUSINESS_RULE_VIOLATION",
           });
         }

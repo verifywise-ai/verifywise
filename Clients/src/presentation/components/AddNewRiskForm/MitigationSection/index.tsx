@@ -9,13 +9,7 @@ import React, {
   Dispatch,
   SetStateAction,
 } from "react";
-import {
-  Divider,
-  SelectChangeEvent,
-  Stack,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Divider, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import { MitigationFormValues } from "../interface";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
@@ -23,11 +17,7 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import selectValidation from "../../../../application/validations/selectValidation";
 import styles from "../styles.module.css";
 import useUsers from "../../../../application/hooks/useUsers";
-import {
-  mitigationStatusItems,
-  riskLevelItems,
-  approvalStatusItems,
-} from "../projectRiskValue";
+import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
 import allowedRoles from "../../../../application/constants/permissions";
 
@@ -39,13 +29,13 @@ const LAYOUT = {
   VERTICAL_GAP: 16,
   COMPACT_CONTENT_WIDTH: 970, // Account for scrollbar (~17px)
   get TOTAL_CONTENT_WIDTH() {
-    return (this.FIELD_WIDTH * 3) + (this.HORIZONTAL_GAP * 2); // 985px
+    return this.FIELD_WIDTH * 3 + this.HORIZONTAL_GAP * 2; // 985px
   },
   get TWO_COLUMN_WIDTH() {
-    return (this.FIELD_WIDTH * 2) + this.HORIZONTAL_GAP; // 654px
+    return this.FIELD_WIDTH * 2 + this.HORIZONTAL_GAP; // 654px
   },
   get COMPACT_TWO_COLUMN_WIDTH() {
-    return (this.COMPACT_FIELD_WIDTH * 2) + this.HORIZONTAL_GAP; // 644px
+    return this.COMPACT_FIELD_WIDTH * 2 + this.HORIZONTAL_GAP; // 644px
   },
 } as const;
 
@@ -92,8 +82,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   compactMode = false,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled =
-    !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
 
   const [alert, setAlert] = useState<alertState | null>(null);
 
@@ -101,8 +90,12 @@ const MitigationSection: FC<MitigationSectionProps> = ({
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
   const fieldWidth = compactMode ? `${LAYOUT.COMPACT_FIELD_WIDTH}px` : `${FORM_FIELD_WIDTH}px`;
-  const contentWidth = compactMode ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px` : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
-  const twoColumnWidth = compactMode ? `${LAYOUT.COMPACT_TWO_COLUMN_WIDTH}px` : `${LAYOUT.TWO_COLUMN_WIDTH}px`;
+  const contentWidth = compactMode
+    ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px`
+    : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
+  const twoColumnWidth = compactMode
+    ? `${LAYOUT.COMPACT_TWO_COLUMN_WIDTH}px`
+    : `${LAYOUT.TWO_COLUMN_WIDTH}px`;
 
   const formRowStyles = {
     display: "flex",
@@ -154,7 +147,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         return r.accepted ? "" : r.message;
       },
     }),
-    []
+    [],
   );
 
   const { errors, validateAll, clearFieldError } =
@@ -175,7 +168,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         _id: user.id,
         name: `${user.name} ${user.surname}`,
       })) || [],
-    [users]
+    [users],
   );
 
   const formFieldStyles = useMemo(
@@ -183,25 +176,24 @@ const MitigationSection: FC<MitigationSectionProps> = ({
       width: fieldWidth,
       backgroundColor: theme.palette.background.main,
     }),
-    [theme.palette.background.main, fieldWidth]
+    [theme.palette.background.main, fieldWidth],
   );
 
   const handleOnSelectChange = useCallback(
-    (prop: keyof MitigationFormValues) =>
-      (event: SelectChangeEvent<string | number>) => {
-        setMitigationValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        clearFieldError(prop);
-      },
-    [setMitigationValues, clearFieldError]
+    (prop: keyof MitigationFormValues) => (event: SelectChangeEvent<string | number>) => {
+      setMitigationValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      clearFieldError(prop);
+    },
+    [setMitigationValues, clearFieldError],
   );
 
   const handleDateChange = useCallback(
     (
       field: keyof Pick<MitigationFormValues, "deadline" | "dateOfAssessment">,
-      newDate: Dayjs | null
+      newDate: Dayjs | null,
     ) => {
       if (newDate?.isValid()) {
         setMitigationValues((prevValues) => ({
@@ -213,25 +205,26 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         console.warn(`Invalid date provided for field: ${field}`);
       }
     },
-    [setMitigationValues, clearFieldError]
+    [setMitigationValues, clearFieldError],
   );
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof MitigationFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setMitigationValues((prevValues) => ({
-          ...prevValues,
-          [prop]: event.target.value,
-        }));
-        clearFieldError(prop);
-      },
-    [setMitigationValues, clearFieldError]
+    (prop: keyof MitigationFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setMitigationValues((prevValues) => ({
+        ...prevValues,
+        [prop]: event.target.value,
+      }));
+      clearFieldError(prop);
+    },
+    [setMitigationValues, clearFieldError],
   );
 
   return (
-    <Stack sx={{
-      ...(disableInternalScroll ? {} : { minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT })
-    }}>
+    <Stack
+      sx={{
+        ...(disableInternalScroll ? {} : { minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }),
+      }}
+    >
       {alert && (
         <Suspense fallback={<div>Loading...</div>}>
           <Alert
@@ -248,11 +241,13 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           className={disableInternalScroll ? undefined : styles.popupBody}
           sx={{
             width: "100%",
-            ...(disableInternalScroll ? {} : {
-              maxHeight: "fit-content",
-              overflowY: "auto",
-              overflowX: "hidden",
-            }),
+            ...(disableInternalScroll
+              ? {}
+              : {
+                  maxHeight: "fit-content",
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                }),
           }}
         >
           <Stack sx={{ width: contentWidth }}>
@@ -265,9 +260,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   label="Mitigation status"
                   placeholder="Select status"
                   value={
-                    mitigationValues.mitigationStatus === 0
-                      ? ""
-                      : mitigationValues.mitigationStatus
+                    mitigationValues.mitigationStatus === 0 ? "" : mitigationValues.mitigationStatus
                   }
                   onChange={handleOnSelectChange("mitigationStatus")}
                   items={mitigationStatusItems}
@@ -282,9 +275,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   label="Current risk level"
                   placeholder="Select risk level"
                   value={
-                    mitigationValues.currentRiskLevel === 0
-                      ? ""
-                      : mitigationValues.currentRiskLevel
+                    mitigationValues.currentRiskLevel === 0 ? "" : mitigationValues.currentRiskLevel
                   }
                   onChange={handleOnSelectChange("currentRiskLevel")}
                   items={riskLevelItems}
@@ -297,9 +288,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 <DatePicker
                   label="Deadline"
                   date={
-                    mitigationValues.deadline
-                      ? dayjs(mitigationValues.deadline)
-                      : dayjs(new Date())
+                    mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
                   }
                   handleDateChange={(e) => handleDateChange("deadline", e)}
                   sx={{ width: fieldWidth }}
@@ -342,14 +331,19 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             </Stack>
           </Stack>
           <Divider sx={{ mt: `${LAYOUT.VERTICAL_GAP}px` }} />
-          <Stack sx={{ gap: `${LAYOUT.HORIZONTAL_GAP}px`, mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+          <Stack
+            sx={{
+              gap: `${LAYOUT.HORIZONTAL_GAP}px`,
+              mt: `${LAYOUT.VERTICAL_GAP}px`,
+              width: contentWidth,
+            }}
+          >
             <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
               Calculate residual risk level
             </Typography>
             <Typography sx={{ fontSize: theme.typography.fontSize }}>
-              The Risk Level is calculated by multiplying the Likelihood and
-              Severity scores. By assigning these scores, the risk level will be
-              determined based on your inputs.
+              The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
+              assigning these scores, the risk level will be determined based on your inputs.
             </Typography>
           </Stack>
           <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
@@ -373,8 +367,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 usersLoading || !users?.length
                   ? ""
                   : mitigationValues.approver === 0
-                  ? ""
-                  : mitigationValues.approver
+                    ? ""
+                    : mitigationValues.approver
               }
               onChange={handleOnSelectChange("approver")}
               items={userOptions}
@@ -387,11 +381,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               id="approval-status-input"
               label="Approval status"
               placeholder="Select status"
-              value={
-                mitigationValues.approvalStatus === 0
-                  ? ""
-                  : mitigationValues.approvalStatus
-              }
+              value={mitigationValues.approvalStatus === 0 ? "" : mitigationValues.approvalStatus}
               onChange={handleOnSelectChange("approvalStatus")}
               items={approvalStatusItems}
               sx={formFieldStyles}

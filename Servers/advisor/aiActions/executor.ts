@@ -81,9 +81,7 @@ async function loadEntityData(
   }
 
   const raw = rows[0].entity_data;
-  return typeof raw === "string"
-    ? (JSON.parse(raw) as AiActionEntityData)
-    : raw;
+  return typeof raw === "string" ? (JSON.parse(raw) as AiActionEntityData) : raw;
 }
 
 /**
@@ -160,18 +158,14 @@ export async function executeAiAction(
     );
   }
 
-  logger.debug(
-    `[aiActionExecutor] executing ${data.tool_name} for request ${requestId}`,
-  );
+  logger.debug(`[aiActionExecutor] executing ${data.tool_name} for request ${requestId}`);
 
   // 1. Dispatch on tool_name via the registry. An unknown tool means
   //    either (a) the handler was removed without a migration path, or
   //    (b) the stored payload was tampered with. Either way, fail loud.
   const handler = getAiActionHandler(data.tool_name);
   if (!handler) {
-    throw new Error(
-      `[aiActionExecutor] unknown AI action tool: ${data.tool_name}`,
-    );
+    throw new Error(`[aiActionExecutor] unknown AI action tool: ${data.tool_name}`);
   }
 
   // 2. Re-validate the stored input at execute time. The LLM's input was
@@ -192,24 +186,12 @@ export async function executeAiAction(
         executed_at: new Date().toISOString(),
       },
     };
-    await writeExecutionResult(
-      requestId,
-      organizationId,
-      null,
-      merged,
-      transaction,
-    );
-    throw new Error(
-      `[aiActionExecutor] ${data.tool_name} input validation failed: ${errorText}`,
-    );
+    await writeExecutionResult(requestId, organizationId, null, merged, transaction);
+    throw new Error(`[aiActionExecutor] ${data.tool_name} input validation failed: ${errorText}`);
   }
 
   // 3. Look up the requester. Every action needs this; hoist it once.
-  const requesterId = await getRequesterId(
-    requestId,
-    organizationId,
-    transaction,
-  );
+  const requesterId = await getRequesterId(requestId, organizationId, transaction);
   if (requesterId == null) {
     throw new Error(
       `[aiActionExecutor] approval request ${requestId} not found while looking up requester`,

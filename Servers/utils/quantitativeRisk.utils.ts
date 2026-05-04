@@ -16,11 +16,7 @@ import {
  *
  * Formula: (min + 4 * likely + max) / 6
  */
-export function pertEstimate(
-  min: number,
-  likely: number,
-  max: number
-): number {
+export function pertEstimate(min: number, likely: number, max: number): number {
   return (min + 4 * likely + max) / 6;
 }
 
@@ -71,7 +67,7 @@ export function computeALE(fields: IQuantitativeRiskFields): number | null {
   const freqEstimate = pertEstimate(
     Number(fields.event_frequency_min),
     Number(fields.event_frequency_likely),
-    Number(fields.event_frequency_max)
+    Number(fields.event_frequency_max),
   );
 
   const totalLoss = computeTotalLoss(fields);
@@ -87,7 +83,7 @@ export function computeALE(fields: IQuantitativeRiskFields): number | null {
  */
 export function computeResidualALE(
   ale: number,
-  controlEffectiveness: number | null | undefined
+  controlEffectiveness: number | null | undefined,
 ): number {
   const effectiveness = Number(controlEffectiveness) || 0;
   const clamped = Math.max(0, Math.min(100, effectiveness));
@@ -104,7 +100,7 @@ export function computeResidualALE(
 export function computeROI(
   ale: number,
   residualAle: number,
-  mitigationCost: number | null | undefined
+  mitigationCost: number | null | undefined,
 ): number | null {
   const cost = Number(mitigationCost) || 0;
   if (cost <= 0) return null;
@@ -119,7 +115,7 @@ export function computeROI(
  * stored computed columns.
  */
 export function computeDerivedFields(
-  fields: IQuantitativeRiskFields
+  fields: IQuantitativeRiskFields,
 ): Partial<IQuantitativeRiskFields> {
   const totalLoss = computeTotalLoss(fields);
   const ale = computeALE(fields);
@@ -151,9 +147,7 @@ export function computeDerivedFields(
 /**
  * Get portfolio summary for an organization (all risks with ALE).
  */
-export async function getPortfolioByOrg(
-  organizationId: number
-): Promise<IPortfolioSummary> {
+export async function getPortfolioByOrg(organizationId: number): Promise<IPortfolioSummary> {
   const [result] = await sequelize.query<{
     total_ale: string;
     total_residual_ale: string;
@@ -180,7 +174,7 @@ export async function getPortfolioByOrg(
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const totalAle = Number(result?.total_ale) || 0;
@@ -196,10 +190,7 @@ export async function getPortfolioByOrg(
     risk_reduction: riskReduction,
     overall_roi:
       totalMitigationCost > 0
-        ? Math.round(
-            ((riskReduction - totalMitigationCost) / totalMitigationCost) *
-              10000
-          ) / 100
+        ? Math.round(((riskReduction - totalMitigationCost) / totalMitigationCost) * 10000) / 100
         : null,
     loss_regulatory: Number(result?.loss_regulatory) || 0,
     loss_operational: Number(result?.loss_operational) || 0,
@@ -213,7 +204,7 @@ export async function getPortfolioByOrg(
  */
 export async function getPortfolioByProject(
   organizationId: number,
-  projectId: number
+  projectId: number,
 ): Promise<IPortfolioSummary> {
   const [result] = await sequelize.query<{
     total_ale: string;
@@ -243,7 +234,7 @@ export async function getPortfolioByProject(
     {
       replacements: { organizationId, projectId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const totalAle = Number(result?.total_ale) || 0;
@@ -259,10 +250,7 @@ export async function getPortfolioByProject(
     risk_reduction: riskReduction,
     overall_roi:
       totalMitigationCost > 0
-        ? Math.round(
-            ((riskReduction - totalMitigationCost) / totalMitigationCost) *
-              10000
-          ) / 100
+        ? Math.round(((riskReduction - totalMitigationCost) / totalMitigationCost) * 10000) / 100
         : null,
     loss_regulatory: Number(result?.loss_regulatory) || 0,
     loss_operational: Number(result?.loss_operational) || 0,
@@ -277,7 +265,7 @@ export async function getPortfolioByProject(
  */
 export async function recordPortfolioSnapshot(
   organizationId: number,
-  projectId?: number | null
+  projectId?: number | null,
 ): Promise<void> {
   const summary = projectId
     ? await getPortfolioByProject(organizationId, projectId)
@@ -315,7 +303,7 @@ export async function recordPortfolioSnapshot(
         snapshotDate: today,
       },
       type: QueryTypes.INSERT,
-    }
+    },
   );
 }
 
@@ -325,11 +313,9 @@ export async function recordPortfolioSnapshot(
 export async function getPortfolioTrend(
   organizationId: number,
   days: number = 30,
-  projectId?: number | null
+  projectId?: number | null,
 ): Promise<IPortfolioSnapshot[]> {
-  const projectFilter = projectId
-    ? "AND project_id = :projectId"
-    : "AND project_id IS NULL";
+  const projectFilter = projectId ? "AND project_id = :projectId" : "AND project_id IS NULL";
 
   const snapshots = await sequelize.query<IPortfolioSnapshot>(
     `SELECT
@@ -344,7 +330,7 @@ export async function getPortfolioTrend(
     {
       replacements: { organizationId, projectId: projectId ?? null, days },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return snapshots;

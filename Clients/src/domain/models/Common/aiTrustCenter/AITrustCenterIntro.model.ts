@@ -17,9 +17,7 @@ export class AITrustCenterIntroModel {
     this.our_mission_text = data.our_mission_text;
   }
 
-  static createNewAITrustCenterIntro(
-    data: AITrustCenterIntroModel
-  ): AITrustCenterIntroModel {
+  static createNewAITrustCenterIntro(data: AITrustCenterIntroModel): AITrustCenterIntroModel {
     return new AITrustCenterIntroModel(data);
   }
 }

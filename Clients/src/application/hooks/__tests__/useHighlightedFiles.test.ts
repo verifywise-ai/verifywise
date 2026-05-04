@@ -22,9 +22,7 @@ describe("useHighlightedFiles", () => {
       recentlyModified: [4, 5],
     });
 
-    const { result } = renderHook(() =>
-      useHighlightedFiles({ refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useHighlightedFiles({ refreshInterval: 0 }));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -42,9 +40,7 @@ describe("useHighlightedFiles", () => {
       recentlyModified: [3],
     });
 
-    const { result } = renderHook(() =>
-      useHighlightedFiles({ refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useHighlightedFiles({ refreshInterval: 0 }));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -64,9 +60,7 @@ describe("useHighlightedFiles", () => {
       recentlyModified: [],
     });
 
-    const { result } = renderHook(() =>
-      useHighlightedFiles({ refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useHighlightedFiles({ refreshInterval: 0 }));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -79,9 +73,7 @@ describe("useHighlightedFiles", () => {
   it("handles error gracefully", async () => {
     mockGetHighlighted.mockRejectedValue(new Error("fail"));
 
-    const { result } = renderHook(() =>
-      useHighlightedFiles({ refreshInterval: 0 })
-    );
+    const { result } = renderHook(() => useHighlightedFiles({ refreshInterval: 0 }));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

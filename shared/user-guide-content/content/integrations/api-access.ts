@@ -246,7 +246,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'There\'s a limit on the number of API keys per organization. If you hit the maximum, delete unused keys before creating new ones.',
+      text: 'Each organization can have up to 10 API keys at a time. If you hit the maximum, delete unused keys before creating new ones.',
     },
     {
       type: 'heading',

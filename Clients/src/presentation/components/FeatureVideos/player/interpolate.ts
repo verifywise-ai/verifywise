@@ -5,7 +5,7 @@
 export function interpolate(
   value: number,
   inputRange: [number, number],
-  outputRange: [number, number]
+  outputRange: [number, number],
 ): number {
   const [inMin, inMax] = inputRange;
   const [outMin, outMax] = outputRange;
@@ -21,11 +21,7 @@ export function interpolate(
  * Simple spring-like easing.
  * Returns 0→1 with overshoot and settle, starting at `delay` frames.
  */
-export function spring(
-  frame: number,
-  fps: number,
-  delay: number = 0
-): number {
+export function spring(frame: number, fps: number, delay: number = 0): number {
   const f = frame - delay;
   if (f <= 0) return 0;
 
@@ -35,10 +31,11 @@ export function spring(
 
   // Spring approximation: overshoot then settle
   const damping = 0.7;
-  const omega = 2 * Math.PI / durationSec;
+  const omega = (2 * Math.PI) / durationSec;
   const progress =
-    1 - Math.exp(-damping * omega * (t * durationSec)) *
-    Math.cos(omega * Math.sqrt(1 - damping * damping) * (t * durationSec));
+    1 -
+    Math.exp(-damping * omega * (t * durationSec)) *
+      Math.cos(omega * Math.sqrt(1 - damping * damping) * (t * durationSec));
 
   return Math.min(Math.max(progress, 0), 1);
 }

@@ -122,8 +122,8 @@ const ButtonsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Action buttons and toggles used throughout VerifyWise.
-          CustomizableButton is the primary button component with support for variants, colors, icons, and loading states.
+          Action buttons and toggles used throughout VerifyWise. CustomizableButton is the primary
+          button component with support for variants, colors, icons, and loading states.
         </Typography>
       </Box>
 
@@ -132,15 +132,50 @@ const ButtonsSection: React.FC = () => {
         <SpecGrid>
           <SpecCard title="Height" value="34px" note="Standard button height" onCopy={handleCopy} />
           <SpecCard title="Border radius" value="4px" note="All buttons" onCopy={handleCopy} />
-          <SpecCard title="Font size" value="13px" note="Medium size (default)" onCopy={handleCopy} />
+          <SpecCard
+            title="Font size"
+            value="13px"
+            note="Medium size (default)"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Font weight" value="500" note="Medium weight" onCopy={handleCopy} />
-          <SpecCard title="Primary color" value={brand.primary} note="Main action buttons" onCopy={handleCopy} />
+          <SpecCard
+            title="Primary color"
+            value={brand.primary}
+            note="Main action buttons"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Primary hover" value="#0f604d" note="Hover state" onCopy={handleCopy} />
-          <SpecCard title="Secondary color" value="#F4F4F4" note="Utility buttons (light bg)" onCopy={handleCopy} />
-          <SpecCard title="Error color" value={status.error.text} note="Destructive actions" onCopy={handleCopy} />
-          <SpecCard title="Disabled bg" value={status.default.border} note="Disabled state" onCopy={handleCopy} />
-          <SpecCard title="Disabled text" value={text.disabled} note="Disabled text" onCopy={handleCopy} />
-          <SpecCard title="Transition" value="0.2s ease" note="All interactions" onCopy={handleCopy} />
+          <SpecCard
+            title="Secondary color"
+            value="#F4F4F4"
+            note="Utility buttons (light bg)"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Error color"
+            value={status.error.text}
+            note="Destructive actions"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Disabled bg"
+            value={status.default.border}
+            note="Disabled state"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Disabled text"
+            value={text.disabled}
+            note="Disabled text"
+            onCopy={handleCopy}
+          />
+          <SpecCard
+            title="Transition"
+            value="0.2s ease"
+            note="All interactions"
+            onCopy={handleCopy}
+          />
           <SpecCard title="Text transform" value="none" note="No uppercase" onCopy={handleCopy} />
         </SpecGrid>
       </SpecSection>
@@ -150,13 +185,23 @@ const ButtonsSection: React.FC = () => {
       {/* CustomizableButton */}
       <SpecSection title="CustomizableButton">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Primary button component with variants (contained, outlined, text), color themes, icons, and loading states.
+          Primary button component with variants (contained, outlined, text), color themes, icons,
+          and loading states.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Variants
             </Typography>
             <Stack spacing="24px">
@@ -165,11 +210,7 @@ const ButtonsSection: React.FC = () => {
                 code={customizableButtonSnippets.primaryContained}
                 onCopy={handleCopy}
               >
-                <CustomizableButton
-                  variant="contained"
-                  color="primary"
-                  text="Primary button"
-                />
+                <CustomizableButton variant="contained" color="primary" text="Primary button" />
               </ExampleWithCode>
 
               <ExampleWithCode
@@ -177,11 +218,7 @@ const ButtonsSection: React.FC = () => {
                 code={customizableButtonSnippets.primaryOutlined}
                 onCopy={handleCopy}
               >
-                <CustomizableButton
-                  variant="outlined"
-                  color="primary"
-                  text="Outlined button"
-                />
+                <CustomizableButton variant="outlined" color="primary" text="Outlined button" />
               </ExampleWithCode>
 
               <ExampleWithCode
@@ -189,15 +226,21 @@ const ButtonsSection: React.FC = () => {
                 code={customizableButtonSnippets.primaryText}
                 onCopy={handleCopy}
               >
-                <CustomizableButton
-                  variant="text"
-                  color="primary"
-                  text="Text button"
-                />
+                <CustomizableButton variant="text" color="primary" text="Text button" />
               </ExampleWithCode>
             </Stack>
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "32px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "32px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               With icons & states
             </Typography>
             <Stack spacing="24px">
@@ -241,7 +284,17 @@ const ButtonsSection: React.FC = () => {
               </ExampleWithCode>
             </Stack>
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "32px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "32px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Color variants
             </Typography>
             <Stack spacing="24px">
@@ -263,18 +316,23 @@ const ButtonsSection: React.FC = () => {
                 code={customizableButtonSnippets.secondary}
                 onCopy={handleCopy}
               >
-                <CustomizableButton
-                  variant="contained"
-                  color="secondary"
-                  text="Cancel"
-                />
+                <CustomizableButton variant="contained" color="secondary" text="Cancel" />
               </ExampleWithCode>
             </Stack>
           </Box>
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -294,7 +352,17 @@ const ButtonsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Button sizes
             </Typography>
             <SpecTable
@@ -320,15 +388,31 @@ const ButtonsSection: React.FC = () => {
       {/* Color Palette for Buttons */}
       <SpecSection title="Button color palette">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Available color options for CustomizableButton. Each color has contained, outlined, and text variants.
+          Available color options for CustomizableButton. Each color has contained, outlined, and
+          text variants.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", mb: "24px" }}>
-          <ColorSwatch label="Primary" color={brand.primary} hoverColor="#0f604d" onCopy={handleCopy} />
+          <ColorSwatch
+            label="Primary"
+            color={brand.primary}
+            hoverColor="#0f604d"
+            onCopy={handleCopy}
+          />
           <ColorSwatch label="Secondary" color="#F4F4F4" hoverColor="#e3e3e3" onCopy={handleCopy} />
-          <ColorSwatch label="Success" color={status.success.text} hoverColor={brand.primaryHover} onCopy={handleCopy} />
+          <ColorSwatch
+            label="Success"
+            color={status.success.text}
+            hoverColor={brand.primaryHover}
+            onCopy={handleCopy}
+          />
           <ColorSwatch label="Warning" color="#795548" hoverColor="#5D4037" onCopy={handleCopy} />
-          <ColorSwatch label="Error" color={status.error.text} hoverColor="#B71C1C" onCopy={handleCopy} />
+          <ColorSwatch
+            label="Error"
+            color={status.error.text}
+            hoverColor="#B71C1C"
+            onCopy={handleCopy}
+          />
           <ColorSwatch label="Info" color="#1565C0" hoverColor="#0D47A1" onCopy={handleCopy} />
         </Box>
 
@@ -353,7 +437,16 @@ const ButtonsSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Live examples
             </Typography>
             <Stack spacing="24px">
@@ -393,7 +486,16 @@ const ButtonsSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -626,9 +728,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -655,9 +755,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -757,9 +855,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {/* Code Panel with Syntax Highlighting */}
       {showCode && (

@@ -19,22 +19,13 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
   {
     name: "pytorch",
     provider: "PyTorch",
-    description:
-      "Open source deep learning framework developed by Meta AI",
+    description: "Open source deep learning framework developed by Meta AI",
     documentationUrl: "https://pytorch.org/docs/",
     confidence: "high",
     keywords: ["torch", "pytorch"],
     patterns: {
-      imports: [
-        /import\s+torch\b/,
-        /from\s+torch\b/,
-        /from\s+torch\./,
-      ],
-      dependencies: [
-        /torch[>=<~^]/,
-        /"torch":\s*"/,
-        /pytorch[>=<~^]/,
-      ],
+      imports: [/import\s+torch\b/, /from\s+torch\b/, /from\s+torch\./],
+      dependencies: [/torch[>=<~^]/, /"torch":\s*"/, /pytorch[>=<~^]/],
     },
   },
 
@@ -49,11 +40,7 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["tensorflow", "tf."],
     patterns: {
-      imports: [
-        /import\s+tensorflow/,
-        /from\s+tensorflow/,
-        /import\s+tf\b/,
-      ],
+      imports: [/import\s+tensorflow/, /from\s+tensorflow/, /import\s+tf\b/],
       dependencies: [
         /tensorflow[>=<~^]/,
         /tensorflow-gpu[>=<~^]/,
@@ -74,15 +61,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["keras"],
     patterns: {
-      imports: [
-        /import\s+keras/,
-        /from\s+keras/,
-        /from\s+tensorflow\.keras/,
-      ],
-      dependencies: [
-        /keras[>=<~^]/,
-        /"keras":\s*"/,
-      ],
+      imports: [/import\s+keras/, /from\s+keras/, /from\s+tensorflow\.keras/],
+      dependencies: [/keras[>=<~^]/, /"keras":\s*"/],
     },
   },
 
@@ -97,15 +77,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["sklearn", "scikit-learn", "scikit_learn"],
     patterns: {
-      imports: [
-        /import\s+sklearn/,
-        /from\s+sklearn/,
-        /import\s+scikit-learn/,
-      ],
-      dependencies: [
-        /scikit-learn[>=<~^]/,
-        /"scikit-learn":\s*"/,
-      ],
+      imports: [/import\s+sklearn/, /from\s+sklearn/, /import\s+scikit-learn/],
+      dependencies: [/scikit-learn[>=<~^]/, /"scikit-learn":\s*"/],
     },
   },
 
@@ -115,16 +88,12 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
   {
     name: "transformers",
     provider: "Transformers",
-    description:
-      "State-of-the-art ML library for transformers models",
+    description: "State-of-the-art ML library for transformers models",
     documentationUrl: "https://huggingface.co/docs/transformers/",
     confidence: "high",
     keywords: ["transformers", "autotokenizer", "automodel"],
     patterns: {
-      imports: [
-        /from\s+transformers\s+import/,
-        /import\s+transformers/,
-      ],
+      imports: [/from\s+transformers\s+import/, /import\s+transformers/],
       dependencies: [
         /transformers[>=<~^]/,
         /"transformers":\s*"/,
@@ -150,15 +119,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["ollama", "localhost:11434"],
     patterns: {
-      imports: [
-        /import\s+ollama/,
-        /from\s+ollama/,
-        /require\s*\(\s*["']ollama["']\s*\)/,
-      ],
-      dependencies: [
-        /"ollama":\s*"/,
-        /ollama[>=<~^]/,
-      ],
+      imports: [/import\s+ollama/, /from\s+ollama/, /require\s*\(\s*["']ollama["']\s*\)/],
+      dependencies: [/"ollama":\s*"/, /ollama[>=<~^]/],
       apiCalls: [
         // Local Ollama API
         /localhost:11434/,
@@ -181,19 +143,9 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["llama_cpp", "llama-cpp", "llamacpp"],
     patterns: {
-      imports: [
-        /from\s+llama_cpp/,
-        /import\s+llama_cpp/,
-      ],
-      dependencies: [
-        /llama-cpp-python[>=<~^]/,
-        /"llama-cpp-python":\s*"/,
-        /"node-llama-cpp":\s*"/,
-      ],
-      apiCalls: [
-        /Llama\s*\(\s*model_path/,
-        /LlamaCpp\s*\(/,
-      ],
+      imports: [/from\s+llama_cpp/, /import\s+llama_cpp/],
+      dependencies: [/llama-cpp-python[>=<~^]/, /"llama-cpp-python":\s*"/, /"node-llama-cpp":\s*"/],
+      apiCalls: [/Llama\s*\(\s*model_path/, /LlamaCpp\s*\(/],
     },
   },
 
@@ -208,18 +160,9 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["vllm"],
     patterns: {
-      imports: [
-        /from\s+vllm/,
-        /import\s+vllm/,
-      ],
-      dependencies: [
-        /vllm[>=<~^]/,
-        /"vllm":\s*"/,
-      ],
-      apiCalls: [
-        /LLM\s*\(\s*model\s*=/,
-        /SamplingParams\s*\(/,
-      ],
+      imports: [/from\s+vllm/, /import\s+vllm/],
+      dependencies: [/vllm[>=<~^]/, /"vllm":\s*"/],
+      apiCalls: [/LLM\s*\(\s*model\s*=/, /SamplingParams\s*\(/],
     },
   },
 
@@ -234,12 +177,7 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["onnxruntime", "onnx"],
     patterns: {
-      imports: [
-        /import\s+onnxruntime/,
-        /from\s+onnxruntime/,
-        /import\s+onnx/,
-        /from\s+onnx/,
-      ],
+      imports: [/import\s+onnxruntime/, /from\s+onnxruntime/, /import\s+onnx/, /from\s+onnx/],
       dependencies: [
         /onnxruntime[>=<~^]/,
         /onnxruntime-gpu[>=<~^]/,
@@ -260,15 +198,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["jax"],
     patterns: {
-      imports: [
-        /import\s+jax/,
-        /from\s+jax/,
-      ],
-      dependencies: [
-        /jax[>=<~^]/,
-        /jaxlib[>=<~^]/,
-        /"jax":\s*"/,
-      ],
+      imports: [/import\s+jax/, /from\s+jax/],
+      dependencies: [/jax[>=<~^]/, /jaxlib[>=<~^]/, /"jax":\s*"/],
     },
   },
 
@@ -283,15 +214,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["xgboost", "xgb"],
     patterns: {
-      imports: [
-        /import\s+xgboost/,
-        /from\s+xgboost/,
-        /import\s+xgb\b/,
-      ],
-      dependencies: [
-        /xgboost[>=<~^]/,
-        /"xgboost":\s*"/,
-      ],
+      imports: [/import\s+xgboost/, /from\s+xgboost/, /import\s+xgb\b/],
+      dependencies: [/xgboost[>=<~^]/, /"xgboost":\s*"/],
     },
   },
 
@@ -306,15 +230,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["lightgbm", "lgb"],
     patterns: {
-      imports: [
-        /import\s+lightgbm/,
-        /from\s+lightgbm/,
-        /import\s+lgb\b/,
-      ],
-      dependencies: [
-        /lightgbm[>=<~^]/,
-        /"lightgbm":\s*"/,
-      ],
+      imports: [/import\s+lightgbm/, /from\s+lightgbm/, /import\s+lgb\b/],
+      dependencies: [/lightgbm[>=<~^]/, /"lightgbm":\s*"/],
     },
   },
 
@@ -329,14 +246,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["catboost"],
     patterns: {
-      imports: [
-        /import\s+catboost/,
-        /from\s+catboost/,
-      ],
-      dependencies: [
-        /catboost[>=<~^]/,
-        /"catboost":\s*"/,
-      ],
+      imports: [/import\s+catboost/, /from\s+catboost/],
+      dependencies: [/catboost[>=<~^]/, /"catboost":\s*"/],
     },
   },
 
@@ -351,14 +262,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["spacy"],
     patterns: {
-      imports: [
-        /import\s+spacy/,
-        /from\s+spacy/,
-      ],
-      dependencies: [
-        /spacy[>=<~^]/,
-        /"spacy":\s*"/,
-      ],
+      imports: [/import\s+spacy/, /from\s+spacy/],
+      dependencies: [/spacy[>=<~^]/, /"spacy":\s*"/],
     },
   },
 
@@ -373,14 +278,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["nltk"],
     patterns: {
-      imports: [
-        /import\s+nltk/,
-        /from\s+nltk/,
-      ],
-      dependencies: [
-        /nltk[>=<~^]/,
-        /"nltk":\s*"/,
-      ],
+      imports: [/import\s+nltk/, /from\s+nltk/],
+      dependencies: [/nltk[>=<~^]/, /"nltk":\s*"/],
     },
   },
 
@@ -395,14 +294,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "medium",
     keywords: ["numpy", "np."],
     patterns: {
-      imports: [
-        /import\s+numpy/,
-        /from\s+numpy/,
-      ],
-      dependencies: [
-        /numpy[>=<~^]/,
-        /"numpy":\s*"/,
-      ],
+      imports: [/import\s+numpy/, /from\s+numpy/],
+      dependencies: [/numpy[>=<~^]/, /"numpy":\s*"/],
     },
   },
 
@@ -417,14 +310,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "medium",
     keywords: ["pandas", "pd."],
     patterns: {
-      imports: [
-        /import\s+pandas/,
-        /from\s+pandas/,
-      ],
-      dependencies: [
-        /pandas[>=<~^]/,
-        /"pandas":\s*"/,
-      ],
+      imports: [/import\s+pandas/, /from\s+pandas/],
+      dependencies: [/pandas[>=<~^]/, /"pandas":\s*"/],
     },
   },
 
@@ -439,14 +326,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["accelerate"],
     patterns: {
-      imports: [
-        /from\s+accelerate/,
-        /import\s+accelerate/,
-      ],
-      dependencies: [
-        /accelerate[>=<~^]/,
-        /"accelerate":\s*"/,
-      ],
+      imports: [/from\s+accelerate/, /import\s+accelerate/],
+      dependencies: [/accelerate[>=<~^]/, /"accelerate":\s*"/],
     },
   },
 
@@ -461,14 +342,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["peft", "lora"],
     patterns: {
-      imports: [
-        /from\s+peft/,
-        /import\s+peft/,
-      ],
-      dependencies: [
-        /peft[>=<~^]/,
-        /"peft":\s*"/,
-      ],
+      imports: [/from\s+peft/, /import\s+peft/],
+      dependencies: [/peft[>=<~^]/, /"peft":\s*"/],
     },
   },
 
@@ -483,14 +358,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["mlflow"],
     patterns: {
-      imports: [
-        /import\s+mlflow/,
-        /from\s+mlflow/,
-      ],
-      dependencies: [
-        /mlflow[>=<~^]/,
-        /"mlflow":\s*"/,
-      ],
+      imports: [/import\s+mlflow/, /from\s+mlflow/],
+      dependencies: [/mlflow[>=<~^]/, /"mlflow":\s*"/],
     },
   },
 
@@ -505,14 +374,8 @@ export const LOCAL_ML_PATTERNS: DetectionPattern[] = [
     confidence: "high",
     keywords: ["wandb"],
     patterns: {
-      imports: [
-        /import\s+wandb/,
-        /from\s+wandb/,
-      ],
-      dependencies: [
-        /wandb[>=<~^]/,
-        /"wandb":\s*"/,
-      ],
+      imports: [/import\s+wandb/, /from\s+wandb/],
+      dependencies: [/wandb[>=<~^]/, /"wandb":\s*"/],
     },
   },
 ];

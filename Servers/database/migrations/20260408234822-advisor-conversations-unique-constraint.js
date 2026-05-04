@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Add the unique constraint on `(organization_id, user_id, domain)` that

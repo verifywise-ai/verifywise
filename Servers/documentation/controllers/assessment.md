@@ -1,6 +1,7 @@
 # Assessment Controller Documentation
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Dependencies](#dependencies)
 - [API Endpoints](#api-endpoints)
@@ -8,9 +9,11 @@
 - [Error Handling](#error-handling)
 
 ## Overview
+
 This controller manages assessment-related operations, providing functionality for creating, reading, updating, and deleting assessments, as well as handling answers and their associated topics, subtopics, and questions.
 
 ## Dependencies
+
 ```typescript
 import { Request, Response } from "express";
 import { MOCKDATA_ON } from "../flags";
@@ -20,59 +23,70 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 ## API Endpoints
 
 ### Get All Assessments
+
 - **Endpoint**: GET `/assessments`
 - **Description**: Retrieves all assessments
-- **Response**: 
+- **Response**:
   - 200: Success with assessments data
   - 204: No content
   - 500: Server error
 
 ### Get Assessment by ID
+
 - **Endpoint**: GET `/assessments/:id`
 - **Description**: Retrieves a specific assessment by ID
-- **Response**: 
+- **Response**:
   - 200: Success with assessment data
   - 404: Assessment not found
   - 500: Server error
 
 ### Create Assessment
+
 - **Endpoint**: POST `/assessments`
 - **Request Body**:
+
 ```typescript
 {
   projectId: number;
 }
 ```
-- **Response**: 
+
+- **Response**:
   - 201: Created
   - 400: Bad request
   - 503: Service unavailable
   - 500: Server error
 
 ### Update Assessment
+
 - **Endpoint**: PUT `/assessments/:id`
 - **Request Body**:
+
 ```typescript
 {
   projectId: number;
 }
 ```
-- **Response**: 
+
+- **Response**:
   - 202: Accepted
   - 400: Bad request
   - 404: Not found
   - 500: Server error
 
 ### Delete Assessment
+
 - **Endpoint**: DELETE `/assessments/:id`
-- **Response**: 
+- **Response**:
   - 202: Accepted
   - 404: Not found
   - 500: Server error
 
 ### Save Answers
+
 - **Endpoint**: POST `/assessments/answers`
 - **Request Body**:
+
 ```typescript
 {
   assessmentId: number;
@@ -94,8 +108,10 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 
 ### Update Answers
+
 - **Endpoint**: PUT `/assessments/answers`
 - **Request Body**:
+
 ```typescript
 {
   assessmentId: number;
@@ -121,6 +137,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 
 ## Data Types
+
 ```typescript
 interface Assessment {
   projectId: number;
@@ -140,7 +157,9 @@ interface Question {
 ```
 
 ## Error Handling
+
 The controller uses HTTP status codes and a standardized STATUS_CODE utility for error responses:
+
 - 400: Bad Request
 - 404: Not Found
 - 500: Internal Server Error

@@ -21,10 +21,7 @@ import {
   generatePolicyDOCX,
   generateFilename,
 } from "../services/policies/policyExporter";
-import {
-  convertDocxToHtml,
-  DOCX_ALLOWED_MIMES,
-} from "../services/policies/policyImporter";
+import { convertDocxToHtml, DOCX_ALLOWED_MIMES } from "../services/policies/policyImporter";
 import {
   notifyReviewRequested,
   notifyReviewApproved,
@@ -32,11 +29,7 @@ import {
 } from "../services/inAppNotification.service";
 import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 import logger from "../utils/logger/fileLogger";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 export class PolicyController {
   // Get all policies
@@ -77,12 +70,7 @@ export class PolicyController {
         last_updated_by: userId,
       } as IPolicy;
 
-      const policy = await createPolicyQuery(
-        policyData,
-        req.organizationId!,
-        userId,
-        transaction
-      );
+      const policy = await createPolicyQuery(policyData, req.organizationId!, userId, transaction);
 
       if (policy) {
         // Record creation in change history
@@ -92,7 +80,7 @@ export class PolicyController {
             userId,
             req.organizationId!,
             policyData,
-            transaction
+            transaction,
           );
         }
 
@@ -114,10 +102,7 @@ export class PolicyController {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const userId = req.userId!;
       // Get existing policy for change tracking
-      const existingPolicyResult = await getPolicyByIdQuery(
-        req.organizationId!,
-        policyId
-      );
+      const existingPolicyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
 
       if (!existingPolicyResult || existingPolicyResult.length === 0) {
         await transaction.rollback();
@@ -136,22 +121,19 @@ export class PolicyController {
         policyData,
         req.organizationId!,
         userId,
-        transaction
+        transaction,
       );
 
       if (policy) {
         // Track and record changes
-        const changes = await trackPolicyChanges(
-          existingPolicy as unknown as IPolicy,
-          policyData
-        );
+        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, policyData);
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             policyId,
             userId,
             req.organizationId!,
             changes,
-            transaction
+            transaction,
           );
         }
 
@@ -182,11 +164,7 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-      const deleted = await deletePolicyByIdQuery(
-        req.organizationId!,
-        policyId,
-        transaction
-      );
+      const deleted = await deletePolicyByIdQuery(req.organizationId!, policyId, transaction);
 
       if (deleted) {
         await transaction.commit();
@@ -219,16 +197,13 @@ export class PolicyController {
       const pdfBuffer = await generatePolicyPDF(
         policy.title,
         policy.content_html || "",
-        req.organizationId!
+        req.organizationId!,
       );
 
       const filename = generateFilename(policy.title, "pdf");
 
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${filename}"`
-      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", pdfBuffer.length);
 
       return res.send(pdfBuffer);
@@ -258,7 +233,7 @@ export class PolicyController {
       const docxBuffer = await generatePolicyDOCX(
         policy.title,
         policy.content_html || "",
-        req.organizationId!
+        req.organizationId!,
       );
       logger.debug(`Generated DOCX buffer for policy ${policyId}: ${docxBuffer.length} bytes`);
 
@@ -266,12 +241,9 @@ export class PolicyController {
 
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${filename}"`
-      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", docxBuffer.length);
 
       return res.send(docxBuffer);
@@ -300,18 +272,12 @@ export class PolicyController {
       }
 
       // Validate MIME type and file extension
-      const hasDocxExtension = req.file.originalname
-        ?.toLowerCase()
-        .endsWith(".docx");
+      const hasDocxExtension = req.file.originalname?.toLowerCase().endsWith(".docx");
       if (
-        !DOCX_ALLOWED_MIMES.includes(
-          req.file.mimetype as (typeof DOCX_ALLOWED_MIMES)[number]
-        ) ||
+        !DOCX_ALLOWED_MIMES.includes(req.file.mimetype as (typeof DOCX_ALLOWED_MIMES)[number]) ||
         !hasDocxExtension
       ) {
-        return res
-          .status(400)
-          .json(STATUS_CODE[400]("Only .docx files are supported"));
+        return res.status(400).json(STATUS_CODE[400]("Only .docx files are supported"));
       }
 
       const { html, warnings } = await convertDocxToHtml(req.file.buffer);
@@ -372,17 +338,17 @@ export class PolicyController {
         "pending_review",
         userId,
         message,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
 
       // Send notifications to each reviewer
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const requesterUser = await sequelize.query(
+      const requesterUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :userId`,
-        { replacements: { userId }, type: QueryTypes.SELECT }
-      ) as { name: string; surname: string }[];
+        { replacements: { userId }, type: QueryTypes.SELECT },
+      )) as { name: string; surname: string }[];
       const requesterName = requesterUser[0]
         ? `${requesterUser[0].name} ${requesterUser[0].surname}`
         : "User";
@@ -402,7 +368,7 @@ export class PolicyController {
             },
             requesterName,
             message || "Please review this policy.",
-            baseUrl
+            baseUrl,
           );
         } catch (notifyError) {
           logger.error("Failed to notify reviewer %d:", reviewerId, notifyError);
@@ -445,17 +411,17 @@ export class PolicyController {
         "approved",
         reviewerId,
         comment,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
 
       // Notify the policy author
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const reviewerUser = await sequelize.query(
+      const reviewerUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :reviewerId`,
-        { replacements: { reviewerId }, type: QueryTypes.SELECT }
-      ) as { name: string; surname: string }[];
+        { replacements: { reviewerId }, type: QueryTypes.SELECT },
+      )) as { name: string; surname: string }[];
       const reviewerName = reviewerUser[0]
         ? `${reviewerUser[0].name} ${reviewerUser[0].surname}`
         : "Reviewer";
@@ -472,7 +438,7 @@ export class PolicyController {
           },
           reviewerName,
           comment || "Looks good!",
-          baseUrl
+          baseUrl,
         );
       } catch (notifyError) {
         logger.error("Failed to send review approved notification:", notifyError);
@@ -502,7 +468,9 @@ export class PolicyController {
 
       if (!comment) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("comment is required when requesting changes"));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400]("comment is required when requesting changes"));
       }
 
       const policyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
@@ -519,17 +487,17 @@ export class PolicyController {
         "changes_requested",
         reviewerId,
         comment,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
 
       // Notify the policy author
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const reviewerUser = await sequelize.query(
+      const reviewerUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :reviewerId`,
-        { replacements: { reviewerId }, type: QueryTypes.SELECT }
-      ) as { name: string; surname: string }[];
+        { replacements: { reviewerId }, type: QueryTypes.SELECT },
+      )) as { name: string; surname: string }[];
       const reviewerName = reviewerUser[0]
         ? `${reviewerUser[0].name} ${reviewerUser[0].surname}`
         : "Reviewer";
@@ -546,7 +514,7 @@ export class PolicyController {
           },
           reviewerName,
           comment,
-          baseUrl
+          baseUrl,
         );
       } catch (notifyError) {
         logger.error("Failed to send review rejected notification:", notifyError);

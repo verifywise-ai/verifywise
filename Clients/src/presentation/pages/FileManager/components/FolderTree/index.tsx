@@ -21,10 +21,7 @@ import {
   PanelLeftOpen as PanelLeftOpenIcon,
   PanelLeftClose as PanelLeftCloseIcon,
 } from "lucide-react";
-import {
-  IFolderTreeNode,
-  SelectedFolder,
-} from "../../../../../domain/interfaces/i.virtualFolder";
+import { IFolderTreeNode, SelectedFolder } from "../../../../../domain/interfaces/i.virtualFolder";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
 import { brand, text } from "../../../../themes/palette";
 
@@ -139,13 +136,12 @@ const FolderItem: React.FC<FolderItemProps> = ({
             opacity: hasChildren ? 1 : 0,
           }}
         >
-          {hasChildren && (
-            isExpanded ? (
+          {hasChildren &&
+            (isExpanded ? (
               <ChevronDownIcon size={14} color={text.icon} />
             ) : (
               <ChevronRightIcon size={14} color={text.icon} />
-            )
-          )}
+            ))}
         </Box>
 
         {/* Folder icon */}
@@ -157,11 +153,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
             color: folder.color || brand.primary,
           }}
         >
-          {isExpanded ? (
-            <FolderOpenIcon size={16} />
-          ) : (
-            <FolderIcon size={16} />
-          )}
+          {isExpanded ? <FolderOpenIcon size={16} /> : <FolderIcon size={16} />}
         </Box>
 
         {/* Folder name and count */}
@@ -438,36 +430,37 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
               {/* Uncategorized */}
               {showUncategorized && (
-              <Box
-                onClick={() => onSelectFolder("uncategorized")}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "transparent",
-                  "&:hover": {
-                    backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "#F0F2F5",
-                  },
-                  marginBottom: "8px",
-                }}
-              >
-                <Box sx={{ width: 20 }} />
-                <Box sx={{ marginRight: "8px", display: "flex", color: "text.muted" }}>
-                  <UncategorizedIcon size={16} />
-                </Box>
-                <Typography
+                <Box
+                  onClick={() => onSelectFolder("uncategorized")}
                   sx={{
-                    flex: 1,
-                    fontSize: 13,
-                    fontWeight: selectedFolder === "uncategorized" ? 500 : 400,
-                    color: selectedFolder === "uncategorized" ? "brand.primary" : "text.secondary",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "6px 8px",
+                    cursor: "pointer",
+                    borderRadius: "4px",
+                    backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "transparent",
+                    "&:hover": {
+                      backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "#F0F2F5",
+                    },
+                    marginBottom: "8px",
                   }}
                 >
-                  Uncategorized
-                </Typography>
-              </Box>
+                  <Box sx={{ width: 20 }} />
+                  <Box sx={{ marginRight: "8px", display: "flex", color: "text.muted" }}>
+                    <UncategorizedIcon size={16} />
+                  </Box>
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      fontSize: 13,
+                      fontWeight: selectedFolder === "uncategorized" ? 500 : 400,
+                      color:
+                        selectedFolder === "uncategorized" ? "brand.primary" : "text.secondary",
+                    }}
+                  >
+                    Uncategorized
+                  </Typography>
+                </Box>
               )}
 
               {/* Folder tree */}

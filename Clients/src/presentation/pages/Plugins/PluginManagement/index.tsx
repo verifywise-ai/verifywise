@@ -34,7 +34,13 @@ import { PageHeader } from "../../../components/Layout/PageHeader";
 import PluginSlot from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
-import { getPluginByKey, getInstalledPlugins, updatePluginConfiguration, testPluginConnection, connectOAuthWorkspace } from "../../../../application/repository/plugin.repository";
+import {
+  getPluginByKey,
+  getInstalledPlugins,
+  updatePluginConfiguration,
+  testPluginConnection,
+  connectOAuthWorkspace,
+} from "../../../../application/repository/plugin.repository";
 import { usePluginInstallation } from "../../../../application/hooks/usePluginInstallation";
 import { Plugin, PluginInstallationStatus } from "../../../../domain/types/plugins";
 import Alert from "../../../components/Alert";
@@ -169,7 +175,7 @@ const PluginManagement: React.FC = () => {
         // Fetch installation status
         const installations = await getInstalledPlugins({});
         const installation = installations.find(
-          (inst) => inst.pluginKey === pluginKey || inst.plugin?.key === pluginKey
+          (inst) => inst.pluginKey === pluginKey || inst.plugin?.key === pluginKey,
         );
 
         if (installation) {
@@ -227,7 +233,6 @@ const PluginManagement: React.FC = () => {
       });
     }
   }, [plugin, pluginKey, uninstall, navigate]);
-
 
   const handleCloseToast = () => {
     setToast(null);
@@ -292,7 +297,8 @@ const PluginManagement: React.FC = () => {
     } catch (err: unknown) {
       setToast({
         variant: "error",
-        body: err instanceof Error ? err.message : "Failed to save configuration. Please try again.",
+        body:
+          err instanceof Error ? err.message : "Failed to save configuration. Please try again.",
         visible: true,
       });
     } finally {
@@ -364,10 +370,7 @@ const PluginManagement: React.FC = () => {
         </Button>
       </Box>
 
-      <PageHeader
-        title={plugin.displayName}
-        description={plugin.description}
-      />
+      <PageHeader title={plugin.displayName} description={plugin.description} />
 
       <Box sx={{ px: 2 }}>
         <Stack gap={2}>
@@ -456,10 +459,17 @@ const PluginManagement: React.FC = () => {
                           <Box>
                             <MuiChip
                               size="small"
-                              label={plugin.frameworkType === "organizational" ? "Organizational" : "Project-Based"}
+                              label={
+                                plugin.frameworkType === "organizational"
+                                  ? "Organizational"
+                                  : "Project-Based"
+                              }
                               sx={frameworkTypeChip(plugin.frameworkType === "organizational")}
                             />
-                            <Typography component="span" sx={{ ...frameworkTypeDescription, display: "block" }}>
+                            <Typography
+                              component="span"
+                              sx={{ ...frameworkTypeDescription, display: "block" }}
+                            >
                               {plugin.frameworkType === "organizational"
                                 ? "Organization-wide framework that applies globally across all projects"
                                 : "Project-specific framework that can be applied to individual projects"}
@@ -507,7 +517,12 @@ const PluginManagement: React.FC = () => {
                             <Typography variant="body2" fontWeight={500} fontSize={13}>
                               {feature.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" fontSize={12} sx={{ mt: "2px", display: "block" }}>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontSize={12}
+                              sx={{ mt: "2px", display: "block" }}
+                            >
                               {feature.description}
                             </Typography>
                           </Box>
@@ -539,7 +554,9 @@ const PluginManagement: React.FC = () => {
                 )}
 
                 {/* Install Button - Show when plugin is not installed */}
-                {(!plugin.installationStatus || plugin.installationStatus === PluginInstallationStatus.UNINSTALLED || plugin.installationStatus === PluginInstallationStatus.FAILED) && (
+                {(!plugin.installationStatus ||
+                  plugin.installationStatus === PluginInstallationStatus.UNINSTALLED ||
+                  plugin.installationStatus === PluginInstallationStatus.FAILED) && (
                   <Box sx={{ display: "flex", gap: 2 }}>
                     <Button
                       variant="contained"
@@ -551,12 +568,12 @@ const PluginManagement: React.FC = () => {
                             // Refresh plugin data with installation status
                             const [updatedPlugin, installedPlugins] = await Promise.all([
                               getPluginByKey({ key: plugin.key }),
-                              getInstalledPlugins()
+                              getInstalledPlugins(),
                             ]);
 
                             // Find the installation for this plugin
                             const pluginInstallation = installedPlugins.find(
-                              (p) => p.pluginKey === plugin.key || p.plugin?.key === plugin.key
+                              (p) => p.pluginKey === plugin.key || p.plugin?.key === plugin.key,
                             );
 
                             // Merge plugin metadata with installation status
@@ -575,7 +592,10 @@ const PluginManagement: React.FC = () => {
                         } catch (err: unknown) {
                           setToast({
                             variant: "error",
-                            body: err instanceof Error ? err.message : "Failed to install plugin. Please try again.",
+                            body:
+                              err instanceof Error
+                                ? err.message
+                                : "Failed to install plugin. Please try again.",
                             visible: true,
                           });
                         }
@@ -586,8 +606,8 @@ const PluginManagement: React.FC = () => {
                       {installing === plugin.key
                         ? "Installing..."
                         : plugin.installationStatus === PluginInstallationStatus.FAILED
-                        ? "Retry Installation"
-                        : "Install plugin"}
+                          ? "Retry Installation"
+                          : "Install plugin"}
                     </Button>
                   </Box>
                 )}
@@ -602,7 +622,9 @@ const PluginManagement: React.FC = () => {
                       disabled={uninstalling === plugin.installationId}
                       sx={uninstallButton}
                     >
-                      {uninstalling === plugin.installationId ? "Uninstalling..." : "Uninstall Plugin"}
+                      {uninstalling === plugin.installationId
+                        ? "Uninstalling..."
+                        : "Uninstall Plugin"}
                     </Button>
                   </Box>
                 )}
@@ -611,215 +633,261 @@ const PluginManagement: React.FC = () => {
           </Card>
 
           {/* Configuration Card - Only show for installed plugins that require configuration */}
-          {plugin.installationStatus === PluginInstallationStatus.INSTALLED && plugin.requiresConfiguration !== false && (
-            <Card sx={cardStyles.base(theme)}>
-              <CardContent sx={{ p: "16px" }}>
-                <Stack spacing={3}>
-                  {/* Configuration Header */}
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <SettingsIcon size={20} color={brand.primary} />
-                    <Typography variant="h6" fontWeight={600} fontSize={15}>
-                      Configuration
-                    </Typography>
-                  </Box>
+          {plugin.installationStatus === PluginInstallationStatus.INSTALLED &&
+            plugin.requiresConfiguration !== false && (
+              <Card sx={cardStyles.base(theme)}>
+                <CardContent sx={{ p: "16px" }}>
+                  <Stack spacing={3}>
+                    {/* Configuration Header */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <SettingsIcon size={20} color={brand.primary} />
+                      <Typography variant="h6" fontWeight={600} fontSize={15}>
+                        Configuration
+                      </Typography>
+                    </Box>
 
-                  <Divider />
+                    <Divider />
 
-                  {/* Configuration Content */}
-                  <Box>
-                    {/* Show loading during OAuth connection */}
-                    {connectingOAuth && (
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2, py: 4 }}>
-                        <CircularProgress size={24} />
-                        <Typography fontSize={13}>Connecting to Slack...</Typography>
-                      </Box>
-                    )}
+                    {/* Configuration Content */}
+                    <Box>
+                      {/* Show loading during OAuth connection */}
+                      {connectingOAuth && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, py: 4 }}>
+                          <CircularProgress size={24} />
+                          <Typography fontSize={13}>Connecting to Slack...</Typography>
+                        </Box>
+                      )}
 
-                    {/* Plugin Configuration via PluginSlot */}
-                    {!connectingOAuth && pluginKey && getComponentsForSlot(PLUGIN_SLOTS.PLUGIN_CONFIG).some(c => c.pluginKey === pluginKey) && (
-                      <PluginSlot
-                        id={PLUGIN_SLOTS.PLUGIN_CONFIG}
-                        pluginKey={pluginKey}
-                        slotProps={{
-                          pluginKey,
-                          installationId: plugin.installationId,
-                          slackClientId: ENV_VARs.CLIENT_ID,
-                          slackOAuthUrl: ENV_VARs.SLACK_URL,
-                          onToast: (t: { variant: string; body: string }) => {
-                            const variant = t.variant as "success" | "info" | "warning" | "error";
-                            setToast({ variant, body: t.body, visible: true });
-                          },
-                          configData,
-                          onConfigChange: handleConfigChange,
-                          onSaveConfiguration: handleSaveConfiguration,
-                          onTestConnection: handleTestConnection,
-                          isSavingConfig,
-                          isTestingConnection,
-                        }}
-                      />
-                    )}
+                      {/* Plugin Configuration via PluginSlot */}
+                      {!connectingOAuth &&
+                        pluginKey &&
+                        getComponentsForSlot(PLUGIN_SLOTS.PLUGIN_CONFIG).some(
+                          (c) => c.pluginKey === pluginKey,
+                        ) && (
+                          <PluginSlot
+                            id={PLUGIN_SLOTS.PLUGIN_CONFIG}
+                            pluginKey={pluginKey}
+                            slotProps={{
+                              pluginKey,
+                              installationId: plugin.installationId,
+                              slackClientId: ENV_VARs.CLIENT_ID,
+                              slackOAuthUrl: ENV_VARs.SLACK_URL,
+                              onToast: (t: { variant: string; body: string }) => {
+                                const variant = t.variant as
+                                  | "success"
+                                  | "info"
+                                  | "warning"
+                                  | "error";
+                                setToast({ variant, body: t.body, visible: true });
+                              },
+                              configData,
+                              onConfigChange: handleConfigChange,
+                              onSaveConfiguration: handleSaveConfiguration,
+                              onTestConnection: handleTestConnection,
+                              isSavingConfig,
+                              isTestingConnection,
+                            }}
+                          />
+                        )}
 
-                    {/* Generic Configuration Form - only for plugins without custom config UI (that don't require configuration) */}
-                    {!connectingOAuth && pluginKey && !getComponentsForSlot(PLUGIN_SLOTS.PLUGIN_CONFIG).some(c => c.pluginKey === pluginKey) && !plugin.requiresConfiguration && (
-                      <>
-                        <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ mb: 3 }}>
-                          Configure {plugin.displayName} settings and preferences.
-                        </Typography>
+                      {/* Generic Configuration Form - only for plugins without custom config UI (that don't require configuration) */}
+                      {!connectingOAuth &&
+                        pluginKey &&
+                        !getComponentsForSlot(PLUGIN_SLOTS.PLUGIN_CONFIG).some(
+                          (c) => c.pluginKey === pluginKey,
+                        ) &&
+                        !plugin.requiresConfiguration && (
+                          <>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              fontSize={13}
+                              sx={{ mb: 3 }}
+                            >
+                              Configure {plugin.displayName} settings and preferences.
+                            </Typography>
 
-                        {/* Generic Configuration Form */}
-                        <Stack spacing={2.5}>
-                          {configFields.map((field: ConfigField) => {
-                            // Skip field if showIf condition is false
-                            if (field.showIf && !field.showIf(configData)) {
-                              return null;
-                            }
+                            {/* Generic Configuration Form */}
+                            <Stack spacing={2.5}>
+                              {configFields.map((field: ConfigField) => {
+                                // Skip field if showIf condition is false
+                                if (field.showIf && !field.showIf(configData)) {
+                                  return null;
+                                }
 
-                            // Render based on field type
-                            if (field.type === "select") {
-                              return (
-                                <Box key={field.key}>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={500}
-                                    fontSize={13}
-                                    sx={formFieldLabel}
-                                  >
-                                    {field.label}
-                                  </Typography>
-                                  <FormControl fullWidth size="small">
-                                    <Select
-                                      value={configData[field.key] || field.placeholder || ""}
-                                      onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                                      sx={configSelect}
-                                    >
-                                      {field.options?.map((option) => (
-                                        <MenuItem key={option.value} value={option.value} sx={{ fontSize: "13px" }}>
-                                          {option.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                </Box>
-                              );
-                            }
-
-                            if (field.type === "multiselect") {
-                              const currentValue = configData[field.key] ?
-                                (typeof configData[field.key] === 'string' ?
-                                  JSON.parse(configData[field.key]) :
-                                  configData[field.key]) :
-                                [];
-
-                              return (
-                                <Box key={field.key}>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={500}
-                                    fontSize={13}
-                                    sx={formFieldLabel}
-                                  >
-                                    {field.label}
-                                  </Typography>
-                                  <FormControl fullWidth size="small">
-                                    <Select
-                                      multiple
-                                      value={currentValue}
-                                      onChange={(e) => {
-                                        const value = typeof e.target.value === 'string' ?
-                                          e.target.value.split(',') :
-                                          e.target.value;
-                                        handleConfigChange(field.key, JSON.stringify(value));
-                                      }}
-                                      renderValue={(selected) => (selected as string[]).join(", ")}
-                                      sx={configSelect}
-                                    >
-                                      {field.options?.map((option) => (
-                                        <MenuItem key={option.value} value={option.value} sx={{ fontSize: "13px" }}>
-                                          <Checkbox
-                                            checked={currentValue.indexOf(option.value) > -1}
-                                            sx={configCheckbox}
-                                          />
-                                          <Typography fontSize={13}>{option.label}</Typography>
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                </Box>
-                              );
-                            }
-
-                            if (field.type === "checkbox") {
-                              return (
-                                <Box key={field.key}>
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={configData[field.key] === "true"}
-                                        onChange={(e) => handleConfigChange(field.key, e.target.checked ? "true" : "false")}
-                                        sx={configCheckbox}
-                                      />
-                                    }
-                                    label={
-                                      <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ color: "text.secondary" }}>
+                                // Render based on field type
+                                if (field.type === "select") {
+                                  return (
+                                    <Box key={field.key}>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={500}
+                                        fontSize={13}
+                                        sx={formFieldLabel}
+                                      >
                                         {field.label}
                                       </Typography>
-                                    }
-                                  />
-                                </Box>
-                              );
-                            }
+                                      <FormControl fullWidth size="small">
+                                        <Select
+                                          value={configData[field.key] || field.placeholder || ""}
+                                          onChange={(e) =>
+                                            handleConfigChange(field.key, e.target.value)
+                                          }
+                                          sx={configSelect}
+                                        >
+                                          {field.options?.map((option) => (
+                                            <MenuItem
+                                              key={option.value}
+                                              value={option.value}
+                                              sx={{ fontSize: "13px" }}
+                                            >
+                                              {option.label}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    </Box>
+                                  );
+                                }
 
-                            // Default: Text, URL, Password, Number fields
-                            return (
-                              <Box key={field.key}>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={500}
-                                  fontSize={13}
-                                  sx={formFieldLabel}
-                                >
-                                  {field.label}
-                                </Typography>
-                                <TextField
-                                  fullWidth
-                                  type={field.type}
-                                  placeholder={field.placeholder}
-                                  value={configData[field.key] || ""}
-                                  onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                                  size="small"
-                                  sx={configTextField}
-                                />
-                              </Box>
-                            );
-                          })}
-                        </Stack>
+                                if (field.type === "multiselect") {
+                                  const currentValue = configData[field.key]
+                                    ? typeof configData[field.key] === "string"
+                                      ? JSON.parse(configData[field.key])
+                                      : configData[field.key]
+                                    : [];
 
-                        {/* Test Connection and Save Buttons */}
-                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 3 }}>
-                          <Button
-                            variant="outlined"
-                            onClick={handleTestConnection}
-                            disabled={isTestingConnection || isSavingConfig}
-                            sx={testConnectionButton}
-                          >
-                            {isTestingConnection ? "Testing..." : "Test Connection"}
-                          </Button>
-                          <Button
-                            variant="contained"
-                            onClick={handleSaveConfiguration}
-                            disabled={isSavingConfig || isTestingConnection}
-                            sx={saveConfigButton}
-                          >
-                            {isSavingConfig ? "Saving..." : "Save Configuration"}
-                          </Button>
-                        </Box>
-                      </>
-                    )}
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
+                                  return (
+                                    <Box key={field.key}>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={500}
+                                        fontSize={13}
+                                        sx={formFieldLabel}
+                                      >
+                                        {field.label}
+                                      </Typography>
+                                      <FormControl fullWidth size="small">
+                                        <Select
+                                          multiple
+                                          value={currentValue}
+                                          onChange={(e) => {
+                                            const value =
+                                              typeof e.target.value === "string"
+                                                ? e.target.value.split(",")
+                                                : e.target.value;
+                                            handleConfigChange(field.key, JSON.stringify(value));
+                                          }}
+                                          renderValue={(selected) =>
+                                            (selected as string[]).join(", ")
+                                          }
+                                          sx={configSelect}
+                                        >
+                                          {field.options?.map((option) => (
+                                            <MenuItem
+                                              key={option.value}
+                                              value={option.value}
+                                              sx={{ fontSize: "13px" }}
+                                            >
+                                              <Checkbox
+                                                checked={currentValue.indexOf(option.value) > -1}
+                                                sx={configCheckbox}
+                                              />
+                                              <Typography fontSize={13}>{option.label}</Typography>
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    </Box>
+                                  );
+                                }
+
+                                if (field.type === "checkbox") {
+                                  return (
+                                    <Box key={field.key}>
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            checked={configData[field.key] === "true"}
+                                            onChange={(e) =>
+                                              handleConfigChange(
+                                                field.key,
+                                                e.target.checked ? "true" : "false",
+                                              )
+                                            }
+                                            sx={configCheckbox}
+                                          />
+                                        }
+                                        label={
+                                          <Typography
+                                            variant="body2"
+                                            fontWeight={500}
+                                            fontSize={13}
+                                            sx={{ color: "text.secondary" }}
+                                          >
+                                            {field.label}
+                                          </Typography>
+                                        }
+                                      />
+                                    </Box>
+                                  );
+                                }
+
+                                // Default: Text, URL, Password, Number fields
+                                return (
+                                  <Box key={field.key}>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={500}
+                                      fontSize={13}
+                                      sx={formFieldLabel}
+                                    >
+                                      {field.label}
+                                    </Typography>
+                                    <TextField
+                                      fullWidth
+                                      type={field.type}
+                                      placeholder={field.placeholder}
+                                      value={configData[field.key] || ""}
+                                      onChange={(e) =>
+                                        handleConfigChange(field.key, e.target.value)
+                                      }
+                                      size="small"
+                                      sx={configTextField}
+                                    />
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+
+                            {/* Test Connection and Save Buttons */}
+                            <Box
+                              sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 3 }}
+                            >
+                              <Button
+                                variant="outlined"
+                                onClick={handleTestConnection}
+                                disabled={isTestingConnection || isSavingConfig}
+                                sx={testConnectionButton}
+                              >
+                                {isTestingConnection ? "Testing..." : "Test Connection"}
+                              </Button>
+                              <Button
+                                variant="contained"
+                                onClick={handleSaveConfiguration}
+                                disabled={isSavingConfig || isTestingConnection}
+                                sx={saveConfigButton}
+                              >
+                                {isSavingConfig ? "Saving..." : "Save Configuration"}
+                              </Button>
+                            </Box>
+                          </>
+                        )}
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
         </Stack>
       </Box>
 

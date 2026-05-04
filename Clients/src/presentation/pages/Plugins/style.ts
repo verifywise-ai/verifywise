@@ -16,14 +16,10 @@ export const categoryMenuItem = (isSelected: boolean): SxProps<Theme> => ({
   padding: "0 12px",
   borderRadius: "4px",
   cursor: "pointer",
-  background: isSelected
-    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-    : "transparent",
+  background: isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "transparent",
   border: isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
   "&:hover": {
-    background: isSelected
-      ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-      : "#FAFAFA",
+    background: isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "#FAFAFA",
     border: isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
     "& svg": {
       color: `${brand.primary} !important`,

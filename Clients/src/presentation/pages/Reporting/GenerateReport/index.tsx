@@ -1,15 +1,9 @@
 import { lazy, Suspense, useState } from "react";
-import {
-  Box,
-  Popover,
-  Typography,
-} from "@mui/material";
+import { Box, Popover, Typography } from "@mui/material";
 import { ChevronDown, FileText, Building2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { brand, background } from "../../../themes/palette";
-const GenerateReportPopup = lazy(
-  () => import("../../../components/Reporting/GenerateReport")
-);
+const GenerateReportPopup = lazy(() => import("../../../components/Reporting/GenerateReport"));
 const ReportStatus = lazy(() => import("./ReportStatus"));
 import { styles } from "./styles";
 import { useProjects } from "../../../../application/hooks/useProjects";
@@ -25,13 +19,15 @@ const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
   {
     id: "project",
     label: "Use case report",
-    description: "Generate a report for a specific AI use case with its associated risks, compliance status, and assessments.",
+    description:
+      "Generate a report for a specific AI use case with its associated risks, compliance status, and assessments.",
     icon: <FileText size={24} strokeWidth={1.5} />,
   },
   {
     id: "organization",
     label: "Organization report",
-    description: "Generate a comprehensive report across all use cases, vendors, models, and organization-wide metrics.",
+    description:
+      "Generate a comprehensive report across all use cases, vendors, models, and organization-wide metrics.",
     icon: <Building2 size={24} strokeWidth={1.5} />,
   },
 ];
@@ -40,14 +36,12 @@ interface GenerateReportProps {
   onReportGenerated?: () => void;
 }
 
-const GenerateReport: React.FC<GenerateReportProps> = ({
-  onReportGenerated,
-}) => {
+const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedReportType, setSelectedReportType] = useState<
-    "project" | "organization" | null
-  >(null);
+  const [selectedReportType, setSelectedReportType] = useState<"project" | "organization" | null>(
+    null,
+  );
   const { data: projects } = useProjects();
   const isDisabled = projects?.length && projects?.length > 0 ? false : true;
 
@@ -141,7 +135,8 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
                     }
                   }}
                   sx={{
-                    background: "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
+                    background:
+                      "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
                     borderRadius: "4px",
                     padding: "20px 16px",
                     cursor: "pointer",
@@ -156,7 +151,8 @@ const GenerateReport: React.FC<GenerateReportProps> = ({
                     "&:hover": {
                       boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                       border: "1px solid rgba(0, 0, 0, 0.08)",
-                      background: "linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 250, 1) 100%)",
+                      background:
+                        "linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 250, 1) 100%)",
                     },
                     "&:active": {
                       transform: "scale(0.98)",

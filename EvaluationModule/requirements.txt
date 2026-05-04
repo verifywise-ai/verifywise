@@ -12,28 +12,28 @@ langfair>=0.6.6
 # Deep learning and transformers
 torch>=2.7.0
 transformers>=4.53.0
-sentence-transformers>=2.7.0
-huggingface-hub>=0.33.0
+sentence-transformers>=5.4.1
+huggingface-hub>=1.12.0
 
 # Data handling
 datasets>=4.0.0
-pyarrow>=21.0.0
+pyarrow>=24.0.0
 
 # Utilities
 tqdm>=4.67.0
 textblob>=0.17.1
-python-dotenv>=1.0.0
+python-dotenv>=1.2.2
 
 # LLM API Clients
-openai>=1.0.0
-anthropic>=0.18.0
-google-generativeai>=0.3.0
-ollama>=0.1.0
+openai>=2.33.0
+anthropic>=0.97.0
+google-generativeai>=0.8.6
+ollama>=0.6.2
 xai-sdk>=1.0.0
-mistralai>=1.0.0
+mistralai>=2.4.2
 
 # DeepEval for comprehensive LLM evaluation
-deepeval>=1.0.0
+deepeval>=3.9.9
 
 # Optional: GPU support (uncomment if using CUDA)
 # torch>=2.7.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118

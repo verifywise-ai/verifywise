@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack } from "@mui/material";
 import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-circle-white.svg";
 import { SearchBox } from "../../components/Search";
@@ -21,10 +15,7 @@ import {
 } from "../../../application/repository/entity.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import {
-  addNewIncidentButton,
-  incidentFilterRow,
-} from "./style";
+import { addNewIncidentButton, incidentFilterRow } from "./style";
 import IncidentTable from "./IncidentTable";
 import NewIncident from "../../components/Modals/NewIncident";
 import {
@@ -37,10 +28,7 @@ import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
@@ -76,11 +64,8 @@ const IncidentManagement: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
-  const [incidentsData, setIncidentsData] = useState<
-    AIIncidentManagementModel[]
-  >([]);
-  const [selectedIncident, setSelectedIncident] =
-    useState<AIIncidentManagementModel | null>(null);
+  const [incidentsData, setIncidentsData] = useState<AIIncidentManagementModel[]>([]);
+  const [selectedIncident, setSelectedIncident] = useState<AIIncidentManagementModel | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [, setIsModalLoading] = useState(false);
@@ -130,8 +115,7 @@ const IncidentManagement: React.FC = () => {
     columns: INCIDENT_TABLE_COLUMNS,
   });
 
-  const isCreatingDisabled =
-    !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
 
   // FilterBy - Dynamic options generators
   const getUniqueProjects = useCallback(() => {
@@ -214,14 +198,14 @@ const IncidentManagement: React.FC = () => {
         type: "date" as const,
       },
     ],
-    [getUniqueProjects, getUniqueTypes]
+    [getUniqueProjects, getUniqueTypes],
   );
 
   // FilterBy - Field value getter
   const getIncidentFieldValue = useCallback(
     (
       item: AIIncidentManagementModel,
-      fieldId: string
+      fieldId: string,
     ): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "incident_id":
@@ -240,14 +224,12 @@ const IncidentManagement: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook
-  const {
-    filterData: filterIncidentData,
-    handleFilterChange: handleIncidentFilterChange,
-  } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
+  const { filterData: filterIncidentData, handleFilterChange: handleIncidentFilterChange } =
+    useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
   const filteredData = useMemo(() => {
@@ -269,7 +251,7 @@ const IncidentManagement: React.FC = () => {
         (i) =>
           (i.id || "").toString().toLowerCase().includes(search) ||
           (i.ai_project || "").toLowerCase().includes(search) ||
-          (i.reporter || "").toLowerCase().includes(search)
+          (i.reporter || "").toLowerCase().includes(search),
       );
     }
 
@@ -279,7 +261,7 @@ const IncidentManagement: React.FC = () => {
   // Define how to get the group key for each incident
   const getIncidentGroupKey = (
     incident: AIIncidentManagementModel,
-    field: string
+    field: string,
   ): string | string[] => {
     switch (field) {
       case "severity":
@@ -313,8 +295,7 @@ const IncidentManagement: React.FC = () => {
       // if (response?.data) setIncidentsData(response.data);
       if (response?.data) {
         const formatted = response.data.map(
-          (item: AIIncidentManagementModel) =>
-            new AIIncidentManagementModel(item)
+          (item: AIIncidentManagementModel) => new AIIncidentManagementModel(item),
         );
         setIncidentsData(formatted);
       }
@@ -437,9 +418,7 @@ const IncidentManagement: React.FC = () => {
       setArchiveId(id);
 
       // Optimistically remove from local state for snappy UI feedback
-      setIncidentsData((prevData) =>
-        prevData.filter((item) => item.id?.toString() !== id)
-      );
+      setIncidentsData((prevData) => prevData.filter((item) => item.id?.toString() !== id));
 
       //API route to match your backend: /:id/archive
       await archiveIncidentById({
@@ -505,9 +484,7 @@ const IncidentManagement: React.FC = () => {
     } catch {
       setAlert({
         variant: "error",
-        body: selectedIncident
-          ? "Failed to update incident."
-          : "Failed to add incident.",
+        body: selectedIncident ? "Failed to update incident." : "Failed to add incident.",
       });
     }
   };
@@ -549,18 +526,17 @@ const IncidentManagement: React.FC = () => {
       <PageHeaderExtended
         title="Incident Management"
         description="End-to-end management of the AI incident lifecycle. You can log events in full detail, analyze root causes, and document corrective and preventive actions."
-
         helpArticlePath="ai-governance/incident-management"
         tipBoxEntity="ai-incident-managements"
         alert={
           alert ? (
-                  <Alert
-                    variant={alert.variant}
-                    title={alert.title}
-                    body={alert.body}
-                    isToast={true}
-                    onClick={() => setAlert(null)}
-                  />
+            <Alert
+              variant={alert.variant}
+              title={alert.title}
+              body={alert.body}
+              isToast={true}
+              onClick={() => setAlert(null)}
+            />
           ) : undefined
         }
         summaryCards={
@@ -568,10 +544,38 @@ const IncidentManagement: React.FC = () => {
           incidentsData.length > 0 ? (
             <StatusTileCards
               items={[
-                { key: IncidentManagementStatus.OPEN, label: "Open", color: "#F9A825", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.OPEN && !i.archived).length },
-                { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating", color: "#FB8C00", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived).length },
-                { key: IncidentManagementStatus.MITIGATED, label: "Mitigated", color: "#2E7D32", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived).length },
-                { key: IncidentManagementStatus.CLOSED, label: "Closed", color: "#455A64", count: incidentsData.filter((i) => i.status === IncidentManagementStatus.CLOSED && !i.archived).length },
+                {
+                  key: IncidentManagementStatus.OPEN,
+                  label: "Open",
+                  color: "#F9A825",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
+                  ).length,
+                },
+                {
+                  key: IncidentManagementStatus.INVESTIGATED,
+                  label: "Investigating",
+                  color: "#FB8C00",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived,
+                  ).length,
+                },
+                {
+                  key: IncidentManagementStatus.MITIGATED,
+                  label: "Mitigated",
+                  color: "#2E7D32",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived,
+                  ).length,
+                },
+                {
+                  key: IncidentManagementStatus.CLOSED,
+                  label: "Closed",
+                  color: "#455A64",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
+                  ).length,
+                },
               ]}
               entityName="incident"
               size="small"
@@ -581,12 +585,13 @@ const IncidentManagement: React.FC = () => {
                   setAlert(null);
                 } else {
                   setSelectedStatus(key);
-                  const label = [
-                    { key: IncidentManagementStatus.OPEN, label: "Open" },
-                    { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating" },
-                    { key: IncidentManagementStatus.MITIGATED, label: "Mitigated" },
-                    { key: IncidentManagementStatus.CLOSED, label: "Closed" },
-                  ].find((s) => s.key === key)?.label || key;
+                  const label =
+                    [
+                      { key: IncidentManagementStatus.OPEN, label: "Open" },
+                      { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating" },
+                      { key: IncidentManagementStatus.MITIGATED, label: "Mitigated" },
+                      { key: IncidentManagementStatus.CLOSED, label: "Closed" },
+                    ].find((s) => s.key === key)?.label || key;
                   setAlert({
                     variant: "info",
                     title: `Filtering by ${label}`,
@@ -609,10 +614,7 @@ const IncidentManagement: React.FC = () => {
           sx={incidentFilterRow}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy
-              columns={incidentFilterColumns}
-              onFilterChange={handleIncidentFilterChange}
-            />
+            <FilterBy columns={incidentFilterColumns} onFilterChange={handleIncidentFilterChange} />
 
             <GroupBy
               options={[
@@ -694,34 +696,24 @@ const IncidentManagement: React.FC = () => {
                 severity: selectedIncident.severity || "",
                 status: selectedIncident.status || "",
                 occurred_date: selectedIncident.occurred_date
-                  ? new Date(selectedIncident.occurred_date)
-                      .toISOString()
-                      .split("T")[0]
+                  ? new Date(selectedIncident.occurred_date).toISOString().split("T")[0]
                   : new Date().toISOString().split("T")[0],
                 date_detected: selectedIncident.date_detected
-                  ? new Date(selectedIncident.date_detected)
-                      .toISOString()
-                      .split("T")[0]
+                  ? new Date(selectedIncident.date_detected).toISOString().split("T")[0]
                   : new Date().toISOString().split("T")[0],
                 reporter: selectedIncident.reporter,
                 categories_of_harm: selectedIncident.categories_of_harm || [],
                 description: selectedIncident.description,
-                affected_persons_groups:
-                  selectedIncident.affected_persons_groups || "",
-                relationship_causality:
-                  selectedIncident.relationship_causality || "",
-                immediate_mitigations:
-                  selectedIncident.immediate_mitigations || "",
-                planned_corrective_actions:
-                  selectedIncident.planned_corrective_actions || "",
+                affected_persons_groups: selectedIncident.affected_persons_groups || "",
+                relationship_causality: selectedIncident.relationship_causality || "",
+                immediate_mitigations: selectedIncident.immediate_mitigations || "",
+                planned_corrective_actions: selectedIncident.planned_corrective_actions || "",
                 model_system_version: selectedIncident.model_system_version,
                 interim_report: selectedIncident.interim_report || false,
                 approval_status: selectedIncident.approval_status,
                 approved_by: selectedIncident.approved_by,
                 approval_date: selectedIncident.approval_date
-                  ? new Date(selectedIncident.approval_date)
-                      .toISOString()
-                      .split("T")[0]
+                  ? new Date(selectedIncident.approval_date).toISOString().split("T")[0]
                   : new Date().toISOString().split("T")[0],
                 approval_notes: selectedIncident.approval_notes,
               }

@@ -75,17 +75,13 @@ const DeleteAccountConfirmation: React.FC<IDeleteAccountConfirmationProps> = ({
             id="alert-dialog-description"
             sx={{ padding: 0, overflowY: "hidden", fontSize: "13px" }}
           >
-            When you delete this file, all the links associated with the file
-            will also be removed. Note that this is a non-reversible action.
+            When you delete this file, all the links associated with the file will also be removed.
+            Note that this is a non-reversible action.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ padding: 0, paddingTop: "32px" }}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleDeleteAccount}
-            color="error"
-          >
+          <Button variant="contained" onClick={handleDeleteAccount} color="error">
             Delete account
           </Button>
         </DialogActions>
@@ -93,11 +89,7 @@ const DeleteAccountConfirmation: React.FC<IDeleteAccountConfirmationProps> = ({
 
       {/* Conditionally render banner when isBannerOpen is true */}
       {isBannerOpen && (
-        <Banner
-          onClose={onClose}
-          bannerText={"This account is removed."}
-          bannerWidth={"209px"}
-        />
+        <Banner onClose={onClose} bannerText={"This account is removed."} bannerWidth={"209px"} />
       )}
     </>
   );

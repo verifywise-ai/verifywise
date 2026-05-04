@@ -55,11 +55,7 @@ const mapLikelihoodMIT = (likelihood: string): Likelihood => {
  * Modal for adding a new risk from the MIT AI Risk Database.
  * Uses the shared RiskDatabaseModal component with MIT-specific mappers.
  */
-const AddNewRiskMITModal = ({
-  isOpen,
-  setIsOpen,
-  onRiskSelected,
-}: AddNewRiskMITModalProps) => {
+const AddNewRiskMITModal = ({ isOpen, setIsOpen, onRiskSelected }: AddNewRiskMITModalProps) => {
   const [riskData, setRiskData] = useState<RiskData[]>([]);
   const [loaded, setLoaded] = useState(false);
 

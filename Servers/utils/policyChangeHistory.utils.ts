@@ -38,7 +38,7 @@ export const recordPolicyChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "policy",
@@ -49,7 +49,7 @@ export const recordPolicyChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -62,7 +62,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "policy",
@@ -70,7 +70,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -82,15 +82,9 @@ export const getPolicyChangeHistory = async (
   policyId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "policy",
-    policyId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("policy", policyId, organizationId, limit, offset);
 };
 
 /**
@@ -99,7 +93,7 @@ export const getPolicyChangeHistory = async (
  */
 export const trackPolicyChanges = async (
   oldModel: IPolicy,
-  newModel: Partial<IPolicy>
+  newModel: Partial<IPolicy>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("policy", oldModel, newModel);
 };
@@ -113,7 +107,7 @@ export const recordPolicyCreation = async (
   changedByUserId: number,
   organizationId: number,
   policyData: Partial<IPolicy>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "policy",
@@ -121,7 +115,7 @@ export const recordPolicyCreation = async (
     changedByUserId,
     organizationId,
     policyData,
-    transaction
+    transaction,
   );
 };
 
@@ -133,13 +127,7 @@ export const recordPolicyDeletion = async (
   policyId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
-  return recordEntityDeletion(
-    "policy",
-    policyId,
-    changedByUserId,
-    organizationId,
-    transaction
-  );
+  return recordEntityDeletion("policy", policyId, changedByUserId, organizationId, transaction);
 };

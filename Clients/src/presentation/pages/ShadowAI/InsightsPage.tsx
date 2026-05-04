@@ -6,19 +6,8 @@
  */
 
 import { useState, useEffect } from "react";
-import {
-  Stack,
-  Box,
-  Typography,
-  Skeleton,
-  SelectChangeEvent,
-} from "@mui/material";
-import {
-  AppWindow,
-  Users,
-  AlertTriangle,
-  Building2,
-} from "lucide-react";
+import { Stack, Box, Typography, Skeleton, SelectChangeEvent } from "@mui/material";
+import { AppWindow, Users, AlertTriangle, Building2 } from "lucide-react";
 import { VWBarChart, VWDonutChart } from "../../components/Charts/VWCharts";
 import {
   getInsightsSummary,
@@ -62,14 +51,13 @@ export default function InsightsPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [summaryData, eventsData, usersData, deptData, toolsData] =
-          await Promise.all([
-            getInsightsSummary(period),
-            getToolsByEvents(period, 6),
-            getToolsByUsers(period, 6),
-            getUsersByDepartment(period),
-            getTools({ sort_by: "risk_score", order: "desc", limit: 5 }),
-          ]);
+        const [summaryData, eventsData, usersData, deptData, toolsData] = await Promise.all([
+          getInsightsSummary(period),
+          getToolsByEvents(period, 6),
+          getToolsByUsers(period, 6),
+          getUsersByDepartment(period),
+          getTools({ sort_by: "risk_score", order: "desc", limit: 5 }),
+        ]);
         if (controller.signal.aborted) return;
         setSummary(summaryData);
         setToolsByEvents(eventsData);
@@ -84,7 +72,9 @@ export default function InsightsPage() {
       }
     };
     fetchData();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [period]);
 
   const handlePeriodChange = (e: SelectChangeEvent<string | number>) => {
@@ -95,11 +85,9 @@ export default function InsightsPage() {
     <PageHeaderExtended
       title="Insights"
       description="Overview of Shadow AI activity across your organization. See summary metrics, top tools by usage, risk rankings, and department breakdown at a glance."
-
       helpArticlePath="shadow-ai/insights"
       tipBoxEntity="shadow-ai-insights"
     >
-
       {/* Period selector */}
       <Stack direction="row" justifyContent="flex-end">
         <Select
@@ -163,7 +151,9 @@ export default function InsightsPage() {
                     justifyContent="space-between"
                   >
                     <Stack direction="row" alignItems="center" gap="12px">
-                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}
+                      >
                         {tool.risk_score ?? 0}
                       </Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
@@ -245,7 +235,10 @@ export default function InsightsPage() {
                   height={260}
                   barCategoryGap="20%"
                   hideHorizontalGrid
-                  tooltipFormatter={(value) => [typeof value === "number" ? value.toLocaleString() : String(value), "Events"]}
+                  tooltipFormatter={(value) => [
+                    typeof value === "number" ? value.toLocaleString() : String(value),
+                    "Events",
+                  ]}
                 />
                 <VWLink
                   onClick={() => navigate("/shadow-ai/tools")}
@@ -273,7 +266,10 @@ export default function InsightsPage() {
                 height={260}
                 barCategoryGap="20%"
                 hideHorizontalGrid
-                tooltipFormatter={(value) => [typeof value === "number" ? value.toLocaleString() : String(value), "Users"]}
+                tooltipFormatter={(value) => [
+                  typeof value === "number" ? value.toLocaleString() : String(value),
+                  "Users",
+                ]}
               />
             ) : (
               <NoChartData />
@@ -281,10 +277,7 @@ export default function InsightsPage() {
           </DashboardCard>
         </Stack>
       </Stack>
-      <ShadowAIOnboarding
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
+      <ShadowAIOnboarding isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </PageHeaderExtended>
   );
 }

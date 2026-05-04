@@ -7,16 +7,7 @@
 import React, { memo, useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Box, Typography, useTheme } from "@mui/material";
-import {
-  Package,
-  Bot,
-  Globe,
-  Key,
-  Database,
-  Cpu,
-  GitBranch,
-  type LucideIcon,
-} from "lucide-react";
+import { Package, Bot, Globe, Key, Database, Cpu, GitBranch, type LucideIcon } from "lucide-react";
 import VWTooltip from "../VWTooltip";
 import type { AIDepNodeData, DependencyNodeType } from "./types";
 import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RISK_LEVEL_COLORS } from "./types";
@@ -33,11 +24,7 @@ const nodeTypeIcons: Record<DependencyNodeType, LucideIcon> = {
   repository: GitBranch,
 };
 
-const AIDepNode: React.FC<NodeProps> = ({
-  data,
-  sourcePosition,
-  targetPosition,
-}) => {
+const AIDepNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }) => {
   const theme = useTheme();
   const nodeData = data as unknown as AIDepNodeData;
   const IconComponent = nodeTypeIcons[nodeData.nodeType] || Package;
@@ -47,8 +34,7 @@ const AIDepNode: React.FC<NodeProps> = ({
 
   // Node size based on connections
   const connections = nodeData.connectionCount || 0;
-  const sizeScale =
-    connections > 10 ? 1.15 : connections > 5 ? 1.08 : connections > 2 ? 1.0 : 0.95;
+  const sizeScale = connections > 10 ? 1.15 : connections > 5 ? 1.08 : connections > 2 ? 1.0 : 0.95;
   const minWidth = Math.round(130 * sizeScale);
   const maxWidth = Math.round(200 * sizeScale);
 
@@ -69,9 +55,7 @@ const AIDepNode: React.FC<NodeProps> = ({
       </Box>
       <Box sx={{ mb: 1 }}>
         <strong>Risk level:</strong>{" "}
-        <span style={{ color: riskColor, textTransform: "capitalize" }}>
-          {nodeData.riskLevel}
-        </span>
+        <span style={{ color: riskColor, textTransform: "capitalize" }}>{nodeData.riskLevel}</span>
       </Box>
       <Box>
         <strong>Files:</strong> {nodeData.fileCount}
@@ -79,9 +63,7 @@ const AIDepNode: React.FC<NodeProps> = ({
       {nodeData.governanceStatus && (
         <Box sx={{ mt: 1 }}>
           <strong>Status:</strong>{" "}
-          <span style={{ textTransform: "capitalize" }}>
-            {nodeData.governanceStatus}
-          </span>
+          <span style={{ textTransform: "capitalize" }}>{nodeData.governanceStatus}</span>
         </Box>
       )}
     </Box>

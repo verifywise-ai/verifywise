@@ -21,16 +21,12 @@ import FileUpload from "./FileUpload";
 const App = () => {
   return (
     <FileUpload
-      onSuccess={(file) =>
-        console.log(`File ${file.name} uploaded successfully.`)
-      }
+      onSuccess={(file) => console.log(`File ${file.name} uploaded successfully.`)}
       onError={(error) => console.error(`Upload error: ${error}`)}
       onStart={() => console.log("Upload started")}
       allowedFileTypes={["application/pdf"]}
       maxFileSize={5 * 1024 * 1024}
-      onHeightChange={(height) =>
-        console.log(`Component height adjusted to ${height}px.`)
-      }
+      onHeightChange={(height) => console.log(`Component height adjusted to ${height}px.`)}
     />
   );
 };

@@ -66,11 +66,7 @@ describe("dashboard.ctrl - getDashboardData", () => {
 
     await getDashboardData(req as Request, res as Response);
 
-    expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(
-      1,
-      1,
-      "Admin"
-    );
+    expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(1, 1, "Admin");
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       message: "OK",
@@ -90,9 +86,7 @@ describe("dashboard.ctrl - getDashboardData", () => {
   });
 
   it("should return 500 on error", async () => {
-    mockGetDashboardDataQuery.mockRejectedValue(
-      new Error("Database connection failed")
-    );
+    mockGetDashboardDataQuery.mockRejectedValue(new Error("Database connection failed"));
 
     const req = createReq();
     const res = createRes();
@@ -118,10 +112,6 @@ describe("dashboard.ctrl - getDashboardData", () => {
 
     await getDashboardData(req as Request, res as Response);
 
-    expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(
-      99,
-      42,
-      "Editor"
-    );
+    expect(mockGetDashboardDataQuery).toHaveBeenCalledWith(99, 42, "Editor");
   });
 });

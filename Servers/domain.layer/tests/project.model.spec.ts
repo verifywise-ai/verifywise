@@ -46,86 +46,68 @@ class TestProjectModel {
 
   // Static method to create new project
   static async CreateNewProject(
-    projectAttributes: Partial<IProjectAttributes>
+    projectAttributes: Partial<IProjectAttributes>,
   ): Promise<TestProjectModel> {
     // Validate required fields
-    if (
-      !projectAttributes.project_title ||
-      projectAttributes.project_title.trim().length === 0
-    ) {
+    if (!projectAttributes.project_title || projectAttributes.project_title.trim().length === 0) {
       throw new ValidationException(
         "Project title is required",
         "project_title",
-        projectAttributes.project_title
+        projectAttributes.project_title,
       );
     }
 
     if (!projectAttributes.owner || projectAttributes.owner <= 0) {
-      throw new ValidationException(
-        "Valid owner is required",
-        "owner",
-        projectAttributes.owner
-      );
+      throw new ValidationException("Valid owner is required", "owner", projectAttributes.owner);
     }
 
     if (!projectAttributes.start_date) {
       throw new ValidationException(
         "Start date is required",
         "start_date",
-        projectAttributes.start_date
+        projectAttributes.start_date,
       );
     }
 
     if (
       !projectAttributes.ai_risk_classification ||
-      !Object.values(AiRiskClassification).includes(
-        projectAttributes.ai_risk_classification
-      )
+      !Object.values(AiRiskClassification).includes(projectAttributes.ai_risk_classification)
     ) {
       throw new ValidationException(
         "Valid AI risk classification is required",
         "ai_risk_classification",
-        projectAttributes.ai_risk_classification
+        projectAttributes.ai_risk_classification,
       );
     }
 
     if (
       !projectAttributes.type_of_high_risk_role ||
-      !Object.values(HighRiskRole).includes(
-        projectAttributes.type_of_high_risk_role
-      )
+      !Object.values(HighRiskRole).includes(projectAttributes.type_of_high_risk_role)
     ) {
       throw new ValidationException(
         "Valid high risk role is required",
         "type_of_high_risk_role",
-        projectAttributes.type_of_high_risk_role
+        projectAttributes.type_of_high_risk_role,
       );
     }
 
     if (!projectAttributes.goal || projectAttributes.goal.trim().length === 0) {
-      throw new ValidationException(
-        "Goal is required",
-        "goal",
-        projectAttributes.goal
-      );
+      throw new ValidationException("Goal is required", "goal", projectAttributes.goal);
     }
 
     if (!projectAttributes.last_updated) {
       throw new ValidationException(
         "Last updated date is required",
         "last_updated",
-        projectAttributes.last_updated
+        projectAttributes.last_updated,
       );
     }
 
-    if (
-      !projectAttributes.last_updated_by ||
-      projectAttributes.last_updated_by <= 0
-    ) {
+    if (!projectAttributes.last_updated_by || projectAttributes.last_updated_by <= 0) {
       throw new ValidationException(
         "Valid last updated by is required",
         "last_updated_by",
-        projectAttributes.last_updated_by
+        projectAttributes.last_updated_by,
       );
     }
 
@@ -148,41 +130,33 @@ class TestProjectModel {
   // Static method to update project
   static async UpdateProject(
     projectId: number,
-    projectAttributes: Partial<IProjectAttributes>
+    projectAttributes: Partial<IProjectAttributes>,
   ): Promise<[number]> {
     // Validate project ID
     if (!projectId || projectId <= 0) {
-      throw new ValidationException(
-        "Valid project ID is required",
-        "projectId",
-        projectId
-      );
+      throw new ValidationException("Valid project ID is required", "projectId", projectId);
     }
 
     // Validate enum values if provided
     if (
       projectAttributes.ai_risk_classification &&
-      !Object.values(AiRiskClassification).includes(
-        projectAttributes.ai_risk_classification
-      )
+      !Object.values(AiRiskClassification).includes(projectAttributes.ai_risk_classification)
     ) {
       throw new ValidationException(
         "Valid AI risk classification is required",
         "ai_risk_classification",
-        projectAttributes.ai_risk_classification
+        projectAttributes.ai_risk_classification,
       );
     }
 
     if (
       projectAttributes.type_of_high_risk_role &&
-      !Object.values(HighRiskRole).includes(
-        projectAttributes.type_of_high_risk_role
-      )
+      !Object.values(HighRiskRole).includes(projectAttributes.type_of_high_risk_role)
     ) {
       throw new ValidationException(
         "Valid high risk role is required",
         "type_of_high_risk_role",
-        projectAttributes.type_of_high_risk_role
+        projectAttributes.type_of_high_risk_role,
       );
     }
 
@@ -239,9 +213,7 @@ describe("ProjectModel", () => {
       // Assert
       expect(project.project_title).toBe("Test Project");
       expect(project.owner).toBe(1);
-      expect(project.ai_risk_classification).toBe(
-        AiRiskClassification.MINIMAL_RISK
-      );
+      expect(project.ai_risk_classification).toBe(AiRiskClassification.MINIMAL_RISK);
       expect(project.type_of_high_risk_role).toBe(HighRiskRole.DEPLOYER);
       expect(project.goal).toBe("Test goal");
     });
@@ -256,9 +228,7 @@ describe("ProjectModel", () => {
       expect(project).toBeInstanceOf(TestProjectModel);
       expect(project.project_title).toBe("Test Project");
       expect(project.owner).toBe(1);
-      expect(project.ai_risk_classification).toBe(
-        AiRiskClassification.MINIMAL_RISK
-      );
+      expect(project.ai_risk_classification).toBe(AiRiskClassification.MINIMAL_RISK);
       expect(project.type_of_high_risk_role).toBe(HighRiskRole.DEPLOYER);
       expect(project.goal).toBe("Test goal");
       expect(project.is_demo).toBe(false); // default value
@@ -276,9 +246,7 @@ describe("ProjectModel", () => {
       const project = await TestProjectModel.CreateNewProject(projectData);
 
       // Assert
-      expect(project.ai_risk_classification).toBe(
-        AiRiskClassification.LIMITED_RISK
-      );
+      expect(project.ai_risk_classification).toBe(AiRiskClassification.LIMITED_RISK);
       expect(project.type_of_high_risk_role).toBe(HighRiskRole.PROVIDER);
     });
 
@@ -288,7 +256,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           project_title: "",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -298,7 +266,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           owner: 0,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -308,7 +276,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           start_date: undefined as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -318,7 +286,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           ai_risk_classification: "INVALID" as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -328,7 +296,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           type_of_high_risk_role: "INVALID" as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -338,7 +306,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           goal: "",
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -348,7 +316,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           last_updated: undefined as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -358,7 +326,7 @@ describe("ProjectModel", () => {
         TestProjectModel.CreateNewProject({
           ...validProjectData,
           last_updated_by: 0,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -372,10 +340,7 @@ describe("ProjectModel", () => {
       };
 
       // Act
-      const [affected] = await TestProjectModel.UpdateProject(
-        projectId,
-        updateData
-      );
+      const [affected] = await TestProjectModel.UpdateProject(projectId, updateData);
 
       // Assert
       expect(affected).toBe(1);
@@ -383,9 +348,9 @@ describe("ProjectModel", () => {
 
     it("should throw ValidationException for invalid project ID", async () => {
       // Arrange & Act & Assert
-      await expect(
-        TestProjectModel.UpdateProject(0, { goal: "Updated goal" })
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectModel.UpdateProject(0, { goal: "Updated goal" })).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid AI risk classification in update", async () => {
@@ -393,7 +358,7 @@ describe("ProjectModel", () => {
       await expect(
         TestProjectModel.UpdateProject(1, {
           ai_risk_classification: "INVALID" as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -402,7 +367,7 @@ describe("ProjectModel", () => {
       await expect(
         TestProjectModel.UpdateProject(1, {
           type_of_high_risk_role: "INVALID" as any,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });

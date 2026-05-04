@@ -8,10 +8,7 @@ interface AITrustCentreHeaderProps {
   data: any;
   hash: string | null;
 }
-const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
-  data,
-  hash,
-}) => {
+const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({ data, hash }) => {
   const [logo, setLogo] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -23,16 +20,10 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
       .then((response) => {
         // Extract the buffer and type
         const logoData = response?.data?.data?.logo;
-        if (
-          logoData?.content?.type === "Buffer" &&
-          Array.isArray(logoData?.content?.data)
-        ) {
+        if (logoData?.content?.type === "Buffer" && Array.isArray(logoData?.content?.data)) {
           // Convert buffer to base64
           const byteArray = new Uint8Array(logoData.content.data);
-          const binary = byteArray.reduce(
-            (acc, byte) => acc + String.fromCharCode(byte),
-            ""
-          );
+          const binary = byteArray.reduce((acc, byte) => acc + String.fromCharCode(byte), "");
           const base64 = window.btoa(binary);
           const imageUrl = `data:${logoData.type};base64,${base64}`;
           setLogo(imageUrl);
@@ -41,9 +32,7 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
       .catch((err) => {
         // 404 is expected when no logo has been uploaded - handle silently
         if (err?.response?.status !== 404) {
-          console.error(
-            err?.response?.data?.error || err.message || "Failed to fetch logo"
-          );
+          console.error(err?.response?.data?.error || err.message || "Failed to fetch logo");
         }
       })
       .finally(() => {
@@ -69,17 +58,9 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
           ) : (
             <>
               {(logo || data?.info?.logo) && (
-                <img
-                  src={logo || data?.info?.logo}
-                  alt="Company Logo"
-                  style={{ height: 35 }}
-                />
+                <img src={logo || data?.info?.logo} alt="Company Logo" style={{ height: 35 }} />
               )}
-              <Typography
-                variant="h5"
-                fontWeight="semibold"
-                sx={{ color: "text.secondary" }}
-              >
+              <Typography variant="h5" fontWeight="semibold" sx={{ color: "text.secondary" }}>
                 {data?.info?.title}
               </Typography>
             </>
@@ -88,36 +69,23 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({
         {data?.terms_and_contact && (
           <Stack direction="row" spacing={2} alignItems="center">
             {data?.terms_and_contact?.terms && (
-              <VWLink
-                url={data?.terms_and_contact?.terms}
-                openInNewTab={true}
-                showIcon={false}
-              >
+              <VWLink url={data?.terms_and_contact?.terms} openInNewTab={true} showIcon={false}>
                 Terms of service
               </VWLink>
             )}
-            {data?.terms_and_contact?.terms &&
-              data?.terms_and_contact?.privacy && (
-                <Typography sx={{ fontSize: 13 }}>•</Typography>
-              )}
+            {data?.terms_and_contact?.terms && data?.terms_and_contact?.privacy && (
+              <Typography sx={{ fontSize: 13 }}>•</Typography>
+            )}
             {data?.terms_and_contact?.privacy && (
-              <VWLink
-                url={data?.terms_and_contact?.privacy}
-                openInNewTab={true}
-                showIcon={false}
-              >
+              <VWLink url={data?.terms_and_contact?.privacy} openInNewTab={true} showIcon={false}>
                 Privacy policy
               </VWLink>
             )}
-            {data?.terms_and_contact?.privacy &&
-              data?.terms_and_contact?.email && (
-                <Typography sx={{ fontSize: 13 }}>•</Typography>
-              )}
+            {data?.terms_and_contact?.privacy && data?.terms_and_contact?.email && (
+              <Typography sx={{ fontSize: 13 }}>•</Typography>
+            )}
             {data?.terms_and_contact?.email && (
-              <VWLink
-                url={`mailto:${data?.terms_and_contact?.email}`}
-                showIcon={false}
-              >
+              <VWLink url={`mailto:${data?.terms_and_contact?.email}`} showIcon={false}>
                 {data?.terms_and_contact?.email}
               </VWLink>
             )}

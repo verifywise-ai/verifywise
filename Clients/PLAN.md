@@ -1,9 +1,11 @@
 # Unified Chip Component Implementation Plan
 
 ## Overview
+
 Create a unified `Chip` component to replace all scattered chip/badge implementations across the codebase with a consistent light pastel style.
 
 ## Target Design
+
 - Light pastel background with dark matching text
 - Padding: 4px 8px
 - Border radius: 4px
@@ -16,37 +18,41 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 ## Color Palette
 
 ### Risk Levels
-| Level | Background | Text |
-|-------|------------|------|
-| Critical/Very High | #FFD6D6 | #D32F2F |
-| High | #FFE5D0 | #E64A19 |
-| Medium | #FFF8E1 | #795548 |
-| Low | #E6F4EA | #138A5E |
-| Very Low | #E0F7FA | #00695C |
+
+| Level              | Background | Text    |
+| ------------------ | ---------- | ------- |
+| Critical/Very High | #FFD6D6    | #D32F2F |
+| High               | #FFE5D0    | #E64A19 |
+| Medium             | #FFF8E1    | #795548 |
+| Low                | #E6F4EA    | #138A5E |
+| Very Low           | #E0F7FA    | #00695C |
 
 ### Status Types
-| Status | Background | Text |
-|--------|------------|------|
-| Approved/Success/Yes/Completed | #E6F4EA | #138A5E |
-| Pending/In Progress | #FFF8E1 | #795548 |
-| Restricted/Warning | #FFE5D0 | #E64A19 |
-| Blocked/Error/No/Rejected | #FFD6D6 | #D32F2F |
-| Draft/Default | #F3F4F6 | #6B7280 |
+
+| Status                         | Background | Text    |
+| ------------------------------ | ---------- | ------- |
+| Approved/Success/Yes/Completed | #E6F4EA    | #138A5E |
+| Pending/In Progress            | #FFF8E1    | #795548 |
+| Restricted/Warning             | #FFE5D0    | #E64A19 |
+| Blocked/Error/No/Rejected      | #FFD6D6    | #D32F2F |
+| Draft/Default                  | #F3F4F6    | #6B7280 |
 
 ### Severity Levels
-| Severity | Background | Text |
-|----------|------------|------|
-| Catastrophic | #FFD6D6 | #D32F2F |
-| Major | #FFE5D0 | #E64A19 |
-| Moderate | #FFF8E1 | #795548 |
-| Minor | #E6F4EA | #138A5E |
-| Negligible | #E0F7FA | #00695C |
+
+| Severity     | Background | Text    |
+| ------------ | ---------- | ------- |
+| Catastrophic | #FFD6D6    | #D32F2F |
+| Major        | #FFE5D0    | #E64A19 |
+| Moderate     | #FFF8E1    | #795548 |
+| Minor        | #E6F4EA    | #138A5E |
+| Negligible   | #E0F7FA    | #00695C |
 
 ---
 
 ## Phase 1: Create Chip Component
 
 ### Task 1.1: Create component file
+
 - [ ] Create `src/presentation/components/Chip.tsx`
 - [ ] Define props interface with:
   - `label`: string (required)
@@ -59,6 +65,7 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 - [ ] Export component
 
 ### Task 1.2: Create interface file
+
 - [ ] Add interface to `src/domain/interfaces/i.chip.ts`
 
 ---
@@ -66,6 +73,7 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 ## Phase 2: Migrate RiskChip Usages
 
 ### Files to update:
+
 - [ ] `src/presentation/pages/ModelInventory/ModelRisksTable.tsx` (line 180)
 - [ ] `src/presentation/components/RiskLevel/index.tsx` (line 83-86)
 - [ ] `src/presentation/components/Table/LinkedRisksTable.tsx`
@@ -73,6 +81,7 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 - [ ] `src/presentation/pages/ModelInventory/MLFlowDataTable.tsx`
 
 ### Post-migration:
+
 - [ ] Remove or deprecate `RiskChip` component
 - [ ] Update `src/presentation/components/RiskLevel/constants.ts` if needed
 
@@ -81,11 +90,13 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 ## Phase 3: Migrate Inline Badges
 
 ### ModelInventory Table
+
 - [ ] `src/presentation/pages/ModelInventory/modelInventoryTable.tsx`
   - SecurityAssessmentBadge (line 89-96)
   - StatusBadge (line 83-87)
 
 ### VWProjectRisksTable
+
 - [ ] `src/presentation/components/Table/VWProjectRisksTable/VWProjectRisksTableBody.tsx`
   - Severity chip (line 182-213)
   - Likelihood chip (line 225-257)
@@ -93,22 +104,27 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
   - Risk Level chip (line 317-349)
 
 ### IncidentManagement Table
+
 - [ ] `src/presentation/pages/IncidentManagement/IncidentTable.tsx`
   - Severity, Status, Approval chips (line 46-101)
 
 ### PolicyTable
+
 - [ ] `src/presentation/components/Policies/PolicyTable.tsx`
   - Status chip (line 21-49)
 
 ### TasksTable
+
 - [ ] `src/presentation/components/Table/TasksTable/index.tsx`
   - Priority badge (line 30-52)
 
 ### TrainingRegistar Table
+
 - [ ] `src/presentation/pages/TrainingRegistar/trainingTable.tsx`
   - Status badge
 
 ### ISO Framework Pages
+
 - [ ] `src/presentation/pages/ISO/Clause/styles.ts`
 - [ ] `src/presentation/pages/ISO/Annex/styles.ts`
 - [ ] `src/presentation/pages/Framework/ISO27001/Clause/style.ts`
@@ -134,15 +150,27 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 ```tsx
 interface ChipProps {
   label: string;
-  variant?:
-    // Risk levels
-    | "critical" | "high" | "medium" | "low" | "very-low"
+  variant?: // Risk levels
+    | "critical"
+    | "high"
+    | "medium"
+    | "low"
+    | "very-low"
     // Status
-    | "success" | "warning" | "error" | "info" | "default"
+    | "success"
+    | "warning"
+    | "error"
+    | "info"
+    | "default"
     // Severity
-    | "catastrophic" | "major" | "moderate" | "minor" | "negligible"
+    | "catastrophic"
+    | "major"
+    | "moderate"
+    | "minor"
+    | "negligible"
     // Boolean
-    | "yes" | "no";
+    | "yes"
+    | "no";
   size?: "small" | "medium"; // 24px | 34px
   uppercase?: boolean; // default true
   backgroundColor?: string; // override

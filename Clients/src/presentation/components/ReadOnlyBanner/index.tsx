@@ -26,9 +26,7 @@ const ReadOnlyBanner = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isSuperAdmin, activeOrganizationId } = useAuth();
-  const activeModule = useSelector(
-    (state: RootState) => state.ui?.appModule?.active ?? "main"
-  );
+  const activeModule = useSelector((state: RootState) => state.ui?.appModule?.active ?? "main");
 
   const [orgs, setOrgs] = useState<Organization[]>([]);
 
@@ -55,8 +53,7 @@ const ReadOnlyBanner = () => {
     }
   }, [isSuperAdmin, orgs, activeOrganizationId, dispatch, navigate]);
 
-  if (!isSuperAdmin || !activeOrganizationId || activeModule === "super-admin")
-    return null;
+  if (!isSuperAdmin || !activeOrganizationId || activeModule === "super-admin") return null;
 
   const handleOrgChange = (event: SelectChangeEvent<number>) => {
     const newOrgId = Number(event.target.value);

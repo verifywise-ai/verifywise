@@ -5,18 +5,23 @@ The GroupBy functionality is a fully reusable component system that can be easil
 ## Components
 
 ### 1. `GroupBy` - The dropdown button component
+
 The main UI component that users interact with to select grouping options.
 
 ### 2. `GroupBadge` - Circular count indicator
+
 A reusable badge component that shows counts in a green circle.
 
 ### 3. `GroupedTableView` - Grouped rendering helper
+
 A component that handles the conditional rendering of grouped vs ungrouped tables.
 
 ### 4. `useGroupByState` - State management hook
+
 Manages the groupBy field and sort order state.
 
 ### 5. `useTableGrouping` - Data grouping hook
+
 Generic hook that groups any data based on a custom key extraction function.
 
 ---
@@ -41,7 +46,7 @@ const MyTablePage: React.FC = () => {
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // ... rest of your component
-}
+};
 ```
 
 ### Step 3: Define how to extract group keys from your data
@@ -51,25 +56,25 @@ Create a function that tells the system how to extract the group key from each d
 ```tsx
 const getMyDataGroupKey = (item: MyDataType, field: string): string | string[] => {
   switch (field) {
-    case 'status':
-      return item.status || 'Unknown';
+    case "status":
+      return item.status || "Unknown";
 
-    case 'category':
-      return item.category || 'Uncategorized';
+    case "category":
+      return item.category || "Uncategorized";
 
-    case 'assignees':
+    case "assignees":
       // For fields that can have multiple values, return an array
       // The item will appear in multiple groups
       if (item.assignees && item.assignees.length > 0) {
-        return item.assignees.map(assignee => assignee.name);
+        return item.assignees.map((assignee) => assignee.name);
       }
-      return 'Unassigned';
+      return "Unassigned";
 
-    case 'date':
-      return item.date ? new Date(item.date).toLocaleDateString() : 'No Date';
+    case "date":
+      return item.date ? new Date(item.date).toLocaleDateString() : "No Date";
 
     default:
-      return 'Other';
+      return "Other";
   }
 };
 ```

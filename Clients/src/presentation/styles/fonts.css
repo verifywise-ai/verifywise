@@ -1,16 +1,16 @@
 /* Self-hosted fonts — no external CDN dependency */
 
 @font-face {
-  font-family: 'Geist';
-  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Red Hat Display';
-  src: url('/fonts/RedHatDisplay-Variable.woff2') format('woff2');
+  font-family: "Red Hat Display";
+  src: url("/fonts/RedHatDisplay-Variable.woff2") format("woff2");
   font-weight: 600 700;
   font-style: normal;
   font-display: swap;

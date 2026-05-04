@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Stack, Typography, Paper, Divider, Button, CircularProgress, IconButton, Select, MenuItem, useTheme, Chip } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  Paper,
+  Divider,
+  Button,
+  CircularProgress,
+  IconButton,
+  Select,
+  MenuItem,
+  useTheme,
+  Chip,
+} from "@mui/material";
 import VWChip from "../../components/Chip";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -11,7 +24,10 @@ import {
   uploadDataset,
   type DatasetPromptRecord,
 } from "../../../application/repository/deepEval.repository";
-import { isSingleTurnPrompt, type SingleTurnPrompt } from "../../../application/repository/deepEval.repository";
+import {
+  isSingleTurnPrompt,
+  type SingleTurnPrompt,
+} from "../../../application/repository/deepEval.repository";
 import Alert from "../../components/Alert";
 import { ArrowLeft, X, Settings, ChevronDown, Upload } from "lucide-react";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
@@ -40,7 +56,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "mmlu",
     name: "MMLU",
     fullName: "Massive Multitask Language Understanding",
-    description: "Evaluates LLMs across 57 subjects including STEM, humanities, social sciences. Tests knowledge breadth and reasoning.",
+    description:
+      "Evaluates LLMs across 57 subjects including STEM, humanities, social sciences. Tests knowledge breadth and reasoning.",
     tasks: ["High School CS", "Astronomy", "College Math", "Medical Genetics", "Philosophy", "Law"],
     metrics: ["Accuracy"],
     difficulty: "Hard",
@@ -50,7 +67,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "hellaswag",
     name: "HellaSwag",
     fullName: "Harder Endings, Longer Contexts, and Low-shot Activities",
-    description: "Tests common-sense reasoning by predicting the most plausible continuation of a scenario.",
+    description:
+      "Tests common-sense reasoning by predicting the most plausible continuation of a scenario.",
     tasks: ["Common Sense", "Sentence Completion"],
     metrics: ["Accuracy"],
     difficulty: "Medium",
@@ -60,7 +78,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "big_bench_hard",
     name: "Big-Bench Hard",
     fullName: "Big-Bench Hard",
-    description: "23 challenging tasks that require multi-step reasoning. Focuses on areas where models struggle.",
+    description:
+      "23 challenging tasks that require multi-step reasoning. Focuses on areas where models struggle.",
     tasks: ["Logical Deduction", "Causal Judgment", "Disambiguation QA", "Date Understanding"],
     metrics: ["Accuracy"],
     difficulty: "Very Hard",
@@ -70,7 +89,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "truthfulqa",
     name: "TruthfulQA",
     fullName: "TruthfulQA",
-    description: "Measures whether a language model is truthful in generating answers to questions.",
+    description:
+      "Measures whether a language model is truthful in generating answers to questions.",
     tasks: ["Truthfulness", "Informativeness"],
     metrics: ["Truthful Score", "Informative Score"],
     difficulty: "Hard",
@@ -80,7 +100,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "drop",
     name: "DROP",
     fullName: "Discrete Reasoning Over Paragraphs",
-    description: "Tests reading comprehension with numerical reasoning, sorting, counting operations.",
+    description:
+      "Tests reading comprehension with numerical reasoning, sorting, counting operations.",
     tasks: ["Reading Comprehension", "Numerical Reasoning"],
     metrics: ["F1 Score", "Exact Match"],
     difficulty: "Hard",
@@ -90,7 +111,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "humaneval",
     name: "HumanEval",
     fullName: "HumanEval Code Generation",
-    description: "Evaluates code generation capabilities with Python programming problems and unit tests.",
+    description:
+      "Evaluates code generation capabilities with Python programming problems and unit tests.",
     tasks: ["Code Generation", "Problem Solving"],
     metrics: ["Pass@k"],
     difficulty: "Medium",
@@ -100,7 +122,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "gsm8k",
     name: "GSM8K",
     fullName: "Grade School Math 8K",
-    description: "Tests mathematical reasoning with grade school math word problems requiring multi-step arithmetic.",
+    description:
+      "Tests mathematical reasoning with grade school math word problems requiring multi-step arithmetic.",
     tasks: ["Math Word Problems", "Arithmetic Reasoning", "Multi-step Calculation"],
     metrics: ["Accuracy", "Exact Match"],
     difficulty: "Medium",
@@ -110,7 +133,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "arc",
     name: "ARC",
     fullName: "AI2 Reasoning Challenge",
-    description: "Science exam questions requiring reasoning. Includes Easy and Challenge sets with varying difficulty.",
+    description:
+      "Science exam questions requiring reasoning. Includes Easy and Challenge sets with varying difficulty.",
     tasks: ["Science QA", "Reasoning", "Knowledge Application"],
     metrics: ["Accuracy"],
     difficulty: "Hard",
@@ -120,7 +144,8 @@ const DEEPEVAL_BENCHMARKS = [
     id: "winogrande",
     name: "WinoGrande",
     fullName: "WinoGrande Commonsense Reasoning",
-    description: "Large-scale dataset for commonsense reasoning, testing pronoun resolution in context.",
+    description:
+      "Large-scale dataset for commonsense reasoning, testing pronoun resolution in context.",
     tasks: ["Coreference Resolution", "Commonsense Reasoning"],
     metrics: ["Accuracy"],
     difficulty: "Medium",
@@ -128,7 +153,11 @@ const DEEPEVAL_BENCHMARKS = [
   },
 ];
 
-type BuiltInEmbedProps = { embed?: boolean; onOpenEditor?: (path: string, name: string) => void; onBack?: () => void };
+type BuiltInEmbedProps = {
+  embed?: boolean;
+  onOpenEditor?: (path: string, name: string) => void;
+  onBack?: () => void;
+};
 export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -190,7 +219,9 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
           try {
             const ex = await getAllExperiments({ project_id: projectId });
             setExperimentsCount(ex.experiments?.length || 0);
-          } catch { setExperimentsCount(0); }
+          } catch {
+            setExperimentsCount(0);
+          }
         }
 
         const res = await listDatasets();
@@ -198,18 +229,25 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
         try {
           const totalCount = Object.values(res).reduce((sum, arr) => sum + (arr?.length || 0), 0);
           setDatasetsCount(totalCount);
-        } catch { setDatasetsCount(0); }
+        } catch {
+          setDatasetsCount(0);
+        }
         if (!embed) {
           const path = params.get("path");
           if (path) {
-            const match = Object.values(res).flat().find((d) => d.path === path);
+            const match = Object.values(res)
+              .flat()
+              .find((d) => d.path === path);
             if (match) {
               setSelected(match);
             }
           }
         }
       } catch (e) {
-        setAlert({ variant: "error", body: e instanceof Error ? e.message : "Failed to load datasets" });
+        setAlert({
+          variant: "error",
+          body: e instanceof Error ? e.message : "Failed to load datasets",
+        });
         setTimeout(() => setAlert(null), 6000);
       }
     })();
@@ -224,14 +262,20 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
         const data = await readDataset(path);
         setPreviewPrompts(data.prompts || []);
         if (!embed) {
-          setParams((p) => {
-            const np = new URLSearchParams(p);
-            np.set("path", path);
-            return np;
-          }, { replace: true });
+          setParams(
+            (p) => {
+              const np = new URLSearchParams(p);
+              np.set("path", path);
+              return np;
+            },
+            { replace: true },
+          );
         }
       } catch (e) {
-        setAlert({ variant: "error", body: e instanceof Error ? e.message : "Failed to load dataset" });
+        setAlert({
+          variant: "error",
+          body: e instanceof Error ? e.message : "Failed to load dataset",
+        });
         setTimeout(() => setAlert(null), 6000);
       } finally {
         setLoadingPreview(false);
@@ -239,11 +283,14 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
     })();
   }, [selected, setParams, embed]);
 
-  const descriptions: Record<string, string> = useMemo(() => ({
-    chatbot: "Chatbot prompts for single‑turn or conversational evaluation of assistant replies.",
-    rag: "RAG tasks with retrieval_context, suitable for faithfulness/contextual metrics.",
-    agent: "Agentic tasks that involve tools and multi‑step plans.",
-  }), []);
+  const descriptions: Record<string, string> = useMemo(
+    () => ({
+      chatbot: "Chatbot prompts for single‑turn or conversational evaluation of assistant replies.",
+      rag: "RAG tasks with retrieval_context, suitable for faithfulness/contextual metrics.",
+      agent: "Agentic tasks that involve tools and multi‑step plans.",
+    }),
+    [],
+  );
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -289,117 +336,156 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
               { label: "Built‑in datasets", path: `/evals/${projectId}/datasets/built-in` },
             ]}
           />
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2, mt: -2 }} />
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ mb: 2, mt: -2 }}
+          />
         </>
       )}
       {/* Project selector + settings (match project pages) - ABOVE tabs */}
-      {!embed && (<Box
-        sx={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          gap: 2,
-          mb: 2,
-        }}
-      >
-        <Stack gap={theme.spacing(2)} className="select-wrapper" sx={{ mb: 0 }}>
-          <Typography
-            component="p"
-            variant="body1"
-            color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize="13px"
-            sx={{ margin: 0, height: "22px", display: "flex", alignItems: "center" }}
-          >
-            Project
-          </Typography>
-          <Select
-            className="select-component"
-            value={projectId || ""}
-            onChange={(e) => {
-              const newId = String(e.target.value);
-              navigate(`/evals/${newId}#datasets`);
-            }}
-            displayEmpty
-            IconComponent={() => (
-              <ChevronDown
-                size={16}
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: theme.palette.text.tertiary,
-                }}
-              />
-            )}
-            MenuProps={{
-              disableScrollLock: true,
-              PaperProps: {
-                sx: {
-                  borderRadius: theme.shape.borderRadius,
-                  boxShadow: theme.boxShadow,
-                  mt: 1,
-                  "& .MuiMenuItem-root": {
-                    fontSize: 13,
-                    color: theme.palette.text.primary,
-                    "&:hover": { backgroundColor: theme.palette.background.accent },
-                    "&.Mui-selected": {
-                      backgroundColor: theme.palette.background.accent,
+      {!embed && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 2,
+            mb: 2,
+          }}
+        >
+          <Stack gap={theme.spacing(2)} className="select-wrapper" sx={{ mb: 0 }}>
+            <Typography
+              component="p"
+              variant="body1"
+              color={theme.palette.text.secondary}
+              fontWeight={500}
+              fontSize="13px"
+              sx={{ margin: 0, height: "22px", display: "flex", alignItems: "center" }}
+            >
+              Project
+            </Typography>
+            <Select
+              className="select-component"
+              value={projectId || ""}
+              onChange={(e) => {
+                const newId = String(e.target.value);
+                navigate(`/evals/${newId}#datasets`);
+              }}
+              displayEmpty
+              IconComponent={() => (
+                <ChevronDown
+                  size={16}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                    color: theme.palette.text.tertiary,
+                  }}
+                />
+              )}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  sx: {
+                    borderRadius: theme.shape.borderRadius,
+                    boxShadow: theme.boxShadow,
+                    mt: 1,
+                    "& .MuiMenuItem-root": {
+                      fontSize: 13,
+                      color: theme.palette.text.primary,
                       "&:hover": { backgroundColor: theme.palette.background.accent },
+                      "&.Mui-selected": {
+                        backgroundColor: theme.palette.background.accent,
+                        "&:hover": { backgroundColor: theme.palette.background.accent },
+                      },
+                      "& .MuiTouchRipple-root": { display: "none" },
                     },
-                    "& .MuiTouchRipple-root": { display: "none" },
                   },
                 },
-              },
-            }}
-            sx={{
-              fontSize: 13,
-              minWidth: "160px",
-              maxWidth: "260px",
-              backgroundColor: theme.palette.background.main,
-              position: "relative",
-              cursor: "pointer",
-              "& .MuiSelect-select": {
-                padding: "0 32px 0 10px !important",
-                height: "34px",
-                display: "flex",
-                alignItems: "center",
-                lineHeight: 2,
-              },
-              ...getSelectStyles(theme),
-            }}
+              }}
+              sx={{
+                fontSize: 13,
+                minWidth: "160px",
+                maxWidth: "260px",
+                backgroundColor: theme.palette.background.main,
+                position: "relative",
+                cursor: "pointer",
+                "& .MuiSelect-select": {
+                  padding: "0 32px 0 10px !important",
+                  height: "34px",
+                  display: "flex",
+                  alignItems: "center",
+                  lineHeight: 2,
+                },
+                ...getSelectStyles(theme),
+              }}
+            >
+              {allProjects.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
+          <IconButton
+            aria-label="Settings"
+            onClick={() => navigate(`/evals/${projectId}/configuration`)}
           >
-            {allProjects.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </Stack>
-        <IconButton aria-label="Settings" onClick={() => navigate(`/evals/${projectId}/configuration`)}>
-          <Settings size={18} />
-        </IconButton>
-      </Box>)}
+            <Settings size={18} />
+          </IconButton>
+        </Box>
+      )}
 
-      {!embed && (<TabContext value="datasets">
-        <TabBar
-          activeTab="datasets"
-          onChange={(_, v: string) => {
-            if (!projectId) return;
-            navigate(`/evals/${projectId}#${v}`);
-          }}
-          tabs={[
-            { value: "overview", label: "Overview", icon: "LayoutDashboard", tooltip: "Project summary and key metrics" },
-            { value: "experiments", label: "Experiments", icon: "FlaskConical", count: experimentsCount, tooltip: "Run and compare model evaluations" },
-            { value: "datasets", label: "Datasets", icon: "Database", count: datasetsCount, tooltip: "Test datasets for evaluating models" },
-            { value: "scorers", label: "Scorers", icon: "Award", tooltip: "Metrics used to score model outputs" },
-            { value: "configuration", label: "Configuration", icon: "Settings", tooltip: "Project settings and LLM API keys" },
-          ]}
-          tabListSx={{ mb: 2 }}
-        />
-      </TabContext>)}
+      {!embed && (
+        <TabContext value="datasets">
+          <TabBar
+            activeTab="datasets"
+            onChange={(_, v: string) => {
+              if (!projectId) return;
+              navigate(`/evals/${projectId}#${v}`);
+            }}
+            tabs={[
+              {
+                value: "overview",
+                label: "Overview",
+                icon: "LayoutDashboard",
+                tooltip: "Project summary and key metrics",
+              },
+              {
+                value: "experiments",
+                label: "Experiments",
+                icon: "FlaskConical",
+                count: experimentsCount,
+                tooltip: "Run and compare model evaluations",
+              },
+              {
+                value: "datasets",
+                label: "Datasets",
+                icon: "Database",
+                count: datasetsCount,
+                tooltip: "Test datasets for evaluating models",
+              },
+              {
+                value: "scorers",
+                label: "Scorers",
+                icon: "Award",
+                tooltip: "Metrics used to score model outputs",
+              },
+              {
+                value: "configuration",
+                label: "Configuration",
+                icon: "Settings",
+                tooltip: "Project settings and LLM API keys",
+              },
+            ]}
+            tabListSx={{ mb: 2 }}
+          />
+        </TabContext>
+      )}
       {!embed && <Divider sx={{ mb: 2 }} />}
 
       {/* Section toggle: Datasets vs Benchmarks */}
@@ -410,12 +496,15 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             onClick={() => setActiveSection("datasets")}
             sx={{
               cursor: "pointer",
-              backgroundColor: activeSection === "datasets" ? palette.brand.primary : palette.background.hover,
-              color: activeSection === "datasets" ? palette.background.main : palette.text.secondary,
+              backgroundColor:
+                activeSection === "datasets" ? palette.brand.primary : palette.background.hover,
+              color:
+                activeSection === "datasets" ? palette.background.main : palette.text.secondary,
               fontWeight: 500,
               fontSize: "13px",
               "&:hover": {
-                backgroundColor: activeSection === "datasets" ? palette.brand.primaryHover : palette.border.dark,
+                backgroundColor:
+                  activeSection === "datasets" ? palette.brand.primaryHover : palette.border.dark,
               },
             }}
           />
@@ -424,12 +513,15 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             onClick={() => setActiveSection("benchmarks")}
             sx={{
               cursor: "pointer",
-              backgroundColor: activeSection === "benchmarks" ? palette.brand.primary : palette.background.hover,
-              color: activeSection === "benchmarks" ? palette.background.main : palette.text.secondary,
+              backgroundColor:
+                activeSection === "benchmarks" ? palette.brand.primary : palette.background.hover,
+              color:
+                activeSection === "benchmarks" ? palette.background.main : palette.text.secondary,
               fontWeight: 500,
               fontSize: "13px",
               "&:hover": {
-                backgroundColor: activeSection === "benchmarks" ? palette.brand.primaryHover : palette.border.dark,
+                backgroundColor:
+                  activeSection === "benchmarks" ? palette.brand.primaryHover : palette.border.dark,
               },
             }}
           />
@@ -462,7 +554,12 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
           />
 
           <Box sx={{ mb: 3 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "16px" }}>
                 Datasets
               </Typography>
@@ -478,7 +575,8 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
               </Button>
             </Stack>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
-              Use pre-built datasets for chatbot, RAG, and agent evaluations, or upload your own custom datasets in JSON format.
+              Use pre-built datasets for chatbot, RAG, and agent evaluations, or upload your own
+              custom datasets in JSON format.
             </Typography>
           </Box>
         </>
@@ -522,10 +620,14 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
               >
                 <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
                   <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: "16px", color: palette.text.primary }}>
+                    <Typography
+                      sx={{ fontWeight: 700, fontSize: "16px", color: palette.text.primary }}
+                    >
                       {benchmark.name}
                     </Typography>
-                    <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, fontStyle: "italic" }}>
+                    <Typography
+                      sx={{ fontSize: "11px", color: palette.text.tertiary, fontStyle: "italic" }}
+                    >
                       {benchmark.fullName}
                     </Typography>
                   </Box>
@@ -537,24 +639,38 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                       fontSize: "10px",
                       fontWeight: 600,
                       backgroundColor:
-                        benchmark.difficulty === "Medium" ? palette.status.warning.bg :
-                        benchmark.difficulty === "Hard" ? palette.status.error.bg :
-                        benchmark.difficulty === "Very Hard" ? palette.accent.purple.bg : palette.border.dark,
+                        benchmark.difficulty === "Medium"
+                          ? palette.status.warning.bg
+                          : benchmark.difficulty === "Hard"
+                            ? palette.status.error.bg
+                            : benchmark.difficulty === "Very Hard"
+                              ? palette.accent.purple.bg
+                              : palette.border.dark,
                       color:
-                        benchmark.difficulty === "Medium" ? palette.status.warning.text :
-                        benchmark.difficulty === "Hard" ? palette.status.error.text :
-                        benchmark.difficulty === "Very Hard" ? palette.accent.purple.text : palette.text.secondary,
+                        benchmark.difficulty === "Medium"
+                          ? palette.status.warning.text
+                          : benchmark.difficulty === "Hard"
+                            ? palette.status.error.text
+                            : benchmark.difficulty === "Very Hard"
+                              ? palette.accent.purple.text
+                              : palette.text.secondary,
                       borderRadius: "4px",
                     }}
                   />
                 </Stack>
 
-                <Typography variant="body2" sx={{ fontSize: "12px", color: palette.text.secondary, lineHeight: 1.6 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontSize: "12px", color: palette.text.secondary, lineHeight: 1.6 }}
+                >
                   {benchmark.description}
                 </Typography>
 
                 <Box>
-                  <Typography variant="body2" sx={{ fontSize: "11px", color: palette.text.secondary }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: "11px", color: palette.text.secondary }}
+                  >
                     <strong>{benchmark.sampleCount.toLocaleString()}</strong> samples
                   </Typography>
                 </Box>
@@ -562,7 +678,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 <Box>
                   <Typography
                     variant="caption"
-                    sx={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 600, color: palette.text.tertiary, letterSpacing: "0.5px" }}
+                    sx={{
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      letterSpacing: "0.5px",
+                    }}
                   >
                     Tasks
                   </Typography>
@@ -582,7 +704,10 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                       />
                     ))}
                     {benchmark.tasks.length > 3 && (
-                      <Typography variant="caption" sx={{ fontSize: "10px", color: palette.text.tertiary }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ fontSize: "10px", color: palette.text.tertiary }}
+                      >
                         +{benchmark.tasks.length - 3} more
                       </Typography>
                     )}
@@ -592,7 +717,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 <Box>
                   <Typography
                     variant="caption"
-                    sx={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 600, color: palette.text.tertiary, letterSpacing: "0.5px" }}
+                    sx={{
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      fontWeight: 600,
+                      color: palette.text.tertiary,
+                      letterSpacing: "0.5px",
+                    }}
                   >
                     Metrics
                   </Typography>
@@ -640,58 +771,90 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
       {activeSection === "datasets" && (
         <Stack direction="row" spacing={2}>
           {selected && (
-          <Box sx={{ width: 360 }}>
-            {(["chatbot", "rag", "agent"] as const).map((uc) => (
-              <Box key={uc} sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, textTransform: "capitalize", fontSize: "13px", mb: 0.5 }}>
-                  {uc} <VWChip label={String((groups[uc] || []).length)} size="small" variant="default" uppercase={false} />
-                </Typography>
-                <Typography variant="body2" sx={{ color: palette.text.tertiary, fontSize: "12px", mb: 1 }}>
-                  {descriptions[uc]}
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                  {(groups[uc] || []).map((ds) => (
-                    <Button
-                      key={ds.key}
-                      variant={selected?.key === ds.key ? "contained" : "outlined"}
-                      onClick={() => setSelected(ds)}
-                      sx={{
-                        justifyContent: "flex-start",
-                        textTransform: "none",
-                        borderRadius: "8px",
-                        px: 1.25,
-                        py: 0.75,
-                        minHeight: 32,
-                        fontSize: "12px",
-                      }}
-                      fullWidth
-                    >
-                      {ds.name}
-                    </Button>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
-          </Box>
+            <Box sx={{ width: 360 }}>
+              {(["chatbot", "rag", "agent"] as const).map((uc) => (
+                <Box key={uc} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 700, textTransform: "capitalize", fontSize: "13px", mb: 0.5 }}
+                  >
+                    {uc}{" "}
+                    <VWChip
+                      label={String((groups[uc] || []).length)}
+                      size="small"
+                      variant="default"
+                      uppercase={false}
+                    />
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: palette.text.tertiary, fontSize: "12px", mb: 1 }}
+                  >
+                    {descriptions[uc]}
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+                    {(groups[uc] || []).map((ds) => (
+                      <Button
+                        key={ds.key}
+                        variant={selected?.key === ds.key ? "contained" : "outlined"}
+                        onClick={() => setSelected(ds)}
+                        sx={{
+                          justifyContent: "flex-start",
+                          textTransform: "none",
+                          borderRadius: "8px",
+                          px: 1.25,
+                          py: 0.75,
+                          minHeight: 32,
+                          fontSize: "12px",
+                        }}
+                        fullWidth
+                      >
+                        {ds.name}
+                      </Button>
+                    ))}
+                  </Stack>
+                </Box>
+              ))}
+            </Box>
           )}
           {selected ? (
             <Box sx={{ flex: 1 }}>
               {loadingPreview ? (
-              <Paper variant="outlined" sx={{ p: 2, height: "70vh", overflow: "auto" }}>
-                <Stack alignItems="center" justifyContent="center" sx={{ height: "100%" }}>
-                  <CircularProgress size={24} />
-                </Stack>
-              </Paper>
+                <Paper variant="outlined" sx={{ p: 2, height: "70vh", overflow: "auto" }}>
+                  <Stack alignItems="center" justifyContent="center" sx={{ height: "100%" }}>
+                    <CircularProgress size={24} />
+                  </Stack>
+                </Paper>
               ) : previewPrompts && previewPrompts.length > 0 ? (
                 <Paper variant="outlined" sx={{ p: 2, height: "70vh", overflow: "auto" }}>
                   <Box ref={viewerTopRef} />
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: "13px" }}>{selected.name}</Typography>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography sx={{ fontWeight: 700, fontSize: "13px" }}>
+                      {selected.name}
+                    </Typography>
                     <Stack direction="row" spacing={1}>
-                      <IconButton size="small" onClick={() => setSelected(null)} title="Close viewer" aria-label="Close viewer">
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelected(null)}
+                        title="Close viewer"
+                        aria-label="Close viewer"
+                      >
                         <X size={16} />
                       </IconButton>
-                      <Button size="small" variant="contained" sx={{ bgcolor: palette.brand.primary, "&:hover": { bgcolor: palette.brand.primaryHover } }} onClick={() => openEditor(selected.path, selected.name)}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        sx={{
+                          bgcolor: palette.brand.primary,
+                          "&:hover": { bgcolor: palette.brand.primaryHover },
+                        }}
+                        onClick={() => openEditor(selected.path, selected.name)}
+                      >
                         Open in editor
                       </Button>
                     </Stack>
@@ -702,59 +865,103 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                         const stp = p as SingleTurnPrompt;
                         return (
                           <Paper key={stp.id} variant="outlined" sx={{ p: 1.25 }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                          <Typography sx={{ fontWeight: 700, fontSize: "12px" }}>{`Prompt ${idx + 1}`}</Typography>
-                          <Chip
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              justifyContent="space-between"
+                              sx={{ mb: 0.5 }}
+                            >
+                              <Typography
+                                sx={{ fontWeight: 700, fontSize: "12px" }}
+                              >{`Prompt ${idx + 1}`}</Typography>
+                              <Chip
                                 label={stp.category}
-                            size="small"
-                            sx={{
-                              height: 18,
-                              fontSize: "10px",
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: "10px",
                                   bgcolor: stp.category?.toLowerCase().includes("coding")
-                                ? palette.brand.primaryLight
+                                    ? palette.brand.primaryLight
                                     : stp.category?.toLowerCase().includes("math")
-                                ? palette.accent.blue.bg
-                                    : stp.category?.toLowerCase().includes("reason")
-                                ? palette.accent.orange.bg
-                                : palette.background.hover,
-                            }}
-                          />
-                        </Stack>
-                        <Typography sx={{ fontSize: "12px", color: palette.text.primary, whiteSpace: "pre-wrap" }}>
+                                      ? palette.accent.blue.bg
+                                      : stp.category?.toLowerCase().includes("reason")
+                                        ? palette.accent.orange.bg
+                                        : palette.background.hover,
+                                }}
+                              />
+                            </Stack>
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: palette.text.primary,
+                                whiteSpace: "pre-wrap",
+                              }}
+                            >
                               {stp.prompt}
-                        </Typography>
+                            </Typography>
                             {stp.expected_output && (
-                          <Typography sx={{ mt: 0.75, fontSize: "12px", color: palette.text.secondary }}>
+                              <Typography
+                                sx={{ mt: 0.75, fontSize: "12px", color: palette.text.secondary }}
+                              >
                                 <b>Expected:</b> {stp.expected_output}
-                          </Typography>
-                        )}
-                            {Array.isArray(stp.expected_keywords) && stp.expected_keywords.length > 0 && (
-                          <Typography sx={{ mt: 0.5, fontSize: "12px", color: palette.text.secondary }}>
-                                <b>Keywords:</b> {stp.expected_keywords.join(", ")}
-                          </Typography>
-                        )}
-                            {Array.isArray(stp.retrieval_context) && stp.retrieval_context.length > 0 && (
-                          <Typography sx={{ mt: 0.5, fontSize: "12px", color: palette.text.secondary, whiteSpace: "pre-wrap" }}>
-                                <b>Context:</b> {stp.retrieval_context.join("\n")}
-                          </Typography>
-                        )}
-                      </Paper>
+                              </Typography>
+                            )}
+                            {Array.isArray(stp.expected_keywords) &&
+                              stp.expected_keywords.length > 0 && (
+                                <Typography
+                                  sx={{ mt: 0.5, fontSize: "12px", color: palette.text.secondary }}
+                                >
+                                  <b>Keywords:</b> {stp.expected_keywords.join(", ")}
+                                </Typography>
+                              )}
+                            {Array.isArray(stp.retrieval_context) &&
+                              stp.retrieval_context.length > 0 && (
+                                <Typography
+                                  sx={{
+                                    mt: 0.5,
+                                    fontSize: "12px",
+                                    color: palette.text.secondary,
+                                    whiteSpace: "pre-wrap",
+                                  }}
+                                >
+                                  <b>Context:</b> {stp.retrieval_context.join("\n")}
+                                </Typography>
+                              )}
+                          </Paper>
                         );
                       } else {
                         // Multi-turn conversation
                         const conv = p;
                         return (
                           <Paper key={conv.id || idx} variant="outlined" sx={{ p: 1.25 }}>
-                            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                              <Typography sx={{ fontWeight: 700, fontSize: "12px" }}>{`Conversation ${idx + 1}`}</Typography>
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              justifyContent="space-between"
+                              sx={{ mb: 0.5 }}
+                            >
+                              <Typography
+                                sx={{ fontWeight: 700, fontSize: "12px" }}
+                              >{`Conversation ${idx + 1}`}</Typography>
                               <Chip
                                 label={`${conv.turns?.length || 0} turns`}
                                 size="small"
-                                sx={{ height: 18, fontSize: "10px", bgcolor: palette.accent.blue.bg }}
+                                sx={{
+                                  height: 18,
+                                  fontSize: "10px",
+                                  bgcolor: palette.accent.blue.bg,
+                                }}
                               />
                             </Stack>
                             {conv.scenario && (
-                              <Typography sx={{ fontSize: "12px", color: palette.text.primary, whiteSpace: "pre-wrap", mb: 0.5 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: "12px",
+                                  color: palette.text.primary,
+                                  whiteSpace: "pre-wrap",
+                                  mb: 0.5,
+                                }}
+                              >
                                 <b>Scenario:</b> {conv.scenario}
                               </Typography>
                             )}
@@ -782,7 +989,10 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
               <Box>
                 {(["chatbot", "rag", "agent"] as const).map((uc) => (
                   <Box key={uc} sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: "13px", textTransform: "capitalize", mb: 1 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, fontSize: "13px", textTransform: "capitalize", mb: 1 }}
+                    >
                       {uc}
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
@@ -820,7 +1030,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                             {ds.description && (
                               <Typography
                                 variant="body2"
-                                sx={{ fontSize: "12px", color: palette.text.secondary, lineHeight: 1.6 }}
+                                sx={{
+                                  fontSize: "12px",
+                                  color: palette.text.secondary,
+                                  lineHeight: 1.6,
+                                }}
                               >
                                 {ds.description}
                               </Typography>
@@ -845,12 +1059,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                                     {ds.category_count === 1 ? "category" : "categories"}
                                   </>
                                 )}
-                                {difficultyText && (
-                                  <>
-                                    {" "}
-                                    – {difficultyText}
-                                  </>
-                                )}
+                                {difficultyText && <> – {difficultyText}</>}
                               </Typography>
                             )}
 
@@ -868,7 +1077,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                                 >
                                   Topics
                                 </Typography>
-                                <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  sx={{ flexWrap: "wrap", mt: 0.5 }}
+                                >
                                   {ds.categories.slice(0, 4).map((c) => (
                                     <Chip
                                       key={c}
@@ -886,7 +1099,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                                   {ds.categories.length > 4 && (
                                     <Typography
                                       variant="caption"
-                                      sx={{ fontSize: "10px", color: palette.text.tertiary, ml: 0.5 }}
+                                      sx={{
+                                        fontSize: "10px",
+                                        color: palette.text.tertiary,
+                                        ml: 0.5,
+                                      }}
                                     >
                                       +{ds.categories.length - 4} more
                                     </Typography>
@@ -943,5 +1160,3 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
     </Box>
   );
 }
-
-

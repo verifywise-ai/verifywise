@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Adds 5 missing sub-controls to ISO 42001 Annex A.9 "Data for AI systems"
@@ -13,37 +13,42 @@ const NEW_SUB_CONTROLS = [
   {
     sub_id: 7.1,
     order_no: 7,
-    title: 'Data labeling and annotation',
-    description: 'Managing data labeling and annotation processes for AI systems.',
-    guidance: 'Data labeling and annotation processes should be defined, documented, and quality-controlled to ensure labels are accurate, consistent, and appropriate for the intended AI system purpose. Labeler qualifications and inter-annotator agreement should be monitored.',
+    title: "Data labeling and annotation",
+    description: "Managing data labeling and annotation processes for AI systems.",
+    guidance:
+      "Data labeling and annotation processes should be defined, documented, and quality-controlled to ensure labels are accurate, consistent, and appropriate for the intended AI system purpose. Labeler qualifications and inter-annotator agreement should be monitored.",
   },
   {
     sub_id: 8.1,
     order_no: 8,
-    title: 'Data bias assessment',
-    description: 'Assessing and mitigating bias in data used for AI systems.',
-    guidance: 'Data used for AI systems should be assessed for potential biases that could lead to unfair, discriminatory, or harmful outcomes. Identified biases should be documented and mitigated through appropriate techniques.',
+    title: "Data bias assessment",
+    description: "Assessing and mitigating bias in data used for AI systems.",
+    guidance:
+      "Data used for AI systems should be assessed for potential biases that could lead to unfair, discriminatory, or harmful outcomes. Identified biases should be documented and mitigated through appropriate techniques.",
   },
   {
     sub_id: 9.1,
     order_no: 9,
-    title: 'Data retention',
-    description: 'Defining and implementing data retention policies for AI-related data.',
-    guidance: 'Retention periods for data used in AI systems — including training data, validation data, model outputs, and logs — should be defined based on legal, regulatory, and operational requirements, and enforced through documented procedures.',
+    title: "Data retention",
+    description: "Defining and implementing data retention policies for AI-related data.",
+    guidance:
+      "Retention periods for data used in AI systems — including training data, validation data, model outputs, and logs — should be defined based on legal, regulatory, and operational requirements, and enforced through documented procedures.",
   },
   {
     sub_id: 10.1,
     order_no: 10,
-    title: 'Data deletion and disposal',
-    description: 'Secure deletion and disposal of AI-related data.',
-    guidance: 'Data used in AI systems should be securely deleted or disposed of when no longer needed or when retention periods expire, ensuring that deletion is complete and verifiable, particularly for personal or sensitive data.',
+    title: "Data deletion and disposal",
+    description: "Secure deletion and disposal of AI-related data.",
+    guidance:
+      "Data used in AI systems should be securely deleted or disposed of when no longer needed or when retention periods expire, ensuring that deletion is complete and verifiable, particularly for personal or sensitive data.",
   },
   {
     sub_id: 11.1,
     order_no: 11,
-    title: 'Data transfer',
-    description: 'Managing the transfer of data used in AI systems.',
-    guidance: 'Transfer of data used in AI systems — whether internal or to third parties — should be governed by documented procedures addressing authorization, encryption, contractual safeguards, and compliance with data protection regulations including cross-border transfer restrictions.',
+    title: "Data transfer",
+    description: "Managing the transfer of data used in AI systems.",
+    guidance:
+      "Transfer of data used in AI systems — whether internal or to third parties — should be governed by documented procedures addressing authorization, encryption, contractual safeguards, and compliance with data protection regulations including cross-border transfer restrictions.",
   },
 ];
 
@@ -54,10 +59,10 @@ module.exports = {
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks
          WHERE name ILIKE 'ISO 42001%' OR name ILIKE 'ISO/IEC 42001%' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[iso42001-a9-subcontrols] ISO 42001 framework not found — skipping');
+        console.warn("[iso42001-a9-subcontrols] ISO 42001 framework not found — skipping");
         await t.commit();
         return;
       }
@@ -66,10 +71,10 @@ module.exports = {
       const [[annex]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.annex_struct_iso
          WHERE framework_id = :frameworkId AND annex_no = 9 LIMIT 1;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
       if (!annex) {
-        console.warn('[iso42001-a9-subcontrols] A.9 annex group not found — skipping');
+        console.warn("[iso42001-a9-subcontrols] A.9 annex group not found — skipping");
         await t.commit();
         return;
       }
@@ -80,7 +85,7 @@ module.exports = {
         const [[existing]] = await queryInterface.sequelize.query(
           `SELECT id FROM verifywise.annexcategories_struct_iso
            WHERE annex_id = :annexId AND order_no = :order_no LIMIT 1;`,
-          { transaction: t, replacements: { annexId, order_no: sub.order_no } }
+          { transaction: t, replacements: { annexId, order_no: sub.order_no } },
         );
         let structId = existing?.id;
         if (!structId) {
@@ -99,7 +104,7 @@ module.exports = {
                 guidance: sub.guidance,
                 order_no: sub.order_no,
               },
-            }
+            },
           );
           structId = inserted.id;
         }
@@ -118,12 +123,12 @@ module.exports = {
                WHERE ai.projects_frameworks_id = pf.id
                  AND ai.annexcategory_meta_id = :structId
              );`,
-          { transaction: t, replacements: { structId, frameworkId } }
+          { transaction: t, replacements: { structId, frameworkId } },
         );
       }
 
       await t.commit();
-      console.log('[iso42001-a9-subcontrols] added 5 A.9 sub-controls + empty tenant rows');
+      console.log("[iso42001-a9-subcontrols] added 5 A.9 sub-controls + empty tenant rows");
     } catch (err) {
       await t.rollback();
       throw err;

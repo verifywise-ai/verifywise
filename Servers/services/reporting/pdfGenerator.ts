@@ -8,7 +8,10 @@ import { chromium, Browser, Page } from "playwright";
 import * as ejs from "ejs";
 import * as path from "path";
 import * as fs from "fs";
-import { ReportData, ReportGenerationResult } from "../../domain.layer/interfaces/i.reportGeneration";
+import {
+  ReportData,
+  ReportGenerationResult,
+} from "../../domain.layer/interfaces/i.reportGeneration";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -48,16 +51,10 @@ export async function closeBrowser(): Promise<void> {
  * Render EJS template to HTML string
  */
 async function renderTemplate(reportData: ReportData): Promise<string> {
-  const templatePath = path.join(
-    __dirname,
-    "../../templates/reports/report-pdf.ejs"
-  );
+  const templatePath = path.join(__dirname, "../../templates/reports/report-pdf.ejs");
 
   // Read CSS files
-  const pdfCssPath = path.join(
-    __dirname,
-    "../../templates/reports/styles/pdf.css"
-  );
+  const pdfCssPath = path.join(__dirname, "../../templates/reports/styles/pdf.css");
   const pdfCss = fs.readFileSync(pdfCssPath, "utf-8");
 
   const templateContent = fs.readFileSync(templatePath, "utf-8");
@@ -80,9 +77,7 @@ async function renderTemplate(reportData: ReportData): Promise<string> {
 /**
  * Generate PDF from report data
  */
-export async function generatePDF(
-  reportData: ReportData
-): Promise<ReportGenerationResult> {
+export async function generatePDF(reportData: ReportData): Promise<ReportGenerationResult> {
   let page: Page | null = null;
 
   try {
@@ -149,7 +144,7 @@ export async function generatePDFWithOptions(
     format?: "A4" | "Letter";
     landscape?: boolean;
     scale?: number;
-  } = {}
+  } = {},
 ): Promise<ReportGenerationResult> {
   let page: Page | null = null;
 
@@ -209,10 +204,7 @@ export async function generatePDFWithOptions(
  * Screenshot a chart element for DOCX embedding
  * Used by DOCX generator to capture chart images
  */
-export async function screenshotChart(
-  html: string,
-  selector: string
-): Promise<Buffer | null> {
+export async function screenshotChart(html: string, selector: string): Promise<Buffer | null> {
   let page: Page | null = null;
 
   try {

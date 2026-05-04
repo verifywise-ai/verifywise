@@ -32,7 +32,7 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with Admin or Editor roles can modify organization settings. Reviewers and Auditors can see the settings but can\'t make changes.',
+      text: 'Only users with the Admin role can modify organization settings. Editors, Reviewers and Auditors can see the settings but can\'t make changes.',
     },
     {
       type: 'heading',
@@ -58,7 +58,7 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Name requirements', text: 'The organization name must be between 2 and 100 characters' },
+        { bold: 'Name requirements', text: 'The organization name must be between 2 and 50 characters' },
         { bold: 'Updates apply right away', text: 'The new name appears across the platform once saved' },
         { bold: 'Reports use current name', text: 'Generated reports show the organization name at the time of generation' },
       ],
@@ -177,7 +177,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Users with Admin or Editor roles can modify organization settings. Reviewers and Auditors can view them but can\'t make changes. If you need to update settings but don\'t have permission, contact your organization\'s administrator.',
+      text: 'Users with the Admin role can modify organization settings. Editors, Reviewers and Auditors can view them but can\'t make changes. If you need to update settings but don\'t have permission, contact your organization\'s administrator.',
     },
     {
       type: 'article-links',

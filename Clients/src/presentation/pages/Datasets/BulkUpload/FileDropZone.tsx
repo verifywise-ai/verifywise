@@ -1,11 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  IconButton,
-  Alert,
-} from "@mui/material";
+import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
 import { brand, text } from "../../../themes/palette";
 
@@ -68,7 +62,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onFilesChange([...files, ...newFiles]);
       }
     },
-    [files, onFilesChange]
+    [files, onFilesChange],
   );
 
   const handleDrop = useCallback(
@@ -78,7 +72,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
       const droppedFiles = Array.from(e.dataTransfer.files);
       validateAndAdd(droppedFiles);
     },
-    [validateAndAdd]
+    [validateAndAdd],
   );
 
   const handleInputChange = useCallback(
@@ -88,14 +82,14 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         e.target.value = "";
       }
     },
-    [validateAndAdd]
+    [validateAndAdd],
   );
 
   const handleRemove = useCallback(
     (index: number) => {
       onFilesChange(files.filter((_, i) => i !== index));
     },
-    [files, onFilesChange]
+    [files, onFilesChange],
   );
 
   return (

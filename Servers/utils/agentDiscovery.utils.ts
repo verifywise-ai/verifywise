@@ -48,7 +48,7 @@ export interface SyncLogEntry {
 
 export const getAllAgentPrimitivesQuery = async (
   organizationId: number,
-  filters: AgentPrimitiveFilters = {}
+  filters: AgentPrimitiveFilters = {},
 ): Promise<AgentPrimitive[]> => {
   const conditions: string[] = ["organization_id = :organizationId"];
   const replacements: Record<string, any> = { organizationId };
@@ -70,7 +70,9 @@ export const getAllAgentPrimitivesQuery = async (
     replacements.is_stale = filters.is_stale;
   }
   if (filters.search) {
-    conditions.push("(display_name ILIKE :search OR external_id ILIKE :search OR owner_id ILIKE :search)");
+    conditions.push(
+      "(display_name ILIKE :search OR external_id ILIKE :search OR owner_id ILIKE :search)",
+    );
     replacements.search = `%${filters.search}%`;
   }
 
@@ -78,18 +80,18 @@ export const getAllAgentPrimitivesQuery = async (
 
   const results = await sequelize.query(
     `SELECT * FROM agent_primitives ${whereClause} ORDER BY created_at DESC, id ASC`,
-    { replacements, type: QueryTypes.SELECT }
+    { replacements, type: QueryTypes.SELECT },
   );
   return results as AgentPrimitive[];
 };
 
 export const getAgentPrimitiveByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive | null> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id }, type: QueryTypes.SELECT }
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
@@ -106,7 +108,7 @@ export const createAgentPrimitiveQuery = async (
     metadata?: Record<string, any>;
     is_manual?: boolean;
   },
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive> => {
   const externalId = data.external_id || `manual_${Date.now()}`;
   const [results] = await sequelize.query(
@@ -132,7 +134,7 @@ export const createAgentPrimitiveQuery = async (
         metadata: JSON.stringify(data.metadata || {}),
         is_manual: data.is_manual ?? true,
       },
-    }
+    },
   );
   return (results as AgentPrimitive[])[0];
 };
@@ -145,7 +147,7 @@ export const updateAgentPrimitiveQuery = async (
     owner_id?: string | null;
     metadata?: Record<string, any>;
   },
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive | null> => {
   const sets: string[] = [];
   const replacements: Record<string, any> = { organizationId, id };
@@ -171,18 +173,18 @@ export const updateAgentPrimitiveQuery = async (
 
   const [results] = await sequelize.query(
     `UPDATE agent_primitives SET ${sets.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-    { replacements }
+    { replacements },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
 
 export const deleteAgentPrimitiveByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<boolean> => {
   const [, meta] = await sequelize.query(
     `DELETE FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id } }
+    { replacements: { organizationId, id } },
   );
   return ((meta as any)?.rowCount ?? 0) > 0;
 };
@@ -191,14 +193,14 @@ export const updateReviewStatusQuery = async (
   id: number,
   status: string,
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive | null> => {
   const [results] = await sequelize.query(
     `UPDATE agent_primitives
      SET review_status = :status, reviewed_by = :userId, reviewed_at = NOW(), updated_at = NOW()
      WHERE organization_id = :organizationId AND id = :id
      RETURNING *`,
-    { replacements: { organizationId, id, status, userId } }
+    { replacements: { organizationId, id, status, userId } },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
@@ -206,28 +208,28 @@ export const updateReviewStatusQuery = async (
 export const linkModelQuery = async (
   id: number,
   modelId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive | null> => {
   const [results] = await sequelize.query(
     `UPDATE agent_primitives
      SET linked_model_inventory_id = :modelId, updated_at = NOW()
      WHERE organization_id = :organizationId AND id = :id
      RETURNING *`,
-    { replacements: { organizationId, id, modelId } }
+    { replacements: { organizationId, id, modelId } },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
 
 export const unlinkModelQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<AgentPrimitive | null> => {
   const [results] = await sequelize.query(
     `UPDATE agent_primitives
      SET linked_model_inventory_id = NULL, updated_at = NOW()
      WHERE organization_id = :organizationId AND id = :id
      RETURNING *`,
-    { replacements: { organizationId, id } }
+    { replacements: { organizationId, id } },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
@@ -244,7 +246,7 @@ export const upsertAgentPrimitivesQuery = async (
     last_activity?: string;
     metadata?: Record<string, any>;
   }>,
-  organizationId: number
+  organizationId: number,
 ): Promise<{ created: number; updated: number }> => {
   let created = 0;
   let updated = 0;
@@ -288,7 +290,7 @@ export const upsertAgentPrimitivesQuery = async (
             last_activity: p.last_activity || null,
             metadata: JSON.stringify(p.metadata || {}),
           },
-        }
+        },
       );
       const row = (results as any[])[0];
       if (row?.is_insert) {
@@ -304,7 +306,7 @@ export const upsertAgentPrimitivesQuery = async (
 
 export const flagStaleAgentsQuery = async (
   source: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> => {
   const [, meta] = await sequelize.query(
     `UPDATE agent_primitives
@@ -314,13 +316,13 @@ export const flagStaleAgentsQuery = async (
        AND last_activity IS NOT NULL
        AND last_activity < NOW() - INTERVAL '30 days'
        AND is_stale = false`,
-    { replacements: { organizationId, source } }
+    { replacements: { organizationId, source } },
   );
   return (meta as any)?.rowCount ?? 0;
 };
 
 export const getAgentStatsQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   total: number;
   unreviewed: number;
@@ -337,7 +339,7 @@ export const getAgentStatsQuery = async (
        COUNT(*) FILTER (WHERE is_stale = true) AS stale
      FROM agent_primitives
      WHERE organization_id = :organizationId`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT }
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
   );
   const row = (results as any[])[0];
   return {
@@ -353,7 +355,7 @@ export const getAgentStatsQuery = async (
 
 export const createSyncLogQuery = async (
   data: { source_system: string; triggered_by: string },
-  organizationId: number
+  organizationId: number,
 ): Promise<SyncLogEntry> => {
   const [results] = await sequelize.query(
     `INSERT INTO agent_discovery_sync_log (organization_id, source_system, status, triggered_by, started_at)
@@ -365,7 +367,7 @@ export const createSyncLogQuery = async (
         source_system: data.source_system,
         triggered_by: data.triggered_by,
       },
-    }
+    },
   );
   return (results as SyncLogEntry[])[0];
 };
@@ -373,7 +375,7 @@ export const createSyncLogQuery = async (
 export const updateSyncLogQuery = async (
   id: number,
   data: Partial<SyncLogEntry>,
-  organizationId: number
+  organizationId: number,
 ): Promise<SyncLogEntry | null> => {
   const sets: string[] = [];
   const replacements: Record<string, any> = { organizationId, id };
@@ -413,27 +415,25 @@ export const updateSyncLogQuery = async (
 
   const [results] = await sequelize.query(
     `UPDATE agent_discovery_sync_log SET ${sets.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-    { replacements }
+    { replacements },
   );
   return (results as SyncLogEntry[])[0] || null;
 };
 
-export const getSyncLogsQuery = async (
-  organizationId: number
-): Promise<SyncLogEntry[]> => {
+export const getSyncLogsQuery = async (organizationId: number): Promise<SyncLogEntry[]> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_discovery_sync_log WHERE organization_id = :organizationId ORDER BY started_at DESC LIMIT 50`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT }
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
   );
   return results as SyncLogEntry[];
 };
 
 export const getLatestSyncStatusQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<SyncLogEntry | null> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_discovery_sync_log WHERE organization_id = :organizationId ORDER BY started_at DESC LIMIT 1`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT }
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
   );
   return (results as SyncLogEntry[])[0] || null;
 };
@@ -460,7 +460,7 @@ export const createAuditLogQuery = async (
     new_value?: string | null;
     performed_by?: number;
   },
-  organizationId: number
+  organizationId: number,
 ): Promise<AuditLogEntry> => {
   const [results] = await sequelize.query(
     `INSERT INTO agent_audit_log
@@ -477,21 +477,21 @@ export const createAuditLogQuery = async (
         new_value: data.new_value || null,
         performed_by: data.performed_by || null,
       },
-    }
+    },
   );
   return (results as AuditLogEntry[])[0];
 };
 
 export const getAuditLogsForAgentQuery = async (
   agentId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<AuditLogEntry[]> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_audit_log
      WHERE organization_id = :organizationId AND agent_primitive_id = :agentId
      ORDER BY created_at DESC
      LIMIT 100`,
-    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT }
+    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT },
   );
   return results as AuditLogEntry[];
 };

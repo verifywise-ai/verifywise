@@ -2,24 +2,14 @@
  * This file is currently in use
  */
 
-import {
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { List, ListItem, ListItemButton, ListItemText, Typography, useTheme } from "@mui/material";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
 import { background } from "../../../../themes/palette";
 
 interface AssessmentItemProps {
   assessmentsValues: Topic[];
   activeTab: number;
-  handleListItemClick: (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    index: number
-  ) => void;
+  handleListItemClick: (event: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => void;
 }
 
 const AssessmentItem = ({
@@ -60,9 +50,7 @@ const AssessmentItem = ({
             <ListItemText
               primary={
                 <Typography
-                  color={
-                    index === activeTab ? `${background.main}` : theme.palette.text.primary
-                  }
+                  color={index === activeTab ? `${background.main}` : theme.palette.text.primary}
                   sx={{ fontSize: 13 }}
                 >
                   {topic.title}

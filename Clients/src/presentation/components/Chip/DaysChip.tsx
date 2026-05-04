@@ -16,11 +16,7 @@ interface DaysChipProps {
  * - Yellow/amber styling if within urgent threshold
  * - Blue styling otherwise
  */
-export function DaysChip({
-  dueDate,
-  maxDays = 50,
-  urgentThreshold = 3,
-}: DaysChipProps) {
+export function DaysChip({ dueDate, maxDays = 50, urgentThreshold = 3 }: DaysChipProps) {
   const dueDateObj = new Date(typeof dueDate === "string" ? dueDate : dueDate.getTime());
   const today = new Date();
   today.setHours(0, 0, 0, 0);

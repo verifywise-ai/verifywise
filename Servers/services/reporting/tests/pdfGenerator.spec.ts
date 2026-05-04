@@ -99,7 +99,7 @@ describe("PDF Generator", () => {
             bottom: "0.75in",
             left: "0.75in",
           }),
-        })
+        }),
       );
     });
 
@@ -125,7 +125,7 @@ describe("PDF Generator", () => {
       expect(mockPage.pdf).toHaveBeenCalledWith(
         expect.objectContaining({
           format: "Letter",
-        })
+        }),
       );
     });
 
@@ -135,7 +135,7 @@ describe("PDF Generator", () => {
       expect(mockPage.pdf).toHaveBeenCalledWith(
         expect.objectContaining({
           landscape: true,
-        })
+        }),
       );
     });
 
@@ -145,7 +145,7 @@ describe("PDF Generator", () => {
       expect(mockPage.pdf).toHaveBeenCalledWith(
         expect.objectContaining({
           scale: 0.8,
-        })
+        }),
       );
     });
   });

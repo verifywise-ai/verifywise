@@ -50,6 +50,8 @@ describe("usePlugins", () => {
 
     renderHook(() => usePlugins("compliance"));
 
-    await waitFor(() => expect(mockGetAll).toHaveBeenCalledWith(expect.objectContaining({ category: "compliance" })));
+    await waitFor(() =>
+      expect(mockGetAll).toHaveBeenCalledWith(expect.objectContaining({ category: "compliance" })),
+    );
   });
 });

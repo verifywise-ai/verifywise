@@ -42,12 +42,12 @@
 .mui-date-picker .MuiTouchRipple-root,
 .MuiPickersPopper-root .MuiTouchRipple-root,
 .MuiPickersDay-root.Mui-selected .MuiTouchRipple-root {
-  display: none
+  display: none;
 }
 
 .MuiPickersCalendarHeader-switchViewButton:hover,
 .MuiPickersArrowSwitcher-button:hover {
-  background-color: transparent!important;
+  background-color: transparent !important;
 }
 
 /* Regular day hover - light gray background */
@@ -57,11 +57,11 @@
 
 /* Selected day should keep green background on hover */
 .MuiPickersDay-root.Mui-selected:hover {
-  background-color: #13715B !important;
-  color: #FFFFFF !important;
+  background-color: #13715b !important;
+  color: #ffffff !important;
 }
 
-.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-edgeEnd.MuiPickersArrowSwitcher-previousIconButton{
+.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-edgeEnd.MuiPickersArrowSwitcher-previousIconButton {
   margin-right: 0;
 }
 

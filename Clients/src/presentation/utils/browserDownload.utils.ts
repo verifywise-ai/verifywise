@@ -40,7 +40,7 @@ export const triggerBrowserDownload = (blob: Blob, filename: string): void => {
  */
 export const extractFilenameFromHeaders = (
   headers: Headers,
-  fallback: string = "download"
+  fallback: string = "download",
 ): string => {
   const headerContent = headers.get("Content-Disposition");
   if (!headerContent) return fallback;

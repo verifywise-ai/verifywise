@@ -20,10 +20,7 @@ interface VerifyWiseContextProps {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   componentsVisible: ComponentVisible;
-  changeComponentVisibility: (
-    component: keyof ComponentVisible,
-    value: boolean
-  ) => void;
+  changeComponentVisibility: (component: keyof ComponentVisible, value: boolean) => void;
   users: User[];
   refreshUsers: () => void;
   userRoleName: string;
@@ -43,7 +40,7 @@ const VerifyWiseContext = createContext<VerifyWiseContextProps>({
     compliance: {},
     assessments: {},
     vendors: [],
-    users: []
+    users: [],
   },
   setDashboardValues: () => {},
   inputValues: {},

@@ -119,11 +119,7 @@ const Subprocessors = ({
 
   return (
     <Box width="100%">
-      <Typography
-        variant="subtitle2"
-        color={brand.primary}
-        sx={{ fontWeight: 600, mb: 2 }}
-      >
+      <Typography variant="subtitle2" color={brand.primary} sx={{ fontWeight: 600, mb: 2 }}>
         Subprocessors
       </Typography>
       <TableContainer
@@ -154,21 +150,16 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === "company name"
-                          ? "#1976D2"
-                          : `${text.disabled}`,
+                      color: sortConfig.key === "company name" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
-                    {sortConfig.key === "company name" &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === "company name" &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== "company name" && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === "company name" && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === "company name" && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== "company name" && <ChevronsUpDown size={16} />}
                   </Box>
                 </Box>
               </TableCell>
@@ -196,12 +187,12 @@ const Subprocessors = ({
                       color: sortConfig.key === "url" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
-                    {sortConfig.key === "url" &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === "url" &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
+                    {sortConfig.key === "url" && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
+                    )}
+                    {sortConfig.key === "url" && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
                     {sortConfig.key !== "url" && <ChevronsUpDown size={16} />}
                   </Box>
                 </Box>
@@ -227,19 +218,16 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === "purpose" ? "#1976D2" : `${text.disabled}`,
+                      color: sortConfig.key === "purpose" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
-                    {sortConfig.key === "purpose" &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === "purpose" &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== "purpose" && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === "purpose" && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === "purpose" && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== "purpose" && <ChevronsUpDown size={16} />}
                   </Box>
                 </Box>
               </TableCell>
@@ -264,19 +252,16 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === "location" ? "#1976D2" : `${text.disabled}`,
+                      color: sortConfig.key === "location" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
-                    {sortConfig.key === "location" &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === "location" &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== "location" && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === "location" && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === "location" && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== "location" && <ChevronsUpDown size={16} />}
                   </Box>
                 </Box>
               </TableCell>
@@ -308,7 +293,8 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "purpose" ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig.key === "purpose" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>
@@ -318,7 +304,8 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "location" ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig.key === "location" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>

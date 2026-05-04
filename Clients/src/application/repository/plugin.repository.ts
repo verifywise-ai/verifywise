@@ -82,9 +82,7 @@ export async function uninstallPlugin({
 }: {
   installationId: number;
 }): Promise<any> {
-  const response = await apiServices.delete(
-    `/plugins/installations/${installationId}`
-  );
+  const response = await apiServices.delete(`/plugins/installations/${installationId}`);
   return (response.data as any).data;
 }
 
@@ -132,10 +130,9 @@ export async function updatePluginConfiguration({
   installationId: number;
   configuration: Record<string, any>;
 }): Promise<PluginInstallation> {
-  const response = await apiServices.put(
-    `/plugins/installations/${installationId}/configuration`,
-    { configuration }
-  );
+  const response = await apiServices.put(`/plugins/installations/${installationId}/configuration`, {
+    configuration,
+  });
   return (response.data as any).data as PluginInstallation;
 }
 
@@ -149,10 +146,9 @@ export async function testPluginConnection({
   pluginKey: string;
   configuration: Record<string, any>;
 }): Promise<any> {
-  const response = await apiServices.post(
-    `/plugins/${pluginKey}/test-connection`,
-    { configuration }
-  );
+  const response = await apiServices.post(`/plugins/${pluginKey}/test-connection`, {
+    configuration,
+  });
   return (response.data as any).data;
 }
 
@@ -166,10 +162,7 @@ export async function connectOAuthWorkspace({
   pluginKey: string;
   code: string;
 }): Promise<any> {
-  const response = await apiServices.post(
-    `/plugins/${pluginKey}/oauth/connect`,
-    { code }
-  );
+  const response = await apiServices.post(`/plugins/${pluginKey}/oauth/connect`, { code });
   return (response.data as any).data;
 }
 
@@ -183,10 +176,7 @@ export async function getOAuthWorkspaces({
   pluginKey: string;
   signal?: AbortSignal;
 }): Promise<any[]> {
-  const response = await apiServices.get(
-    `/plugins/${pluginKey}/oauth/workspaces`,
-    { signal }
-  );
+  const response = await apiServices.get(`/plugins/${pluginKey}/oauth/workspaces`, { signal });
   return (response.data as any).data;
 }
 
@@ -204,10 +194,10 @@ export async function updateOAuthWorkspace({
   routing_type?: string[];
   is_active?: boolean;
 }): Promise<any> {
-  const response = await apiServices.patch(
-    `/plugins/${pluginKey}/oauth/workspaces/${webhookId}`,
-    { routing_type, is_active }
-  );
+  const response = await apiServices.patch(`/plugins/${pluginKey}/oauth/workspaces/${webhookId}`, {
+    routing_type,
+    is_active,
+  });
   return (response.data as any).data;
 }
 
@@ -221,7 +211,5 @@ export async function disconnectOAuthWorkspace({
   pluginKey: string;
   webhookId: number;
 }): Promise<void> {
-  await apiServices.delete(
-    `/plugins/${pluginKey}/oauth/workspaces/${webhookId}`
-  );
+  await apiServices.delete(`/plugins/${pluginKey}/oauth/workspaces/${webhookId}`);
 }

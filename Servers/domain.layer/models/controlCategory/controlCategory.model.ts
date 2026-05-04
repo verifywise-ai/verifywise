@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ProjectModel } from "../project/project.model";
 import { IControlCategory } from "../../interfaces/i.controlCategory";
 import { numberValidation } from "../../validations/number.valid";
@@ -19,10 +13,7 @@ import {
   timestamps: true,
   underscored: true,
 })
-export class ControlCategoryModel
-  extends Model<ControlCategoryModel>
-  implements IControlCategory
-{
+export class ControlCategoryModel extends Model<ControlCategoryModel> implements IControlCategory {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -71,14 +62,14 @@ export class ControlCategoryModel
   static async createNewControlCategory(
     projectId: number,
     title: string,
-    orderNo?: number
+    orderNo?: number,
   ): Promise<ControlCategoryModel> {
     // Validate project_id
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -88,19 +79,11 @@ export class ControlCategoryModel
     }
 
     if (title.trim().length < 2) {
-      throw new ValidationException(
-        "Title must be at least 2 characters long",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must be at least 2 characters long", "title", title);
     }
 
     if (title.trim().length > 255) {
-      throw new ValidationException(
-        "Title must not exceed 255 characters",
-        "title",
-        title
-      );
+      throw new ValidationException("Title must not exceed 255 characters", "title", title);
     }
 
     // Validate order_no if provided
@@ -109,7 +92,7 @@ export class ControlCategoryModel
         throw new ValidationException(
           "Order number must be a non-negative integer",
           "order_no",
-          orderNo
+          orderNo,
         );
       }
     }
@@ -128,25 +111,18 @@ export class ControlCategoryModel
   /**
    * Update control category with validation
    */
-  async updateControlCategory(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateControlCategory(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Title is required", "title", updateData.title);
       }
 
       if (updateData.title.trim().length < 2) {
         throw new ValidationException(
           "Title must be at least 2 characters long",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
 
@@ -154,7 +130,7 @@ export class ControlCategoryModel
         throw new ValidationException(
           "Title must not exceed 255 characters",
           "title",
-          updateData.title
+          updateData.title,
         );
       }
 
@@ -167,7 +143,7 @@ export class ControlCategoryModel
         throw new ValidationException(
           "Order number must be a non-negative integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -182,7 +158,7 @@ export class ControlCategoryModel
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
 
@@ -194,23 +170,19 @@ export class ControlCategoryModel
       throw new ValidationException(
         "Title must be at least 2 characters long",
         "title",
-        this.title
+        this.title,
       );
     }
 
     if (this.title.trim().length > 255) {
-      throw new ValidationException(
-        "Title must not exceed 255 characters",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Title must not exceed 255 characters", "title", this.title);
     }
 
     if (this.order_no !== undefined && !numberValidation(this.order_no, 0)) {
       throw new ValidationException(
         "Order number must be a non-negative integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -230,7 +202,7 @@ export class ControlCategoryModel
       throw new BusinessLogicException(
         "Demo control categories cannot be modified",
         "DEMO_CATEGORY_RESTRICTION",
-        { categoryId: this.id, categoryTitle: this.title }
+        { categoryId: this.id, categoryTitle: this.title },
       );
     }
     return true;
@@ -294,24 +266,14 @@ export class ControlCategoryModel
   /**
    * Static method to find control category by ID with validation
    */
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<ControlCategoryModel> {
+  static async findByIdWithValidation(id: number): Promise<ControlCategoryModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const controlCategory = await ControlCategoryModel.findByPk(id);
     if (!controlCategory) {
-      throw new NotFoundException(
-        "Control category not found",
-        "ControlCategory",
-        id
-      );
+      throw new NotFoundException("Control category not found", "ControlCategory", id);
     }
 
     return controlCategory;
@@ -320,14 +282,12 @@ export class ControlCategoryModel
   /**
    * Static method to find control categories by project ID
    */
-  static async findByProjectId(
-    projectId: number
-  ): Promise<ControlCategoryModel[]> {
+  static async findByProjectId(projectId: number): Promise<ControlCategoryModel[]> {
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -345,14 +305,10 @@ export class ControlCategoryModel
    */
   static async updateControlCategoryById(
     id: number,
-    updateData: Partial<IControlCategory>
+    updateData: Partial<IControlCategory>,
   ): Promise<[number, ControlCategoryModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await ControlCategoryModel.update(updateData, {
@@ -366,11 +322,7 @@ export class ControlCategoryModel
    */
   static async deleteControlCategoryById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await ControlCategoryModel.destroy({

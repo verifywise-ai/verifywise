@@ -1,11 +1,5 @@
 import React, { useState, useRef } from "react";
-import {
-  Box,
-  Typography,
-  Menu,
-  MenuItem,
-  useTheme,
-} from "@mui/material";
+import { Box, Typography, Menu, MenuItem, useTheme } from "@mui/material";
 import { ChevronDown, Eye } from "lucide-react";
 import Checkbox from "../Inputs/Checkbox";
 import { brand, background, status } from "../../themes/palette";

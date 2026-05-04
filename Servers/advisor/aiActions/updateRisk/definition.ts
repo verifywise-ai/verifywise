@@ -147,13 +147,11 @@ export const updateRiskToolDefinition: AiActionToolDefinition = {
         },
         implementation_strategy: {
           type: "string",
-          description:
-            "New implementation strategy. Optional. 1–1024 characters.",
+          description: "New implementation strategy. Optional. 1–1024 characters.",
         },
         deadline: {
           type: "string",
-          description:
-            "New mitigation deadline. Optional. ISO date string (YYYY-MM-DD).",
+          description: "New mitigation deadline. Optional. ISO date string (YYYY-MM-DD).",
         },
         approver: {
           type: "number",
@@ -167,8 +165,7 @@ export const updateRiskToolDefinition: AiActionToolDefinition = {
         },
         date_of_assessment: {
           type: "string",
-          description:
-            "New assessment date. Optional. ISO date string (YYYY-MM-DD).",
+          description: "New assessment date. Optional. ISO date string (YYYY-MM-DD).",
         },
       },
       required: ["risk_id"],

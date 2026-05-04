@@ -23,7 +23,11 @@ interface VersionColorConfig {
 const getVersionColors = (reviewStatus?: string): VersionColorConfig => {
   switch (reviewStatus) {
     case "superseded":
-      return { backgroundColor: "#F2F4F7", color: `${text.icon}`, borderColor: `${borderPalette.dark}` };
+      return {
+        backgroundColor: "#F2F4F7",
+        color: `${text.icon}`,
+        borderColor: `${borderPalette.dark}`,
+      };
     case "approved":
       return { backgroundColor: "#ECFDF3", color: "#027A48", borderColor: "#A6F4C5" };
     default:

@@ -3,14 +3,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  TableHead,
-  TableRow,
-  TableCell,
-  Box,
-  Typography,
-  Tooltip,
-} from "@mui/material";
+import { TableHead, TableRow, TableCell, Box, Typography, Tooltip } from "@mui/material";
 import { ChevronsUpDown, ChevronUp, ChevronDown, Info } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
 import { palette } from "../../themes/palette";
@@ -50,7 +43,7 @@ export interface SortableColumn {
 export function useTableSort(
   storageKey: string,
   defaultKey = "",
-  defaultDirection: SortDirection = null
+  defaultDirection: SortDirection = null,
 ) {
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
     const saved = localStorage.getItem(storageKey);
@@ -58,7 +51,9 @@ export function useTableSort(
       try {
         const parsed = JSON.parse(saved);
         if (parsed.key !== undefined && parsed.direction !== undefined) return parsed;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     return { key: defaultKey, direction: defaultDirection };
   });
@@ -87,7 +82,7 @@ export function useTableSort(
 export function useSortedRows<T>(
   rows: T[],
   sortConfig: SortConfig,
-  getValue: (row: T, key: string) => string | number
+  getValue: (row: T, key: string) => string | number,
 ): T[] {
   return useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return rows;
@@ -157,7 +152,10 @@ export function SortableTableHead({
                     tooltip: { sx: { maxWidth: 280, fontSize: 12, lineHeight: 1.5 } },
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", cursor: "help" }} onClick={(e) => e.stopPropagation()}>
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", cursor: "help" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Info size={13} strokeWidth={1.5} color={palette.text.disabled} />
                   </Box>
                 </Tooltip>
@@ -170,8 +168,12 @@ export function SortableTableHead({
                     color: sortConfig.key === col.id ? "primary.main" : palette.text.disabled,
                   }}
                 >
-                  {sortConfig.key === col.id && sortConfig.direction === "asc" && <ChevronUp size={14} />}
-                  {sortConfig.key === col.id && sortConfig.direction === "desc" && <ChevronDown size={14} />}
+                  {sortConfig.key === col.id && sortConfig.direction === "asc" && (
+                    <ChevronUp size={14} />
+                  )}
+                  {sortConfig.key === col.id && sortConfig.direction === "desc" && (
+                    <ChevronDown size={14} />
+                  )}
                   {sortConfig.key !== col.id && <ChevronsUpDown size={14} />}
                 </Box>
               )}

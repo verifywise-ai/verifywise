@@ -24,31 +24,17 @@ export async function getProjectScopeById({
   return response.data;
 }
 
-export async function createProjectScope({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createProjectScope({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/projectScopes", body);
   return response;
 }
 
-export async function updateProjectScope({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateProjectScope({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.put(`/projectScopes/${id}`, body);
   return response;
 }
 
-export async function deleteProjectScope({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteProjectScope({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/projectScopes/${id}`);
   return response;
 }

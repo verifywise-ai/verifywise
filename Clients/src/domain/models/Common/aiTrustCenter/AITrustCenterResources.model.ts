@@ -14,7 +14,7 @@ export class AITrustCenterResourcesModel {
   }
 
   static createNewAITrustCenterResources(
-    data: AITrustCenterResourcesModel
+    data: AITrustCenterResourcesModel,
   ): AITrustCenterResourcesModel {
     return new AITrustCenterResourcesModel(data);
   }

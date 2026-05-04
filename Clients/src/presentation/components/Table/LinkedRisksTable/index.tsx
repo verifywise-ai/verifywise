@@ -1,10 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow } from "@mui/material";
 import React, { useState } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import TableHeader from "../TableHead";
@@ -62,7 +56,10 @@ const LinkedRisksTable: React.FC<ILinkedRisksTableProps> = ({
                       align="center"
                       sx={{ border: "none", p: 0 }}
                     >
-                      <EmptyState icon={ShieldAlert} message="There is currently no data in this table." />
+                      <EmptyState
+                        icon={ShieldAlert}
+                        message="There is currently no data in this table."
+                      />
                     </TableCell>
                   </TableRow>
                 </TableBody>

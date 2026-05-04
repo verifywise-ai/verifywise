@@ -48,8 +48,7 @@ const SetNewPassword: React.FC = () => {
   const [values, setValues] = useState<ResetPasswordFormValues>(initialState);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResetInvitationValid, setIsResetInvitationValid] =
-    useState<boolean>(true);
+  const [isResetInvitationValid, setIsResetInvitationValid] = useState<boolean>(true);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   // Password validation
@@ -88,26 +87,21 @@ const SetNewPassword: React.FC = () => {
 
   // Handle input field changes
   const handleChange = useCallback(
-    (prop: keyof ResetPasswordFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setValues((prev) => ({ ...prev, [prop]: event.target.value }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
-      },
-    []
+    (prop: keyof ResetPasswordFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setValues((prev) => ({ ...prev, [prop]: event.target.value }));
+      setErrors((prev) => ({ ...prev, [prop]: "" }));
+    },
+    [],
   );
 
   // Validate reset invitation
-  const checkResetInvitation = useCallback(
-    (expDate: string | number): boolean => {
-      const currentTime = new Date().getTime();
-      const expirationTime =
-        typeof expDate === "string" ? parseInt(expDate, 10) : expDate;
-      const isValid = currentTime < expirationTime;
-      setIsResetInvitationValid(isValid);
-      return isValid;
-    },
-    []
-  );
+  const checkResetInvitation = useCallback((expDate: string | number): boolean => {
+    const currentTime = new Date().getTime();
+    const expirationTime = typeof expDate === "string" ? parseInt(expDate, 10) : expDate;
+    const isValid = currentTime < expirationTime;
+    setIsResetInvitationValid(isValid);
+    return isValid;
+  }, []);
 
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -126,7 +120,7 @@ const SetNewPassword: React.FC = () => {
           email: userInfo?.email || "",
           newPassword: values.password,
         },
-        userToken || ""
+        userToken || "",
       );
 
       if (response.status === 202) {
@@ -233,9 +227,7 @@ const SetNewPassword: React.FC = () => {
             <Lock size={24} />
           </Stack>
           <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
-            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-              Set new password
-            </Typography>
+            <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Set new password</Typography>
           </Stack>
           <Stack sx={{ gap: theme.spacing(12) }}>
             <Field

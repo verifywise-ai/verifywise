@@ -75,7 +75,8 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
             lineHeight: 1.6,
           }}
         >
-          Configure your organization settings, invite team members, and enable the frameworks you need.
+          Configure your organization settings, invite team members, and enable the frameworks you
+          need.
         </Typography>
       </Box>
 

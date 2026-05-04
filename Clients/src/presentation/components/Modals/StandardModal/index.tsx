@@ -164,7 +164,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
           onClose();
         }
       }}
-      sx={{ 
+      sx={{
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -198,11 +198,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
             zIndex: 0,
           }}
         >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0.5}>
               <Typography
                 sx={{
@@ -326,22 +322,22 @@ const StandardModal: React.FC<StandardModalProps> = ({
               customFooter
             ) : (
               <>
-               {showCancelButton && (
-                    <CustomizableButton
-                      variant="outlined"
-                      text={cancelButtonText}
-                      onClick={onClose}
-                      sx={{
-                        minWidth: "80px",
-                        height: "34px",
+                {showCancelButton && (
+                  <CustomizableButton
+                    variant="outlined"
+                    text={cancelButtonText}
+                    onClick={onClose}
+                    sx={{
+                      minWidth: "80px",
+                      height: "34px",
+                      border: "1px solid #d0d5dd",
+                      color: "text.secondary",
+                      "&:hover": {
+                        backgroundColor: "background.accent",
                         border: "1px solid #d0d5dd",
-                        color: "text.secondary",
-                        "&:hover": {
-                          backgroundColor: "background.accent",
-                          border: "1px solid #d0d5dd",
-                        },
-                      }}
-                    />
+                      },
+                    }}
+                  />
                 )}
 
                 {onSubmit && !hideSubmitButton && (
@@ -355,8 +351,12 @@ const StandardModal: React.FC<StandardModalProps> = ({
                       height: "34px",
                       backgroundColor: submitButtonColor,
                       "&:hover:not(.Mui-disabled)": {
-                        backgroundColor: submitButtonColor === "brand.primary" ? "brand.primaryHover" : submitButtonColor,
-                        filter: submitButtonColor !== "brand.primary" ? "brightness(0.9)" : undefined,
+                        backgroundColor:
+                          submitButtonColor === "brand.primary"
+                            ? "brand.primaryHover"
+                            : submitButtonColor,
+                        filter:
+                          submitButtonColor !== "brand.primary" ? "brightness(0.9)" : undefined,
                       },
                       "&.Mui-disabled": {
                         backgroundColor: "status.default.border",

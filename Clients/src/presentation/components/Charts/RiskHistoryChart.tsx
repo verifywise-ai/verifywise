@@ -15,28 +15,28 @@ interface RiskHistoryChartProps {
 
 // Color schemes for different risk parameters
 const SEVERITY_COLORS: Record<string, string> = {
-  "Negligible": "#10B981",
-  "Minor": "#84CC16",
-  "Moderate": "#F59E0B",
-  "Major": "#F97316",
-  "Catastrophic": "#DC2626",
+  Negligible: "#10B981",
+  Minor: "#84CC16",
+  Moderate: "#F59E0B",
+  Major: "#F97316",
+  Catastrophic: "#DC2626",
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  "Rare": "#10B981",
-  "Unlikely": "#84CC16",
-  "Possible": "#F59E0B",
-  "Likely": "#F97316",
+  Rare: "#10B981",
+  Unlikely: "#84CC16",
+  Possible: "#F59E0B",
+  Likely: "#F97316",
   "Almost Certain": "#DC2626",
 };
 
 const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "Not Started": "#94A3B8",
   "In Progress": "#3B82F6",
-  "Completed": "#10B981",
+  Completed: "#10B981",
   "On Hold": "#F59E0B",
-  "Deferred": "#8B5CF6",
-  "Canceled": "#EF4444",
+  Deferred: "#8B5CF6",
+  Canceled: "#EF4444",
   "Requires review": "#F97316",
 };
 
@@ -107,8 +107,7 @@ export function RiskHistoryChart({
       }
     } catch (err: unknown) {
       console.error("Error fetching timeseries data:", err);
-      const message =
-        err instanceof Error ? err.message : "Failed to load chart data";
+      const message = err instanceof Error ? err.message : "Failed to load chart data";
       setError(message);
     } finally {
       setLoading(false);
@@ -142,7 +141,9 @@ export function RiskHistoryChart({
 
     // Merge parallel arrays into a single array of objects for Recharts
     const chartData = timeseriesData.map((point) => {
-      const entry: Record<string, string | number> = { date: fmt.format(new Date(point.timestamp)) };
+      const entry: Record<string, string | number> = {
+        date: fmt.format(new Date(point.timestamp)),
+      };
       valueKeys.forEach((key) => {
         entry[key] = point.data[key] || 0;
       });
@@ -157,10 +158,7 @@ export function RiskHistoryChart({
       dot: false as const,
     }));
 
-    const maxValue = Math.max(
-      ...timeseriesData.flatMap((point) => Object.values(point.data)),
-      0
-    );
+    const maxValue = Math.max(...timeseriesData.flatMap((point) => Object.values(point.data)), 0);
 
     return { chartData, series, maxValue };
   }, [timeseriesData, parameter]);
@@ -196,20 +194,14 @@ export function RiskHistoryChart({
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
       >
-        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>
-          {error}
-        </Typography>
+        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>{error}</Typography>
       </Stack>
     );
   }
 
   if (!timeseriesData || timeseriesData.length === 0) {
     return (
-      <EmptyState
-        message="There is no historical data here"
-        showBorder={true}
-        icon={TrendingUp}
-      />
+      <EmptyState message="There is no historical data here" showBorder={true} icon={TrendingUp} />
     );
   }
 

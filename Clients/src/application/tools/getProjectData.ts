@@ -15,7 +15,12 @@
  * @returns {number} return.controlsCompleted - The number of completed controls.
  * @returns {number} return.requirementsCompleted - The number of completed assessments.
  */
-import { Assessments, AssessmentsProject, Controls, ControlsProject } from "../../domain/types/projectStatus.types";
+import {
+  Assessments,
+  AssessmentsProject,
+  Controls,
+  ControlsProject,
+} from "../../domain/types/projectStatus.types";
 
 const DEFAULT_DONE_COUNT = 0;
 const DEFAULT_TOTAL_COUNT = 1;
@@ -28,7 +33,7 @@ interface GetProjectDataTypes {
 
 const getProjectData = ({ projectId, assessments, controls }: GetProjectDataTypes) => {
   const projectAssessments = assessments.projects?.find(
-    (project: AssessmentsProject) => project.projectId === projectId
+    (project: AssessmentsProject) => project.projectId === projectId,
   ) ?? {
     doneAssessments: DEFAULT_DONE_COUNT,
     projectId,
@@ -36,15 +41,15 @@ const getProjectData = ({ projectId, assessments, controls }: GetProjectDataType
   };
 
   const projectControls = controls.projects?.find(
-    (project: ControlsProject) => project.projectId === projectId
+    (project: ControlsProject) => project.projectId === projectId,
   ) ?? {
     doneSubControls: DEFAULT_DONE_COUNT,
     projectId,
     totalSubControls: DEFAULT_TOTAL_COUNT,
   };
 
-  const controlsProgress = `${projectControls?.doneSubControls ?? 0}/${projectControls?.totalSubControls ?? 1}`
-  const requirementsProgress = `${projectAssessments?.doneAssessments ?? 0}/${projectAssessments?.totalAssessments ?? 1}`
+  const controlsProgress = `${projectControls?.doneSubControls ?? 0}/${projectControls?.totalSubControls ?? 1}`;
+  const requirementsProgress = `${projectAssessments?.doneAssessments ?? 0}/${projectAssessments?.totalAssessments ?? 1}`;
 
   const controlsCompleted = projectControls?.doneSubControls ?? 0;
   const requirementsCompleted = projectAssessments?.doneAssessments ?? 0;
@@ -55,7 +60,7 @@ const getProjectData = ({ projectId, assessments, controls }: GetProjectDataType
     controlsProgress,
     requirementsProgress,
     controlsCompleted,
-    requirementsCompleted
+    requirementsCompleted,
   };
 };
 

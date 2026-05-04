@@ -40,7 +40,7 @@ describe("ceMarkingService", () => {
       "/ce-marking/proj-1",
       expect.objectContaining({
         conformitySteps: [{ id: 2, status: "done" }],
-      })
+      }),
     );
   });
 
@@ -59,7 +59,9 @@ describe("ceMarkingService", () => {
   it("updateRegistration delegates to updateCEMarking", async () => {
     mockAxios.put.mockResolvedValue({ data: {} });
     await ceMarkingService.updateRegistration("p1", { registrationStatus: "complete" });
-    expect(mockAxios.put).toHaveBeenCalledWith("/ce-marking/p1", { registrationStatus: "complete" });
+    expect(mockAxios.put).toHaveBeenCalledWith("/ce-marking/p1", {
+      registrationStatus: "complete",
+    });
   });
 
   it("getAllPolicies extracts data.data", async () => {

@@ -54,7 +54,7 @@ const addVisibilityLogic = (
   replacements: QueryReplacements,
   { userId, role }: GetTasksOptions,
   organizationId: number,
-  joinAlias: string = "ta"
+  joinAlias: string = "ta",
 ): void => {
   // SECURITY: Always filter by organization_id to prevent cross-organization access
   whereConditions.push("t.organization_id = :organizationId");
@@ -62,11 +62,9 @@ const addVisibilityLogic = (
 
   if (role !== "Admin" && role !== "SuperAdmin") {
     baseQueryParts.push(
-      `LEFT JOIN task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.organization_id = :organizationId AND ${joinAlias}.user_id = :userId`
+      `LEFT JOIN task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.organization_id = :organizationId AND ${joinAlias}.user_id = :userId`,
     );
-    whereConditions.push(
-      `(t.creator_id = :userId OR ${joinAlias}.user_id IS NOT NULL)`
-    );
+    whereConditions.push(`(t.creator_id = :userId OR ${joinAlias}.user_id IS NOT NULL)`);
     replacements.userId = userId;
   }
 };
@@ -76,7 +74,7 @@ export const createNewTaskQuery = async (
   task: ITask,
   organizationId: number,
   transaction: Transaction,
-  assignees?: Array<{ user_id: number }>
+  assignees?: Array<{ user_id: number }>,
 ): Promise<TasksModel> => {
   const result = await sequelize.query(
     `INSERT INTO tasks (
@@ -99,7 +97,7 @@ export const createNewTaskQuery = async (
       model: TasksModel,
       mapToModel: true,
       transaction,
-    }
+    },
   );
 
   const createdTask = result[0] as TasksModel;
@@ -125,7 +123,7 @@ export const createNewTaskQuery = async (
               user_id: userId,
             },
             transaction,
-          }
+          },
         );
         (createdTask.dataValues as any)["assignees"].push(userId);
       }
@@ -139,7 +137,7 @@ export const createNewTaskQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organization_id JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organization_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organization_id: organizationId }, transaction }
+    { replacements: { organization_id: organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -156,7 +154,7 @@ export const createNewTaskQuery = async (
         {
           replacements: { creator_id: createdTask.dataValues.creator_id },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
@@ -165,7 +163,7 @@ export const createNewTaskQuery = async (
             assignee_ids: (createdTask.dataValues as any)["assignees"],
           },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
 
       const params = automation.params!;
@@ -191,9 +189,7 @@ export const createNewTaskQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -206,16 +202,13 @@ export const getTasksQuery = async (
   organizationId: number,
   filters: TaskFilters = {},
   sort: TaskSortOptions = {},
-  options?: { limit?: number; offset?: number }
+  options?: { limit?: number; offset?: number },
 ): Promise<TasksModel[]> => {
   const { limit, offset } = options ?? {};
   const { sort_by = "created_at", sort_order = "DESC" } = sort;
 
   // Build base query parts following project utils pattern
-  const baseQueryParts: string[] = [
-    `SELECT DISTINCT t.*`,
-    `FROM tasks t`,
-  ];
+  const baseQueryParts: string[] = [`SELECT DISTINCT t.*`, `FROM tasks t`];
 
   // Build pagination clause
   const paginationClause =
@@ -240,7 +233,7 @@ export const getTasksQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    organizationId
+    organizationId,
   );
 
   // Apply filters
@@ -253,9 +246,7 @@ export const getTasksQuery = async (
   }
 
   if (filters.priority && filters.priority.length > 0) {
-    const priorityList = filters.priority
-      .map((_p, i) => `:priority${i}`)
-      .join(", ");
+    const priorityList = filters.priority.map((_p, i) => `:priority${i}`).join(", ");
     whereConditions.push(`t.priority IN (${priorityList})`);
     filters.priority.forEach((priority, i) => {
       replacements[`priority${i}`] = priority;
@@ -287,12 +278,10 @@ export const getTasksQuery = async (
     // Add LEFT JOIN for assignee filter if not already added
     if (role === "Admin" || role === "SuperAdmin") {
       baseQueryParts.push(
-        `LEFT JOIN task_assignees ta_filter ON ta_filter.task_id = t.id AND ta_filter.organization_id = :organizationId`
+        `LEFT JOIN task_assignees ta_filter ON ta_filter.task_id = t.id AND ta_filter.organization_id = :organizationId`,
       );
     }
-    const assigneeList = filters.assignee
-      .map((_, i) => `:assignee${i}`)
-      .join(", ");
+    const assigneeList = filters.assignee.map((_, i) => `:assignee${i}`).join(", ");
     const joinAlias = role === "Admin" || role === "SuperAdmin" ? "ta_filter" : "ta";
     whereConditions.push(`${joinAlias}.user_id IN (${assigneeList})`);
     filters.assignee.forEach((assignee, i) => {
@@ -301,9 +290,7 @@ export const getTasksQuery = async (
   }
 
   if (filters.search) {
-    whereConditions.push(
-      `(t.title ILIKE :search OR t.description ILIKE :search)`
-    );
+    whereConditions.push(`(t.title ILIKE :search OR t.description ILIKE :search)`);
     replacements.search = `%${filters.search}%`;
   }
 
@@ -319,11 +306,7 @@ export const getTasksQuery = async (
   } as const;
 
   if (!(sort_order in sortOrders)) {
-    throw new ValidationException(
-      "Invalid sort order provided",
-      "sort_order",
-      sort_order
-    );
+    throw new ValidationException("Invalid sort order provided", "sort_order", sort_order);
   }
 
   const sortOrder = sortOrders[sort_order as keyof typeof sortOrders];
@@ -347,16 +330,11 @@ export const getTasksQuery = async (
     } as const;
 
     if (!(sort_by in allowedSortFields)) {
-      throw new ValidationException(
-        "Invalid sort field provided",
-        "sort_by",
-        sort_by
-      );
+      throw new ValidationException("Invalid sort field provided", "sort_by", sort_by);
     }
 
     // We can safely interpolate these as they come strictly from the defined mappings
-    const safeSortBy =
-      allowedSortFields[sort_by as keyof typeof allowedSortFields];
+    const safeSortBy = allowedSortFields[sort_by as keyof typeof allowedSortFields];
     const orderClause = `ORDER BY t.${safeSortBy} ${sortOrder}`;
 
     if (safeSortBy !== "created_at") {
@@ -393,11 +371,9 @@ export const getTasksQuery = async (
         replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
-      }
+      },
     );
-    (task.dataValues as any)["assignees"] = assignees.map(
-      (a: any) => a.user_id
-    );
+    (task.dataValues as any)["assignees"] = assignees.map((a: any) => a.user_id);
 
     // Fetch entity links for this task
     const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
@@ -416,16 +392,10 @@ export const getTasksQuery = async (
 export const getTaskByIdQuery = async (
   taskId: number,
   { userId, role }: GetTasksOptions,
-  organizationId: number
+  organizationId: number,
 ): Promise<TasksModel | null> => {
-  const baseQueryParts: string[] = [
-    `SELECT DISTINCT t.*`,
-    `FROM tasks t`,
-  ];
-  const whereConditions: string[] = [
-    "t.id = :taskId",
-    "t.status != :deletedStatus",
-  ];
+  const baseQueryParts: string[] = [`SELECT DISTINCT t.*`, `FROM tasks t`];
+  const whereConditions: string[] = ["t.id = :taskId", "t.status != :deletedStatus"];
   const replacements: QueryReplacements = {
     taskId,
     deletedStatus: TaskStatus.DELETED,
@@ -437,7 +407,7 @@ export const getTaskByIdQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    organizationId
+    organizationId,
   );
 
   baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
@@ -460,28 +430,24 @@ export const getTaskByIdQuery = async (
         replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
-      }
+      },
     );
-    (task.dataValues as any)["assignees"] = assignees.map(
-      (a: any) => a.user_id
-    );
+    (task.dataValues as any)["assignees"] = assignees.map((a: any) => a.user_id);
 
     const creator_name = (await sequelize.query(
       `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :creator_id;`,
       {
         replacements: { creator_id: task.dataValues.creator_id },
-      }
+      },
     )) as [{ full_name: string }[], number];
     (task.dataValues as any)["creator_name"] = creator_name[0][0].full_name;
     const assignee_names = (await sequelize.query(
       `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
       {
         replacements: { assignee_ids: (task.dataValues as any)["assignees"] },
-      }
+      },
     )) as [{ full_name: string }[], number];
-    (task.dataValues as any)["assignee_names"] = assignee_names[0].map(
-      (a) => a.full_name
-    );
+    (task.dataValues as any)["assignee_names"] = assignee_names[0].map((a) => a.full_name);
 
     // Fetch entity links for this task
     const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
@@ -514,14 +480,10 @@ export const updateTaskByIdQuery = async (
     transaction: Transaction;
   },
   organizationId: number,
-  assignees?: number[]
+  assignees?: number[],
 ): Promise<TasksModel> => {
   // First, get the task to check permissions
-  const existingTask = await getTaskByIdQuery(
-    id,
-    { userId, role },
-    organizationId
-  );
+  const existingTask = await getTaskByIdQuery(id, { userId, role }, organizationId);
 
   if (!existingTask) {
     throw new NotFoundException("Task not found or access denied", "task", id);
@@ -537,20 +499,16 @@ export const updateTaskByIdQuery = async (
     {
       replacements: { organizationId, taskId: id, userId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   const isAssignee = assigneeCheck.length > 0;
 
   // Restrict who can update certain fields - only admin and creator can edit due_date and priority
-  if (
-    (task.due_date !== undefined || task.priority !== undefined) &&
-    !isAdmin &&
-    !isCreator
-  ) {
+  if ((task.due_date !== undefined || task.priority !== undefined) && !isAdmin && !isCreator) {
     throw new ForbiddenException(
       "Only admin and creator can update due_date and priority",
       "task",
-      "update_schedule_priority"
+      "update_schedule_priority",
     );
   }
 
@@ -559,25 +517,16 @@ export const updateTaskByIdQuery = async (
     throw new ForbiddenException(
       "Only task creator, assignee, or admin can update status",
       "task",
-      "update_status"
+      "update_status",
     );
   }
 
   const updateTask: QueryReplacements = {};
-  const setClause = [
-    "title",
-    "description",
-    "due_date",
-    "priority",
-    "status",
-    "categories",
-  ]
+  const setClause = ["title", "description", "due_date", "priority", "status", "categories"]
     .filter((f) => {
       if (task[f as keyof ITask] !== undefined) {
         updateTask[f as keyof ITask] =
-          f === "categories"
-            ? JSON.stringify(task[f as keyof ITask])
-            : task[f as keyof ITask];
+          f === "categories" ? JSON.stringify(task[f as keyof ITask]) : task[f as keyof ITask];
         return true;
       }
       return false;
@@ -586,11 +535,7 @@ export const updateTaskByIdQuery = async (
     .join(", ");
 
   if (!setClause) {
-    throw new ValidationException(
-      "No valid fields provided for update",
-      "task",
-      "update_fields"
-    );
+    throw new ValidationException("No valid fields provided for update", "task", "update_fields");
   }
 
   const query = `UPDATE tasks SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
@@ -617,7 +562,7 @@ export const updateTaskByIdQuery = async (
         replacements: { organizationId, taskId: id },
         type: QueryTypes.DELETE,
         transaction,
-      }
+      },
     );
 
     // Add new assignees if any
@@ -637,7 +582,7 @@ export const updateTaskByIdQuery = async (
           replacements: assigneeReplacements,
           type: QueryTypes.INSERT,
           transaction,
-        }
+        },
       );
     }
 
@@ -651,11 +596,9 @@ export const updateTaskByIdQuery = async (
         replacements: { organizationId, task_id: updatedTask.id },
         mapToModel: true,
         model: TaskAssigneesModel,
-      }
+      },
     );
-    (updatedTask.dataValues as any)["assignees"] = existingAssignees.map(
-      (a: any) => a.user_id
-    );
+    (updatedTask.dataValues as any)["assignees"] = existingAssignees.map((a: any) => a.user_id);
   }
   const automations = (await sequelize.query(
     `SELECT
@@ -664,7 +607,7 @@ export const updateTaskByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -681,7 +624,7 @@ export const updateTaskByIdQuery = async (
         {
           replacements: { creator_id: updatedTask.dataValues.creator_id },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
@@ -690,7 +633,7 @@ export const updateTaskByIdQuery = async (
             assignee_ids: (updatedTask.dataValues as any)["assignees"],
           },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
 
       const params = automation.params!;
@@ -716,9 +659,7 @@ export const updateTaskByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -729,12 +670,9 @@ export const updateTaskByIdQuery = async (
 const getTaskByIdIncludingArchivedQuery = async (
   taskId: number,
   { userId, role }: GetTasksOptions,
-  organizationId: number
+  organizationId: number,
 ): Promise<TasksModel | null> => {
-  const baseQueryParts: string[] = [
-    `SELECT DISTINCT t.*`,
-    `FROM tasks t`,
-  ];
+  const baseQueryParts: string[] = [`SELECT DISTINCT t.*`, `FROM tasks t`];
   const whereConditions: string[] = ["t.id = :taskId"];
   const replacements: QueryReplacements = { taskId };
 
@@ -744,7 +682,7 @@ const getTaskByIdIncludingArchivedQuery = async (
     whereConditions,
     replacements,
     { userId, role },
-    organizationId
+    organizationId,
   );
 
   baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
@@ -767,11 +705,9 @@ const getTaskByIdIncludingArchivedQuery = async (
         replacements: { organizationId, task_id: task.id },
         mapToModel: true,
         model: TaskAssigneesModel,
-      }
+      },
     );
-    (task.dataValues as any)["assignees"] = assignees.map(
-      (a: any) => a.user_id
-    );
+    (task.dataValues as any)["assignees"] = assignees.map((a: any) => a.user_id);
 
     return task;
   }
@@ -780,27 +716,21 @@ const getTaskByIdIncludingArchivedQuery = async (
 };
 
 // Soft delete task (only creator or admin)
-export const deleteTaskByIdQuery = async (
-  {
-    id,
-    userId,
-    role,
-    transaction,
-    organizationId,
-  }: {
-    id: number;
-    userId: number;
-    role: string;
-    transaction: Transaction;
-    organizationId: number;
-  }
-): Promise<boolean> => {
+export const deleteTaskByIdQuery = async ({
+  id,
+  userId,
+  role,
+  transaction,
+  organizationId,
+}: {
+  id: number;
+  userId: number;
+  role: string;
+  transaction: Transaction;
+  organizationId: number;
+}): Promise<boolean> => {
   // Use helper that includes archived tasks to fix 404 bug when archiving already-archived task
-  const task = await getTaskByIdIncludingArchivedQuery(
-    id,
-    { userId, role },
-    organizationId
-  );
+  const task = await getTaskByIdIncludingArchivedQuery(id, { userId, role }, organizationId);
 
   if (!task) {
     return false;
@@ -811,11 +741,7 @@ export const deleteTaskByIdQuery = async (
   const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   if (!isCreator && !isAdmin) {
-    throw new ForbiddenException(
-      "Only task creator or admin can delete tasks",
-      "task",
-      "delete"
-    );
+    throw new ForbiddenException("Only task creator or admin can delete tasks", "task", "delete");
   }
 
   // Soft delete by setting status to DELETED
@@ -829,7 +755,7 @@ export const deleteTaskByIdQuery = async (
       },
       // type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   )) as [TasksModel[], number];
   const deletedTask = result[0][0];
   const existingAssignees = await sequelize.query(
@@ -838,11 +764,9 @@ export const deleteTaskByIdQuery = async (
       replacements: { organizationId, task_id: id },
       mapToModel: true,
       model: TaskAssigneesModel,
-    }
+    },
   );
-  (deletedTask as any)["assignees"] = existingAssignees.map(
-    (a: any) => a.user_id
-  );
+  (deletedTask as any)["assignees"] = existingAssignees.map((a: any) => a.user_id);
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,
@@ -850,7 +774,7 @@ export const deleteTaskByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'task_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -867,14 +791,14 @@ export const deleteTaskByIdQuery = async (
         {
           replacements: { creator_id: deletedTask.creator_id },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
       const assignee_names = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
         {
           replacements: { assignee_ids: (deletedTask as any)["assignees"] },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
 
       const params = automation.params!;
@@ -900,9 +824,7 @@ export const deleteTaskByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -910,27 +832,21 @@ export const deleteTaskByIdQuery = async (
 };
 
 // Restore archived task (only creator or admin)
-export const restoreTaskByIdQuery = async (
-  {
-    id,
-    userId,
-    role,
-    transaction,
-    organizationId,
-  }: {
-    id: number;
-    userId: number;
-    role: string;
-    transaction: Transaction;
-    organizationId: number;
-  }
-): Promise<TasksModel | null> => {
+export const restoreTaskByIdQuery = async ({
+  id,
+  userId,
+  role,
+  transaction,
+  organizationId,
+}: {
+  id: number;
+  userId: number;
+  role: string;
+  transaction: Transaction;
+  organizationId: number;
+}): Promise<TasksModel | null> => {
   // Use helper that includes archived tasks
-  const task = await getTaskByIdIncludingArchivedQuery(
-    id,
-    { userId, role },
-    organizationId
-  );
+  const task = await getTaskByIdIncludingArchivedQuery(id, { userId, role }, organizationId);
 
   if (!task) {
     return null;
@@ -946,11 +862,7 @@ export const restoreTaskByIdQuery = async (
   const isAdmin = role === "Admin" || role === "SuperAdmin";
 
   if (!isCreator && !isAdmin) {
-    throw new ForbiddenException(
-      "Only task creator or admin can restore tasks",
-      "task",
-      "restore"
-    );
+    throw new ForbiddenException("Only task creator or admin can restore tasks", "task", "restore");
   }
 
   // Restore by setting status back to OPEN
@@ -963,7 +875,7 @@ export const restoreTaskByIdQuery = async (
         id: id,
       },
       transaction,
-    }
+    },
   )) as [TasksModel[], number];
 
   const restoredTask = result[0][0];
@@ -975,37 +887,29 @@ export const restoreTaskByIdQuery = async (
       replacements: { organizationId, task_id: id },
       mapToModel: true,
       model: TaskAssigneesModel,
-    }
+    },
   );
-  (restoredTask as any)["assignees"] = existingAssignees.map(
-    (a: any) => a.user_id
-  );
+  (restoredTask as any)["assignees"] = existingAssignees.map((a: any) => a.user_id);
 
   return restoredTask;
 };
 
 // Hard delete task - permanently removes from database (only creator or admin)
-export const hardDeleteTaskByIdQuery = async (
-  {
-    id,
-    userId,
-    role,
-    transaction,
-    organizationId,
-  }: {
-    id: number;
-    userId: number;
-    role: string;
-    transaction: Transaction;
-    organizationId: number;
-  }
-): Promise<boolean> => {
+export const hardDeleteTaskByIdQuery = async ({
+  id,
+  userId,
+  role,
+  transaction,
+  organizationId,
+}: {
+  id: number;
+  userId: number;
+  role: string;
+  transaction: Transaction;
+  organizationId: number;
+}): Promise<boolean> => {
   // Use helper that includes archived tasks
-  const task = await getTaskByIdIncludingArchivedQuery(
-    id,
-    { userId, role },
-    organizationId
-  );
+  const task = await getTaskByIdIncludingArchivedQuery(id, { userId, role }, organizationId);
 
   if (!task) {
     return false;
@@ -1019,7 +923,7 @@ export const hardDeleteTaskByIdQuery = async (
     throw new ForbiddenException(
       "Only task creator or admin can permanently delete tasks",
       "task",
-      "hard_delete"
+      "hard_delete",
     );
   }
 
@@ -1030,7 +934,7 @@ export const hardDeleteTaskByIdQuery = async (
       replacements: { organizationId, id },
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
 
   // Then hard delete the task
@@ -1040,7 +944,7 @@ export const hardDeleteTaskByIdQuery = async (
       replacements: { organizationId, id },
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
 
   return true;

@@ -69,7 +69,7 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
   // Initialize state from localStorage or default
   const [selectedParameter, setSelectedParameter] = useState<string>(() => {
     const stored = localStorage.getItem(storageKey);
-    if (stored && availableParameters.some(p => p.value === stored)) {
+    if (stored && availableParameters.some((p) => p.value === stored)) {
       return stored;
     }
     return defaultParameter || availableParameters[0]?.value || "";
@@ -87,9 +87,8 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
   };
 
   // Get the label for the selected parameter
-  const selectedParameterLabel = availableParameters.find(
-    (p) => p.value === selectedParameter
-  )?.label || "Parameter";
+  const selectedParameterLabel =
+    availableParameters.find((p) => p.value === selectedParameter)?.label || "Parameter";
 
   return (
     <Drawer
@@ -106,17 +105,24 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
     >
       <Box>
         {/* Header */}
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: 3 }}
-        >
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
           <Box>
-            <Typography sx={{ fontSize: theme.typography.body1.fontSize, fontWeight: 700, color: theme.palette.text.primary }}>
+            <Typography
+              sx={{
+                fontSize: theme.typography.body1.fontSize,
+                fontWeight: 700,
+                color: theme.palette.text.primary,
+              }}
+            >
               {title}
             </Typography>
-            <Typography sx={{ fontSize: theme.typography.body2.fontSize, color: theme.palette.text.secondary, mt: 0.5 }}>
+            <Typography
+              sx={{
+                fontSize: theme.typography.body2.fontSize,
+                color: theme.palette.text.secondary,
+                mt: 0.5,
+              }}
+            >
               {description}
             </Typography>
           </Box>
@@ -136,7 +142,13 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
 
         {/* Parameter Selection */}
         <Stack sx={{ mb: 3, gap: 2 }}>
-          <Typography sx={{ fontSize: theme.typography.body1.fontSize, fontWeight: 700, color: theme.palette.text.primary }}>
+          <Typography
+            sx={{
+              fontSize: theme.typography.body1.fontSize,
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+            }}
+          >
             Historical trend: {entityName} {selectedParameterLabel.toLowerCase()} over time
           </Typography>
           <Box display="flex" justifyContent="flex-end">
@@ -150,15 +162,9 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
 
         {/* Chart */}
         {chartType === "model" ? (
-          <ModelInventoryHistoryChart
-            parameter={selectedParameter}
-            height={300}
-          />
+          <ModelInventoryHistoryChart parameter={selectedParameter} height={300} />
         ) : (
-          <RiskHistoryChart
-            parameter={selectedParameter}
-            height={300}
-          />
+          <RiskHistoryChart parameter={selectedParameter} height={300} />
         )}
       </Box>
     </Drawer>

@@ -36,16 +36,13 @@ describe("Test Model Inventory History Repository", () => {
       await getModelInventoryTimeseries("status");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/modelInventoryHistory/timeseries",
-        {
-          parameter: "status",
-          startDate: undefined,
-          endDate: undefined,
-          intervalHours: undefined,
-          timeframe: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/modelInventoryHistory/timeseries", {
+        parameter: "status",
+        startDate: undefined,
+        endDate: undefined,
+        intervalHours: undefined,
+        timeframe: undefined,
+      });
     });
 
     it("should make a GET request with all optional params when provided", async () => {
@@ -64,16 +61,13 @@ describe("Test Model Inventory History Repository", () => {
         12,
       );
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/modelInventoryHistory/timeseries",
-        {
-          parameter: "security_assessment",
-          startDate: "2026-01-01",
-          endDate: "2026-03-01",
-          intervalHours: 12,
-          timeframe: "7days",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/modelInventoryHistory/timeseries", {
+        parameter: "security_assessment",
+        startDate: "2026-01-01",
+        endDate: "2026-03-01",
+        intervalHours: 12,
+        timeframe: "7days",
+      });
     });
 
     it("should return the full response on successful API call", async () => {
@@ -95,19 +89,13 @@ describe("Test Model Inventory History Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getModelInventoryTimeseries("status")).rejects.toEqual(
-        mockError,
-      );
+      await expect(getModelInventoryTimeseries("status")).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getModelInventoryTimeseries("status")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getModelInventoryTimeseries("status")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -128,10 +116,9 @@ describe("Test Model Inventory History Repository", () => {
       await getCurrentParameterCounts("status");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/api/modelInventoryHistory/current-counts",
-        { params: { parameter: "status" } },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/api/modelInventoryHistory/current-counts", {
+        params: { parameter: "status" },
+      });
     });
 
     it("should return the response data on successful API call", async () => {
@@ -150,19 +137,13 @@ describe("Test Model Inventory History Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getCurrentParameterCounts("status")).rejects.toEqual(
-        mockError,
-      );
+      await expect(getCurrentParameterCounts("status")).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(getCurrentParameterCounts("status")).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getCurrentParameterCounts("status")).rejects.toThrow("Connection refused");
     });
   });
 
@@ -183,10 +164,10 @@ describe("Test Model Inventory History Repository", () => {
       await createHistorySnapshot("status", "Manual snapshot");
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/api/modelInventoryHistory/snapshot",
-        { parameter: "status", description: "Manual snapshot" },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/api/modelInventoryHistory/snapshot", {
+        parameter: "status",
+        description: "Manual snapshot",
+      });
     });
 
     it("should make a POST request with only the parameter when description is omitted", async () => {
@@ -199,10 +180,10 @@ describe("Test Model Inventory History Repository", () => {
 
       await createHistorySnapshot("status");
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/api/modelInventoryHistory/snapshot",
-        { parameter: "status", description: undefined },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/api/modelInventoryHistory/snapshot", {
+        parameter: "status",
+        description: undefined,
+      });
     });
 
     it("should return the response data on successful API call", async () => {
@@ -233,13 +214,9 @@ describe("Test Model Inventory History Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(createHistorySnapshot("status")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createHistorySnapshot("status")).rejects.toThrow("Network timeout");
     });
   });
 });

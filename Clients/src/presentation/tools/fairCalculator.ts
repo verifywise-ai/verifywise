@@ -9,7 +9,7 @@ import { IQuantitativeRiskFields } from "../../domain/interfaces/i.quantitativeR
 export function pertEstimate(
   min: number | null | undefined,
   likely: number | null | undefined,
-  max: number | null | undefined
+  max: number | null | undefined,
 ): number | null {
   if (min == null || likely == null || max == null) return null;
   return (min + 4 * likely + max) / 6;
@@ -18,10 +18,26 @@ export function pertEstimate(
 /** Sum of PERT estimates for all 4 loss categories */
 export function computeTotalLoss(fields: Partial<IQuantitativeRiskFields>): number | null {
   const categories = [
-    { min: fields.loss_regulatory_min, likely: fields.loss_regulatory_likely, max: fields.loss_regulatory_max },
-    { min: fields.loss_operational_min, likely: fields.loss_operational_likely, max: fields.loss_operational_max },
-    { min: fields.loss_litigation_min, likely: fields.loss_litigation_likely, max: fields.loss_litigation_max },
-    { min: fields.loss_reputational_min, likely: fields.loss_reputational_likely, max: fields.loss_reputational_max },
+    {
+      min: fields.loss_regulatory_min,
+      likely: fields.loss_regulatory_likely,
+      max: fields.loss_regulatory_max,
+    },
+    {
+      min: fields.loss_operational_min,
+      likely: fields.loss_operational_likely,
+      max: fields.loss_operational_max,
+    },
+    {
+      min: fields.loss_litigation_min,
+      likely: fields.loss_litigation_likely,
+      max: fields.loss_litigation_max,
+    },
+    {
+      min: fields.loss_reputational_min,
+      likely: fields.loss_reputational_likely,
+      max: fields.loss_reputational_max,
+    },
   ];
 
   let total = 0;
@@ -43,7 +59,7 @@ export function computeALE(fields: Partial<IQuantitativeRiskFields>): number | n
   const freq = pertEstimate(
     fields.event_frequency_min,
     fields.event_frequency_likely,
-    fields.event_frequency_max
+    fields.event_frequency_max,
   );
   const totalLoss = computeTotalLoss(fields);
 
@@ -54,7 +70,7 @@ export function computeALE(fields: Partial<IQuantitativeRiskFields>): number | n
 /** Residual ALE = ALE × (1 - control_effectiveness / 100) */
 export function computeResidualALE(
   ale: number | null,
-  controlEffectiveness: number | null | undefined
+  controlEffectiveness: number | null | undefined,
 ): number | null {
   if (ale == null) return null;
   if (controlEffectiveness == null) return ale;
@@ -65,12 +81,12 @@ export function computeResidualALE(
 export function computeROI(
   ale: number | null,
   residualALE: number | null,
-  mitigationCost: number | null | undefined
+  mitigationCost: number | null | undefined,
 ): number | null {
   if (ale == null || residualALE == null || mitigationCost == null || mitigationCost === 0) {
     return null;
   }
-  return ((ale - residualALE) - mitigationCost) / mitigationCost * 100;
+  return ((ale - residualALE - mitigationCost) / mitigationCost) * 100;
 }
 
 /**

@@ -16,11 +16,9 @@ interface OrgProfileSectionProps {
 }
 
 function OrgProfileSection({ assessment, onUpdate, isSaving }: OrgProfileSectionProps) {
-  const [assessmentOwner, setAssessmentOwner] = useState(
-    assessment.assessment_owner ?? ""
-  );
+  const [assessmentOwner, setAssessmentOwner] = useState(assessment.assessment_owner ?? "");
   const [operationalContext, setOperationalContext] = useState(
-    assessment.operational_context ?? ""
+    assessment.operational_context ?? "",
   );
 
   const handleOwnerBlur = () => {
@@ -48,10 +46,16 @@ function OrgProfileSection({ assessment, onUpdate, isSaving }: OrgProfileSection
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)
           </a>{" "}
-          requires deployers of high-risk AI systems to perform a fundamental rights impact assessment before putting the system into use.
+          requires deployers of high-risk AI systems to perform a fundamental rights impact
+          assessment before putting the system into use.
         </>
       }
     >

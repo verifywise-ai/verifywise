@@ -86,37 +86,25 @@ describe("riskHistory.repository", () => {
     });
 
     it("should log and rethrow errors", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = new Error("Network error");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(getRiskTimeseries("severity")).rejects.toThrow(
-        "Network error",
-      );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching risk timeseries:",
-        error,
-      );
+      await expect(getRiskTimeseries("severity")).rejects.toThrow("Network error");
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching risk timeseries:", error);
 
       consoleErrorSpy.mockRestore();
     });
 
     it("should rethrow structured API errors", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = {
         response: { status: 500, statusText: "Internal Server Error" },
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getRiskTimeseries("severity")).rejects.toEqual(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching risk timeseries:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching risk timeseries:", error);
 
       consoleErrorSpy.mockRestore();
     });
@@ -134,12 +122,9 @@ describe("riskHistory.repository", () => {
 
       const result = await getCurrentRiskParameterCounts("severity");
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/api/riskHistory/current-counts",
-        {
-          params: { parameter: "severity" },
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/api/riskHistory/current-counts", {
+        params: { parameter: "severity" },
+      });
       expect(result).toEqual(responseData);
     });
 
@@ -153,18 +138,13 @@ describe("riskHistory.repository", () => {
 
       await getCurrentRiskParameterCounts("mitigation_status");
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/api/riskHistory/current-counts",
-        {
-          params: { parameter: "mitigation_status" },
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/api/riskHistory/current-counts", {
+        params: { parameter: "mitigation_status" },
+      });
     });
 
     it("should log and rethrow errors", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = new Error("Counts fetch failed");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
@@ -194,18 +174,12 @@ describe("riskHistory.repository", () => {
       };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createRiskHistorySnapshot(
-        "severity",
-        "manual snapshot",
-      );
+      const result = await createRiskHistorySnapshot("severity", "manual snapshot");
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/api/riskHistory/snapshot",
-        {
-          parameter: "severity",
-          description: "manual snapshot",
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/api/riskHistory/snapshot", {
+        parameter: "severity",
+        description: "manual snapshot",
+      });
       expect(result).toEqual(responseData);
     });
 
@@ -220,50 +194,35 @@ describe("riskHistory.repository", () => {
 
       const result = await createRiskHistorySnapshot("likelihood");
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/api/riskHistory/snapshot",
-        {
-          parameter: "likelihood",
-          description: undefined,
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/api/riskHistory/snapshot", {
+        parameter: "likelihood",
+        description: undefined,
+      });
       expect(result).toEqual(responseData);
     });
 
     it("should log and rethrow snapshot creation errors", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = new Error("Snapshot failed");
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(createRiskHistorySnapshot("risk_level")).rejects.toThrow(
-        "Snapshot failed",
-      );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating risk history snapshot:",
-        error,
-      );
+      await expect(createRiskHistorySnapshot("risk_level")).rejects.toThrow("Snapshot failed");
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating risk history snapshot:", error);
 
       consoleErrorSpy.mockRestore();
     });
 
     it("should rethrow API conflict errors", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = {
         response: { status: 409, statusText: "Conflict" },
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createRiskHistorySnapshot("severity", "duplicate snapshot"),
-      ).rejects.toEqual(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating risk history snapshot:",
+      await expect(createRiskHistorySnapshot("severity", "duplicate snapshot")).rejects.toEqual(
         error,
       );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating risk history snapshot:", error);
 
       consoleErrorSpy.mockRestore();
     });

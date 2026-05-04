@@ -15,13 +15,11 @@ test.describe("Start Here", () => {
         .or(page.getByText(/getting started/i))
         .or(page.getByText(/welcome/i))
         .or(page.getByText(/setup/i))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/start-here");
     await page.waitForLoadState("domcontentloaded");
 
@@ -43,9 +41,7 @@ test.describe("Start Here", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays onboarding steps or checklist", async ({
-    authedPage: page,
-  }) => {
+  test("displays onboarding steps or checklist", async ({ authedPage: page }) => {
     await page.goto("/start-here");
 
     // Should show steps, cards, or a checklist for onboarding

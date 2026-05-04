@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Reseeds the EU AI Act struct tables to pick up:
@@ -27,16 +27,18 @@
  */
 module.exports = {
   async up(queryInterface) {
-    const { ControlCategories } = require('../../dist/structures/EU-AI-Act/compliance-tracker/controlCategories.struct');
+    const {
+      ControlCategories,
+    } = require("../../dist/structures/EU-AI-Act/compliance-tracker/controlCategories.struct");
 
     const t = await queryInterface.sequelize.transaction();
     try {
       const [[framework]] = await queryInterface.sequelize.query(
         `SELECT id FROM verifywise.frameworks WHERE name = 'EU AI Act' LIMIT 1;`,
-        { transaction: t }
+        { transaction: t },
       );
       if (!framework) {
-        console.warn('[reseed-eu-act] EU AI Act framework not found — skipping');
+        console.warn("[reseed-eu-act] EU AI Act framework not found — skipping");
         await t.commit();
         return;
       }
@@ -52,7 +54,7 @@ module.exports = {
           {
             transaction: t,
             replacements: { frameworkId, order_no: category.order_no },
-          }
+          },
         );
 
         let categoryId = existingCat?.id;
@@ -68,7 +70,7 @@ module.exports = {
                 title: category.title,
                 article: category.article ?? null,
               },
-            }
+            },
           );
         } else {
           const [[inserted]] = await queryInterface.sequelize.query(
@@ -84,7 +86,7 @@ module.exports = {
                 order_no: category.order_no,
                 article: category.article ?? null,
               },
-            }
+            },
           );
           categoryId = inserted.id;
         }
@@ -101,7 +103,7 @@ module.exports = {
             {
               transaction: t,
               replacements: { categoryId, order_no: control.order_no },
-            }
+            },
           );
 
           let controlId = existingCtl?.id;
@@ -115,10 +117,10 @@ module.exports = {
                 replacements: {
                   id: controlId,
                   title: control.title,
-                  description: control.description || '',
+                  description: control.description || "",
                   article: controlArticle,
                 },
-              }
+              },
             );
           } else {
             const [[inserted]] = await queryInterface.sequelize.query(
@@ -131,11 +133,11 @@ module.exports = {
                 replacements: {
                   categoryId,
                   title: control.title,
-                  description: control.description || '',
+                  description: control.description || "",
                   order_no: control.order_no,
                   article: controlArticle,
                 },
-              }
+              },
             );
             controlId = inserted.id;
           }
@@ -152,7 +154,7 @@ module.exports = {
               {
                 transaction: t,
                 replacements: { controlId, order_no: sc.order_no },
-              }
+              },
             );
 
             if (existingSc?.id) {
@@ -165,10 +167,10 @@ module.exports = {
                   replacements: {
                     id: existingSc.id,
                     title: sc.title,
-                    description: sc.description || '',
+                    description: sc.description || "",
                     article: scArticle,
                   },
-                }
+                },
               );
             } else {
               await queryInterface.sequelize.query(
@@ -180,11 +182,11 @@ module.exports = {
                   replacements: {
                     controlId,
                     title: sc.title,
-                    description: sc.description || '',
+                    description: sc.description || "",
                     order_no: sc.order_no,
                     article: scArticle,
                   },
-                }
+                },
               );
             }
           }
@@ -210,7 +212,7 @@ module.exports = {
                AND ce.control_meta_id = cs.id
            )
          RETURNING id;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
 
       const [scBackfill] = await queryInterface.sequelize.query(
@@ -231,10 +233,12 @@ module.exports = {
              WHERE se.control_id = ce.id AND se.subcontrol_meta_id = ss.id
            )
          RETURNING id;`,
-        { transaction: t, replacements: { frameworkId } }
+        { transaction: t, replacements: { frameworkId } },
       );
 
-      console.log(`[reseed-eu-act] reseed complete; tenant backfill: ${ctlBackfill.length} controls_eu, ${scBackfill.length} subcontrols_eu`);
+      console.log(
+        `[reseed-eu-act] reseed complete; tenant backfill: ${ctlBackfill.length} controls_eu, ${scBackfill.length} subcontrols_eu`,
+      );
       await t.commit();
     } catch (err) {
       await t.rollback();

@@ -119,15 +119,12 @@ describe("Test form validations", () => {
       expect(result).toEqual(expected);
     });
     it("should not accept non-matching confirm password", () => {
-      const form = new FormValidationBuilder()
-        .withNonMatchingConfirmPassword()
-        .build();
+      const form = new FormValidationBuilder().withNonMatchingConfirmPassword().build();
       const result = validateForm(form);
       const expected = {
         isFormValid: false,
         errors: {
-          confirmPassword:
-            "Password confirmation does not match. Please re-enter.",
+          confirmPassword: "Password confirmation does not match. Please re-enter.",
         },
       };
       expect(result).toEqual(expected);
@@ -208,8 +205,7 @@ describe("Test form validations", () => {
       const expected = {
         isFormValid: false,
         errors: {
-          organizationName:
-            "Organization name can't be shorter than 2 characters.",
+          organizationName: "Organization name can't be shorter than 2 characters.",
         },
       };
       expect(result).toEqual(expected);
@@ -222,8 +218,7 @@ describe("Test form validations", () => {
       const expected = {
         isFormValid: false,
         errors: {
-          organizationName:
-            "Organization name can't be longer than 50 characters.",
+          organizationName: "Organization name can't be longer than 50 characters.",
         },
       };
       expect(result).toEqual(expected);

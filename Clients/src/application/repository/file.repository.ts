@@ -2,7 +2,13 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 
 // Review status type
-export type ReviewStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'expired' | 'superseded';
+export type ReviewStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "superseded";
 
 // Type definitions for API responses
 export interface FileMetadata {
@@ -96,7 +102,6 @@ export async function getFileById({
   return response.data;
 }
 
-
 /**
  * Get all files metadata for the current user's organization
  *
@@ -108,43 +113,41 @@ export async function getUserFilesMetaData({
 }: {
   signal?: AbortSignal;
 } = {}): Promise<FileMetadata[]> {
-    const [fileManageResponse, fileResponse] = await Promise.all([
-      apiServices.get<FileManagerResponse>("/file-manager", { signal }),
-      apiServices.get<any[]>("/files", { signal })
-    ]);
+  const [fileManageResponse, fileResponse] = await Promise.all([
+    apiServices.get<FileManagerResponse>("/file-manager", { signal }),
+    apiServices.get<any[]>("/files", { signal }),
+  ]);
 
-    // Extract and return all file data from API
-    const rawFiles = [...(fileManageResponse.data?.data?.files ?? []), ...(fileResponse.data ?? [])];
+  // Extract and return all file data from API
+  const rawFiles = [...(fileManageResponse.data?.data?.files ?? []), ...(fileResponse.data ?? [])];
 
-    return rawFiles.map((f: any) => ({
-        id: String(f.id),
-        filename: f.filename,
-        size: f?.size,
-        mimetype: f?.mimetype,
-        upload_date: f?.upload_date || f?.uploaded_time,
-        uploaded_by: String(f?.uploaded_by),
-        uploader_name: f?.uploader_name,
-        uploader_surname: f?.uploader_surname,
-        source: f?.source,
-        project_title: f?.project_title,
-        project_id: f?.project_id,
-        parent_id: f?.parent_id,
-        sub_id: f?.sub_id,
-        meta_id: f?.meta_id,
-        is_evidence: f?.is_evidence,
-        // Metadata fields (may not be present in all responses)
-        tags: f?.tags || [],
-        review_status: f?.review_status,
-        version: f?.version,
-        expiry_date: f?.expiry_date,
-        description: f?.description,
-        file_group_id: f?.file_group_id,
-        approval_workflow_id: f?.approval_workflow_id,
-        approval_workflow_name: f?.approval_workflow_name,
-    })) as FileMetadata[];
+  return rawFiles.map((f: any) => ({
+    id: String(f.id),
+    filename: f.filename,
+    size: f?.size,
+    mimetype: f?.mimetype,
+    upload_date: f?.upload_date || f?.uploaded_time,
+    uploaded_by: String(f?.uploaded_by),
+    uploader_name: f?.uploader_name,
+    uploader_surname: f?.uploader_surname,
+    source: f?.source,
+    project_title: f?.project_title,
+    project_id: f?.project_id,
+    parent_id: f?.parent_id,
+    sub_id: f?.sub_id,
+    meta_id: f?.meta_id,
+    is_evidence: f?.is_evidence,
+    // Metadata fields (may not be present in all responses)
+    tags: f?.tags || [],
+    review_status: f?.review_status,
+    version: f?.version,
+    expiry_date: f?.expiry_date,
+    description: f?.description,
+    file_group_id: f?.file_group_id,
+    approval_workflow_id: f?.approval_workflow_id,
+    approval_workflow_name: f?.approval_workflow_name,
+  })) as FileMetadata[];
 }
-
-
 
 /**
  * Upload a file to the file manager
@@ -196,7 +199,6 @@ export async function uploadFileToManager({
   return response.data;
 }
 
-
 /**
  * Download a file from the file manager
  *
@@ -217,7 +219,6 @@ export async function downloadFileFromManager({
   });
   return response.data;
 }
-
 
 /**
  * Delete a file from the file manager
@@ -388,7 +389,9 @@ export async function updateFileMetadata({
   updates: UpdateFileMetadataInput;
   signal?: AbortSignal;
 }): Promise<FileMetadata> {
-  const response = await apiServices.patch<any>(`/file-manager/${id}/metadata`, updates, { signal });
+  const response = await apiServices.patch<any>(`/file-manager/${id}/metadata`, updates, {
+    signal,
+  });
   const f = response.data?.data || response.data;
 
   return {
@@ -437,7 +440,9 @@ export async function getHighlightedFiles({
   params.append("daysUntilExpiry", String(daysUntilExpiry));
   params.append("recentDays", String(recentDays));
 
-  const response = await apiServices.get<any>(`/file-manager/highlighted?${params.toString()}`, { signal });
+  const response = await apiServices.get<any>(`/file-manager/highlighted?${params.toString()}`, {
+    signal,
+  });
   const data = response.data?.data || response.data;
 
   return {
@@ -509,9 +514,15 @@ export async function getFileVersionHistory({
 // File Entity Linking (Framework-agnostic evidence attachment)
 // ============================================================================
 
-export type FrameworkType = 'eu_ai_act' | 'nist_ai' | 'iso_27001' | 'iso_42001' | string;
-export type EntityType = 'assessment' | 'subcontrol' | 'subclause' | 'annex_control' | 'annex_category' | string;
-export type LinkType = 'evidence' | 'feedback' | 'attachment' | 'reference';
+export type FrameworkType = "eu_ai_act" | "nist_ai" | "iso_27001" | "iso_42001" | string;
+export type EntityType =
+  | "assessment"
+  | "subcontrol"
+  | "subclause"
+  | "annex_control"
+  | "annex_category"
+  | string;
+export type LinkType = "evidence" | "feedback" | "attachment" | "reference";
 
 export interface FileEntityLink {
   id?: number;
@@ -553,7 +564,7 @@ export interface AttachFilesParams {
  */
 export async function attachFileToEntity(
   params: AttachFileParams,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ message: string; link?: FileEntityLink }> {
   const response = await apiServices.post<any>("/files/attach", params, { signal });
   return response.data;
@@ -568,7 +579,7 @@ export async function attachFileToEntity(
  */
 export async function attachFilesToEntity(
   params: AttachFilesParams,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{
   message: string;
   results: { file_id: number; success: boolean; message: string }[];
@@ -585,8 +596,8 @@ export async function attachFilesToEntity(
  * @returns {Promise<{ message: string }>}
  */
 export async function detachFileFromEntity(
-  params: Pick<AttachFileParams, 'file_id' | 'framework_type' | 'entity_type' | 'entity_id'>,
-  signal?: AbortSignal
+  params: Pick<AttachFileParams, "file_id" | "framework_type" | "entity_type" | "entity_id">,
+  signal?: AbortSignal,
 ): Promise<{ message: string }> {
   const response = await apiServices.delete<any>("/files/detach", {
     data: params,
@@ -608,11 +619,11 @@ export async function getEntityFiles(
   frameworkType: FrameworkType,
   entityType: EntityType,
   entityId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<FileMetadata[]> {
   const response = await apiServices.get<any>(
     `/files/entity/${frameworkType}/${entityType}/${entityId}`,
-    { signal }
+    { signal },
   );
   const files = response.data || [];
   return files.map((f: any) => ({

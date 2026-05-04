@@ -15,10 +15,10 @@ export async function getProjectRiskById({
 
 export async function getAllProjectRisks({
   signal,
-  filter = 'active',
+  filter = "active",
 }: {
   signal?: AbortSignal;
-  filter?: 'active' | 'deleted' | 'all';
+  filter?: "active" | "deleted" | "all";
 } = {}): Promise<any> {
   const response = await apiServices.get(`/projectRisks?filter=${filter}`, {
     signal,
@@ -29,11 +29,11 @@ export async function getAllProjectRisks({
 export async function getAllProjectRisksByProjectId({
   projectId,
   signal,
-  filter = 'active',
+  filter = "active",
 }: {
   projectId: string;
   signal?: AbortSignal;
-  filter?: 'active' | 'deleted' | 'all';
+  filter?: "active" | "deleted" | "all";
 }): Promise<any> {
   const response = await apiServices.get(`/projectRisks/by-projid/${projectId}?filter=${filter}`, {
     signal,
@@ -44,15 +44,18 @@ export async function getAllProjectRisksByProjectId({
 export async function getAllRisksByFrameworkId({
   frameworkId,
   signal,
-  filter = 'active',
+  filter = "active",
 }: {
   frameworkId: number;
   signal?: AbortSignal;
-  filter?: 'active' | 'deleted' | 'all';
+  filter?: "active" | "deleted" | "all";
 }): Promise<any> {
-  const response = await apiServices.get(`/projectRisks/by-frameworkid/${frameworkId}?filter=${filter}`, {
-    signal,
-  });
+  const response = await apiServices.get(
+    `/projectRisks/by-frameworkid/${frameworkId}?filter=${filter}`,
+    {
+      signal,
+    },
+  );
   return response.data;
 }
 
@@ -69,31 +72,17 @@ export async function getNonMitigatedProjectRisks({
   return response.data;
 }
 
-export async function createProjectRisk({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createProjectRisk({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/projectRisks", body);
   return response;
 }
 
-export async function updateProjectRisk({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateProjectRisk({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.put(`/projectRisks/${id}`, body);
   return response;
 }
 
-export async function deleteProjectRisk({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteProjectRisk({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/projectRisks/${id}`);
-  return response
+  return response;
 }

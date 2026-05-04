@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { IProjectAttributes } from "../../interfaces/i.project";
 import { AiRiskClassification } from "../../enums/ai-risk-classification.enum";
@@ -16,10 +10,7 @@ import { ProjectStatus } from "../../enums/project-status.enum";
   timestamps: true,
   underscored: true,
 })
-export class ProjectModel
-  extends Model<ProjectModel>
-  implements IProjectAttributes
-{
+export class ProjectModel extends Model<ProjectModel> implements IProjectAttributes {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -146,18 +137,13 @@ export class ProjectModel
   })
   _source?: string;
 
-  static async CreateNewProject(
-    projectAttributes: Partial<IProjectAttributes>
-  ) {
+  static async CreateNewProject(projectAttributes: Partial<IProjectAttributes>) {
     // Convert Partial<IProjectAttributes> to Optional<ProjectModel, NullishPropertiesOf<ProjectModel>>
     const attributes = projectAttributes as any;
     return await ProjectModel.create(attributes);
   }
 
-  static async UpdateProject(
-    projectId: number,
-    projectAttributes: Partial<IProjectAttributes>
-  ) {
+  static async UpdateProject(projectId: number, projectAttributes: Partial<IProjectAttributes>) {
     return await ProjectModel.update(projectAttributes, {
       where: {
         id: projectId,

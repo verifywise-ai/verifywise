@@ -17,10 +17,7 @@ vi.mock("../../repository/plugin.repository", () => ({
 }));
 
 import { usePluginInstallation } from "../usePluginInstallation";
-import {
-  installPlugin,
-  uninstallPlugin,
-} from "../../repository/plugin.repository";
+import { installPlugin, uninstallPlugin } from "../../repository/plugin.repository";
 
 const mockInstall = vi.mocked(installPlugin);
 const mockUninstall = vi.mocked(uninstallPlugin);

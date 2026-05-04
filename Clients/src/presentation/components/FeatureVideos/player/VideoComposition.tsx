@@ -29,7 +29,7 @@ interface TimelineEntry {
 
 function buildTimeline(
   scenes: SceneDef[],
-  overlap: number
+  overlap: number,
 ): { entries: TimelineEntry[]; totalFrames: number } {
   const entries: TimelineEntry[] = [];
   let cursor = 0;
@@ -67,17 +67,13 @@ interface VideoCompositionProps {
   playing: boolean;
 }
 
-export function VideoComposition({
-  config,
-  frame,
-  playing,
-}: VideoCompositionProps) {
+export function VideoComposition({ config, frame, playing }: VideoCompositionProps) {
   const overlap = config.transitionFrames ?? 15;
   const useAudio = config.audio ?? true;
 
   const { entries, totalFrames } = useMemo(
     () => buildTimeline(config.scenes, overlap),
-    [config.scenes, overlap]
+    [config.scenes, overlap],
   );
 
   // ── Audio ──
@@ -157,10 +153,7 @@ export function VideoComposition({
         }
 
         return (
-          <div
-            key={entry.key}
-            style={{ position: "absolute", inset: 0, opacity, zIndex: 1 }}
-          >
+          <div key={entry.key} style={{ position: "absolute", inset: 0, opacity, zIndex: 1 }}>
             {entry.render(localFrame)}
           </div>
         );

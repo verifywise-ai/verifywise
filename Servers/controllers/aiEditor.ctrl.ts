@@ -57,7 +57,9 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({ error: "No LLM keys configured. Ask your admin to add one in Settings > LLM keys." });
+      res.status(400).json({
+        error: "No LLM keys configured. Ask your admin to add one in Settings > LLM keys.",
+      });
       return;
     }
 
@@ -65,7 +67,9 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
     const model = createModel(apiKey.name, apiKey.key || "", url, apiKey.model);
 
-    logger.debug(`[AI Editor] Streaming for org: ${organizationId}, provider: ${apiKey.name}, model: ${apiKey.model}`);
+    logger.debug(
+      `[AI Editor] Streaming for org: ${organizationId}, provider: ${apiKey.name}, model: ${apiKey.model}`,
+    );
 
     const result = streamText({
       model,

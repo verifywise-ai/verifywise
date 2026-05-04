@@ -39,10 +39,7 @@ declare module "papaparse" {
     meta: ParseMeta;
   }
 
-  function parse<T = any>(
-    input: string | File,
-    config?: ParseConfig<T>
-  ): ParseResult<T>;
+  function parse<T = any>(input: string | File, config?: ParseConfig<T>): ParseResult<T>;
 
   export default { parse };
   export { parse, ParseResult, ParseConfig, ParseError, ParseMeta };

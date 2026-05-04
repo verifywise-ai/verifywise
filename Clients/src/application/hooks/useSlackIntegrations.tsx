@@ -45,9 +45,7 @@ interface ApiResponse {
 export type SlackRoutingType = { routingType: string; id: number[] };
 
 const useSlackIntegrations = (userId: number | null) => {
-  const [slackIntegrations, setSlackIntegrations] = useState<SlackWebhook[]>(
-    [],
-  );
+  const [slackIntegrations, setSlackIntegrations] = useState<SlackWebhook[]>([]);
   const [routingData, setRoutingData] = useState<SlackRoutingType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,11 +94,7 @@ const useSlackIntegrations = (userId: number | null) => {
       setRoutingData(notificationRoutingData);
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to fetch slack integrations",
-      );
+      setError(err instanceof Error ? err.message : "Failed to fetch slack integrations");
     } finally {
       setLoading(false);
     }

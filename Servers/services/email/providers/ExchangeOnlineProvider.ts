@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { EmailProvider, EmailOptions, EmailResult, ExchangeOnlineConfig } from '../types';
+import nodemailer from "nodemailer";
+import { EmailProvider, EmailOptions, EmailResult, ExchangeOnlineConfig } from "../types";
 
 /**
  * Exchange Online (Office 365/Microsoft 365) Email Provider
@@ -14,7 +14,7 @@ export class ExchangeOnlineProvider implements EmailProvider {
   constructor(config: ExchangeOnlineConfig) {
     this.config = config;
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.office365.com',
+      host: "smtp.office365.com",
       port: 587,
       secure: false, // Use STARTTLS
       auth: {
@@ -22,19 +22,19 @@ export class ExchangeOnlineProvider implements EmailProvider {
         pass: config.pass,
       },
       tls: {
-        minVersion: 'TLSv1.2', // Enforce modern TLS
-        ciphers: 'HIGH:!aNULL:!MD5:!3DES', // Strong ciphers only
-        rejectUnauthorized: process.env.NODE_ENV !== 'development', // Only allow self-signed in dev
+        minVersion: "TLSv1.2", // Enforce modern TLS
+        ciphers: "HIGH:!aNULL:!MD5:!3DES", // Strong ciphers only
+        rejectUnauthorized: process.env.NODE_ENV !== "development", // Only allow self-signed in dev
       },
       // Add timeout configurations
-      connectionTimeout: 30000,    // 30 seconds to establish connection
-      greetingTimeout: 10000,      // 10 seconds for server greeting
-      socketTimeout: 60000,        // 60 seconds for socket inactivity
+      connectionTimeout: 30000, // 30 seconds to establish connection
+      greetingTimeout: 10000, // 10 seconds for server greeting
+      socketTimeout: 60000, // 60 seconds for socket inactivity
     });
   }
 
   getProviderName(): string {
-    return 'Exchange Online (Office 365)';
+    return "Exchange Online (Office 365)";
   }
 
   async validateConfig(): Promise<boolean> {
@@ -42,7 +42,7 @@ export class ExchangeOnlineProvider implements EmailProvider {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('Exchange Online configuration validation failed:', error);
+      console.error("Exchange Online configuration validation failed:", error);
       return false;
     }
   }
@@ -58,11 +58,11 @@ export class ExchangeOnlineProvider implements EmailProvider {
 
       // Add attachments if provided
       if (options.attachments && options.attachments.length > 0) {
-        mailOptions.attachments = options.attachments.map(att => ({
+        mailOptions.attachments = options.attachments.map((att) => ({
           filename: att.filename,
           content: att.content,
           contentType: att.contentType,
-          path: att.path
+          path: att.path,
         }));
       }
 
@@ -76,8 +76,8 @@ export class ExchangeOnlineProvider implements EmailProvider {
       return {
         success: false,
         error: {
-          name: error.name || 'ExchangeOnlineError',
-          message: error.message || 'Unknown Exchange Online error',
+          name: error.name || "ExchangeOnlineError",
+          message: error.message || "Unknown Exchange Online error",
         },
       };
     }

@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Remove duplicate annex_struct_iso27001 records that have no
@@ -18,5 +18,5 @@ module.exports = {
 
   async down() {
     // No-op: the deleted rows were duplicates with no children
-  }
+  },
 };

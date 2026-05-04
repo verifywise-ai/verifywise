@@ -43,9 +43,7 @@ export const ShadowAISidebarProvider: FC<{ children: ReactNode }> = ({ children 
         order: "desc",
       });
       setToolsCount(response.total);
-      setRecentTools(
-        response.tools.map((t) => ({ id: t.id, name: t.name }))
-      );
+      setRecentTools(response.tools.map((t) => ({ id: t.id, name: t.name })));
     } catch (error) {
       console.error("Failed to load recent tools:", error);
     }

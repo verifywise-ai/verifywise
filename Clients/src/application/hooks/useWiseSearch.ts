@@ -84,7 +84,7 @@ async function searchPolicyTemplates(query: string): Promise<SearchResult[]> {
     .filter(
       (template) =>
         template.title.toLowerCase().includes(lowerQuery) ||
-        template.description.toLowerCase().includes(lowerQuery)
+        template.description.toLowerCase().includes(lowerQuery),
     )
     .slice(0, 20)
     .map((template) => {
@@ -111,7 +111,9 @@ function loadRecentSearches(): RecentSearch[] {
       const parsed = JSON.parse(stored);
       // Filter out old searches (older than 7 days)
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      return parsed.filter((s: RecentSearch) => s.timestamp > weekAgo).slice(0, MAX_RECENT_SEARCHES);
+      return parsed
+        .filter((s: RecentSearch) => s.timestamp > weekAgo)
+        .slice(0, MAX_RECENT_SEARCHES);
     }
   } catch (e) {
     console.error("Failed to load recent searches:", e);
@@ -124,7 +126,10 @@ function loadRecentSearches(): RecentSearch[] {
  */
 function saveRecentSearches(searches: RecentSearch[]): void {
   try {
-    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches.slice(0, MAX_RECENT_SEARCHES)));
+    localStorage.setItem(
+      RECENT_SEARCHES_KEY,
+      JSON.stringify(searches.slice(0, MAX_RECENT_SEARCHES)),
+    );
   } catch (e) {
     console.error("Failed to save recent searches:", e);
   }
@@ -220,7 +225,9 @@ export function useWiseSearch(): UseWiseSearchReturn {
       // Ignore abort/cancel errors (axios uses CanceledError, native fetch uses AbortError)
       if (
         err instanceof Error &&
-        (err.name === "AbortError" || err.name === "CanceledError" || (err as { code?: string }).code === "ERR_CANCELED")
+        (err.name === "AbortError" ||
+          err.name === "CanceledError" ||
+          (err as { code?: string }).code === "ERR_CANCELED")
       ) {
         return;
       }
@@ -264,7 +271,7 @@ export function useWiseSearch(): UseWiseSearchReturn {
       // Add new search at the beginning
       const updated = [{ query: searchQuery, timestamp: Date.now() }, ...filtered].slice(
         0,
-        MAX_RECENT_SEARCHES
+        MAX_RECENT_SEARCHES,
       );
       // Save to localStorage
       saveRecentSearches(updated);

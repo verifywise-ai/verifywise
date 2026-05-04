@@ -106,5 +106,4 @@ export function LogLine({ line, index }: LogLineProps) {
       </Typography>
     </Box>
   );
-};
-
+}

@@ -16,10 +16,6 @@ import { githubWebhookController } from "../controllers/webhook.ctrl";
 const router = express.Router();
 
 // GitHub webhook — raw body needed for HMAC signature verification
-router.post(
-  "/github",
-  express.raw({ type: "application/json" }),
-  githubWebhookController
-);
+router.post("/github", express.raw({ type: "application/json" }), githubWebhookController);
 
 export default router;

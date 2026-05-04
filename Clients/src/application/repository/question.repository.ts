@@ -21,13 +21,7 @@ export async function createQuestion({ body }: { body: any }): Promise<any> {
   return response;
 }
 
-export async function updateQuestion({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateQuestion({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.patch(`/questions/${id}`, body);
   return response;
 }
@@ -54,10 +48,6 @@ export async function updateEUAIActAnswerById({
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await apiServices.patch(
-    `/eu-ai-act/saveAnswer/${answerId}`,
-    body,
-    { headers }
-  );
+  const response = await apiServices.patch(`/eu-ai-act/saveAnswer/${answerId}`, body, { headers });
   return response;
 }

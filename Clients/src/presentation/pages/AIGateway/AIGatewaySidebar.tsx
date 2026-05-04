@@ -5,7 +5,22 @@
  * Follows the SidebarShell pattern established by ShadowAISidebar.
  */
 
-import { Router, BarChart3, MessageSquare, ShieldCheck, FileText, Settings, BookOpen, Layers, KeyRound, Server, Wrench, ClipboardList, CheckCircle, Shield } from "lucide-react";
+import {
+  Router,
+  BarChart3,
+  MessageSquare,
+  ShieldCheck,
+  FileText,
+  Settings,
+  BookOpen,
+  Layers,
+  KeyRound,
+  Server,
+  Wrench,
+  ClipboardList,
+  CheckCircle,
+  Shield,
+} from "lucide-react";
 import SidebarShell, {
   SidebarMenuItem,
   SidebarMenuGroup,

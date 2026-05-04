@@ -10,12 +10,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import {
-  listItemStyle,
-  pageHeadingStyle,
-  subHeadingStyle,
-  topicsListStyle,
-} from "./index.style";
+import { listItemStyle, pageHeadingStyle, subHeadingStyle, topicsListStyle } from "./index.style";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import AccordionView from "./AccordionView";
@@ -42,9 +37,8 @@ const AssessmentTracker = ({
   const theme = useTheme();
   const [refreshKey, setRefreshKey] = useState(false);
   const currentProjectId = project?.id;
-  const currentProjectFramework = project.framework?.filter(
-    (p) => p.framework_id === 1
-  )[0]?.project_framework_id;
+  const currentProjectFramework = project.framework?.filter((p) => p.framework_id === 1)[0]
+    ?.project_framework_id;
   const [searchParams, setSearchParams] = useSearchParams();
   const topicId = searchParams.get("topicId");
   const questionId = searchParams.get("questionId");
@@ -52,33 +46,22 @@ const AssessmentTracker = ({
   const [hasAutoOpenedDrawer, setHasAutoOpenedDrawer] = useState(false);
   const [runAssessmentTour, setRunAssessmentTour] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
-    null
-  );
-  const [selectedSubtopic, setSelectedSubtopic] = useState<Subtopic | null>(
-    null
-  );
-  const [flashingQuestionId, setFlashingQuestionId] = useState<number | null>(
-    null
-  );
-  const [expandedAccordion, setExpandedAccordion] = useState<number | false>(
-    false
-  );
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [selectedSubtopic, setSelectedSubtopic] = useState<Subtopic | null>(null);
+  const [flashingQuestionId, setFlashingQuestionId] = useState<number | null>(null);
+  const [expandedAccordion, setExpandedAccordion] = useState<number | false>(false);
 
-  const { assessmentProgress, loading: loadingAssessmentProgress } =
-    useAssessmentProgress({
-      projectFrameworkId: currentProjectFramework,
-      refreshKey,
-    });
+  const { assessmentProgress, loading: loadingAssessmentProgress } = useAssessmentProgress({
+    projectFrameworkId: currentProjectFramework,
+    refreshKey,
+  });
 
-  const { assessmentTopics, loading: loadingAssessmentTopics } =
-    useAssessmentTopics();
-  const { assessmentSubtopics, loading: loadingAssessmentSubtopic } =
-    useAssessmentSubtopics({
-      activeAssessmentTopicId: assessmentTopics?.[activeTab]?.id,
-      projectFrameworkId: currentProjectFramework,
-      refreshKey,
-    });
+  const { assessmentTopics, loading: loadingAssessmentTopics } = useAssessmentTopics();
+  const { assessmentSubtopics, loading: loadingAssessmentSubtopic } = useAssessmentSubtopics({
+    activeAssessmentTopicId: assessmentTopics?.[activeTab]?.id,
+    projectFrameworkId: currentProjectFramework,
+    refreshKey,
+  });
 
   const { refs, allVisible } = useMultipleOnScreen<HTMLDivElement>({
     countToTrigger: 2,
@@ -98,9 +81,7 @@ const AssessmentTracker = ({
   // Handle topicId from URL to set active tab
   useEffect(() => {
     if (topicId && assessmentTopics && assessmentTopics.length > 0) {
-      const topicIndex =
-        assessmentTopics.findIndex((topic) => topic.id === parseInt(topicId)) ||
-        0;
+      const topicIndex = assessmentTopics.findIndex((topic) => topic.id === parseInt(topicId)) || 0;
       if (topicIndex >= 0) {
         setActiveTab(topicIndex);
       }
@@ -120,7 +101,7 @@ const AssessmentTracker = ({
       // assessmentSubtopics has questions array from the hook response
       for (const subtopic of assessmentSubtopics as Array<Subtopic & { questions: Question[] }>) {
         const question = subtopic.questions?.find(
-          (q: Question) => q.question_id === targetQuestionId
+          (q: Question) => q.question_id === targetQuestionId,
         );
         if (question) {
           setSelectedQuestion(question);
@@ -146,7 +127,7 @@ const AssessmentTracker = ({
       }
       setActiveTab(index);
     },
-    [topicId, searchParams, setSearchParams]
+    [topicId, searchParams, setSearchParams],
   );
 
   const handleQuestionClick = (question: Question, subtopic: Subtopic) => {
@@ -161,11 +142,7 @@ const AssessmentTracker = ({
     setSelectedSubtopic(null);
   };
 
-  const handleSaveSuccess = (
-    success: boolean,
-    _message?: string,
-    questionId?: number
-  ) => {
+  const handleSaveSuccess = (success: boolean, _message?: string, questionId?: number) => {
     if (success && questionId) {
       // Trigger green flash animation
       setFlashingQuestionId(questionId);
@@ -186,7 +163,7 @@ const AssessmentTracker = ({
           (question: Question) =>
             !statusFilter ||
             statusFilter === "all" ||
-            question.status.toLowerCase() === statusFilter
+            question.status.toLowerCase() === statusFilter,
         ),
       }))
     : [];
@@ -210,9 +187,7 @@ const AssessmentTracker = ({
           <ListItemText
             primary={
               <Typography
-                color={
-                  index === activeTab ? `${background.main}` : theme.palette.text.primary
-                }
+                color={index === activeTab ? `${background.main}` : theme.palette.text.primary}
                 sx={{ fontSize: 13 }}
               >
                 {topic.title}
@@ -222,7 +197,7 @@ const AssessmentTracker = ({
         </ListItemButton>
       </ListItem>
     ),
-    [activeTab, handleListItemClick, theme.palette.text.primary]
+    [activeTab, handleListItemClick, theme.palette.text.primary],
   );
 
   // Show message if no project is selected
@@ -270,27 +245,27 @@ const AssessmentTracker = ({
             <StatsCard
               total={assessmentProgress.totalQuestions}
               completed={assessmentProgress.answeredQuestions}
-              title="Controls"
+              title="Assessments"
               progressbarColor={brand.primary}
             />
           ) : (
-            <Typography>
-              Unable to fetch statistical values from the server
-            </Typography>
+            <Typography>Unable to fetch statistical values from the server</Typography>
           )}
         </Stack>
-        <Typography sx={{ ...pageHeadingStyle, mt: 4 }}>
-          Controls status overview
-        </Typography>
+        <Typography sx={{ ...pageHeadingStyle, mt: 4 }}>Assessments status overview</Typography>
         <Divider sx={{ marginY: 2 }} />
-        <Box sx={{ display: "flex", width: "100%", height: "100vh", paddingLeft: "8px", paddingRight: 0 }}>
+        <Box
+          sx={{
+            display: "flex",
+            width: "100%",
+            height: "100vh",
+            paddingLeft: "8px",
+            paddingRight: 0,
+          }}
+        >
           <Stack sx={topicsListStyle}>
-            <Typography
-              sx={subHeadingStyle}
-              data-joyride-id="assessment-topics"
-              ref={refs[1]}
-            >
-              High risk conformity controls
+            <Typography sx={subHeadingStyle} data-joyride-id="assessment-topics" ref={refs[1]}>
+              Conformity assessment topics
             </Typography>
             <List>
               {loadingAssessmentTopics ? (
@@ -303,9 +278,7 @@ const AssessmentTracker = ({
                   variant="rectangular"
                 />
               ) : assessmentTopics ? (
-                assessmentTopics.map((topic: any, index: number) =>
-                  topicsList(topic, index)
-                )
+                assessmentTopics.map((topic: any, index: number) => topicsList(topic, index))
               ) : (
                 <Typography>Unable to get topics</Typography>
               )}

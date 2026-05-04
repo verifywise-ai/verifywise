@@ -10,7 +10,7 @@ import { getEvidenceFilesForEntity } from "./files/evidenceFiles.utils";
 export const getAllNISTAIRMFSubcategoriesByCategoryQuery = async (
   functionName: string,
   categoryId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<NISTAIMRFSubcategoryModel[]> => {
   const results = await sequelize.query(
     `SELECT s.*,
@@ -30,11 +30,9 @@ export const getAllNISTAIRMFSubcategoriesByCategoryQuery = async (
       replacements: { organizationId, functionName, categoryId },
       mapToModel: true,
       model: NISTAIMRFSubcategoryModel,
-    }
+    },
   );
-  return Array.isArray(results)
-    ? (results as NISTAIMRFSubcategoryModel[])
-    : [];
+  return Array.isArray(results) ? (results as NISTAIMRFSubcategoryModel[]) : [];
 };
 
 /**
@@ -45,7 +43,7 @@ export const getAllNISTAIRMFSubcategoriesByCategoryQuery = async (
 export const getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery = async (
   categoryStructId: number,
   _title: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<NISTAIMRFSubcategoryModel[]> => {
   const results = await sequelize.query(
     `SELECT s.*,
@@ -63,17 +61,12 @@ export const getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery = async (
       replacements: { organizationId, categoryStructId },
       mapToModel: true,
       model: NISTAIMRFSubcategoryModel,
-    }
+    },
   );
-  return Array.isArray(results)
-    ? (results as NISTAIMRFSubcategoryModel[])
-    : [];
+  return Array.isArray(results) ? (results as NISTAIMRFSubcategoryModel[]) : [];
 };
 
-export const getNISTAIRMFSubcategoryByIdQuery = async (
-  id: number,
-  organizationId: number
-) => {
+export const getNISTAIRMFSubcategoryByIdQuery = async (id: number, organizationId: number) => {
   const subcategory = await sequelize.query(
     `SELECT s.*,
             ss.function,
@@ -88,7 +81,7 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: NISTAIMRFSubcategoryModel,
-    }
+    },
   );
 
   if (!subcategory[0]) {
@@ -101,7 +94,7 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (
     "nist_ai_rmf",
     "subcategory",
     id,
-    "evidence"
+    "evidence",
   );
   (subcategory[0] as any).evidence_links = evidenceFiles;
 
@@ -113,7 +106,7 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (
  */
 export const getNISTAIRMFSubcategoryRisksQuery = async (
   subcategoryId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<any[]> => {
   const risks = await sequelize.query(
     `SELECT pr.*
@@ -124,7 +117,7 @@ export const getNISTAIRMFSubcategoryRisksQuery = async (
      ORDER BY pr.id ASC`,
     {
       replacements: { organizationId, subcategoryId },
-    }
+    },
   );
   return risks[0] as any[];
 };
@@ -160,10 +153,11 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
   }[] = [],
   deletedFiles: string[] = [],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
-  const updateFields: Partial<Record<keyof NISTAIMRFSubcategoryModel, any>> & { organizationId?: number } =
-    {};
+  const updateFields: Partial<Record<keyof NISTAIMRFSubcategoryModel, any>> & {
+    organizationId?: number;
+  } = {};
 
   const setClause = [
     "implementation_description",
@@ -175,30 +169,24 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     "auditor_feedback",
   ]
     .filter((f) => {
-      // Handle other fields
-      if (
-        subcategory[f as keyof NISTAIMRFSubcategoryModel] !== undefined &&
-        subcategory[f as keyof NISTAIMRFSubcategoryModel] !== null &&
-        subcategory[f as keyof NISTAIMRFSubcategoryModel] !== ""
-      ) {
-        let value = subcategory[f as keyof NISTAIMRFSubcategoryModel];
+      const incoming = subcategory[f as keyof NISTAIMRFSubcategoryModel];
+      if (incoming === undefined) return false;
 
-        // Handle empty strings for integer fields (owner, reviewer, approver)
-        if (["owner", "reviewer", "approver"].includes(f)) {
-          if (value === "" || value === null || value === undefined) {
-            return false; // Skip this field if it's empty
-          }
+      let value: any = incoming;
+      if (["owner", "reviewer", "approver"].includes(f)) {
+        if (value === "" || value === null) {
+          value = null;
+        } else {
           const numValue = parseInt(value as string);
-          if (isNaN(numValue)) {
-            return false; // Skip this field if it's not a valid number
-          }
+          if (isNaN(numValue)) return false;
           value = numValue;
         }
-
-        updateFields[f as keyof NISTAIMRFSubcategoryModel] = value;
-        return true;
+      } else if (value === "") {
+        return false;
       }
-      return false;
+
+      updateFields[f as keyof NISTAIMRFSubcategoryModel] = value;
+      return true;
     })
     .map((f) => `${f} = :${f}`)
     .join(", ");
@@ -224,7 +212,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
       {
         replacements: { organizationId, id },
         transaction,
-      }
+      },
     )) as [NISTAIMRFSubcategoryModel[], number];
     subcategoryResult = result[0][0] as NISTAIMRFSubcategoryModel & { risks: number[] };
   }
@@ -245,7 +233,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   )) as [{ projects_risks_id: number }[], number];
 
   let currentRisks = risks[0].map((r) => r.projects_risks_id);
@@ -261,7 +249,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   );
 
   // Insert new associations
@@ -281,7 +269,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
       {
         replacements,
         transaction,
-      }
+      },
     )) as [{ projects_risks_id: number }[], number];
 
     for (const risk of subCategoryRisksInsertResult[0]) {
@@ -298,7 +286,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
         {
           replacements: { organizationId, riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
           transaction,
-        }
+        },
       );
 
       // Only insert if association doesn't exist
@@ -308,7 +296,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
           {
             replacements: { organizationId, riskId, frameworkId: NIST_AI_RMF_FRAMEWORK_ID },
             transaction,
-          }
+          },
         );
       }
     }
@@ -324,7 +312,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
       {
         replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -342,7 +330,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
         {
           replacements: { organizationId, fileId, entityId: id },
           transaction,
-        }
+        },
       );
     }
   }
@@ -352,7 +340,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
     organizationId,
     "nist_ai_rmf",
     "subcategory",
-    id
+    id,
   );
   (subcategoryResult as any).evidence_links = evidenceLinks;
 
@@ -364,7 +352,7 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
  * A subcategory is considered "done" when its status is "Implemented"
  */
 export const countNISTAIRMFSubcategoriesProgress = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubcategories: number;
   doneSubcategories: number;
@@ -375,7 +363,7 @@ export const countNISTAIRMFSubcategoriesProgress = async (
       SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneSubcategories"
     FROM nist_ai_rmf_subcategories
     WHERE organization_id = :organizationId`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [{ totalSubcategories: string; doneSubcategories: string }[], number];
 
   return {
@@ -389,7 +377,7 @@ export const countNISTAIRMFSubcategoriesProgress = async (
  * A subcategory is considered "assigned" when it has an owner
  */
 export const countNISTAIRMFSubcategoriesAssignments = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubcategories: number;
   assignedSubcategories: number;
@@ -400,7 +388,7 @@ export const countNISTAIRMFSubcategoriesAssignments = async (
       SUM(CASE WHEN owner IS NOT NULL THEN 1 ELSE 0 END) AS "assignedSubcategories"
     FROM nist_ai_rmf_subcategories
     WHERE organization_id = :organizationId`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [{ totalSubcategories: string; assignedSubcategories: string }[], number];
 
   return {
@@ -415,7 +403,7 @@ export const countNISTAIRMFSubcategoriesAssignments = async (
  * Returns counts for Govern, Map, Measure, Manage functions
  */
 export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   govern: { total: number; assigned: number };
   map: { total: number; assigned: number };
@@ -439,7 +427,7 @@ export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
         WHEN 'MANAGE' THEN 4
         ELSE 5
       END`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [{ function_type: string; total: string; assigned: string }[], number];
 
   const defaultValue = { total: 0, assigned: 0 };
@@ -474,7 +462,7 @@ export const countNISTAIRMFSubcategoriesAssignmentsByFunction = async (
  * Returns counts for Govern, Map, Measure, Manage functions
  */
 export const countNISTAIRMFSubcategoriesProgressByFunction = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   govern: { total: number; done: number };
   map: { total: number; done: number };
@@ -498,7 +486,7 @@ export const countNISTAIRMFSubcategoriesProgressByFunction = async (
         WHEN 'MANAGE' THEN 4
         ELSE 5
       END`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [{ function_type: string; total: string; done: string }[], number];
 
   const defaultValue = { total: 0, done: 0 };
@@ -531,7 +519,7 @@ export const countNISTAIRMFSubcategoriesProgressByFunction = async (
  * Get status breakdown for NIST AI RMF subcategories
  */
 export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   notStarted: number;
   draft: number;
@@ -552,7 +540,7 @@ export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
       SUM(CASE WHEN status = 'Needs rework' THEN 1 ELSE 0 END) AS "needsRework"
     FROM nist_ai_rmf_subcategories
     WHERE organization_id = :organizationId`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [
     {
       notStarted: string;
@@ -563,7 +551,7 @@ export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
       implemented: string;
       needsRework: string;
     }[],
-    number
+    number,
   ];
 
   return {
@@ -582,7 +570,7 @@ export const getNISTAIRMFSubcategoriesStatusBreakdown = async (
  * Uses struct tables for hierarchy and joins with implementation data
  */
 export const getNISTAIRMFDashboardOverview = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   functions: {
     function: string;
@@ -603,10 +591,10 @@ export const getNISTAIRMFDashboardOverview = async (
 }> => {
   // Function metadata for display
   const FUNCTION_METADATA: Record<string, string> = {
-    'GOVERN': 'Govern',
-    'MAP': 'Map',
-    'MEASURE': 'Measure',
-    'MANAGE': 'Manage',
+    GOVERN: "Govern",
+    MAP: "Map",
+    MEASURE: "Measure",
+    MANAGE: "Manage",
   };
 
   // Get all categories from struct (public schema)
@@ -622,8 +610,11 @@ export const getNISTAIRMFDashboardOverview = async (
          ELSE 5
        END,
        order_no ASC, category_id ASC`,
-    {}
-  )) as [{ id: number; function: string; category_id: number; description: string; order_no: number }[], number];
+    {},
+  )) as [
+    { id: number; function: string; category_id: number; description: string; order_no: number }[],
+    number,
+  ];
 
   // Get all subcategories with implementation data
   const subcategories = (await sequelize.query(
@@ -640,20 +631,23 @@ export const getNISTAIRMFDashboardOverview = async (
      LEFT JOIN nist_ai_rmf_subcategories s
        ON s.subcategory_meta_id = ss.id AND s.organization_id = :organizationId
      ORDER BY ss.order_no ASC, ss.subcategory_id ASC`,
-    { replacements: { organizationId } }
-  )) as [{
-    id: number | null;
-    status: string | null;
-    owner: number | null;
-    struct_id: number;
-    function: string;
-    subcategory_id: number;
-    description: string;
-    category_struct_id: number;
-  }[], number];
+    { replacements: { organizationId } },
+  )) as [
+    {
+      id: number | null;
+      status: string | null;
+      owner: number | null;
+      struct_id: number;
+      function: string;
+      subcategory_id: number;
+      description: string;
+      category_struct_id: number;
+    }[],
+    number,
+  ];
 
   // Build the nested structure grouped by function
-  const functionOrder = ['GOVERN', 'MAP', 'MEASURE', 'MANAGE'];
+  const functionOrder = ["GOVERN", "MAP", "MEASURE", "MANAGE"];
   const result = functionOrder.map((func) => ({
     function: func,
     title: FUNCTION_METADATA[func] || func,
@@ -666,10 +660,10 @@ export const getNISTAIRMFDashboardOverview = async (
         subcategories: subcategories[0]
           .filter((sub) => sub.category_struct_id === cat.id)
           .map((sub) => ({
-            id: sub.id || 0,  // 0 if no implementation record exists
+            id: sub.id || 0, // 0 if no implementation record exists
             subcategory_id: sub.subcategory_id,
             description: sub.description,
-            status: sub.status || 'Not started',
+            status: sub.status || "Not started",
             owner: sub.owner,
           })),
       })),
@@ -682,7 +676,7 @@ export const updateNISTAIRMFSubcategoryStatusByIdQuery = async (
   id: number,
   status: string,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<NISTAIMRFSubcategoryModel> => {
   // Validate status against allowed values from the frontend StatusDropdown component
   const validStatuses = [
@@ -696,9 +690,7 @@ export const updateNISTAIRMFSubcategoryStatusByIdQuery = async (
   ];
 
   if (!validStatuses.includes(status)) {
-    throw new Error(
-      `Invalid status value: ${status}. Must be one of: ${validStatuses.join(", ")}`
-    );
+    throw new Error(`Invalid status value: ${status}. Must be one of: ${validStatuses.join(", ")}`);
   }
 
   const query = `

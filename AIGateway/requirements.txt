@@ -14,7 +14,7 @@ asyncpg>=0.30.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
-litellm==1.83.0
+litellm==1.83.7
 
 # Database migrations (Alembic)
 sqlalchemy[asyncio]>=2.0.0

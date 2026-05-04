@@ -17,7 +17,13 @@ interface HandleAlertProps extends AlertProps {
 
 const ALERT_TIMEOUT = 2500;
 
-const handleAlert = ({ variant, body, title, setAlert, alertTimeout = ALERT_TIMEOUT }: HandleAlertProps) => {
+const handleAlert = ({
+  variant,
+  body,
+  title,
+  setAlert,
+  alertTimeout = ALERT_TIMEOUT,
+}: HandleAlertProps) => {
   setAlert({
     variant,
     title,

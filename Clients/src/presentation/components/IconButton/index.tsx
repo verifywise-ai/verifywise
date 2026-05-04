@@ -6,13 +6,7 @@
  * @returns {JSX.Element} The rendered IconButton component with associated dropdown menu and modals.
  */
 
-import {
-  Menu,
-  MenuItem,
-  IconButton as MuiIconButton,
-  useTheme,
-  Tooltip,
-} from "@mui/material";
+import { Menu, MenuItem, IconButton as MuiIconButton, useTheme, Tooltip } from "@mui/material";
 import { Settings } from "lucide-react";
 import { useState, type JSX } from "react";
 import ConfirmationModal from "../Dialogs/ConfirmationModal";
@@ -64,8 +58,7 @@ function IconButton({
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isOpenRemoveModal, setIsOpenRemoveModal] = useState(false);
   const [isOpenHardDeleteModal, setIsOpenHardDeleteModal] = useState(false);
-  const [isOpenRiskConfirmationModal, setIsOpenRiskConfirmationModal] =
-    useState(false);
+  const [isOpenRiskConfirmationModal, setIsOpenRiskConfirmationModal] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const isAdmin = useIsAdmin();
 
@@ -275,14 +268,14 @@ function IconButton({
    */
 
   type ButtonType =
-  | "report"
-  | "evidence"
-  | "resource"
-  | "incident"
-  | "integration"
-  | "policy"
-  | "linkedobjectstype"
-  | "risk";
+    | "report"
+    | "evidence"
+    | "resource"
+    | "incident"
+    | "integration"
+    | "policy"
+    | "linkedobjectstype"
+    | "risk";
 
   const BUTTONS_BY_TYPE: Record<ButtonType, string[]> = {
     report: [], // Handled dynamically in getListOfButtons
@@ -295,15 +288,11 @@ function IconButton({
     risk: ["edit", "linked_policies", "remove"],
   };
 
-
-
   const getListOfButtons = () => {
     const normalizedType = type?.toLowerCase();
 
     if (normalizedType === "task") {
-      return isArchived
-        ? ["restore", "delete"]
-        : ["edit", "archive", "delete"];
+      return isArchived ? ["restore", "delete"] : ["edit", "archive", "delete"];
     }
 
     if (normalizedType === "vendor") {
@@ -384,8 +373,6 @@ function IconButton({
     return item.charAt(0).toUpperCase() + item.slice(1);
   };
 
-
-
   const dropDownListOfOptions: JSX.Element = (
     <Menu
       anchorEl={anchorEl}
@@ -400,8 +387,7 @@ function IconButton({
       {listOfButtons.map((item) => {
         // For resources, disable edit, download, and remove when not visible
         const isResourceAction =
-          (type === "Resource" || type === "resource") &&
-          item !== "make visible";
+          (type === "Resource" || type === "resource") && item !== "make visible";
         const isResourceDisabled = isResourceAction && !isVisible;
 
         // Disable download actions for non-admin users
@@ -416,123 +402,123 @@ function IconButton({
             title={isDownloadDisabled ? "Only admins can download files" : ""}
             placement="left"
           >
-          <MenuItem
-            key={item}
-            onClick={async (e) => {
-              // Prevent actions when disabled
-              if (isDisabled) {
-                e.stopPropagation();
-                return;
-              }
+            <MenuItem
+              key={item}
+              onClick={async (e) => {
+                // Prevent actions when disabled
+                if (isDisabled) {
+                  e.stopPropagation();
+                  return;
+                }
 
-              if (item === "edit") {
-                handleEdit(e);
-              } else if (item === "download") {
-                await handleDownload(e);
-              } else if (item === "make visible") {
-                handleMakeVisible(e);
-              } else if (item === "view") {
-                handleView(e);
-              } else if (item === "Send Test") {
-                await handleSendTestNotification(e);
-              } else if (item === "Activate/Deactivate") {
-                await handleToggleStatus(e);
-              } else if (item === "restore") {
-                // Task restore action
-                handleRestore(e);
-              } else if (item === "link_objects") {
-                handleLinkedObjects(e);
-              } else if (item === "linked_policies") {
-                handleOpenLinkedPolicies(e);
-              } else if (item === "download_pdf") {
-                await handleDownloadPDF(e);
-              } else if (item === "download_docx") {
-                await handleDownloadDOCX(e);
-              } else if (item === "assign_folder") {
-                if (onAssignToFolder) {
-                  onAssignToFolder();
-                }
-                if (e) closeDropDownMenu(e);
-              } else if (item === "preview") {
-                if (e) closeDropDownMenu(e);
-                if (onPreview) {
-                  try {
-                    await onPreview();
-                  } catch (error) {
-                    console.error("Preview failed:", error);
+                if (item === "edit") {
+                  handleEdit(e);
+                } else if (item === "download") {
+                  await handleDownload(e);
+                } else if (item === "make visible") {
+                  handleMakeVisible(e);
+                } else if (item === "view") {
+                  handleView(e);
+                } else if (item === "Send Test") {
+                  await handleSendTestNotification(e);
+                } else if (item === "Activate/Deactivate") {
+                  await handleToggleStatus(e);
+                } else if (item === "restore") {
+                  // Task restore action
+                  handleRestore(e);
+                } else if (item === "link_objects") {
+                  handleLinkedObjects(e);
+                } else if (item === "linked_policies") {
+                  handleOpenLinkedPolicies(e);
+                } else if (item === "download_pdf") {
+                  await handleDownloadPDF(e);
+                } else if (item === "download_docx") {
+                  await handleDownloadDOCX(e);
+                } else if (item === "assign_folder") {
+                  if (onAssignToFolder) {
+                    onAssignToFolder();
                   }
-                }
-              } else if (item === "edit_metadata") {
-                if (e) closeDropDownMenu(e);
-                if (onEditMetadata) {
-                  try {
-                    await onEditMetadata();
-                  } catch (error) {
-                    console.error("Edit metadata failed:", error);
+                  if (e) closeDropDownMenu(e);
+                } else if (item === "preview") {
+                  if (e) closeDropDownMenu(e);
+                  if (onPreview) {
+                    try {
+                      await onPreview();
+                    } catch (error) {
+                      console.error("Preview failed:", error);
+                    }
                   }
-                }
-              } else if (item === "version_history") {
-                if (onViewHistory) {
-                  onViewHistory();
-                }
-                if (e) closeDropDownMenu(e);
-              } else if (item === "delete" && (type === "Task" || type === "task")) {
-                // Task hard delete action
-                if (hardDeleteWarningTitle && hardDeleteWarningMessage) {
-                  setIsOpenHardDeleteModal(true);
+                } else if (item === "edit_metadata") {
                   if (e) closeDropDownMenu(e);
-                } else {
-                  handleHardDelete(e);
-                }
-              } else if (item === "archive" && (type === "Task" || type === "task")) {
-                // Task archive action (soft delete)
-                if (warningTitle && warningMessage) {
-                  setIsOpenRemoveModal(true);
+                  if (onEditMetadata) {
+                    try {
+                      await onEditMetadata();
+                    } catch (error) {
+                      console.error("Edit metadata failed:", error);
+                    }
+                  }
+                } else if (item === "version_history") {
+                  if (onViewHistory) {
+                    onViewHistory();
+                  }
                   if (e) closeDropDownMenu(e);
-                } else {
-                  handleDelete(e);
-                }
-              } else if (item === "remove" || item === "archive") {
-                if (warningTitle && warningMessage) {
-                  setIsOpenRemoveModal(true);
-                  if (e) closeDropDownMenu(e);
-                } else {
-                  if (checkForRisks && onDeleteWithRisks) {
-                    handleDeleteWithRiskCheck(e);
+                } else if (item === "delete" && (type === "Task" || type === "task")) {
+                  // Task hard delete action
+                  if (hardDeleteWarningTitle && hardDeleteWarningMessage) {
+                    setIsOpenHardDeleteModal(true);
+                    if (e) closeDropDownMenu(e);
+                  } else {
+                    handleHardDelete(e);
+                  }
+                } else if (item === "archive" && (type === "Task" || type === "task")) {
+                  // Task archive action (soft delete)
+                  if (warningTitle && warningMessage) {
+                    setIsOpenRemoveModal(true);
+                    if (e) closeDropDownMenu(e);
                   } else {
                     handleDelete(e);
                   }
+                } else if (item === "remove" || item === "archive") {
+                  if (warningTitle && warningMessage) {
+                    setIsOpenRemoveModal(true);
+                    if (e) closeDropDownMenu(e);
+                  } else {
+                    if (checkForRisks && onDeleteWithRisks) {
+                      handleDeleteWithRiskCheck(e);
+                    } else {
+                      handleDelete(e);
+                    }
+                  }
                 }
-              }
-            }}
-            disabled={isDisabled}
-            sx={{
-              ...(() => {
-                // Archive (soft delete) uses warning color
-                if (item === "archive" && (type === "Task" || type === "task")) {
-                  return { color: theme.palette.warning.main };
-                }
-                // Hard delete uses error color
-                if (item === "delete" && (type === "Task" || type === "task")) {
-                  return { color: theme.palette.error.main };
-                }
-                // Other remove/archive uses error color
-                if (item === "remove" || item === "archive") {
-                  return { color: theme.palette.error.main };
-                }
-                // Restore uses primary/success color
-                if (item === "restore") {
-                  return { color: theme.palette.primary.main };
-                }
-                if (item === "link_objects" || item === "linked_policies") {
-                  return { color: theme.palette.primary.main };
-                }
-                return {};
-              })(),
-            }}
-          >
-            {getMenuItemText(item)}
-          </MenuItem>
+              }}
+              disabled={isDisabled}
+              sx={{
+                ...(() => {
+                  // Archive (soft delete) uses warning color
+                  if (item === "archive" && (type === "Task" || type === "task")) {
+                    return { color: theme.palette.warning.main };
+                  }
+                  // Hard delete uses error color
+                  if (item === "delete" && (type === "Task" || type === "task")) {
+                    return { color: theme.palette.error.main };
+                  }
+                  // Other remove/archive uses error color
+                  if (item === "remove" || item === "archive") {
+                    return { color: theme.palette.error.main };
+                  }
+                  // Restore uses primary/success color
+                  if (item === "restore") {
+                    return { color: theme.palette.primary.main };
+                  }
+                  if (item === "link_objects" || item === "linked_policies") {
+                    return { color: theme.palette.primary.main };
+                  }
+                  return {};
+                })(),
+              }}
+            >
+              {getMenuItemText(item)}
+            </MenuItem>
           </Tooltip>
         );
       })}
@@ -541,9 +527,7 @@ function IconButton({
 
   const customIconButtonAsSettings: JSX.Element = (
     <MuiIconButton
-      disableRipple={
-        theme.components?.MuiIconButton?.defaultProps?.disableRipple
-      }
+      disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
       sx={singleTheme.iconButtons}
       onClick={(event) => {
         event.stopPropagation();
@@ -579,13 +563,9 @@ function IconButton({
           }
           onCancel={() => handleCancel()}
           onProceed={() =>
-            checkForRisks && onDeleteWithRisks
-              ? handleDeleteWithRiskCheck()
-              : handleDelete()
+            checkForRisks && onDeleteWithRisks ? handleDeleteWithRiskCheck() : handleDelete()
           }
-          proceedButtonColor={
-            type === "Incident" || type === "Task" ? "warning" : "error"
-          }
+          proceedButtonColor={type === "Incident" || type === "Task" ? "warning" : "error"}
           proceedButtonVariant="contained"
           TitleFontSize={0}
         />

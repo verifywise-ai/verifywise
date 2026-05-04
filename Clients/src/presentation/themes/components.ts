@@ -37,23 +37,25 @@ export const frameworkStyles = {
     backgroundColor: theme.palette.background.paper,
   }),
 
-  tab: (isActive: boolean, isLast: boolean) => (theme: Theme): SxProps<Theme> => ({
-    cursor: "pointer",
-    px: 5,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-    backgroundColor: isActive ? theme.palette.background.paper : theme.palette.action.hover,
-    color: theme.palette.text.primary,
-    fontFamily: theme.typography.fontFamily,
-    fontSize: theme.typography.fontSize,
-    borderRight: isLast ? "none" : `1px solid ${theme.palette.divider}`,
-    fontWeight: theme.typography.body2?.fontWeight,
-    transition: "background 0.2s",
-    userSelect: "none",
-    width: "142px",
-  }),
+  tab:
+    (isActive: boolean, isLast: boolean) =>
+    (theme: Theme): SxProps<Theme> => ({
+      cursor: "pointer",
+      px: 5,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      backgroundColor: isActive ? theme.palette.background.paper : theme.palette.action.hover,
+      color: theme.palette.text.primary,
+      fontFamily: theme.typography.fontFamily,
+      fontSize: theme.typography.fontSize,
+      borderRight: isLast ? "none" : `1px solid ${theme.palette.divider}`,
+      fontWeight: theme.typography.body2?.fontWeight,
+      transition: "background 0.2s",
+      userSelect: "none",
+      width: "142px",
+    }),
 
   manageButton: (theme: Theme): SxProps<Theme> => ({
     borderRadius: theme.spacing(1),
@@ -277,81 +279,89 @@ export const formStyles = {
 
 // Button styles (standardized button variants)
 export const buttonStyles = {
-  primary: (size: keyof typeof COMPONENT_SIZES.button = 'medium') => (theme: Theme): SxProps<Theme> => ({
-    ...COMPONENT_SIZES.button[size],
-    backgroundColor: theme.palette.primary.main,
-    border: `1px solid ${theme.palette.primary.main}`,
-    color: "#fff",
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark || "#10614d",
+  primary:
+    (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
+    (theme: Theme): SxProps<Theme> => ({
+      ...COMPONENT_SIZES.button[size],
+      backgroundColor: theme.palette.primary.main,
+      border: `1px solid ${theme.palette.primary.main}`,
+      color: "#fff",
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: 400,
+      textTransform: "none",
+      borderRadius: theme.shape.borderRadius,
       boxShadow: "none",
-    },
-    "&:focus": {
-      outline: "none",
-    },
-  }),
+      "&:hover": {
+        backgroundColor: theme.palette.primary.dark || "#10614d",
+        boxShadow: "none",
+      },
+      "&:focus": {
+        outline: "none",
+      },
+    }),
 
-  secondary: (size: keyof typeof COMPONENT_SIZES.button = 'medium') => (theme: Theme): SxProps<Theme> => ({
-    ...COMPONENT_SIZES.button[size],
-    backgroundColor: theme.palette.secondary.main,
-    border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-    color: theme.palette.secondary.contrastText,
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
-    "&:hover": {
-      backgroundColor: theme.palette.secondary.dark,
+  secondary:
+    (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
+    (theme: Theme): SxProps<Theme> => ({
+      ...COMPONENT_SIZES.button[size],
+      backgroundColor: theme.palette.secondary.main,
+      border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+      color: theme.palette.secondary.contrastText,
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: 400,
+      textTransform: "none",
+      borderRadius: theme.shape.borderRadius,
       boxShadow: "none",
-    },
-    "&:focus": {
-      outline: "none",
-    },
-  }),
+      "&:hover": {
+        backgroundColor: theme.palette.secondary.dark,
+        boxShadow: "none",
+      },
+      "&:focus": {
+        outline: "none",
+      },
+    }),
 
-  outlined: (size: keyof typeof COMPONENT_SIZES.button = 'medium') => (theme: Theme): SxProps<Theme> => ({
-    ...COMPONENT_SIZES.button[size],
-    backgroundColor: "transparent",
-    border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-    color: theme.palette.text.secondary,
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
-    "&:hover": {
-      backgroundColor: theme.palette.action?.hover || "#f5f5f5",
+  outlined:
+    (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
+    (theme: Theme): SxProps<Theme> => ({
+      ...COMPONENT_SIZES.button[size],
+      backgroundColor: "transparent",
+      border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+      color: theme.palette.text.secondary,
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: 400,
+      textTransform: "none",
+      borderRadius: theme.shape.borderRadius,
       boxShadow: "none",
-    },
-    "&:focus": {
-      outline: "none",
-    },
-  }),
+      "&:hover": {
+        backgroundColor: theme.palette.action?.hover || "#f5f5f5",
+        boxShadow: "none",
+      },
+      "&:focus": {
+        outline: "none",
+      },
+    }),
 
-  danger: (size: keyof typeof COMPONENT_SIZES.button = 'medium') => (theme: Theme): SxProps<Theme> => ({
-    ...COMPONENT_SIZES.button[size],
-    backgroundColor: theme.palette.status?.error?.main || "#d32f2f",
-    border: `1px solid ${theme.palette.status?.error?.border || "#f04438"}`,
-    color: "#fff",
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
-    "&:hover": {
-      backgroundColor: theme.palette.status?.error?.dark || "#932020",
+  danger:
+    (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
+    (theme: Theme): SxProps<Theme> => ({
+      ...COMPONENT_SIZES.button[size],
+      backgroundColor: theme.palette.status?.error?.main || "#d32f2f",
+      border: `1px solid ${theme.palette.status?.error?.border || "#f04438"}`,
+      color: "#fff",
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: 400,
+      textTransform: "none",
+      borderRadius: theme.shape.borderRadius,
       boxShadow: "none",
-    },
-    "&:focus": {
-      outline: "none",
-    },
-  }),
+      "&:hover": {
+        backgroundColor: theme.palette.status?.error?.dark || "#932020",
+        boxShadow: "none",
+      },
+      "&:focus": {
+        outline: "none",
+      },
+    }),
 };
 
 // Icon styles (standardized icon button styles)
@@ -372,9 +382,9 @@ export const iconStyles = {
 
   closeButton: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
-    "&:hover": { 
-      color: theme.palette.text.primary, 
-      backgroundColor: theme.palette.action?.hover || "#e3f5e6"
+    "&:hover": {
+      color: theme.palette.text.primary,
+      backgroundColor: theme.palette.action?.hover || "#e3f5e6",
     },
     padding: theme.spacing(0.5),
   }),
@@ -460,7 +470,7 @@ export const emptyStateStyles = {
   }),
 
   image: (): SxProps<Theme> => ({
-    marginBottom: theme => theme.spacing(4),
+    marginBottom: (theme) => theme.spacing(4),
     "& img": {
       maxWidth: "100%",
       height: "auto",

@@ -14,7 +14,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The scanner checks source files, dependency manifests, CI/CD workflows, container definitions and model files against 100+ AI/ML patterns (OpenAI, TensorFlow, PyTorch, LangChain, etc.). A 2-phase LLM vulnerability pipeline also checks for the 10 OWASP LLM Top 10 vulnerability types. All results are stored and can be reviewed from the scan results page.',
+      text: 'The scanner checks source files, dependency manifests, CI/CD workflows, container definitions and model files against 80+ AI/ML patterns (OpenAI, TensorFlow, PyTorch, LangChain, etc.). A 2-phase LLM vulnerability pipeline also checks for the 10 OWASP LLM Top 10 vulnerability types. All results are stored and can be reviewed from the scan results page.',
     },
     {
       type: 'heading',

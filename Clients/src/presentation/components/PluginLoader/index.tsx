@@ -32,17 +32,12 @@ export function PluginLoader() {
     async function loadAllPluginUIs() {
       try {
         // Fetch marketplace data to get UI configs
-        const response = await apiServices.get<MarketplaceResponse>(
-          "/plugins/marketplace"
-        );
+        const response = await apiServices.get<MarketplaceResponse>("/plugins/marketplace");
 
-        const marketplacePlugins: MarketplacePlugin[] =
-          (response.data as any)?.data || [];
+        const marketplacePlugins: MarketplacePlugin[] = (response.data as any)?.data || [];
 
         for (const installed of installedPlugins) {
-          const marketplacePlugin = marketplacePlugins.find(
-            (p) => p.key === installed.pluginKey
-          );
+          const marketplacePlugin = marketplacePlugins.find((p) => p.key === installed.pluginKey);
 
           if (marketplacePlugin?.ui) {
             await loadPluginUI(installed.pluginKey, marketplacePlugin.ui);

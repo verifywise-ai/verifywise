@@ -28,4 +28,3 @@ export interface CreateProjectFormErrors {
   typeOfHighRiskRole?: string;
   goal?: string;
 }
-

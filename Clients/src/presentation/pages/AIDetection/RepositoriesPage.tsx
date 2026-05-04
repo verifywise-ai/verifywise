@@ -116,7 +116,9 @@ function formatNextScan(dateStr: string | null | undefined): string {
   });
 }
 
-function getStatusChipColor(status: string | null | undefined): "success" | "error" | "info" | "default" {
+function getStatusChipColor(
+  status: string | null | undefined,
+): "success" | "error" | "info" | "default" {
   switch (status) {
     case "completed":
       return "success";
@@ -141,7 +143,8 @@ const TABLE_COLUMNS = [
 
 export default function RepositoriesPage() {
   const theme = useTheme();
-  const { startTrackingScan, refreshRecentScans, refreshRepositoryCount } = useAIDetectionSidebarContext();
+  const { startTrackingScan, refreshRecentScans, refreshRepositoryCount } =
+    useAIDetectionSidebarContext();
 
   const [repositories, setRepositories] = useState<AIDetectionRepository[]>([]);
   const [total, setTotal] = useState(0);
@@ -180,7 +183,10 @@ export default function RepositoriesPage() {
       // Detect repos with active scans (status is pending/cloning/scanning)
       const activeIds = new Set<number>();
       for (const repo of response.repositories) {
-        if (repo.last_scan_status && ["pending", "cloning", "scanning"].includes(repo.last_scan_status)) {
+        if (
+          repo.last_scan_status &&
+          ["pending", "cloning", "scanning"].includes(repo.last_scan_status)
+        ) {
           activeIds.add(repo.id);
         }
       }
@@ -382,9 +388,7 @@ export default function RepositoriesPage() {
       }
     >
       {/* Error state */}
-      {error && (
-        <Alert variant="error" title="Error" body={error} />
-      )}
+      {error && <Alert variant="error" title="Error" body={error} />}
 
       {/* Table — always shown, with empty state inside when no repos */}
       {!error && (
@@ -403,11 +407,7 @@ export default function RepositoriesPage() {
             >
               <TableRow sx={singleTheme.tableStyles.primary.header.row}>
                 {TABLE_COLUMNS.map((col) => (
-                  <TableCell
-                    key={col.id}
-                    sx={headerCellStyle}
-                    align={col.align}
-                  >
+                  <TableCell key={col.id} sx={headerCellStyle} align={col.align}>
                     {col.label}
                   </TableCell>
                 ))}
@@ -520,7 +520,11 @@ export default function RepositoriesPage() {
                     </TableCell>
 
                     {/* Actions */}
-                    <TableCell sx={bodyCellStyle} align="right" onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      sx={bodyCellStyle}
+                      align="right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {(() => {
                         const isScanning = scanningRepoIds.has(repo.id);
                         return (
@@ -531,10 +535,16 @@ export default function RepositoriesPage() {
                                   size="small"
                                   onClick={() => handleScanNow(repo)}
                                   disabled={isScanning}
-                                  sx={{ color: isScanning ? palette.text.accent : palette.brand.primary }}
+                                  sx={{
+                                    color: isScanning ? palette.text.accent : palette.brand.primary,
+                                  }}
                                 >
                                   {isScanning ? (
-                                    <Loader2 size={15} strokeWidth={1.5} style={{ animation: `${spin} 1s linear infinite` }} />
+                                    <Loader2
+                                      size={15}
+                                      strokeWidth={1.5}
+                                      style={{ animation: `${spin} 1s linear infinite` }}
+                                    />
                                   ) : (
                                     <Play size={15} strokeWidth={1.5} />
                                   )}
@@ -556,7 +566,11 @@ export default function RepositoriesPage() {
                                   size="small"
                                   onClick={() => setDeleteTarget(repo)}
                                   disabled={isScanning}
-                                  sx={{ color: isScanning ? palette.text.accent : palette.status.error.text }}
+                                  sx={{
+                                    color: isScanning
+                                      ? palette.text.accent
+                                      : palette.status.error.text,
+                                  }}
                                 >
                                   <Trash2 size={15} strokeWidth={1.5} />
                                 </IconButton>
@@ -618,7 +632,8 @@ export default function RepositoriesPage() {
         title={`Delete "${deleteTarget?.repository_owner}/${deleteTarget?.repository_name}"?`}
         body={
           <Typography fontSize={13}>
-            This will remove the repository from monitoring. Existing scan history will not be deleted.
+            This will remove the repository from monitoring. Existing scan history will not be
+            deleted.
           </Typography>
         }
         cancelText="Cancel"

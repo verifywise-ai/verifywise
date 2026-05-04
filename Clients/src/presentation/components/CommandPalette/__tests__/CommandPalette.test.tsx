@@ -97,51 +97,39 @@ describe("CommandPalette", () => {
   });
 
   it("should render dialog when open=true", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     // The dialog should be in the DOM
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("should not render when open=false", () => {
-    renderWithProviders(
-      <CommandPalette open={false} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={false} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("should render search input field", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
   it("should show command groups when no search query", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByText("Go to Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Go to Risk Management")).toBeInTheDocument();
   });
 
   it("should show navigation group heading", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByText("Navigation")).toBeInTheDocument();
   });
 
   it("should render footer with keyboard hints", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByText("Navigate")).toBeInTheDocument();
     expect(screen.getByText("Select")).toBeInTheDocument();
@@ -149,22 +137,16 @@ describe("CommandPalette", () => {
   });
 
   it("should render recent searches from localStorage", () => {
-    mockRecentSearches = [
-      { query: "vendor policy", timestamp: 1708000000000 },
-    ];
+    mockRecentSearches = [{ query: "vendor policy", timestamp: 1708000000000 }];
 
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByText("vendor policy")).toBeInTheDocument();
     expect(screen.getByText("Recent searches")).toBeInTheDocument();
   });
 
   it("should render evidence status filter", () => {
-    renderWithProviders(
-      <CommandPalette open={true} onOpenChange={mockOnOpenChange} />
-    );
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
 
     expect(screen.getByText("Evidence Status:")).toBeInTheDocument();
     expect(screen.getByLabelText("Filter by review status")).toBeInTheDocument();

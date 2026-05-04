@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  Box,
-  Stack,
-} from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { Plus } from "lucide-react";
 import SearchBox from "../../components/Search/SearchBox";
@@ -52,7 +49,9 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
   // Edit modal state - using comprehensive CreateScorerModal
   const [editScorerModalOpen, setEditScorerModalOpen] = useState(false);
   const [editingScorer, setEditingScorer] = useState<DeepEvalScorer | null>(null);
-  const [editInitialConfig, setEditInitialConfig] = useState<Partial<ScorerConfig> | undefined>(undefined);
+  const [editInitialConfig, setEditInitialConfig] = useState<Partial<ScorerConfig> | undefined>(
+    undefined,
+  );
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -96,14 +95,11 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
         ],
       },
     ],
-    []
+    [],
   );
 
   const getFieldValue = useCallback(
-    (
-      s: DeepEvalScorer,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (s: DeepEvalScorer, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "name":
           return s.name;
@@ -115,22 +111,17 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
           return "";
       }
     },
-    []
+    [],
   );
 
-  const { filterData, handleFilterChange } =
-    useFilterBy<DeepEvalScorer>(getFieldValue);
+  const { filterData, handleFilterChange } = useFilterBy<DeepEvalScorer>(getFieldValue);
 
   const filteredScorers = useMemo(() => {
     const afterFilter = filterData(scorers);
     if (!searchTerm.trim()) return afterFilter;
     const q = searchTerm.toLowerCase();
     return afterFilter.filter((s) =>
-      [s.name, s.metricKey, s.type]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(q)
+      [s.name, s.metricKey, s.type].filter(Boolean).join(" ").toLowerCase().includes(q),
     );
   }, [scorers, filterData, searchTerm]);
 
@@ -152,19 +143,29 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
   // Helper to open edit modal for a scorer
   const openEditModal = useCallback((scorer: DeepEvalScorer) => {
     try {
-      const scorerConfig = typeof scorer.config === 'object' && scorer.config !== null ? scorer.config : {};
-      
+      const scorerConfig =
+        typeof scorer.config === "object" && scorer.config !== null ? scorer.config : {};
+
       // Convert scorer to ScorerConfig format for the comprehensive modal
       const judgeModel = scorerConfig.judgeModel;
-      const provider = typeof judgeModel === 'object' ? judgeModel?.provider : scorerConfig.provider || "openai";
-      const model = typeof judgeModel === 'object' ? judgeModel?.name : (typeof judgeModel === 'string' ? judgeModel : scorerConfig.model || "");
-      const modelParams = typeof judgeModel === 'object' && judgeModel?.params ? {
-        temperature: judgeModel.params.temperature ?? 0,
-        maxTokens: judgeModel.params.max_tokens ?? 256,
-        topP: judgeModel.params.top_p ?? 1,
-      } : scorerConfig.modelParams || { temperature: 0, maxTokens: 256, topP: 1 };
-      const endpointUrl = typeof judgeModel === 'object' ? judgeModel?.endpointUrl : undefined;
-      const apiKey = typeof judgeModel === 'object' ? judgeModel?.apiKey : undefined;
+      const provider =
+        typeof judgeModel === "object" ? judgeModel?.provider : scorerConfig.provider || "openai";
+      const model =
+        typeof judgeModel === "object"
+          ? judgeModel?.name
+          : typeof judgeModel === "string"
+            ? judgeModel
+            : scorerConfig.model || "";
+      const modelParams =
+        typeof judgeModel === "object" && judgeModel?.params
+          ? {
+              temperature: judgeModel.params.temperature ?? 0,
+              maxTokens: judgeModel.params.max_tokens ?? 256,
+              topP: judgeModel.params.top_p ?? 1,
+            }
+          : scorerConfig.modelParams || { temperature: 0, maxTokens: 256, topP: 1 };
+      const endpointUrl = typeof judgeModel === "object" ? judgeModel?.endpointUrl : undefined;
+      const apiKey = typeof judgeModel === "object" ? judgeModel?.apiKey : undefined;
 
       setEditInitialConfig({
         name: scorer.name || "",
@@ -175,11 +176,13 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
         messages: scorerConfig.messages || [
           {
             role: "system",
-            content: "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
+            content:
+              "You are an AI evaluator. Assess the quality of the AI response based on accuracy and relevance to the input.",
           },
           {
             role: "user",
-            content: "Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {\"verdict\": \"PASS\", \"reason\": \"brief explanation\"}",
+            content:
+              'Input: {{input}}\n\nAI Response: {{output}}\n\nExpected Answer: {{expected}}\n\nEvaluate whether the AI response is satisfactory. Reply with JSON only, in this exact format: {"verdict": "PASS", "reason": "brief explanation"}',
           },
         ],
         useChainOfThought: scorerConfig.useChainOfThought ?? true,
@@ -187,14 +190,16 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
         passThreshold: scorer.defaultThreshold ?? 0.5,
         endpointUrl: endpointUrl || "",
         apiKey: apiKey || "",
-        inputSchema: scorerConfig.inputSchema || `{
+        inputSchema:
+          scorerConfig.inputSchema ||
+          `{
           "input": "",
           "output": "",
           "expected": "",
           "metadata": {}
         }`,
       });
-      
+
       setEditingScorer(scorer);
       setEditScorerModalOpen(true);
     } catch (err) {
@@ -205,29 +210,38 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
   }, []);
 
   // Row click handler - opens edit modal
-  const handleRowClick = useCallback((row: ScorerRow) => {
-    const scorer = scorers.find((s) => s.id === row.id);
-    if (scorer) {
-      openEditModal(scorer);
-    }
-  }, [scorers, openEditModal]);
+  const handleRowClick = useCallback(
+    (row: ScorerRow) => {
+      const scorer = scorers.find((s) => s.id === row.id);
+      if (scorer) {
+        openEditModal(scorer);
+      }
+    },
+    [scorers, openEditModal],
+  );
 
   // Edit handler from menu
-  const handleEdit = useCallback((row: ScorerRow) => {
-    const scorer = scorers.find((s) => s.id === row.id);
-    if (scorer) {
-      openEditModal(scorer);
-    }
-  }, [scorers, openEditModal]);
+  const handleEdit = useCallback(
+    (row: ScorerRow) => {
+      const scorer = scorers.find((s) => s.id === row.id);
+      if (scorer) {
+        openEditModal(scorer);
+      }
+    },
+    [scorers, openEditModal],
+  );
 
   // Delete handler from menu
-  const handleDelete = useCallback((row: ScorerRow) => {
-    const scorer = scorers.find((s) => s.id === row.id);
-    if (scorer) {
-      setScorerToDelete(scorer);
-      setDeleteModalOpen(true);
-    }
-  }, [scorers]);
+  const handleDelete = useCallback(
+    (row: ScorerRow) => {
+      const scorer = scorers.find((s) => s.id === row.id);
+      if (scorer) {
+        setScorerToDelete(scorer);
+        setDeleteModalOpen(true);
+      }
+    },
+    [scorers],
+  );
 
   const handleConfirmDelete = async () => {
     if (!scorerToDelete) return;
@@ -271,9 +285,11 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl
-              ? { endpointUrl: config.endpointUrl } : {}),
+              ? { endpointUrl: config.endpointUrl }
+              : {}),
             ...(config.provider === "self-hosted" && config.apiKey
-              ? { apiKey: config.apiKey } : {}),
+              ? { apiKey: config.apiKey }
+              : {}),
           },
           messages: config.messages,
           useChainOfThought: config.useChainOfThought,
@@ -324,9 +340,11 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl
-              ? { endpointUrl: config.endpointUrl } : {}),
+              ? { endpointUrl: config.endpointUrl }
+              : {}),
             ...(config.provider === "self-hosted" && config.apiKey
-              ? { apiKey: config.apiKey } : {}),
+              ? { apiKey: config.apiKey }
+              : {}),
           },
           messages: config.messages,
           useChainOfThought: config.useChainOfThought,

@@ -41,26 +41,31 @@
  */
 
 // Web mode components
-export { default as UserGuideWrapper } from './UserGuideWrapper';
-export { default as UserGuideLanding } from './UserGuideLanding';
-export { default as CollectionPage } from './CollectionPage';
-export { default as ArticlePage } from './ArticlePage';
-export { default as ContentRenderer } from './ContentRenderer';
+export { default as UserGuideWrapper } from "./UserGuideWrapper";
+export { default as UserGuideLanding } from "./UserGuideLanding";
+export { default as CollectionPage } from "./CollectionPage";
+export { default as ArticlePage } from "./ArticlePage";
+export { default as ContentRenderer } from "./ContentRenderer";
 
 // In-app mode components
-export { default as SidebarWrapper } from './SidebarWrapper';
-export { default as TabBar } from './TabBar';
-export { default as SidebarHeader } from './SidebarHeader';
-export { default as HelpSection } from './HelpSection';
+export { default as SidebarWrapper } from "./SidebarWrapper";
+export { default as TabBar } from "./TabBar";
+export { default as SidebarHeader } from "./SidebarHeader";
+export { default as HelpSection } from "./HelpSection";
 
 // Configuration and content (from shared location)
-export { collections, getCollection, getArticle, fastFinds } from '@user-guide-content/userGuideConfig';
-export { getArticleContent } from '@user-guide-content/content';
-export type { Collection, Article } from '@user-guide-content/userGuideConfig';
-export type { ArticleContent, ContentBlock, TocItem } from '@user-guide-content/contentTypes';
+export {
+  collections,
+  getCollection,
+  getArticle,
+  fastFinds,
+} from "@user-guide-content/userGuideConfig";
+export { getArticleContent } from "@user-guide-content/content";
+export type { Collection, Article } from "@user-guide-content/userGuideConfig";
+export type { ArticleContent, ContentBlock, TocItem } from "@user-guide-content/contentTypes";
 
 // Hook for managing sidebar state
-export { useUserGuideSidebar } from './useUserGuideSidebar';
+export { useUserGuideSidebar } from "./useUserGuideSidebar";
 
 // Context for sharing sidebar state across components
 export {
@@ -69,4 +74,4 @@ export {
   TAB_BAR_WIDTH,
   DEFAULT_CONTENT_WIDTH,
   MIN_GAP,
-} from './UserGuideSidebarContext';
+} from "./UserGuideSidebarContext";

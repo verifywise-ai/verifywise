@@ -15,10 +15,10 @@ import {
 // Rate limiter for expensive routes (e.g., create webhook)
 const createWebhookLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour window
-  max: 10,                  // limit each IP to 10 create requests per windowMs
+  max: 10, // limit each IP to 10 create requests per windowMs
   message: {
-    error: "Too many webhook creation requests from this IP, please try again after an hour."
-  }
+    error: "Too many webhook creation requests from this IP, please try again after an hour.",
+  },
 });
 // GET requests
 router.get("/", authenticateJWT, getAllSlackWebhooks);

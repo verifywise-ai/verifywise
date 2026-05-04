@@ -25,7 +25,7 @@ import {
   Plus,
   LayoutGrid,
 } from "lucide-react";
-import { brand, background, border as borderPalette } from "../../themes/palette";;
+import { brand, background, border as borderPalette } from "../../themes/palette";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
 import "../Layout/icon-shake.css";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -155,8 +155,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
   const [delayedCollapsed, setDelayedCollapsed] = useState(collapsed);
 
   // Project selector menu state
-  const [projectMenuAnchor, setProjectMenuAnchor] =
-    useState<null | HTMLElement>(null);
+  const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const projectMenuOpen = Boolean(projectMenuAnchor);
 
   useEffect(() => {
@@ -215,11 +214,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
       return isItemActive(item);
     }
     if (activeItemId) {
-      return (
-        item.id === activeItemId ||
-        item.value === activeItemId ||
-        item.path === activeItemId
-      );
+      return item.id === activeItemId || item.value === activeItemId || item.path === activeItemId;
     }
     return false;
   };
@@ -255,9 +250,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
         {isDisabled ? (
           <span style={{ display: "inline-block" }}>
             <ListItemButton
-              disableRipple={
-                theme.components?.MuiListItemButton?.defaultProps?.disableRipple
-              }
+              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               className={isActive ? "selected-path" : "unselected"}
               onClick={() => handleItemClick(item)}
               disabled={isDisabled}
@@ -276,21 +269,18 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   isActive && !isDisabled
                     ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                     : "transparent",
-                border:
-                  isActive && !isDisabled
-                    ? "1px solid #E8E8E8"
-                    : "1px solid transparent",
+                border: isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
                 "&:hover": {
                   background: isDisabled
                     ? "transparent"
                     : isActive
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                    : "#FAFAFA",
+                      ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                      : "#FAFAFA",
                   border: isDisabled
                     ? "1px solid transparent"
                     : isActive
-                    ? "1px solid #E8E8E8"
-                    : "1px solid transparent",
+                      ? "1px solid #E8E8E8"
+                      : "1px solid transparent",
                 },
                 "&:hover svg": isDisabled
                   ? {}
@@ -320,21 +310,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     color: isDisabled
                       ? `${theme.palette.text.disabled} !important`
                       : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
                     stroke: isDisabled
                       ? `${theme.palette.text.disabled} !important`
                       : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
                     transition: "color 0.2s ease, stroke 0.2s ease",
                   },
                   "& svg path": {
                     stroke: isDisabled
                       ? `${theme.palette.text.disabled} !important`
                       : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
                   },
                 }}
               >
@@ -349,48 +339,43 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       color: isDisabled
                         ? theme.palette.text.disabled
                         : isActive
-                        ? theme.palette.text.primary
-                        : theme.palette.text.secondary,
+                          ? theme.palette.text.primary
+                          : theme.palette.text.secondary,
                     },
                   }}
                 >
                   {item.label}
                 </ListItemText>
               )}
-              {!collapsed &&
-                item.count !== undefined &&
-                item.count > 0 &&
-                !isDisabled && (
-                  <Chip
-                    label={item.count > 99 ? "99+" : item.count}
-                    size="small"
-                    sx={{
-                      height: "18px",
-                      fontSize: "10px",
-                      fontWeight: 500,
-                      backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
-                      color: "#475569",
-                      borderRadius: "9px",
-                      minWidth: "18px",
-                      maxWidth: "36px",
-                      "& .MuiChip-label": {
-                        px: "6px",
-                        py: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      },
-                      ml: "auto",
-                    }}
-                  />
-                )}
+              {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
+                <Chip
+                  label={item.count > 99 ? "99+" : item.count}
+                  size="small"
+                  sx={{
+                    height: "18px",
+                    fontSize: "10px",
+                    fontWeight: 500,
+                    backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
+                    color: "#475569",
+                    borderRadius: "9px",
+                    minWidth: "18px",
+                    maxWidth: "36px",
+                    "& .MuiChip-label": {
+                      px: "6px",
+                      py: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                    ml: "auto",
+                  }}
+                />
+              )}
             </ListItemButton>
           </span>
         ) : (
           <ListItemButton
-            disableRipple={
-              theme.components?.MuiListItemButton?.defaultProps?.disableRipple
-            }
+            disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
             className={isActive ? "selected-path" : "unselected"}
             onClick={() => handleItemClick(item)}
             disabled={isDisabled}
@@ -409,21 +394,18 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 isActive && !isDisabled
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                   : "transparent",
-              border:
-                isActive && !isDisabled
-                  ? "1px solid #E8E8E8"
-                  : "1px solid transparent",
+              border: isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
               "&:hover": {
                 background: isDisabled
                   ? "transparent"
                   : isActive
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                  : "#FAFAFA",
+                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                    : "#FAFAFA",
                 border: isDisabled
                   ? "1px solid transparent"
                   : isActive
-                  ? "1px solid #E8E8E8"
-                  : "1px solid transparent",
+                    ? "1px solid #E8E8E8"
+                    : "1px solid transparent",
               },
               "&:hover svg": isDisabled
                 ? {}
@@ -454,21 +436,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   color: isDisabled
                     ? `${theme.palette.text.disabled} !important`
                     : isActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
                   stroke: isDisabled
                     ? `${theme.palette.text.disabled} !important`
                     : isActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
                   transition: "color 0.2s ease, stroke 0.2s ease",
                 },
                 "& svg path": {
                   stroke: isDisabled
                     ? `${theme.palette.text.disabled} !important`
                     : isActive
-                    ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                      ? `${brand.primary} !important`
+                      : `${theme.palette.text.tertiary} !important`,
                 },
               }}
             >
@@ -483,41 +465,38 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     color: isDisabled
                       ? theme.palette.text.disabled
                       : isActive
-                      ? theme.palette.text.primary
-                      : theme.palette.text.secondary,
+                        ? theme.palette.text.primary
+                        : theme.palette.text.secondary,
                   },
                 }}
               >
                 {item.label}
               </ListItemText>
             )}
-            {!collapsed &&
-              item.count !== undefined &&
-              item.count > 0 &&
-              !isDisabled && (
-                <Chip
-                  label={item.count > 99 ? "99+" : item.count}
-                  size="small"
-                  sx={{
-                    height: "18px",
-                    fontSize: "10px",
-                    fontWeight: 500,
-                    backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
-                    color: "#475569",
-                    borderRadius: "9px",
-                    minWidth: "18px",
-                    maxWidth: "36px",
-                    "& .MuiChip-label": {
-                      px: "6px",
-                      py: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    },
-                    ml: "auto",
-                  }}
-                />
-              )}
+            {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
+              <Chip
+                label={item.count > 99 ? "99+" : item.count}
+                size="small"
+                sx={{
+                  height: "18px",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
+                  color: "#475569",
+                  borderRadius: "9px",
+                  minWidth: "18px",
+                  maxWidth: "36px",
+                  "& .MuiChip-label": {
+                    px: "6px",
+                    py: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                  ml: "auto",
+                }}
+              />
+            )}
           </ListItemButton>
         )}
       </Tooltip>
@@ -525,27 +504,27 @@ const SidebarShell: FC<SidebarShellProps> = ({
   };
 
   return (
-      <Stack
-        component="aside"
-        className={`sidebar-menu ${collapsed ? "collapsed" : "expanded"}`}
-        py={theme.spacing(6)}
-        gap={theme.spacing(2)}
-        sx={{
-          width: collapsed ? "78px" : "260px",
-          minWidth: collapsed ? "78px" : "260px",
-          maxWidth: collapsed ? "78px" : "260px",
-          flexShrink: 0,
-          height: "100vh",
-          overflowY: "auto",
-          overflowX: "hidden",
-          border: "none",
-          borderRight: `1px solid ${theme.palette.border?.dark || borderPalette.dark}`,
-          borderRadius: 0,
-          backgroundColor: theme.palette.background.main,
-          transition:
-            "width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), min-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), max-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77)",
-        }}
-      >
+    <Stack
+      component="aside"
+      className={`sidebar-menu ${collapsed ? "collapsed" : "expanded"}`}
+      py={theme.spacing(6)}
+      gap={theme.spacing(2)}
+      sx={{
+        width: collapsed ? "78px" : "260px",
+        minWidth: collapsed ? "78px" : "260px",
+        maxWidth: collapsed ? "78px" : "260px",
+        flexShrink: 0,
+        height: "100vh",
+        overflowY: "auto",
+        overflowX: "hidden",
+        border: "none",
+        borderRight: `1px solid ${theme.palette.border?.dark || borderPalette.dark}`,
+        borderRadius: 0,
+        backgroundColor: theme.palette.background.main,
+        transition:
+          "width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), min-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), max-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77)",
+      }}
+    >
       {/* Logo Header */}
       <Stack
         pt={theme.spacing(6)}
@@ -621,19 +600,11 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       },
                     }}
                   >
-                    <Heart
-                      size={14}
-                      color="#FF1493"
-                      strokeWidth={1.5}
-                      fill="#FF1493"
-                    />
+                    <Heart size={14} color="#FF1493" strokeWidth={1.5} fill="#FF1493" />
                   </IconButton>
                 </Tooltip>
               )}
-              <RouterLink
-                to="/"
-                style={{ display: "flex", alignItems: "center" }}
-              >
+              <RouterLink to="/" style={{ display: "flex", alignItems: "center" }}>
                 <img
                   src={VerifyWiseLogo}
                   alt="VerifyWise"
@@ -656,9 +627,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
           )}
           {/* Sidebar Toggle Button */}
           <IconButton
-            disableRipple={
-              theme.components?.MuiListItemButton?.defaultProps?.disableRipple
-            }
+            disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
             sx={{
               position: "absolute",
               right: delayedCollapsed ? "50%" : 0,
@@ -819,8 +788,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     </Typography>
                     <Box sx={{ maxHeight: 160, overflowY: "auto" }}>
                       {projectSelector.allProjects.map((project) => {
-                        const isSelected =
-                          project.id === projectSelector.currentProject?.id;
+                        const isSelected = project.id === projectSelector.currentProject?.id;
                         return (
                           <Box
                             key={project.id}
@@ -838,7 +806,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               borderRadius: "6px",
                               cursor: "pointer",
                               backgroundColor: isSelected ? "#f0fdf4" : "transparent",
-                              borderLeft: isSelected ? `3px solid ${brand.primary}` : "3px solid transparent",
+                              borderLeft: isSelected
+                                ? `3px solid ${brand.primary}`
+                                : "3px solid transparent",
                               color: theme.palette.text.primary,
                               fontWeight: isSelected ? 500 : 400,
                               transition: "all 0.15s ease",
@@ -847,15 +817,22 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               },
                             }}
                           >
-                            <FolderKanban 
-                              size={15} 
-                              style={{ 
-                                marginRight: 10, 
+                            <FolderKanban
+                              size={15}
+                              style={{
+                                marginRight: 10,
                                 opacity: isSelected ? 1 : 0.6,
-                                color: isSelected ? brand.primary : "inherit"
-                              }} 
+                                color: isSelected ? brand.primary : "inherit",
+                              }}
                             />
-                            <Box sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Box
+                              sx={{
+                                flex: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
                               {project.name}
                             </Box>
                           </Box>
@@ -962,11 +939,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 >
                   {group.name}
                 </Typography>
-                {isCollapsible && (
-                  isGroupCollapsed
-                    ? <ChevronRight size={14} color="#a0a0a0" />
-                    : <ChevronDown size={14} color="#a0a0a0" />
-                )}
+                {isCollapsible &&
+                  (isGroupCollapsed ? (
+                    <ChevronRight size={14} color="#a0a0a0" />
+                  ) : (
+                    <ChevronDown size={14} color="#a0a0a0" />
+                  ))}
               </Box>
               {!isGroupCollapsed && group.items.map((item) => renderMenuItem(item))}
             </Box>
@@ -1021,30 +999,30 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   </ListItemButton>
                 ))}
               </Box>
-            )
+            ),
         )}
       </List>
 
-        {/* Shared Footer */}
-        <SidebarFooter
-          collapsed={collapsed}
-          delayedCollapsed={delayedCollapsed}
-          hasDemoData={hasDemoData}
-          onOpenCreateDemoData={onOpenCreateDemoData}
-          onOpenDeleteDemoData={onOpenDeleteDemoData}
-          onDismissDemoDataButton={onDismissDemoDataButton}
-          showDemoDataButton={showDemoDataButton}
-          showReadyToSubscribe={showReadyToSubscribe}
-          openUserGuide={openUserGuide}
-          openReleaseNotes={openReleaseNotes}
-          isAdmin={isAdmin}
-        />
+      {/* Shared Footer */}
+      <SidebarFooter
+        collapsed={collapsed}
+        delayedCollapsed={delayedCollapsed}
+        hasDemoData={hasDemoData}
+        onOpenCreateDemoData={onOpenCreateDemoData}
+        onOpenDeleteDemoData={onOpenDeleteDemoData}
+        onDismissDemoDataButton={onDismissDemoDataButton}
+        showDemoDataButton={showDemoDataButton}
+        showReadyToSubscribe={showReadyToSubscribe}
+        openUserGuide={openUserGuide}
+        openReleaseNotes={openReleaseNotes}
+        isAdmin={isAdmin}
+      />
 
-        {/* Flying Hearts Animation */}
-        {enableFlyingHearts && showFlyingHearts && (
-          <FlyingHearts onComplete={() => setShowFlyingHearts(false)} />
-        )}
-      </Stack>
+      {/* Flying Hearts Animation */}
+      {enableFlyingHearts && showFlyingHearts && (
+        <FlyingHearts onComplete={() => setShowFlyingHearts(false)} />
+      )}
+    </Stack>
   );
 };
 

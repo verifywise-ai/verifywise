@@ -8,10 +8,10 @@
 
 Shared-schema isolation with `organization_id` column on all tenant-scoped tables. All data lives in the `verifywise` schema (via `search_path`).
 
-| Schema | Purpose |
-|--------|---------|
-| `verifywise` | All tables — users, organizations, projects, vendors, risks, files, model_inventories, frameworks, llm_evals_*, etc. |
-| `public` | PostgreSQL extensions only (uuid-ossp, pgcrypto). Also `public.organizations` and `public.users` which EvalServer FKs reference (since EvalServer starts in parallel). |
+| Schema       | Purpose                                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verifywise` | All tables — users, organizations, projects, vendors, risks, files, model*inventories, frameworks, llm_evals*\*, etc.                                                  |
+| `public`     | PostgreSQL extensions only (uuid-ossp, pgcrypto). Also `public.organizations` and `public.users` which EvalServer FKs reference (since EvalServer starts in parallel). |
 
 **Access:** `req.organizationId` from auth middleware. Queries use unqualified table names (resolved by `search_path`): `SELECT * FROM projects WHERE organization_id = :orgId AND id = :id`.
 
@@ -54,7 +54,7 @@ Post-consolidation migrations add new features incrementally (risk benchmarks, v
 New migrations should use `verifywise.` prefix in DDL and `queryInterface.sequelize.query()` for raw SQL:
 
 ```javascript
-'use strict';
+"use strict";
 module.exports = {
   async up(queryInterface) {
     await queryInterface.sequelize.query(`
@@ -67,16 +67,17 @@ module.exports = {
     `);
   },
   async down(queryInterface) {
-    await queryInterface.sequelize.query('DROP TABLE IF EXISTS verifywise.my_new_table;');
-  }
+    await queryInterface.sequelize.query("DROP TABLE IF EXISTS verifywise.my_new_table;");
+  },
 };
 ```
 
 For simple column additions, `queryInterface.addColumn` with unqualified names also works (Sequelize resolves via `search_path`):
 
 ```javascript
-await queryInterface.addColumn('users', 'new_field', {
-  type: Sequelize.STRING, allowNull: true
+await queryInterface.addColumn("users", "new_field", {
+  type: Sequelize.STRING,
+  allowNull: true,
 });
 ```
 
@@ -133,6 +134,7 @@ This is for local developer convenience only — never enable on shared environm
 4. **Model** (`domain.layer/models/{entity}/`) — Sequelize-typescript decorators
 
 **Don't forget:** Register new routes in `index.ts`:
+
 ```typescript
 import entityRoutes from "./routes/entity.route";
 app.use("/api/entities", entityRoutes);
@@ -142,16 +144,16 @@ app.use("/api/entities", entityRoutes);
 
 ## Key Files
 
-| Purpose | Path |
-|---------|------|
-| Backend entry | `index.ts` |
-| Route definitions | `routes/*.ts` |
-| Database models | `domain.layer/models/` |
-| Shared schema migration | `scripts/migrateToSharedSchema.ts` |
-| Migration config | `scripts/migrationConfig.ts` |
-| Auth middleware | `middleware/auth.middleware.ts` |
-| Custom exceptions | `domain.layer/exceptions/custom.exception.ts` |
-| Log helper | `utils/logger/logHelper.ts` |
+| Purpose                 | Path                                          |
+| ----------------------- | --------------------------------------------- |
+| Backend entry           | `index.ts`                                    |
+| Route definitions       | `routes/*.ts`                                 |
+| Database models         | `domain.layer/models/`                        |
+| Shared schema migration | `scripts/migrateToSharedSchema.ts`            |
+| Migration config        | `scripts/migrationConfig.ts`                  |
+| Auth middleware         | `middleware/auth.middleware.ts`               |
+| Custom exceptions       | `domain.layer/exceptions/custom.exception.ts` |
+| Log helper              | `utils/logger/logHelper.ts`                   |
 
 ---
 
@@ -159,22 +161,22 @@ app.use("/api/entities", entityRoutes);
 
 Read the relevant file BEFORE implementing changes in that area:
 
-| When working on... | Read this file |
-|---------------------|---------------|
-| Controller/route/utils patterns | `docs/technical/guides/backend-patterns.md` |
-| Adding a new feature (full guide) | `docs/technical/guides/adding-new-feature.md` |
-| Adding a new framework | `docs/technical/guides/adding-new-framework.md` |
-| API conventions | `docs/technical/guides/api-conventions.md` |
-| Code style | `docs/technical/guides/code-style.md` |
-| API routes & endpoints | `docs/technical/api/endpoints.md` |
-| Background jobs (BullMQ) | `docs/technical/infrastructure/automations.md` |
-| Email templates (MJML) | `docs/technical/infrastructure/email-service.md` |
-| PDF/DOCX reporting | `docs/technical/infrastructure/pdf-generation.md` |
-| File upload system | `docs/technical/infrastructure/file-storage.md` |
-| Error handling & exceptions | `docs/claude/error-handling.md` |
-| Logging system | `docs/claude/logging.md` |
-| Middleware (rate limit, RBAC, JWT, Redis) | `docs/claude/middleware.md` |
-| Database schema | `docs/technical/architecture/database-schema.md` |
-| Multi-tenancy architecture | `docs/technical/architecture/multi-tenancy.md` |
+| When working on...                        | Read this file                                    |
+| ----------------------------------------- | ------------------------------------------------- |
+| Controller/route/utils patterns           | `docs/technical/guides/backend-patterns.md`       |
+| Adding a new feature (full guide)         | `docs/technical/guides/adding-new-feature.md`     |
+| Adding a new framework                    | `docs/technical/guides/adding-new-framework.md`   |
+| API conventions                           | `docs/technical/guides/api-conventions.md`        |
+| Code style                                | `docs/technical/guides/code-style.md`             |
+| API routes & endpoints                    | `docs/technical/api/endpoints.md`                 |
+| Background jobs (BullMQ)                  | `docs/technical/infrastructure/automations.md`    |
+| Email templates (MJML)                    | `docs/technical/infrastructure/email-service.md`  |
+| PDF/DOCX reporting                        | `docs/technical/infrastructure/pdf-generation.md` |
+| File upload system                        | `docs/technical/infrastructure/file-storage.md`   |
+| Error handling & exceptions               | `docs/claude/error-handling.md`                   |
+| Logging system                            | `docs/claude/logging.md`                          |
+| Middleware (rate limit, RBAC, JWT, Redis) | `docs/claude/middleware.md`                       |
+| Database schema                           | `docs/technical/architecture/database-schema.md`  |
+| Multi-tenancy architecture                | `docs/technical/architecture/multi-tenancy.md`    |
 
 > All `docs/` paths are relative to the repository root.

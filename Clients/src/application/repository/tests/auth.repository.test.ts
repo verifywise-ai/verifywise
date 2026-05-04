@@ -35,10 +35,7 @@ describe("Test Auth Repository", () => {
 
       const response = await sendPasswordResetEmail(data);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/mail/reset-password",
-        data,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/mail/reset-password", data);
       expect(response).toEqual(mockResponse);
     });
   });
@@ -60,15 +57,11 @@ describe("Test Auth Repository", () => {
 
       const response = await resetPassword(data, token);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/users/reset-password",
-        data,
-        {
-          headers: {
-            Authorization: "Bearer token-123",
-          },
+      expect(apiServices.post).toHaveBeenCalledWith("/users/reset-password", data, {
+        headers: {
+          Authorization: "Bearer token-123",
         },
-      );
+      });
       expect(response).toEqual(mockResponse);
     });
   });

@@ -9,7 +9,7 @@ import { DatePickerStyle } from "./style";
 import { getDatePickerStyles } from "../../../utils/inputStyles";
 
 function isRecordSx(sx: SxProps<Theme>): sx is Record<string, unknown> {
-  return typeof sx === 'object' && sx !== null && !Array.isArray(sx);
+  return typeof sx === "object" && sx !== null && !Array.isArray(sx);
 }
 
 function DatePicker({
@@ -21,30 +21,33 @@ function DatePicker({
   date,
   error,
   handleDateChange,
-  disabled=false,
+  disabled = false,
 }: DatePickerProps) {
   const theme = useTheme();
 
   // Extract width, flexGrow, minWidth, maxWidth from sx prop to apply to wrapper Stack
-  const extractedLayoutProps = sx && isRecordSx(sx)
-    ? {
-        width: sx.width as string | number | undefined,
-        flexGrow: sx.flexGrow as number | undefined,
-        minWidth: sx.minWidth as string | number | undefined,
-        maxWidth: sx.maxWidth as string | number | undefined,
-      }
-    : {};
+  const extractedLayoutProps =
+    sx && isRecordSx(sx)
+      ? {
+          width: sx.width as string | number | undefined,
+          flexGrow: sx.flexGrow as number | undefined,
+          minWidth: sx.minWidth as string | number | undefined,
+          maxWidth: sx.maxWidth as string | number | undefined,
+        }
+      : {};
 
   // Create a copy of sx without layout props to pass to MuiDatePicker
-  const sxWithoutLayoutProps = sx && isRecordSx(sx)
-    ? Object.fromEntries(Object.entries(sx).filter(([key]) => !['width', 'flexGrow', 'minWidth', 'maxWidth'].includes(key)))
-    : sx;
+  const sxWithoutLayoutProps =
+    sx && isRecordSx(sx)
+      ? Object.fromEntries(
+          Object.entries(sx).filter(
+            ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key),
+          ),
+        )
+      : sx;
 
   return (
-    <Stack
-      gap={theme.spacing(2)}
-      sx={extractedLayoutProps}
-    >
+    <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
       {label && (
         <Typography
           component="p"
@@ -52,15 +55,11 @@ function DatePicker({
           color={theme.palette.text.secondary}
           fontWeight={500}
           fontSize={"13px"}
-          sx={{ margin: 0, height: '22px' }}
+          sx={{ margin: 0, height: "22px" }}
         >
           {label}
           {isRequired && (
-            <Typography
-              component="span"
-              ml={theme.spacing(1)}
-              color={theme.palette.error.text}
-            >
+            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
               *
             </Typography>
           )}
@@ -83,8 +82,8 @@ function DatePicker({
           sx={{
             ...DatePickerStyle,
             ...getDatePickerStyles(theme, { hasError: !!error }),
-            '& .MuiInputBase-root': {
-              cursor: 'pointer',
+            "& .MuiInputBase-root": {
+              cursor: "pointer",
             },
             ...sxWithoutLayoutProps,
           }}

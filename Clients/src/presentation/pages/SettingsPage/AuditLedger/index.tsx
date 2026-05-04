@@ -41,9 +41,7 @@ import { useAuditLedger } from "./hooks/useAuditLedger";
 import { useFeatureSettings } from "../../../../application/hooks/useFeatureSettings";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
 const ENTITY_TYPE_ITEMS = [
   { _id: "", name: "All entity types" },
@@ -76,10 +74,7 @@ function formatTimestamp(iso: string): string {
   });
 }
 
-function getUserDisplay(
-  name: string | null,
-  surname: string | null
-): string {
+function getUserDisplay(name: string | null, surname: string | null): string {
   if (name || surname) {
     return `${name ?? ""} ${surname ?? ""}`.trim();
   }
@@ -124,10 +119,7 @@ export default function AuditLedger() {
         bg: theme.palette.background.alt,
       };
     }
-    if (
-      verifyResult.status === "intact" ||
-      verifyResult.status === "partial"
-    ) {
+    if (verifyResult.status === "intact" || verifyResult.status === "partial") {
       const suffix =
         verifyResult.status === "partial"
           ? ` (verified ${verifyResult.totalEntries.toLocaleString()} entries)`
@@ -172,14 +164,9 @@ export default function AuditLedger() {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-            Audit ledger
-          </Typography>
-          <Typography
-            sx={{ fontSize: 13, color: theme.palette.text.secondary }}
-          >
-            Tamper-proof, hash-chained log of all platform changes for
-            compliance auditing
+          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Audit ledger</Typography>
+          <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
+            Tamper-proof, hash-chained log of all platform changes for compliance auditing
           </Typography>
         </Box>
         <Toggle
@@ -202,9 +189,8 @@ export default function AuditLedger() {
             py: "12px",
           }}
         >
-          The audit ledger is currently disabled. New platform changes will not
-          be recorded. Existing entries are preserved and can still be verified
-          once the ledger is re-enabled.
+          The audit ledger is currently disabled. New platform changes will not be recorded.
+          Existing entries are preserved and can still be verified once the ledger is re-enabled.
         </Typography>
       )}
 
@@ -237,9 +223,7 @@ export default function AuditLedger() {
             }}
           >
             <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
-              <Box sx={{ color: verifyBanner.color, display: "flex" }}>
-                {verifyBanner.icon}
-              </Box>
+              <Box sx={{ color: verifyBanner.color, display: "flex" }}>{verifyBanner.icon}</Box>
               <Typography
                 sx={{
                   fontSize: 13,
@@ -260,11 +244,7 @@ export default function AuditLedger() {
           </Stack>
 
           {/* Filters row */}
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
               <Select
                 id="audit-entity-type"
@@ -301,11 +281,7 @@ export default function AuditLedger() {
               <CircularProgress size={28} />
             </Stack>
           ) : entries.length === 0 ? (
-            <EmptyState
-              icon={ClipboardList}
-              message="No audit ledger entries found."
-              showBorder
-            >
+            <EmptyState icon={ClipboardList} message="No audit ledger entries found." showBorder>
               <EmptyStateTip
                 icon={FileSearch}
                 title="What gets logged?"
@@ -323,152 +299,155 @@ export default function AuditLedger() {
               />
             </EmptyState>
           ) : (
-              <TableContainer sx={singleTheme.tableStyles.primary.frame}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Timestamp</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>User</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Action</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Entity type</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Entity ID</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Entry type</TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Hash</TableCell>
+            <TableContainer sx={singleTheme.tableStyles.primary.frame}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Timestamp
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>User</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Action</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Entity type
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Entity ID
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Entry type
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Hash</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {entries.map((entry) => (
+                    <TableRow key={entry.id} sx={singleTheme.tableStyles.primary.body.row}>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {formatTimestamp(entry.occurred_at)}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {getUserDisplay(entry.user_name, entry.user_surname)}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {entry.event_type ?? entry.action ?? "-"}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {entry.entity_type ?? "-"}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        {entry.entity_id ?? "-"}
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        <Chip
+                          label={entry.entry_type === "event_log" ? "Event log" : "Change history"}
+                          variant={entry.entry_type === "event_log" ? "info" : "warning"}
+                          uppercase={false}
+                        />
+                      </TableCell>
+                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                        <Tooltip title={entry.entry_hash.trim()} arrow>
+                          <Typography
+                            component="span"
+                            sx={{
+                              fontSize: 12,
+                              fontFamily: "monospace",
+                              color: theme.palette.text.accent,
+                              cursor: "default",
+                            }}
+                          >
+                            {entry.entry_hash.trim().slice(0, 12)}...
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {entries.map((entry) => (
-                      <TableRow key={entry.id} sx={singleTheme.tableStyles.primary.body.row}>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {formatTimestamp(entry.occurred_at)}
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {getUserDisplay(entry.user_name, entry.user_surname)}
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {entry.event_type ?? entry.action ?? "-"}
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {entry.entity_type ?? "-"}
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {entry.entity_id ?? "-"}
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          <Chip
-                            label={entry.entry_type === "event_log" ? "Event log" : "Change history"}
-                            variant={entry.entry_type === "event_log" ? "info" : "warning"}
-                            uppercase={false}
-                          />
-                        </TableCell>
-                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          <Tooltip title={entry.entry_hash.trim()} arrow>
-                            <Typography
-                              component="span"
-                              sx={{
-                                fontSize: 12,
-                                fontFamily: "monospace",
-                                color: theme.palette.text.accent,
-                                cursor: "default",
-                              }}
-                            >
-                              {entry.entry_hash.trim().slice(0, 12)}...
-                            </Typography>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow
+                    sx={{
+                      "& .MuiTableCell-root.MuiTableCell-footer": {
+                        paddingX: theme.spacing(8),
+                        paddingY: theme.spacing(4),
+                      },
+                    }}
+                  >
+                    <TableCell
                       sx={{
-                        "& .MuiTableCell-root.MuiTableCell-footer": {
-                          paddingX: theme.spacing(8),
-                          paddingY: theme.spacing(4),
-                        },
+                        paddingX: theme.spacing(2),
+                        fontSize: 13,
+                        opacity: 0.7,
                       }}
                     >
-                      <TableCell
-                        sx={{
-                          paddingX: theme.spacing(2),
-                          fontSize: 13,
-                          opacity: 0.7,
-                        }}
-                      >
-                        {filters.searchUser
-                          ? `Showing ${entries.length} matching of ${total.toLocaleString()} entries`
-                          : `Showing ${Math.min(page * rowsPerPage + 1, total)}–${Math.min((page + 1) * rowsPerPage, total)} of ${total.toLocaleString()} entries`}
-                      </TableCell>
-                      <TablePagination
-                        count={total}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        rowsPerPage={rowsPerPage}
-                        rowsPerPageOptions={[5, 10, 15, 25, 50]}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => (
-                          <TablePaginationActions {...props} />
-                        )}
-                        labelRowsPerPage="Rows per page"
-                        labelDisplayedRows={({ page: p, count }) =>
-                          `Page ${p + 1} of ${Math.max(
-                            1,
-                            Math.ceil(count / rowsPerPage)
-                          )}`
-                        }
-                        slotProps={{
-                          select: {
-                            MenuProps: {
-                              keepMounted: true,
-                              PaperProps: {
-                                className: "pagination-dropdown",
-                                sx: {
-                                  mt: 0,
-                                  mb: theme.spacing(2),
-                                },
-                              },
-                              transformOrigin: {
-                                vertical: "bottom",
-                                horizontal: "left",
-                              },
-                              anchorOrigin: {
-                                vertical: "top",
-                                horizontal: "left",
-                              },
-                              sx: { mt: theme.spacing(-2) },
-                            },
-                            inputProps: { id: "pagination-dropdown" },
-                            IconComponent: SelectorVertical,
-                            sx: {
-                              ml: theme.spacing(4),
-                              mr: theme.spacing(12),
-                              minWidth: theme.spacing(20),
-                              textAlign: "left",
-                              "&.Mui-focused > div": {
-                                backgroundColor: theme.palette.background.main,
+                      {filters.searchUser
+                        ? `Showing ${entries.length} matching of ${total.toLocaleString()} entries`
+                        : `Showing ${Math.min(page * rowsPerPage + 1, total)}–${Math.min((page + 1) * rowsPerPage, total)} of ${total.toLocaleString()} entries`}
+                    </TableCell>
+                    <TablePagination
+                      count={total}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      rowsPerPage={rowsPerPage}
+                      rowsPerPageOptions={[5, 10, 15, 25, 50]}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                      labelRowsPerPage="Rows per page"
+                      labelDisplayedRows={({ page: p, count }) =>
+                        `Page ${p + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
+                      }
+                      slotProps={{
+                        select: {
+                          MenuProps: {
+                            keepMounted: true,
+                            PaperProps: {
+                              className: "pagination-dropdown",
+                              sx: {
+                                mt: 0,
+                                mb: theme.spacing(2),
                               },
                             },
+                            transformOrigin: {
+                              vertical: "bottom",
+                              horizontal: "left",
+                            },
+                            anchorOrigin: {
+                              vertical: "top",
+                              horizontal: "left",
+                            },
+                            sx: { mt: theme.spacing(-2) },
                           },
-                        }}
-                        sx={{
-                          mt: theme.spacing(6),
-                          color: theme.palette.text.secondary,
-                          "& .MuiSelect-icon": {
-                            width: "24px",
-                            height: "fit-content",
+                          inputProps: { id: "pagination-dropdown" },
+                          IconComponent: SelectorVertical,
+                          sx: {
+                            ml: theme.spacing(4),
+                            mr: theme.spacing(12),
+                            minWidth: theme.spacing(20),
+                            textAlign: "left",
+                            "&.Mui-focused > div": {
+                              backgroundColor: theme.palette.background.main,
+                            },
                           },
-                          "& .MuiSelect-select": {
-                            width: theme.spacing(10),
-                            borderRadius: theme.shape.borderRadius,
-                            border: `1px solid ${theme.palette.border.light}`,
-                            padding: theme.spacing(4),
-                          },
-                        }}
-                      />
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </TableContainer>
+                        },
+                      }}
+                      sx={{
+                        mt: theme.spacing(6),
+                        color: theme.palette.text.secondary,
+                        "& .MuiSelect-icon": {
+                          width: "24px",
+                          height: "fit-content",
+                        },
+                        "& .MuiSelect-select": {
+                          width: theme.spacing(10),
+                          borderRadius: theme.shape.borderRadius,
+                          border: `1px solid ${theme.palette.border.light}`,
+                          padding: theme.spacing(4),
+                        },
+                      }}
+                    />
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </TableContainer>
           )}
         </>
       )}

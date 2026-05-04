@@ -53,10 +53,34 @@ const DIMENSION_CONFIGS = [
   {
     key: "data_sensitivity",
     label: "Data sensitivity",
-    weight: 0.20,
+    weight: 0.2,
     keywords: {
-      high: ["biometric", "health", "medical", "genetic", "racial", "ethnic", "political", "sexual", "criminal", "social security", "ssn", "passport"],
-      medium: ["personal", "pii", "email", "address", "name", "phone", "location", "financial", "salary", "income"],
+      high: [
+        "biometric",
+        "health",
+        "medical",
+        "genetic",
+        "racial",
+        "ethnic",
+        "political",
+        "sexual",
+        "criminal",
+        "social security",
+        "ssn",
+        "passport",
+      ],
+      medium: [
+        "personal",
+        "pii",
+        "email",
+        "address",
+        "name",
+        "phone",
+        "location",
+        "financial",
+        "salary",
+        "income",
+      ],
       low: ["anonymous", "aggregated", "public", "synthetic", "no personal data", "non-personal"],
     },
     fieldMappings: ["personal_data_type", "data_type", "data_sensitivity"],
@@ -64,11 +88,33 @@ const DIMENSION_CONFIGS = [
   {
     key: "autonomy_level",
     label: "Autonomy level",
-    weight: 0.20,
+    weight: 0.2,
     keywords: {
-      high: ["autonomous", "automated decision", "no human", "self-driving", "auto-approve", "fully automated", "replaces human"],
-      medium: ["semi-autonomous", "recommendation", "suggests", "assists", "human approval", "human review"],
-      low: ["human-controlled", "tool", "advisory", "manual override", "human decides", "support only"],
+      high: [
+        "autonomous",
+        "automated decision",
+        "no human",
+        "self-driving",
+        "auto-approve",
+        "fully automated",
+        "replaces human",
+      ],
+      medium: [
+        "semi-autonomous",
+        "recommendation",
+        "suggests",
+        "assists",
+        "human approval",
+        "human review",
+      ],
+      low: [
+        "human-controlled",
+        "tool",
+        "advisory",
+        "manual override",
+        "human decides",
+        "support only",
+      ],
     },
     fieldMappings: ["autonomy_level", "decision_making", "autonomous"],
   },
@@ -77,7 +123,16 @@ const DIMENSION_CONFIGS = [
     label: "Impact scope",
     weight: 0.15,
     keywords: {
-      high: ["enterprise", "organization-wide", "all users", "public-facing", "millions", "thousands", "critical infrastructure", "national"],
+      high: [
+        "enterprise",
+        "organization-wide",
+        "all users",
+        "public-facing",
+        "millions",
+        "thousands",
+        "critical infrastructure",
+        "national",
+      ],
       medium: ["department", "team", "hundreds", "regional", "business unit"],
       low: ["individual", "single user", "internal", "pilot", "prototype", "poc", "few users"],
     },
@@ -88,9 +143,24 @@ const DIMENSION_CONFIGS = [
     label: "Transparency",
     weight: 0.15,
     keywords: {
-      high: ["black box", "unexplainable", "opaque", "proprietary model", "no documentation", "cannot explain"],
+      high: [
+        "black box",
+        "unexplainable",
+        "opaque",
+        "proprietary model",
+        "no documentation",
+        "cannot explain",
+      ],
       medium: ["partially explainable", "some documentation", "limited transparency"],
-      low: ["explainable", "interpretable", "documented", "transparent", "white box", "open source", "full documentation"],
+      low: [
+        "explainable",
+        "interpretable",
+        "documented",
+        "transparent",
+        "white box",
+        "open source",
+        "full documentation",
+      ],
     },
     fieldMappings: ["explainability", "transparency", "model_transparency"],
   },
@@ -101,7 +171,13 @@ const DIMENSION_CONFIGS = [
     keywords: {
       high: ["no oversight", "no review", "unsupervised", "no monitoring", "no human check"],
       medium: ["periodic review", "spot checks", "some oversight", "quarterly review"],
-      low: ["continuous monitoring", "human-in-the-loop", "real-time review", "always supervised", "human approval required"],
+      low: [
+        "continuous monitoring",
+        "human-in-the-loop",
+        "real-time review",
+        "always supervised",
+        "human approval required",
+      ],
     },
     fieldMappings: ["human_oversight", "human_in_the_loop", "oversight_level"],
   },
@@ -110,9 +186,43 @@ const DIMENSION_CONFIGS = [
     label: "Domain criticality",
     weight: 0.15,
     keywords: {
-      high: ["healthcare", "medical", "legal", "judicial", "law enforcement", "military", "defense", "financial services", "banking", "insurance", "education", "hiring", "recruitment", "immigration", "border", "critical infrastructure", "energy", "transportation"],
-      medium: ["marketing", "sales", "customer service", "manufacturing", "logistics", "agriculture"],
-      low: ["entertainment", "gaming", "social media", "internal tools", "content generation", "research", "testing"],
+      high: [
+        "healthcare",
+        "medical",
+        "legal",
+        "judicial",
+        "law enforcement",
+        "military",
+        "defense",
+        "financial services",
+        "banking",
+        "insurance",
+        "education",
+        "hiring",
+        "recruitment",
+        "immigration",
+        "border",
+        "critical infrastructure",
+        "energy",
+        "transportation",
+      ],
+      medium: [
+        "marketing",
+        "sales",
+        "customer service",
+        "manufacturing",
+        "logistics",
+        "agriculture",
+      ],
+      low: [
+        "entertainment",
+        "gaming",
+        "social media",
+        "internal tools",
+        "content generation",
+        "research",
+        "testing",
+      ],
     },
     fieldMappings: ["domain", "industry", "sector", "use_case_domain"],
   },
@@ -136,9 +246,9 @@ const TIER_THRESHOLDS: Record<string, Array<{ max: number; tier: string }>> = {
 // ============================================================================
 
 function scoreDimension(
-  config: typeof DIMENSION_CONFIGS[0],
+  config: (typeof DIMENSION_CONFIGS)[0],
   submissionData: Record<string, unknown>,
-  schema: FormSchema
+  schema: FormSchema,
 ): { score: number; signals: string[] } {
   const signals: string[] = [];
   let score = 50; // Default neutral
@@ -156,7 +266,7 @@ function scoreDimension(
 
     // Check if this field is mapped to a relevant entity field
     const fieldMapping = field.entityFieldMapping?.toLowerCase() || "";
-    if (config.fieldMappings.some(m => fieldMapping.includes(m))) {
+    if (config.fieldMappings.some((m) => fieldMapping.includes(m))) {
       mappedFieldValues.push(textValue.toLowerCase());
     }
   }
@@ -207,9 +317,9 @@ function scoreDimension(
 
 export function scoreSubmissionRuleBased(
   submissionData: Record<string, unknown>,
-  schema: FormSchema
+  schema: FormSchema,
 ): RiskDimension[] {
-  return DIMENSION_CONFIGS.map(config => {
+  return DIMENSION_CONFIGS.map((config) => {
     const { score, signals } = scoreDimension(config, submissionData, schema);
     return {
       key: config.key,
@@ -230,7 +340,7 @@ export async function enhanceWithLLM(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
   llmKeyId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<RiskDimension[]> {
   try {
     const keys = await getLLMKeysWithKeyQuery(organizationId);
@@ -243,12 +353,12 @@ export async function enhanceWithLLM(
 
     // Build context from submission
     const fieldSummary = schema.fields
-      .filter(f => submissionData[f.id] !== undefined)
-      .map(f => `${f.label}: ${JSON.stringify(submissionData[f.id])}`)
+      .filter((f) => submissionData[f.id] !== undefined)
+      .map((f) => `${f.label}: ${JSON.stringify(submissionData[f.id])}`)
       .join("\n");
 
     const dimensionSummary = dimensions
-      .map(d => `${d.label}: ${d.score}/100 (signals: ${d.signals.join(", ") || "none"})`)
+      .map((d) => `${d.label}: ${d.score}/100 (signals: ${d.signals.join(", ") || "none"})`)
       .join("\n");
 
     const prompt = `You are an AI risk assessment analyst. Analyze this AI use case submission and refine the risk scores.
@@ -283,11 +393,15 @@ For each dimension, provide a refined score adjustment (-15 to +15). Respond ONL
       });
       model = anthropic((llmKey as any).model || "claude-sonnet-4-20250514");
     } else {
+      const customBaseURL = (llmKey as any).url || undefined;
       const openai = createOpenAI({
         apiKey: (llmKey as any).key,
-        baseURL: (llmKey as any).url || undefined,
+        baseURL: customBaseURL,
       });
-      model = openai((llmKey as any).model || "gpt-4o-mini");
+      const modelId = (llmKey as any).model || "gpt-4o-mini";
+      // Only native OpenAI implements the Responses API. Any custom baseURL
+      // (OpenRouter, vLLM, Together, etc.) must use Chat Completions.
+      model = customBaseURL ? openai.chat(modelId) : openai(modelId);
     }
 
     const result = await generateText({
@@ -306,7 +420,7 @@ For each dimension, provide a refined score adjustment (-15 to +15). Respond ONL
     if (!adjustments || typeof adjustments !== "object") return dimensions;
 
     // Apply adjustments with ±15 cap
-    return dimensions.map(dim => {
+    return dimensions.map((dim) => {
       const adj = adjustments[dim.key];
       if (typeof adj !== "number") return dim;
 
@@ -316,9 +430,10 @@ For each dimension, provide a refined score adjustment (-15 to +15). Respond ONL
       return {
         ...dim,
         score: newScore,
-        signals: clampedAdj !== 0
-          ? [...dim.signals, `LLM adjustment: ${clampedAdj > 0 ? "+" : ""}${clampedAdj}`]
-          : dim.signals,
+        signals:
+          clampedAdj !== 0
+            ? [...dim.signals, `LLM adjustment: ${clampedAdj > 0 ? "+" : ""}${clampedAdj}`]
+            : dim.signals,
       };
     });
   } catch (error) {
@@ -344,7 +459,7 @@ export async function calculateSubmissionRisk(
   schema: FormSchema,
   tierSystem: string = "eu_ai_act",
   llmKeyId?: number | null,
-  organizationId?: number
+  organizationId?: number,
 ): Promise<RiskResult> {
   // Step 1: Rule-based scoring
   let dimensions = scoreSubmissionRuleBased(submissionData, schema);
@@ -354,7 +469,13 @@ export async function calculateSubmissionRisk(
   // Step 2: LLM enhancement (optional, non-blocking)
   if (llmKeyId && organizationId) {
     try {
-      dimensions = await enhanceWithLLM(dimensions, submissionData, schema, llmKeyId, organizationId);
+      dimensions = await enhanceWithLLM(
+        dimensions,
+        submissionData,
+        schema,
+        llmKeyId,
+        organizationId,
+      );
       llmEnhanced = true;
     } catch (error) {
       logger.error("LLM enhancement failed, using rule-based scores:", error);
@@ -362,9 +483,7 @@ export async function calculateSubmissionRisk(
   }
 
   // Step 3: Calculate weighted average
-  const overallScore = Math.round(
-    dimensions.reduce((sum, d) => sum + d.score * d.weight, 0)
-  );
+  const overallScore = Math.round(dimensions.reduce((sum, d) => sum + d.score * d.weight, 0));
 
   // Step 4: Determine tier
   const tier = getTierFromScore(overallScore, tierSystem);

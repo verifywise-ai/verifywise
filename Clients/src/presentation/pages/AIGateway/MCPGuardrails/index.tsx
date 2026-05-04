@@ -1,19 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  IconButton,
-} from "@mui/material";
-import {
-  CirclePlus,
-  ShieldCheck,
-  Trash2,
-  Pencil,
-  Shield,
-  ScanLine,
-  Lock,
-} from "lucide-react";
+import { Box, Typography, Stack, IconButton } from "@mui/material";
+import { CirclePlus, ShieldCheck, Trash2, Pencil, Shield, ScanLine, Lock } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -72,9 +59,7 @@ const ACTION_ITEMS = [
   { _id: "mask", name: "Mask" },
 ];
 
-const SCOPE_ITEMS = [
-  { _id: "tool_input", name: "Tool input" },
-];
+const SCOPE_ITEMS = [{ _id: "tool_input", name: "Tool input" }];
 
 const RULE_TYPE_VARIANTS: Record<string, "info" | "warning" | "success"> = {
   pii: "info",
@@ -143,7 +128,9 @@ export default function MCPGuardrailsPage() {
       rule_type: rule.rule_type || "pii",
       action: rule.action || "block",
       scope: rule.scope || "tool_input",
-      applies_to_tools: Array.isArray(rule.applies_to_tools) ? rule.applies_to_tools.join(", ") : "",
+      applies_to_tools: Array.isArray(rule.applies_to_tools)
+        ? rule.applies_to_tools.join(", ")
+        : "",
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,
     });
@@ -200,7 +187,7 @@ export default function MCPGuardrailsPage() {
       setFormError(
         err?.response?.data?.detail ||
           err?.response?.data?.message ||
-          `Failed to ${isEditing ? "update" : "create"} guardrail`
+          `Failed to ${isEditing ? "update" : "create"} guardrail`,
       );
     } finally {
       setIsSubmitting(false);
@@ -250,18 +237,13 @@ export default function MCPGuardrailsPage() {
     >
       <Stack gap="4px" flex={1} minWidth={0}>
         <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
-          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-            {rule.name}
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{rule.name}</Typography>
           <Chip
             label={RULE_TYPE_LABELS[rule.rule_type] || rule.rule_type}
             size="small"
             variant={RULE_TYPE_VARIANTS[rule.rule_type] || "info"}
           />
-          <Chip
-            label={rule.action === "block" ? "Block" : "Mask"}
-            size="small"
-          />
+          <Chip label={rule.action === "block" ? "Block" : "Mask"} size="small" />
         </Stack>
         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
           Scope: {rule.scope || "tool_input"}
@@ -301,18 +283,10 @@ export default function MCPGuardrailsPage() {
           onChange={() => handleToggle(rule.id, rule.is_active)}
           size="small"
         />
-        <IconButton
-          size="small"
-          onClick={() => openEditModal(rule)}
-          sx={{ p: 0.5 }}
-        >
+        <IconButton size="small" onClick={() => openEditModal(rule)} sx={{ p: 0.5 }}>
           <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
         </IconButton>
-        <IconButton
-          size="small"
-          onClick={() => setDeleteTarget(rule)}
-          sx={{ p: 0.5 }}
-        >
+        <IconButton size="small" onClick={() => setDeleteTarget(rule)} sx={{ p: 0.5 }}>
           <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
         </IconButton>
       </Stack>
@@ -367,9 +341,7 @@ export default function MCPGuardrailsPage() {
             <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
               {rules.length} rule{rules.length !== 1 ? "s" : ""} configured, {activeCount} active
             </Typography>
-            <Stack gap="8px">
-              {rules.map(renderRuleRow)}
-            </Stack>
+            <Stack gap="8px">{rules.map(renderRuleRow)}</Stack>
           </Stack>
         </Box>
       )}
@@ -379,7 +351,11 @@ export default function MCPGuardrailsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? "Edit guardrail" : "Add guardrail"}
-        description={isEditing ? "Update this guardrail rule's configuration." : "Configure a new guardrail rule for MCP tool invocations."}
+        description={
+          isEditing
+            ? "Update this guardrail rule's configuration."
+            : "Configure a new guardrail rule for MCP tool invocations."
+        }
         onSubmit={handleSubmit}
         submitButtonText={isEditing ? "Save changes" : "Create guardrail"}
         isSubmitting={isSubmitting}
@@ -455,8 +431,15 @@ export default function MCPGuardrailsPage() {
           </Stack>
 
           {form.action === "mask" && (
-            <Typography sx={{ fontSize: 12, color: palette.status.warning?.text || palette.text.tertiary, lineHeight: 1.5 }}>
-              Masking replaces matched content with placeholders before the tool receives the input. The tool may produce less relevant results.
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: palette.status.warning?.text || palette.text.tertiary,
+                lineHeight: 1.5,
+              }}
+            >
+              Masking replaces matched content with placeholders before the tool receives the input.
+              The tool may produce less relevant results.
             </Typography>
           )}
 
@@ -482,7 +465,8 @@ export default function MCPGuardrailsPage() {
       >
         <Stack gap="8px">
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            This action takes effect immediately. MCP tool invocations will no longer be checked against this rule.
+            This action takes effect immediately. MCP tool invocations will no longer be checked
+            against this rule.
           </Typography>
           <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
             You can re-create this guardrail at any time.

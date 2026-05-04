@@ -30,7 +30,7 @@
 }
 
 .command-dialog-content::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 32px;
   left: 8px;
@@ -47,7 +47,8 @@
 }
 
 .command-input {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   border: none;
   width: 100%;
   font-size: 17px;
@@ -71,7 +72,8 @@
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 13px;
   color: #999;
   pointer-events: none;
@@ -171,7 +173,7 @@
 
 /* Icon styling for hover state */
 .command-item:hover svg {
-  color: #6B8A6A !important;
+  color: #6b8a6a !important;
   opacity: 0.9 !important;
 }
 
@@ -203,7 +205,7 @@
 }
 
 .whats-new-big-block::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -217,7 +219,9 @@
   background: linear-gradient(135deg, #22312a 0%, #2f4f2f 50%, #152115 100%);
   border-color: rgba(123, 154, 122, 0.3);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 10px rgba(123, 154, 122, 0.08);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 10px rgba(123, 154, 122, 0.08);
 }
 
 /* Filter bar */
@@ -340,7 +344,7 @@
 }
 
 .command-loading::after {
-  content: '';
+  content: "";
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -353,8 +357,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Dark mode support */
@@ -397,7 +405,7 @@
   }
 
   .command-item svg {
-    color: #8AAB89 !important;
+    color: #8aab89 !important;
     opacity: 0.8 !important;
   }
 
@@ -416,7 +424,7 @@
   }
 
   .command-item:hover svg {
-    color: #8AAB89 !important;
+    color: #8aab89 !important;
     opacity: 0.9 !important;
   }
 

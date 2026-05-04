@@ -19,7 +19,7 @@ const defaultAssessmentProgress: AssessmentProgress = {
   answeredQuestions: 0,
 };
 
-const ASSESSMENT_PROGRESS_QUERY_KEY = ['assessmentProgress'] as const;
+const ASSESSMENT_PROGRESS_QUERY_KEY = ["assessmentProgress"] as const;
 
 const useAssessmentProgress = ({
   projectFrameworkId,
@@ -35,7 +35,7 @@ const useAssessmentProgress = ({
         projectFrameworkId,
         signal,
       });
-      return response?.data as AssessmentProgress || defaultAssessmentProgress;
+      return (response?.data as AssessmentProgress) || defaultAssessmentProgress;
     },
     enabled: !!projectFrameworkId,
     // staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes

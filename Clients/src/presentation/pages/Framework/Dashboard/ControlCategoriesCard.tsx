@@ -13,11 +13,11 @@ import {
   Cog,
   Activity,
   Zap,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import {
   GetClausesByProjectFrameworkId,
-  Iso27001GetClauseStructByFrameworkID
+  Iso27001GetClauseStructByFrameworkID,
 } from "../../../../application/repository/clause_struct_iso.repository";
 import type { LucideIcon } from "lucide-react";
 import { getStatusColor } from "../../ISO/style";
@@ -31,7 +31,7 @@ import {
   createErrorLogData,
   type BaseFrameworkData,
   type SubClauseData,
-  type ClauseData
+  type ClauseData,
 } from "../../../../application/utils/frameworkDataUtils";
 
 interface ControlCategoriesCardProps {
@@ -87,11 +87,11 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
 
         // Find both frameworks
         const iso42001Framework = frameworksData.find((framework) =>
-          isISO42001(framework.frameworkId, framework.frameworkName)
+          isISO42001(framework.frameworkId, framework.frameworkName),
         );
 
         const iso27001Framework = frameworksData.find((framework) =>
-          isISO27001(framework.frameworkId, framework.frameworkName)
+          isISO27001(framework.frameworkId, framework.frameworkName),
         );
 
         // Fetch ISO 42001 data if framework is present
@@ -102,11 +102,15 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             });
 
             // Validate response using utility function
-            const validation = validateApiResponse(clausesResponse, iso42001Framework.frameworkName, 'clauses');
+            const validation = validateApiResponse(
+              clausesResponse,
+              iso42001Framework.frameworkName,
+              "clauses",
+            );
             if (!validation.isValid) {
               console.warn(validation.error, {
                 projectFrameworkId: iso42001Framework.projectFrameworkId,
-                frameworkName: iso42001Framework.frameworkName
+                frameworkName: iso42001Framework.frameworkName,
               });
               setIso42001CategoriesData([]);
               return;
@@ -115,24 +119,26 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             const clauses: ClauseData[] = validation.data;
 
             // Filter clauses 4-10 only using utility function
-            const targetClauses = clauses.filter(clause =>
-              isValidClauseNumber(clause, iso42001Framework.frameworkName)
+            const targetClauses = clauses.filter((clause) =>
+              isValidClauseNumber(clause, iso42001Framework.frameworkName),
             );
 
             // Process ISO 42001 clauses
             const iso42001Categories = targetClauses.map((clause) => {
               const clauseNum = getClauseNumber(clause, iso42001Framework.frameworkName);
-              const mapping = ISO42001_CLAUSE_MAPPINGS[clauseNum as keyof typeof ISO42001_CLAUSE_MAPPINGS];
+              const mapping =
+                ISO42001_CLAUSE_MAPPINGS[clauseNum as keyof typeof ISO42001_CLAUSE_MAPPINGS];
 
               // Process subclauses using utility function
               const subClausesWithStatus = processSubItems(
                 clause.subClauses,
                 clause.clause_no,
-                iso42001Framework.frameworkName
+                iso42001Framework.frameworkName,
               );
 
               // Calculate percentages using utility function
-              const { completionPercentage, assignmentPercentage } = calculateItemPercentages(subClausesWithStatus);
+              const { completionPercentage, assignmentPercentage } =
+                calculateItemPercentages(subClausesWithStatus);
 
               return {
                 id: clause.id,
@@ -150,8 +156,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             const errorData = createErrorLogData(error, {
               frameworkName: iso42001Framework.frameworkName,
               projectFrameworkId: iso42001Framework.projectFrameworkId,
-              operation: 'fetching ISO 42001 categories data',
-              routeUrl: `/iso-42001/clauses/struct/byProjectId/${iso42001Framework.projectFrameworkId}`
+              operation: "fetching ISO 42001 categories data",
+              routeUrl: `/iso-42001/clauses/struct/byProjectId/${iso42001Framework.projectFrameworkId}`,
             });
             console.error("Error fetching ISO 42001 categories data:", errorData);
             setIso42001CategoriesData([]);
@@ -166,11 +172,15 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             });
 
             // Validate response using utility function
-            const validation = validateApiResponse(clausesResponse, iso27001Framework.frameworkName, 'clauses');
+            const validation = validateApiResponse(
+              clausesResponse,
+              iso27001Framework.frameworkName,
+              "clauses",
+            );
             if (!validation.isValid) {
               console.warn(validation.error, {
                 projectFrameworkId: iso27001Framework.projectFrameworkId,
-                frameworkName: iso27001Framework.frameworkName
+                frameworkName: iso27001Framework.frameworkName,
               });
               setIso27001CategoriesData([]);
               return;
@@ -179,24 +189,26 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             const clauses: ClauseData[] = validation.data;
 
             // Filter clauses 4-10 only using utility function
-            const targetClauses = clauses.filter(clause =>
-              isValidClauseNumber(clause, iso27001Framework.frameworkName)
+            const targetClauses = clauses.filter((clause) =>
+              isValidClauseNumber(clause, iso27001Framework.frameworkName),
             );
 
             // Process ISO 27001 clauses
             const iso27001Categories = targetClauses.map((clause: any) => {
               const clauseNum = getClauseNumber(clause, iso27001Framework.frameworkName);
-              const mapping = ISO27001_CLAUSE_MAPPINGS[clauseNum as keyof typeof ISO27001_CLAUSE_MAPPINGS];
+              const mapping =
+                ISO27001_CLAUSE_MAPPINGS[clauseNum as keyof typeof ISO27001_CLAUSE_MAPPINGS];
 
               // Process subclauses using utility function
               const subClausesWithStatus = processSubItems(
                 clause.subClauses,
                 clause.arrangement || clause.clause_no,
-                iso27001Framework.frameworkName
+                iso27001Framework.frameworkName,
               );
 
               // Calculate percentages using utility function
-              const { completionPercentage, assignmentPercentage } = calculateItemPercentages(subClausesWithStatus);
+              const { completionPercentage, assignmentPercentage } =
+                calculateItemPercentages(subClausesWithStatus);
 
               return {
                 id: clause.id,
@@ -214,8 +226,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             const errorData = createErrorLogData(error, {
               frameworkName: iso27001Framework.frameworkName,
               projectFrameworkId: iso27001Framework.projectFrameworkId,
-              operation: 'fetching ISO 27001 categories data',
-              routeUrl: `/iso-27001/clauses/struct/byProjectId/${iso27001Framework.projectFrameworkId}`
+              operation: "fetching ISO 27001 categories data",
+              routeUrl: `/iso-27001/clauses/struct/byProjectId/${iso27001Framework.projectFrameworkId}`,
             });
             console.error("Error fetching ISO 27001 categories data:", errorData);
             setIso27001CategoriesData([]);
@@ -225,11 +237,12 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
         console.error("Error fetching control categories data:", {
           error: error instanceof Error ? error.message : error,
           frameworksCount: frameworksData?.length || 0,
-          frameworks: frameworksData?.map(f => ({
-            id: f.frameworkId,
-            name: f.frameworkName,
-            projectFrameworkId: f.projectFrameworkId
-          })) || []
+          frameworks:
+            frameworksData?.map((f) => ({
+              id: f.frameworkId,
+              name: f.frameworkName,
+              projectFrameworkId: f.projectFrameworkId,
+            })) || [],
         });
         setIso42001CategoriesData([]);
         setIso27001CategoriesData([]);
@@ -271,7 +284,11 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
     ));
   };
 
-  const renderFrameworkSection = (categoriesData: CategoryData[], title: string, frameworkName: string) => {
+  const renderFrameworkSection = (
+    categoriesData: CategoryData[],
+    title: string,
+    frameworkName: string,
+  ) => {
     if (categoriesData.length === 0) return null;
 
     const handleCardClick = () => {
@@ -380,7 +397,9 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                   </Box>
 
                   {/* Statistics */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
@@ -389,7 +408,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                           fontWeight: 600,
                         }}
                       >
-                        {category.subClauses.filter(sub => sub.status === "Implemented").length}/
+                        {category.subClauses.filter((sub) => sub.status === "Implemented").length}/
                         {category.subClauses.length}
                       </Typography>
                       <Typography
@@ -409,8 +428,12 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                           fontWeight: 600,
                         }}
                       >
-                        {category.subClauses.filter(sub => sub.owner !== null && sub.owner !== undefined).length}/
-                        {category.subClauses.length}
+                        {
+                          category.subClauses.filter(
+                            (sub) => sub.owner !== null && sub.owner !== undefined,
+                          ).length
+                        }
+                        /{category.subClauses.length}
                       </Typography>
                       <Typography
                         sx={{

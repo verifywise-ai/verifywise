@@ -96,7 +96,14 @@ function ClickablePaletteItem({ item, onAdd }: ClickablePaletteItemProps) {
         <IconComponent size={16} strokeWidth={1.5} color={theme.palette.text.tertiary} />
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 500, color: theme.palette.text.primary, fontSize: "13px", lineHeight: 1.3 }}>
+        <Typography
+          sx={{
+            fontWeight: 500,
+            color: theme.palette.text.primary,
+            fontSize: "13px",
+            lineHeight: 1.3,
+          }}
+        >
           {item.label}
         </Typography>
         <Typography sx={{ color: theme.palette.other.icon, fontSize: "11px", lineHeight: 1.2 }}>
@@ -124,7 +131,13 @@ interface SuggestedCategoryProps {
   onAdd: (field: FormField) => void;
 }
 
-function SuggestedCategory({ category, questions, fieldCount, addedLabels, onAdd }: SuggestedCategoryProps) {
+function SuggestedCategory({
+  category,
+  questions,
+  fieldCount,
+  addedLabels,
+  onAdd,
+}: SuggestedCategoryProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -169,7 +182,9 @@ function SuggestedCategory({ category, questions, fieldCount, addedLabels, onAdd
         >
           <ChevronRight size={14} />
         </Box>
-        <Typography sx={{ fontWeight: 600, color: theme.palette.text.secondary, fontSize: "12px", flex: 1 }}>
+        <Typography
+          sx={{ fontWeight: 600, color: theme.palette.text.secondary, fontSize: "12px", flex: 1 }}
+        >
           {category}
         </Typography>
         <Typography sx={{ color: theme.palette.text.accent, fontSize: "11px" }}>
@@ -198,7 +213,12 @@ function SuggestedCategory({ category, questions, fieldCount, addedLabels, onAdd
               }}
             >
               <Typography
-                sx={{ flex: 1, color: theme.palette.text.tertiary, fontSize: "11.5px", lineHeight: 1.4 }}
+                sx={{
+                  flex: 1,
+                  color: theme.palette.text.tertiary,
+                  fontSize: "11.5px",
+                  lineHeight: 1.4,
+                }}
               >
                 {question.label}
               </Typography>
@@ -267,12 +287,23 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
         },
       }}
     >
-      <Typography sx={{ flex: 1, color: theme.palette.text.secondary, fontSize: "13px", lineHeight: 1.4, minWidth: 0 }}>
+      <Typography
+        sx={{
+          flex: 1,
+          color: theme.palette.text.secondary,
+          fontSize: "13px",
+          lineHeight: 1.4,
+          minWidth: 0,
+        }}
+      >
         {question.label}
       </Typography>
       <Box
         className="dismiss-icon"
-        onClick={(e) => { e.stopPropagation(); onDismiss(question); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss(question);
+        }}
         sx={{
           opacity: 0,
           transition: "opacity 0.15s ease",
@@ -282,7 +313,10 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
           color: theme.palette.text.accent,
           borderRadius: "4px",
           p: "2px",
-          "&:hover": { color: theme.palette.status.error.text, backgroundColor: theme.palette.background.main },
+          "&:hover": {
+            color: theme.palette.status.error.text,
+            backgroundColor: theme.palette.background.main,
+          },
         }}
       >
         <X size={13} />
@@ -321,55 +355,63 @@ export interface SuggestedQuestionsPanelProps {
   onAdd: (field: FormField) => void;
 }
 
-export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle, SuggestedQuestionsPanelProps>(
-  function SuggestedQuestionsPanel(
-    { fieldCount, existingFieldLabels, entityType, llmKeyId, onAdd },
-    ref
-  ) {
-    const theme = useTheme();
-    const hasLLM = !!llmKeyId;
+export const SuggestedQuestionsPanel = forwardRef<
+  SuggestedQuestionsPanelHandle,
+  SuggestedQuestionsPanelProps
+>(function SuggestedQuestionsPanel(
+  { fieldCount, existingFieldLabels, entityType, llmKeyId, onAdd },
+  ref,
+) {
+  const theme = useTheme();
+  const hasLLM = !!llmKeyId;
 
-    // Collapse state
-    const [isOpen, setIsOpen] = useState(true);
+  // Collapse state
+  const [isOpen, setIsOpen] = useState(true);
 
-    // Sparkle animation state — triggered when new questions arrive
-    const [isSparkleAnimating, setIsSparkleAnimating] = useState(false);
-    const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Sparkle animation state — triggered when new questions arrive
+  const [isSparkleAnimating, setIsSparkleAnimating] = useState(false);
+  const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const triggerSparkle = useCallback(() => {
-      setIsSparkleAnimating(true);
-      if (sparkleTimerRef.current) clearTimeout(sparkleTimerRef.current);
-      sparkleTimerRef.current = setTimeout(() => setIsSparkleAnimating(false), 2400);
-    }, []);
+  const triggerSparkle = useCallback(() => {
+    setIsSparkleAnimating(true);
+    if (sparkleTimerRef.current) clearTimeout(sparkleTimerRef.current);
+    sparkleTimerRef.current = setTimeout(() => setIsSparkleAnimating(false), 2400);
+  }, []);
 
-    // Track which questions have already been added (by label match)
-    const addedLabels = new Set(existingFieldLabels.map((l) => l.toLowerCase()));
+  // Track which questions have already been added (by label match)
+  const addedLabels = new Set(existingFieldLabels.map((l) => l.toLowerCase()));
 
-    // Track dismissed questions so they never come back
-    const [dismissedLabels, setDismissedLabels] = useState<Set<string>>(new Set());
+  // Track dismissed questions so they never come back
+  const [dismissedLabels, setDismissedLabels] = useState<Set<string>>(new Set());
 
-    // LLM state
-    const [llmQuestions, setLlmQuestions] = useState<LLMSuggestedQuestion[]>([]);
-    const [llmLoading, setLlmLoading] = useState(false);
-    const [llmError, setLlmError] = useState<string | null>(null);
-    const [llmFetched, setLlmFetched] = useState(false);
-    const abortRef = useRef<AbortController | null>(null);
-    // Debounce timer for re-fetch after field add
-    const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // LLM state
+  const [llmQuestions, setLlmQuestions] = useState<LLMSuggestedQuestion[]>([]);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [llmFetched, setLlmFetched] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  // Debounce timer for re-fetch after field add
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const buildContext = useCallback((extraDismissed?: string[]) => {
+  const buildContext = useCallback(
+    (extraDismissed?: string[]) => {
       const parts: string[] = [];
       if (existingFieldLabels.length > 0) {
         parts.push(`Existing fields: ${existingFieldLabels.join(", ")}`);
       }
       const allDismissed = [...dismissedLabels, ...(extraDismissed || [])];
       if (allDismissed.length > 0) {
-        parts.push(`Do NOT suggest these questions (already dismissed): ${allDismissed.join(", ")}`);
+        parts.push(
+          `Do NOT suggest these questions (already dismissed): ${allDismissed.join(", ")}`,
+        );
       }
       return parts.join(". ");
-    }, [existingFieldLabels, dismissedLabels]);
+    },
+    [existingFieldLabels, dismissedLabels],
+  );
 
-    const fetchLLMQuestions = useCallback(async (autoOpen?: boolean) => {
+  const fetchLLMQuestions = useCallback(
+    async (autoOpen?: boolean) => {
       if (!llmKeyId) return;
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
@@ -382,7 +424,7 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
           entityType,
           buildContext(),
           llmKeyId,
-          controller.signal
+          controller.signal,
         );
         if (!controller.signal.aborted) {
           const newQuestions = result.data || [];
@@ -402,10 +444,13 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
       } finally {
         if (!controller.signal.aborted) setLlmLoading(false);
       }
-    }, [llmKeyId, entityType, buildContext, triggerSparkle]);
+    },
+    [llmKeyId, entityType, buildContext, triggerSparkle],
+  );
 
-    // Fetch a single replacement question after dismissal
-    const fetchSingleReplacement = useCallback(async (dismissedLabel: string) => {
+  // Fetch a single replacement question after dismissal
+  const fetchSingleReplacement = useCallback(
+    async (dismissedLabel: string) => {
       if (!llmKeyId) return;
       const controller = new AbortController();
       try {
@@ -413,7 +458,7 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
           entityType,
           buildContext([dismissedLabel]) + ". Generate exactly 1 new question only.",
           llmKeyId,
-          controller.signal
+          controller.signal,
         );
         if (!controller.signal.aborted) {
           const newQuestions = result.data || [];
@@ -424,7 +469,7 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
                 !addedLabels.has(q.label.toLowerCase()) &&
                 !dismissedLabels.has(q.label) &&
                 q.label !== dismissedLabel &&
-                !llmQuestions.some((existing) => existing.label === q.label)
+                !llmQuestions.some((existing) => existing.label === q.label),
             );
             if (replacement) {
               setLlmQuestions((prev) => [...prev, replacement]);
@@ -434,210 +479,66 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
       } catch {
         // Silently fail — the question was already removed, no need to show an error
       }
-    }, [llmKeyId, entityType, buildContext, addedLabels, dismissedLabels, llmQuestions]);
+    },
+    [llmKeyId, entityType, buildContext, addedLabels, dismissedLabels, llmQuestions],
+  );
 
-    // Auto-fetch on mount when LLM key is set
-    useEffect(() => {
-      if (hasLLM && !llmFetched && !llmLoading) {
-        fetchLLMQuestions();
-        triggerSparkle();
-      }
-      return () => {
-        if (abortRef.current) abortRef.current.abort();
-      };
-    }, [hasLLM]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Cleanup timers on unmount
-    useEffect(() => {
-      return () => {
-        if (sparkleTimerRef.current) clearTimeout(sparkleTimerRef.current);
-        if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
-      };
-    }, []);
-
-    // Expose onFieldAdded to parent via ref (no-op now — re-fetch is not triggered on add)
-    useImperativeHandle(ref, () => ({
-      onFieldAdded: () => {},
-    }), []);
-
-    const handleAdd = useCallback(
-      (field: FormField) => {
-        onAdd(field);
-        // Remove from LLM list when added
-        setLlmQuestions((prev) => prev.filter((q) => q.label !== field.label));
-      },
-      [onAdd]
-    );
-
-    const handleDismiss = useCallback(
-      (question: LLMSuggestedQuestion) => {
-        // Permanently mark as dismissed
-        setDismissedLabels((prev) => new Set(prev).add(question.label));
-        // Remove from current list
-        setLlmQuestions((prev) => prev.filter((q) => q.label !== question.label));
-        // Fetch a single replacement in the background
-        fetchSingleReplacement(question.label);
-      },
-      [fetchSingleReplacement]
-    );
-
-    // Filter out already-added and dismissed questions
-    const filteredLLMQuestions = llmQuestions.filter(
-      (q) => !addedLabels.has(q.label.toLowerCase()) && !dismissedLabels.has(q.label)
-    );
-
-    // ── LLM mode ──
-    if (hasLLM) {
-      return (
-        <Box
-          sx={{
-            borderTop: `1px solid ${theme.palette.border.dark}`,
-            backgroundColor: theme.palette.background.accent,
-            flexShrink: 0,
-          }}
-        >
-          {/* Collapsible header */}
-          <Box
-            onClick={() => setIsOpen((prev) => !prev)}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              px: "16px",
-              py: "10px",
-              cursor: "pointer",
-              userSelect: "none",
-              "&:hover": { backgroundColor: theme.palette.background.fill },
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  animation: isSparkleAnimating
-                    ? `${sparkleShimmer} 0.8s ease-in-out 3`
-                    : `${sparkleIdle} 3s ease-in-out infinite`,
-                }}
-              >
-                <Sparkles size={14} color="#7c3aed" />
-              </Box>
-              <Typography
-                sx={{
-                  fontWeight: 600,
-                  color: "#7c3aed",
-                  fontSize: "13px",
-                  ...(isSparkleAnimating ? { animation: `${sparkleShimmer} 0.8s ease-in-out 3` } : {}),
-                }}
-              >
-                AI-suggested questions
-              </Typography>
-              {filteredLLMQuestions.length > 0 && !llmLoading && (
-                <Typography
-                  sx={{
-                    fontSize: "11px",
-                    color: theme.palette.text.accent,
-                    backgroundColor: theme.palette.background.fill,
-                    borderRadius: "10px",
-                    px: "6px",
-                    py: "1px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {filteredLLMQuestions.length}
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              {llmFetched && !llmLoading && (
-                <Box
-                  onClick={(e) => { e.stopPropagation(); setDismissedLabels(new Set()); fetchLLMQuestions(); }}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    color: theme.palette.text.accent,
-                    borderRadius: "4px",
-                    px: "6px",
-                    py: "2px",
-                    "&:hover": { backgroundColor: theme.palette.background.main, color: theme.palette.primary.main },
-                  }}
-                >
-                  <RefreshCw size={12} />
-                  <Typography sx={{ fontSize: "11px" }}>Regenerate</Typography>
-                </Box>
-              )}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  transition: "transform 0.2s ease",
-                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                  color: theme.palette.other.icon,
-                }}
-              >
-                <ChevronDown size={14} />
-              </Box>
-            </Box>
-          </Box>
-
-          <Collapse in={isOpen} timeout={300}>
-            <Box sx={{ px: "16px", pb: "12px" }}>
-              {llmLoading && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: "8px", py: "12px" }}>
-                  <CircularProgress size={16} sx={{ color: theme.palette.primary.main }} />
-                  <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
-                    Generating questions...
-                  </Typography>
-                </Box>
-              )}
-
-              {llmError && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: "6px", py: "8px" }}>
-                  <AlertCircle size={14} color={theme.palette.status.error.text} />
-                  <Typography sx={{ fontSize: "11px", color: theme.palette.status.error.text, flex: 1 }}>
-                    {llmError}
-                  </Typography>
-                  <CustomizableButton
-                    variant="text"
-                    onClick={() => fetchLLMQuestions()}
-                    sx={{ height: 24, fontSize: "11px", color: theme.palette.primary.main, minWidth: 0, px: "8px" }}
-                  >
-                    Retry
-                  </CustomizableButton>
-                </Box>
-              )}
-
-              {!llmLoading && !llmError && filteredLLMQuestions.length > 0 && (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {filteredLLMQuestions.map((question, index) => (
-                    <LLMQuestionItem
-                      key={`${question.label}-${index}`}
-                      question={question}
-                      fieldCount={fieldCount}
-                      onAdd={handleAdd}
-                      onDismiss={handleDismiss}
-                    />
-                  ))}
-                </Box>
-              )}
-
-              {!llmLoading && !llmError && llmFetched && filteredLLMQuestions.length === 0 && (
-                <Box sx={{ py: "8px" }}>
-                  <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
-                    All suggested questions have been added. Click regenerate for more.
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Collapse>
-        </Box>
-      );
+  // Auto-fetch on mount when LLM key is set
+  useEffect(() => {
+    if (hasLLM && !llmFetched && !llmLoading) {
+      fetchLLMQuestions();
+      triggerSparkle();
     }
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [hasLLM]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Hardcoded fallback ──
-    const grouped = groupByCategory(HARDCODED_SUGGESTED_QUESTIONS);
-    const categories = Object.keys(grouped);
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (sparkleTimerRef.current) clearTimeout(sparkleTimerRef.current);
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    };
+  }, []);
 
+  // Expose onFieldAdded to parent via ref (no-op now — re-fetch is not triggered on add)
+  useImperativeHandle(
+    ref,
+    () => ({
+      onFieldAdded: () => {},
+    }),
+    [],
+  );
+
+  const handleAdd = useCallback(
+    (field: FormField) => {
+      onAdd(field);
+      // Remove from LLM list when added
+      setLlmQuestions((prev) => prev.filter((q) => q.label !== field.label));
+    },
+    [onAdd],
+  );
+
+  const handleDismiss = useCallback(
+    (question: LLMSuggestedQuestion) => {
+      // Permanently mark as dismissed
+      setDismissedLabels((prev) => new Set(prev).add(question.label));
+      // Remove from current list
+      setLlmQuestions((prev) => prev.filter((q) => q.label !== question.label));
+      // Fetch a single replacement in the background
+      fetchSingleReplacement(question.label);
+    },
+    [fetchSingleReplacement],
+  );
+
+  // Filter out already-added and dismissed questions
+  const filteredLLMQuestions = llmQuestions.filter(
+    (q) => !addedLabels.has(q.label.toLowerCase()) && !dismissedLabels.has(q.label),
+  );
+
+  // ── LLM mode ──
+  if (hasLLM) {
     return (
       <Box
         sx={{
@@ -660,42 +561,208 @@ export const SuggestedQuestionsPanel = forwardRef<SuggestedQuestionsPanelHandle,
             "&:hover": { backgroundColor: theme.palette.background.fill },
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "13px" }}>
-            Suggested questions
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              transition: "transform 0.2s ease",
-              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-              color: theme.palette.other.icon,
-            }}
-          >
-            <ChevronDown size={14} />
+          <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Box
+              sx={{
+                display: "flex",
+                animation: isSparkleAnimating
+                  ? `${sparkleShimmer} 0.8s ease-in-out 3`
+                  : `${sparkleIdle} 3s ease-in-out infinite`,
+              }}
+            >
+              <Sparkles size={14} color="#7c3aed" />
+            </Box>
+            <Typography
+              sx={{
+                fontWeight: 600,
+                color: "#7c3aed",
+                fontSize: "13px",
+                ...(isSparkleAnimating
+                  ? { animation: `${sparkleShimmer} 0.8s ease-in-out 3` }
+                  : {}),
+              }}
+            >
+              AI-suggested questions
+            </Typography>
+            {filteredLLMQuestions.length > 0 && !llmLoading && (
+              <Typography
+                sx={{
+                  fontSize: "11px",
+                  color: theme.palette.text.accent,
+                  backgroundColor: theme.palette.background.fill,
+                  borderRadius: "10px",
+                  px: "6px",
+                  py: "1px",
+                  fontWeight: 500,
+                }}
+              >
+                {filteredLLMQuestions.length}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {llmFetched && !llmLoading && (
+              <Box
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDismissedLabels(new Set());
+                  fetchLLMQuestions();
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  color: theme.palette.text.accent,
+                  borderRadius: "4px",
+                  px: "6px",
+                  py: "2px",
+                  "&:hover": {
+                    backgroundColor: theme.palette.background.main,
+                    color: theme.palette.primary.main,
+                  },
+                }}
+              >
+                <RefreshCw size={12} />
+                <Typography sx={{ fontSize: "11px" }}>Regenerate</Typography>
+              </Box>
+            )}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                transition: "transform 0.2s ease",
+                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                color: theme.palette.other.icon,
+              }}
+            >
+              <ChevronDown size={14} />
+            </Box>
           </Box>
         </Box>
 
         <Collapse in={isOpen} timeout={300}>
           <Box sx={{ px: "16px", pb: "12px" }}>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {categories.map((category) => (
-                <SuggestedCategory
-                  key={category}
-                  category={category}
-                  questions={grouped[category]}
-                  fieldCount={fieldCount}
-                  addedLabels={addedLabels}
-                  onAdd={onAdd}
-                />
-              ))}
-            </Box>
+            {llmLoading && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: "8px", py: "12px" }}>
+                <CircularProgress size={16} sx={{ color: theme.palette.primary.main }} />
+                <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+                  Generating questions...
+                </Typography>
+              </Box>
+            )}
+
+            {llmError && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: "6px", py: "8px" }}>
+                <AlertCircle size={14} color={theme.palette.status.error.text} />
+                <Typography
+                  sx={{ fontSize: "11px", color: theme.palette.status.error.text, flex: 1 }}
+                >
+                  {llmError}
+                </Typography>
+                <CustomizableButton
+                  variant="text"
+                  onClick={() => fetchLLMQuestions()}
+                  sx={{
+                    height: 24,
+                    fontSize: "11px",
+                    color: theme.palette.primary.main,
+                    minWidth: 0,
+                    px: "8px",
+                  }}
+                >
+                  Retry
+                </CustomizableButton>
+              </Box>
+            )}
+
+            {!llmLoading && !llmError && filteredLLMQuestions.length > 0 && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {filteredLLMQuestions.map((question, index) => (
+                  <LLMQuestionItem
+                    key={`${question.label}-${index}`}
+                    question={question}
+                    fieldCount={fieldCount}
+                    onAdd={handleAdd}
+                    onDismiss={handleDismiss}
+                  />
+                ))}
+              </Box>
+            )}
+
+            {!llmLoading && !llmError && llmFetched && filteredLLMQuestions.length === 0 && (
+              <Box sx={{ py: "8px" }}>
+                <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+                  All suggested questions have been added. Click regenerate for more.
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Collapse>
       </Box>
     );
   }
-);
+
+  // ── Hardcoded fallback ──
+  const grouped = groupByCategory(HARDCODED_SUGGESTED_QUESTIONS);
+  const categories = Object.keys(grouped);
+
+  return (
+    <Box
+      sx={{
+        borderTop: `1px solid ${theme.palette.border.dark}`,
+        backgroundColor: theme.palette.background.accent,
+        flexShrink: 0,
+      }}
+    >
+      {/* Collapsible header */}
+      <Box
+        onClick={() => setIsOpen((prev) => !prev)}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          px: "16px",
+          py: "10px",
+          cursor: "pointer",
+          userSelect: "none",
+          "&:hover": { backgroundColor: theme.palette.background.fill },
+        }}
+      >
+        <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: "13px" }}>
+          Suggested questions
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            transition: "transform 0.2s ease",
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+            color: theme.palette.other.icon,
+          }}
+        >
+          <ChevronDown size={14} />
+        </Box>
+      </Box>
+
+      <Collapse in={isOpen} timeout={300}>
+        <Box sx={{ px: "16px", pb: "12px" }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {categories.map((category) => (
+              <SuggestedCategory
+                key={category}
+                category={category}
+                questions={grouped[category]}
+                fieldCount={fieldCount}
+                addedLabels={addedLabels}
+                onAdd={onAdd}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Collapse>
+    </Box>
+  );
+});
 
 interface FieldPaletteProps {
   disabled?: boolean;
@@ -703,11 +770,7 @@ interface FieldPaletteProps {
   onAddField: (field: FormField) => void;
 }
 
-export function FieldPalette({
-  disabled = false,
-  fieldCount = 0,
-  onAddField,
-}: FieldPaletteProps) {
+export function FieldPalette({ disabled = false, fieldCount = 0, onAddField }: FieldPaletteProps) {
   const theme = useTheme();
   const handleAddPaletteItem = (item: PaletteItem) => {
     const field = createFieldFromPalette(item, fieldCount);

@@ -4,7 +4,8 @@ export const ObligationsOfDeployersAIsystems = [
     title: "AI Act Compliance Policies and Guidelines",
     description:
       "Assign technical and organizational measures, along with human oversight, to ensure compliance with AI regulations and manage associated risks.",
-    implementation_details: "Currently implementing organizational measures and documentation framework",
+    implementation_details:
+      "Currently implementing organizational measures and documentation framework",
     subControls: [
       {
         order_no: 1,
@@ -49,9 +50,9 @@ export const ObligationsOfDeployersAIsystems = [
   {
     order_no: 3,
     title: "Compliance with AI System Instructions",
-    description:
-      "Regularly evaluate transparency and accountability issues related to AI systems.",
-    implementation_details: "Implementing measures to ensure compliance with AI system instructions.",
+    description: "Regularly evaluate transparency and accountability issues related to AI systems.",
+    implementation_details:
+      "Implementing measures to ensure compliance with AI system instructions.",
     subControls: [
       {
         order_no: 1,
@@ -78,14 +79,12 @@ export const ObligationsOfDeployersAIsystems = [
   {
     order_no: 4,
     title: "System Risk Controls Documentation",
-    description:
-      "Document system risk controls, including those for third-party components.",
+    description: "Document system risk controls, including those for third-party components.",
     implementation_details: "Documenting risk controls for AI systems and third-party components.",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We conduct thorough legal reviews relevant to AI system deployment.",
+        title: "We conduct thorough legal reviews relevant to AI system deployment.",
         description:
           "Legal reviews ensure AI systems comply with all applicable laws, minimizing regulatory and legal risks.",
         implementation_details: "Established a legal compliance framework for AI deployment",
@@ -94,8 +93,7 @@ export const ObligationsOfDeployersAIsystems = [
       },
       {
         order_no: 2,
-        title:
-          "We prioritize risk responses based on impact, likelihood, and resources.",
+        title: "We prioritize risk responses based on impact, likelihood, and resources.",
         description:
           "Prioritizing risks helps allocate resources effectively and address the most critical threats first.",
         implementation_details: "Risk prioritization framework implemented",
@@ -113,8 +111,7 @@ export const ObligationsOfDeployersAIsystems = [
       },
       {
         order_no: 4,
-        title:
-          "We evaluate if AI systems meet objectives and decide on deployment continuation.",
+        title: "We evaluate if AI systems meet objectives and decide on deployment continuation.",
         description:
           "Regular evaluations verify that systems are achieving their goals and remain suitable for continued use.",
         implementation_details: "Periodic evaluation process established",
@@ -132,8 +129,7 @@ export const ObligationsOfDeployersAIsystems = [
       },
       {
         order_no: 6,
-        title:
-          "We document system risk controls, including third-party components.",
+        title: "We document system risk controls, including third-party components.",
         description:
           "Comprehensive documentation of risk controls ensures accountability and supports audits or compliance checks.",
         implementation_details: "Detailed risk control documentation finalized",
@@ -145,14 +141,12 @@ export const ObligationsOfDeployersAIsystems = [
   {
     order_no: 5,
     title: "Transparency and Explainability Evaluation",
-    description:
-      "Regularly update compliance measures based on system or regulatory changes.",
+    description: "Regularly update compliance measures based on system or regulatory changes.",
     implementation_details: "Updating compliance measures to align with regulatory changes.",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We regularly update compliance measures based on system or regulatory changes.",
+        title: "We regularly update compliance measures based on system or regulatory changes.",
         description:
           "Ongoing updates ensure compliance measures remain aligned with evolving technologies and legal requirements.",
         implementation_details: "Scheduled quarterly compliance review meetings.",
@@ -183,14 +177,12 @@ export const ObligationsOfDeployersAIsystems = [
   {
     order_no: 7,
     title: "Transparency and Explainability Evaluation",
-    description:
-      "Maintain and update technical documentation reflecting AI system changes.",
+    description: "Maintain and update technical documentation reflecting AI system changes.",
     implementation_details: "Updating technical documentation to reflect recent changes.",
     subControls: [
       {
         order_no: 1,
-        title:
-          "We maintain and update technical documentation reflecting system changes.",
+        title: "We maintain and update technical documentation reflecting system changes.",
         description:
           "Up-to-date documentation ensures accurate representation of system functionalities and compliance status.",
         implementation_details: "Updated API documentation to reflect recent system updates.",

@@ -41,13 +41,10 @@ describe("Test Assessment Repository", () => {
 
       const response = await getAssessmentById({ id, signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/assessments/project/byid/123",
-        {
-          signal,
-          responseType: "json",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/assessments/project/byid/123", {
+        signal,
+        responseType: "json",
+      });
       expect(response).toEqual(mockResponse.data);
     });
 
@@ -68,13 +65,10 @@ describe("Test Assessment Repository", () => {
         responseType: "blob",
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/assessments/project/byid/123",
-        {
-          signal,
-          responseType: "blob",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/assessments/project/byid/123", {
+        signal,
+        responseType: "blob",
+      });
       expect(response).toEqual(mockResponse.data);
     });
   });
@@ -156,10 +150,9 @@ describe("Test Assessment Repository", () => {
         signal,
       });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/eu-ai-act/assessments/progress/10",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/eu-ai-act/assessments/progress/10", {
+        signal,
+      });
       expect(response).toEqual(mockResponse.data);
     });
   });
@@ -177,9 +170,7 @@ describe("Test Assessment Repository", () => {
 
       const response = await getAssessmentAnswers({ assessmentId });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/assessments/getAnswaers/99",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/assessments/getAnswaers/99");
       expect(response).toEqual(mockResponse.data);
     });
   });

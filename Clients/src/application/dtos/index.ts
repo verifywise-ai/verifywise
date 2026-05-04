@@ -1,6 +1,6 @@
 /**
  * DTOs (Data Transfer Objects) Index
- * 
+ *
  * Central export point for all DTOs.
  * DTOs represent the data structure as it comes from the API,
  * providing a clear boundary between infrastructure and domain layers.
@@ -41,9 +41,4 @@ export type {
 } from "./task.dto";
 
 // Vendor DTOs
-export type {
-  VendorResponseDTO,
-  CreateVendorDTO,
-  UpdateVendorDTO,
-} from "./vendor.dto";
-
+export type { VendorResponseDTO, CreateVendorDTO, UpdateVendorDTO } from "./vendor.dto";

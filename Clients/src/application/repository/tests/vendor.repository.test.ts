@@ -204,7 +204,9 @@ describe("vendor.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(createNewVendor({ body: { name: "Test" } })).rejects.toThrow("Connection refused");
+      await expect(createNewVendor({ body: { name: "Test" } })).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 

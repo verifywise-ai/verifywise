@@ -36,10 +36,7 @@ export type {
   ProjectProgressData,
 } from "./IProjectRepository";
 
-export type {
-  ITaskRepository,
-  TaskFilterOptions,
-} from "./ITaskRepository";
+export type { ITaskRepository, TaskFilterOptions } from "./ITaskRepository";
 
 export type {
   IVendorRepository,

@@ -27,11 +27,9 @@ const Home = () => {
     refreshUsers,
     userRoleName,
   } = useContext(VerifyWiseContext);
-  const [isProjectFormModalOpen, setIsProjectFormModalOpen] =
-    useState<boolean>(false);
+  const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState<boolean>(false);
   const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
-  const [refreshProjectsFlag, setRefreshProjectsFlag] =
-    useState<boolean>(false);
+  const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const { dashboard, fetchDashboard } = useDashboard();
@@ -90,7 +88,6 @@ const Home = () => {
     <PageHeaderExtended
       title="Use cases"
       description="Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome."
-
       helpArticlePath="ai-governance/use-cases"
       tipBoxEntity="overview"
     >

@@ -26,9 +26,7 @@ describe("Test Model Inventory Change History Repository", () => {
       await getModelInventoryChangeHistory(5);
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/modelInventoryChangeHistory/5",
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/modelInventoryChangeHistory/5");
     });
 
     it("should return the response data on successful API call", async () => {
@@ -60,19 +58,13 @@ describe("Test Model Inventory Change History Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getModelInventoryChangeHistory(99)).rejects.toEqual(
-        mockError,
-      );
+      await expect(getModelInventoryChangeHistory(99)).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getModelInventoryChangeHistory(5)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getModelInventoryChangeHistory(5)).rejects.toThrow("Network timeout");
     });
   });
 });

@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -71,8 +71,12 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query('DROP TABLE IF EXISTS verifywise.agent_audit_log CASCADE');
-    await queryInterface.sequelize.query('DROP TABLE IF EXISTS verifywise.agent_discovery_sync_log CASCADE');
-    await queryInterface.sequelize.query('DROP TABLE IF EXISTS verifywise.agent_primitives CASCADE');
-  }
+    await queryInterface.sequelize.query("DROP TABLE IF EXISTS verifywise.agent_audit_log CASCADE");
+    await queryInterface.sequelize.query(
+      "DROP TABLE IF EXISTS verifywise.agent_discovery_sync_log CASCADE",
+    );
+    await queryInterface.sequelize.query(
+      "DROP TABLE IF EXISTS verifywise.agent_primitives CASCADE",
+    );
+  },
 };

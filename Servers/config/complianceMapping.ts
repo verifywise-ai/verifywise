@@ -19,10 +19,7 @@ export type ComplianceCategory =
   | "monitoring"
   | "accountability";
 
-export type DocumentationRequirement =
-  | "required"
-  | "recommended"
-  | "conditional";
+export type DocumentationRequirement = "required" | "recommended" | "conditional";
 
 export interface ComplianceRequirement {
   id: string;
@@ -115,8 +112,7 @@ export const COMPLIANCE_REQUIREMENTS: Record<string, ComplianceRequirement> = {
     id: "RISK_002",
     articleRef: "Article 9(2)",
     title: "Third-Party AI Risk Assessment",
-    description:
-      "Assess and document risks from third-party AI services and dependencies.",
+    description: "Assess and document risks from third-party AI services and dependencies.",
     category: "risk_management",
     documentationRequired: "required",
     checklistItems: [
@@ -132,8 +128,7 @@ export const COMPLIANCE_REQUIREMENTS: Record<string, ComplianceRequirement> = {
     id: "DATA_001",
     articleRef: "Article 10",
     title: "Training Data Governance",
-    description:
-      "Ensure proper governance of training, validation, and testing data sets.",
+    description: "Ensure proper governance of training, validation, and testing data sets.",
     category: "data_governance",
     documentationRequired: "required",
     checklistItems: [
@@ -179,8 +174,7 @@ export const COMPLIANCE_REQUIREMENTS: Record<string, ComplianceRequirement> = {
     id: "DOC_002",
     articleRef: "Article 11(1)",
     title: "AI Library Documentation",
-    description:
-      "Document all AI/ML libraries, their versions, and licensing information.",
+    description: "Document all AI/ML libraries, their versions, and licensing information.",
     category: "documentation",
     documentationRequired: "required",
     checklistItems: [
@@ -196,8 +190,7 @@ export const COMPLIANCE_REQUIREMENTS: Record<string, ComplianceRequirement> = {
     id: "HUMAN_001",
     articleRef: "Article 14",
     title: "Human Oversight Mechanisms",
-    description:
-      "Implement appropriate human oversight measures for AI system operation.",
+    description: "Implement appropriate human oversight measures for AI system operation.",
     category: "human_oversight",
     documentationRequired: "required",
     checklistItems: [
@@ -279,8 +272,7 @@ export const COMPLIANCE_REQUIREMENTS: Record<string, ComplianceRequirement> = {
     id: "ACC_001",
     articleRef: "Article 17",
     title: "Quality Management System",
-    description:
-      "Implement quality management procedures for AI system development and operation.",
+    description: "Implement quality management procedures for AI system development and operation.",
     category: "accountability",
     documentationRequired: "required",
     checklistItems: [
@@ -390,11 +382,7 @@ export const FINDING_COMPLIANCE_MAPPINGS: FindingComplianceMapping[] = [
   {
     findingType: "secret",
     requirements: ["SEC_001", "SEC_002", "ACC_001"],
-    riskFactors: [
-      "Credential exposure",
-      "Unauthorized access",
-      "Data breach potential",
-    ],
+    riskFactors: ["Credential exposure", "Unauthorized access", "Data breach potential"],
     documentationNeeds: [
       "Secret type and purpose",
       "Storage mechanism",
@@ -453,14 +441,12 @@ export const PROVIDER_SPECIFIC_REQUIREMENTS: Record<string, string[]> = {
  */
 export function getComplianceRequirementsForFinding(
   findingType: string,
-  provider?: string
+  provider?: string,
 ): ComplianceRequirement[] {
   const requirements = new Set<string>();
 
   // Get requirements from finding type mapping
-  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find(
-    (m) => m.findingType === findingType
-  );
+  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find((m) => m.findingType === findingType);
   if (typeMapping) {
     typeMapping.requirements.forEach((r) => requirements.add(r));
   }
@@ -479,9 +465,7 @@ export function getComplianceRequirementsForFinding(
  * Get risk factors for a finding
  */
 export function getRiskFactorsForFinding(findingType: string): string[] {
-  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find(
-    (m) => m.findingType === findingType
-  );
+  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find((m) => m.findingType === findingType);
   return typeMapping?.riskFactors || [];
 }
 
@@ -489,9 +473,7 @@ export function getRiskFactorsForFinding(findingType: string): string[] {
  * Get documentation needs for a finding
  */
 export function getDocumentationNeedsForFinding(findingType: string): string[] {
-  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find(
-    (m) => m.findingType === findingType
-  );
+  const typeMapping = FINDING_COMPLIANCE_MAPPINGS.find((m) => m.findingType === findingType);
   return typeMapping?.documentationNeeds || [];
 }
 
@@ -509,10 +491,7 @@ export function getComplianceCategories(): ComplianceCategory[] {
 /**
  * Group requirements by category
  */
-export function groupRequirementsByCategory(): Record<
-  ComplianceCategory,
-  ComplianceRequirement[]
-> {
+export function groupRequirementsByCategory(): Record<ComplianceCategory, ComplianceRequirement[]> {
   const grouped: Record<ComplianceCategory, ComplianceRequirement[]> = {
     transparency: [],
     documentation: [],

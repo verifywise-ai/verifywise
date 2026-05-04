@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Extend the CHECK constraint on `approval_workflows.entity_type` to include

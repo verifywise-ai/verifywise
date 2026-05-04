@@ -24,13 +24,16 @@ vi.mock("react", async () => {
 
 vi.mock("react-redux", () => ({
   useSelector: vi.fn((fn: any) =>
-    fn({ auth: { onboardingStatus: "pending", isOrgCreator: true } })
+    fn({ auth: { onboardingStatus: "pending", isOrgCreator: true } }),
   ),
   useDispatch: () => vi.fn(),
 }));
 
 vi.mock("../../redux/auth/authSlice", () => ({
-  setOnboardingStatus: vi.fn((status: string) => ({ type: "auth/setOnboardingStatus", payload: status })),
+  setOnboardingStatus: vi.fn((status: string) => ({
+    type: "auth/setOnboardingStatus",
+    payload: status,
+  })),
 }));
 
 import { useOnboarding } from "../useOnboarding";

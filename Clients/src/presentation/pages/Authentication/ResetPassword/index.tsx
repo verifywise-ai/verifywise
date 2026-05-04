@@ -36,8 +36,7 @@ const ResetPassword = () => {
   const [values, setValues] = useState<FormValues>(initialState);
 
   const handleChange =
-    (field: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues({ ...values, [field]: event.target.value });
     };
 
@@ -61,7 +60,9 @@ const ResetPassword = () => {
     handleAlert({
       variant: response.status === 200 ? "success" : "error",
       body:
-        response.status === 200 ? "If an account exists with this email, we'll send a password reset link" : "Request failed",
+        response.status === 200
+          ? "If an account exists with this email, we'll send a password reset link"
+          : "Request failed",
       setAlert,
     });
   };
@@ -122,9 +123,7 @@ const ResetPassword = () => {
           <Email size={24} />
         </Stack>
         <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
-          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-            Check your email
-          </Typography>
+          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Check your email</Typography>
           <Typography fontSize={13} color={`${text.tertiary}`}>
             If an account exists with this email, we'll send a password reset link
           </Typography>

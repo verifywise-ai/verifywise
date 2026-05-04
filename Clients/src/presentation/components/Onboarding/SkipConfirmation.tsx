@@ -11,11 +11,7 @@ interface SkipConfirmationProps {
   onCancel: () => void;
 }
 
-const SkipConfirmation: React.FC<SkipConfirmationProps> = ({
-  open,
-  onConfirm,
-  onCancel,
-}) => {
+const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, onCancel }) => {
   const theme = useTheme();
 
   useModalKeyHandling({
@@ -59,18 +55,10 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({
           },
         }}
       >
-        <Typography
-          id="modal-skip-onboarding"
-          fontSize={16}
-          fontWeight={600}
-        >
+        <Typography id="modal-skip-onboarding" fontSize={16} fontWeight={600}>
           {SKIP_CONFIRMATION_TEXT.title}
         </Typography>
-        <Typography
-          id="skip-onboarding-confirmation"
-          fontSize={13}
-          textAlign={"left"}
-        >
+        <Typography id="skip-onboarding-confirmation" fontSize={13} textAlign={"left"}>
           {SKIP_CONFIRMATION_TEXT.message}
         </Typography>
         <Stack

@@ -6,23 +6,15 @@ export const STATUSES = [
   "Awaiting approval",
   "Implemented",
   // "Audited",
-  "Needs rework"
+  "Needs rework",
 ] as const;
 
-export type Status = typeof STATUSES[number];
+export type Status = (typeof STATUSES)[number];
 
-export const STATUSES_COMPLIANCE = [
-  "Waiting",
-  "In progress",
-  "Done"
-]
+export const STATUSES_COMPLIANCE = ["Waiting", "In progress", "Done"];
 
-export type StatusCompliance = typeof STATUSES_COMPLIANCE[number];
+export type StatusCompliance = (typeof STATUSES_COMPLIANCE)[number];
 
-export const STATUSES_ANSWERS = [
-  "Not started",
-  "In progress",
-  "Done"
-]
+export const STATUSES_ANSWERS = ["Not started", "In progress", "Done"];
 
-export type StatusAnswers = typeof STATUSES_ANSWERS[number];
+export type StatusAnswers = (typeof STATUSES_ANSWERS)[number];

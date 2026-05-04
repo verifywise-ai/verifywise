@@ -150,7 +150,7 @@ export interface ControllerResult<T> {
  */
 export function controllerWrapper<T>(
   handler: (req: Request, res: Response) => Promise<ControllerResult<T>>,
-  options: ControllerOptions<T>
+  options: ControllerOptions<T>,
 ): (req: Request, res: Response) => Promise<Response> {
   return async (req: Request, res: Response): Promise<Response> => {
     const {
@@ -189,9 +189,7 @@ export function controllerWrapper<T>(
         tenantId: req.tenantId!,
       });
 
-      return res
-        .status(result.status)
-        .json(STATUS_CODE[result.status](result.data));
+      return res.status(result.status).json(STATUS_CODE[result.status](result.data));
     } catch (error) {
       const err = error as Error;
 

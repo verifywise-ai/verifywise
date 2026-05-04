@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Box, Card, CardContent, Typography, Stack, FormControl, Select, MenuItem } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  FormControl,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { Play, Clock } from "lucide-react";
 import {
   getAllExperiments,
@@ -15,7 +24,10 @@ import NewExperimentModal from "./NewExperimentModal";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useNavigate } from "react-router-dom";
 import EvaluationTable from "../../components/Table/EvaluationTable";
-import PerformanceChart, { TIME_RANGE_OPTIONS, type TimeRange } from "./components/PerformanceChart";
+import PerformanceChart, {
+  TIME_RANGE_OPTIONS,
+  type TimeRange,
+} from "./components/PerformanceChart";
 import type { IEvaluationRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
 import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
@@ -55,10 +67,15 @@ interface AlertState {
 function shortenModelName(modelName: string): string {
   if (!modelName) return modelName;
   // Remove date patterns like -20250514 or -2024-05-13 from the end
-  return modelName.replace(/-\d{8}$/, '').replace(/-\d{4}-\d{2}-\d{2}$/, '');
+  return modelName.replace(/-\d{8}$/, "").replace(/-\d{4}-\d{2}-\d{2}$/, "");
 }
 
-export default function ProjectExperiments({ projectId, orgId, onViewExperiment, useCase }: ProjectExperimentsProps) {
+export default function ProjectExperiments({
+  projectId,
+  orgId,
+  onViewExperiment,
+  useCase,
+}: ProjectExperimentsProps) {
   const navigate = useNavigate();
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
@@ -102,13 +119,13 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
 
   useEffect(() => {
     loadExperiments();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Auto-poll when there are running experiments
   useEffect(() => {
     const hasRunningExperiments = experiments.some(
-      (exp) => exp.status === "running" || exp.status === "pending"
+      (exp) => exp.status === "running" || exp.status === "pending",
     );
 
     // Clear existing interval
@@ -129,7 +146,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         clearInterval(pollIntervalRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experiments]);
 
   // Detect when running experiments complete and refresh the chart + notify user
@@ -137,23 +154,23 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     const currentRunningIds = new Set(
       experiments
         .filter((exp) => exp.status === "running" || exp.status === "pending")
-        .map((exp) => exp.id)
+        .map((exp) => exp.id),
     );
 
     // Check if any previously running experiments are now completed or failed
     const prevRunning = prevRunningIdsRef.current;
     let anyCompleted = false;
     const completedExps: { name: string; status: string }[] = [];
-    
+
     prevRunning.forEach((id) => {
       if (!currentRunningIds.has(id)) {
         // This experiment was running but is no longer running (completed or failed)
         const exp = experiments.find((e) => e.id === id);
         if (exp && (exp.status === "completed" || exp.status === "failed")) {
           anyCompleted = true;
-          completedExps.push({ 
-            name: exp.name || exp.id, 
-            status: exp.status 
+          completedExps.push({
+            name: exp.name || exp.id,
+            status: exp.status,
           });
         }
       }
@@ -165,7 +182,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     // If any experiment just completed/failed, refresh the chart and show notification
     if (anyCompleted) {
       setChartRefreshKey((prev) => prev + 1);
-      
+
       // Show notification for each completed/failed experiment
       completedExps.forEach((exp) => {
         if (exp.status === "completed") {
@@ -173,7 +190,10 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           // Auto-dismiss success alerts after 5 seconds
           setTimeout(() => setAlert(null), 5000);
         } else {
-          setAlert({ variant: "error", body: `Experiment "${exp.name}" failed. Check logs for details.` });
+          setAlert({
+            variant: "error",
+            body: `Experiment "${exp.name}" failed. Check logs for details.`,
+          });
           setTimeout(() => setAlert(null), 20000);
         }
       });
@@ -184,26 +204,27 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     try {
       setLoading(true);
       const data = await getAllExperiments({
-        project_id: projectId
+        project_id: projectId,
       });
 
       // Use pre-computed avg_scores from experiment results (no need to fetch logs)
       const experimentsWithMetrics = (data.experiments || []).map((exp: Experiment) => {
         // Get prompt count from config or results
-        const sampleCount = exp.results?.total_prompts || 
-                           exp.config?.dataset?.count || 
-                                    exp.config?.dataset?.prompts?.length || 
-                                    0;
-          
+        const sampleCount =
+          exp.results?.total_prompts ||
+          exp.config?.dataset?.count ||
+          exp.config?.dataset?.prompts?.length ||
+          0;
+
         // Use pre-computed avg_scores from results (computed when experiment completes)
         // This eliminates N individual log requests!
         const avgMetrics = exp.results?.avg_scores || {};
 
-            return {
-              ...exp,
-              avgMetrics,
+        return {
+          ...exp,
+          avgMetrics,
           sampleCount,
-            };
+        };
       });
 
       setExperiments(experimentsWithMetrics);
@@ -249,7 +270,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
       };
 
       setAlert({ variant: "success", body: "Starting new evaluation run..." });
-      
+
       const response = await createExperiment(payload);
 
       if (response?.experiment?.id) {
@@ -261,7 +282,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           status: "running",
           created_at: new Date().toISOString(),
         });
-        
+
         setAlert({ variant: "success", body: `Rerun started: ${nextName}` });
         setTimeout(() => setAlert(null), 3000);
       }
@@ -304,7 +325,9 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         if (!validation.valid) {
           // Show warning modal but allow user to proceed
           setApiKeyWarning({
-            message: validation.error_message || `API key for ${validation.provider || modelProvider} is not configured.`,
+            message:
+              validation.error_message ||
+              `API key for ${validation.provider || modelProvider} is not configured.`,
             pendingExperiment: originalExp,
           });
           return;
@@ -333,7 +356,9 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
   const handleDownloadExperiment = async (row: IEvaluationRow) => {
     try {
       const experimentData = await getExperiment(row.id);
-      const blob = new Blob([JSON.stringify(experimentData, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(experimentData, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -362,9 +387,15 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     }
   };
 
-  const handleStarted = (exp: { id: string; name?: string; config: Record<string, unknown>; status: string; created_at?: string }) => {
-    const cfg = exp.config as { 
-      model?: { name?: string }; 
+  const handleStarted = (exp: {
+    id: string;
+    name?: string;
+    config: Record<string, unknown>;
+    status: string;
+    created_at?: string;
+  }) => {
+    const cfg = exp.config as {
+      model?: { name?: string };
       judgeLlm?: { model?: string; provider?: string };
       dataset?: { count?: number; prompts?: unknown[] };
     };
@@ -375,9 +406,9 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     };
     // Get prompt count from config
     const promptCount = cfg.dataset?.count || cfg.dataset?.prompts?.length || 0;
-    
+
     setExperiments((prev) => [
-      ({
+      {
         id: exp.id,
         project_id: projectId,
         name: exp.name || exp.id,
@@ -395,7 +426,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         created_by: undefined,
         avgMetrics: {},
         sampleCount: promptCount,
-      } as unknown as ExperimentWithMetrics),
+      } as unknown as ExperimentWithMetrics,
       ...prev,
     ]);
   };
@@ -418,17 +449,19 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
       { id: "model", label: "Model", type: "text" },
       { id: "judge", label: "Judge", type: "text" },
     ],
-    []
+    [],
   );
 
   const getExperimentFieldValue = useCallback(
     (exp: ExperimentWithMetrics, fieldId: string): string | number | Date | null | undefined => {
-      const cfg = exp.config as {
-        model?: { name?: string };
-        judgeLlm?: { model?: string; provider?: string };
-        evaluationMode?: string;
-        scorerName?: string;
-      } | undefined;
+      const cfg = exp.config as
+        | {
+            model?: { name?: string };
+            judgeLlm?: { model?: string; provider?: string };
+            evaluationMode?: string;
+            scorerName?: string;
+          }
+        | undefined;
 
       switch (fieldId) {
         case "name":
@@ -449,20 +482,23 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           return "";
       }
     },
-    []
+    [],
   );
 
-  const { filterData, handleFilterChange } = useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
+  const { filterData, handleFilterChange } =
+    useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
 
   const filteredExperiments = useMemo(() => {
     const afterFilter = filterData(experiments);
     if (!searchTerm.trim()) return afterFilter;
     const q = searchTerm.toLowerCase();
     return afterFilter.filter((exp) => {
-      const cfg = exp.config as {
-        model?: { name?: string };
-        judgeLlm?: { model?: string; provider?: string };
-      } | undefined;
+      const cfg = exp.config as
+        | {
+            model?: { name?: string };
+            judgeLlm?: { model?: string; provider?: string };
+          }
+        | undefined;
 
       const text = [
         exp.id,
@@ -481,7 +517,16 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
   }, [experiments, filterData, searchTerm]);
 
   // Transform to table format
-  const tableColumns = ["EXPERIMENT NAME", "MODEL", "JUDGE/SCORER", "# PROMPTS", "DATASET", "LINKED MODEL", "DATE", "ACTION"];
+  const tableColumns = [
+    "EXPERIMENT NAME",
+    "MODEL",
+    "JUDGE/SCORER",
+    "# PROMPTS",
+    "DATASET",
+    "LINKED MODEL",
+    "DATE",
+    "ACTION",
+  ];
 
   const tableRows: IEvaluationRow[] = filteredExperiments.map((exp) => {
     // Get dataset name from config - try multiple sources
@@ -507,12 +552,12 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
         datasetName = "Template";
       }
     }
-    
+
     // Format the date with time
-    const createdDate = exp.created_at 
-      ? new Date(exp.created_at).toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
+    const createdDate = exp.created_at
+      ? new Date(exp.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
@@ -524,7 +569,7 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
     const judgeModelRaw = exp.config?.judgeLlm?.model || exp.config?.judgeLlm?.provider || "";
     const judgeModel = shortenModelName(judgeModelRaw);
     const scorerName = exp.config?.scorerName || "";
-    
+
     let judgeDisplay = "-";
     if (evaluationMode === "scorer" && scorerName) {
       judgeDisplay = `${scorerName}`;
@@ -548,10 +593,13 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
       linkedModel: exp.model_inventory_id ?? null,
       date: createdDate,
       status:
-        exp.status === "completed" ? "Completed" :
-        exp.status === "failed" ? "Failed" :
-        exp.status === "running" ? "Running" :
-        "Pending",
+        exp.status === "completed"
+          ? "Completed"
+          : exp.status === "failed"
+            ? "Failed"
+            : exp.status === "running"
+              ? "Running"
+              : "Pending",
     };
   });
 
@@ -588,7 +636,8 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           body={
             <Box>
               <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: 2 }}>
-                This will create a new experiment run using the same configuration as "{rerunConfirm.experiment.name}".
+                This will create a new experiment run using the same configuration as "
+                {rerunConfirm.experiment.name}".
               </Typography>
               {rerunConfirm.promptCount > 0 && (
                 <Box
@@ -608,7 +657,8 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
                       Estimated time: {getEstimatedTimeRange(rerunConfirm.promptCount)}
                     </Typography>
                     <Typography sx={{ fontSize: "11px", color: "#16A34A" }}>
-                      Based on {rerunConfirm.promptCount} prompt{rerunConfirm.promptCount !== 1 ? "s" : ""} from the original run
+                      Based on {rerunConfirm.promptCount} prompt
+                      {rerunConfirm.promptCount !== 1 ? "s" : ""} from the original run
                     </Typography>
                   </Box>
                 </Box>
@@ -635,7 +685,8 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           body={
             <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6 }}>
               {apiKeyWarning.message}
-              <br /><br />
+              <br />
+              <br />
               Do you want to run the experiment anyway?
             </Typography>
           }
@@ -660,19 +711,35 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           </Typography>
           <HelperIcon articlePath="llm-evals/running-experiments" />
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: "14px" }}>
-          Experiments run evaluations on your models using datasets and scorers. Track performance metrics over time and compare different model configurations.
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ lineHeight: 1.6, fontSize: "14px" }}
+        >
+          Experiments run evaluations on your models using datasets and scorers. Track performance
+          metrics over time and compare different model configurations.
         </Typography>
         <TipBox entityName="evals-experiments" />
       </Stack>
 
       {/* Performance Chart */}
-      <Card sx={{ marginBottom: "16px", border: "1px solid #d0d5dd", borderRadius: "4px", boxShadow: "none" }}>
+      <Card
+        sx={{
+          marginBottom: "16px",
+          border: "1px solid #d0d5dd",
+          borderRadius: "4px",
+          boxShadow: "none",
+        }}
+      >
         <CardContent sx={{ py: 2 }}>
           <Box mb={1}>
-            <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>Performance tracking</Typography>
+            <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>
+              Performance tracking
+            </Typography>
           </Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
+          >
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
               Track metric scores across eval runs
             </Typography>
@@ -699,11 +766,17 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
           </Box>
 
           <Box sx={{ position: "relative" }}>
-            <Box sx={{
-              filter: experiments.length === 0 ? "blur(4px)" : "none",
-              pointerEvents: experiments.length === 0 ? "none" : "auto",
-            }}>
-              <PerformanceChart key={`chart-${chartRefreshKey}`} projectId={projectId} timeRange={chartTimeRange} />
+            <Box
+              sx={{
+                filter: experiments.length === 0 ? "blur(4px)" : "none",
+                pointerEvents: experiments.length === 0 ? "none" : "auto",
+              }}
+            >
+              <PerformanceChart
+                key={`chart-${chartRefreshKey}`}
+                projectId={projectId}
+                timeRange={chartTimeRange}
+              />
             </Box>
             {experiments.length === 0 && (
               <Box
@@ -738,7 +811,13 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
       </Card>
 
       {/* Filters + Search + Group directly above the table */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ marginBottom: "18px" }} gap={2}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ marginBottom: "18px" }}
+        gap={2}
+      >
         <Stack direction="row" alignItems="center" gap={2}>
           <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
@@ -780,9 +859,13 @@ export default function ProjectExperiments({ projectId, orgId, onViewExperiment,
             <EvaluationTable
               columns={tableColumns}
               rows={data}
-              removeModel={canDeleteExperiment ? {
-                onConfirm: handleDeleteExperiment,
-              } : undefined}
+              removeModel={
+                canDeleteExperiment
+                  ? {
+                      onConfirm: handleDeleteExperiment,
+                    }
+                  : undefined
+              }
               page={currentPage}
               setCurrentPagingation={setCurrentPage}
               onShowDetails={handleViewExperiment}

@@ -33,7 +33,7 @@ import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../utils/user.utils";
-import { asyncLocalStorage } from '../utils/context/context';
+import { asyncLocalStorage } from "../utils/context/context";
 
 /**
  * Role ID to role name mapping for validation
@@ -49,7 +49,7 @@ export const roleMap = new Map([
   [3, "Editor"],
   [4, "Auditor"],
   [5, "SuperAdmin"],
-])
+]);
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -98,7 +98,7 @@ export const roleMap = new Map([
 const authenticateJWT = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void | Response> => {
   // Extract Bearer token from Authorization header
   const token = req.headers.authorization?.split(" ")[1];
@@ -107,7 +107,7 @@ const authenticateJWT = async (
     return res.status(400).json(
       STATUS_CODE[400]({
         message: "Token not found",
-      })
+      }),
     );
   }
 
@@ -119,33 +119,31 @@ const authenticateJWT = async (
       return res.status(401).json(
         STATUS_CODE[401]({
           message: "Unauthorized **",
-        })
+        }),
       );
 
     // Check token expiration
     if (decoded.expire < Date.now())
-      return res
-        .status(406)
-        .json(STATUS_CODE[406]({ message: "Token expired" }));
+      return res.status(406).json(STATUS_CODE[406]({ message: "Token expired" }));
 
     // Validate payload structure
     if (
       !decoded.id ||
-      typeof decoded.id !== 'number' ||
+      typeof decoded.id !== "number" ||
       decoded.id <= 0 ||
       !decoded.roleName ||
-      typeof decoded.roleName !== 'string'
+      typeof decoded.roleName !== "string"
     ) {
-      return res.status(400).json({ message: 'Invalid token' });
+      return res.status(400).json({ message: "Invalid token" });
     }
 
     // Validate role hasn't changed since token was issued
-    const user = await getUserByIdQuery(decoded.id)
+    const user = await getUserByIdQuery(decoded.id);
     if (decoded.roleName !== roleMap.get(user.role_id)) {
-      return res.status(403).json({ message: 'Not allowed to access' });
+      return res.status(403).json({ message: "Not allowed to access" });
     }
 
-    const isSuperAdmin = decoded.roleName === 'SuperAdmin';
+    const isSuperAdmin = decoded.roleName === "SuperAdmin";
 
     if (isSuperAdmin) {
       // Super-admin: skip org membership check, resolve org from header
@@ -154,13 +152,13 @@ const authenticateJWT = async (
 
       req.role = decoded.roleName;
 
-      const headerOrgId = req.headers['x-organization-id'];
+      const headerOrgId = req.headers["x-organization-id"];
       if (headerOrgId) {
         const orgId = parseInt(headerOrgId as string, 10);
         if (!isNaN(orgId) && orgId > 0) {
           req.organizationId = orgId;
           req.tenantId = orgId;
-          const { getTenantHash } = require('../tools/getTenantHash');
+          const { getTenantHash } = require("../tools/getTenantHash");
           req.tenantHash = getTenantHash(orgId);
         }
       }
@@ -169,7 +167,7 @@ const authenticateJWT = async (
       // Normal user: verify org membership
       const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
       if (!belongs.belongs) {
-        return res.status(403).json({ message: 'User does not belong to this organization' });
+        return res.status(403).json({ message: "User does not belong to this organization" });
       }
 
       // Attach user context to request for downstream handlers
@@ -181,29 +179,33 @@ const authenticateJWT = async (
       req.tenantId = decoded.organizationId;
       // tenantHash is the schema name derived from organizationId
       // Use for schema-qualified queries: FROM "${tenantHash}".table_name
-      const { getTenantHash } = require('../tools/getTenantHash');
+      const { getTenantHash } = require("../tools/getTenantHash");
       req.tenantHash = getTenantHash(decoded.organizationId);
     }
 
     // Enforce read-only mode for super-admin viewing an org
     if (req.isSuperAdmin && req.organizationId) {
-      const readOnlyMethods = ['GET', 'HEAD', 'OPTIONS'];
-      const isSuperAdminRoute = req.path.startsWith('/api/super-admin') || req.baseUrl?.startsWith('/api/super-admin');
+      const readOnlyMethods = ["GET", "HEAD", "OPTIONS"];
+      const isSuperAdminRoute =
+        req.path.startsWith("/api/super-admin") || req.baseUrl?.startsWith("/api/super-admin");
       if (!readOnlyMethods.includes(req.method.toUpperCase()) && !isSuperAdminRoute) {
-        return res.status(403).json(
-          STATUS_CODE[403]("Super-admin has read-only access when viewing an organization")
-        );
+        return res
+          .status(403)
+          .json(STATUS_CODE[403]("Super-admin has read-only access when viewing an organization"));
       }
     }
 
     // Initialize AsyncLocalStorage context for request tracing
-    asyncLocalStorage.run({
-      userId: decoded.id,
-      tenantId: req.organizationId ?? 0,
-      organizationId: req.organizationId ?? 0
-    }, () => {
-      next();
-    });
+    asyncLocalStorage.run(
+      {
+        userId: decoded.id,
+        tenantId: req.organizationId ?? 0,
+        organizationId: req.organizationId ?? 0,
+      },
+      () => {
+        next();
+      },
+    );
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }

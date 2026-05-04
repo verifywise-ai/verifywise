@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { colors, typography, spacing, border, chipStyles, imageStyles } from './styles/theme';
-import ImageLightbox from './ImageLightbox';
+import React, { useState } from "react";
+import { colors, typography, spacing, border, chipStyles, imageStyles } from "./styles/theme";
+import ImageLightbox from "./ImageLightbox";
 import {
   CheckCircle,
   Clock,
@@ -27,7 +27,7 @@ import {
   ShieldAlert,
   Circle,
   type LucideIcon,
-} from 'lucide-react';
+} from "lucide-react";
 import type {
   ContentBlock,
   HeadingBlock,
@@ -46,8 +46,8 @@ import type {
   ImageBlock,
   ArticleLinksBlock,
   ArticleContent,
-} from '@user-guide-content/contentTypes';
-import './ContentRenderer.css';
+} from "@user-guide-content/contentTypes";
+import "./ContentRenderer.css";
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
@@ -84,7 +84,11 @@ interface ContentRendererProps {
 }
 
 const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }) => {
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string; caption?: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string;
+    alt: string;
+    caption?: string;
+  } | null>(null);
 
   // Parse basic markdown in text (inside component to access onNavigate)
   const parseMarkdown = (text: string): React.ReactNode => {
@@ -115,33 +119,33 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         parts.push(
           <span key={key++} style={style}>
             {match[2]}
-          </span>
+          </span>,
         );
       } else if (match[3] && match[4]) {
         // Article link: [[text]](collection/article)
         const linkText = match[3];
         const linkPath = match[4];
-        const [collectionId, articleId] = linkPath.split('/');
+        const [collectionId, articleId] = linkPath.split("/");
         parts.push(
           <span
             key={key++}
             onClick={() => onNavigate?.(collectionId, articleId)}
             style={{
               color: colors.brand.primary,
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              textDecorationColor: 'transparent',
-              transition: 'text-decoration-color 150ms ease',
+              cursor: "pointer",
+              textDecoration: "underline",
+              textDecorationColor: "transparent",
+              transition: "text-decoration-color 150ms ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.textDecorationColor = colors.brand.primary;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.textDecorationColor = 'transparent';
+              e.currentTarget.style.textDecorationColor = "transparent";
             }}
           >
             {linkText}
-          </span>
+          </span>,
         );
       }
 
@@ -157,35 +161,35 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
 
   const renderBlock = (block: ContentBlock, index: number): React.ReactNode => {
     switch (block.type) {
-      case 'heading':
+      case "heading":
         return renderHeading(block, index);
-      case 'paragraph':
+      case "paragraph":
         return renderParagraph(block, index);
-      case 'callout':
+      case "callout":
         return renderCallout(block, index);
-      case 'bullet-list':
+      case "bullet-list":
         return renderBulletList(block, index);
-      case 'ordered-list':
+      case "ordered-list":
         return renderOrderedList(block, index);
-      case 'checklist':
+      case "checklist":
         return renderChecklist(block, index);
-      case 'icon-cards':
+      case "icon-cards":
         return renderIconCards(block, index);
-      case 'grid-cards':
+      case "grid-cards":
         return renderGridCards(block, index);
-      case 'time-estimate':
+      case "time-estimate":
         return renderTimeEstimate(block, index);
-      case 'info-box':
+      case "info-box":
         return renderInfoBox(block, index);
-      case 'code':
+      case "code":
         return renderCode(block, index);
-      case 'requirements':
+      case "requirements":
         return renderRequirements(block, index);
-      case 'table':
+      case "table":
         return renderTable(block, index);
-      case 'image':
+      case "image":
         return renderImage(block, index);
-      case 'article-links':
+      case "article-links":
         return renderArticleLinks(block, index);
       default:
         return null;
@@ -193,18 +197,18 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   };
 
   const renderHeading = (block: HeadingBlock, index: number) => {
-    const Tag = block.level === 2 ? 'h2' : 'h3';
+    const Tag = block.level === 2 ? "h2" : "h3";
     return (
       <Tag
         key={index}
         id={block.id}
         style={{
           fontFamily: typography.fontFamily.sans,
-          fontSize: block.level === 2 ? typography.fontSize['2xl'] : typography.fontSize.lg,
+          fontSize: block.level === 2 ? typography.fontSize["2xl"] : typography.fontSize.lg,
           fontWeight: typography.fontWeight.semibold,
           color: colors.text.primary,
           marginBottom: spacing.lg,
-          marginTop: index > 0 ? spacing['2xl'] : 0,
+          marginTop: index > 0 ? spacing["2xl"] : 0,
           lineHeight: typography.lineHeight.normal,
         }}
       >
@@ -236,14 +240,14 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       warning: colors.brand.warning,
       success: colors.brand.success,
     };
-    const accentColor = calloutColors[block.variant || 'info'];
+    const accentColor = calloutColors[block.variant || "info"];
 
     return (
       <div
         key={index}
         style={{
           border: border.default,
-          borderLeftWidth: '3px',
+          borderLeftWidth: "3px",
           borderLeftColor: accentColor,
           backgroundColor: colors.background.alt,
           paddingLeft: spacing.lg,
@@ -251,13 +255,13 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           paddingBottom: spacing.md,
           paddingRight: spacing.lg,
           borderRadius: border.radius,
-          marginBottom: spacing['2xl'],
+          marginBottom: spacing["2xl"],
         }}
       >
         {block.title && (
           <span
             style={{
-              display: 'block',
+              display: "block",
               fontSize: typography.fontSize.base,
               fontWeight: typography.fontWeight.semibold,
               color: colors.text.primary,
@@ -269,7 +273,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         )}
         <span
           style={{
-            display: 'block',
+            display: "block",
             fontSize: typography.fontSize.base,
             color: colors.text.primary,
             lineHeight: typography.lineHeight.normal,
@@ -287,7 +291,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       className="content-list"
       style={{
         paddingLeft: spacing.xl,
-        marginBottom: spacing['2xl'],
+        marginBottom: spacing["2xl"],
         marginTop: 0,
       }}
     >
@@ -320,19 +324,24 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderChecklist = (block: ChecklistBlock, index: number) => (
-    <div key={index} style={{ marginBottom: spacing['2xl'], paddingLeft: spacing.sm }}>
+    <div key={index} style={{ marginBottom: spacing["2xl"], paddingLeft: spacing.sm }}>
       {block.items.map((item, i) => (
         <div
           key={i}
           style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            gap: '10px',
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: "10px",
             marginBottom: spacing.sm,
           }}
         >
-          <CheckCircle size={16} strokeWidth={1.5} color={colors.brand.primary} style={{ flexShrink: 0, marginTop: 3 }} />
+          <CheckCircle
+            size={16}
+            strokeWidth={1.5}
+            color={colors.brand.primary}
+            style={{ flexShrink: 0, marginTop: 3 }}
+          />
           <span
             style={{
               fontSize: typography.fontSize.base,
@@ -348,14 +357,22 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderIconCards = (block: IconCardsBlock, index: number) => (
-    <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: spacing.md, marginBottom: spacing['2xl'] }}>
+    <div
+      key={index}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.md,
+        marginBottom: spacing["2xl"],
+      }}
+    >
       {block.items.map((item, i) => {
         const IconComponent = getIcon(item.icon);
         return (
           <div
             key={i}
             style={{
-              display: 'flex',
+              display: "flex",
               gap: spacing.md,
               padding: spacing.sm,
               backgroundColor: colors.background.white,
@@ -365,12 +382,12 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
-                width: '20px',
-                height: '22px',
+                width: "20px",
+                height: "22px",
               }}
             >
               <IconComponent size={20} strokeWidth={1.5} color={colors.brand.primary} />
@@ -378,19 +395,19 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
             <div>
               <span
                 style={{
-                  display: 'block',
+                  display: "block",
                   fontSize: typography.fontSize.md,
                   fontWeight: typography.fontWeight.semibold,
                   color: colors.text.primary,
-                  lineHeight: '22px',
-                  marginBottom: '2px',
+                  lineHeight: "22px",
+                  marginBottom: "2px",
                 }}
               >
                 {item.title}
               </span>
               <span
                 style={{
-                  display: 'block',
+                  display: "block",
                   fontSize: typography.fontSize.base,
                   color: colors.text.secondary,
                   lineHeight: typography.lineHeight.normal,
@@ -409,10 +426,10 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
     <div
       key={index}
       style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(auto-fit, minmax(${block.columns === 2 ? '250px' : '200px'}, 1fr))`,
+        display: "grid",
+        gridTemplateColumns: `repeat(auto-fit, minmax(${block.columns === 2 ? "250px" : "200px"}, 1fr))`,
         gap: spacing.md,
-        marginBottom: spacing['2xl'],
+        marginBottom: spacing["2xl"],
       }}
     >
       {block.items.map((item, i) => {
@@ -421,7 +438,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           <div
             key={i}
             style={{
-              padding: '14px',
+              padding: "14px",
               backgroundColor: colors.background.white,
               border: border.default,
               borderRadius: border.radius,
@@ -429,21 +446,21 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'flex-start',
+                display: "flex",
+                alignItems: "flex-start",
                 gap: spacing.sm,
-                marginBottom: '6px',
+                marginBottom: "6px",
               }}
             >
               {IconComponent && (
                 <span
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     flexShrink: 0,
-                    width: '16px',
-                    height: '18px',
+                    width: "16px",
+                    height: "18px",
                   }}
                 >
                   <IconComponent size={16} strokeWidth={1.5} color={colors.brand.primary} />
@@ -454,7 +471,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
                   fontSize: typography.fontSize.base,
                   fontWeight: typography.fontWeight.semibold,
                   color: colors.text.primary,
-                  lineHeight: '18px',
+                  lineHeight: "18px",
                 }}
               >
                 {item.title}
@@ -462,7 +479,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
             </div>
             <span
               style={{
-                display: 'block',
+                display: "block",
                 fontSize: typography.fontSize.xs,
                 color: colors.text.secondary,
                 lineHeight: typography.lineHeight.snug,
@@ -480,8 +497,8 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
     <div
       key={index}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: "inline-flex",
+        alignItems: "center",
         gap: spacing.sm,
         padding: `${spacing.md} ${spacing.lg}`,
         backgroundColor: colors.background.alt,
@@ -492,11 +509,11 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
     >
       <span
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
           flexShrink: 0,
-          height: '20px',
+          height: "20px",
         }}
       >
         <Clock size={16} strokeWidth={1.5} color={colors.brand.primary} />
@@ -505,9 +522,9 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         style={{
           fontSize: typography.fontSize.base,
           color: colors.text.primary,
-          lineHeight: '20px',
-          display: 'inline-flex',
-          alignItems: 'center',
+          lineHeight: "20px",
+          display: "inline-flex",
+          alignItems: "center",
         }}
       >
         {parseMarkdown(block.text)}
@@ -521,7 +538,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       <div
         key={index}
         style={{
-          display: 'flex',
+          display: "flex",
           gap: spacing.md,
           padding: spacing.lg,
           backgroundColor: colors.background.white,
@@ -530,11 +547,16 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           marginBottom: spacing.lg,
         }}
       >
-        <IconComponent size={20} strokeWidth={1.5} color={colors.brand.primary} style={{ flexShrink: 0, marginTop: 2 }} />
+        <IconComponent
+          size={20}
+          strokeWidth={1.5}
+          color={colors.brand.primary}
+          style={{ flexShrink: 0, marginTop: 2 }}
+        />
         <div>
           <span
             style={{
-              display: 'block',
+              display: "block",
               fontSize: typography.fontSize.md,
               fontWeight: typography.fontWeight.semibold,
               color: colors.text.primary,
@@ -543,7 +565,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           >
             {block.title}
           </span>
-          <ul style={{ margin: 0, paddingLeft: '20px' }}>
+          <ul style={{ margin: 0, paddingLeft: "20px" }}>
             {block.items.map((item, i) => (
               <li
                 key={i}
@@ -570,8 +592,8 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       style={{
         backgroundColor: colors.background.code,
         borderRadius: border.radius,
-        padding: '14px 16px',
-        overflow: 'auto',
+        padding: "14px 16px",
+        overflow: "auto",
         marginBottom: spacing.lg,
       }}
     >
@@ -579,10 +601,10 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         style={{
           fontSize: typography.fontSize.sm,
           fontFamily: typography.fontFamily.mono,
-          color: '#E5E7EB',
+          color: "#E5E7EB",
           margin: 0,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all",
         }}
       >
         {block.code}
@@ -591,7 +613,15 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderRequirements = (block: RequirementsBlock, index: number) => (
-    <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: spacing.md, marginBottom: spacing['2xl'] }}>
+    <div
+      key={index}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.md,
+        marginBottom: spacing["2xl"],
+      }}
+    >
       {block.items.map((req, i) => {
         const IconComponent = getIcon(req.icon);
         return (
@@ -604,8 +634,20 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
               borderRadius: border.radius,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-              <IconComponent size={16} strokeWidth={1.5} color={colors.brand.primary} style={{ flexShrink: 0 }} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <IconComponent
+                size={16}
+                strokeWidth={1.5}
+                color={colors.brand.primary}
+                style={{ flexShrink: 0 }}
+              />
               <span
                 style={{
                   fontSize: typography.fontSize.base,
@@ -616,7 +658,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
                 {req.title}
               </span>
             </div>
-            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+            <ul style={{ margin: 0, paddingLeft: "20px" }}>
               {req.items.map((item, j) => (
                 <li
                   key={j}
@@ -638,17 +680,17 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderTableCell = (value: string) => {
-    if (value === '✓') {
+    if (value === "✓") {
       return (
         <span
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             width: 20,
             height: 20,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(19, 113, 91, 0.1)',
+            borderRadius: "50%",
+            backgroundColor: "rgba(19, 113, 91, 0.1)",
             color: colors.brand.primary,
             fontSize: typography.fontSize.sm,
             fontWeight: typography.fontWeight.semibold,
@@ -658,17 +700,17 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         </span>
       );
     }
-    if (value === '✗' || value === '—') {
+    if (value === "✗" || value === "—") {
       return (
         <span
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             width: 20,
             height: 20,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(102, 112, 133, 0.1)',
+            borderRadius: "50%",
+            backgroundColor: "rgba(102, 112, 133, 0.1)",
             color: colors.text.muted,
             fontSize: typography.fontSize.sm,
           }}
@@ -686,15 +728,15 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       style={{
         border: border.default,
         borderRadius: border.radius,
-        overflow: 'hidden',
-        marginBottom: spacing['2xl'],
+        overflow: "hidden",
+        marginBottom: spacing["2xl"],
       }}
     >
       {/* Header */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: block.columns.map((col) => col.width || '1fr').join(' '),
+          display: "grid",
+          gridTemplateColumns: block.columns.map((col) => col.width || "1fr").join(" "),
           backgroundColor: colors.background.alt,
           borderBottom: border.default,
           padding: `${spacing.md} ${spacing.lg}`,
@@ -721,13 +763,13 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           key={i}
           className="table-row"
           style={{
-            display: 'grid',
-            gridTemplateColumns: block.columns.map((col) => col.width || '1fr').join(' '),
-            borderBottom: i < block.rows.length - 1 ? border.default : 'none',
-            backgroundColor: i % 2 === 1 ? 'rgba(249, 250, 251, 0.5)' : 'transparent',
+            display: "grid",
+            gridTemplateColumns: block.columns.map((col) => col.width || "1fr").join(" "),
+            borderBottom: i < block.rows.length - 1 ? border.default : "none",
+            backgroundColor: i % 2 === 1 ? "rgba(249, 250, 251, 0.5)" : "transparent",
             padding: `10px ${spacing.lg}`,
             gap: spacing.md,
-            alignItems: 'center',
+            alignItems: "center",
           }}
         >
           {block.columns.map((col, j) => (
@@ -752,7 +794,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
     <div
       key={index}
       style={{
-        marginBottom: spacing['2xl'],
+        marginBottom: spacing["2xl"],
       }}
     >
       <img
@@ -761,7 +803,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         onClick={() => setLightboxImage({ src: block.src, alt: block.alt, caption: block.caption })}
         style={{
           ...imageStyles.image,
-          cursor: 'zoom-in',
+          cursor: "zoom-in",
         }}
       />
       {block.caption && (
@@ -779,18 +821,18 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderArticleLinks = (block: ArticleLinksBlock, index: number) => (
-    <div key={index} style={{ marginBottom: spacing['2xl'] }}>
+    <div key={index} style={{ marginBottom: spacing["2xl"] }}>
       <div
         style={{
-          height: '1px',
-          backgroundColor: '#d0d5dd',
+          height: "1px",
+          backgroundColor: "#d0d5dd",
           marginBottom: spacing.xl,
         }}
       />
       {block.title && (
         <span
           style={{
-            display: 'block',
+            display: "block",
             fontFamily: typography.fontFamily.sans,
             fontSize: typography.fontSize.lg,
             fontWeight: typography.fontWeight.semibold,
@@ -801,20 +843,20 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
           {block.title}
         </span>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         {block.items.map((item, i) => (
           <div
             key={i}
             onClick={() => onNavigate?.(item.collectionId, item.articleId)}
             className="article-link-item"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               padding: spacing.sm,
               margin: `0 -${spacing.sm}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
+              borderRadius: "4px",
+              cursor: "pointer",
             }}
           >
             <span

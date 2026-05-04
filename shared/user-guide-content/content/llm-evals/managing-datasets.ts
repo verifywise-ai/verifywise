@@ -60,6 +60,9 @@ export const managingDatasetsContent: ArticleContent = {
         { bold: 'Product Documentation', text: 'Tests accuracy of information retrieval and contextual response generation with product docs.' },
         { bold: 'Research Papers', text: 'Academic and technical content retrieval, testing comprehension of complex material.' },
         { bold: 'Wikipedia', text: 'General knowledge retrieval from encyclopedia-style content.' },
+        { bold: 'Document QA', text: 'Multi-turn question-answering against a document corpus.' },
+        { bold: 'Knowledge Base', text: 'Retrieval-augmented Q&A over an internal knowledge base.' },
+        { bold: 'Research Assistant', text: 'Multi-turn assistant interactions over technical research material.' },
       ],
     },
     {
@@ -70,14 +73,7 @@ export const managingDatasetsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For AI assistants that take actions:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: 'Tool use', text: 'Prompts requiring function calls, API interactions, or external tool usage.' },
-        { bold: 'Multi-step reasoning', text: 'Tasks that require planning and executing multiple steps to complete.' },
-      ],
+      text: 'For agentic AI assistants. Agent datasets are conversation-based multi-turn evaluations that exercise planning, tool selection and follow-through over several turns; they are not isolated single-call examples.',
     },
     {
       type: 'callout',

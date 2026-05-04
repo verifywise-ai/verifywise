@@ -33,35 +33,27 @@ export async function devAutoBootstrap(): Promise<void> {
   // Pre-flight: if any required env var is missing/empty, skip silently and
   // fall back to the default super-admin-only flow. We do this BEFORE touching
   // the DB so a partially-configured .env never fails startup.
-  const missing = REQUIRED_VARS.filter(
-    (k) => !(process.env[k] ?? "").trim()
-  );
+  const missing = REQUIRED_VARS.filter((k) => !(process.env[k] ?? "").trim());
   if (missing.length > 0) {
-    console.log(
-      `[dev-bootstrap] skipping — missing env vars: ${missing.join(", ")}`
-    );
+    console.log(`[dev-bootstrap] skipping — missing env vars: ${missing.join(", ")}`);
     return;
   }
 
   // Idempotency — skip if any organization already exists
   let count = 0;
   try {
-    const [rows] = await sequelize.query(
-      "SELECT COUNT(*)::int AS count FROM organizations"
-    );
+    const [rows] = await sequelize.query("SELECT COUNT(*)::int AS count FROM organizations");
     count = (rows as Array<{ count: number }>)[0]?.count ?? 0;
   } catch (err: any) {
     if (err?.parent?.code === "42P01" || err?.original?.code === "42P01") {
       throw new Error(
-        "[dev-bootstrap] organizations table not found — run `npx sequelize db:migrate` first"
+        "[dev-bootstrap] organizations table not found — run `npx sequelize db:migrate` first",
       );
     }
     throw err;
   }
   if (count > 0) {
-    console.log(
-      "[dev-bootstrap] organizations already exist, skipping"
-    );
+    console.log("[dev-bootstrap] organizations already exist, skipping");
     return;
   }
 
@@ -72,9 +64,7 @@ export async function devAutoBootstrap(): Promise<void> {
   const surname = process.env.DEV_ADMIN_SURNAME!;
 
   if (!EMAIL_RE.test(email)) {
-    throw new Error(
-      `[dev-bootstrap] DEV_ADMIN_EMAIL is not a valid email: ${email}`
-    );
+    throw new Error(`[dev-bootstrap] DEV_ADMIN_EMAIL is not a valid email: ${email}`);
   }
 
   if (
@@ -84,21 +74,16 @@ export async function devAutoBootstrap(): Promise<void> {
         .replace(/^['"]|['"]$/g, "")
         .toLowerCase()
   ) {
-    throw new Error(
-      "[dev-bootstrap] DEV_ADMIN_EMAIL must differ from SUPERADMIN_EMAIL"
-    );
+    throw new Error("[dev-bootstrap] DEV_ADMIN_EMAIL must differ from SUPERADMIN_EMAIL");
   }
 
   // Password strength is enforced by UserModel.createNewUser; we duplicate a
   // lightweight pre-check here for a friendlier startup error message.
   const strong =
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password);
+    password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
   if (!strong) {
     throw new Error(
-      "[dev-bootstrap] DEV_ADMIN_PASSWORD must be ≥8 chars and contain upper, lower, and digit"
+      "[dev-bootstrap] DEV_ADMIN_PASSWORD must be ≥8 chars and contain upper, lower, and digit",
     );
   }
 
@@ -106,7 +91,7 @@ export async function devAutoBootstrap(): Promise<void> {
   try {
     const org = await createOrganizationQuery(
       { name: orgName, logo: undefined as any },
-      transaction
+      transaction,
     );
 
     await createNewUserWrapper(
@@ -118,13 +103,11 @@ export async function devAutoBootstrap(): Promise<void> {
         roleId: 1, // Admin
         organizationId: org.id!,
       },
-      transaction
+      transaction,
     );
 
     await transaction.commit();
-    console.log(
-      `[dev-bootstrap] created org "${orgName}" (id=${org.id}) and admin ${email}`
-    );
+    console.log(`[dev-bootstrap] created org "${orgName}" (id=${org.id}) and admin ${email}`);
   } catch (err) {
     await transaction.rollback();
     throw err;

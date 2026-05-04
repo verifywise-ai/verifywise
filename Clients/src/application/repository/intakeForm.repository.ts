@@ -4,7 +4,10 @@ import {
   IntakeEntityType,
   IntakeSubmissionStatus,
 } from "../../domain/intake/enums";
-import type { FieldType, FormDesignSettings } from "../../presentation/pages/IntakeFormBuilder/types";
+import type {
+  FieldType,
+  FormDesignSettings,
+} from "../../presentation/pages/IntakeFormBuilder/types";
 
 // Re-export enums for convenience
 export { IntakeFormStatus, IntakeEntityType, IntakeSubmissionStatus };
@@ -159,7 +162,7 @@ export async function getAllIntakeForms(
     status?: IntakeFormStatus;
     entityType?: IntakeEntityType;
   } = {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeForm[]; pagination?: { total: number; page: number; limit: number } }> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.append("page", String(params.page));
@@ -169,7 +172,10 @@ export async function getAllIntakeForms(
 
   const url = `${BASE_URL}/forms${queryParams.toString() ? `?${queryParams}` : ""}`;
   const response = await apiServices.get(url, { signal });
-  return response.data as { data: IntakeForm[]; pagination?: { total: number; page: number; limit: number } };
+  return response.data as {
+    data: IntakeForm[];
+    pagination?: { total: number; page: number; limit: number };
+  };
 }
 
 /**
@@ -177,7 +183,7 @@ export async function getAllIntakeForms(
  */
 export async function getIntakeForm(
   formId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
   const response = await apiServices.get(`${BASE_URL}/forms/${formId}`, { signal });
   return response.data as { data: IntakeForm };
@@ -202,7 +208,7 @@ export async function createIntakeForm(
     suggestedQuestionsEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
   const response = await apiServices.post(`${BASE_URL}/forms`, data, { signal });
   return response.data as { data: IntakeForm };
@@ -227,7 +233,7 @@ export async function updateIntakeForm(
     suggestedQuestionsEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
   const response = await apiServices.patch(`${BASE_URL}/forms/${formId}`, data, { signal });
   return response.data as { data: IntakeForm };
@@ -238,7 +244,7 @@ export async function updateIntakeForm(
  */
 export async function deleteIntakeForm(
   formId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: null }> {
   const response = await apiServices.delete(`${BASE_URL}/forms/${formId}`, { signal });
   return response.data as { data: null };
@@ -249,9 +255,11 @@ export async function deleteIntakeForm(
  */
 export async function archiveIntakeForm(
   formId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
-  const response = await apiServices.post(`${BASE_URL}/forms/${formId}/archive`, undefined, { signal });
+  const response = await apiServices.post(`${BASE_URL}/forms/${formId}/archive`, undefined, {
+    signal,
+  });
   return response.data as { data: IntakeForm };
 }
 
@@ -269,8 +277,11 @@ export async function getPendingSubmissions(
     formId?: number;
     status?: string;
   } = {},
-  signal?: AbortSignal
-): Promise<{ data: IntakeSubmission[]; pagination?: { total: number; page: number; limit: number } }> {
+  signal?: AbortSignal,
+): Promise<{
+  data: IntakeSubmission[];
+  pagination?: { total: number; page: number; limit: number };
+}> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.append("page", String(params.page));
   if (params.limit) queryParams.append("limit", String(params.limit));
@@ -279,7 +290,10 @@ export async function getPendingSubmissions(
 
   const url = `${BASE_URL}/submissions${queryParams.toString() ? `?${queryParams}` : ""}`;
   const response = await apiServices.get(url, { signal });
-  return response.data as { data: IntakeSubmission[]; pagination?: { total: number; page: number; limit: number } };
+  return response.data as {
+    data: IntakeSubmission[];
+    pagination?: { total: number; page: number; limit: number };
+  };
 }
 
 /**
@@ -287,7 +301,7 @@ export async function getPendingSubmissions(
  */
 export async function getSubmissionPreview(
   submissionId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{
   data: {
     submission: IntakeSubmission;
@@ -304,7 +318,9 @@ export async function getSubmissionPreview(
     riskOverride?: RiskOverride | null;
   };
 }> {
-  const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, { signal });
+  const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
+    signal,
+  });
   return response.data as {
     data: {
       submission: IntakeSubmission;
@@ -336,12 +352,12 @@ export async function approveSubmission(
       justification: string;
     };
   },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: { submission: IntakeSubmission; createdEntity: unknown } }> {
   const response = await apiServices.post(
     `${BASE_URL}/submissions/${submissionId}/approve`,
     data || {},
-    { signal }
+    { signal },
   );
   return response.data as { data: { submission: IntakeSubmission; createdEntity: unknown } };
 }
@@ -352,12 +368,12 @@ export async function approveSubmission(
 export async function rejectSubmission(
   submissionId: number,
   reason: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: IntakeSubmission }> {
   const response = await apiServices.post(
     `${BASE_URL}/submissions/${submissionId}/reject`,
     { reason },
-    { signal }
+    { signal },
   );
   return response.data as { data: IntakeSubmission };
 }
@@ -396,12 +412,12 @@ export interface EntityIntakeSubmission {
 export async function getEntityIntakeSubmission(
   entityType: "use_case" | "model",
   entityId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<EntityIntakeSubmission | null> {
   try {
     const response = await apiServices.get(
       `${BASE_URL}/submissions/by-entity/${entityType}/${entityId}`,
-      { signal }
+      { signal },
     );
     return (response.data as { data: EntityIntakeSubmission }).data;
   } catch (error: any) {
@@ -435,12 +451,12 @@ export async function getLLMSuggestedQuestions(
   entityType: string,
   context: string,
   llmKeyId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: LLMSuggestedQuestion[] }> {
   const response = await apiServices.post(
     `${BASE_URL}/forms/suggested-questions`,
     { entityType, context, llmKeyId },
-    { signal }
+    { signal },
   );
   return response.data as { data: LLMSuggestedQuestion[] };
 }
@@ -452,12 +468,12 @@ export async function getLLMFieldGuidance(
   fieldLabel: string,
   entityType: string,
   llmKeyId: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{ data: { guidanceText: string } }> {
   const response = await apiServices.post(
     `${BASE_URL}/forms/field-guidance`,
     { fieldLabel, entityType, llmKeyId },
-    { signal }
+    { signal },
   );
   return response.data as { data: { guidanceText: string } };
 }
@@ -480,7 +496,7 @@ export async function getCaptcha(): Promise<{ data: { question: string; token: s
 export async function getPublicForm(
   tenantSlug: string,
   formSlug: string,
-  resubmissionToken?: string
+  resubmissionToken?: string,
 ): Promise<{
   data: {
     form: {
@@ -500,7 +516,9 @@ export async function getPublicForm(
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
-  const response = await apiServices.get(`${BASE_URL}/public/${tenantSlug}/${formSlug}${queryParams}`);
+  const response = await apiServices.get(
+    `${BASE_URL}/public/${tenantSlug}/${formSlug}${queryParams}`,
+  );
   return response.data as {
     data: {
       form: {
@@ -534,7 +552,7 @@ export async function submitPublicForm(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
-  }
+  },
 ): Promise<{
   data: {
     submissionId: number;
@@ -543,7 +561,9 @@ export async function submitPublicForm(
   };
 }> {
   const response = await apiServices.post(`${BASE_URL}/public/${tenantSlug}/${formSlug}`, data);
-  return response.data as { data: { submissionId: number; resubmissionToken: string; message: string } };
+  return response.data as {
+    data: { submissionId: number; resubmissionToken: string; message: string };
+  };
 }
 
 /**
@@ -551,7 +571,7 @@ export async function submitPublicForm(
  */
 export async function getPublicFormById(
   publicId: string,
-  resubmissionToken?: string
+  resubmissionToken?: string,
 ): Promise<{
   data: {
     form: {
@@ -608,7 +628,7 @@ export async function submitPublicFormById(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
-  }
+  },
 ): Promise<{
   data: {
     submissionId: number;
@@ -617,5 +637,7 @@ export async function submitPublicFormById(
   };
 }> {
   const response = await apiServices.post(`${BASE_URL}/public/by-id/${publicId}`, data);
-  return response.data as { data: { submissionId: number; resubmissionToken: string; message: string } };
+  return response.data as {
+    data: { submissionId: number; resubmissionToken: string; message: string };
+  };
 }

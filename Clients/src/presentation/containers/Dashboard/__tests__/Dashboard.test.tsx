@@ -95,9 +95,7 @@ vi.mock("../../../components/Modals/StandardModal", () => ({
     isOpen ? <div data-testid="standard-modal">{children}</div> : null,
 }));
 vi.mock("../../../components/Toast", () => ({
-  default: ({ title }: { title: string }) => (
-    <div data-testid="toast">{title}</div>
-  ),
+  default: ({ title }: { title: string }) => <div data-testid="toast">{title}</div>,
 }));
 vi.mock("../../../components/Alert", () => ({
   default: () => <div data-testid="alert" />,
@@ -147,9 +145,8 @@ describe("Dashboard container", () => {
   });
 
   it("calls getAllProjects on mount", async () => {
-    const { getAllProjects } = await import(
-      "../../../../application/repository/project.repository"
-    );
+    const { getAllProjects } =
+      await import("../../../../application/repository/project.repository");
     renderWithProviders(<Dashboard reloadTrigger={false} />);
     await waitFor(() => {
       expect(getAllProjects).toHaveBeenCalled();

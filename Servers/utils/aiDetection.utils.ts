@@ -51,7 +51,7 @@ function validateOrganizationId(organizationId: number): void {
 export async function createScanQuery(
   input: ICreateScanInput,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<IScan> {
   validateOrganizationId(organizationId);
   const query = `
@@ -131,7 +131,7 @@ export async function createScanQuery(
  */
 export async function getScanByIdQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IScan | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -157,7 +157,7 @@ export async function getScanByIdQuery(
  */
 export async function getScanWithUserQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<(IScan & { triggered_by_user: { id: number; name: string; surname?: string } }) | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -178,7 +178,11 @@ export async function getScanWithUserQuery(
     type: QueryTypes.SELECT,
   });
 
-  return (results as (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[])[0] || null;
+  return (
+    (
+      results as (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[]
+    )[0] || null
+  );
 }
 
 /**
@@ -194,7 +198,7 @@ export async function updateScanProgressQuery(
   scanId: number,
   input: IUpdateScanProgressInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IScan | null> {
   validateOrganizationId(organizationId);
   // Build SET clause dynamically based on provided fields
@@ -251,7 +255,7 @@ export async function updateScanProgressQuery(
     transaction,
   });
 
-  return ((results as unknown as IScan[][])[0])?.[0] || null;
+  return (results as unknown as IScan[][])[0]?.[0] || null;
 }
 
 /**
@@ -268,8 +272,11 @@ export async function getScansListQuery(
   page: number = 1,
   limit: number = 20,
   status?: ScanStatus,
-  repositoryId?: number
-): Promise<{ scans: (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[]; total: number }> {
+  repositoryId?: number,
+): Promise<{
+  scans: (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[];
+  total: number;
+}> {
   validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
   const replacements: Record<string, unknown> = { limit, offset, organizationId };
@@ -314,7 +321,9 @@ export async function getScansListQuery(
   ]);
 
   return {
-    scans: dataResults as (IScan & { triggered_by_user: { id: number; name: string; surname?: string } })[],
+    scans: dataResults as (IScan & {
+      triggered_by_user: { id: number; name: string; surname?: string };
+    })[],
     total: parseInt((countResults[0] as { total: string }).total, 10),
   };
 }
@@ -330,7 +339,7 @@ export async function getScansListQuery(
 export async function deleteScanQuery(
   scanId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
   // Findings are deleted via CASCADE
@@ -359,7 +368,7 @@ export async function deleteScanQuery(
 export async function getActiveScanForRepoQuery(
   repoOwner: string,
   repoName: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IScan | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -396,7 +405,7 @@ export async function getActiveScanForRepoQuery(
 export async function createFindingQuery(
   input: ICreateFindingInput,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<IFinding> {
   validateOrganizationId(organizationId);
   const query = `
@@ -464,7 +473,7 @@ export async function createFindingQuery(
 export async function createFindingsBatchQuery(
   inputs: ICreateFindingInput[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<number> {
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
@@ -576,7 +585,7 @@ export async function createFindingsBatchQuery(
 
   // Insert vulnerability details into separate table for findings that have them
   const vulnInputs = deduplicatedInputs.filter(
-    (input) => input.mitigation || input.data_flow_summary || input.vulnerability_details
+    (input) => input.mitigation || input.data_flow_summary || input.vulnerability_details,
   );
 
   if (vulnInputs.length > 0 && Array.isArray(insertedRows) && insertedRows.length > 0) {
@@ -607,7 +616,8 @@ export async function createFindingsBatchQuery(
       vulnReplacements[`mitigation_${index}`] = input.mitigation || null;
       vulnReplacements[`data_flow_summary_${index}`] = input.data_flow_summary || null;
       vulnReplacements[`vulnerability_details_${index}`] = input.vulnerability_details
-        ? JSON.stringify(input.vulnerability_details) : null;
+        ? JSON.stringify(input.vulnerability_details)
+        : null;
     });
 
     if (vulnValues.length > 0) {
@@ -654,7 +664,7 @@ export async function createFindingsBatchQuery(
 export async function createModelSecurityFindingsBatchQuery(
   inputs: ICreateModelSecurityFindingInput[],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<number> {
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
@@ -680,28 +690,66 @@ export async function createModelSecurityFindingsBatchQuery(
 
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
-    return "("+
+    return (
+      "(" +
       ":organizationId, " +
-      ":scan_id_" + index + ", " +
-      ":finding_type_" + index + ", " +
-      ":category_" + index + ", " +
-      ":name_" + index + ", " +
-      ":provider_" + index + ", " +
-      ":confidence_" + index + ", " +
-      ":description_" + index + ", " +
-      ":documentation_url_" + index + ", " +
-      ":file_count_" + index + ", " +
-      ":file_paths_" + index + ", " +
-      ":severity_" + index + ", " +
-      ":cwe_id_" + index + ", " +
-      ":cwe_name_" + index + ", " +
-      ":owasp_ml_id_" + index + ", " +
-      ":owasp_ml_name_" + index + ", " +
-      ":threat_type_" + index + ", " +
-      ":operator_name_" + index + ", " +
-      ":module_name_" + index + ", " +
+      ":scan_id_" +
+      index +
+      ", " +
+      ":finding_type_" +
+      index +
+      ", " +
+      ":category_" +
+      index +
+      ", " +
+      ":name_" +
+      index +
+      ", " +
+      ":provider_" +
+      index +
+      ", " +
+      ":confidence_" +
+      index +
+      ", " +
+      ":description_" +
+      index +
+      ", " +
+      ":documentation_url_" +
+      index +
+      ", " +
+      ":file_count_" +
+      index +
+      ", " +
+      ":file_paths_" +
+      index +
+      ", " +
+      ":severity_" +
+      index +
+      ", " +
+      ":cwe_id_" +
+      index +
+      ", " +
+      ":cwe_name_" +
+      index +
+      ", " +
+      ":owasp_ml_id_" +
+      index +
+      ", " +
+      ":owasp_ml_name_" +
+      index +
+      ", " +
+      ":threat_type_" +
+      index +
+      ", " +
+      ":operator_name_" +
+      index +
+      ", " +
+      ":module_name_" +
+      index +
+      ", " +
       "NOW()" +
-    ")";
+      ")"
+    );
   });
 
   const replacements: Record<string, unknown> = { organizationId };
@@ -728,14 +776,15 @@ export async function createModelSecurityFindingsBatchQuery(
 
   const query =
     "INSERT INTO ai_detection_findings (" +
-      "organization_id, scan_id, finding_type, category, name, provider, confidence, " +
-      "description, documentation_url, file_count, file_paths, " +
-      "severity, cwe_id, cwe_name, owasp_ml_id, owasp_ml_name, " +
-      "threat_type, operator_name, module_name, created_at" +
-    ") VALUES " + values.join(", ") +
+    "organization_id, scan_id, finding_type, category, name, provider, confidence, " +
+    "description, documentation_url, file_count, file_paths, " +
+    "severity, cwe_id, cwe_name, owasp_ml_id, owasp_ml_name, " +
+    "threat_type, operator_name, module_name, created_at" +
+    ") VALUES " +
+    values.join(", ") +
     " ON CONFLICT (scan_id, name, provider) DO UPDATE SET " +
-      "file_count = ai_detection_findings.file_count + EXCLUDED.file_count, " +
-      "file_paths = ai_detection_findings.file_paths || EXCLUDED.file_paths;";
+    "file_count = ai_detection_findings.file_count + EXCLUDED.file_count, " +
+    "file_paths = ai_detection_findings.file_paths || EXCLUDED.file_paths;";
 
   await sequelize.query(query, {
     replacements,
@@ -751,7 +800,7 @@ export async function getFindingsForScanQuery(
   page: number = 1,
   limit: number = 50,
   confidence?: string,
-  findingType?: string
+  findingType?: string,
 ): Promise<{ findings: IFinding[]; total: number }> {
   validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
@@ -825,7 +874,7 @@ const MAX_EXPORT_FINDINGS = 10000;
 export async function getAllFindingsForExportQuery(
   scanId: number,
   organizationId: number,
-  excludeTypes?: string[]
+  excludeTypes?: string[],
 ): Promise<IFinding[]> {
   validateOrganizationId(organizationId);
 
@@ -856,7 +905,7 @@ export async function getAllFindingsForExportQuery(
   if (total > MAX_EXPORT_FINDINGS) {
     throw new Error(
       `Scan has ${total} findings, which exceeds the maximum export limit of ${MAX_EXPORT_FINDINGS}. ` +
-      `Consider filtering findings or exporting in smaller batches.`
+        `Consider filtering findings or exporting in smaller batches.`,
     );
   }
 
@@ -902,7 +951,7 @@ export async function getAllFindingsForExportQuery(
  */
 export async function getFindingsSummaryQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   total: number;
   by_confidence: { high: number; medium: number; low: number };
@@ -1009,7 +1058,7 @@ export async function getFindingsSummaryQuery(
 export async function deleteFindingsForScanQuery(
   scanId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> {
   validateOrganizationId(organizationId);
   const query = `
@@ -1037,7 +1086,7 @@ export async function deleteFindingsForScanQuery(
  */
 export async function getScansWithCacheQuery(
   organizationId: number,
-  olderThanDays: number = 7
+  olderThanDays: number = 7,
 ): Promise<{ id: number; cache_path: string }[]> {
   validateOrganizationId(organizationId);
   // Validate olderThanDays to prevent SQL injection
@@ -1068,7 +1117,7 @@ export async function getScansWithCacheQuery(
  */
 export async function clearScanCachePathQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   validateOrganizationId(organizationId);
   const query = `
@@ -1102,7 +1151,7 @@ export async function updateFindingGovernanceStatusQuery(
   scanId: number,
   governanceStatus: GovernanceStatus | null,
   userId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IFinding | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -1126,7 +1175,7 @@ export async function updateFindingGovernanceStatusQuery(
     type: QueryTypes.UPDATE,
   });
 
-  return ((results as unknown as IFinding[][])[0])?.[0] || null;
+  return (results as unknown as IFinding[][])[0]?.[0] || null;
 }
 
 /**
@@ -1138,7 +1187,7 @@ export async function updateFindingGovernanceStatusQuery(
  */
 export async function getGovernanceSummaryQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   total: number;
   reviewed: number;
@@ -1205,9 +1254,7 @@ export interface IAIDetectionStats {
  * @param organizationId - Organization ID for multi-tenancy
  * @returns Aggregated statistics
  */
-export async function getAIDetectionStatsQuery(
-  organizationId: number
-): Promise<IAIDetectionStats> {
+export async function getAIDetectionStatsQuery(organizationId: number): Promise<IAIDetectionStats> {
   validateOrganizationId(organizationId);
   // Total and completed scans
   const scansQuery = `
@@ -1275,15 +1322,23 @@ export async function getAIDetectionStatsQuery(
   `;
 
   const replacements = { organizationId };
-  const [scansResults, reposResults, findingsResults, securityResults, providersResults, activityResults] =
-    await Promise.all([
-      sequelize.query(scansQuery, { replacements, type: QueryTypes.SELECT }),
-      sequelize.query(reposQuery, { replacements, type: QueryTypes.SELECT }),
-      sequelize.query(findingsQuery, { replacements, type: QueryTypes.SELECT }),
-      sequelize.query(securityQuery, { replacements, type: QueryTypes.SELECT }).catch(() => [{ security_count: "0" }]),
-      sequelize.query(providersQuery, { replacements, type: QueryTypes.SELECT }),
-      sequelize.query(activityQuery, { replacements, type: QueryTypes.SELECT }),
-    ]);
+  const [
+    scansResults,
+    reposResults,
+    findingsResults,
+    securityResults,
+    providersResults,
+    activityResults,
+  ] = await Promise.all([
+    sequelize.query(scansQuery, { replacements, type: QueryTypes.SELECT }),
+    sequelize.query(reposQuery, { replacements, type: QueryTypes.SELECT }),
+    sequelize.query(findingsQuery, { replacements, type: QueryTypes.SELECT }),
+    sequelize
+      .query(securityQuery, { replacements, type: QueryTypes.SELECT })
+      .catch(() => [{ security_count: "0" }]),
+    sequelize.query(providersQuery, { replacements, type: QueryTypes.SELECT }),
+    sequelize.query(activityQuery, { replacements, type: QueryTypes.SELECT }),
+  ]);
 
   const scansRow = scansResults[0] as { total_scans: string; completed_scans: string };
   const reposRow = reposResults[0] as { unique_repos: string };
@@ -1319,13 +1374,15 @@ export async function getAIDetectionStatsQuery(
       dependency: parseInt(findingsRow?.dependency_count || "0", 10),
       secret: parseInt(findingsRow?.secret_count || "0", 10),
     },
-    security_findings: parseInt(securityRow?.security_count || "0", 10) + parseInt(findingsRow?.secret_count || "0", 10),
+    security_findings:
+      parseInt(securityRow?.security_count || "0", 10) +
+      parseInt(findingsRow?.secret_count || "0", 10),
     recent_activity: (activityResults as { date: string; scans: string; findings: string }[]).map(
       (r) => ({
         date: r.date,
         scans: parseInt(r.scans, 10),
         findings: parseInt(r.findings, 10),
-      })
+      }),
     ),
   };
 }
@@ -1345,7 +1402,7 @@ export async function getAIDetectionStatsQuery(
  */
 export async function markStaleScansFailed(
   organizationId: number,
-  timeoutMinutes: number = 30
+  timeoutMinutes: number = 30,
 ): Promise<number> {
   validateOrganizationId(organizationId);
 
@@ -1361,7 +1418,7 @@ export async function markStaleScansFailed(
     {
       replacements: { organizationId, timeoutMinutes },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return results.length;
@@ -1383,7 +1440,7 @@ export async function markStaleScansFailed(
 export async function getLatestCompletedFullScanQuery(
   owner: string,
   repo: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IScan | null> {
   validateOrganizationId(organizationId);
 
@@ -1399,7 +1456,7 @@ export async function getLatestCompletedFullScanQuery(
     {
       replacements: { owner, repo, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return results.length > 0 ? results[0] : null;
@@ -1414,7 +1471,7 @@ export async function getLatestCompletedFullScanQuery(
  */
 export async function getBaselineFindingsQuery(
   baselineScanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IFinding[]> {
   validateOrganizationId(organizationId);
 
@@ -1425,6 +1482,6 @@ export async function getBaselineFindingsQuery(
     {
       replacements: { baselineScanId, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 }

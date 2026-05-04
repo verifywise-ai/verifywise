@@ -127,7 +127,10 @@ async def get_providers(request: Request):
             provider = info.get("litellm_provider", "unknown")
             if provider not in providers:
                 providers[provider] = []
-            providers[provider].append(model_name)
+            providers[provider].append({
+                "id": model_name,
+                "mode": info.get("mode", "chat"),
+            })
 
         return {
             "data": {

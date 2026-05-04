@@ -29,11 +29,7 @@ import { Request, Response, NextFunction } from "express";
  * // Protect profile update endpoint
  * router.patch("/profile/:id", authenticateJWT, selfOnly, updateProfile);
  */
-export const selfOnly = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void | Response => {
+export const selfOnly = (req: Request, res: Response, next: NextFunction): void | Response => {
   const jwtUserId = req.userId;
   const paramsId = req.params.id;
   const bodyId = req.body.id;

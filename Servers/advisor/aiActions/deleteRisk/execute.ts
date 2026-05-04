@@ -9,10 +9,7 @@
  */
 
 import { deleteRiskByIdQuery } from "../../../utils/risk.utils";
-import type {
-  AiActionExecuteContext,
-  AiActionExecuteResult,
-} from "../types";
+import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentDeleteRiskInput } from "./schema";
 
 export async function executeDeleteRisk(
@@ -20,11 +17,7 @@ export async function executeDeleteRisk(
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
 
-  const success = await deleteRiskByIdQuery(
-    input.risk_id,
-    ctx.organizationId,
-    ctx.transaction,
-  );
+  const success = await deleteRiskByIdQuery(input.risk_id, ctx.organizationId, ctx.transaction);
 
   if (!success) {
     throw new Error(

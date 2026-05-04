@@ -25,8 +25,7 @@ const installPluginLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour window
   max: 20, // limit each IP to 20 install requests per hour
   message: {
-    error:
-      "Too many plugin installation requests from this IP, please try again after an hour.",
+    error: "Too many plugin installation requests from this IP, please try again after an hour.",
   },
 });
 
@@ -48,7 +47,15 @@ router.post("/:key/test-connection", authenticateJWT, testPluginConnection);
 router.get("/:key/ui/dist/:filename", async (req, res) => {
   const { key, filename } = req.params;
   const bundlePath = path.join(__dirname, "../../temp/plugins", key, "ui", "dist", filename);
-  console.log("[Plugin UI] Requested:", key, filename, "Path:", bundlePath, "Exists:", fs.existsSync(bundlePath));
+  console.log(
+    "[Plugin UI] Requested:",
+    key,
+    filename,
+    "Path:",
+    bundlePath,
+    "Exists:",
+    fs.existsSync(bundlePath),
+  );
 
   // If bundle doesn't exist, try to download it
   if (!fs.existsSync(bundlePath)) {
@@ -58,7 +65,7 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
 
       const response = await axios.get(bundleUrl, {
         timeout: 30000,
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
       });
 
       // Create directory and save bundle

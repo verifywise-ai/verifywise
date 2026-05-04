@@ -34,9 +34,17 @@ import {
   getDependencyGraph,
   getComplianceMapping,
 } from "../services/aiDetection.service";
-import { IServiceContext, ScanStatus, FINDING_TYPES, VULNERABILITY_FINDING_TYPES } from "../domain.layer/interfaces/i.aiDetection";
+import {
+  IServiceContext,
+  ScanStatus,
+  FINDING_TYPES,
+  VULNERABILITY_FINDING_TYPES,
+} from "../domain.layer/interfaces/i.aiDetection";
 import { calculateAndStoreRiskScore } from "../services/aiDetection/riskScoring";
-import { getRiskScoringConfigQuery, upsertRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
+import {
+  getRiskScoringConfigQuery,
+  upsertRiskScoringConfigQuery,
+} from "../utils/aiDetectionRiskScoring.utils";
 import { DEFAULT_DIMENSION_WEIGHTS } from "../config/riskScoringConfig";
 
 const FILE_NAME = "aiDetection.ctrl.ts";
@@ -78,9 +86,12 @@ function handleException(res: Response, error: unknown): Response {
     return res.status(502).json(STATUS_CODE[502](error.message));
   }
 
-  const errorMessage = process.env.NODE_ENV === "production"
-    ? "An internal error occurred"
-    : error instanceof Error ? error.message : "Unknown error";
+  const errorMessage =
+    process.env.NODE_ENV === "production"
+      ? "An internal error occurred"
+      : error instanceof Error
+        ? error.message
+        : "Unknown error";
   return res.status(500).json(STATUS_CODE[500](errorMessage));
 }
 
@@ -94,10 +105,7 @@ function handleException(res: Response, error: unknown): Response {
  * POST /ai-detection/scans
  * Body: { repository_url: string }
  */
-export async function startScanController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function startScanController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Starting AI detection scan",
     functionName: "startScanController",
@@ -110,9 +118,7 @@ export async function startScanController(
     const { repository_url, scan_mode, base_commit_sha, head_commit_sha } = req.body;
 
     if (!repository_url) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]("repository_url is required"));
+      return res.status(400).json(STATUS_CODE[400]("repository_url is required"));
     }
 
     // Validate incremental scan parameters
@@ -121,19 +127,28 @@ export async function startScanController(
       if (!base_commit_sha || !head_commit_sha) {
         return res
           .status(400)
-          .json(STATUS_CODE[400]("Both base_commit_sha and head_commit_sha are required for incremental scans"));
+          .json(
+            STATUS_CODE[400](
+              "Both base_commit_sha and head_commit_sha are required for incremental scans",
+            ),
+          );
       }
       if (!SHA_PATTERN.test(base_commit_sha) || !SHA_PATTERN.test(head_commit_sha)) {
         return res
           .status(400)
-          .json(STATUS_CODE[400]("base_commit_sha and head_commit_sha must be valid hex strings (7-40 characters)"));
+          .json(
+            STATUS_CODE[400](
+              "base_commit_sha and head_commit_sha must be valid hex strings (7-40 characters)",
+            ),
+          );
       }
     }
 
     const ctx = buildServiceContext(req);
-    const incrementalOptions = scan_mode === "incremental"
-      ? { scan_mode: scan_mode as "incremental", base_commit_sha, head_commit_sha }
-      : undefined;
+    const incrementalOptions =
+      scan_mode === "incremental"
+        ? { scan_mode: scan_mode as "incremental", base_commit_sha, head_commit_sha }
+        : undefined;
     const scan = await startScan(repository_url, ctx, undefined, incrementalOptions);
 
     await logSuccess({
@@ -165,10 +180,7 @@ export async function startScanController(
  *
  * GET /ai-detection/scans/:scanId/status
  */
-export async function getScanStatusController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getScanStatusController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan status",
     functionName: "getScanStatusController",
@@ -178,7 +190,10 @@ export async function getScanStatusController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -198,10 +213,7 @@ export async function getScanStatusController(
  *
  * GET /ai-detection/scans/:scanId
  */
-export async function getScanController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getScanController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan details",
     functionName: "getScanController",
@@ -211,7 +223,10 @@ export async function getScanController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -232,10 +247,7 @@ export async function getScanController(
  * GET /ai-detection/scans/:scanId/findings
  * Query: page, limit, confidence, finding_type
  */
-export async function getScanFindingsController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getScanFindingsController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan findings",
     functionName: "getScanFindingsController",
@@ -245,16 +257,39 @@ export async function getScanFindingsController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
 
-    const page = parseInt(Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || '1'), 10) || 1;
-    const limit = Math.min(parseInt(Array.isArray(req.query.limit) ? String(req.query.limit[0]) : String(req.query.limit || '50'), 10) || 50, 100);
-    const confidence = Array.isArray(req.query.confidence) ? String(req.query.confidence[0]) : (req.query.confidence ? String(req.query.confidence) : undefined);
-    const findingType = Array.isArray(req.query.finding_type) ? String(req.query.finding_type[0]) : (req.query.finding_type ? String(req.query.finding_type) : undefined);
+    const page =
+      parseInt(
+        Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || "1"),
+        10,
+      ) || 1;
+    const limit = Math.min(
+      parseInt(
+        Array.isArray(req.query.limit)
+          ? String(req.query.limit[0])
+          : String(req.query.limit || "50"),
+        10,
+      ) || 50,
+      100,
+    );
+    const confidence = Array.isArray(req.query.confidence)
+      ? String(req.query.confidence[0])
+      : req.query.confidence
+        ? String(req.query.confidence)
+        : undefined;
+    const findingType = Array.isArray(req.query.finding_type)
+      ? String(req.query.finding_type[0])
+      : req.query.finding_type
+        ? String(req.query.finding_type)
+        : undefined;
 
     // Validate confidence if provided
     if (confidence && !["high", "medium", "low"].includes(confidence)) {
@@ -285,10 +320,7 @@ export async function getScanFindingsController(
  * GET /ai-detection/scans
  * Query: page, limit, status
  */
-export async function getScansController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getScansController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan history",
     functionName: "getScansController",
@@ -298,16 +330,30 @@ export async function getScansController(
   });
 
   try {
-    const page = parseInt(Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || '1'), 10) || 1;
-    const limit = Math.min(parseInt(Array.isArray(req.query.limit) ? String(req.query.limit[0]) : String(req.query.limit || '20'), 10) || 20, 100);
-    const status = Array.isArray(req.query.status) ? String(req.query.status[0]) as ScanStatus : (req.query.status ? String(req.query.status) as ScanStatus : undefined);
+    const page =
+      parseInt(
+        Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || "1"),
+        10,
+      ) || 1;
+    const limit = Math.min(
+      parseInt(
+        Array.isArray(req.query.limit)
+          ? String(req.query.limit[0])
+          : String(req.query.limit || "20"),
+        10,
+      ) || 20,
+      100,
+    );
+    const status = Array.isArray(req.query.status)
+      ? (String(req.query.status[0]) as ScanStatus)
+      : req.query.status
+        ? (String(req.query.status) as ScanStatus)
+        : undefined;
 
     // Validate status if provided
     if (
       status &&
-      !["pending", "cloning", "scanning", "completed", "failed", "cancelled"].includes(
-        status
-      )
+      !["pending", "cloning", "scanning", "completed", "failed", "cancelled"].includes(status)
     ) {
       return res.status(400).json(STATUS_CODE[400]("Invalid status filter"));
     }
@@ -327,10 +373,7 @@ export async function getScansController(
  *
  * GET /ai-detection/scans/active
  */
-export async function getActiveScanController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getActiveScanController(req: Request, res: Response): Promise<Response> {
   // No processing log to reduce noise since this is polled frequently
 
   try {
@@ -350,10 +393,7 @@ export async function getActiveScanController(
  *
  * POST /ai-detection/scans/:scanId/cancel
  */
-export async function cancelScanController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function cancelScanController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Cancelling AI detection scan",
     functionName: "cancelScanController",
@@ -363,7 +403,10 @@ export async function cancelScanController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -401,10 +444,7 @@ export async function cancelScanController(
  *
  * DELETE /ai-detection/scans/:scanId
  */
-export async function deleteScanController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function deleteScanController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Deleting AI detection scan",
     functionName: "deleteScanController",
@@ -414,7 +454,10 @@ export async function deleteScanController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -455,7 +498,7 @@ export async function deleteScanController(
  */
 export async function getSecurityFindingsController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting AI detection security findings",
@@ -466,15 +509,34 @@ export async function getSecurityFindingsController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
 
-    const page = parseInt(Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || '1'), 10) || 1;
-    const limit = Math.min(parseInt(Array.isArray(req.query.limit) ? String(req.query.limit[0]) : String(req.query.limit || '50'), 10) || 50, 100);
-    const severity = Array.isArray(req.query.severity) ? String(req.query.severity[0]) : (req.query.severity ? String(req.query.severity) : undefined);
+    const page =
+      parseInt(
+        Array.isArray(req.query.page) ? String(req.query.page[0]) : String(req.query.page || "1"),
+        10,
+      ) || 1;
+    const limit = Math.min(
+      parseInt(
+        Array.isArray(req.query.limit)
+          ? String(req.query.limit[0])
+          : String(req.query.limit || "50"),
+        10,
+      ) || 50,
+      100,
+    );
+    const severity = Array.isArray(req.query.severity)
+      ? String(req.query.severity[0])
+      : req.query.severity
+        ? String(req.query.severity)
+        : undefined;
 
     // Validate severity if provided
     if (severity && !["critical", "high", "medium", "low"].includes(severity)) {
@@ -497,10 +559,7 @@ export async function getSecurityFindingsController(
  *
  * GET /ai-detection/scans/:scanId/security-summary
  */
-export async function getSecuritySummaryController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getSecuritySummaryController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI detection security summary",
     functionName: "getSecuritySummaryController",
@@ -510,7 +569,10 @@ export async function getSecuritySummaryController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -533,7 +595,7 @@ export async function getSecuritySummaryController(
  */
 export async function updateGovernanceStatusController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Updating finding governance status",
@@ -544,8 +606,14 @@ export async function updateGovernanceStatusController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
-    const findingId = parseInt(Array.isArray(req.params.findingId) ? req.params.findingId[0] : req.params.findingId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
+    const findingId = parseInt(
+      Array.isArray(req.params.findingId) ? req.params.findingId[0] : req.params.findingId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -558,11 +626,16 @@ export async function updateGovernanceStatusController(
     const { governance_status } = req.body;
 
     // Validate governance_status if provided
-    if (governance_status !== null && governance_status !== undefined &&
-      !["reviewed", "approved", "flagged"].includes(governance_status)) {
+    if (
+      governance_status !== null &&
+      governance_status !== undefined &&
+      !["reviewed", "approved", "flagged"].includes(governance_status)
+    ) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("governance_status must be 'reviewed', 'approved', 'flagged', or null"));
+        .json(
+          STATUS_CODE[400]("governance_status must be 'reviewed', 'approved', 'flagged', or null"),
+        );
     }
 
     const ctx = buildServiceContext(req);
@@ -570,12 +643,12 @@ export async function updateGovernanceStatusController(
       scanId,
       findingId,
       governance_status ?? null,
-      ctx
+      ctx,
     );
 
     await logSuccess({
       eventType: "Update",
-      description: `Updated governance status for finding ${findingId} to ${governance_status || 'cleared'}`,
+      description: `Updated governance status for finding ${findingId} to ${governance_status || "cleared"}`,
       functionName: "updateGovernanceStatusController",
       fileName: FILE_NAME,
       userId: req.userId!,
@@ -604,7 +677,7 @@ export async function updateGovernanceStatusController(
  */
 export async function getGovernanceSummaryController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting governance summary",
@@ -615,7 +688,10 @@ export async function getGovernanceSummaryController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
 
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
@@ -637,7 +713,7 @@ export async function getGovernanceSummaryController(
  */
 export async function getAIDetectionStatsController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting AI Detection statistics",
@@ -665,10 +741,7 @@ export async function getAIDetectionStatsController(
  * Returns an AI-BOM formatted JSON document containing all
  * detected AI/ML components from the scan.
  */
-export async function exportAIBOMController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function exportAIBOMController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Exporting scan as AI-BOM",
     functionName: "exportAIBOMController",
@@ -678,7 +751,10 @@ export async function exportAIBOMController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
@@ -722,10 +798,7 @@ export async function exportAIBOMController(
  *
  * Returns graph nodes and edges for visualizing AI component relationships.
  */
-export async function getDependencyGraphController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getDependencyGraphController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting AI dependency graph",
     functionName: "getDependencyGraphController",
@@ -735,7 +808,10 @@ export async function getDependencyGraphController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
@@ -759,7 +835,7 @@ export async function getDependencyGraphController(
  */
 export async function getComplianceMappingController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting compliance mapping for scan",
@@ -770,7 +846,10 @@ export async function getComplianceMappingController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
@@ -801,10 +880,7 @@ export async function getComplianceMappingController(
  * Get risk score for a scan
  * @route GET /ai-detection/scans/:scanId/risk-score
  */
-export async function getRiskScoreController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function getRiskScoreController(req: Request, res: Response): Promise<Response> {
   logProcessing({
     description: "Getting risk score for scan",
     functionName: "getRiskScoreController",
@@ -814,7 +890,10 @@ export async function getRiskScoreController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
@@ -850,7 +929,7 @@ export async function getRiskScoreController(
  */
 export async function recalculateRiskScoreController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Recalculating risk score for scan",
@@ -861,7 +940,10 @@ export async function recalculateRiskScoreController(
   });
 
   try {
-    const scanId = parseInt(Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId, 10);
+    const scanId = parseInt(
+      Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+      10,
+    );
     if (isNaN(scanId)) {
       return res.status(400).json(STATUS_CODE[400]("Invalid scan ID"));
     }
@@ -871,7 +953,9 @@ export async function recalculateRiskScoreController(
     // Verify scan exists and is completed
     const scan = await getScan(scanId, ctx);
     if (scan.scan.status !== "completed") {
-      return res.status(422).json(STATUS_CODE[422]("Can only calculate risk score for completed scans"));
+      return res
+        .status(422)
+        .json(STATUS_CODE[422]("Can only calculate risk score for completed scans"));
     }
 
     const repoName = `${scan.scan.repository_owner}/${scan.scan.repository_name}`;
@@ -902,7 +986,7 @@ export async function recalculateRiskScoreController(
  */
 export async function getRiskScoringConfigController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Getting risk scoring config",
@@ -959,7 +1043,7 @@ export async function getRiskScoringConfigController(
  */
 export async function updateRiskScoringConfigController(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<Response> {
   logProcessing({
     description: "Updating risk scoring config",
@@ -971,27 +1055,46 @@ export async function updateRiskScoringConfigController(
 
   try {
     const ctx = buildServiceContext(req);
-    const { llm_enabled, llm_key_id, dimension_weights, vulnerability_scan_enabled, vulnerability_types_enabled } = req.body;
+    const {
+      llm_enabled,
+      llm_key_id,
+      dimension_weights,
+      vulnerability_scan_enabled,
+      vulnerability_types_enabled,
+    } = req.body;
 
     // Validate dimension weights if provided
     if (dimension_weights) {
       const requiredKeys = [
-        "data_sovereignty", "transparency", "security",
-        "autonomy", "supply_chain"
+        "data_sovereignty",
+        "transparency",
+        "security",
+        "autonomy",
+        "supply_chain",
       ];
       const providedKeys = Object.keys(dimension_weights);
       const extraKeys = providedKeys.filter((k) => !requiredKeys.includes(k));
       if (extraKeys.length > 0) {
-        return res.status(400).json(STATUS_CODE[400](`Unknown dimension keys: ${extraKeys.join(", ")}`));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](`Unknown dimension keys: ${extraKeys.join(", ")}`));
       }
       for (const key of requiredKeys) {
-        if (typeof dimension_weights[key] !== "number" || dimension_weights[key] < 0 || dimension_weights[key] > 1) {
-          return res.status(400).json(STATUS_CODE[400](`Invalid weight for ${key}: must be a number between 0 and 1`));
+        if (
+          typeof dimension_weights[key] !== "number" ||
+          dimension_weights[key] < 0 ||
+          dimension_weights[key] > 1
+        ) {
+          return res
+            .status(400)
+            .json(STATUS_CODE[400](`Invalid weight for ${key}: must be a number between 0 and 1`));
         }
       }
       const total = requiredKeys.reduce((sum: number, k: string) => sum + dimension_weights[k], 0);
       if (Math.abs(total - 1.0) > 0.01) {
-        return res.status(400).json(STATUS_CODE[400](`Dimension weights must sum to 1.0, got ${total.toFixed(2)}`));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](`Dimension weights must sum to 1.0, got ${total.toFixed(2)}`));
       }
     }
 
@@ -1010,13 +1113,19 @@ export async function updateRiskScoringConfigController(
     // Validate vulnerability_types_enabled if provided
     if (vulnerability_types_enabled !== undefined) {
       const providedKeys = Object.keys(vulnerability_types_enabled);
-      const invalidKeys = providedKeys.filter((k) => !(VULNERABILITY_FINDING_TYPES as readonly string[]).includes(k));
+      const invalidKeys = providedKeys.filter(
+        (k) => !(VULNERABILITY_FINDING_TYPES as readonly string[]).includes(k),
+      );
       if (invalidKeys.length > 0) {
-        return res.status(400).json(STATUS_CODE[400](`Unknown vulnerability types: ${invalidKeys.join(", ")}`));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](`Unknown vulnerability types: ${invalidKeys.join(", ")}`));
       }
       for (const key of providedKeys) {
         if (typeof vulnerability_types_enabled[key] !== "boolean") {
-          return res.status(400).json(STATUS_CODE[400](`vulnerability_types_enabled.${key} must be a boolean`));
+          return res
+            .status(400)
+            .json(STATUS_CODE[400](`vulnerability_types_enabled.${key} must be a boolean`));
         }
       }
     }

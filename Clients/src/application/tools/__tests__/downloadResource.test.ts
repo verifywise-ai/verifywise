@@ -47,7 +47,7 @@ describe("downloadResource", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost:3000/api/aiTrustCentre/tenant-abc/resources/res-123",
-      expect.objectContaining({ method: "GET" })
+      expect.objectContaining({ method: "GET" }),
     );
     expect(mockClick).toHaveBeenCalled();
   });
@@ -58,10 +58,7 @@ describe("downloadResource", () => {
 
     await downloadResource("res-1", "tenant-1");
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Error downloading resource:",
-      expect.any(Error)
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("Error downloading resource:", expect.any(Error));
     consoleSpy.mockRestore();
   });
 });

@@ -79,15 +79,14 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
   const fieldWidth = `${LAYOUT.FIELD_WIDTH}px`;
 
   const handleFieldChange = useCallback(
-    (field: keyof QuantitativeRiskFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const val = event.target.value;
-        onChange({
-          ...values,
-          [field]: val === "" ? null : parseFloat(val),
-        });
-      },
-    [values, onChange]
+    (field: keyof QuantitativeRiskFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const val = event.target.value;
+      onChange({
+        ...values,
+        [field]: val === "" ? null : parseFloat(val),
+      });
+    },
+    [values, onChange],
   );
 
   const handleBenchmarkApply = useCallback(
@@ -118,7 +117,7 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
         benchmark_id: toNum(benchmark.id),
       });
     },
-    [values, onChange]
+    [values, onChange],
   );
 
   // Build the fields object for the summary card
@@ -134,11 +133,7 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
   /**
    * Renders a three-point estimate row (min / likely / max)
    */
-  const renderThreePointRow = (
-    label: string,
-    prefix: string,
-    unit: string
-  ) => (
+  const renderThreePointRow = (label: string, prefix: string, unit: string) => (
     <Stack sx={{ gap: 1 }}>
       <Typography
         sx={{
@@ -157,14 +152,10 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
           type="number"
           value={
             values[`${prefix}_min` as keyof QuantitativeRiskFormValues] != null
-              ? String(
-                  values[`${prefix}_min` as keyof QuantitativeRiskFormValues]
-                )
+              ? String(values[`${prefix}_min` as keyof QuantitativeRiskFormValues])
               : ""
           }
-          onChange={handleFieldChange(
-            `${prefix}_min` as keyof QuantitativeRiskFormValues
-          )}
+          onChange={handleFieldChange(`${prefix}_min` as keyof QuantitativeRiskFormValues)}
           disabled={disabled}
           sx={{ width: fieldWidth }}
         />
@@ -174,19 +165,11 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
           placeholder={unit === "$" ? "0" : "0.0"}
           type="number"
           value={
-            values[
-              `${prefix}_likely` as keyof QuantitativeRiskFormValues
-            ] != null
-              ? String(
-                  values[
-                    `${prefix}_likely` as keyof QuantitativeRiskFormValues
-                  ]
-                )
+            values[`${prefix}_likely` as keyof QuantitativeRiskFormValues] != null
+              ? String(values[`${prefix}_likely` as keyof QuantitativeRiskFormValues])
               : ""
           }
-          onChange={handleFieldChange(
-            `${prefix}_likely` as keyof QuantitativeRiskFormValues
-          )}
+          onChange={handleFieldChange(`${prefix}_likely` as keyof QuantitativeRiskFormValues)}
           disabled={disabled}
           sx={{ width: fieldWidth }}
         />
@@ -197,14 +180,10 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
           type="number"
           value={
             values[`${prefix}_max` as keyof QuantitativeRiskFormValues] != null
-              ? String(
-                  values[`${prefix}_max` as keyof QuantitativeRiskFormValues]
-                )
+              ? String(values[`${prefix}_max` as keyof QuantitativeRiskFormValues])
               : ""
           }
-          onChange={handleFieldChange(
-            `${prefix}_max` as keyof QuantitativeRiskFormValues
-          )}
+          onChange={handleFieldChange(`${prefix}_max` as keyof QuantitativeRiskFormValues)}
           disabled={disabled}
           sx={{ width: fieldWidth }}
         />
@@ -238,14 +217,10 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
             lineHeight: 1.5,
           }}
         >
-          How often is this risk event expected to occur per year? Use
-          three-point estimates (min / most likely / max).
+          How often is this risk event expected to occur per year? Use three-point estimates (min /
+          most likely / max).
         </Typography>
-        {renderThreePointRow(
-          "Frequency (times per year)",
-          "event_frequency",
-          "#"
-        )}
+        {renderThreePointRow("Frequency (times per year)", "event_frequency", "#")}
       </Stack>
 
       {/* Loss Magnitude */}
@@ -266,8 +241,7 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
             lineHeight: 1.5,
           }}
         >
-          Estimate the monetary impact per occurrence across four loss
-          categories.
+          Estimate the monetary impact per occurrence across four loss categories.
         </Typography>
         {renderThreePointRow("Regulatory fines", "loss_regulatory", "$")}
         {renderThreePointRow("Operational costs", "loss_operational", "$")}
@@ -279,15 +253,10 @@ const QuantitativeRiskForm: FC<QuantitativeRiskFormProps> = ({
       <MitigationROI
         controlEffectiveness={values.control_effectiveness}
         mitigationCostAnnual={values.mitigation_cost_annual}
-        onControlEffectivenessChange={(val) =>
-          onChange({ ...values, control_effectiveness: val })
-        }
-        onMitigationCostChange={(val) =>
-          onChange({ ...values, mitigation_cost_annual: val })
-        }
+        onControlEffectivenessChange={(val) => onChange({ ...values, control_effectiveness: val })}
+        onMitigationCostChange={(val) => onChange({ ...values, mitigation_cost_annual: val })}
         disabled={disabled}
       />
-
     </Stack>
   );
 };

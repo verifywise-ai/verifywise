@@ -19,13 +19,7 @@ const App = () => {
     // Handle sending the invite logic here
   };
 
-  return (
-    <InviteUserModal
-      isOpen={isOpen}
-      setIsOpen={setIsOpen}
-      onSendInvite={handleSendInvite}
-    />
-  );
+  return <InviteUserModal isOpen={isOpen} setIsOpen={setIsOpen} onSendInvite={handleSendInvite} />;
 };
 ```
 

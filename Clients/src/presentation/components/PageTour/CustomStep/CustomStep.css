@@ -13,7 +13,9 @@
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tour-close-button:hover {
@@ -30,7 +32,9 @@
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tour-back-button:hover {
@@ -39,7 +43,7 @@
 }
 
 .tour-primary-button {
-  background: linear-gradient(135deg, #13715B 0%, #16C784 100%);
+  background: linear-gradient(135deg, #13715b 0%, #16c784 100%);
   color: #ffffff;
   font-size: 13px;
   padding: 6px 16px;

@@ -7,14 +7,10 @@ test.describe("Agent Discovery", () => {
     await expect(page).toHaveURL(/\/agent-discovery/);
 
     // Page should show agent-related content or empty state
-    await expect(
-      page.getByText(/agent/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/agent/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/agent-discovery");
     await page.waitForLoadState("domcontentloaded");
 
@@ -38,9 +34,7 @@ test.describe("Agent Discovery", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("agent list or empty state is visible", async ({
-    authedPage: page,
-  }) => {
+  test("agent list or empty state is visible", async ({ authedPage: page }) => {
     await page.goto("/agent-discovery");
 
     const content = page

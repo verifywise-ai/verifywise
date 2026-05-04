@@ -7,7 +7,5 @@ interface WelcomeVideoPlayerProps {
 }
 
 export function WelcomeVideoPlayer({ open, onClose }: WelcomeVideoPlayerProps) {
-  return (
-    <VideoPlayerModal open={open} onClose={onClose} config={WELCOME_CONFIG} />
-  );
+  return <VideoPlayerModal open={open} onClose={onClose} config={WELCOME_CONFIG} />;
 }

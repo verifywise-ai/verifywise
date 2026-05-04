@@ -1,7 +1,11 @@
 import React from "react";
 import { Box, Stack, FormControlLabel, useTheme } from "@mui/material";
 import Toggle from "../Toggle";
-import { CardActive, CardDisabled, getFormControlLabelStyles } from "../../../pages/AITrustCenter/Overview/styles";
+import {
+  CardActive,
+  CardDisabled,
+  getFormControlLabelStyles,
+} from "../../../pages/AITrustCenter/Overview/styles";
 
 interface ToggleCardProps {
   label: string;
@@ -25,11 +29,9 @@ function ToggleCard({ label, checked, onToggle, children, disabled }: ToggleCard
           sx={formControlLabelStyles}
         />
       </Box>
-      <CardComponent>
-        {children}
-      </CardComponent>
+      <CardComponent>{children}</CardComponent>
     </Stack>
   );
 }
 
-export default ToggleCard; 
+export default ToggleCard;

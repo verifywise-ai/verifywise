@@ -10,7 +10,7 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard is the first screen you see after logging in. It gives you a real-time overview of your AI governance program, showing key metrics across all areas of the platform in a customizable layout.',
+      text: 'The dashboard is the first screen you see after logging in. It gives you a real-time overview of your AI governance program, showing key metrics across all areas of the platform.',
     },
     {
       type: 'paragraph',
@@ -138,101 +138,35 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'heading',
-      id: 'customizing-layout',
+      id: 'dashboard-views',
       level: 2,
-      text: 'Customizing the dashboard layout',
+      text: 'Dashboard views',
     },
     {
       type: 'paragraph',
-      text: 'You can personalize the dashboard to match your workflow by rearranging widgets and choosing which ones to display.',
+      text: 'The dashboard supports two preset layouts via a view toggle. Widget layout itself is not user-customizable.',
     },
     {
       type: 'heading',
-      id: 'edit-mode',
+      id: 'view-toggle',
       level: 3,
-      text: 'Entering edit mode',
+      text: 'Switching between views',
     },
     {
       type: 'paragraph',
-      text: 'To customize your dashboard:',
-    },
-    {
-      type: 'ordered-list',
-      items: [
-        { text: 'Click the lock icon in the top right corner of the dashboard' },
-        { text: 'The icon changes to an unlocked state, meaning edit mode is active' },
-        { text: 'A "Show/hide cards" selector appears next to the lock icon' },
-        { text: 'Make your changes (drag, resize or hide widgets)' },
-        { text: 'Click the lock icon again to save your layout and exit edit mode' },
-      ],
-    },
-    {
-      type: 'image',
-      src: '/images/user-guide/dashboard-edit-mode.png',
-      alt: 'Dashboard in edit mode showing the Show/hide cards dropdown menu with checkboxes for each widget type',
-      caption: 'Use the Show/hide cards menu to control which widgets appear on your dashboard.',
-    },
-    {
-      type: 'heading',
-      id: 'rearranging-widgets',
-      level: 3,
-      text: 'Rearranging widgets',
-    },
-    {
-      type: 'paragraph',
-      text: 'While in edit mode, you can drag widgets to reposition them:',
+      text: 'Use the toggle in the top right of the dashboard to switch between two layouts:',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Click and hold the widget header (a grip icon appears when in edit mode)' },
-        { text: 'Drag the widget to your desired position' },
-        { text: 'Other widgets rearrange automatically to make room' },
-        { text: 'Release to drop the widget in place' },
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'resizing-widgets',
-      level: 3,
-      text: 'Resizing widgets',
-    },
-    {
-      type: 'paragraph',
-      text: 'Some widgets can be resized while in edit mode:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { text: 'Drag any edge or corner of a widget to resize it' },
-        { text: 'Widgets snap to a grid for consistent alignment' },
-        { text: 'Some widgets have fixed sizes and can\'t be resized (Use cases, Users, Evidence, Reports)' },
-        { text: 'Widgets with status charts can be made larger to show more detail' },
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'showing-hiding',
-      level: 3,
-      text: 'Showing and hiding widgets',
-    },
-    {
-      type: 'paragraph',
-      text: 'Use the "Show/hide cards" selector to control which widgets appear:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { text: 'Click the "Show/hide cards" dropdown that appears in edit mode' },
-        { text: 'Check or uncheck widgets to show or hide them' },
-        { text: 'Hidden widgets are removed from the dashboard but can be restored at any time' },
-        { text: 'If you hide all widgets, a prompt appears to help you restore them' },
+        { bold: 'Operations', text: 'Detailed view with status charts and counts for every governance area.' },
+        { bold: 'Executive', text: 'Condensed three-column summary focused on top-line metrics.' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Your dashboard layout saves automatically and will be restored when you return. Each user has their own layout.',
+      text: 'Your view choice is remembered in your browser and restored when you return.',
     },
     {
       type: 'heading',
@@ -287,23 +221,13 @@ export const dashboardAnalyticsContent: ArticleContent = {
     },
     {
       type: 'heading',
-      id: 'faq-reset-layout',
-      level: 3,
-      text: 'How do I reset my dashboard to the default layout?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Enter edit mode and use the "Show/hide cards" selector to hide all widgets. Then click the link to restore all cards, which resets them to the default layout. You can also clear your browser\'s local storage for the VerifyWise site.',
-    },
-    {
-      type: 'heading',
       id: 'faq-shared-layout',
       level: 3,
-      text: 'Is the dashboard layout shared across my team?',
+      text: 'Is my view choice shared with my team?',
     },
     {
       type: 'paragraph',
-      text: 'No. Each user has their own dashboard layout. Changes you make only affect your view and are saved in your browser. Other team members see their own customized layout.',
+      text: 'No. Each user\'s view (Operations or Executive) is saved in their own browser. Other team members see whichever view they last selected.',
     },
     {
       type: 'heading',

@@ -78,7 +78,8 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
             lineHeight: 1.6,
           }}
         >
-          Map your projects to regulations like EU AI Act, ISO 42001, and ISO 27001 to ensure comprehensive compliance.
+          Map your projects to regulations like EU AI Act, ISO 42001, and ISO 27001 to ensure
+          comprehensive compliance.
         </Typography>
       </Box>
 

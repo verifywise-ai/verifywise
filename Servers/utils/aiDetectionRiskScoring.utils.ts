@@ -92,7 +92,7 @@ function defaultVulnerabilityTypesEnabled(): Record<VulnerabilityTypeKey, boolea
  * Get risk scoring config for an organization. Returns null if no config exists.
  */
 export async function getRiskScoringConfigQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<RiskScoringConfig | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -113,7 +113,8 @@ export async function getRiskScoringConfigQuery(
   // Merge vulnerability config from separate table
   const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
   config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
-  config.vulnerability_types_enabled = vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
+  config.vulnerability_types_enabled =
+    vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
 
   return config;
 }
@@ -122,7 +123,7 @@ export async function getRiskScoringConfigQuery(
  * Get vulnerability scan config for an organization from the dedicated table.
  */
 export async function getVulnerabilityConfigQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<VulnerabilityConfig | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -153,7 +154,7 @@ export async function upsertRiskScoringConfigQuery(
     vulnerability_scan_enabled?: boolean;
     vulnerability_types_enabled?: Record<VulnerabilityTypeKey, boolean>;
     updated_by: number;
-  }
+  },
 ): Promise<RiskScoringConfig> {
   validateOrganizationId(organizationId);
 
@@ -213,9 +214,7 @@ export async function upsertRiskScoringConfigQuery(
         organizationId,
         llm_enabled: data.llm_enabled ?? false,
         llm_key_id: data.llm_key_id ?? null,
-        dimension_weights: JSON.stringify(
-          data.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS
-        ),
+        dimension_weights: JSON.stringify(data.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS),
         updated_by: data.updated_by,
       },
     });
@@ -224,7 +223,10 @@ export async function upsertRiskScoringConfigQuery(
   }
 
   // Upsert vulnerability scan config in the dedicated table
-  if (data.vulnerability_scan_enabled !== undefined || data.vulnerability_types_enabled !== undefined) {
+  if (
+    data.vulnerability_scan_enabled !== undefined ||
+    data.vulnerability_types_enabled !== undefined
+  ) {
     await upsertVulnerabilityConfigQuery(organizationId, {
       vulnerability_scan_enabled: data.vulnerability_scan_enabled,
       vulnerability_types_enabled: data.vulnerability_types_enabled,
@@ -235,7 +237,8 @@ export async function upsertRiskScoringConfigQuery(
   // Merge vulnerability config into the returned object
   const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
   config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
-  config.vulnerability_types_enabled = vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
+  config.vulnerability_types_enabled =
+    vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
 
   return config;
 }
@@ -249,7 +252,7 @@ async function upsertVulnerabilityConfigQuery(
     vulnerability_scan_enabled?: boolean;
     vulnerability_types_enabled?: Record<VulnerabilityTypeKey, boolean>;
     updated_by: number;
-  }
+  },
 ): Promise<void> {
   const insertVulnEnabled = data.vulnerability_scan_enabled ?? false;
   const insertTypesEnabled = data.vulnerability_types_enabled
@@ -294,7 +297,7 @@ export async function updateScanRiskScoreQuery(
   score: number,
   grade: string,
   details: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   validateOrganizationId(organizationId);
   const query = `
@@ -329,7 +332,7 @@ export async function updateScanRiskScoreQuery(
  */
 export async function getAllFindingsForScoringQuery(
   scanId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FindingForScoring[]> {
   validateOrganizationId(organizationId);
   const query = `
@@ -362,4 +365,3 @@ export async function getAllFindingsForScoringQuery(
 
   return results as FindingForScoring[];
 }
-

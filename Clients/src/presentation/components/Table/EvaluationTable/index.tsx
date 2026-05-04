@@ -18,12 +18,7 @@ import { ChevronsUpDown, FlaskConical, Play, Database, BarChart3 } from "lucide-
 const SelectorVertical = (props: React.SVGProps<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
 );
-import {
-  paginationStatus,
-  paginationStyle,
-  paginationDropdown,
-  paginationSelect,
-} from "./styles";
+import { paginationStatus, paginationStyle, paginationDropdown, paginationSelect } from "./styles";
 import singleTheme from "../../../themes/v1SingleTheme";
 import {
   getPaginationRowCount,
@@ -39,23 +34,23 @@ const EVALUATION_SORTING_KEY = "verifywise_evaluation_sorting";
 // Map column labels to sortable field keys
 const columnSortKeys: Record<string, string> = {
   "EXPERIMENT NAME": "name",
-  "MODEL": "model",
+  MODEL: "model",
   "JUDGE/SCORER": "judge",
   "# PROMPTS": "prompts",
-  "DATASET": "dataset",
-  "DATE": "date",
+  DATASET: "dataset",
+  DATE: "date",
 };
 
 // Column width definitions for consistent spacing
 const columnWidths: Record<string, string> = {
   "EXPERIMENT NAME": "20%",
-  "MODEL": "12%",
+  MODEL: "12%",
   "JUDGE/SCORER": "16%",
   "# PROMPTS": "8%",
-  "DATASET": "12%",
+  DATASET: "12%",
   "LINKED MODEL": "10%",
-  "DATE": "14%",
-  "ACTION": "60px",
+  DATE: "14%",
+  ACTION: "60px",
 };
 
 const toStandardColumns = (labels: string[]): StandardColumn[] =>
@@ -81,9 +76,7 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
 }) => {
   const standardColumns = useMemo(() => toStandardColumns(columns), [columns]);
 
-  const [rowsPerPage, setRowsPerPage] = useState(() =>
-    getPaginationRowCount("evaluation", 10)
-  );
+  const [rowsPerPage, setRowsPerPage] = useState(() => getPaginationRowCount("evaluation", 10));
 
   // Initialize sorting state from localStorage or default to date desc
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -185,7 +178,7 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
     (_: unknown, newPage: number) => {
       setCurrentPagingation(newPage);
     },
-    [setCurrentPagingation]
+    [setCurrentPagingation],
   );
 
   const handleChangeRowsPerPage = useCallback(
@@ -195,7 +188,7 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
       setPaginationRowCount("evaluation", newRowsPerPage);
       setCurrentPagingation(0);
     },
-    [setRowsPerPage, setCurrentPagingation]
+    [setRowsPerPage, setCurrentPagingation],
   );
 
   return (
@@ -241,15 +234,10 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
                         rowsPerPage={rowsPerPage}
                         rowsPerPageOptions={[5, 10, 15, 20, 25]}
                         onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => (
-                          <TablePaginationActions {...props} />
-                        )}
+                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         labelRowsPerPage="Evaluations per page"
                         labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(
-                            0,
-                            Math.ceil(count / rowsPerPage)
-                          )}`
+                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                         }
                         sx={paginationStyle(theme)}
                         slotProps={{
@@ -284,7 +272,10 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
               <TableBody>
                 <TableRow>
                   <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                    <EmptyState icon={FlaskConical} message="No experiments run yet. Create an experiment to evaluate model performance.">
+                    <EmptyState
+                      icon={FlaskConical}
+                      message="No experiments run yet. Create an experiment to evaluate model performance."
+                    >
                       <EmptyStateTip
                         icon={Play}
                         title="Run your first experiment"

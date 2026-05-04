@@ -16,13 +16,11 @@ test.describe("Post-Market Monitoring", () => {
         .or(page.getByText(/report/i))
         .or(page.getByText(/post-market/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/monitoring/reports");
     await page.waitForLoadState("domcontentloaded");
 
@@ -44,9 +42,7 @@ test.describe("Post-Market Monitoring", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays reports list or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("displays reports list or empty state", async ({ authedPage: page }) => {
     await page.goto("/monitoring/reports");
 
     // Should show reports, archive entries, or empty state
@@ -61,9 +57,7 @@ test.describe("Post-Market Monitoring", () => {
 
   // --- Tier 5: Reports archive & monitoring form ---
 
-  test("reports archive shows table with filter controls", async ({
-    authedPage: page,
-  }) => {
+  test("reports archive shows table with filter controls", async ({ authedPage: page }) => {
     await page.goto("/monitoring/reports");
     await page.waitForTimeout(2000);
 
@@ -75,7 +69,12 @@ test.describe("Post-Market Monitoring", () => {
       .or(page.getByRole("table"))
       .or(page.getByText(/no.*report/i));
 
-    if (await filterControls.first().isVisible().catch(() => false)) {
+    if (
+      await filterControls
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(filterControls.first()).toBeVisible();
     }
   });
@@ -92,7 +91,12 @@ test.describe("Post-Market Monitoring", () => {
       .or(page.getByRole("button", { name: /reset/i }))
       .or(page.getByText(/flagged only/i));
 
-    if (await filters.first().isVisible().catch(() => false)) {
+    if (
+      await filters
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(filters.first()).toBeVisible();
     }
   });

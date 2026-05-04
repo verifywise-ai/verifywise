@@ -68,8 +68,7 @@
   height: 42px;
 }
 
-.new-compliance-tracker-details-accordion
-  .new-compliance-tracker-details-accordion-summary {
+.new-compliance-tracker-details-accordion .new-compliance-tracker-details-accordion-summary {
   background-color: #fafafa;
   padding: 10px;
   flex-direction: row-reverse;

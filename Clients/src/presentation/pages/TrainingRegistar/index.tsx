@@ -1,11 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  Suspense,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from "react";
 import { Box, Stack, Fade } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
@@ -32,23 +25,15 @@ import {
   TrainingRegistarDTO,
 } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { GroupBy } from "../../components/Table/GroupBy";
-import {
-  useTableGrouping,
-  useGroupByState,
-} from "../../../application/hooks/useTableGrouping";
+import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import {
-  useColumnVisibility,
-  ColumnConfig,
-} from "../../../application/hooks/useColumnVisibility";
+import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
-const Alert = React.lazy(
-  () => import("../../../presentation/components/Alert")
-);
+const Alert = React.lazy(() => import("../../../presentation/components/Alert"));
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -61,9 +46,7 @@ interface AlertState {
 
 // Utility: Map TrainingRegistarModel to form data DTO (DRY)
 // Returns complete DTO (id is already optional in DTO definition)
-const mapTrainingToFormData = (
-  training: TrainingRegistarModel
-): TrainingRegistarDTO => {
+const mapTrainingToFormData = (training: TrainingRegistarModel): TrainingRegistarDTO => {
   return {
     training_name: training.training_name,
     duration: training.duration,
@@ -76,11 +59,7 @@ const mapTrainingToFormData = (
 };
 
 // Utility: Show alert with auto-dismiss (DRY)
-const createAlert = (
-  variant: AlertVariant,
-  body: string,
-  title?: string
-): AlertState => ({
+const createAlert = (variant: AlertVariant, body: string, title?: string): AlertState => ({
   variant,
   body,
   title,
@@ -114,17 +93,13 @@ const Training: React.FC = () => {
   const [trainingData, setTrainingData] = useState<TrainingRegistarModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewTrainingModalOpen, setIsNewTrainingModalOpen] = useState(false);
-  const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(
-    null
-  );
-  const [selectedTraining, setSelectedTraining] =
-    useState<TrainingRegistarModel | null>(null);
-    const [showAlert, setShowAlert] = useState(false);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
+  const [selectedTraining, setSelectedTraining] = useState<TrainingRegistarModel | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
 
   const { userRoleName } = useAuth();
   // Assuming a similar permission structure for 'training' as 'vendors'
-  const isCreatingDisabled =
-    !userRoleName || !["Admin", "Editor"].includes(userRoleName); // Example permission check
+  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName); // Example permission check
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
@@ -230,8 +205,10 @@ const Training: React.FC = () => {
           });
           setAlert({
             variant: "error",
-            body: "Failed to load training details. Please try again.",
+            body: "This training no longer exists or you do not have access to it.",
           });
+          setIsNewTrainingModalOpen(false);
+          setSelectedTrainingId(null);
         }
       }
     };
@@ -265,9 +242,7 @@ const Training: React.FC = () => {
               type: "error",
               message: "Cannot update training without ID",
             });
-            setAlert(
-              createAlert("error", "Cannot update training: Missing ID")
-            );
+            setAlert(createAlert("error", "Cannot update training: Missing ID"));
             return false;
           }
 
@@ -304,30 +279,28 @@ const Training: React.FC = () => {
               "error",
               selectedTraining
                 ? "Failed to update training. Please try again."
-                : "Failed to create training. Please try again."
-            )
+                : "Failed to create training. Please try again.",
+            ),
           );
           return false;
         }
       } catch (error) {
         logEngine({
           type: "error",
-          message: `Failed to ${
-            selectedTraining ? "update" : "create"
-          } training: ${error}`,
+          message: `Failed to ${selectedTraining ? "update" : "create"} training: ${error}`,
         });
         setAlert(
           createAlert(
             "error",
             selectedTraining
               ? "Failed to update training. Please try again."
-              : "Failed to create training. Please try again."
-          )
+              : "Failed to create training. Please try again.",
+          ),
         );
         return false;
       }
     },
-    [selectedTraining, fetchTrainingData]
+    [selectedTraining, fetchTrainingData],
   );
 
   const handleDeleteTraining = async (id: string) => {
@@ -417,15 +390,12 @@ const Training: React.FC = () => {
         type: "text" as const,
       },
     ],
-    [getUniqueProviders, getUniqueDepartments]
+    [getUniqueProviders, getUniqueDepartments],
   );
 
   // FilterBy - Field value getter
   const getTrainingFieldValue = useCallback(
-    (
-      item: TrainingRegistarModel,
-      fieldId: string
-    ): string | number | Date | null | undefined => {
+    (item: TrainingRegistarModel, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "training_name":
           return item.training_name;
@@ -441,14 +411,12 @@ const Training: React.FC = () => {
           return null;
       }
     },
-    []
+    [],
   );
 
   // FilterBy - Initialize hook
-  const {
-    filterData: filterTrainingData,
-    handleFilterChange: handleTrainingFilterChange,
-  } = useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
+  const { filterData: filterTrainingData, handleFilterChange: handleTrainingFilterChange } =
+    useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
   // Filtered trainings using FilterBy and search
   const filteredTraining = useMemo(() => {
@@ -470,7 +438,7 @@ const Training: React.FC = () => {
   // Define how to get the group key for each training
   const getTrainingGroupKey = (
     training: TrainingRegistarModel,
-    field: string
+    field: string,
   ): string | string[] => {
     switch (field) {
       case "status":
@@ -526,36 +494,35 @@ const Training: React.FC = () => {
       tipBoxEntity="training"
       alert={
         alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Fade
-            in={showAlert}
-            timeout={300}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              zIndex: 1000,
-            }}
-          >
-            <Box mb={2}>
-              <Alert
-                variant={alert.variant}
-                title={alert.title}
-                body={alert.body}
-                isToast={true}
-                onClick={() => {
-                  setShowAlert(false);
-                  setTimeout(() => setAlert(null), 300);
-                }}
-              />
-            </Box>
-          </Fade>
-        </Suspense>
-      )
+          <Suspense fallback={<div>Loading...</div>}>
+            <Fade
+              in={showAlert}
+              timeout={300}
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1000,
+              }}
+            >
+              <Box mb={2}>
+                <Alert
+                  variant={alert.variant}
+                  title={alert.title}
+                  body={alert.body}
+                  isToast={true}
+                  onClick={() => {
+                    setShowAlert(false);
+                    setTimeout(() => setAlert(null), 300);
+                  }}
+                />
+              </Box>
+            </Fade>
+          </Suspense>
+        )
       }
     >
-
       {/* Filter + Search row */}
       <Stack
         direction="row"
@@ -566,10 +533,7 @@ const Training: React.FC = () => {
       >
         {/* Left side: FilterBy, GroupBy, Search */}
         <Stack direction="row" spacing={2} alignItems="center">
-          <FilterBy
-            columns={trainingFilterColumns}
-            onFilterChange={handleTrainingFilterChange}
-          />
+          <FilterBy columns={trainingFilterColumns} onFilterChange={handleTrainingFilterChange} />
 
           <GroupBy
             options={[
@@ -644,9 +608,7 @@ const Training: React.FC = () => {
         isOpen={isNewTrainingModalOpen}
         setIsOpen={handleCloseModal}
         onSuccess={handleTrainingSuccess}
-        initialData={
-          selectedTraining ? mapTrainingToFormData(selectedTraining) : undefined
-        }
+        initialData={selectedTraining ? mapTrainingToFormData(selectedTraining) : undefined}
         isEdit={!!selectedTraining}
         entityId={selectedTraining?.id ? Number(selectedTraining.id) : undefined}
       />

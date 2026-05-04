@@ -55,8 +55,7 @@ export const ProjectScope = [
     questions: [
       {
         id: 1,
-        question:
-          "What type of AI technology are you using? Explain AI and ML technologies used.",
+        question: "What type of AI technology are you using? Explain AI and ML technologies used.",
         hint: "What type of AI technology are you using? Explain AI and ML technologies used.",
         priorityLevel: "high priority",
         answerType: "Long text",

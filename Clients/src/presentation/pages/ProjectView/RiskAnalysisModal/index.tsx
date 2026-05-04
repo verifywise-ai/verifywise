@@ -1,9 +1,4 @@
-import {
-  Stack,
-  Typography,
-  useTheme,
-  Box,
-} from "@mui/material";
+import { Stack, Typography, useTheme, Box } from "@mui/material";
 import { ArrowLeft, ArrowRight, Save } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import {
@@ -12,11 +7,7 @@ import {
   getVisibleQuestions,
   getProgress,
 } from "./questions.config";
-import {
-  QuestionId,
-  IQuestionnaireAnswers,
-  ClassificationResult,
-} from "./iQuestion";
+import { QuestionId, IQuestionnaireAnswers, ClassificationResult } from "./iQuestion";
 import { useCallback, useState, useEffect } from "react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import RiskAnalysisQuestion from "./RiskAnalysisQuestion";
@@ -57,8 +48,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
   const [currentQuestionId, setCurrentQuestionId] = useState<QuestionId>("Q1");
   const [answers, setAnswers] = useState<IQuestionnaireAnswers>({});
   const [showResults, setShowResults] = useState<boolean>(false);
-  const [classification, setClassification] =
-    useState<ClassificationResult | null>(null);
+  const [classification, setClassification] = useState<ClassificationResult | null>(null);
 
   // LocalStorage key for this project's risk analysis
   const STORAGE_KEY = `riskAnalysis_${projectId}`;
@@ -68,8 +58,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       try {
-        const { answers: savedAnswers, currentQuestionId: savedQuestionId } =
-          JSON.parse(savedData);
+        const { answers: savedAnswers, currentQuestionId: savedQuestionId } = JSON.parse(savedData);
         if (savedAnswers) {
           setAnswers(savedAnswers);
         }
@@ -110,9 +99,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
 
   // Get current question
   const visibleQuestions = getVisibleQuestions(answers);
-  const currentQuestion = visibleQuestions.find(
-    (q) => q.id === currentQuestionId,
-  );
+  const currentQuestion = visibleQuestions.find((q) => q.id === currentQuestionId);
   const finalQuestion = currentQuestionId === "Q5";
 
   // Calculate progress
@@ -216,14 +203,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
         });
       }
     });
-  }, [
-    projectId,
-    setAlert,
-    classification,
-    clearSavedProgress,
-    updateClassification,
-    handleClose
-  ]);
+  }, [projectId, setAlert, classification, clearSavedProgress, updateClassification, handleClose]);
 
   const handleSave = () => {
     handleSaveConfirm();
@@ -281,10 +261,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
         ) : (
           <>
             {/* Progress Tracker */}
-            <ProgressTracker
-              currentStep={progress.current}
-              totalSteps={progress.total}
-            />
+            <ProgressTracker currentStep={progress.current} totalSteps={progress.total} />
 
             {/* Content */}
             <Stack spacing={3}>

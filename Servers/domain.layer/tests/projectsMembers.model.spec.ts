@@ -45,15 +45,11 @@ class TestProjectsMembersModel {
   static async createNewProjectMember(
     userId: number,
     projectId: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestProjectsMembersModel> {
     // Validate user_id
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     // Validate project_id
@@ -61,7 +57,7 @@ class TestProjectsMembersModel {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -77,7 +73,7 @@ class TestProjectsMembersModel {
       throw new ConflictException(
         "User is already a member of this project",
         "ProjectMember",
-        "user_id,project_id"
+        "user_id,project_id",
       );
     }
 
@@ -97,7 +93,7 @@ class TestProjectsMembersModel {
       throw new BusinessLogicException(
         "Demo project members cannot be converted to regular members",
         "DEMO_MEMBER_RESTRICTION",
-        { userId: this.user_id, projectId: this.project_id }
+        { userId: this.user_id, projectId: this.project_id },
       );
     }
 
@@ -113,7 +109,7 @@ class TestProjectsMembersModel {
       throw new ValidationException(
         "Valid user_id is required (must be >= 1)",
         "user_id",
-        this.user_id
+        this.user_id,
       );
     }
 
@@ -121,7 +117,7 @@ class TestProjectsMembersModel {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }
@@ -137,7 +133,7 @@ class TestProjectsMembersModel {
       throw new BusinessLogicException(
         "Demo project members cannot be modified",
         "DEMO_MEMBER_RESTRICTION",
-        { userId: this.user_id, projectId: this.project_id }
+        { userId: this.user_id, projectId: this.project_id },
       );
     }
     return true;
@@ -177,21 +173,17 @@ class TestProjectsMembersModel {
   // Static method to find by user and project IDs
   static async findByUserAndProject(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<TestProjectsMembersModel | null> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -210,12 +202,9 @@ class TestProjectsMembersModel {
   // Static method to find by user and project IDs with validation
   static async findByUserAndProjectWithValidation(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<TestProjectsMembersModel> {
-    const projectMember = await TestProjectsMembersModel.findByUserAndProject(
-      userId,
-      projectId
-    );
+    const projectMember = await TestProjectsMembersModel.findByUserAndProject(userId, projectId);
 
     if (!projectMember) {
       throw new NotFoundException("Project member not found", "ProjectMember", {
@@ -228,14 +217,12 @@ class TestProjectsMembersModel {
   }
 
   // Static method to find all project members by project ID
-  static async findByProjectId(
-    projectId: number
-  ): Promise<TestProjectsMembersModel[]> {
+  static async findByProjectId(projectId: number): Promise<TestProjectsMembersModel[]> {
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -254,15 +241,9 @@ class TestProjectsMembersModel {
   }
 
   // Static method to find all projects by user ID
-  static async findByUserId(
-    userId: number
-  ): Promise<TestProjectsMembersModel[]> {
+  static async findByUserId(userId: number): Promise<TestProjectsMembersModel[]> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return [
@@ -283,21 +264,17 @@ class TestProjectsMembersModel {
   static async updateProjectMemberByUserAndProject(
     userId: number,
     projectId: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestProjectsMembersModel[]]> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -316,21 +293,17 @@ class TestProjectsMembersModel {
   // Static method to delete project member by user and project IDs
   static async deleteProjectMemberByUserAndProject(
     userId: number,
-    projectId: number
+    projectId: number,
   ): Promise<number> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -338,23 +311,16 @@ class TestProjectsMembersModel {
   }
 
   // Static method to check if user is a member of a project
-  static async isUserMemberOfProject(
-    userId: number,
-    projectId: number
-  ): Promise<boolean> {
+  static async isUserMemberOfProject(userId: number, projectId: number): Promise<boolean> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     if (!numberValidation(projectId, 1)) {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -374,7 +340,7 @@ class TestProjectsMembersModel {
       throw new ValidationException(
         "Valid project_id is required (must be >= 1)",
         "project_id",
-        projectId
+        projectId,
       );
     }
 
@@ -384,11 +350,7 @@ class TestProjectsMembersModel {
   // Static method to get user project count by user ID
   static async getUserProjectCount(userId: number): Promise<number> {
     if (!numberValidation(userId, 1)) {
-      throw new ValidationException(
-        "Valid user_id is required (must be >= 1)",
-        "user_id",
-        userId
-      );
+      throw new ValidationException("Valid user_id is required (must be >= 1)", "user_id", userId);
     }
 
     return 3; // Mock count
@@ -446,12 +408,11 @@ describe("ProjectsMembersModel", () => {
       // Mock findOne to return null (no existing member)
       jest.spyOn(TestProjectsMembersModel, "findOne").mockResolvedValue(null);
 
-      const projectMember =
-        await TestProjectsMembersModel.createNewProjectMember(
-          validData.user_id,
-          validData.project_id,
-          validData.is_demo
-        );
+      const projectMember = await TestProjectsMembersModel.createNewProjectMember(
+        validData.user_id,
+        validData.project_id,
+        validData.is_demo,
+      );
 
       expect(projectMember).toBeInstanceOf(TestProjectsMembersModel);
       expect(projectMember.user_id).toBe(1);
@@ -463,25 +424,24 @@ describe("ProjectsMembersModel", () => {
       // Mock findOne to return null (no existing member)
       jest.spyOn(TestProjectsMembersModel, "findOne").mockResolvedValue(null);
 
-      const projectMember =
-        await TestProjectsMembersModel.createNewProjectMember(
-          validData.user_id,
-          validData.project_id,
-          true
-        );
+      const projectMember = await TestProjectsMembersModel.createNewProjectMember(
+        validData.user_id,
+        validData.project_id,
+        true,
+      );
 
       expect(projectMember.is_demo).toBe(true);
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
       await expect(
-        TestProjectsMembersModel.createNewProjectMember(0, validData.project_id)
+        TestProjectsMembersModel.createNewProjectMember(0, validData.project_id),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(
-        TestProjectsMembersModel.createNewProjectMember(validData.user_id, 0)
+        TestProjectsMembersModel.createNewProjectMember(validData.user_id, 0),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -492,10 +452,7 @@ describe("ProjectsMembersModel", () => {
         .mockResolvedValue(new TestProjectsMembersModel(validData));
 
       await expect(
-        TestProjectsMembersModel.createNewProjectMember(
-          validData.user_id,
-          validData.project_id
-        )
+        TestProjectsMembersModel.createNewProjectMember(validData.user_id, validData.project_id),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -515,9 +472,9 @@ describe("ProjectsMembersModel", () => {
         is_demo: true,
       });
 
-      await expect(
-        projectMember.updateProjectMember({ is_demo: false })
-      ).rejects.toThrow(BusinessLogicException);
+      await expect(projectMember.updateProjectMember({ is_demo: false })).rejects.toThrow(
+        BusinessLogicException,
+      );
     });
   });
 
@@ -525,9 +482,7 @@ describe("ProjectsMembersModel", () => {
     it("should pass validation with valid data", async () => {
       const projectMember = new TestProjectsMembersModel(validData);
 
-      await expect(
-        projectMember.validateProjectMemberData()
-      ).resolves.not.toThrow();
+      await expect(projectMember.validateProjectMemberData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
@@ -536,9 +491,7 @@ describe("ProjectsMembersModel", () => {
         user_id: 0,
       });
 
-      await expect(projectMember.validateProjectMemberData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectMember.validateProjectMemberData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
@@ -547,9 +500,7 @@ describe("ProjectsMembersModel", () => {
         project_id: 0,
       });
 
-      await expect(projectMember.validateProjectMemberData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(projectMember.validateProjectMemberData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -592,9 +543,7 @@ describe("ProjectsMembersModel", () => {
         is_demo: true,
       });
 
-      expect(() => projectMember.canBeModified()).toThrow(
-        BusinessLogicException
-      );
+      expect(() => projectMember.canBeModified()).toThrow(BusinessLogicException);
     });
   });
 
@@ -642,10 +591,7 @@ describe("ProjectsMembersModel", () => {
 
   describe("findByUserAndProject", () => {
     it("should find project member by valid IDs", async () => {
-      const projectMember = await TestProjectsMembersModel.findByUserAndProject(
-        1,
-        1
-      );
+      const projectMember = await TestProjectsMembersModel.findByUserAndProject(1, 1);
 
       expect(projectMember).toBeInstanceOf(TestProjectsMembersModel);
       expect(projectMember?.user_id).toBe(1);
@@ -653,31 +599,27 @@ describe("ProjectsMembersModel", () => {
     });
 
     it("should return null for non-existent member", async () => {
-      const projectMember = await TestProjectsMembersModel.findByUserAndProject(
-        999,
-        1
-      );
+      const projectMember = await TestProjectsMembersModel.findByUserAndProject(999, 1);
 
       expect(projectMember).toBeNull();
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
-      await expect(
-        TestProjectsMembersModel.findByUserAndProject(0, 1)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.findByUserAndProject(0, 1)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestProjectsMembersModel.findByUserAndProject(1, 0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.findByUserAndProject(1, 0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
   describe("findByUserAndProjectWithValidation", () => {
     it("should find project member by valid IDs", async () => {
-      const projectMember =
-        await TestProjectsMembersModel.findByUserAndProjectWithValidation(1, 1);
+      const projectMember = await TestProjectsMembersModel.findByUserAndProjectWithValidation(1, 1);
 
       expect(projectMember).toBeInstanceOf(TestProjectsMembersModel);
       expect(projectMember.user_id).toBe(1);
@@ -686,7 +628,7 @@ describe("ProjectsMembersModel", () => {
 
     it("should throw NotFoundException for non-existent member", async () => {
       await expect(
-        TestProjectsMembersModel.findByUserAndProjectWithValidation(999, 1)
+        TestProjectsMembersModel.findByUserAndProjectWithValidation(999, 1),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -702,7 +644,7 @@ describe("ProjectsMembersModel", () => {
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(TestProjectsMembersModel.findByProjectId(0)).rejects.toThrow(
-        ValidationException
+        ValidationException,
       );
     });
   });
@@ -717,20 +659,14 @@ describe("ProjectsMembersModel", () => {
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
-      await expect(TestProjectsMembersModel.findByUserId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestProjectsMembersModel.findByUserId(0)).rejects.toThrow(ValidationException);
     });
   });
 
   describe("updateProjectMemberByUserAndProject", () => {
     it("should update project member by user and project IDs", async () => {
       const [affected, updated] =
-        await TestProjectsMembersModel.updateProjectMemberByUserAndProject(
-          1,
-          1,
-          { is_demo: true }
-        );
+        await TestProjectsMembersModel.updateProjectMemberByUserAndProject(1, 1, { is_demo: true });
 
       expect(affected).toBe(1);
       expect(updated).toHaveLength(1);
@@ -741,7 +677,7 @@ describe("ProjectsMembersModel", () => {
       await expect(
         TestProjectsMembersModel.updateProjectMemberByUserAndProject(0, 1, {
           is_demo: true,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -749,41 +685,34 @@ describe("ProjectsMembersModel", () => {
       await expect(
         TestProjectsMembersModel.updateProjectMemberByUserAndProject(1, 0, {
           is_demo: true,
-        })
+        }),
       ).rejects.toThrow(ValidationException);
     });
   });
 
   describe("deleteProjectMemberByUserAndProject", () => {
     it("should delete project member by user and project IDs", async () => {
-      const deleted =
-        await TestProjectsMembersModel.deleteProjectMemberByUserAndProject(
-          1,
-          1
-        );
+      const deleted = await TestProjectsMembersModel.deleteProjectMemberByUserAndProject(1, 1);
 
       expect(deleted).toBe(1);
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
       await expect(
-        TestProjectsMembersModel.deleteProjectMemberByUserAndProject(0, 1)
+        TestProjectsMembersModel.deleteProjectMemberByUserAndProject(0, 1),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(
-        TestProjectsMembersModel.deleteProjectMemberByUserAndProject(1, 0)
+        TestProjectsMembersModel.deleteProjectMemberByUserAndProject(1, 0),
       ).rejects.toThrow(ValidationException);
     });
   });
 
   describe("isUserMemberOfProject", () => {
     it("should return true for existing member", async () => {
-      const isMember = await TestProjectsMembersModel.isUserMemberOfProject(
-        1,
-        1
-      );
+      const isMember = await TestProjectsMembersModel.isUserMemberOfProject(1, 1);
 
       expect(isMember).toBe(true);
     });
@@ -792,24 +721,21 @@ describe("ProjectsMembersModel", () => {
       // Mock findOne to return null for non-existent member
       jest.spyOn(TestProjectsMembersModel, "findOne").mockResolvedValue(null);
 
-      const isMember = await TestProjectsMembersModel.isUserMemberOfProject(
-        999,
-        1
-      );
+      const isMember = await TestProjectsMembersModel.isUserMemberOfProject(999, 1);
 
       expect(isMember).toBe(false);
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
-      await expect(
-        TestProjectsMembersModel.isUserMemberOfProject(0, 1)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.isUserMemberOfProject(0, 1)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestProjectsMembersModel.isUserMemberOfProject(1, 0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.isUserMemberOfProject(1, 0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -821,9 +747,9 @@ describe("ProjectsMembersModel", () => {
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestProjectsMembersModel.getProjectMemberCount(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.getProjectMemberCount(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -835,9 +761,9 @@ describe("ProjectsMembersModel", () => {
     });
 
     it("should throw ValidationException for invalid user_id", async () => {
-      await expect(
-        TestProjectsMembersModel.getUserProjectCount(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectsMembersModel.getUserProjectCount(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 

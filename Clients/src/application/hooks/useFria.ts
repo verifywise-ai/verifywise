@@ -140,7 +140,7 @@ export function useFria(projectId: string) {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(flushUpdate, 500);
     },
-    [flushUpdate]
+    [flushUpdate],
   );
 
   // Fire-and-forget flush on unmount (no state updates)
@@ -170,10 +170,7 @@ export function useFria(projectId: string) {
       setIsSaving(true);
       setLastSaveStatus(null);
       try {
-        const result = await friaRepository.updateRights(
-          assessment.id,
-          updatedRights
-        );
+        const result = await friaRepository.updateRights(assessment.id, updatedRights);
         setRights(result);
         await refreshAssessment();
         setLastSaveStatus("saved");
@@ -184,7 +181,7 @@ export function useFria(projectId: string) {
         setIsSaving(false);
       }
     },
-    [assessment, refreshAssessment]
+    [assessment, refreshAssessment],
   );
 
   const addRiskItem = useCallback(
@@ -204,7 +201,7 @@ export function useFria(projectId: string) {
         setIsSaving(false);
       }
     },
-    [assessment, refreshAssessment]
+    [assessment, refreshAssessment],
   );
 
   const updateRiskItem = useCallback(
@@ -214,9 +211,7 @@ export function useFria(projectId: string) {
       setLastSaveStatus(null);
       try {
         const updated = await friaRepository.updateRiskItem(assessment.id, itemId, data);
-        setRiskItems((prev) =>
-          prev.map((item) => (item.id === itemId ? updated : item))
-        );
+        setRiskItems((prev) => prev.map((item) => (item.id === itemId ? updated : item)));
         await refreshAssessment();
         setLastSaveStatus("saved");
       } catch (err: unknown) {
@@ -226,7 +221,7 @@ export function useFria(projectId: string) {
         setIsSaving(false);
       }
     },
-    [assessment, refreshAssessment]
+    [assessment, refreshAssessment],
   );
 
   const deleteRiskItem = useCallback(
@@ -246,7 +241,7 @@ export function useFria(projectId: string) {
         setIsSaving(false);
       }
     },
-    [assessment, refreshAssessment]
+    [assessment, refreshAssessment],
   );
 
   const linkModel = useCallback(
@@ -259,7 +254,7 @@ export function useFria(projectId: string) {
         setError(err instanceof Error ? err.message : "Failed to link model");
       }
     },
-    [assessment, fetchFria]
+    [assessment, fetchFria],
   );
 
   const unlinkModel = useCallback(
@@ -272,7 +267,7 @@ export function useFria(projectId: string) {
         setError(err instanceof Error ? err.message : "Failed to unlink model");
       }
     },
-    [assessment, fetchFria]
+    [assessment, fetchFria],
   );
 
   const submitFria = useCallback(
@@ -294,7 +289,7 @@ export function useFria(projectId: string) {
         setIsSaving(false);
       }
     },
-    [assessment, fetchFria, flushUpdate]
+    [assessment, fetchFria, flushUpdate],
   );
 
   return {

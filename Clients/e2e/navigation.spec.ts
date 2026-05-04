@@ -25,9 +25,7 @@ test.describe("Navigation", () => {
     await expect(page).toHaveURL(/\/tasks/);
   });
 
-  test("can navigate to model inventory page", async ({
-    authedPage: page,
-  }) => {
+  test("can navigate to model inventory page", async ({ authedPage: page }) => {
     await page.goto("/model-inventory");
     await expect(page).toHaveURL(/\/model-inventory/);
   });
@@ -52,9 +50,7 @@ test.describe("Navigation", () => {
     await expect(page).toHaveURL(/\/training/);
   });
 
-  test("dashboard has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("dashboard has no accessibility violations", async ({ authedPage: page }) => {
     await page.waitForLoadState("domcontentloaded");
 
     // Disable pre-existing app-wide WCAG violations (tracked for future fix).

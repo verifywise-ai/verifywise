@@ -1,19 +1,9 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import * as riskUtils from "../../../utils/risk.utils";
 import { availableRiskTools } from "../../functions/riskFunctions";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
-import {
-  mockRisks,
-  mockEmptyRisks,
-  createMockRisk,
-} from "../../mocks/mockRiskData";
-import { createMockTenant } from '../../mocks/mockTenant';
+import { mockRisks, mockEmptyRisks, createMockRisk } from "../../mocks/mockRiskData";
+import { createMockTenant } from "../../mocks/mockTenant";
 
 const availableTools = {
   ...availableRiskTools,
@@ -43,8 +33,8 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const result = await getExecutiveSummary({}, mockTenant);
 
       // Count risks with Catastrophic severity or Very high risk level
-      const expectedCritical = mockRisks.filter(r =>
-        r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk"
+      const expectedCritical = mockRisks.filter(
+        (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
       ).length;
 
       expect(result.criticalRisks).toBe(expectedCritical);
@@ -69,8 +59,8 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const result = await getExecutiveSummary({}, mockTenant);
 
       // Count risks with Major severity or High risk level
-      const expectedHigh = mockRisks.filter(r =>
-        r.severity === "Major" || r.risk_level_autocalculated === "High risk"
+      const expectedHigh = mockRisks.filter(
+        (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
       ).length;
 
       expect(result.highRisks).toBe(expectedHigh);
@@ -162,7 +152,7 @@ describe("Advisor Functions: getExecutiveSummary", () => {
     });
 
     it("should not count completed risks as overdue", async () => {
-      const pastDate = new Date('2024-01-01');
+      const pastDate = new Date("2024-01-01");
       const testRisks = [
         createMockRisk({ deadline: pastDate, mitigation_status: "Completed" }),
         createMockRisk({ deadline: pastDate, mitigation_status: "In Progress" }),
@@ -177,7 +167,7 @@ describe("Advisor Functions: getExecutiveSummary", () => {
     it("should handle risks without deadlines", async () => {
       const testRisks = [
         { ...createMockRisk({}), deadline: null, mitigation_status: "In Progress" } as any,
-        createMockRisk({ deadline: new Date('2024-01-01'), mitigation_status: "In Progress" }),
+        createMockRisk({ deadline: new Date("2024-01-01"), mitigation_status: "In Progress" }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
@@ -254,7 +244,11 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const result = await getExecutiveSummary({}, mockTenant);
 
       expect(result.urgentRisks.length).toBeLessThanOrEqual(5);
-      expect(result.urgentRisks.every((r: any) => r.severity === "Major" || r.severity === "Catastrophic")).toBe(true);
+      expect(
+        result.urgentRisks.every(
+          (r: any) => r.severity === "Major" || r.severity === "Catastrophic",
+        ),
+      ).toBe(true);
     });
 
     it("should sort urgent risks by deadline (overdue first)", async () => {
@@ -264,18 +258,33 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const upcoming = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const testRisks = [
-        createMockRisk({ id: 1, severity: "Major", deadline: upcoming, mitigation_status: "Not Started" }),
-        createMockRisk({ id: 2, severity: "Catastrophic", deadline: veryOverdue, mitigation_status: "In Progress" }),
-        createMockRisk({ id: 3, severity: "Major", deadline: slightlyOverdue, mitigation_status: "Not Started" }),
+        createMockRisk({
+          id: 1,
+          severity: "Major",
+          deadline: upcoming,
+          mitigation_status: "Not Started",
+        }),
+        createMockRisk({
+          id: 2,
+          severity: "Catastrophic",
+          deadline: veryOverdue,
+          mitigation_status: "In Progress",
+        }),
+        createMockRisk({
+          id: 3,
+          severity: "Major",
+          deadline: slightlyOverdue,
+          mitigation_status: "Not Started",
+        }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getExecutiveSummary({}, mockTenant);
 
       // Most overdue should be first
-      expect(result.urgentRisks[0].id).toBe(2);  // veryOverdue
-      expect(result.urgentRisks[1].id).toBe(3);  // slightlyOverdue
-      expect(result.urgentRisks[2].id).toBe(1);  // upcoming
+      expect(result.urgentRisks[0].id).toBe(2); // veryOverdue
+      expect(result.urgentRisks[1].id).toBe(3); // slightlyOverdue
+      expect(result.urgentRisks[2].id).toBe(1); // upcoming
     });
 
     it("should calculate daysUntilDeadline correctly", async () => {
@@ -284,8 +293,16 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const pastDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
 
       const testRisks = [
-        createMockRisk({ severity: "Major", deadline: futureDate, mitigation_status: "In Progress" }),
-        createMockRisk({ severity: "Catastrophic", deadline: pastDate, mitigation_status: "Not Started" }),
+        createMockRisk({
+          severity: "Major",
+          deadline: futureDate,
+          mitigation_status: "In Progress",
+        }),
+        createMockRisk({
+          severity: "Catastrophic",
+          deadline: pastDate,
+          mitigation_status: "Not Started",
+        }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
@@ -317,7 +334,7 @@ describe("Advisor Functions: getExecutiveSummary", () => {
           risk_name: "Critical Security Issue",
           severity: "Catastrophic",
           likelihood: "Likely",
-          mitigation_status: "In Progress"
+          mitigation_status: "In Progress",
         }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
@@ -328,7 +345,7 @@ describe("Advisor Functions: getExecutiveSummary", () => {
         id: 123,
         name: "Critical Security Issue",
         severity: "Catastrophic",
-        likelihood: "Likely"
+        likelihood: "Likely",
       });
       expect(result.urgentRisks[0].deadline).toBeDefined();
       expect(result.urgentRisks[0].daysUntilDeadline).toBeDefined();
@@ -339,8 +356,16 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const testRisks = [
-        { ...createMockRisk({ id: 1, severity: "Major", mitigation_status: "Not Started" }), deadline: null } as any,
-        createMockRisk({ id: 2, severity: "Catastrophic", deadline: futureDate, mitigation_status: "In Progress" }),
+        {
+          ...createMockRisk({ id: 1, severity: "Major", mitigation_status: "Not Started" }),
+          deadline: null,
+        } as any,
+        createMockRisk({
+          id: 2,
+          severity: "Catastrophic",
+          deadline: futureDate,
+          mitigation_status: "In Progress",
+        }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
@@ -372,8 +397,14 @@ describe("Advisor Functions: getExecutiveSummary", () => {
 
     it("should handle all risks without deadlines", async () => {
       const testRisks = [
-        { ...createMockRisk({ severity: "Major", mitigation_status: "In Progress" }), deadline: null } as any,
-        { ...createMockRisk({ severity: "Catastrophic", mitigation_status: "Not Started" }), deadline: null } as any,
+        {
+          ...createMockRisk({ severity: "Major", mitigation_status: "In Progress" }),
+          deadline: null,
+        } as any,
+        {
+          ...createMockRisk({ severity: "Catastrophic", mitigation_status: "Not Started" }),
+          deadline: null,
+        } as any,
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 

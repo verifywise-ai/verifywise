@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { CustomizableButton } from "../../button/customizable-button";
 import { Stack, SxProps, Theme, Typography } from "@mui/material";
-import {useModalKeyHandling} from "../../../../application/hooks/useModalKeyHandling";
+import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 
 interface ConfirmationModalProps {
   title: string;
@@ -10,13 +10,7 @@ interface ConfirmationModalProps {
   proceedText: string;
   onCancel: () => void;
   onProceed: () => void;
-  proceedButtonColor?:
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "error"
-    | "info";
+  proceedButtonColor?: "primary" | "secondary" | "success" | "warning" | "error" | "info";
   proceedButtonVariant: "contained" | "outlined" | "text";
   TitleFontSize?: number;
   confirmBtnSx?: SxProps<Theme> | undefined;
@@ -126,7 +120,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </Stack>
       </Stack>
     </>,
-    document.body
+    document.body,
   );
 };
 

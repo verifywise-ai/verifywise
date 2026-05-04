@@ -7,7 +7,14 @@
 
 import CustomAxios from "./customAxios";
 
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'huggingface' | 'openrouter';
+export type LLMProvider =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "xai"
+  | "mistral"
+  | "huggingface"
+  | "openrouter";
 
 export interface LLMApiKey {
   provider: LLMProvider;
@@ -97,7 +104,7 @@ class EvaluationLlmApiKeysService {
   async hasKey(provider: LLMProvider): Promise<boolean> {
     try {
       const keys = await this.getAllKeys();
-      return keys.some(k => k.provider === provider);
+      return keys.some((k) => k.provider === provider);
     } catch (_error) {
       return false;
     }

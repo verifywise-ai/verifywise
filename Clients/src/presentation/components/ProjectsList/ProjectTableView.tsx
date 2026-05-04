@@ -20,7 +20,15 @@ import { EmptyState } from "../EmptyState";
 import Chip from "../Chip";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
-import { ChevronsUpDown, ChevronUp, ChevronDown, Briefcase, PlusCircle, Target, Link2 } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Briefcase,
+  PlusCircle,
+  Target,
+  Link2,
+} from "lucide-react";
 import EmptyStateTip from "../EmptyState/EmptyStateTip";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
@@ -65,8 +73,7 @@ const SortableTableHeader: React.FC<{
   return (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -102,8 +109,7 @@ const SortableTableHeader: React.FC<{
                 variant="body2"
                 sx={{
                   fontWeight: 500,
-                  color:
-                    sortConfig.key === column.id ? "primary.main" : "inherit",
+                  color: sortConfig.key === column.id ? "primary.main" : "inherit",
                 }}
               >
                 {column.label}
@@ -113,14 +119,15 @@ const SortableTableHeader: React.FC<{
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    color:
-                      sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
+                    color: sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
                   }}
                 >
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "desc" && <ChevronDown size={16} />}
+                  {sortConfig.key === column.id && sortConfig.direction === "asc" && (
+                    <ChevronUp size={16} />
+                  )}
+                  {sortConfig.key === column.id && sortConfig.direction === "desc" && (
+                    <ChevronDown size={16} />
+                  )}
                   {sortConfig.key !== column.id && <ChevronsUpDown size={16} />}
                 </Box>
               )}
@@ -132,9 +139,9 @@ const SortableTableHeader: React.FC<{
   );
 };
 
-const ProjectTableView: React.FC<IProjectTableViewProps> = ({ 
-  projects, 
-  hidePagination = false, 
+const ProjectTableView: React.FC<IProjectTableViewProps> = ({
+  projects,
+  hidePagination = false,
   onProjectDeleted,
   visibleColumns,
 }) => {
@@ -184,14 +191,17 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
       // If no visibility set provided, show all columns
       return columns;
     }
-    return columns.filter(col => visibleColumns.has(col.id));
+    return columns.filter((col) => visibleColumns.has(col.id));
   }, [visibleColumns]);
 
   // Helper to check if column is visible (defaults to true if no visibility set)
-  const isColumnVisible = useCallback((columnId: string) => {
-    if (!visibleColumns || visibleColumns.size === 0) return true;
-    return visibleColumns.has(columnId);
-  }, [visibleColumns]);
+  const isColumnVisible = useCallback(
+    (columnId: string) => {
+      if (!visibleColumns || visibleColumns.size === 0) return true;
+      return visibleColumns.has(columnId);
+    },
+    [visibleColumns],
+  );
 
   // Sorting handlers
   const handleSort = useCallback((columnId: string) => {
@@ -221,60 +231,61 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   const handleRowClick = (projectId: number) => {
     navigate("/project-view", { projectId: projectId.toString() });
   };
 
-  const handleEditProject = useCallback((projectId: number) => {
-    navigate("/project-view", { projectId: projectId.toString(), tab: "settings" });
-  }, [navigate]);
+  const handleEditProject = useCallback(
+    (projectId: number) => {
+      navigate("/project-view", { projectId: projectId.toString(), tab: "settings" });
+    },
+    [navigate],
+  );
 
-  const handleDeleteProject = useCallback(async (projectId: number) => {
-    try {
-      const response = await deleteProject({ id: projectId });
-      const isError = response.status === 404 || response.status === 500;
+  const handleDeleteProject = useCallback(
+    async (projectId: number) => {
+      try {
+        const response = await deleteProject({ id: projectId });
+        const isError = response.status === 404 || response.status === 500;
 
-      setAlert({
-        variant: isError ? "error" : "success",
-        title: isError ? "Error" : "Success",
-        body: isError
-          ? "Failed to delete use case. Please try again."
-          : "Use case deleted successfully.",
-      });
+        setAlert({
+          variant: isError ? "error" : "success",
+          title: isError ? "Error" : "Success",
+          body: isError
+            ? "Failed to delete use case. Please try again."
+            : "Use case deleted successfully.",
+        });
 
-      if (!isError) {
-        setProjects((prevProjects) =>
-          prevProjects.filter((project) => project.id !== projectId)
-        );
-        // Call the callback if provided to refresh the parent component
-        if (onProjectDeleted) {
-          onProjectDeleted();
+        if (!isError) {
+          setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
+          // Call the callback if provided to refresh the parent component
+          if (onProjectDeleted) {
+            onProjectDeleted();
+          }
         }
-      }
 
-      setTimeout(() => {
-        setAlert(null);
-      }, 3000);
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      setAlert({
-        variant: "error",
-        title: "Error",
-        body: "Failed to delete use case. Please try again.",
-      });
-      setTimeout(() => {
-        setAlert(null);
-      }, 3000);
-    }
-  }, [setProjects, onProjectDeleted]);
+        setTimeout(() => {
+          setAlert(null);
+        }, 3000);
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        setAlert({
+          variant: "error",
+          title: "Error",
+          body: "Failed to delete use case. Please try again.",
+        });
+        setTimeout(() => {
+          setAlert(null);
+        }, 3000);
+      }
+    },
+    [setProjects, onProjectDeleted],
+  );
 
   // Sort the projects based on current sort configuration
   const sortedProjects = useMemo(() => {
@@ -348,17 +359,14 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
 
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
-    const end = Math.min(
-      page * rowsPerPage + rowsPerPage,
-      sortedProjects.length
-    );
+    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedProjects.length);
     return `${start} - ${end}`;
   }, [page, rowsPerPage, sortedProjects.length]);
 
   const paginatedProjects = useMemo(() => {
     return sortedProjects.slice(
       hidePagination ? 0 : page * rowsPerPage,
-      hidePagination ? Math.min(sortedProjects.length, 100) : page * rowsPerPage + rowsPerPage
+      hidePagination ? Math.min(sortedProjects.length, 100) : page * rowsPerPage + rowsPerPage,
     );
   }, [sortedProjects, page, rowsPerPage, hidePagination]);
 
@@ -378,7 +386,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                 align="center"
                 sx={{ border: "none", p: 0 }}
               >
-                <EmptyState icon={Briefcase} message="No use cases yet. A use case describes how an AI system is applied within your organization.">
+                <EmptyState
+                  icon={Briefcase}
+                  message="No use cases yet. A use case describes how an AI system is applied within your organization."
+                >
                   <EmptyStateTip
                     icon={PlusCircle}
                     title="Create a use case"
@@ -417,235 +428,229 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
       <TableContainer>
         <Table sx={singleTheme.tableStyles.primary.frame}>
           <SortableTableHeader
-          columns={visibleColumnsArray}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
-        <TableBody>
-          {paginatedProjects.map((project) => (
-            <TableRow
-              key={project.id}
-              onClick={() => handleRowClick(project.id)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  if (event.key === " ") {
-                    event.preventDefault();
+            columns={visibleColumnsArray}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+          <TableBody>
+            {paginatedProjects.map((project) => (
+              <TableRow
+                key={project.id}
+                onClick={() => handleRowClick(project.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    if (event.key === " ") {
+                      event.preventDefault();
+                    }
+                    handleRowClick(project.id);
                   }
-                  handleRowClick(project.id);
-                }
-              }}
-              tabIndex={0}
-              role="button"
-              sx={{
-                ...singleTheme.tableStyles.primary.body.row,
-                cursor: "pointer",
-                "&:last-child td, &:last-child th": {
-                  border: 0,
-                },
-                "&:focus": {
-                  outline: "none",
-                },
-              }}
-            >
-              {isColumnVisible('ucId') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    backgroundColor:
-                      sortConfig.key === "ucId" ? "#e8e8e8" : "#fafafa",
-                  }}
-                >
-                  {project.uc_id || project.id}
-                </TableCell>
-              )}
-
-              {isColumnVisible('title') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    backgroundColor:
-                      sortConfig.key === "title" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {project.project_title}
-                </TableCell>
-              )}
-
-              {isColumnVisible('risk') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    backgroundColor:
-                      sortConfig.key === "risk" ? "background.surface" : "inherit",
-                  }}
-                >
-                  <Chip label={project.ai_risk_classification || "—"} />
-                </TableCell>
-              )}
-
-              {isColumnVisible('role') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    fontSize: "13px",
-                    textTransform: "capitalize",
-                    backgroundColor:
-                      sortConfig.key === "role" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {project.type_of_high_risk_role?.replace(/_/g, " ") || "—"}
-                </TableCell>
-              )}
-              
-              {isColumnVisible('startDate') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    fontSize: "13px",
-                    color: "text.tertiary",
-                    backgroundColor:
-                      sortConfig.key === "startDate" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {formatDate(project.start_date)}
-                </TableCell>
-              )}
-              
-              {isColumnVisible('lastUpdated') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                    fontSize: "13px",
-                    color: "text.tertiary",
-                    backgroundColor:
-                      sortConfig.key === "lastUpdated" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {formatDate(project.last_updated)}
-                </TableCell>
-              )}
-              
-              {isColumnVisible('actions') && (
-                <TableCell
-                  sx={{
-                    ...singleTheme.tableStyles.primary.body.cell,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
-                    <ViewRelationshipsButton
-                      entityId={project.id}
-                      entityType="useCase"
-                      entityLabel={project.project_title}
-                    />
-                    {allowedRoles.projects.delete.includes(userRoleName) && (
-                      <IconButton
-                        id={project.id}
-                        type="use case"
-                        onEdit={() => handleEditProject(project.id)}
-                        onDelete={() => { handleDeleteProject(project.id); }}
-                        onMouseEvent={() => {}}
-                        warningTitle="Delete this use case?"
-                        warningMessage="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
-                      />
-                    )}
-                  </Stack>
-                </TableCell>
-              )}
-            </TableRow>
-          ))}
-        </TableBody>
-        {!hidePagination && (
-          <TableFooter>
-            <TableRow
-              sx={{
-                "& .MuiTableCell-root.MuiTableCell-footer": {
-                  paddingX: theme.spacing(8),
-                  paddingY: theme.spacing(4),
-                },
-              }}
-            >
-              <TableCell
-                sx={{
-                  paddingX: theme.spacing(2),
-                  fontSize: 12,
-                  opacity: 0.7,
-                  color: theme.palette.text.tertiary,
                 }}
-                colSpan={2}
+                tabIndex={0}
+                role="button"
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.row,
+                  cursor: "pointer",
+                  "&:last-child td, &:last-child th": {
+                    border: 0,
+                  },
+                  "&:focus": {
+                    outline: "none",
+                  },
+                }}
               >
-                Showing {getRange} of {sortedProjects.length} use case(s)
-              </TableCell>
-              <TablePagination
-                count={sortedProjects.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => (
-                  <TablePaginationActions {...props} />
+                {isColumnVisible("ucId") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      backgroundColor: sortConfig.key === "ucId" ? "#e8e8e8" : "#fafafa",
+                    }}
+                  >
+                    {project.uc_id || project.id}
+                  </TableCell>
                 )}
-                labelRowsPerPage="Use cases per page"
-                labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(
-                    0,
-                    Math.ceil(count / rowsPerPage)
-                  )}`
-                }
-                slotProps={{
-                  select: {
-                    MenuProps: {
-                      keepMounted: true,
-                      PaperProps: {
-                        className: "pagination-dropdown",
-                        sx: {
-                          mt: 0,
-                          mb: theme.spacing(2),
+
+                {isColumnVisible("title") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      backgroundColor:
+                        sortConfig.key === "title" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {project.project_title}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("risk") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      backgroundColor: sortConfig.key === "risk" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    <Chip label={project.ai_risk_classification || "—"} />
+                  </TableCell>
+                )}
+
+                {isColumnVisible("role") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      fontSize: "13px",
+                      textTransform: "capitalize",
+                      backgroundColor: sortConfig.key === "role" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {project.type_of_high_risk_role?.replace(/_/g, " ") || "—"}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("startDate") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      fontSize: "13px",
+                      color: "text.tertiary",
+                      backgroundColor:
+                        sortConfig.key === "startDate" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {formatDate(project.start_date)}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("lastUpdated") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      fontSize: "13px",
+                      color: "text.tertiary",
+                      backgroundColor:
+                        sortConfig.key === "lastUpdated" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {formatDate(project.last_updated)}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("actions") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Stack direction="row" alignItems="center" gap={0.5}>
+                      <ViewRelationshipsButton
+                        entityId={project.id}
+                        entityType="useCase"
+                        entityLabel={project.project_title}
+                      />
+                      {allowedRoles.projects.delete.includes(userRoleName) && (
+                        <IconButton
+                          id={project.id}
+                          type="use case"
+                          onEdit={() => handleEditProject(project.id)}
+                          onDelete={() => {
+                            handleDeleteProject(project.id);
+                          }}
+                          onMouseEvent={() => {}}
+                          warningTitle="Delete this use case?"
+                          warningMessage="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
+                        />
+                      )}
+                    </Stack>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+          {!hidePagination && (
+            <TableFooter>
+              <TableRow
+                sx={{
+                  "& .MuiTableCell-root.MuiTableCell-footer": {
+                    paddingX: theme.spacing(8),
+                    paddingY: theme.spacing(4),
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    paddingX: theme.spacing(2),
+                    fontSize: 12,
+                    opacity: 0.7,
+                    color: theme.palette.text.tertiary,
+                  }}
+                  colSpan={2}
+                >
+                  Showing {getRange} of {sortedProjects.length} use case(s)
+                </TableCell>
+                <TablePagination
+                  count={sortedProjects.length}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={rowsPerPage}
+                  rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                  labelRowsPerPage="Use cases per page"
+                  labelDisplayedRows={({ page, count }) =>
+                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                  }
+                  slotProps={{
+                    select: {
+                      MenuProps: {
+                        keepMounted: true,
+                        PaperProps: {
+                          className: "pagination-dropdown",
+                          sx: {
+                            mt: 0,
+                            mb: theme.spacing(2),
+                          },
+                        },
+                        transformOrigin: {
+                          vertical: "bottom",
+                          horizontal: "left",
+                        },
+                        anchorOrigin: { vertical: "top", horizontal: "left" },
+                        sx: { mt: theme.spacing(-2) },
+                      },
+                      inputProps: { id: "pagination-dropdown" },
+                      IconComponent: SelectorVertical,
+                      sx: {
+                        ml: theme.spacing(4),
+                        mr: theme.spacing(12),
+                        minWidth: theme.spacing(20),
+                        textAlign: "left",
+                        "&.Mui-focused > div": {
+                          backgroundColor: theme.palette.background.main,
                         },
                       },
-                      transformOrigin: {
-                        vertical: "bottom",
-                        horizontal: "left",
-                      },
-                      anchorOrigin: { vertical: "top", horizontal: "left" },
-                      sx: { mt: theme.spacing(-2) },
                     },
-                    inputProps: { id: "pagination-dropdown" },
-                    IconComponent: SelectorVertical,
-                    sx: {
-                      ml: theme.spacing(4),
-                      mr: theme.spacing(12),
-                      minWidth: theme.spacing(20),
-                      textAlign: "left",
-                      "&.Mui-focused > div": {
-                        backgroundColor: theme.palette.background.main,
-                      },
+                  }}
+                  sx={{
+                    mt: theme.spacing(6),
+                    color: theme.palette.text.secondary,
+                    "& .MuiSelect-icon": {
+                      width: "24px",
+                      height: "fit-content",
                     },
-                  },
-                }}
-                sx={{
-                  mt: theme.spacing(6),
-                  color: theme.palette.text.secondary,
-                  "& .MuiSelect-icon": {
-                    width: "24px",
-                    height: "fit-content",
-                  },
-                  "& .MuiSelect-select": {
-                    width: theme.spacing(10),
-                    borderRadius: theme.shape.borderRadius,
-                    border: `1px solid ${theme.palette.border.light}`,
-                    padding: theme.spacing(4),
-                  },
-                }}
-              />
-            </TableRow>
-          </TableFooter>
-        )}
+                    "& .MuiSelect-select": {
+                      width: theme.spacing(10),
+                      borderRadius: theme.shape.borderRadius,
+                      border: `1px solid ${theme.palette.border.light}`,
+                      padding: theme.spacing(4),
+                    },
+                  }}
+                />
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </TableContainer>
     </>

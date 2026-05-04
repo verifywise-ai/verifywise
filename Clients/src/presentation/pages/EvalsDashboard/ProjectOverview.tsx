@@ -236,61 +236,79 @@ export default function ProjectOverview({
 
   // Calculate metrics from experiments data
   const totalExperiments = experiments.length;
-  const completedExperiments = experiments.filter(e => e.status === "completed").length;
-  const failedExperiments = experiments.filter(e => e.status === "failed").length;
-  
+  const completedExperiments = experiments.filter((e) => e.status === "completed").length;
+  const failedExperiments = experiments.filter((e) => e.status === "failed").length;
+
   // Success rate: completed / (completed + failed) - ignore running/pending
   const finishedExperiments = completedExperiments + failedExperiments;
-  const successRate = finishedExperiments > 0
-    ? `${((completedExperiments / finishedExperiments) * 100).toFixed(0)}%`
-    : "No data";
-  const successRateSubtitle = finishedExperiments > 0 ? `${finishedExperiments} finished` : "Run an experiment";
-  
+  const successRate =
+    finishedExperiments > 0
+      ? `${((completedExperiments / finishedExperiments) * 100).toFixed(0)}%`
+      : "No data";
+  const successRateSubtitle =
+    finishedExperiments > 0 ? `${finishedExperiments} finished` : "Run an experiment";
+
   // Calculate avg latency from evaluation logs (each log = one prompt evaluation)
-  const logsWithLatency = evaluationLogs.filter(log =>
-    typeof log.latency_ms === 'number' && !isNaN(log.latency_ms) && log.latency_ms > 0
+  const logsWithLatency = evaluationLogs.filter(
+    (log) => typeof log.latency_ms === "number" && !isNaN(log.latency_ms) && log.latency_ms > 0,
   );
-  const avgLatencyValue = logsWithLatency.length > 0
-    ? formatLatency(logsWithLatency.reduce((sum, log) => sum + (log.latency_ms || 0), 0) / logsWithLatency.length)
-    : dashboardData?.metrics?.latency?.average !== undefined
-      ? formatLatency(dashboardData.metrics.latency.average)
-      : null;
+  const avgLatencyValue =
+    logsWithLatency.length > 0
+      ? formatLatency(
+          logsWithLatency.reduce((sum, log) => sum + (log.latency_ms || 0), 0) /
+            logsWithLatency.length,
+        )
+      : dashboardData?.metrics?.latency?.average !== undefined
+        ? formatLatency(dashboardData.metrics.latency.average)
+        : null;
   const avgLatency = avgLatencyValue ?? "No data";
-  const avgLatencySubtitle = avgLatencyValue ? `${logsWithLatency.length} logs` : "Run a successful experiment";
-  
+  const avgLatencySubtitle = avgLatencyValue
+    ? `${logsWithLatency.length} logs`
+    : "Run a successful experiment";
+
   // Calculate avg score from experiment results (avg_scores contains metric averages)
-  const experimentsWithResults = experiments.filter(e => e.results && typeof e.results === 'object');
+  const experimentsWithResults = experiments.filter(
+    (e) => e.results && typeof e.results === "object",
+  );
   const allScores: number[] = [];
-  experimentsWithResults.forEach(e => {
+  experimentsWithResults.forEach((e) => {
     const results = e.results as Record<string, unknown>;
     const avgScores = results?.avg_scores as Record<string, number> | undefined;
-    if (avgScores && typeof avgScores === 'object') {
+    if (avgScores && typeof avgScores === "object") {
       // Get all metric scores and average them
-      const metricValues = Object.values(avgScores).filter((v): v is number => typeof v === 'number' && !isNaN(v) && v > 0);
+      const metricValues = Object.values(avgScores).filter(
+        (v): v is number => typeof v === "number" && !isNaN(v) && v > 0,
+      );
       if (metricValues.length > 0) {
         allScores.push(metricValues.reduce((a, b) => a + b, 0) / metricValues.length);
       }
     }
   });
-  const avgScoreValue = allScores.length > 0
-    ? formatScore(allScores.reduce((a, b) => a + b, 0) / allScores.length)
-    : dashboardData?.metrics?.score_average?.average !== undefined
-      ? formatScore(dashboardData.metrics.score_average.average)
-      : null;
+  const avgScoreValue =
+    allScores.length > 0
+      ? formatScore(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+      : dashboardData?.metrics?.score_average?.average !== undefined
+        ? formatScore(dashboardData.metrics.score_average.average)
+        : null;
   const avgScore = avgScoreValue ?? "No data";
-  const avgScoreSubtitle = avgScoreValue ? `${allScores.length} experiments` : "Run a successful experiment";
-  
+  const avgScoreSubtitle = avgScoreValue
+    ? `${allScores.length} experiments`
+    : "Run a successful experiment";
+
   // Calculate total tokens from evaluation logs
-  const logsWithTokens = evaluationLogs.filter(log =>
-    typeof log.token_count === 'number' && !isNaN(log.token_count) && log.token_count > 0
+  const logsWithTokens = evaluationLogs.filter(
+    (log) => typeof log.token_count === "number" && !isNaN(log.token_count) && log.token_count > 0,
   );
-  const totalTokensValue = logsWithTokens.length > 0
-    ? formatNumber(logsWithTokens.reduce((sum, log) => sum + (log.token_count || 0), 0))
-    : dashboardData?.metrics?.token_count?.average !== undefined && dashboardData?.logs?.total
-      ? formatNumber(dashboardData.metrics.token_count.average * dashboardData.logs.total)
-      : null;
+  const totalTokensValue =
+    logsWithTokens.length > 0
+      ? formatNumber(logsWithTokens.reduce((sum, log) => sum + (log.token_count || 0), 0))
+      : dashboardData?.metrics?.token_count?.average !== undefined && dashboardData?.logs?.total
+        ? formatNumber(dashboardData.metrics.token_count.average * dashboardData.logs.total)
+        : null;
   const totalTokens = totalTokensValue ?? "No data";
-  const totalTokensSubtitle = totalTokensValue ? "Across all experiments" : "Run a successful experiment";
+  const totalTokensSubtitle = totalTokensValue
+    ? "Across all experiments"
+    : "Run a successful experiment";
 
   // Transform experiments to table rows (top 5 recent)
   const recentExperimentsRows: IEvaluationRow[] = [...experiments]
@@ -348,7 +366,8 @@ export default function ProjectOverview({
       }
 
       // Calculate prompt count from config or results
-      const promptCount = exp.config?.dataset?.count ||
+      const promptCount =
+        exp.config?.dataset?.count ||
         exp.config?.dataset?.prompts?.length ||
         exp.results?.total_prompts ||
         0;
@@ -362,10 +381,13 @@ export default function ProjectOverview({
         prompts: promptCount,
         date: createdDate,
         status:
-          exp.status === "completed" ? "Completed" :
-          exp.status === "failed" ? "Failed" :
-          exp.status === "running" ? "Running" :
-          "Pending",
+          exp.status === "completed"
+            ? "Completed"
+            : exp.status === "failed"
+              ? "Failed"
+              : exp.status === "running"
+                ? "Running"
+                : "Pending",
       };
     });
 
@@ -409,12 +431,14 @@ export default function ProjectOverview({
       </Box>
 
       {/* Stat cards: 3x2 grid */}
-      <Box sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
-        gap: "16px",
-        mb: "24px"
-      }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
+          gap: "16px",
+          mb: "24px",
+        }}
+      >
         <StatCard
           title="Experiments"
           value={formatNumber(totalExperiments)}
@@ -433,12 +457,7 @@ export default function ProjectOverview({
           Icon={Clock}
           subtitle={avgLatencySubtitle}
         />
-        <StatCard
-          title="Avg score"
-          value={avgScore}
-          Icon={Star}
-          subtitle={avgScoreSubtitle}
-        />
+        <StatCard title="Avg score" value={avgScore} Icon={Star} subtitle={avgScoreSubtitle} />
         <StatCard
           title="Total tokens"
           value={totalTokens}
@@ -447,7 +466,7 @@ export default function ProjectOverview({
         />
         <StatCard
           title="Running"
-          value={experiments.filter(e => e.status === "running").length}
+          value={experiments.filter((e) => e.status === "running").length}
           Icon={Activity}
           subtitle="Experiments in progress"
         />
@@ -462,21 +481,20 @@ export default function ProjectOverview({
         </Box>
 
         {!hasExperiments ? (
-          <Box sx={{
-            border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
-            backgroundColor: palette.background.main,
-            textAlign: "center",
-            py: 4,
-            px: 2,
-          }}>
+          <Box
+            sx={{
+              border: `1px solid ${palette.border.dark}`,
+              borderRadius: "4px",
+              backgroundColor: palette.background.main,
+              textAlign: "center",
+              py: 4,
+              px: 2,
+            }}
+          >
             <Box sx={{ mb: 2 }}>
               <Beaker size={32} color={palette.text.disabled} strokeWidth={1} />
             </Box>
-            <Typography
-              variant="subtitle2"
-              sx={{ fontWeight: 600, mb: 1, fontSize: "13px" }}
-            >
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: "13px" }}>
               No experiments yet
             </Typography>
             <Typography

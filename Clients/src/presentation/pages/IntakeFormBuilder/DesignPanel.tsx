@@ -30,15 +30,37 @@ const FONT_OPTIONS = [
 ];
 
 const THEME_COLORS = [
-  `${brand.primary}`, `${brand.primaryHover}`, "#1976D2", "#2E7D32", "#C62828",
-  "#AD1457", "#6A1B9A", "#283593", "#00695C", "#EF6C00",
-  "#4E342E", "#37474F", `${text.black}`, "#546E7A",
+  `${brand.primary}`,
+  `${brand.primaryHover}`,
+  "#1976D2",
+  "#2E7D32",
+  "#C62828",
+  "#AD1457",
+  "#6A1B9A",
+  "#283593",
+  "#00695C",
+  "#EF6C00",
+  "#4E342E",
+  "#37474F",
+  `${text.black}`,
+  "#546E7A",
 ];
 
 const BG_COLORS = [
-  "#fafafa", `${background.main}`, `${background.surface}`, "#f0f4f8", "#fdf2f8",
-  "#f0fdf4", "#fef3c7", "#ecfeff", "#f5f3ff", "#fef2f2",
-  "#e8f5e9", "#e3f2fd", "#fff3e0", "#f3e5f5",
+  "#fafafa",
+  `${background.main}`,
+  `${background.surface}`,
+  "#f0f4f8",
+  "#fdf2f8",
+  "#f0fdf4",
+  "#fef3c7",
+  "#ecfeff",
+  "#f5f3ff",
+  "#fef2f2",
+  "#e8f5e9",
+  "#e3f2fd",
+  "#fff3e0",
+  "#f3e5f5",
 ];
 
 function IconToggleButton({
@@ -67,13 +89,17 @@ function IconToggleButton({
           justifyContent: "center",
           borderRadius: "4px",
           cursor: "pointer",
-          border: active ? `1px solid ${theme.palette.primary.main}80` : `1px solid ${theme.palette.border.dark}`,
+          border: active
+            ? `1px solid ${theme.palette.primary.main}80`
+            : `1px solid ${theme.palette.border.dark}`,
           backgroundColor: active ? theme.palette.background.fill : theme.palette.background.main,
           color: active ? theme.palette.primary.main : theme.palette.text.tertiary,
           transition: "all 0.15s ease",
           "&:hover": {
             borderColor: active ? `${theme.palette.primary.main}80` : theme.palette.text.accent,
-            backgroundColor: active ? theme.palette.background.fill : theme.palette.background.accent,
+            backgroundColor: active
+              ? theme.palette.background.fill
+              : theme.palette.background.accent,
           },
           ...sxOverride,
         }}
@@ -197,16 +223,12 @@ function ColorGrid({
       </Box>
       {showCustom && (
         <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <Typography sx={{ fontSize: "11px", color: theme.palette.other.icon }}>
-            Custom
-          </Typography>
+          <Typography sx={{ fontSize: "11px", color: theme.palette.other.icon }}>Custom</Typography>
           <Box
             component="input"
             type="color"
             value={customValue || brand.primary}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onCustomChange?.(e.target.value)
-            }
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onCustomChange?.(e.target.value)}
             sx={{
               width: 28,
               height: 22,
@@ -222,7 +244,9 @@ function ColorGrid({
               },
             }}
           />
-          <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent, fontFamily: "monospace" }}>
+          <Typography
+            sx={{ fontSize: "11px", color: theme.palette.text.accent, fontFamily: "monospace" }}
+          >
             {customValue || brand.primary}
           </Typography>
         </Box>
@@ -264,9 +288,7 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
           borderBottom: `1px solid ${theme.palette.border.dark}`,
         }}
       >
-        <Typography
-          sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.primary }}
-        >
+        <Typography sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.primary }}>
           Design
         </Typography>
       </Box>
@@ -275,7 +297,14 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         {/* Format */}
         <Box>
           <Typography
-            sx={{ fontSize: "11px", fontWeight: 600, color: theme.palette.text.tertiary, mb: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 600,
+              color: theme.palette.text.tertiary,
+              mb: "6px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
           >
             Format
           </Typography>
@@ -300,7 +329,14 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         {/* Alignment */}
         <Box>
           <Typography
-            sx={{ fontSize: "11px", fontWeight: 600, color: theme.palette.text.tertiary, mb: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 600,
+              color: theme.palette.text.tertiary,
+              mb: "6px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
           >
             Alignment
           </Typography>
@@ -334,7 +370,14 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         {/* Customize */}
         <Box>
           <Typography
-            sx={{ fontSize: "11px", fontWeight: 600, color: theme.palette.text.tertiary, mb: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 600,
+              color: theme.palette.text.tertiary,
+              mb: "4px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
           >
             Customize
           </Typography>
@@ -407,7 +450,6 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
             </Box>
           )}
         </Box>
-
       </Box>
     </Box>
   );

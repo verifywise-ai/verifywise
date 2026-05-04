@@ -110,7 +110,7 @@ export const trainingTrackingContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click "Add training" in the toolbar' },
+        { text: 'Click "New training" in the toolbar' },
         { text: 'Enter a training name that clearly describes the program' },
         { text: 'Specify the duration' },
         { text: 'Enter the provider (who delivers the training)' },

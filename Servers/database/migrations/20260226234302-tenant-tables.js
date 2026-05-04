@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Tenant Tables Migration
@@ -14,25 +14,32 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-    console.log('🚀 Setting up tenant tables...');
+      console.log("🚀 Setting up tenant tables...");
 
-    // Helper: Create index if not exists
-    const createIndex = async (indexName, tableName, columns) => {
-      await queryInterface.sequelize.query(`
+      // Helper: Create index if not exists
+      const createIndex = async (indexName, tableName, columns) => {
+        await queryInterface.sequelize.query(
+          `
         CREATE INDEX IF NOT EXISTS ${indexName} ON verifywise.${tableName}(${columns});
-      `, { transaction });
-    };
+      `,
+          { transaction },
+        );
+      };
 
-    // ========================================
-    // SEQUENCES
-    // ========================================
-    await queryInterface.sequelize.query(`CREATE SEQUENCE IF NOT EXISTS verifywise.project_uc_id_seq;`, { transaction });
+      // ========================================
+      // SEQUENCES
+      // ========================================
+      await queryInterface.sequelize.query(
+        `CREATE SEQUENCE IF NOT EXISTS verifywise.project_uc_id_seq;`,
+        { transaction },
+      );
 
-    // ========================================
-    // PROJECTS
-    // ========================================
-    console.log('📋 Creating projects table...');
-    await queryInterface.sequelize.query(`
+      // ========================================
+      // PROJECTS
+      // ========================================
+      console.log("📋 Creating projects table...");
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.projects (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -58,15 +65,18 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
         UNIQUE(organization_id, uc_id)
       );
-    `, { transaction });
-    await createIndex('idx_projects_org', 'projects', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_projects_org", "projects", "organization_id");
 
-    // ========================================
-    // VENDORS
-    // ========================================
-    console.log('📋 Ensuring vendors table...');
+      // ========================================
+      // VENDORS
+      // ========================================
+      console.log("📋 Ensuring vendors table...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.vendors (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -89,15 +99,18 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
       );
-    `, { transaction });
-    await createIndex('idx_vendors_org', 'vendors', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_vendors_org", "vendors", "organization_id");
 
-    // ========================================
-    // TRAINING REGISTRAR
-    // ========================================
-    console.log('📋 Ensuring training table...');
+      // ========================================
+      // TRAINING REGISTRAR
+      // ========================================
+      console.log("📋 Ensuring training table...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.trainingregistar (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -112,16 +125,19 @@ module.exports = {
         description VARCHAR(255),
         is_demo BOOLEAN NOT NULL DEFAULT false
       );
-    `, { transaction });
-    await createIndex('idx_trainingregistar_org', 'trainingregistar', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_trainingregistar_org", "trainingregistar", "organization_id");
 
-    // ========================================
-    // JUNCTION TABLES
-    // ========================================
-    console.log('📋 Ensuring junction tables...');
+      // ========================================
+      // JUNCTION TABLES
+      // ========================================
+      console.log("📋 Ensuring junction tables...");
 
-    // projects_members
-    await queryInterface.sequelize.query(`
+      // projects_members
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.projects_members (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL REFERENCES verifywise.users(id) ON DELETE CASCADE,
@@ -129,10 +145,13 @@ module.exports = {
         is_demo BOOLEAN NOT NULL DEFAULT false,
         PRIMARY KEY (user_id, project_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // event_logs
-    await queryInterface.sequelize.query(`
+      // event_logs
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.event_logs (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -141,10 +160,13 @@ module.exports = {
         user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // vendors_projects
-    await queryInterface.sequelize.query(`
+      // vendors_projects
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.vendors_projects (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         vendor_id INTEGER NOT NULL REFERENCES verifywise.vendors(id) ON DELETE CASCADE,
@@ -152,14 +174,17 @@ module.exports = {
         is_demo BOOLEAN NOT NULL DEFAULT false,
         PRIMARY KEY (vendor_id, project_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // RISKS
-    // ========================================
-    console.log('📋 Ensuring risks table...');
+      // ========================================
+      // RISKS
+      // ========================================
+      console.log("📋 Ensuring risks table...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.risks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -193,33 +218,42 @@ module.exports = {
         is_deleted BOOLEAN NOT NULL DEFAULT false,
         deleted_at TIMESTAMP WITHOUT TIME ZONE
       );
-    `, { transaction });
-    await createIndex('idx_risks_org', 'risks', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_risks_org", "risks", "organization_id");
 
-    // projects_risks junction
-    await queryInterface.sequelize.query(`
+      // projects_risks junction
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.projects_risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         risk_id INTEGER NOT NULL REFERENCES verifywise.risks(id) ON DELETE CASCADE,
         project_id INTEGER NOT NULL REFERENCES verifywise.projects(id) ON DELETE CASCADE,
         PRIMARY KEY (risk_id, project_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // frameworks_risks junction
-    await queryInterface.sequelize.query(`
+      // frameworks_risks junction
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.frameworks_risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         risk_id INTEGER NOT NULL REFERENCES verifywise.risks(id) ON DELETE CASCADE,
         framework_id INTEGER NOT NULL REFERENCES verifywise.frameworks(id) ON DELETE CASCADE,
         PRIMARY KEY (risk_id, framework_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // NOTE: files and file_entity_links are created in 234301-public-schema-tables.js
+      // NOTE: files and file_entity_links are created in 234301-public-schema-tables.js
 
-    // virtual_folders
-    await queryInterface.sequelize.query(`
+      // virtual_folders
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.virtual_folders (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -234,10 +268,13 @@ module.exports = {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE (organization_id, parent_id, name)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // file_folder_mappings
-    await queryInterface.sequelize.query(`
+      // file_folder_mappings
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.file_folder_mappings (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -247,15 +284,18 @@ module.exports = {
         assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE (file_id, folder_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // FRAMEWORKS DATA
-    // ========================================
-    console.log('📋 Ensuring framework data tables...');
+      // ========================================
+      // FRAMEWORKS DATA
+      // ========================================
+      console.log("📋 Ensuring framework data tables...");
 
-    // projects_frameworks
-    await queryInterface.sequelize.query(`
+      // projects_frameworks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.projects_frameworks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -264,10 +304,13 @@ module.exports = {
         is_demo BOOLEAN DEFAULT false,
         UNIQUE(project_id, framework_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // assessments
-    await queryInterface.sequelize.query(`
+      // assessments
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.assessments (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -276,10 +319,13 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
         projects_frameworks_id INTEGER REFERENCES verifywise.projects_frameworks(id) ON DELETE CASCADE
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // projectscopes
-    await queryInterface.sequelize.query(`
+      // projectscopes
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.projectscopes (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -295,10 +341,13 @@ module.exports = {
         is_demo BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // vendorrisks
-    await queryInterface.sequelize.query(`
+      // vendorrisks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.vendorrisks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -317,15 +366,18 @@ module.exports = {
         is_deleted BOOLEAN NOT NULL DEFAULT false,
         deleted_at TIMESTAMP WITHOUT TIME ZONE
       );
-    `, { transaction });
-    await createIndex('idx_vendorrisks_org', 'vendorrisks', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_vendorrisks_org", "vendorrisks", "organization_id");
 
-    // ========================================
-    // EU AI ACT CONTROLS
-    // ========================================
-    console.log('📋 Ensuring EU AI Act tenant tables...');
+      // ========================================
+      // EU AI ACT CONTROLS
+      // ========================================
+      console.log("📋 Ensuring EU AI Act tenant tables...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.controls_eu (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -341,9 +393,12 @@ module.exports = {
         projects_frameworks_id INTEGER REFERENCES verifywise.projects_frameworks(id) ON DELETE CASCADE,
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subcontrols_eu (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -361,9 +416,12 @@ module.exports = {
         feedback_description TEXT,
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.answers_eu (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -375,24 +433,30 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
         is_demo BOOLEAN NOT NULL DEFAULT false
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // subcontrols_eu__risks junction
-    await queryInterface.sequelize.query(`
+      // subcontrols_eu__risks junction
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subcontrols_eu__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         subcontrol_id INTEGER REFERENCES verifywise.subcontrols_eu(id) ON DELETE CASCADE,
         projects_risks_id INTEGER REFERENCES verifywise.risks(id) ON DELETE CASCADE,
         PRIMARY KEY (subcontrol_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // ISO 42001
-    // ========================================
-    console.log('📋 Ensuring ISO 42001 tenant tables...');
+      // ========================================
+      // ISO 42001
+      // ========================================
+      console.log("📋 Ensuring ISO 42001 tenant tables...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subclauses_iso (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -408,9 +472,12 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         is_demo BOOLEAN DEFAULT false
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.annexcategories_iso (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -428,24 +495,30 @@ module.exports = {
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         is_demo BOOLEAN DEFAULT false
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // annexcategories_iso__risks junction table
-    await queryInterface.sequelize.query(`
+      // annexcategories_iso__risks junction table
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.annexcategories_iso__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         annexcategory_id INTEGER,
         projects_risks_id INTEGER NOT NULL,
         PRIMARY KEY (projects_risks_id, annexcategory_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // ISO 27001
-    // ========================================
-    console.log('📋 Ensuring ISO 27001 tenant tables...');
+      // ========================================
+      // ISO 27001
+      // ========================================
+      console.log("📋 Ensuring ISO 27001 tenant tables...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subclauses_iso27001 (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -461,9 +534,12 @@ module.exports = {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_demo BOOLEAN DEFAULT FALSE
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.annexcontrols_iso27001 (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -479,14 +555,17 @@ module.exports = {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_demo BOOLEAN DEFAULT FALSE
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // NIST AI RMF
-    // ========================================
-    console.log('📋 Ensuring NIST AI RMF tenant tables...');
+      // ========================================
+      // NIST AI RMF
+      // ========================================
+      console.log("📋 Ensuring NIST AI RMF tenant tables...");
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.nist_ai_rmf_subcategories (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -503,17 +582,28 @@ module.exports = {
         approver INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         due_date DATE
       );
-    `, { transaction });
-    await createIndex('idx_nist_subcategories_org', 'nist_ai_rmf_subcategories', 'organization_id');
-    await createIndex('idx_nist_subcategories_pf', 'nist_ai_rmf_subcategories', 'projects_frameworks_id');
+    `,
+        { transaction },
+      );
+      await createIndex(
+        "idx_nist_subcategories_org",
+        "nist_ai_rmf_subcategories",
+        "organization_id",
+      );
+      await createIndex(
+        "idx_nist_subcategories_pf",
+        "nist_ai_rmf_subcategories",
+        "projects_frameworks_id",
+      );
 
-    // ========================================
-    // REMAINING TABLES (continue pattern)
-    // ========================================
-    console.log('📋 Ensuring remaining tenant tables...');
+      // ========================================
+      // REMAINING TABLES (continue pattern)
+      // ========================================
+      console.log("📋 Ensuring remaining tenant tables...");
 
-    // policy_manager
-    await queryInterface.sequelize.query(`
+      // policy_manager
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.policy_manager (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -532,10 +622,13 @@ module.exports = {
         reviewed_at TIMESTAMP,
         is_demo BOOLEAN NOT NULL DEFAULT false
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // model_inventories
-    await queryInterface.sequelize.query(`
+      // model_inventories
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_inventories (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -557,11 +650,14 @@ module.exports = {
         provider VARCHAR(255) NOT NULL,
         model VARCHAR(255) NOT NULL
       );
-    `, { transaction });
-    await createIndex('idx_model_inventories_org', 'model_inventories', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_model_inventories_org", "model_inventories", "organization_id");
 
-    // model_risks
-    await queryInterface.sequelize.query(`
+      // model_risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_risks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -585,10 +681,13 @@ module.exports = {
         deleted_at TIMESTAMP,
         is_demo BOOLEAN DEFAULT false
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // datasets
-    await queryInterface.sequelize.query(`
+      // datasets
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.datasets (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -615,10 +714,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // tasks
-    await queryInterface.sequelize.query(`
+      // tasks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.tasks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -633,11 +735,14 @@ module.exports = {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
         is_demo BOOLEAN DEFAULT false
       );
-    `, { transaction });
-    await createIndex('idx_tasks_org', 'tasks', 'organization_id');
+    `,
+        { transaction },
+      );
+      await createIndex("idx_tasks_org", "tasks", "organization_id");
 
-    // task_assignees
-    await queryInterface.sequelize.query(`
+      // task_assignees
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.task_assignees (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -648,11 +753,17 @@ module.exports = {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
         UNIQUE (task_id, user_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ai_incident_managements
-    await queryInterface.sequelize.query(`CREATE SEQUENCE IF NOT EXISTS verifywise.incident_id_seq;`, { transaction });
-    await queryInterface.sequelize.query(`
+      // ai_incident_managements
+      await queryInterface.sequelize.query(
+        `CREATE SEQUENCE IF NOT EXISTS verifywise.incident_id_seq;`,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.ai_incident_managements (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -682,10 +793,13 @@ module.exports = {
         updated_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(organization_id, incident_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // automations
-    await queryInterface.sequelize.query(`
+      // automations
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.automations (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -696,10 +810,13 @@ module.exports = {
         created_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // automation_actions_data
-    await queryInterface.sequelize.query(`
+      // automation_actions_data
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.automation_actions_data (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -708,10 +825,13 @@ module.exports = {
         params JSONB DEFAULT '{}',
         "order" INTEGER DEFAULT 1
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // automation_execution_logs
-    await queryInterface.sequelize.query(`
+      // automation_execution_logs
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.automation_execution_logs (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -724,10 +844,13 @@ module.exports = {
         error_message TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // notifications
-    await queryInterface.sequelize.query(`
+      // notifications
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.notifications (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -745,10 +868,13 @@ module.exports = {
         created_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         metadata JSONB
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // plugin_installations
-    await queryInterface.sequelize.query(`
+      // plugin_installations
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.plugin_installations (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -762,10 +888,13 @@ module.exports = {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(organization_id, plugin_key)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // llm_keys
-    await queryInterface.sequelize.query(`
+      // llm_keys
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.llm_keys (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -776,10 +905,13 @@ module.exports = {
         custom_headers JSONB DEFAULT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // invitations
-    await queryInterface.sequelize.query(`
+      // invitations
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.invitations (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -793,10 +925,13 @@ module.exports = {
         expires_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // notes
-    await queryInterface.sequelize.query(`
+      // notes
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.notes (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -808,10 +943,13 @@ module.exports = {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // share_links
-    await queryInterface.sequelize.query(`
+      // share_links
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.share_links (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -825,10 +963,13 @@ module.exports = {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // approval_workflows
-    await queryInterface.sequelize.query(`
+      // approval_workflows
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_workflows (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -840,10 +981,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // approval_workflow_steps
-    await queryInterface.sequelize.query(`
+      // approval_workflow_steps
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_workflow_steps (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -855,10 +999,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(workflow_id, step_number)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // approval_requests
-    await queryInterface.sequelize.query(`
+      // approval_requests
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_requests (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -873,15 +1020,18 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // ADDITIONAL TENANT TABLES (Junction & Change History)
-    // ========================================
-    console.log('📋 Ensuring additional junction & history tables...');
+      // ========================================
+      // ADDITIONAL TENANT TABLES (Junction & Change History)
+      // ========================================
+      console.log("📋 Ensuring additional junction & history tables...");
 
-    // approval_request_steps
-    await queryInterface.sequelize.query(`
+      // approval_request_steps
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_request_steps (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -894,10 +1044,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(request_id, step_number)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // approval_request_step_approvals
-    await queryInterface.sequelize.query(`
+      // approval_request_step_approvals
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_request_step_approvals (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -909,10 +1062,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(request_step_id, approver_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // approval_step_approvers
-    await queryInterface.sequelize.query(`
+      // approval_step_approvers
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.approval_step_approvers (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -921,10 +1077,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(workflow_step_id, approver_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // task_entity_links
-    await queryInterface.sequelize.query(`
+      // task_entity_links
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.task_entity_links (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -936,10 +1095,13 @@ module.exports = {
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(task_id, entity_type, entity_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // policy_linked_objects
-    await queryInterface.sequelize.query(`
+      // policy_linked_objects
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.policy_linked_objects (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -949,20 +1111,26 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // policy_manager__assigned_reviewer_ids
-    await queryInterface.sequelize.query(`
+      // policy_manager__assigned_reviewer_ids
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.policy_manager__assigned_reviewer_ids (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         policy_manager_id INTEGER REFERENCES verifywise.policy_manager(id) ON DELETE CASCADE,
         user_id INTEGER REFERENCES verifywise.users(id) ON DELETE CASCADE,
         PRIMARY KEY (policy_manager_id, user_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // dataset_projects
-    await queryInterface.sequelize.query(`
+      // dataset_projects
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.dataset_projects (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -971,10 +1139,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(dataset_id, project_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // dataset_model_inventories
-    await queryInterface.sequelize.query(`
+      // dataset_model_inventories
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.dataset_model_inventories (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -984,10 +1155,13 @@ module.exports = {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(dataset_id, model_inventory_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // model_inventories_projects_frameworks
-    await queryInterface.sequelize.query(`
+      // model_inventories_projects_frameworks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_inventories_projects_frameworks (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -996,13 +1170,16 @@ module.exports = {
         framework_id INTEGER REFERENCES verifywise.frameworks(id) ON DELETE CASCADE,
         UNIQUE(model_inventory_id, project_id, framework_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // Change History Tables
-    console.log('📋 Ensuring change history tables...');
+      // Change History Tables
+      console.log("📋 Ensuring change history tables...");
 
-    // vendor_change_history
-    await queryInterface.sequelize.query(`
+      // vendor_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.vendor_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1015,10 +1192,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // vendor_risk_change_history
-    await queryInterface.sequelize.query(`
+      // vendor_risk_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.vendor_risk_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1031,10 +1211,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // project_risk_change_history
-    await queryInterface.sequelize.query(`
+      // project_risk_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.project_risk_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1047,10 +1230,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // policy_change_history
-    await queryInterface.sequelize.query(`
+      // policy_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.policy_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1063,10 +1249,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // incident_change_history
-    await queryInterface.sequelize.query(`
+      // incident_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.incident_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1079,10 +1268,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // use_case_change_history
-    await queryInterface.sequelize.query(`
+      // use_case_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.use_case_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1095,10 +1287,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // model_inventory_change_history
-    await queryInterface.sequelize.query(`
+      // model_inventory_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_inventory_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1111,10 +1306,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // model_risk_change_history
-    await queryInterface.sequelize.query(`
+      // model_risk_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_risk_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1126,10 +1324,13 @@ module.exports = {
         changed_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         changed_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // file_change_history
-    await queryInterface.sequelize.query(`
+      // file_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.file_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1142,10 +1343,13 @@ module.exports = {
         changed_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // dataset_change_histories
-    await queryInterface.sequelize.query(`
+      // dataset_change_histories
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.dataset_change_histories (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1157,10 +1361,13 @@ module.exports = {
         changed_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         changed_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // task_change_history
-    await queryInterface.sequelize.query(`
+      // task_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.task_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1172,10 +1379,13 @@ module.exports = {
         changed_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         changed_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // training_change_history
-    await queryInterface.sequelize.query(`
+      // training_change_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.training_change_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1187,10 +1397,13 @@ module.exports = {
         changed_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         changed_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // risk_history
-    await queryInterface.sequelize.query(`
+      // risk_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.risk_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1200,10 +1413,13 @@ module.exports = {
         triggered_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // model_inventory_history
-    await queryInterface.sequelize.query(`
+      // model_inventory_history
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.model_inventory_history (
         id SERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1213,80 +1429,101 @@ module.exports = {
         triggered_by_user_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // RISK JUNCTION TABLES
-    // ========================================
-    console.log('📋 Ensuring risk junction tables...');
+      // ========================================
+      // RISK JUNCTION TABLES
+      // ========================================
+      console.log("📋 Ensuring risk junction tables...");
 
-    // controls_eu__risks
-    await queryInterface.sequelize.query(`
+      // controls_eu__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.controls_eu__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         control_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (control_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // answers_eu__risks
-    await queryInterface.sequelize.query(`
+      // answers_eu__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.answers_eu__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         answer_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (answer_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // subclauses_iso__risks
-    await queryInterface.sequelize.query(`
+      // subclauses_iso__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subclauses_iso__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         subclause_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (subclause_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // subclauses_iso27001__risks
-    await queryInterface.sequelize.query(`
+      // subclauses_iso27001__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.subclauses_iso27001__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         subclause_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (subclause_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // annexcontrols_iso27001__risks
-    await queryInterface.sequelize.query(`
+      // annexcontrols_iso27001__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.annexcontrols_iso27001__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         annexcontrol_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (annexcontrol_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // nist_ai_rmf_subcategories__risks
-    await queryInterface.sequelize.query(`
+      // nist_ai_rmf_subcategories__risks
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.nist_ai_rmf_subcategories__risks (
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         nist_ai_rmf_subcategory_id INTEGER,
         projects_risks_id INTEGER,
         PRIMARY KEY (nist_ai_rmf_subcategory_id, projects_risks_id)
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // ========================================
-    // AI DETECTION, SHADOW AI, AI TRUST CENTER
-    // ========================================
-    console.log('📋 Ensuring AI detection & Shadow AI tables...');
+      // ========================================
+      // AI DETECTION, SHADOW AI, AI TRUST CENTER
+      // ========================================
+      console.log("📋 Ensuring AI detection & Shadow AI tables...");
 
-    // ai_detection_scans
-      await queryInterface.sequelize.query(`
+      // ai_detection_scans
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_detection_scans (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1313,10 +1550,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_detection_findings
-      await queryInterface.sequelize.query(`
+      // ai_detection_findings
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_detection_findings (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1348,10 +1588,13 @@ module.exports = {
           owasp_ml_name VARCHAR(255),
           created_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_detection_repositories
-      await queryInterface.sequelize.query(`
+      // ai_detection_repositories
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_detection_repositories (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1378,10 +1621,13 @@ module.exports = {
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(organization_id, repository_owner, repository_name)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_detection_risk_scoring_config
-      await queryInterface.sequelize.query(`
+      // ai_detection_risk_scoring_config
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_detection_risk_scoring_config (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1391,10 +1637,13 @@ module.exports = {
           updated_by INTEGER,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_tools
-      await queryInterface.sequelize.query(`
+      // shadow_ai_tools
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_tools (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1420,10 +1669,13 @@ module.exports = {
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(organization_id, name)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_events
-      await queryInterface.sequelize.query(`
+      // shadow_ai_events
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_events (
           id BIGSERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1440,10 +1692,13 @@ module.exports = {
           event_timestamp TIMESTAMPTZ,
           ingested_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_daily_rollups
-      await queryInterface.sequelize.query(`
+      // shadow_ai_daily_rollups
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_daily_rollups (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1457,10 +1712,13 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(organization_id, rollup_date, user_email, tool_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_monthly_rollups
-      await queryInterface.sequelize.query(`
+      // shadow_ai_monthly_rollups
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_monthly_rollups (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1474,10 +1732,13 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(organization_id, rollup_month, tool_id, department)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_rules
-      await queryInterface.sequelize.query(`
+      // shadow_ai_rules
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_rules (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1492,10 +1753,13 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_alert_history
-      await queryInterface.sequelize.query(`
+      // shadow_ai_alert_history
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_alert_history (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1506,10 +1770,13 @@ module.exports = {
           actions_taken JSONB,
           fired_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_rule_notifications
-      await queryInterface.sequelize.query(`
+      // shadow_ai_rule_notifications
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_rule_notifications (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1518,10 +1785,13 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           UNIQUE(organization_id, rule_id, user_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_settings
-      await queryInterface.sequelize.query(`
+      // shadow_ai_settings
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_settings (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1532,10 +1802,13 @@ module.exports = {
           updated_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_syslog_config
-      await queryInterface.sequelize.query(`
+      // shadow_ai_syslog_config
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_syslog_config (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1544,10 +1817,13 @@ module.exports = {
           parser_type VARCHAR(50),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // shadow_ai_api_keys
-      await queryInterface.sequelize.query(`
+      // shadow_ai_api_keys
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.shadow_ai_api_keys (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1559,15 +1835,18 @@ module.exports = {
           created_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ========================================
-    // AI TRUST CENTER TABLES
-    // ========================================
-    console.log('📋 Ensuring AI Trust Center tables...');
+      // ========================================
+      // AI TRUST CENTER TABLES
+      // ========================================
+      console.log("📋 Ensuring AI Trust Center tables...");
 
-    // ai_trust_center
-      await queryInterface.sequelize.query(`
+      // ai_trust_center
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1583,10 +1862,13 @@ module.exports = {
           terms_and_contact_visible BOOLEAN DEFAULT TRUE,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_intro
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_intro
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_intro (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1598,10 +1880,13 @@ module.exports = {
           our_statement_text TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_company_description
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_company_description
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_company_description (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1613,10 +1898,13 @@ module.exports = {
           compliance_doc_text TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_compliance_badges
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_compliance_badges
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_compliance_badges (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1630,10 +1918,13 @@ module.exports = {
           eu_ai_act BOOLEAN DEFAULT FALSE,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_resources
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_resources
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_resources (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1643,10 +1934,13 @@ module.exports = {
           visible BOOLEAN DEFAULT TRUE,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_subprocessor
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_subprocessor
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_subprocessor (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1656,10 +1950,13 @@ module.exports = {
           url TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ai_trust_center_terms_and_contact
-      await queryInterface.sequelize.query(`
+      // ai_trust_center_terms_and_contact
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ai_trust_center_terms_and_contact (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1671,15 +1968,18 @@ module.exports = {
           email_text TEXT,
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ========================================
-    // REMAINING TENANT TABLES
-    // ========================================
-    console.log('📋 Ensuring remaining tenant tables...');
+      // ========================================
+      // REMAINING TENANT TABLES
+      // ========================================
+      console.log("📋 Ensuring remaining tenant tables...");
 
-    // evidence_hub
-      await queryInterface.sequelize.query(`
+      // evidence_hub
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.evidence_hub (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1691,10 +1991,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // api_tokens
-      await queryInterface.sequelize.query(`
+      // api_tokens
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.api_tokens (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1704,10 +2007,13 @@ module.exports = {
           created_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           created_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // github_tokens
-      await queryInterface.sequelize.query(`
+      // github_tokens
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.github_tokens (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1718,10 +2024,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // user_preferences
-      await queryInterface.sequelize.query(`
+      // user_preferences
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.user_preferences (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1731,10 +2040,13 @@ module.exports = {
           updated_at TIMESTAMP DEFAULT NOW(),
           UNIQUE(user_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // entity_graph_annotations
-      await queryInterface.sequelize.query(`
+      // entity_graph_annotations
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.entity_graph_annotations (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1745,10 +2057,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // entity_graph_views
-      await queryInterface.sequelize.query(`
+      // entity_graph_views
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.entity_graph_views (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1758,10 +2073,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // entity_graph_gap_rules
-      await queryInterface.sequelize.query(`
+      // entity_graph_gap_rules
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.entity_graph_gap_rules (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1770,10 +2088,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // feature_settings
-      await queryInterface.sequelize.query(`
+      // feature_settings
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.feature_settings (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1782,20 +2103,26 @@ module.exports = {
           updated_at TIMESTAMP DEFAULT now(),
           updated_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // audit_ledger
-    // Create guard functions first
-    await queryInterface.sequelize.query(`
+      // audit_ledger
+      // Create guard functions first
+      await queryInterface.sequelize.query(
+        `
       CREATE OR REPLACE FUNCTION verifywise.audit_ledger_prevent_delete()
       RETURNS trigger LANGUAGE plpgsql AS $func$
       BEGIN
         RAISE EXCEPTION 'DELETE on audit_ledger is prohibited — append-only table';
       END;
       $func$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE OR REPLACE FUNCTION verifywise.audit_ledger_guard_update()
       RETURNS trigger LANGUAGE plpgsql AS $func$
       BEGIN
@@ -1819,9 +2146,12 @@ module.exports = {
         RAISE EXCEPTION 'UPDATE on audit_ledger is prohibited — only sentinel hash finalization is allowed';
       END;
       $func$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TABLE verifywise.audit_ledger (
         id BIGSERIAL PRIMARY KEY,
         organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1839,28 +2169,37 @@ module.exports = {
         entry_hash CHAR(64) NOT NULL,
         prev_hash CHAR(64) NOT NULL
       );
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // Indexes
-    await createIndex('idx_audit_ledger_occurred_at', 'audit_ledger', 'occurred_at DESC');
-    await createIndex('idx_audit_ledger_user_id', 'audit_ledger', 'user_id');
-    await createIndex('idx_audit_ledger_entity', 'audit_ledger', 'entity_type, entity_id');
+      // Indexes
+      await createIndex("idx_audit_ledger_occurred_at", "audit_ledger", "occurred_at DESC");
+      await createIndex("idx_audit_ledger_user_id", "audit_ledger", "user_id");
+      await createIndex("idx_audit_ledger_entity", "audit_ledger", "entity_type, entity_id");
 
-    // Guard triggers
-    await queryInterface.sequelize.query(`
+      // Guard triggers
+      await queryInterface.sequelize.query(
+        `
       CREATE TRIGGER trg_audit_ledger_no_delete
       BEFORE DELETE ON verifywise.audit_ledger
       FOR EACH ROW EXECUTE FUNCTION verifywise.audit_ledger_prevent_delete();
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       CREATE TRIGGER trg_audit_ledger_guard_update
       BEFORE UPDATE ON verifywise.audit_ledger
       FOR EACH ROW EXECUTE FUNCTION verifywise.audit_ledger_guard_update();
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // policy_folder_mappings
-      await queryInterface.sequelize.query(`
+      // policy_folder_mappings
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.policy_folder_mappings (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1870,10 +2209,13 @@ module.exports = {
           assigned_at TIMESTAMPTZ DEFAULT now(),
           UNIQUE(policy_id, folder_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // slack_webhooks
-      await queryInterface.sequelize.query(`
+      // slack_webhooks
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.slack_webhooks (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1893,10 +2235,13 @@ module.exports = {
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // advisor_conversations
-      await queryInterface.sequelize.query(`
+      // advisor_conversations
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.advisor_conversations (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1906,10 +2251,13 @@ module.exports = {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // file_access_logs
-      await queryInterface.sequelize.query(`
+      // file_access_logs
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.file_access_logs (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1919,17 +2267,20 @@ module.exports = {
           action VARCHAR(50),
           access_date TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // NOTE: automation_actions_data already created above (line ~996)
+      // NOTE: automation_actions_data already created above (line ~996)
 
-    // =====================================================
-    // CE MARKING TABLES
-    // =====================================================
-    console.log('  Creating CE Marking tables...');
+      // =====================================================
+      // CE MARKING TABLES
+      // =====================================================
+      console.log("  Creating CE Marking tables...");
 
-    // ce_markings
-      await queryInterface.sequelize.query(`
+      // ce_markings
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_markings (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1960,10 +2311,13 @@ module.exports = {
           updated_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           CONSTRAINT unique_project_ce_marking UNIQUE(project_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ce_marking_conformity_steps
-      await queryInterface.sequelize.query(`
+      // ce_marking_conformity_steps
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_marking_conformity_steps (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1979,10 +2333,13 @@ module.exports = {
           updated_at TIMESTAMP DEFAULT NOW(),
           UNIQUE(ce_marking_id, step_number)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ce_marking_audit_trail
-      await queryInterface.sequelize.query(`
+      // ce_marking_audit_trail
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_marking_audit_trail (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -1994,10 +2351,13 @@ module.exports = {
           changed_at TIMESTAMP DEFAULT NOW(),
           change_type VARCHAR(50)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ce_marking_policies
-      await queryInterface.sequelize.query(`
+      // ce_marking_policies
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_marking_policies (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2006,10 +2366,13 @@ module.exports = {
           linked_at TIMESTAMP NOT NULL DEFAULT NOW(),
           linked_by INTEGER NOT NULL
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ce_marking_evidences
-      await queryInterface.sequelize.query(`
+      // ce_marking_evidences
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_marking_evidences (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2018,10 +2381,13 @@ module.exports = {
           linked_at TIMESTAMP NOT NULL DEFAULT NOW(),
           linked_by INTEGER NOT NULL
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // ce_marking_incidents
-      await queryInterface.sequelize.query(`
+      // ce_marking_incidents
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.ce_marking_incidents (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2030,15 +2396,18 @@ module.exports = {
           linked_at TIMESTAMP NOT NULL DEFAULT NOW(),
           linked_by INTEGER NOT NULL
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // =====================================================
-    // POST-MARKET MONITORING TABLES
-    // =====================================================
-    console.log('  Creating Post-Market Monitoring tables...');
+      // =====================================================
+      // POST-MARKET MONITORING TABLES
+      // =====================================================
+      console.log("  Creating Post-Market Monitoring tables...");
 
-    // post_market_monitoring_configs
-      await queryInterface.sequelize.query(`
+      // post_market_monitoring_configs
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.post_market_monitoring_configs (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2056,10 +2425,13 @@ module.exports = {
           updated_at TIMESTAMP DEFAULT NOW(),
           UNIQUE(project_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // post_market_monitoring_questions
-      await queryInterface.sequelize.query(`
+      // post_market_monitoring_questions
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.post_market_monitoring_questions (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2075,10 +2447,13 @@ module.exports = {
           eu_ai_act_article TEXT,
           created_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // post_market_monitoring_cycles
-      await queryInterface.sequelize.query(`
+      // post_market_monitoring_cycles
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.post_market_monitoring_cycles (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2094,10 +2469,13 @@ module.exports = {
           assigned_stakeholder_id INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           created_at TIMESTAMP DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // post_market_monitoring_responses
-      await queryInterface.sequelize.query(`
+      // post_market_monitoring_responses
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.post_market_monitoring_responses (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2109,10 +2487,13 @@ module.exports = {
           updated_at TIMESTAMP DEFAULT NOW(),
           UNIQUE(cycle_id, question_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // post_market_monitoring_reports
-      await queryInterface.sequelize.query(`
+      // post_market_monitoring_reports
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.post_market_monitoring_reports (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2123,32 +2504,35 @@ module.exports = {
           generated_by INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
           UNIQUE(cycle_id)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // NOTE: llm_evals_* and bias_fairness_evaluations tables are owned by EvalServer
-    // and created by its Alembic migration (c20260303115117_create_shared_schema_tables.py)
+      // NOTE: llm_evals_* and bias_fairness_evaluations tables are owned by EvalServer
+      // and created by its Alembic migration (c20260303115117_create_shared_schema_tables.py)
 
-    // mlflow_integrations — NOT an eval table, keep here
-    //   (placeholder to maintain code flow)
+      // mlflow_integrations — NOT an eval table, keep here
+      //   (placeholder to maintain code flow)
 
-    // llm_evals_organizations — REMOVED (owned by EvalServer)
-    // llm_evals_org_members — REMOVED (owned by EvalServer)
-    // llm_evals_projects — REMOVED (owned by EvalServer)
-    // llm_evals_datasets — REMOVED (owned by EvalServer)
-    // llm_evals_scorers — REMOVED (owned by EvalServer)
-    // llm_evals_models — REMOVED (owned by EvalServer)
-    // llm_evals_experiments — REMOVED (owned by EvalServer)
-    // llm_evals_logs — REMOVED (owned by EvalServer)
-    // llm_evals_metrics — REMOVED (owned by EvalServer)
-    // llm_evals_api_keys — REMOVED (owned by EvalServer)
-    // evaluation_llm_api_keys — REMOVED (owned by EvalServer)
-    // llm_evals_arena_comparisons — REMOVED (owned by EvalServer)
-    // llm_evals_bias_audits — REMOVED (owned by EvalServer)
-    // llm_evals_bias_audit_results — REMOVED (owned by EvalServer)
-    // bias_fairness_evaluations — REMOVED (owned by EvalServer)
+      // llm_evals_organizations — REMOVED (owned by EvalServer)
+      // llm_evals_org_members — REMOVED (owned by EvalServer)
+      // llm_evals_projects — REMOVED (owned by EvalServer)
+      // llm_evals_datasets — REMOVED (owned by EvalServer)
+      // llm_evals_scorers — REMOVED (owned by EvalServer)
+      // llm_evals_models — REMOVED (owned by EvalServer)
+      // llm_evals_experiments — REMOVED (owned by EvalServer)
+      // llm_evals_logs — REMOVED (owned by EvalServer)
+      // llm_evals_metrics — REMOVED (owned by EvalServer)
+      // llm_evals_api_keys — REMOVED (owned by EvalServer)
+      // evaluation_llm_api_keys — REMOVED (owned by EvalServer)
+      // llm_evals_arena_comparisons — REMOVED (owned by EvalServer)
+      // llm_evals_bias_audits — REMOVED (owned by EvalServer)
+      // llm_evals_bias_audit_results — REMOVED (owned by EvalServer)
+      // bias_fairness_evaluations — REMOVED (owned by EvalServer)
 
-    // mlflow_integrations
-      await queryInterface.sequelize.query(`
+      // mlflow_integrations
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.mlflow_integrations (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2169,10 +2553,13 @@ module.exports = {
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // mlflow_model_records
-      await queryInterface.sequelize.query(`
+      // mlflow_model_records
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.mlflow_model_records (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2200,10 +2587,13 @@ module.exports = {
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT mlflow_model_records_org_model_version_unique UNIQUE (organization_id, model_name, version)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // intake_forms
-      await queryInterface.sequelize.query(`
+      // intake_forms
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.intake_forms (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2227,10 +2617,13 @@ module.exports = {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           UNIQUE(organization_id, slug)
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // intake_submissions
-      await queryInterface.sequelize.query(`
+      // intake_submissions
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE verifywise.intake_submissions (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -2253,121 +2646,204 @@ module.exports = {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
-      `, { transaction });
+      `,
+        { transaction },
+      );
 
-    // =====================================================
-    // INDEXES
-    // =====================================================
-    console.log('📋 Creating indexes...');
+      // =====================================================
+      // INDEXES
+      // =====================================================
+      console.log("📋 Creating indexes...");
 
-    // Shadow AI indexes
-    await createIndex('idx_shadow_ai_events_timestamp', 'shadow_ai_events', 'organization_id, event_timestamp');
-    await createIndex('idx_shadow_ai_events_user', 'shadow_ai_events', 'organization_id, user_email');
-    await createIndex('idx_shadow_ai_events_tool', 'shadow_ai_events', 'organization_id, detected_tool_id');
-    await createIndex('idx_shadow_ai_daily_rollups_date', 'shadow_ai_daily_rollups', 'organization_id, rollup_date');
-    await createIndex('idx_shadow_ai_daily_rollups_tool', 'shadow_ai_daily_rollups', 'organization_id, tool_id');
-    await createIndex('idx_shadow_ai_alert_cooldown', 'shadow_ai_alert_history', 'rule_id, fired_at');
+      // Shadow AI indexes
+      await createIndex(
+        "idx_shadow_ai_events_timestamp",
+        "shadow_ai_events",
+        "organization_id, event_timestamp",
+      );
+      await createIndex(
+        "idx_shadow_ai_events_user",
+        "shadow_ai_events",
+        "organization_id, user_email",
+      );
+      await createIndex(
+        "idx_shadow_ai_events_tool",
+        "shadow_ai_events",
+        "organization_id, detected_tool_id",
+      );
+      await createIndex(
+        "idx_shadow_ai_daily_rollups_date",
+        "shadow_ai_daily_rollups",
+        "organization_id, rollup_date",
+      );
+      await createIndex(
+        "idx_shadow_ai_daily_rollups_tool",
+        "shadow_ai_daily_rollups",
+        "organization_id, tool_id",
+      );
+      await createIndex(
+        "idx_shadow_ai_alert_cooldown",
+        "shadow_ai_alert_history",
+        "rule_id, fired_at",
+      );
 
-    // AI incident management indexes
-    await createIndex('idx_ai_incidents_severity', 'ai_incident_managements', 'organization_id, severity');
-    await createIndex('idx_ai_incidents_status', 'ai_incident_managements', 'organization_id, status');
-    await createIndex('idx_ai_incidents_approval', 'ai_incident_managements', 'organization_id, approval_status');
-    await createIndex('idx_ai_incidents_created', 'ai_incident_managements', 'organization_id, created_at');
+      // AI incident management indexes
+      await createIndex(
+        "idx_ai_incidents_severity",
+        "ai_incident_managements",
+        "organization_id, severity",
+      );
+      await createIndex(
+        "idx_ai_incidents_status",
+        "ai_incident_managements",
+        "organization_id, status",
+      );
+      await createIndex(
+        "idx_ai_incidents_approval",
+        "ai_incident_managements",
+        "organization_id, approval_status",
+      );
+      await createIndex(
+        "idx_ai_incidents_created",
+        "ai_incident_managements",
+        "organization_id, created_at",
+      );
 
-    // AI detection indexes
-    await createIndex('idx_ai_detection_findings_type', 'ai_detection_findings', 'organization_id, finding_type');
-    await createIndex('idx_ai_detection_scans_status', 'ai_detection_scans', 'organization_id, status');
+      // AI detection indexes
+      await createIndex(
+        "idx_ai_detection_findings_type",
+        "ai_detection_findings",
+        "organization_id, finding_type",
+      );
+      await createIndex(
+        "idx_ai_detection_scans_status",
+        "ai_detection_scans",
+        "organization_id, status",
+      );
 
-    // Partial unique index: prevent concurrent active scans for same repo
-    await queryInterface.sequelize.query(`
+      // Partial unique index: prevent concurrent active scans for same repo
+      await queryInterface.sequelize.query(
+        `
       CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_scans_unique_active
       ON verifywise.ai_detection_scans (organization_id, repository_owner, repository_name)
       WHERE status IN ('pending', 'cloning', 'scanning');
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // Slack webhooks index
-    await createIndex('idx_slack_webhooks_team', 'slack_webhooks', 'team_id');
+      // Slack webhooks index
+      await createIndex("idx_slack_webhooks_team", "slack_webhooks", "team_id");
 
-    // Invitations partial unique index: only one pending invite per email per org
-    await queryInterface.sequelize.query(`
+      // Invitations partial unique index: only one pending invite per email per org
+      await queryInterface.sequelize.query(
+        `
       CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_pending_email
       ON verifywise.invitations(organization_id, email) WHERE status = 'pending';
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // =====================================================
-    // FK CONSTRAINTS
-    // =====================================================
+      // =====================================================
+      // FK CONSTRAINTS
+      // =====================================================
 
-    // CE marking FK constraints
-    await queryInterface.sequelize.query(`
+      // CE marking FK constraints
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_conformity_steps ADD CONSTRAINT fk_ce_conformity_ce_marking FOREIGN KEY (ce_marking_id) REFERENCES verifywise.ce_markings(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
-    await queryInterface.sequelize.query(`
+    `,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_audit_trail ADD CONSTRAINT fk_ce_audit_ce_marking FOREIGN KEY (ce_marking_id) REFERENCES verifywise.ce_markings(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
-    await queryInterface.sequelize.query(`
+    `,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_policies ADD CONSTRAINT fk_ce_policies_ce_marking FOREIGN KEY (ce_marking_id) REFERENCES verifywise.ce_markings(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
-    await queryInterface.sequelize.query(`
+    `,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_evidences ADD CONSTRAINT fk_ce_evidences_ce_marking FOREIGN KEY (ce_marking_id) REFERENCES verifywise.ce_markings(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
-    await queryInterface.sequelize.query(`
+    `,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_incidents ADD CONSTRAINT fk_ce_incidents_ce_marking FOREIGN KEY (ce_marking_id) REFERENCES verifywise.ce_markings(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
-    await queryInterface.sequelize.query(`
+    `,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ce_marking_incidents ADD CONSTRAINT fk_ce_incidents_incident FOREIGN KEY (incident_id) REFERENCES verifywise.ai_incident_managements(id) ON DELETE CASCADE;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // AI detection repositories → github_tokens FK (deferred because github_tokens created later)
-    await queryInterface.sequelize.query(`
+      // AI detection repositories → github_tokens FK (deferred because github_tokens created later)
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.ai_detection_repositories ADD CONSTRAINT fk_ai_detection_repos_github_token FOREIGN KEY (github_token_id) REFERENCES verifywise.github_tokens(id) ON DELETE SET NULL;
       EXCEPTION WHEN duplicate_object THEN null; END $$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    // Add FK constraints for approval_workflow_id (deferred due to table creation order)
-    await queryInterface.sequelize.query(`
+      // Add FK constraints for approval_workflow_id (deferred due to table creation order)
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.projects
         ADD CONSTRAINT fk_projects_approval_workflow
         FOREIGN KEY (approval_workflow_id) REFERENCES verifywise.approval_workflows(id) ON DELETE SET NULL;
       EXCEPTION WHEN duplicate_object THEN null;
       END $$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       DO $$ BEGIN
         ALTER TABLE verifywise.files
         ADD CONSTRAINT fk_files_approval_workflow
         FOREIGN KEY (approval_workflow_id) REFERENCES verifywise.approval_workflows(id) ON DELETE SET NULL;
       EXCEPTION WHEN duplicate_object THEN null;
       END $$;
-    `, { transaction });
+    `,
+        { transaction },
+      );
 
-    console.log('✅ Tenant tables migration complete!');
-    await transaction.commit();
+      console.log("✅ Tenant tables migration complete!");
+      await transaction.commit();
     } catch (error) {
       await transaction.rollback();
-      console.error('Migration tenant-tables failed:', error);
+      console.error("Migration tenant-tables failed:", error);
       throw error;
     }
   },
 
   async down(queryInterface, Sequelize) {
-    console.log('🔄 Rolling back tenant tables...');
+    console.log("🔄 Rolling back tenant tables...");
     // Rolling back is complex - in most cases you wouldn't want to drop these
-    console.log('⚠️ Rollback not implemented - data preservation');
-  }
+    console.log("⚠️ Rollback not implemented - data preservation");
+  },
 };

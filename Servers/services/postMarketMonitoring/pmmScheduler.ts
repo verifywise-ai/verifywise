@@ -38,7 +38,7 @@ const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
 function calculateNextDueDate(
   frequencyValue: number,
   frequencyUnit: string,
-  startDate?: Date | string
+  startDate?: Date | string,
 ): Date {
   const start = startDate ? new Date(startDate) : new Date();
   const dueDate = new Date(start);
@@ -66,13 +66,11 @@ function calculateNextDueDate(
 function buildNotificationData(
   cycle: IPMMCycleWithDetails,
   config: any,
-  organizationName: string
+  organizationName: string,
 ): IPMMNotificationData {
   const dueDate = new Date(cycle.due_at);
   const now = new Date();
-  const daysRemaining = Math.ceil(
-    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const daysRemaining = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   return {
     stakeholder_name: cycle.stakeholder_name || "Team Member",
@@ -97,13 +95,11 @@ function buildNotificationData(
 function buildEscalationData(
   cycle: IPMMCycleWithDetails,
   config: any,
-  organizationName: string
+  organizationName: string,
 ): IPMMEscalationData {
   const dueDate = new Date(cycle.due_at);
   const now = new Date();
-  const daysOverdue = Math.floor(
-    (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const notificationData = buildNotificationData(cycle, config, organizationName);
 
@@ -120,7 +116,7 @@ function buildEscalationData(
  */
 async function createNewCycle(
   config: IPMMConfigWithDetails,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   const transaction = await sequelize.transaction();
 
@@ -140,7 +136,7 @@ async function createNewCycle(
     const dueDate = calculateNextDueDate(
       config.frequency_value,
       config.frequency_unit,
-      config.start_date
+      config.start_date,
     );
 
     // Get stakeholder
@@ -153,13 +149,13 @@ async function createNewCycle(
       dueDate,
       stakeholder?.id || null,
       organizationId,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
 
     logger.info(
-      `Created PMM cycle #${nextCycleNumber} for config ${config.id} (project: ${config.project_id})`
+      `Created PMM cycle #${nextCycleNumber} for config ${config.id} (project: ${config.project_id})`,
     );
   } catch (error) {
     await transaction.rollback();
@@ -175,14 +171,12 @@ async function sendInitialNotification(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   const notificationData = buildNotificationData(cycle, config, organizationName);
 
   if (!notificationData.stakeholder_email) {
-    logger.warn(
-      `No stakeholder email for cycle ${cycle.id}, skipping initial notification`
-    );
+    logger.warn(`No stakeholder email for cycle ${cycle.id}, skipping initial notification`);
     return;
   }
 
@@ -193,7 +187,7 @@ async function sendInitialNotification(
   });
 
   logger.info(
-    `Sent initial PMM notification for cycle ${cycle.id} to ${notificationData.stakeholder_email}`
+    `Sent initial PMM notification for cycle ${cycle.id} to ${notificationData.stakeholder_email}`,
   );
 }
 
@@ -204,14 +198,12 @@ async function sendReminderNotification(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   const notificationData = buildNotificationData(cycle, config, organizationName);
 
   if (!notificationData.stakeholder_email) {
-    logger.warn(
-      `No stakeholder email for cycle ${cycle.id}, skipping reminder notification`
-    );
+    logger.warn(`No stakeholder email for cycle ${cycle.id}, skipping reminder notification`);
     return;
   }
 
@@ -224,7 +216,7 @@ async function sendReminderNotification(
   await markCycleReminderSentQuery(cycle.id!, organizationId);
 
   logger.info(
-    `Sent reminder PMM notification for cycle ${cycle.id} to ${notificationData.stakeholder_email}`
+    `Sent reminder PMM notification for cycle ${cycle.id} to ${notificationData.stakeholder_email}`,
   );
 }
 
@@ -235,14 +227,12 @@ async function sendEscalationNotification(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<void> {
   const escalationData = buildEscalationData(cycle, config, organizationName);
 
   if (!escalationData.escalation_contact_email) {
-    logger.warn(
-      `No escalation contact email for cycle ${cycle.id}, skipping escalation`
-    );
+    logger.warn(`No escalation contact email for cycle ${cycle.id}, skipping escalation`);
     return;
   }
 
@@ -255,7 +245,7 @@ async function sendEscalationNotification(
   await markCycleEscalationSentQuery(cycle.id!, organizationId);
 
   logger.info(
-    `Sent escalation PMM notification for cycle ${cycle.id} to ${escalationData.escalation_contact_email}`
+    `Sent escalation PMM notification for cycle ${cycle.id} to ${escalationData.escalation_contact_email}`,
   );
 }
 
@@ -264,7 +254,7 @@ async function sendEscalationNotification(
  */
 async function processPendingCycles(
   organizationId: number,
-  organizationName: string
+  organizationName: string,
 ): Promise<void> {
   const cycles = await getPendingCyclesForProcessingQuery(organizationId);
 
@@ -272,31 +262,20 @@ async function processPendingCycles(
     const config = cycle as any; // Contains joined config data
     const now = new Date();
     const dueDate = new Date(cycle.due_at);
-    const daysUntilDue = Math.ceil(
-      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const daysOverdue = Math.floor(
-      (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
     // Check if cycle just started (same day) and no notification sent
     if (cycle.status === "pending" && !cycle.reminder_sent_at && !cycle.escalation_sent_at) {
       // Send initial notification on the start day
       const startDate = new Date(cycle.started_at);
-      if (
-        startDate.toDateString() === now.toDateString() ||
-        daysUntilDue <= config.reminder_days
-      ) {
+      if (startDate.toDateString() === now.toDateString() || daysUntilDue <= config.reminder_days) {
         await sendInitialNotification(cycle, config, organizationName, organizationId);
       }
     }
 
     // Check if reminder should be sent
-    if (
-      !cycle.reminder_sent_at &&
-      daysUntilDue <= config.reminder_days &&
-      daysUntilDue > 0
-    ) {
+    if (!cycle.reminder_sent_at && daysUntilDue <= config.reminder_days && daysUntilDue > 0) {
       await sendReminderNotification(cycle, config, organizationName, organizationId);
     }
 
@@ -315,10 +294,7 @@ async function processPendingCycles(
  * Check and create new cycles for configs where the current cycle is completed
  * or where no cycle exists yet
  */
-async function checkAndCreateNewCycles(
-  organizationId: number,
-  currentHour: number
-): Promise<void> {
+async function checkAndCreateNewCycles(organizationId: number, currentHour: number): Promise<void> {
   const configs = await getActiveConfigsForNotificationHourQuery(currentHour, organizationId);
 
   for (const config of configs) {
@@ -386,6 +362,6 @@ export async function schedulePMMCheck(): Promise<void> {
       },
       removeOnComplete: true,
       removeOnFail: false,
-    }
+    },
   );
 }

@@ -10,7 +10,7 @@
 // Configuration
 // ============================================================================
 
-export type FrequencyUnit = 'days' | 'weeks' | 'months';
+export type FrequencyUnit = "days" | "weeks" | "months";
 
 export interface IPMMConfig {
   id?: number;
@@ -40,7 +40,7 @@ export interface IPMMConfigWithDetails extends IPMMConfig {
 // Questions
 // ============================================================================
 
-export type QuestionType = 'yes_no' | 'multi_select' | 'multi_line_text';
+export type QuestionType = "yes_no" | "multi_select" | "multi_line_text";
 
 export interface IPMMQuestion {
   id?: number;
@@ -84,7 +84,7 @@ export interface IPMMQuestionUpdate {
 // Cycles
 // ============================================================================
 
-export type CycleStatus = 'pending' | 'in_progress' | 'completed' | 'escalated';
+export type CycleStatus = "pending" | "in_progress" | "completed" | "escalated";
 
 export interface IPMMCycle {
   id?: number;

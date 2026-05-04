@@ -20,7 +20,15 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import TablePaginationActions from "../../TablePagination";
-import { ChevronsUpDown, ChevronUp, ChevronDown, Building2, ShieldCheck, FileSearch, AlertCircle } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Building2,
+  ShieldCheck,
+  FileSearch,
+  AlertCircle,
+} from "lucide-react";
 import VendorRisksDialog from "../../VendorRisksDialog";
 import allowedRoles from "../../../../application/constants/permissions";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -67,8 +75,7 @@ const SortableTableHead: React.FC<{
   return (
     <TableHead
       sx={{
-        backgroundColor:
-          singleTheme.tableStyles.primary.header.backgroundColors,
+        backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
       }}
     >
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
@@ -101,8 +108,7 @@ const SortableTableHead: React.FC<{
                 variant="body2"
                 sx={{
                   fontWeight: 500,
-                  color:
-                    sortConfig.key === column.id ? "primary.main" : "inherit",
+                  color: sortConfig.key === column.id ? "primary.main" : "inherit",
                 }}
               >
                 {column.label}
@@ -112,16 +118,15 @@ const SortableTableHead: React.FC<{
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    color:
-                      sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
+                    color: sortConfig.key === column.id ? "primary.main" : `${text.disabled}`,
                   }}
                 >
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                  {sortConfig.key === column.id &&
-                    sortConfig.direction === "desc" && (
-                      <ChevronDown size={16} />
-                    )}
+                  {sortConfig.key === column.id && sortConfig.direction === "asc" && (
+                    <ChevronUp size={16} />
+                  )}
+                  {sortConfig.key === column.id && sortConfig.direction === "desc" && (
+                    <ChevronDown size={16} />
+                  )}
                   {sortConfig.key !== column.id && <ChevronsUpDown size={16} />}
                 </Box>
               )}
@@ -191,7 +196,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
     (vendorId: number) => {
       return vendorRisks.filter((risk) => risk.vendor_id === vendorId).length;
     },
-    [vendorRisks]
+    [vendorRisks],
   );
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
@@ -203,15 +208,15 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       if (!visibleColumns) return true;
       return visibleColumns.has(key);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   const visibleTableColumns = useMemo(
     () =>
       titleOfTableColumns.filter(
-        (col) => col.id === "vendor_name" || col.id === "actions" || isVisible(col.id)
+        (col) => col.id === "vendor_name" || col.id === "actions" || isVisible(col.id),
       ),
-    [isVisible]
+    [isVisible],
   );
 
   // Sorting handlers
@@ -310,21 +315,15 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
     setPage(newPage);
   }, []);
 
-  const handleChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    },
-    []
-  );
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
-  const openVendorRisksDialog = useCallback(
-    (vendorId: number, vendorName: string) => {
-      setSelectedVendor({ id: vendorId, name: vendorName });
-      setShowVendorRisks(true);
-    },
-    []
-  );
+  const openVendorRisksDialog = useCallback((vendorId: number, vendorName: string) => {
+    setSelectedVendor({ id: vendorId, name: vendorName });
+    setShowVendorRisks(true);
+  }, []);
 
   const closeVendorRisksDialog = useCallback(() => {
     setShowVendorRisks(false);
@@ -333,10 +332,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
-    const end = Math.min(
-      page * rowsPerPage + rowsPerPage,
-      sortedVendors?.length ?? 0
-    );
+    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedVendors?.length ?? 0);
     return `${start} - ${end}`;
   }, [page, rowsPerPage, sortedVendors?.length]);
 
@@ -349,7 +345,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
               hidePagination ? 0 : page * rowsPerPage,
               hidePagination
                 ? Math.min(sortedVendors.length, 100)
-                : page * rowsPerPage + rowsPerPage
+                : page * rowsPerPage + rowsPerPage,
             )
             .map((row: VendorModel, index: number) => (
               <TableRow
@@ -376,8 +372,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
-                    backgroundColor:
-                      sortConfig.key === "vendor_name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor: sortConfig.key === "vendor_name" ? "#e8e8e8" : "#fafafa",
                   }}
                 >
                   <VendorLogo
@@ -387,117 +382,123 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                     showName={true}
                   />
                 </TableCell>
-                {isVisible("assignee") && <TableCell
-                  sx={{
-                    ...cellStyle,
-                    backgroundColor:
-                      sortConfig.key === "assignee" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {row.assignee
-                    ? formattedUsers?.find(
-                        (user: { _id: number; name: string }) =>
-                          user._id === row.assignee
-                      )?.name || "Unassigned"
-                    : "Unassigned"}
-                </TableCell>}
-                {isVisible("review_status") && <TableCell
-                  sx={{
-                    ...cellStyle,
-                    backgroundColor:
-                      sortConfig.key === "review_status"
-                        ? "background.surface"
-                        : "inherit",
-                  }}
-                >
-                  {row.review_status}
-                </TableCell>}
-                {isVisible("risk") && <TableCell
-                  sx={{
-                    ...cellStyle,
-                    backgroundColor:
-                      sortConfig.key === "risk" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {(() => {
-                    const riskCount = getVendorRiskCount(row.id!);
-                    return riskCount > 0 ? (
-                      <VWLink
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openVendorRisksDialog(row.id!, row.vendor_name);
-                        }}
-                        showIcon={false}
-                      >
-                        {riskCount} risk{riskCount !== 1 ? "s" : ""}
-                      </VWLink>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: "text.muted" }}>
-                        No risks
-                      </Typography>
-                    );
-                  })()}
-                </TableCell>}
-                {isVisible("scorecard") && <TableCell
-                  sx={{
-                    ...cellStyle,
-                    backgroundColor:
-                      sortConfig.key === "scorecard" ? "background.surface" : "inherit",
-                  }}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
+                {isVisible("assignee") && (
+                  <TableCell
+                    sx={{
+                      ...cellStyle,
+                      backgroundColor:
+                        sortConfig.key === "assignee" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {row.assignee
+                      ? formattedUsers?.find(
+                          (user: { _id: number; name: string }) => user._id === row.assignee,
+                        )?.name || "Unassigned"
+                      : "Unassigned"}
+                  </TableCell>
+                )}
+                {isVisible("review_status") && (
+                  <TableCell
+                    sx={{
+                      ...cellStyle,
+                      backgroundColor:
+                        sortConfig.key === "review_status" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {row.review_status}
+                  </TableCell>
+                )}
+                {isVisible("risk") && (
+                  <TableCell
+                    sx={{
+                      ...cellStyle,
+                      backgroundColor: sortConfig.key === "risk" ? "background.surface" : "inherit",
+                    }}
+                  >
                     {(() => {
-                      // Use only backend provided risk_score, no client-side calculations
-                      const riskScore = row.risk_score ?? 0;
-                      const riskColor = getRiskScoreColor(riskScore);
-
-                      return (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            backgroundColor: `${riskColor}20`,
-                            border: `1px solid ${riskColor}`,
-                            minWidth: "50px",
+                      const riskCount = getVendorRiskCount(row.id!);
+                      return riskCount > 0 ? (
+                        <VWLink
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openVendorRisksDialog(row.id!, row.vendor_name);
                           }}
+                          showIcon={false}
                         >
-                          <Box
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              backgroundColor: riskColor,
-                            }}
-                          />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: "11px",
-                              fontWeight: 500,
-                              color: riskColor,
-                            }}
-                          >
-                            {riskScore}%
-                          </Typography>
-                        </Box>
+                          {riskCount} risk{riskCount !== 1 ? "s" : ""}
+                        </VWLink>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: "text.muted" }}>
+                          No risks
+                        </Typography>
                       );
                     })()}
-                  </Box>
-                </TableCell>}
-                {isVisible("review_date") && <TableCell
-                  sx={{
-                    ...cellStyle,
-                    backgroundColor:
-                      sortConfig.key === "review_date" ? "background.surface" : "inherit",
-                  }}
-                >
-                  {row.review_date
-                    ? displayFormattedDate(row.review_date.toString())
-                    : "No review date"}
-                </TableCell>}
+                  </TableCell>
+                )}
+                {isVisible("scorecard") && (
+                  <TableCell
+                    sx={{
+                      ...cellStyle,
+                      backgroundColor:
+                        sortConfig.key === "scorecard" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {(() => {
+                        // Use only backend provided risk_score, no client-side calculations
+                        const riskScore = row.risk_score ?? 0;
+                        const riskColor = getRiskScoreColor(riskScore);
+
+                        return (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: `${riskColor}20`,
+                              border: `1px solid ${riskColor}`,
+                              minWidth: "50px",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                backgroundColor: riskColor,
+                              }}
+                            />
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: "11px",
+                                fontWeight: 500,
+                                color: riskColor,
+                              }}
+                            >
+                              {riskScore}%
+                            </Typography>
+                          </Box>
+                        );
+                      })()}
+                    </Box>
+                  </TableCell>
+                )}
+                {isVisible("review_date") && (
+                  <TableCell
+                    sx={{
+                      ...cellStyle,
+                      backgroundColor:
+                        sortConfig.key === "review_date" ? "background.surface" : "inherit",
+                    }}
+                  >
+                    {row.review_date
+                      ? displayFormattedDate(row.review_date.toString())
+                      : "No review date"}
+                  </TableCell>
+                )}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -540,7 +541,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       getVendorRiskCount,
       hidePagination,
       isVisible,
-    ]
+    ],
   );
 
   return (
@@ -602,15 +603,10 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => (
-                      <TablePaginationActions {...props} />
-                    )}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(
-                        0,
-                        Math.ceil(count / rowsPerPage)
-                      )}`
+                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                     }
                     slotProps={{
                       select: {

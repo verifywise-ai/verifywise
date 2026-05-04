@@ -15,7 +15,8 @@ export const BiasMonitoringAndMitigation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "To address bias in the AI system''s training data, we utilize a multi-step process including data balancing, preprocessing techniques, and fairness-aware algorithms. We also implement guardrails such as continuous monitoring of model predictions, testing for potential biases in decision-making, and regular audits by diverse teams to ensure non-discriminatory responses."
+        answer:
+          "To address bias in the AI system''s training data, we utilize a multi-step process including data balancing, preprocessing techniques, and fairness-aware algorithms. We also implement guardrails such as continuous monitoring of model predictions, testing for potential biases in decision-making, and regular audits by diverse teams to ensure non-discriminatory responses.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const BiasMonitoringAndMitigation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We conduct regular bias audits to assess whether specific groups are favored or disadvantaged by the AI application. These audits involve analyzing the impact of the AI system on different demographic groups and ensuring fairness in model predictions. In case of disparities, we take corrective actions such as rebalancing the training dataset, modifying algorithms, or adding fairness constraints."
+        answer:
+          "We conduct regular bias audits to assess whether specific groups are favored or disadvantaged by the AI application. These audits involve analyzing the impact of the AI system on different demographic groups and ensuring fairness in model predictions. In case of disparities, we take corrective actions such as rebalancing the training dataset, modifying algorithms, or adding fairness constraints.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const BiasMonitoringAndMitigation = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our user base includes individuals from vulnerable populations, particularly in healthcare and financial sectors. We have implemented special considerations, including ensuring that data privacy and security are prioritized, providing accessible support channels, and incorporating safeguards in the AI models to prevent discriminatory practices. Additionally, we ensure that all AI interactions are transparent and understandable to users."
+        answer:
+          "Our user base includes individuals from vulnerable populations, particularly in healthcare and financial sectors. We have implemented special considerations, including ensuring that data privacy and security are prioritized, providing accessible support channels, and incorporating safeguards in the AI models to prevent discriminatory practices. Additionally, we ensure that all AI interactions are transparent and understandable to users.",
       },
     ],
   },

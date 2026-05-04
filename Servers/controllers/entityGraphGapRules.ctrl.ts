@@ -18,13 +18,8 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { EntityGraphGapRulesService } from "../services/entityGraphGapRulesService";
-import {
-  ValidationException,
-} from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-} from "../utils/logger/logHelper";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { logFailure, logProcessing } from "../utils/logger/logHelper";
 import { sanitizeErrorMessage } from "../utils/entityGraphSecurity.utils";
 
 /**
@@ -58,24 +53,16 @@ export async function saveGapRules(req: Request, res: Response): Promise<any> {
 
     // Validate required fields
     if (!rules || !Array.isArray(rules)) {
-      throw new ValidationException(
-        "Rules array is required",
-        "rules",
-        rules
-      );
+      throw new ValidationException("Rules array is required", "rules", rules);
     }
 
-    const savedRules = await EntityGraphGapRulesService.saveGapRules(
-      rules,
-      userId,
-      organizationId
-    );
+    const savedRules = await EntityGraphGapRulesService.saveGapRules(rules, userId, organizationId);
 
     return res.status(201).json(
       STATUS_CODE[201]({
         ...savedRules.toJSON(),
         isDefault: false,
-      })
+      }),
     );
   } catch (error) {
     await logFailure({
@@ -91,11 +78,9 @@ export async function saveGapRules(req: Request, res: Response): Promise<any> {
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400]((error as Error).message));
     }
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to save gap rules")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to save gap rules")));
   }
 }
 
@@ -124,10 +109,7 @@ export async function getGapRules(req: Request, res: Response): Promise<any> {
     const userId = req.userId!;
     const organizationId = req.organizationId!;
 
-    const result = await EntityGraphGapRulesService.getGapRules(
-      userId,
-      organizationId
-    );
+    const result = await EntityGraphGapRulesService.getGapRules(userId, organizationId);
 
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
@@ -141,11 +123,9 @@ export async function getGapRules(req: Request, res: Response): Promise<any> {
       organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to retrieve gap rules")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to retrieve gap rules")));
   }
 }
 
@@ -174,10 +154,7 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
     const userId = req.userId!;
     const organizationId = req.organizationId!;
 
-    const result = await EntityGraphGapRulesService.resetToDefaults(
-      userId,
-      organizationId
-    );
+    const result = await EntityGraphGapRulesService.resetToDefaults(userId, organizationId);
 
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
@@ -191,11 +168,9 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
       organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to reset gap rules")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to reset gap rules")));
   }
 }
 
@@ -212,10 +187,7 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
  * @param {Response} res - Express response object
  * @returns {Promise<any>} JSON response with default rules
  */
-export async function getDefaultGapRules(
-  _req: Request,
-  res: Response
-): Promise<any> {
+export async function getDefaultGapRules(_req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "Starting getDefaultGapRules",
     functionName: "getDefaultGapRules",
@@ -231,7 +203,7 @@ export async function getDefaultGapRules(
       STATUS_CODE[200]({
         rules: defaults,
         isDefault: true,
-      })
+      }),
     );
   } catch (error) {
     await logFailure({
@@ -244,10 +216,10 @@ export async function getDefaultGapRules(
       organizationId: _req.organizationId!,
     });
 
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to get default gap rules")
-      )
-    );
+    return res
+      .status(500)
+      .json(
+        STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to get default gap rules")),
+      );
   }
 }

@@ -6,7 +6,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 
 export const getAllControlCategoriesQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<ControlCategoryModel[]> => {
   const controlCategories = await sequelize.query(
     `SELECT * FROM controlcategories WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
@@ -14,14 +14,14 @@ export const getAllControlCategoriesQuery = async (
       replacements: { organizationId },
       mapToModel: true,
       model: ControlCategoryModel,
-    }
+    },
   );
   return controlCategories;
 };
 
 export const getControlCategoryByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControlCategory | null> => {
   const result = await sequelize.query(
     `SELECT * FROM controlcategories WHERE organization_id = :organizationId AND id = :id`,
@@ -29,7 +29,7 @@ export const getControlCategoryByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: ControlCategoryModel,
-    }
+    },
   );
   return result[0];
 };
@@ -37,7 +37,7 @@ export const getControlCategoryByIdQuery = async (
 export const getControlCategoryByTitleAndProjectIdQuery = async (
   title: string,
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControlCategory | null> => {
   const result = await sequelize.query(
     "SELECT * FROM controlcategories WHERE organization_id = :organizationId AND title = :title AND project_id = :project_id",
@@ -45,14 +45,14 @@ export const getControlCategoryByTitleAndProjectIdQuery = async (
       replacements: { organizationId, title, project_id: projectId },
       mapToModel: true,
       model: ControlCategoryModel,
-    }
+    },
   );
   return result[0];
 };
 
 export const getControlCategoryByProjectIdQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IControlCategory[]> => {
   const result = await sequelize.query(
     `SELECT * FROM controlcategories WHERE organization_id = :organizationId AND project_id = :project_id ORDER BY created_at DESC, id ASC`,
@@ -60,7 +60,7 @@ export const getControlCategoryByProjectIdQuery = async (
       replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: ControlCategoryModel,
-    }
+    },
   );
   return result;
 };
@@ -68,7 +68,7 @@ export const getControlCategoryByProjectIdQuery = async (
 export const createControlCategoryQuery = async (
   controlCategory: ControlCategoryModel,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ControlCategoryModel> => {
   const result = await sequelize.query(
     `INSERT INTO controlcategories (
@@ -85,7 +85,7 @@ export const createControlCategoryQuery = async (
       model: ControlCategoryModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -94,11 +94,11 @@ export const updateControlCategoryByIdQuery = async (
   id: number,
   controlCategory: Partial<ControlCategoryModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<ControlCategoryModel | null> => {
-  const updateControlCategory: Partial<
-    Record<keyof ControlCategoryModel, any>
-  > & { organizationId?: number } = {};
+  const updateControlCategory: Partial<Record<keyof ControlCategoryModel, any>> & {
+    organizationId?: number;
+  } = {};
   const setClause = ["title"]
     .filter((f) => {
       if (
@@ -133,7 +133,7 @@ export const updateControlCategoryByIdQuery = async (
 export const deleteControlCategoryByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM controlcategories WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -143,7 +143,7 @@ export const deleteControlCategoryByIdQuery = async (
       model: ControlCategoryModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -152,7 +152,7 @@ export const createNewControlCategories = async (
   projectId: number,
   enable_ai_data_insertion: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const createdControlCategories = [];
   let query = `INSERT INTO controlcategories(
@@ -177,7 +177,7 @@ export const createNewControlCategories = async (
       controlCategoryStruct.controls,
       enable_ai_data_insertion,
       organizationId,
-      transaction
+      transaction,
     );
     createdControlCategories.push({ ...result[0].dataValues, controls });
   }

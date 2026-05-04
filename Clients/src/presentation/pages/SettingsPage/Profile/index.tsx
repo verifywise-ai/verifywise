@@ -1,11 +1,4 @@
-import React, {
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  ChangeEvent,
-  useContext,
-} from "react";
+import React, { useRef, useState, useEffect, useCallback, ChangeEvent, useContext } from "react";
 import {
   Box,
   CircularProgress,
@@ -89,11 +82,7 @@ const ProfileForm: React.FC = () => {
     email !== initialStateRef.current.email;
 
   const isSaveDisabled =
-    !!firstnameError ||
-    !!lastnameError ||
-    !!emailError ||
-    !isModified ||
-    saving;
+    !!firstnameError || !!lastnameError || !!emailError || !isModified || saving;
 
   const logout = useLogout();
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -103,9 +92,7 @@ const ProfileForm: React.FC = () => {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageRemoving, setImageRemoving] = useState(false);
   const [isRemoveImageModalOpen, setIsRemoveImageModalOpen] = useState(false);
-  const [selectedImagePreview, setSelectedImagePreview] = useState<
-    string | null
-  >(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
 
@@ -115,16 +102,13 @@ const ProfileForm: React.FC = () => {
   /**
    * Update initial state reference when data changes
    */
-  const updateInitialState = useCallback(
-    (name: string, surname: string, emailAddr: string) => {
-      initialStateRef.current = {
-        firstname: name,
-        lastname: surname,
-        email: emailAddr,
-      };
-    },
-    []
-  );
+  const updateInitialState = useCallback((name: string, surname: string, emailAddr: string) => {
+    initialStateRef.current = {
+      firstname: name,
+      lastname: surname,
+      email: emailAddr,
+    };
+  }, []);
 
   /**
    * Fetch user data on component mount.
@@ -146,7 +130,7 @@ const ProfileForm: React.FC = () => {
       updateInitialState(
         actualUserData?.name || "",
         actualUserData?.surname || "",
-        actualUserData?.email || ""
+        actualUserData?.email || "",
       );
     } catch (_error) {
       logEngine({
@@ -190,12 +174,9 @@ const ProfileForm: React.FC = () => {
   /**
    * Show alert with auto-hide functionality
    */
-  const showAlert = useCallback(
-    (variant: AlertState["variant"], title: string, body: string) => {
-      setAlert({ variant, title, body, isToast: true });
-    },
-    []
-  );
+  const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
+    setAlert({ variant, title, body, isToast: true });
+  }, []);
 
   // Auto-hide alert after 3 seconds
   React.useEffect(() => {
@@ -216,20 +197,12 @@ const ProfileForm: React.FC = () => {
         type: "error",
         message: "Validation errors occurred while saving the profile.",
       });
-      showAlert(
-        "error",
-        "Error",
-        "Validation errors occurred while saving the profile."
-      );
+      showAlert("error", "Error", "Validation errors occurred while saving the profile.");
       return;
     }
 
     if (!id) {
-      showAlert(
-        "error",
-        "Error",
-        "User session not found. Please log in again."
-      );
+      showAlert("error", "Error", "User session not found. Please log in again.");
       return;
     }
 
@@ -263,11 +236,7 @@ const ProfileForm: React.FC = () => {
             response?.status || "undefined"
           }, Response: ${JSON.stringify(response)}`,
         });
-        showAlert(
-          "error",
-          "Error",
-          "Failed to update profile. Please try again."
-        );
+        showAlert("error", "Error", "Failed to update profile. Please try again.");
       }
     } catch (error) {
       console.error("Update error:", error);
@@ -277,11 +246,7 @@ const ProfileForm: React.FC = () => {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       });
-      showAlert(
-        "error",
-        "Error",
-        "Failed to update profile. Please try again."
-      );
+      showAlert("error", "Error", "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
       setShowToast(false);
@@ -315,44 +280,24 @@ const ProfileForm: React.FC = () => {
   /**
    * Handle firstname input change with validation.
    */
-  const handleFirstnameChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const newFirstname = e.target.value;
-      setFirstname(newFirstname);
+  const handleFirstnameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const newFirstname = e.target.value;
+    setFirstname(newFirstname);
 
-      const validation = checkStringValidation(
-        "First name",
-        newFirstname,
-        2,
-        50,
-        false,
-        false
-      );
-      setFirstnameError(validation.accepted ? null : validation.message);
-    },
-    []
-  );
+    const validation = checkStringValidation("First name", newFirstname, 2, 50, false, false);
+    setFirstnameError(validation.accepted ? null : validation.message);
+  }, []);
 
   /**
    * Handle lastname input change with validation.
    */
-  const handleLastnameChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const newLastname = e.target.value;
-      setLastname(newLastname);
+  const handleLastnameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const newLastname = e.target.value;
+    setLastname(newLastname);
 
-      const validation = checkStringValidation(
-        "Last name",
-        newLastname,
-        2,
-        50,
-        false,
-        false
-      );
-      setLastnameError(validation.accepted ? null : validation.message);
-    },
-    []
-  );
+    const validation = checkStringValidation("Last name", newLastname, 2, 50, false, false);
+    setLastnameError(validation.accepted ? null : validation.message);
+  }, []);
 
   /**
    * Handle email input change with validation.
@@ -392,11 +337,7 @@ const ProfileForm: React.FC = () => {
             response?.status || "undefined"
           }, Response: ${JSON.stringify(response)}`,
         });
-        showAlert(
-          "error",
-          "Error",
-          "Failed to delete account. Please try again."
-        );
+        showAlert("error", "Error", "Failed to delete account. Please try again.");
       }
     } catch (error) {
       logEngine({
@@ -405,11 +346,7 @@ const ProfileForm: React.FC = () => {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       });
-      showAlert(
-        "error",
-        "Error",
-        "Failed to delete account. Please try again."
-      );
+      showAlert("error", "Error", "Failed to delete account. Please try again.");
     } finally {
       setIsDeleteModalOpen(false);
       setShowToast(false);
@@ -445,11 +382,7 @@ const ProfileForm: React.FC = () => {
       }
 
       if (!id) {
-        showAlert(
-          "error",
-          "Error",
-          "User session not found. Please log in again."
-        );
+        showAlert("error", "Error", "User session not found. Please log in again.");
         return;
       }
 
@@ -470,17 +403,13 @@ const ProfileForm: React.FC = () => {
             if (imageUrl && imageUrl.startsWith("blob:")) {
               URL.revokeObjectURL(imageUrl);
             }
-            setPhotoRefreshFlag(prev => !prev);
+            setPhotoRefreshFlag((prev) => !prev);
             setImageUrl(photoUrl);
             setImageLoadError(false);
           }
 
           clearImagePreview();
-          showAlert(
-            "success",
-            "Success",
-            "Profile photo uploaded successfully"
-          );
+          showAlert("success", "Success", "Profile photo uploaded successfully");
         } else {
           showAlert("error", "Error", "Failed to upload profile photo");
         }
@@ -494,26 +423,16 @@ const ProfileForm: React.FC = () => {
         }
       }
     },
-    [id, showAlert, clearImagePreview, fetchProfilePhotoAsBlobUrl, imageUrl]
+    [id, showAlert, clearImagePreview, fetchProfilePhotoAsBlobUrl, imageUrl],
   );
 
   // Image removal handlers
-  const handleRemoveImage = useCallback(
-    () => setIsRemoveImageModalOpen(true),
-    []
-  );
-  const handleRemoveImageCancel = useCallback(
-    () => setIsRemoveImageModalOpen(false),
-    []
-  );
+  const handleRemoveImage = useCallback(() => setIsRemoveImageModalOpen(true), []);
+  const handleRemoveImageCancel = useCallback(() => setIsRemoveImageModalOpen(false), []);
 
   const handleRemoveImageConfirm = useCallback(async () => {
     if (!id) {
-      showAlert(
-        "error",
-        "Error",
-        "User session not found. Please log in again."
-      );
+      showAlert("error", "Error", "User session not found. Please log in again.");
       return;
     }
 
@@ -530,26 +449,14 @@ const ProfileForm: React.FC = () => {
         setImageUrl(null);
         setImageLoadError(false); // Reset error state
         clearImagePreview();
-        setPhotoRefreshFlag(prev => !prev);
+        setPhotoRefreshFlag((prev) => !prev);
         setIsRemoveImageModalOpen(false);
-        showAlert(
-          "success",
-          "Image Removed",
-          "Profile photo removed successfully"
-        );
+        showAlert("success", "Image Removed", "Profile photo removed successfully");
       } else {
-        showAlert(
-          "error",
-          "Remove Failed",
-          "Failed to remove profile photo. Please try again."
-        );
+        showAlert("error", "Remove Failed", "Failed to remove profile photo. Please try again.");
       }
     } catch (_error) {
-      showAlert(
-        "error",
-        "Remove Failed",
-        "Failed to remove profile photo. Please try again."
-      );
+      showAlert("error", "Remove Failed", "Failed to remove profile photo. Please try again.");
     } finally {
       setImageRemoving(false);
     }
@@ -706,11 +613,7 @@ const ProfileForm: React.FC = () => {
             {!loading && (
               <Box>
                 <Stack>
-                  <Typography
-                    fontWeight={"600"}
-                    gutterBottom
-                    sx={{ mb: 2, mt: 10 }}
-                  >
+                  <Typography fontWeight={"600"} gutterBottom sx={{ mb: 2, mt: 10 }}>
                     Delete account
                   </Typography>
                   <Typography
@@ -718,8 +621,8 @@ const ProfileForm: React.FC = () => {
                     variant="body2"
                     sx={{ mb: 8, mt: 4, color: "text.icon" }}
                   >
-                    Note that deleting your account will remove all data from our
-                    system. This is permanent and non-recoverable.
+                    Note that deleting your account will remove all data from our system. This is
+                    permanent and non-recoverable.
                   </Typography>
                   <Stack
                     sx={{
@@ -754,8 +657,8 @@ const ProfileForm: React.FC = () => {
                 title="Confirm delete"
                 body={
                   <Typography fontSize={13}>
-                    Are you sure you want to delete your account? This action is
-                    permanent and cannot be undone.
+                    Are you sure you want to delete your account? This action is permanent and
+                    cannot be undone.
                   </Typography>
                 }
                 cancelText="Cancel"
@@ -770,9 +673,7 @@ const ProfileForm: React.FC = () => {
         )}
       </Box>
       {/* Profile Image Upload Section */}
-      <Stack
-        sx={{ width: { xs: "100%", md: "40%" }, alignItems: "center", mt: 32 }}
-      >
+      <Stack sx={{ width: { xs: "100%", md: "40%" }, alignItems: "center", mt: 32 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
           <Box
             sx={{
@@ -808,7 +709,7 @@ const ProfileForm: React.FC = () => {
                     firstname,
                     lastname,
                     pathToImage: !imageLoadError
-                      ? selectedImagePreview ?? imageUrl ?? ""
+                      ? (selectedImagePreview ?? imageUrl ?? "")
                       : undefined,
                   }}
                   size="medium"
@@ -826,15 +727,11 @@ const ProfileForm: React.FC = () => {
               textTransform: "none",
               color: imageUrl ? "#666" : "#ccc",
               "&:hover": {
-                backgroundColor: imageUrl
-                  ? "rgba(102, 102, 102, 0.04)"
-                  : "transparent",
+                backgroundColor: imageUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
               },
             }}
             onClick={handleRemoveImage}
-            disabled={
-              !imageUrl || imageRemoving || imageUploading || imageLoading
-            }
+            disabled={!imageUrl || imageRemoving || imageUploading || imageLoading}
           >
             {imageRemoving ? (
               <>

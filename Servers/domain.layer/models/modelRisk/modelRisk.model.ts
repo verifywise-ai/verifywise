@@ -10,9 +10,7 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class ModelRiskModel
-  extends Model<ModelRiskModel>
-  implements IModelRisk {
+export class ModelRiskModel extends Model<ModelRiskModel> implements IModelRisk {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -166,35 +164,23 @@ export class ModelRiskModel
    */
   async validateModelRiskData(): Promise<void> {
     if (!this.risk_name || !String(this.risk_name).trim()) {
-      throw new ValidationException(
-        "Risk name is required",
-        "risk_name",
-        this.risk_name
-      );
+      throw new ValidationException("Risk name is required", "risk_name", this.risk_name);
     }
 
     if (!this.risk_category) {
       throw new ValidationException(
         "Risk category is required",
         "risk_category",
-        this.risk_category
+        this.risk_category,
       );
     }
 
     if (!this.risk_level) {
-      throw new ValidationException(
-        "Risk level is required",
-        "risk_level",
-        this.risk_level
-      );
+      throw new ValidationException("Risk level is required", "risk_level", this.risk_level);
     }
 
     if (!this.status) {
-      throw new ValidationException(
-        "Status is required",
-        "status",
-        this.status
-      );
+      throw new ValidationException("Status is required", "status", this.status);
     }
 
     if (!this.owner || !String(this.owner).trim()) {
@@ -205,7 +191,7 @@ export class ModelRiskModel
       throw new ValidationException(
         "Next review date is required",
         "target_date",
-        this.target_date
+        this.target_date,
       );
     }
   }
@@ -230,8 +216,8 @@ export class ModelRiskModel
       current_values: this.current_values,
       threshold: this.threshold,
       model_id: this.model_id,
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 

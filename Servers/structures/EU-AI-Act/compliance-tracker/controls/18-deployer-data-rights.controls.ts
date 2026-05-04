@@ -18,8 +18,7 @@ export const DeployerDataRights = [
         order_no: 2,
         title:
           "We have implemented technical measures to ensure automatic log storage and prevent premature deletion.",
-        description:
-          "Automated log capture, immutable storage, and deletion-protection controls.",
+        description: "Automated log capture, immutable storage, and deletion-protection controls.",
       },
     ],
   },

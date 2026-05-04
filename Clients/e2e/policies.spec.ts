@@ -7,14 +7,10 @@ test.describe("Policies", () => {
     await expect(page).toHaveURL(/\/policies/);
 
     // Page should show policy-related content or empty state
-    await expect(
-      page.getByText(/polic/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/polic/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/policies");
     await page.waitForLoadState("domcontentloaded");
 
@@ -37,9 +33,7 @@ test.describe("Policies", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("add button or empty state is present", async ({
-    authedPage: page,
-  }) => {
+  test("add button or empty state is present", async ({ authedPage: page }) => {
     await page.goto("/policies");
 
     const content = page
@@ -59,7 +53,12 @@ test.describe("Policies", () => {
       .getByRole("tab", { name: /policy templates/i })
       .or(page.getByRole("tab", { name: /templates/i }));
 
-    if (await templatesTab.first().isVisible().catch(() => false)) {
+    if (
+      await templatesTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await templatesTab.first().click();
       await expect(page).toHaveURL(/\/policies\/templates/, {
         timeout: 10_000,
@@ -75,7 +74,12 @@ test.describe("Policies", () => {
       .getByRole("tab", { name: /organizational policies/i })
       .or(page.getByRole("tab", { name: /organizational/i }));
 
-    if (await orgTab.first().isVisible().catch(() => false)) {
+    if (
+      await orgTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await orgTab.first().click();
       await expect(page).toHaveURL(/\/policies$/, { timeout: 10_000 });
     }
@@ -83,14 +87,16 @@ test.describe("Policies", () => {
 
   // --- Tier 2: Search ---
 
-  test("searching for nonexistent policy filters results", async ({
-    authedPage: page,
-  }) => {
+  test("searching for nonexistent policy filters results", async ({ authedPage: page }) => {
     await page.goto("/policies");
-    const searchInput = page
-      .getByPlaceholder(/search/i);
+    const searchInput = page.getByPlaceholder(/search/i);
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-policy");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -100,16 +106,19 @@ test.describe("Policies", () => {
 
   // --- Tier 3: Modal/drawer open/close ---
 
-  test("add policy button opens creation form", async ({
-    authedPage: page,
-  }) => {
+  test("add policy button opens creation form", async ({ authedPage: page }) => {
     await page.goto("/policies");
     const addBtn = page
       .getByRole("button", { name: /add new policy/i })
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (await addBtn.first().isVisible().catch(() => false)) {
+    if (
+      await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await addBtn.first().click();
       // Could be a drawer or modal
       await expect(
@@ -118,7 +127,7 @@ test.describe("Policies", () => {
           .or(page.getByText(/add.*policy/i))
           .or(page.getByText(/new policy/i))
           .or(page.locator(".MuiDrawer-root"))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -126,16 +135,19 @@ test.describe("Policies", () => {
 
   // --- Tier 3: Validation ---
 
-  test("submitting empty policy form shows validation error", async ({
-    authedPage: page,
-  }) => {
+  test("submitting empty policy form shows validation error", async ({ authedPage: page }) => {
     await page.goto("/policies");
     const addBtn = page
       .getByRole("button", { name: /add new policy/i })
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -143,9 +155,7 @@ test.describe("Policies", () => {
     await page.waitForTimeout(500);
 
     // Click submit without filling any fields
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     if (await submitBtn.isVisible().catch(() => false)) {
       await submitBtn.click();
       await page.waitForTimeout(500);
@@ -156,7 +166,12 @@ test.describe("Policies", () => {
         .or(page.getByText(/please/i))
         .or(page.getByText(/error/i))
         .or(page.locator(".Mui-error"));
-      if (await error.first().isVisible().catch(() => false)) {
+      if (
+        await error
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(error.first()).toBeVisible();
       }
     }
@@ -175,7 +190,12 @@ test.describe("Policies", () => {
       .or(page.getByRole("button", { name: /new policy/i }))
       .or(page.getByRole("button", { name: /add policy/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -190,15 +210,18 @@ test.describe("Policies", () => {
     await titleInput.first().fill(policyTitle);
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
     // Verify: Search for the created policy
     const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill(policyTitle);
       await page.waitForTimeout(500);
     }
@@ -208,17 +231,32 @@ test.describe("Policies", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);

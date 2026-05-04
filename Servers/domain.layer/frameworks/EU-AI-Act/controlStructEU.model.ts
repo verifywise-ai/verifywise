@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ControlCategoryStructEUModel } from "./controlCategoryStructEU.model";
 import { Role, RiskTier } from "./euActTypes";
 

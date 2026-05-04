@@ -124,7 +124,12 @@ const TooltipsSection: React.FC = () => {
               >
                 <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                   {(["top", "right", "bottom", "left"] as const).map((placement) => (
-                    <Tooltip key={placement} title={`Tooltip on ${placement}`} placement={placement} arrow>
+                    <Tooltip
+                      key={placement}
+                      title={`Tooltip on ${placement}`}
+                      placement={placement}
+                      arrow
+                    >
                       <Box
                         sx={{
                           px: "12px",
@@ -148,7 +153,16 @@ const TooltipsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               MUI Tooltip specs
             </Typography>
             <SpecTable
@@ -172,7 +186,8 @@ const TooltipsSection: React.FC = () => {
       {/* EnhancedTooltip */}
       <SpecSection title="EnhancedTooltip">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Rich content tooltip with dark glassmorphic design. Supports custom React content, close button, and persists on hover.
+          Rich content tooltip with dark glassmorphic design. Supports custom React content, close
+          button, and persists on hover.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -226,7 +241,16 @@ const TooltipsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               EnhancedTooltip props
             </Typography>
             <SpecTable
@@ -238,7 +262,17 @@ const TooltipsSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               EnhancedTooltip specs
             </Typography>
             <SpecTable
@@ -327,7 +361,8 @@ const TooltipsSection: React.FC = () => {
               lineHeight: 1.6,
             }}
           >
-            This is the tooltip content area. It supports rich content including lists, links, and formatted text.
+            This is the tooltip content area. It supports rich content including lists, links, and
+            formatted text.
           </Box>
           <Box
             sx={{
@@ -455,9 +490,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -479,9 +512,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -532,9 +563,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

@@ -11,18 +11,13 @@ interface PortfolioTrendChartProps {
   height?: number;
 }
 
-export function PortfolioTrendChart({
-  snapshots,
-  height = 200,
-}: PortfolioTrendChartProps) {
+export function PortfolioTrendChart({ snapshots, height = 200 }: PortfolioTrendChartProps) {
   const sorted = useMemo(
     () =>
       [...snapshots].sort(
-        (a, b) =>
-          new Date(a.snapshot_date).getTime() -
-          new Date(b.snapshot_date).getTime()
+        (a, b) => new Date(a.snapshot_date).getTime() - new Date(b.snapshot_date).getTime(),
       ),
-    [snapshots]
+    [snapshots],
   );
 
   // Merge xLabels + both series into a single data array for Recharts
@@ -36,16 +31,12 @@ export function PortfolioTrendChart({
           "Residual ALE": s.total_residual_ale,
         };
       }),
-    [sorted]
+    [sorted],
   );
 
   if (snapshots.length === 0) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{ height, opacity: 0.5 }}
-      >
+      <Stack alignItems="center" justifyContent="center" sx={{ height, opacity: 0.5 }}>
         <Typography sx={{ fontSize: 13, color: C.textSecondary }}>
           No trend data available yet
         </Typography>

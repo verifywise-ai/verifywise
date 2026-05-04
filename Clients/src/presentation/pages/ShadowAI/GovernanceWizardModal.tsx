@@ -6,18 +6,9 @@
  */
 
 import { useState } from "react";
-import {
-  Stack,
-  Typography,
-  Box,
-  Alert,
-  SelectChangeEvent,
-} from "@mui/material";
+import { Stack, Typography, Box, Alert, SelectChangeEvent } from "@mui/material";
 import { startGovernance } from "../../../application/repository/shadowAi.repository";
-import {
-  IShadowAiTool,
-  ShadowAiGovernanceRequest,
-} from "../../../domain/interfaces/i.shadowAi";
+import { IShadowAiTool, ShadowAiGovernanceRequest } from "../../../domain/interfaces/i.shadowAi";
 import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
@@ -76,12 +67,13 @@ export default function GovernanceWizardModal({
           status: "active",
         },
         governance_owner_id: parseInt(ownerId, 10),
-        risk_assessment: dataSensitivity.trim() || riskDescription.trim()
-          ? {
-              data_sensitivity: dataSensitivity.trim() || undefined,
-              description: riskDescription.trim() || undefined,
-            }
-          : undefined,
+        risk_assessment:
+          dataSensitivity.trim() || riskDescription.trim()
+            ? {
+                data_sensitivity: dataSensitivity.trim() || undefined,
+                description: riskDescription.trim() || undefined,
+              }
+            : undefined,
         start_lifecycle: startLifecycle,
       };
 
@@ -89,9 +81,7 @@ export default function GovernanceWizardModal({
       onSuccess();
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to start governance."
-      );
+      setError(err instanceof Error ? err.message : "Failed to start governance.");
     } finally {
       setSubmitting(false);
     }
@@ -152,9 +142,7 @@ export default function GovernanceWizardModal({
           id="governance-owner-select"
           label="Owner"
           value={ownerId}
-          onChange={(e: SelectChangeEvent<string | number>) =>
-            setOwnerId(String(e.target.value))
-          }
+          onChange={(e: SelectChangeEvent<string | number>) => setOwnerId(String(e.target.value))}
           items={userItems}
           placeholder="Select an owner"
         />
@@ -189,9 +177,7 @@ export default function GovernanceWizardModal({
         {/* Lifecycle option */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
           <Stack>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-              Start lifecycle review
-            </Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start lifecycle review</Typography>
             <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
               Automatically create a lifecycle entry for this model
             </Typography>

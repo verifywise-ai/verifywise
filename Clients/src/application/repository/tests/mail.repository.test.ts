@@ -69,13 +69,9 @@ describe("Test Mail Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(sendInviteEmail(inviteData)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(sendInviteEmail(inviteData)).rejects.toThrow("Network timeout");
     });
   });
 });

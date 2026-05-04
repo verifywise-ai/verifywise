@@ -19,14 +19,18 @@ import {
 import { Upload as UploadIcon, X as CloseIcon, Trash2 as DeleteIcon, Info } from "lucide-react";
 import { uploadFileToManager } from "../../../../application/repository/file.repository";
 import { getApprovalWorkflowsByEntityType } from "../../../../application/repository/approvalWorkflow.repository";
-import { SUPPORTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, validateFile } from "../../../../application/constants/fileManager";
+import {
+  SUPPORTED_FILE_TYPES_STRING,
+  MAX_FILE_SIZE_MB,
+  validateFile,
+} from "../../../../application/constants/fileManager";
 import { formatBytes } from "../../../../application/tools/fileUtil";
 import { getFileErrorMessage } from "../../../../application/utils/fileErrorHandler.utils";
 import { secureLogError } from "../../../../application/utils/secureLogger.utils"; // SECURITY: No PII
 import SelectComponent from "../../Inputs/Select";
 
 // Constants (DRY + Maintainability)
-const UPLOAD_CONTEXT = 'FileManagerUpload';
+const UPLOAD_CONTEXT = "FileManagerUpload";
 
 interface ApprovalWorkflow {
   id: number;
@@ -57,7 +61,7 @@ type UploadStatus = "pending" | "uploading" | "success" | "error";
 
 interface UploadedFileInfo {
   file: File;
-  model_id?: string | number | undefined,
+  model_id?: string | number | undefined;
   status: UploadStatus;
   progress: number;
   error?: string;
@@ -84,7 +88,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
 
   // Approval workflow state
   const [approvalWorkflows, setApprovalWorkflows] = useState<ApprovalWorkflow[]>([]);
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<number | ''>('');
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<number | "">("");
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
 
   //Store timeout IDs to prevent race conditions and memory leaks
@@ -110,12 +114,12 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
   useEffect(() => {
     if (open && showApprovalWorkflow) {
       setLoadingWorkflows(true);
-      getApprovalWorkflowsByEntityType({ entityType: 'file' })
+      getApprovalWorkflowsByEntityType({ entityType: "file" })
         .then((workflows) => {
           setApprovalWorkflows(workflows);
         })
         .catch(() => {
-          secureLogError('Failed to load approval workflows', UPLOAD_CONTEXT);
+          secureLogError("Failed to load approval workflows", UPLOAD_CONTEXT);
           setApprovalWorkflows([]);
         })
         .finally(() => {
@@ -127,7 +131,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
   // Reset selected workflow when modal closes
   useEffect(() => {
     if (!open) {
-      setSelectedWorkflowId('');
+      setSelectedWorkflowId("");
     }
   }, [open]);
 
@@ -144,11 +148,13 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
       // First check custom MIME types if provided
       if (acceptedMimeTypes && acceptedMimeTypes.length > 0) {
         if (!acceptedMimeTypes.includes(file.type)) {
-          const typeNames = acceptedMimeTypes.map(t => {
-            if (t === "application/pdf") return "PDF";
-            if (t.startsWith("image/")) return "Image";
-            return t;
-          }).join(", ");
+          const typeNames = acceptedMimeTypes
+            .map((t) => {
+              if (t === "application/pdf") return "PDF";
+              if (t.startsWith("image/")) return "Image";
+              return t;
+            })
+            .join(", ");
           return {
             file,
             status: "error" as const,
@@ -203,12 +209,11 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
         // Update status to uploading
         setFileList((prev) =>
           prev.map((item, idx) =>
-            idx === i ? { ...item, status: "uploading" as const, progress: 50 } : item
-          )
+            idx === i ? { ...item, status: "uploading" as const, progress: 50 } : item,
+          ),
         );
 
         fileList[i] = { ...fileList[i], model_id: modelId };
-
 
         // Upload the file and validate response
         const response = await uploadFileToManager({
@@ -233,8 +238,8 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
         // Update status to success
         setFileList((prev) =>
           prev.map((item, idx) =>
-            idx === i ? { ...item, status: "success" as const, progress: 100 } : item
-          )
+            idx === i ? { ...item, status: "success" as const, progress: 100 } : item,
+          ),
         );
 
         successCount++;
@@ -244,7 +249,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
 
         // SECURITY FIX: Use secure logger (no PII leak) instead of logEngine
         // logEngine includes user ID/email/name which violates GDPR/compliance
-        secureLogError('File upload failed', UPLOAD_CONTEXT);
+        secureLogError("File upload failed", UPLOAD_CONTEXT);
 
         // Update status to error with user-facing message
         setFileList((prev) =>
@@ -256,8 +261,8 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                   progress: 0,
                   error: errorMessage,
                 }
-              : item
-          )
+              : item,
+          ),
         );
       }
     }
@@ -357,10 +362,8 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
 
   // Handle selection-only mode - just return the files without uploading
   const handleSelectFiles = () => {
-    const validFiles = fileList
-      .filter((f) => f.status === "pending")
-      .map((f) => f.file);
-    
+    const validFiles = fileList.filter((f) => f.status === "pending").map((f) => f.file);
+
     if (validFiles.length > 0 && onFileSelect) {
       onFileSelect(validFiles);
     }
@@ -378,13 +381,15 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
   // Get display text for supported file types
   const getSupportedTypesText = () => {
     if (acceptedMimeTypes && acceptedMimeTypes.length > 0) {
-      return acceptedMimeTypes.map(t => {
-        if (t === "application/pdf") return "PDF";
-        if (t === "image/jpeg") return "JPEG";
-        if (t === "image/png") return "PNG";
-        if (t.startsWith("image/")) return "Images";
-        return t;
-      }).join(", ");
+      return acceptedMimeTypes
+        .map((t) => {
+          if (t === "application/pdf") return "PDF";
+          if (t === "image/jpeg") return "JPEG";
+          if (t === "image/png") return "PNG";
+          if (t.startsWith("image/")) return "Images";
+          return t;
+        })
+        .join(", ");
     }
     return SUPPORTED_FILE_TYPES_STRING;
   };
@@ -421,7 +426,10 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
             onClick={handleBrowseClick}
           >
             <Stack spacing={2} alignItems="center">
-              <UploadIcon size={48} color={isDragging ? theme.palette.primary.main : theme.palette.text.disabled} />
+              <UploadIcon
+                size={48}
+                color={isDragging ? theme.palette.primary.main : theme.palette.text.disabled}
+              />
               <Typography variant="body1" fontWeight={500}>
                 Drag and drop files here
               </Typography>
@@ -459,13 +467,13 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                   placeholder="No approval required"
                   value={selectedWorkflowId}
                   items={[
-                    { _id: '', name: 'No approval required' },
+                    { _id: "", name: "No approval required" },
                     ...approvalWorkflows.map((workflow) => ({
                       _id: workflow.id,
                       name: workflow.workflow_title,
                     })),
                   ]}
-                  onChange={(e: any) => setSelectedWorkflowId(e.target.value as number | '')}
+                  onChange={(e: any) => setSelectedWorkflowId(e.target.value as number | "")}
                   disabled={isUploading}
                   sx={{ width: "100%" }}
                 />
@@ -501,7 +509,11 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                   border: `1px solid ${theme.palette.border.light}`,
                 }}
               >
-                <Info size={16} color={theme.palette.text.tertiary} style={{ marginTop: 2, flexShrink: 0 }} />
+                <Info
+                  size={16}
+                  color={theme.palette.text.tertiary}
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                />
                 <span>
                   No file approval workflows configured. Create one in{" "}
                   <strong>Settings → Approval Workflows</strong> with "File / Evidence" entity type.
@@ -554,7 +566,10 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                             <LinearProgress variant="indeterminate" sx={{ mt: 0.5 }} />
                           )}
                           {item.status === "success" && (
-                            <Typography variant="caption" sx={{ color: theme.palette.success.main }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: theme.palette.success.main }}
+                            >
                               Uploaded successfully
                             </Typography>
                           )}
@@ -565,7 +580,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                           )}
                         </Stack>
                       }
-                      secondaryTypographyProps={{ component: 'div' }}
+                      secondaryTypographyProps={{ component: "div" }}
                     />
                     <Box
                       sx={{
@@ -598,11 +613,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                 },
               }}
             >
-              {selectionOnly 
-                ? "Select" 
-                : isUploading 
-                  ? "Uploading..." 
-                  : "Upload"}
+              {selectionOnly ? "Select" : isUploading ? "Uploading..." : "Upload"}
             </Button>
           </Stack>
         </Stack>

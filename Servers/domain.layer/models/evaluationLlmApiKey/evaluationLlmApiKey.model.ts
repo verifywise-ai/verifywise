@@ -21,59 +21,69 @@
  * @module domain.layer/models/evaluationLlmApiKey
  */
 
-import { Column, DataType, Model, Table } from 'sequelize-typescript';
-import { IEvaluationLlmApiKey } from '../../interfaces/i.evalutationLlmApiKey';
+import { Column, DataType, Model, Table } from "sequelize-typescript";
+import { IEvaluationLlmApiKey } from "../../interfaces/i.evalutationLlmApiKey";
 
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'huggingface' | 'openrouter';
+export type LLMProvider =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "xai"
+  | "mistral"
+  | "huggingface"
+  | "openrouter";
 
 export const VALID_PROVIDERS: LLMProvider[] = [
-  'openai',
-  'anthropic',
-  'google',
-  'xai',
-  'mistral',
-  'huggingface',
-  'openrouter',
+  "openai",
+  "anthropic",
+  "google",
+  "xai",
+  "mistral",
+  "huggingface",
+  "openrouter",
 ];
 
 /**
  * API key format patterns for each provider
  * These are used to validate that the user entered a valid-looking API key
  */
-export const API_KEY_PATTERNS: Record<LLMProvider, { pattern: RegExp; example: string; description: string }> = {
+export const API_KEY_PATTERNS: Record<
+  LLMProvider,
+  { pattern: RegExp; example: string; description: string }
+> = {
   openai: {
     pattern: /^sk-(proj-)?[a-zA-Z0-9_-]{20,}$/,
-    example: 'sk-... or sk-proj-...',
+    example: "sk-... or sk-proj-...",
     description: 'OpenAI keys start with "sk-" or "sk-proj-"',
   },
   anthropic: {
     pattern: /^sk-ant-(api\d+-)?[a-zA-Z0-9_-]{20,}$/,
-    example: 'sk-ant-api03-...',
+    example: "sk-ant-api03-...",
     description: 'Anthropic keys start with "sk-ant-" (typically "sk-ant-api03-")',
   },
   google: {
     pattern: /^AIza[a-zA-Z0-9_-]{35,}$/,
-    example: 'AIza...',
+    example: "AIza...",
     description: 'Google API keys start with "AIza"',
   },
   xai: {
     pattern: /^xai-[a-zA-Z0-9_-]{20,}$/,
-    example: 'xai-...',
+    example: "xai-...",
     description: 'xAI keys start with "xai-"',
   },
   mistral: {
     pattern: /^[a-zA-Z0-9]{32,}$/,
-    example: '32+ character alphanumeric string',
-    description: 'Mistral keys are alphanumeric strings (32+ characters)',
+    example: "32+ character alphanumeric string",
+    description: "Mistral keys are alphanumeric strings (32+ characters)",
   },
   huggingface: {
     pattern: /^hf_[a-zA-Z0-9]{20,}$/,
-    example: 'hf_...',
+    example: "hf_...",
     description: 'Hugging Face keys start with "hf_"',
   },
   openrouter: {
     pattern: /^sk-or-v1-[a-zA-Z0-9]{40,}$/,
-    example: 'sk-or-v1-...',
+    example: "sk-or-v1-...",
     description: 'OpenRouter keys start with "sk-or-v1-"',
   },
 };
@@ -98,11 +108,14 @@ export function validateApiKeyFormat(provider: LLMProvider, apiKey: string): str
 }
 
 @Table({
-  tableName: 'llm_evals_api_keys',
+  tableName: "llm_evals_api_keys",
   timestamps: true,
   underscored: true,
 })
-export class EvaluationLlmApiKeyModel extends Model<EvaluationLlmApiKeyModel> implements IEvaluationLlmApiKey {
+export class EvaluationLlmApiKeyModel
+  extends Model<EvaluationLlmApiKeyModel>
+  implements IEvaluationLlmApiKey
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -119,7 +132,7 @@ export class EvaluationLlmApiKeyModel extends Model<EvaluationLlmApiKeyModel> im
   @Column({
     type: DataType.TEXT,
     allowNull: false,
-    field: 'api_key_encrypted',
+    field: "api_key_encrypted",
   })
   api_key_encrypted!: string;
 

@@ -27,13 +27,11 @@ export const GeneralPurposeAImodels = {
       id: 2,
       icon: Checked,
       title: "Comprehensive AI System Documentation",
-      description:
-        "Ensure comprehensive documentation of AI system purposes and restrictions.",
+      description: "Ensure comprehensive documentation of AI system purposes and restrictions.",
       subControls: [
         {
           id: 1,
-          title:
-            "We ensure comprehensive documentation of AI system purposes and restrictions.",
+          title: "We ensure comprehensive documentation of AI system purposes and restrictions.",
           description:
             "Detailed documentation clarifies system capabilities, limitations, and appropriate use cases.",
         },
@@ -69,8 +67,7 @@ export const GeneralPurposeAImodels = {
       subControls: [
         {
           id: 1,
-          title:
-            "We list countermeasures to prevent illegal content generation.",
+          title: "We list countermeasures to prevent illegal content generation.",
           description:
             "Countermeasures protect against misuse, ensuring AI systems do not produce or facilitate illegal activities.",
         },
@@ -83,13 +80,11 @@ export const GeneralPurposeAImodels = {
       id: 5,
       icon: Exclamation,
       title: "Synthetic Content Marking Mechanisms",
-      description:
-        "Implement machine-readable watermarks for AI-generated synthetic content.",
+      description: "Implement machine-readable watermarks for AI-generated synthetic content.",
       subControls: [
         {
           id: 1,
-          title:
-            "We implement machine-readable watermarks for AI-generated content.",
+          title: "We implement machine-readable watermarks for AI-generated content.",
           description:
             "Watermarks enhance transparency, allowing users to identify AI-generated content and mitigating risks of misuse.",
         },
@@ -102,13 +97,11 @@ export const GeneralPurposeAImodels = {
       id: 6,
       icon: Exclamation,
       title: "Datasets Used Documentation",
-      description:
-        "Describe datasets used, including owned, free, and copyrighted data.",
+      description: "Describe datasets used, including owned, free, and copyrighted data.",
       subControls: [
         {
           id: 1,
-          title:
-            "We describe datasets used, including owned, free, and copyrighted data.",
+          title: "We describe datasets used, including owned, free, and copyrighted data.",
           description:
             "Dataset descriptions ensure transparency, compliance with intellectual property laws, and ethical use of data.",
         },

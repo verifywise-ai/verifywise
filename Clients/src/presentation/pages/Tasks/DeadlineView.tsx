@@ -1,13 +1,16 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useMemo, useState, useEffect } from "react";
+import { Box, Stack, Typography, Collapse, IconButton } from "@mui/material";
 import {
-  Box,
-  Stack,
-  Typography,
-  Collapse,
-  IconButton,
-} from "@mui/material";
-import { ChevronDown, ChevronRight, Calendar, AlertTriangle, CalendarCheck, ListChecks, Clock, Users } from "lucide-react";
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  AlertTriangle,
+  CalendarCheck,
+  ListChecks,
+  Clock,
+  Users,
+} from "lucide-react";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TaskModel } from "../../../domain/models/Common/task/task.model";
 import { TaskStatus } from "../../../domain/enums/task.enum";
@@ -34,7 +37,15 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
   flashRowId,
 }) => {
   const STORAGE_KEY = "verifywise_deadline_collapsed_sections";
-  const ALL_SECTIONS = ["overdue", "today", "this-week", "next-week", "this-month", "later", "no-due-date"];
+  const ALL_SECTIONS = [
+    "overdue",
+    "today",
+    "this-week",
+    "next-week",
+    "this-month",
+    "later",
+    "no-due-date",
+  ];
 
   // Track collapsed sections - load from localStorage or default all collapsed
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
@@ -79,9 +90,7 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
 
     // Filter out completed and archived tasks
     const activeTasks = tasks.filter(
-      (task) =>
-        task.status !== TaskStatus.COMPLETED &&
-        task.status !== TaskStatus.DELETED
+      (task) => task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.DELETED,
     );
 
     const overdue: TaskModel[] = [];
@@ -195,7 +204,7 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
     if (flashRowId) {
       // Find which group contains the flashed task
       const groupWithTask = deadlineGroups.find((group) =>
-        group.tasks.some((task) => task.id === flashRowId)
+        group.tasks.some((task) => task.id === flashRowId),
       );
       if (groupWithTask && collapsedSections.has(groupWithTask.key)) {
         // Expand the section containing the updated task

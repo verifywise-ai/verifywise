@@ -116,7 +116,7 @@ const useAssessmentAnswers = ({ assessmentId }: AssessmentProps) => {
       setError(null);
 
       try {
-         const response = await getAssessmentAnswers({
+        const response = await getAssessmentAnswers({
           assessmentId: assessmentId!,
         });
         if (response?.data?.message?.topics?.length > 0) {
@@ -136,7 +136,7 @@ const useAssessmentAnswers = ({ assessmentId }: AssessmentProps) => {
         setIsLoading(false);
       }
     },
-    [assessmentId]
+    [assessmentId],
   );
 
   useEffect(() => {

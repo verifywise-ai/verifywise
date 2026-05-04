@@ -37,16 +37,14 @@ export default function ProfilePage() {
   const isTeamManagementDisabled =
     !isSuperAdmin && !allowedRoles.projects.editTeamMembers.includes(userRoleName);
   const isApiKeysDisabled = !isSuperAdmin && !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !isSuperAdmin && !allowedRoles.features?.manage?.includes(userRoleName);
+  const isFeaturesDisabled =
+    !isSuperAdmin && !allowedRoles.features?.manage?.includes(userRoleName);
   // Audit ledger: Admin-only (or super admin)
   const isAuditLedgerDisabled = !isSuperAdmin && userRoleName !== "Admin";
 
   // Get plugin tabs dynamically from the plugin registry
   const { getPluginTabs, installedPlugins, isLoading: pluginsLoading } = usePluginRegistry();
-  const pluginTabs = useMemo(
-    () => getPluginTabs(PLUGIN_SLOTS.SETTINGS_TABS),
-    [getPluginTabs]
-  );
+  const pluginTabs = useMemo(() => getPluginTabs(PLUGIN_SLOTS.SETTINGS_TABS), [getPluginTabs]);
 
   const { tab } = useParams<{ tab?: string }>();
 
@@ -107,13 +105,7 @@ export default function ProfilePage() {
       // Clear the navigation state to prevent stale state issues
       navigate(location.pathname, { replace: true });
     }
-  }, [
-    location.state,
-    isTeamManagementDisabled,
-    navigate,
-    location.pathname,
-    validTabs,
-  ]);
+  }, [location.state, isTeamManagementDisabled, navigate, location.pathname, validTabs]);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue);
@@ -248,11 +240,7 @@ export default function ProfilePage() {
 
         {/* Render plugin tab content dynamically */}
         {pluginTabs.some((tab) => tab.value === activeTab) && (
-          <PluginSlot
-            id={PLUGIN_SLOTS.SETTINGS_TABS}
-            renderType="tab"
-            activeTab={activeTab}
-          />
+          <PluginSlot id={PLUGIN_SLOTS.SETTINGS_TABS} renderType="tab" activeTab={activeTab} />
         )}
       </TabContext>
     </PageHeaderExtended>

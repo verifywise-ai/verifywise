@@ -4,7 +4,7 @@ export interface IAutomationExecutionLog {
   triggered_at?: Date;
   trigger_data?: object;
   action_results?: IAutomationActionExecutionResult[];
-  status?: 'success' | 'partial_success' | 'failure';
+  status?: "success" | "partial_success" | "failure";
   error_message?: string;
   execution_time_ms?: number;
   created_at?: Date;
@@ -15,7 +15,7 @@ export interface IAutomationActionExecutionResult {
   execution_log_id: number;
   action_id?: number;
   action_type: string;
-  status: 'success' | 'failure';
+  status: "success" | "failure";
   result_data?: object;
   error_message?: string;
   executed_at?: Date;

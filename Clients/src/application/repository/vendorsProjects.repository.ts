@@ -50,33 +50,19 @@ export async function getVendorById({
 }
 
 // Create a vendor
-export async function createVendor({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createVendor({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/vendors", body);
   return response;
 }
 
 // Update a vendor
-export async function updateVendor({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateVendor({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.patch(`/vendors/${id}`, body);
   return response;
 }
 
 // Delete a vendor
-export async function deleteVendor({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteVendor({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/vendors/${id}`);
   return response;
 }

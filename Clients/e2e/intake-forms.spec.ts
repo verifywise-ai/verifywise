@@ -15,13 +15,11 @@ test.describe("Intake Forms", () => {
         .getByText(/intake/i)
         .or(page.getByText(/form/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/intake-forms");
     await page.waitForLoadState("domcontentloaded");
 
@@ -43,9 +41,7 @@ test.describe("Intake Forms", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays forms list or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("displays forms list or empty state", async ({ authedPage: page }) => {
     await page.goto("/intake-forms");
 
     // Should show list of intake forms or empty state
@@ -68,20 +64,16 @@ test.describe("Intake Forms", () => {
       page
         .getByText(/submission/i)
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
   // --- Tier 3: Modal open/close ---
 
-  test("create form button opens modal or navigates", async ({
-    authedPage: page,
-  }) => {
+  test("create form button opens modal or navigates", async ({ authedPage: page }) => {
     await page.goto("/intake-forms");
 
-    const addBtn = page
-      .getByRole("button", { name: /add|new|create/i })
-      .first();
+    const addBtn = page.getByRole("button", { name: /add|new|create/i }).first();
 
     if (await addBtn.isVisible().catch(() => false)) {
       await addBtn.click();
@@ -93,7 +85,12 @@ test.describe("Intake Forms", () => {
         .or(page.getByText(/new.*form/i))
         .or(page.locator('[class*="builder" i]'));
 
-      if (await modalOrBuilder.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      if (
+        await modalOrBuilder
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false)
+      ) {
         await page.keyboard.press("Escape");
       }
     }
@@ -101,14 +98,10 @@ test.describe("Intake Forms", () => {
 
   // --- Tier 3: Form builder ---
 
-  test("clicking create opens form builder or modal with fields", async ({
-    authedPage: page,
-  }) => {
+  test("clicking create opens form builder or modal with fields", async ({ authedPage: page }) => {
     await page.goto("/intake-forms");
 
-    const addBtn = page
-      .getByRole("button", { name: /add|new|create/i })
-      .first();
+    const addBtn = page.getByRole("button", { name: /add|new|create/i }).first();
 
     if (!(await addBtn.isVisible().catch(() => false))) {
       test.skip();
@@ -126,7 +119,12 @@ test.describe("Intake Forms", () => {
       .or(page.locator('[class*="builder" i]'))
       .or(page.locator('[class*="form-editor" i]'));
 
-    if (await builderContent.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await builderContent
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await expect(builderContent.first()).toBeVisible();
     }
     await page.keyboard.press("Escape");

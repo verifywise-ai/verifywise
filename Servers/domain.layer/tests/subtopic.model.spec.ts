@@ -46,15 +46,11 @@ class TestSubtopicModel {
     title: string,
     topic_id: number,
     order_no?: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestSubtopicModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
-      throw new ValidationException(
-        "Subtopic title is required",
-        "title",
-        title
-      );
+      throw new ValidationException("Subtopic title is required", "title", title);
     }
 
     // Validate topic_id
@@ -62,7 +58,7 @@ class TestSubtopicModel {
       throw new ValidationException(
         "Valid topic_id is required (must be >= 1)",
         "topic_id",
-        topic_id
+        topic_id,
       );
     }
 
@@ -71,7 +67,7 @@ class TestSubtopicModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -87,18 +83,11 @@ class TestSubtopicModel {
   }
 
   // Instance method to update subtopic
-  async updateSubtopic(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateSubtopic(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Subtopic title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Subtopic title is required", "title", updateData.title);
       }
       this.title = updateData.title.trim();
     }
@@ -109,7 +98,7 @@ class TestSubtopicModel {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -119,26 +108,18 @@ class TestSubtopicModel {
   // Instance method to validate subtopic data
   async validateSubtopicData(): Promise<void> {
     if (!this.title || this.title.trim().length === 0) {
-      throw new ValidationException(
-        "Subtopic title is required",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Subtopic title is required", "title", this.title);
     }
 
     if (!this.topic_id || !numberValidation(this.topic_id, 1)) {
-      throw new ValidationException(
-        "Valid topic_id is required",
-        "topic_id",
-        this.topic_id
-      );
+      throw new ValidationException("Valid topic_id is required", "topic_id", this.topic_id);
     }
 
     if (this.order_no !== undefined && !numberValidation(this.order_no, 1)) {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -154,7 +135,7 @@ class TestSubtopicModel {
       throw new BusinessLogicException(
         "Demo subtopics cannot be modified",
         "DEMO_SUBTOPIC_RESTRICTION",
-        { subtopicId: this.id, topicId: this.topic_id }
+        { subtopicId: this.id, topicId: this.topic_id },
       );
     }
     return true;
@@ -192,11 +173,7 @@ class TestSubtopicModel {
   // Static method to find subtopic by ID with validation
   static async findByIdWithValidation(id: number): Promise<TestSubtopicModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
@@ -219,7 +196,7 @@ class TestSubtopicModel {
       throw new ValidationException(
         "Valid topic_id is required (must be >= 1)",
         "topic_id",
-        topicId
+        topicId,
       );
     }
 
@@ -258,7 +235,7 @@ describe("SubtopicModel", () => {
         validSubtopicData.title,
         validSubtopicData.topic_id,
         validSubtopicData.order_no,
-        validSubtopicData.is_demo
+        validSubtopicData.is_demo,
       );
 
       expect(subtopic).toBeInstanceOf(TestSubtopicModel);
@@ -271,23 +248,19 @@ describe("SubtopicModel", () => {
 
     it("should throw ValidationException for empty title", async () => {
       await expect(
-        TestSubtopicModel.createNewSubtopic("", validSubtopicData.topic_id)
+        TestSubtopicModel.createNewSubtopic("", validSubtopicData.topic_id),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid topic_id", async () => {
-      await expect(
-        TestSubtopicModel.createNewSubtopic(validSubtopicData.title, 0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestSubtopicModel.createNewSubtopic(validSubtopicData.title, 0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid order_no", async () => {
       await expect(
-        TestSubtopicModel.createNewSubtopic(
-          validSubtopicData.title,
-          validSubtopicData.topic_id,
-          0
-        )
+        TestSubtopicModel.createNewSubtopic(validSubtopicData.title, validSubtopicData.topic_id, 0),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -308,17 +281,13 @@ describe("SubtopicModel", () => {
     it("should throw ValidationException for empty title update", async () => {
       const subtopic = new TestSubtopicModel(validSubtopicData);
 
-      await expect(subtopic.updateSubtopic({ title: "" })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(subtopic.updateSubtopic({ title: "" })).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid order_no update", async () => {
       const subtopic = new TestSubtopicModel(validSubtopicData);
 
-      await expect(subtopic.updateSubtopic({ order_no: 0 })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(subtopic.updateSubtopic({ order_no: 0 })).rejects.toThrow(ValidationException);
     });
   });
 
@@ -335,9 +304,7 @@ describe("SubtopicModel", () => {
         title: "",
       });
 
-      await expect(subtopic.validateSubtopicData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(subtopic.validateSubtopicData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid topic_id", async () => {
@@ -346,9 +313,7 @@ describe("SubtopicModel", () => {
         topic_id: 0,
       });
 
-      await expect(subtopic.validateSubtopicData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(subtopic.validateSubtopicData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -429,14 +394,14 @@ describe("SubtopicModel", () => {
 
     it("should throw ValidationException for invalid ID", async () => {
       await expect(TestSubtopicModel.findByIdWithValidation(0)).rejects.toThrow(
-        ValidationException
+        ValidationException,
       );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestSubtopicModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestSubtopicModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -450,9 +415,7 @@ describe("SubtopicModel", () => {
     });
 
     it("should throw ValidationException for invalid topic_id", async () => {
-      await expect(TestSubtopicModel.findByTopicId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestSubtopicModel.findByTopicId(0)).rejects.toThrow(ValidationException);
     });
   });
 });

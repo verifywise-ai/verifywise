@@ -1,139 +1,133 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VerifyWise - Upgrading</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-
-    .container {
-      text-align: center;
-      max-width: 600px;
-      padding: 2rem;
-    }
-
-    .title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .subtitle {
-      font-size: 1.2rem;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-
-    .message {
-      font-size: 1rem;
-      line-height: 1.6;
-      margin-bottom: 2rem;
-      opacity: 0.8;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      margin: 2rem auto;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VerifyWise - Upgrading</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
 
-      100% {
-        transform: rotate(360deg);
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
       }
-    }
 
-    .refresh-message {
-      font-size: 0.9rem;
-      opacity: 0.7;
-      margin-top: 2rem;
-    }
-
-    .refresh-button {
-      background: rgba(255, 255, 255, 0.2);
-      border: 2px solid white;
-      color: white;
-      padding: 0.8rem 2rem;
-      border-radius: 25px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 1rem;
-    }
-
-    .refresh-button:hover {
-      background: white;
-      color: #667eea;
-      transform: translateY(-2px);
-    }
-
-    @media (max-width: 768px) {
       .container {
-        padding: 1rem;
+        text-align: center;
+        max-width: 600px;
+        padding: 2rem;
       }
 
       .title {
-        font-size: 2rem;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
       .subtitle {
-        font-size: 1rem;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
       }
-    }
-  </style>
-</head>
 
-<body>
-  <div class="container">
-    <h1 class="title">VerifyWise</h1>
-    <h2 class="subtitle">System Upgrade in Progress</h2>
-    <div class="spinner"></div>
-    <p class="message">
-      We're currently upgrading our platform to bring you enhanced features and improved performance.
-      This process typically takes a few minutes to complete.
-    </p>
-    <p class="message">
-      Thank you for your patience as we make VerifyWise even better for you.
-    </p>
-    <button class="refresh-button" onclick="window.location.reload()">
-      Check Again
-    </button>
-    <p class="refresh-message">
-      This page will automatically refresh every 30 seconds
-    </p>
-  </div>
+      .message {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        opacity: 0.8;
+      }
 
-  <script>
-    // Auto-refresh every 30 seconds
-    setTimeout(function () {
-      window.location.reload();
-    }, 30000);
-  </script>
-</body>
+      .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 2rem auto;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
 
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .refresh-message {
+        font-size: 0.9rem;
+        opacity: 0.7;
+        margin-top: 2rem;
+      }
+
+      .refresh-button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid white;
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+      }
+
+      .refresh-button:hover {
+        background: white;
+        color: #667eea;
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
+        .title {
+          font-size: 2rem;
+        }
+
+        .subtitle {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1 class="title">VerifyWise</h1>
+      <h2 class="subtitle">System Upgrade in Progress</h2>
+      <div class="spinner"></div>
+      <p class="message">
+        We're currently upgrading our platform to bring you enhanced features and improved
+        performance. This process typically takes a few minutes to complete.
+      </p>
+      <p class="message">Thank you for your patience as we make VerifyWise even better for you.</p>
+      <button class="refresh-button" onclick="window.location.reload()">Check Again</button>
+      <p class="refresh-message">This page will automatically refresh every 30 seconds</p>
+    </div>
+
+    <script>
+      // Auto-refresh every 30 seconds
+      setTimeout(function () {
+        window.location.reload();
+      }, 30000);
+    </script>
+  </body>
 </html>

@@ -50,7 +50,7 @@ export const agentDiscoveryContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click **Refresh** to trigger a sync with your connected source systems.' },
+        { text: 'Click **Sync now** to trigger a sync with your connected source systems.' },
         { text: 'The system queries each source and imports any new agents it finds.' },
         { text: 'New agents appear with a status of "Unreviewed" so you can review them before they are confirmed.' },
       ],
@@ -65,7 +65,7 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Add agent**.' },
-        { text: 'Enter the agent\'s name, type and permissions.' },
+        { text: 'Enter the agent\'s name, type, owner and notes.' },
         { text: 'Manually added agents are marked as such so you can distinguish them from auto-discovered ones.' },
       ],
     },

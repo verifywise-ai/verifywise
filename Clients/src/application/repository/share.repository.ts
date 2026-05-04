@@ -48,7 +48,7 @@ export async function createShareLink(body: CreateShareLinkParams): Promise<any>
  */
 export async function getShareLinksForResource(
   resourceType: string,
-  resourceId: number
+  resourceId: number,
 ): Promise<any> {
   const response = await apiServices.get(`/shares/${resourceType}/${resourceId}`);
   return response;
@@ -76,10 +76,7 @@ export async function getShareLinkByToken(token: string): Promise<any> {
  * @returns {Promise<any>} A promise that resolves to the updated share link
  * @throws Will throw an error if the update fails
  */
-export async function updateShareLink(
-  id: number,
-  body: UpdateShareLinkParams
-): Promise<any> {
+export async function updateShareLink(id: number, body: UpdateShareLinkParams): Promise<any> {
   const response = await apiServices.patch(`/shares/${id}`, body);
   return response;
 }

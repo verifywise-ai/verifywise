@@ -86,7 +86,7 @@ export class DeploymentManager {
 const CHUNK_RELOAD_KEY = "chunk_reload_attempted";
 
 export function lazyWithRetry<T extends React.ComponentType<any>>(
-  importFn: () => Promise<{ default: T }>
+  importFn: () => Promise<{ default: T }>,
 ): React.LazyExoticComponent<T> {
   return React.lazy(() =>
     importFn().catch((error: Error) => {
@@ -106,7 +106,7 @@ export function lazyWithRetry<T extends React.ComponentType<any>>(
 
       // Either not a chunk error or we already tried reloading — re-throw
       throw error;
-    })
+    }),
   );
 }
 

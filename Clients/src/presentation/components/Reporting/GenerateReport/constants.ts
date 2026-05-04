@@ -67,7 +67,7 @@ export const FRAMEWORK_IDS = {
  */
 export function getAvailableSections(
   frameworkId: number,
-  isOrganizational: boolean
+  isOrganizational: boolean,
 ): ReportSectionGroup[] {
   return REPORT_SECTION_GROUPS.map((group) => {
     let filteredSections = [...group.sections];
@@ -78,7 +78,7 @@ export function getAvailableSections(
       // (they show all vendors/models in Organization group instead)
       if (group.id === "riskAnalysis") {
         filteredSections = filteredSections.filter(
-          (s) => s.id !== "vendorRisks" && s.id !== "modelRisks"
+          (s) => s.id !== "vendorRisks" && s.id !== "modelRisks",
         );
       }
       // Organizational reports don't have Compliance & Governance sections
@@ -97,7 +97,9 @@ export function getAvailableSections(
             return frameworkId === FRAMEWORK_IDS.EU_AI_ACT;
           case "clausesAndAnnexes":
             // Only for ISO frameworks (2 and 3)
-            return frameworkId === FRAMEWORK_IDS.ISO_42001 || frameworkId === FRAMEWORK_IDS.ISO_27001;
+            return (
+              frameworkId === FRAMEWORK_IDS.ISO_42001 || frameworkId === FRAMEWORK_IDS.ISO_27001
+            );
           case "nistSubcategories":
             // Only for NIST AI RMF (framework 4)
             return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
@@ -124,7 +126,7 @@ export const SECTION_PREFERENCES_KEY = "verifywise_report_sections";
  */
 export function getDefaultSectionSelection(
   frameworkId: number,
-  isOrganizational: boolean
+  isOrganizational: boolean,
 ): Record<string, boolean> {
   const selection: Record<string, boolean> = {};
 
@@ -171,7 +173,7 @@ export function saveSectionPreferences(selection: Record<string, boolean>): void
 export function selectionToBackendFormat(
   selection: Record<string, boolean>,
   frameworkId: number,
-  isOrganizational: boolean
+  isOrganizational: boolean,
 ): string[] {
   const backendKeys: string[] = [];
 
@@ -194,7 +196,7 @@ export function selectionToBackendFormat(
 export const EUAI_REPORT_TYPES = [
   "Use case risks report",
   "Requirements tracker report",
-  "Controls tracker report",
+  "Assessments tracker report",
   "Vendors and risks report",
   "Training registry report",
   "Policy manager report",

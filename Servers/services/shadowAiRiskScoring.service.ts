@@ -53,9 +53,7 @@ function calculateDataPolicyScore(tool: {
  * Calculate risk scores for all tools in an organization.
  * Updates the risk_score column in shadow_ai_tools.
  */
-export async function calculateRiskScoresForOrganization(
-  organizationId: number
-): Promise<void> {
+export async function calculateRiskScoresForOrganization(organizationId: number): Promise<void> {
   // Get all tools
   const [tools] = await sequelize.query(
     `SELECT id, name, model_inventory_id, status,
@@ -63,7 +61,7 @@ export async function calculateRiskScoresForOrganization(
             sso_support, encryption_at_rest, total_events
      FROM shadow_ai_tools
      WHERE organization_id = :organizationId`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   if ((tools as any[]).length === 0) return;
@@ -71,7 +69,7 @@ export async function calculateRiskScoresForOrganization(
   // Calculate org-wide average event count for normalization
   const totalEvents = (tools as any[]).reduce(
     (sum: number, t: any) => sum + (t.total_events || 0),
-    0
+    0,
   );
   const avgEvents = totalEvents / (tools as any[]).length || 1;
 
@@ -83,7 +81,7 @@ export async function calculateRiskScoresForOrganization(
        AND event_timestamp > NOW() - INTERVAL '30 days'
        AND department IS NOT NULL
      GROUP BY detected_tool_id, department`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   // Build department map per tool
@@ -92,16 +90,13 @@ export async function calculateRiskScoresForOrganization(
     if (!toolDepartments.has(row.detected_tool_id)) {
       toolDepartments.set(row.detected_tool_id, new Set());
     }
-    toolDepartments.get(row.detected_tool_id)!.add(
-      (row.department || "").toLowerCase()
-    );
+    toolDepartments.get(row.detected_tool_id)!.add((row.department || "").toLowerCase());
   }
 
   // Calculate and update each tool's risk score
   for (const tool of tools as any[]) {
     // 1. Approval weight (40%): 100 if not in model inventory, 0 if approved
-    const approvalWeight =
-      tool.model_inventory_id && tool.status === "approved" ? 0 : 100;
+    const approvalWeight = tool.model_inventory_id && tool.status === "approved" ? 0 : 100;
 
     // 2. Data policy weight (25%)
     const dataPolicyWeight = calculateDataPolicyScore(tool);
@@ -114,8 +109,7 @@ export async function calculateRiskScoresForOrganization(
     const departments = toolDepartments.get(tool.id) || new Set<string>();
     let departmentWeight = 0;
     for (const dept of departments) {
-      const sensitivity =
-        DEFAULT_DEPARTMENT_SENSITIVITY[dept] || 30; // default 30 for unknown depts
+      const sensitivity = DEFAULT_DEPARTMENT_SENSITIVITY[dept] || 30; // default 30 for unknown depts
       departmentWeight = Math.max(departmentWeight, sensitivity);
     }
 
@@ -124,14 +118,14 @@ export async function calculateRiskScoresForOrganization(
       approvalWeight * 0.4 +
         dataPolicyWeight * 0.25 +
         usageVolumeWeight * 0.15 +
-        departmentWeight * 0.2
+        departmentWeight * 0.2,
     );
 
     await sequelize.query(
       `UPDATE shadow_ai_tools
        SET risk_score = :riskScore, updated_at = NOW()
        WHERE organization_id = :organizationId AND id = :toolId`,
-      { replacements: { organizationId, riskScore, toolId: tool.id } }
+      { replacements: { organizationId, riskScore, toolId: tool.id } },
     );
   }
 }

@@ -17,7 +17,7 @@ export interface UpdateEUAIActQuestionStatusParams {
  * @returns Promise<boolean> - True if update was successful
  */
 export async function updateEUAIActQuestionStatus(
-  params: UpdateEUAIActQuestionStatusParams
+  params: UpdateEUAIActQuestionStatusParams,
 ): Promise<boolean> {
   try {
     // Create FormData to match backend's multipart/form-data expectation

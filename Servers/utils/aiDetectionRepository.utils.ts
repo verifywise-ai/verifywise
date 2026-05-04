@@ -33,7 +33,7 @@ function validateOrganizationId(organizationId: number): void {
 export async function createRepositoryQuery(
   input: ICreateRepositoryInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IAIDetectionRepository> {
   validateOrganizationId(organizationId);
 
@@ -43,7 +43,7 @@ export async function createRepositoryQuery(
         input.schedule_day_of_week ?? null,
         input.schedule_day_of_month ?? null,
         input.schedule_hour ?? 2,
-        input.schedule_minute ?? 0
+        input.schedule_minute ?? 0,
       )
     : null;
 
@@ -99,7 +99,7 @@ export async function createRepositoryQuery(
 
 export async function getRepositoryByIdQuery(
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IAIDetectionRepository | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -118,7 +118,7 @@ export async function getRepositoryByIdQuery(
 export async function getRepositoryByOwnerNameQuery(
   owner: string,
   name: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IAIDetectionRepository | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -136,7 +136,7 @@ export async function getRepositoryByOwnerNameQuery(
 
 export async function getRepositoryByOwnerNameForWebhook(
   owner: string,
-  name: string
+  name: string,
 ): Promise<(IAIDetectionRepository & { organization_id: number }) | null> {
   const query = `
     SELECT * FROM ai_detection_repositories
@@ -156,7 +156,7 @@ export async function getRepositoryByOwnerNameForWebhook(
 export async function getRepositoriesListQuery(
   organizationId: number,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<{ repositories: IAIDetectionRepository[]; total: number }> {
   validateOrganizationId(organizationId);
   const offset = (page - 1) * limit;
@@ -193,7 +193,7 @@ export async function updateRepositoryQuery(
   id: number,
   input: IUpdateRepositoryInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IAIDetectionRepository | null> {
   validateOrganizationId(organizationId);
 
@@ -283,7 +283,7 @@ export async function updateRepositoryQuery(
 export async function deleteRepositoryQuery(
   id: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
   const query = `
@@ -309,7 +309,7 @@ export async function updateRepositoryLastScanQuery(
   scanId: number,
   scanStatus: string,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   validateOrganizationId(organizationId);
   const query = `
@@ -333,7 +333,7 @@ export async function updateRepositoryNextScanAtQuery(
   repositoryId: number,
   nextScanAt: Date | null,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   validateOrganizationId(organizationId);
   const query = `
@@ -354,7 +354,7 @@ export async function updateRepositoryNextScanAtQuery(
 // ============================================================================
 
 export async function getRepositoriesDueForScanQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<IAIDetectionRepository[]> {
   validateOrganizationId(organizationId);
   const query = `
@@ -374,9 +374,7 @@ export async function getRepositoriesDueForScanQuery(
   return results as IAIDetectionRepository[];
 }
 
-export async function getRepositoryCountQuery(
-  organizationId: number
-): Promise<number> {
+export async function getRepositoryCountQuery(organizationId: number): Promise<number> {
   validateOrganizationId(organizationId);
   const query = `
     SELECT COUNT(*) as total
@@ -401,7 +399,7 @@ export function computeNextScanAt(
   dayOfWeek: number | null,
   dayOfMonth: number | null,
   hour: number,
-  minute: number
+  minute: number,
 ): Date {
   const now = new Date();
   const next = new Date();
@@ -444,7 +442,9 @@ export function computeNextScanAt(
         // Move to next month
         next.setUTCDate(1);
         next.setUTCMonth(next.getUTCMonth() + 1);
-        const nextMonthLastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+        const nextMonthLastDay = new Date(
+          Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0),
+        ).getUTCDate();
         next.setUTCDate(Math.min(targetDayOfMonth, nextMonthLastDay));
       }
       break;

@@ -7,7 +7,10 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class AutomationActionModel extends Model<AutomationActionModel> implements IAutomationAction {
+export class AutomationActionModel
+  extends Model<AutomationActionModel>
+  implements IAutomationAction
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -60,7 +63,7 @@ export class AutomationActionModel extends Model<AutomationActionModel> implemen
     key: string,
     label: string,
     description?: string,
-    default_params?: Record<string, any>
+    default_params?: Record<string, any>,
   ): Promise<AutomationActionModel> {
     // Validate required fields
     if (!key || key.trim().length === 0) {
@@ -157,8 +160,8 @@ export class AutomationActionModel extends Model<AutomationActionModel> implemen
       label: this.label,
       description: this.description,
       default_params: this.default_params,
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

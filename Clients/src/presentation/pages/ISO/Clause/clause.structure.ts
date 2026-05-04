@@ -28,8 +28,7 @@ export const ISO42001ClauseList = [
           },
           {
             number: 2,
-            title:
-              "Understanding the needs and expectations of interested parties",
+            title: "Understanding the needs and expectations of interested parties",
             status: "Draft",
             summary:
               "Identify interested parties relevant to the AIMS and their requirements/expectations concerning AI.",
@@ -49,8 +48,7 @@ export const ISO42001ClauseList = [
             number: 3,
             title: "Determining the scope of the AI Management System",
             status: "In Review",
-            summary:
-              "Define the boundaries and applicability of the AIMS within the organization.",
+            summary: "Define the boundaries and applicability of the AIMS within the organization.",
             keyQuestions: [
               "What organizational units, processes, locations are included in the AIMS?",
               "Which specific AI systems or applications are covered by the AIMS?",

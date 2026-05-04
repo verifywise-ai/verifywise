@@ -16,8 +16,18 @@ const ModelInventorySummary: React.FC<ModelInventorySummaryProps> = ({
 }) => {
   const items: StatusTileItem[] = [
     { key: "total", label: "Total", count: summary.total, color: palette.text.tertiary },
-    { key: "approved", label: "Approved", count: summary.approved, color: palette.status.success.text },
-    { key: "restricted", label: "Restricted", count: summary.restricted, color: palette.risk.high.text },
+    {
+      key: "approved",
+      label: "Approved",
+      count: summary.approved,
+      color: palette.status.success.text,
+    },
+    {
+      key: "restricted",
+      label: "Restricted",
+      count: summary.restricted,
+      color: palette.risk.high.text,
+    },
     { key: "pending", label: "Pending", count: summary.pending, color: palette.risk.medium.text },
     { key: "blocked", label: "Blocked", count: summary.blocked, color: palette.status.error.text },
   ];

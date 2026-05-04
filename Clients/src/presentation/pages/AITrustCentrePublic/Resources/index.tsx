@@ -111,11 +111,7 @@ const Resources = ({
 
   return (
     <Box width="100%">
-      <Typography
-        variant="subtitle2"
-        color={brand.primary}
-        sx={{ fontWeight: 600, mb: 2 }}
-      >
+      <Typography variant="subtitle2" color={brand.primary} sx={{ fontWeight: 600, mb: 2 }}>
         Resources
       </Typography>
       <TableContainer
@@ -146,21 +142,16 @@ const Resources = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === "document name"
-                          ? "#1976D2"
-                          : `${text.disabled}`,
+                      color: sortConfig.key === "document name" ? "#1976D2" : `${text.disabled}`,
                     }}
                   >
-                    {sortConfig.key === "document name" &&
-                      sortConfig.direction === "asc" && <ChevronUp size={16} />}
-                    {sortConfig.key === "document name" &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== "document name" && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === "document name" && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === "document name" && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== "document name" && <ChevronsUpDown size={16} />}
                   </Box>
                 </Box>
               </TableCell>
@@ -188,10 +179,7 @@ const Resources = ({
                   }}
                 >
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CheckCircleOutlineIcon
-                      size={24}
-                      style={{ color: "#10B981" }}
-                    />
+                    <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
                     <Typography color={text.secondary} sx={{ fontSize: 13 }}>
                       {resource.name}
                     </Typography>
@@ -201,7 +189,8 @@ const Resources = ({
                   align="right"
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "action" ? `${background.surface}` : "inherit",
+                    backgroundColor:
+                      sortConfig.key === "action" ? `${background.surface}` : "inherit",
                   }}
                 >
                   <Button

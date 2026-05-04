@@ -8,7 +8,7 @@ export class SubClauseISO42001RiskModel {
   }
 
   static createNewSubClauseISO42001Risk(
-    data: SubClauseISO42001RiskModel
+    data: SubClauseISO42001RiskModel,
   ): SubClauseISO42001RiskModel {
     return new SubClauseISO42001RiskModel(data);
   }

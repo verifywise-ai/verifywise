@@ -37,7 +37,13 @@ export interface FileMetadata {
   uploader_surname?: string;
 }
 
-export type ReviewStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'expired' | 'superseded';
+export type ReviewStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "superseded";
 
 export interface OrganizationFileMetadata {
   id: number;
@@ -140,7 +146,7 @@ export async function uploadProjectFile(
   projectId: number | null,
   source: FileSource,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ): Promise<FileModel> {
   validateOrganizationId(organizationId);
 
@@ -153,7 +159,7 @@ export async function uploadProjectFile(
         mapToModel: true,
         model: ProjectModel,
         ...(transaction && { transaction }),
-      }
+      },
     );
     isDemo = projectResult[0]?.is_demo || false;
   }
@@ -182,9 +188,7 @@ export async function uploadProjectFile(
     ...(transaction && { transaction }),
   });
 
-  return Array.isArray(result[0]) && result[0].length > 0
-    ? result[0][0]
-    : (result[0] as FileModel);
+  return Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : (result[0] as FileModel);
 }
 
 /**
@@ -196,7 +200,7 @@ export async function uploadProjectFile(
  */
 export async function getProjectFileById(
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FileModel | null> {
   validateOrganizationId(organizationId);
 
@@ -221,7 +225,7 @@ export async function getProjectFileById(
 export async function deleteProjectFileById(
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
 
@@ -231,7 +235,7 @@ export async function deleteProjectFileById(
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   );
 
   const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id RETURNING id`;
@@ -254,7 +258,7 @@ export async function deleteProjectFileById(
  */
 export async function getProjectFileMetadata(
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FileMetadata[]> {
   validateOrganizationId(organizationId);
 
@@ -309,7 +313,7 @@ export async function uploadOrganizationFile(
   userId: number,
   orgId: number,
   organizationId: number,
-  options?: UploadOrganizationFileOptions
+  options?: UploadOrganizationFileOptions,
 ): Promise<OrganizationFileMetadata>;
 
 /**
@@ -322,7 +326,7 @@ export async function uploadOrganizationFile(
   organizationId: number,
   modelId?: number,
   source?: FileSource,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<OrganizationFileMetadata>;
 
 export async function uploadOrganizationFile(
@@ -332,7 +336,7 @@ export async function uploadOrganizationFile(
   organizationId: number,
   modelIdOrOptions?: number | UploadOrganizationFileOptions,
   source?: FileSource,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<OrganizationFileMetadata> {
   validateOrganizationId(organizationId);
 
@@ -342,7 +346,7 @@ export async function uploadOrganizationFile(
   let approvalWorkflowId: number | undefined;
   let txn: Transaction | undefined;
 
-  if (typeof modelIdOrOptions === 'object' && modelIdOrOptions !== null) {
+  if (typeof modelIdOrOptions === "object" && modelIdOrOptions !== null) {
     // New signature with options object
     modelId = modelIdOrOptions.modelId;
     finalSource = modelIdOrOptions.source;
@@ -358,7 +362,7 @@ export async function uploadOrganizationFile(
   const safeName = sanitizeFilenameStr(file.originalname);
 
   // If approval workflow is selected, set status to pending_review
-  const reviewStatus = approvalWorkflowId ? 'pending_review' : 'draft';
+  const reviewStatus = approvalWorkflowId ? "pending_review" : "draft";
 
   const query = `
     INSERT INTO files
@@ -398,7 +402,7 @@ export async function uploadOrganizationFile(
  */
 export async function getFileById(
   fileId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FileModel | null> {
   validateOrganizationId(organizationId);
 
@@ -423,7 +427,7 @@ export async function getFileById(
 export async function deleteFileById(
   fileId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
 
@@ -438,7 +442,7 @@ export async function deleteFileById(
       {
         replacements: { organizationId, fileId },
         transaction: txn,
-      }
+      },
     );
 
     // Clean up file entity links (evidence/attachment associations)
@@ -447,7 +451,7 @@ export async function deleteFileById(
       {
         replacements: { organizationId, fileId },
         transaction: txn,
-      }
+      },
     );
 
     const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId RETURNING id`;
@@ -485,7 +489,7 @@ export async function deleteFileById(
  */
 export async function getOrganizationFiles(
   organizationId: number,
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): Promise<{ files: OrganizationFileMetadata[]; total: number }> {
   validateOrganizationId(organizationId);
 
@@ -561,7 +565,7 @@ export async function logFileAccess(
   orgId: number,
   action: "download" | "view",
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   validateOrganizationId(organizationId);
 
@@ -589,7 +593,7 @@ export async function logFileAccess(
 export async function getFileAccessLogs(
   fileId: number,
   organizationId: number,
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): Promise<FileAccessLog[]> {
   validateOrganizationId(organizationId);
 
@@ -650,7 +654,7 @@ export interface FileSearchResult {
 export async function searchFilesByContent(
   organizationId: number,
   queryText: string,
-  options: FileContentSearchOptions = {}
+  options: FileContentSearchOptions = {},
 ): Promise<{ files: FileSearchResult[] }> {
   validateOrganizationId(organizationId);
 
@@ -708,7 +712,7 @@ export async function searchFilesByContent(
  */
 export async function getFilesByModelId(
   modelId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<OrganizationFileMetadata[]> {
   validateOrganizationId(organizationId);
 
@@ -755,7 +759,7 @@ export async function updateFileMetadata(
   fileId: number,
   updates: UpdateFileMetadataInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<OrganizationFileMetadata | null> {
   validateOrganizationId(organizationId);
 
@@ -764,29 +768,29 @@ export async function updateFileMetadata(
 
   // Build dynamic SET clause
   if (updates.tags !== undefined) {
-    setClauses.push('tags = :tags::jsonb');
+    setClauses.push("tags = :tags::jsonb");
     replacements.tags = JSON.stringify(updates.tags);
   }
   if (updates.review_status !== undefined) {
-    setClauses.push('review_status = :review_status');
+    setClauses.push("review_status = :review_status");
     replacements.review_status = updates.review_status;
   }
   if (updates.version !== undefined) {
-    setClauses.push('version = :version');
+    setClauses.push("version = :version");
     replacements.version = updates.version;
   }
   if (updates.expiry_date !== undefined) {
-    setClauses.push('expiry_date = :expiry_date');
+    setClauses.push("expiry_date = :expiry_date");
     replacements.expiry_date = updates.expiry_date;
   }
   if (updates.description !== undefined) {
-    setClauses.push('description = :description');
+    setClauses.push("description = :description");
     replacements.description = updates.description;
   }
 
   // Always update last_modified_by and updated_at
-  setClauses.push('last_modified_by = :last_modified_by');
-  setClauses.push('updated_at = NOW()');
+  setClauses.push("last_modified_by = :last_modified_by");
+  setClauses.push("updated_at = NOW()");
   replacements.last_modified_by = updates.last_modified_by;
 
   // Since we always add last_modified_by, setClauses will never be empty
@@ -798,7 +802,7 @@ export async function updateFileMetadata(
 
   const query = `
     UPDATE files
-    SET ${setClauses.join(', ')}
+    SET ${setClauses.join(", ")}
     WHERE organization_id = :organizationId AND id = :fileId
     RETURNING *`;
 
@@ -820,7 +824,7 @@ export async function updateFileMetadata(
  */
 export async function getFileWithMetadata(
   fileId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<OrganizationFileMetadata | null> {
   validateOrganizationId(organizationId);
 
@@ -873,7 +877,7 @@ export async function getFileWithMetadata(
  */
 export async function getOrganizationFilesWithMetadata(
   organizationId: number,
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): Promise<{ files: OrganizationFileMetadata[]; total: number }> {
   validateOrganizationId(organizationId);
 
@@ -951,7 +955,7 @@ export async function getOrganizationFilesWithMetadata(
 export async function getHighlightedFiles(
   organizationId: number,
   daysUntilExpiry: number = 30,
-  recentDays: number = 7
+  recentDays: number = 7,
 ): Promise<{
   dueForUpdate: number[];
   pendingApproval: number[];
@@ -1022,7 +1026,7 @@ export async function getHighlightedFiles(
 export async function getFilePreview(
   fileId: number,
   organizationId: number,
-  maxSize: number = 5 * 1024 * 1024 // 5MB default
+  maxSize: number = 5 * 1024 * 1024, // 5MB default
 ): Promise<{
   id: number;
   filename: string;
@@ -1097,7 +1101,7 @@ export async function getFilePreview(
  */
 export async function getFileVersionHistory(
   fileGroupId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<OrganizationFileMetadata[]> {
   validateOrganizationId(organizationId);
 
@@ -1156,7 +1160,7 @@ export async function updateFileReviewStatus(
   fileId: number,
   reviewStatus: ReviewStatus,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
 
@@ -1184,7 +1188,7 @@ export async function updateFileReviewStatus(
  */
 export async function getFilesPendingApproval(
   workflowId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<OrganizationFileMetadata[]> {
   validateOrganizationId(organizationId);
 
@@ -1227,9 +1231,15 @@ export async function getFilesPendingApproval(
 // File Entity Links (Evidence/Attachment Linking)
 // ============================================================================
 
-export type FrameworkType = 'eu_ai_act' | 'nist_ai_rmf' | 'iso_27001' | 'iso_42001' | string;
-export type EntityType = 'assessment' | 'subcontrol' | 'subclause' | 'annex_control' | 'annex_category' | string;
-export type LinkType = 'evidence' | 'feedback' | 'attachment' | 'reference' | 'source_data';
+export type FrameworkType = "eu_ai_act" | "nist_ai_rmf" | "iso_27001" | "iso_42001" | string;
+export type EntityType =
+  | "assessment"
+  | "subcontrol"
+  | "subclause"
+  | "annex_control"
+  | "annex_category"
+  | string;
+export type LinkType = "evidence" | "feedback" | "attachment" | "reference" | "source_data";
 
 export interface FileEntityLink {
   id?: number;
@@ -1252,9 +1262,9 @@ export interface FileEntityLink {
  * @returns The created link or null if already exists (ON CONFLICT DO NOTHING)
  */
 export async function createFileEntityLink(
-  link: Omit<FileEntityLink, 'id' | 'created_at'>,
+  link: Omit<FileEntityLink, "id" | "created_at">,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<FileEntityLink | null> {
   validateOrganizationId(organizationId);
 
@@ -1274,7 +1284,7 @@ export async function createFileEntityLink(
       entityType: link.entity_type,
       entityId: link.entity_id,
       projectId: link.project_id ?? null,
-      linkType: link.link_type ?? 'evidence',
+      linkType: link.link_type ?? "evidence",
       createdBy: link.created_by ?? null,
     },
     type: QueryTypes.SELECT,
@@ -1301,7 +1311,7 @@ export async function deleteFileEntityLink(
   entityType: EntityType,
   entityId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
 
@@ -1332,7 +1342,7 @@ export async function deleteFileEntityLink(
  */
 export async function getFileEntityLinks(
   fileId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<FileEntityLink[]> {
   validateOrganizationId(organizationId);
 
@@ -1363,7 +1373,7 @@ export async function getFilesForEntity(
   frameworkType: FrameworkType,
   entityType: EntityType,
   entityId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number[]> {
   validateOrganizationId(organizationId);
 
@@ -1381,7 +1391,7 @@ export async function getFilesForEntity(
     type: QueryTypes.SELECT,
   });
 
-  return (result as { file_id: number }[]).map(r => r.file_id);
+  return (result as { file_id: number }[]).map((r) => r.file_id);
 }
 
 /**
@@ -1397,7 +1407,7 @@ export async function getFilesWithMetadataForEntity(
   frameworkType: FrameworkType,
   entityType: EntityType,
   entityId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<OrganizationFileMetadata[]> {
   validateOrganizationId(organizationId);
 
@@ -1446,7 +1456,7 @@ export async function getFilesWithMetadataForEntity(
 export async function deleteAllFileEntityLinks(
   fileId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> {
   validateOrganizationId(organizationId);
 

@@ -13,12 +13,7 @@
  * @returns {JSX.Element} The rendered Radio component.
  */
 
-import {
-  FormControlLabel,
-  useTheme,
-  Radio as MUIRadio,
-  Typography,
-} from "@mui/material";
+import { FormControlLabel, useTheme, Radio as MUIRadio, Typography } from "@mui/material";
 import "./index.css";
 
 import { CircleDot } from "lucide-react";
@@ -57,17 +52,13 @@ function Radio({ checked, value, id, size, onChange, title, desc }: RadioProps) 
           }}
         />
       }
-      onChange={(event) =>
-        onChange(event as ChangeEvent<HTMLInputElement>)
-      }
+      onChange={(event) => onChange(event as ChangeEvent<HTMLInputElement>)}
       label={
         <>
-          <Typography fontSize={13} color="text.tertiary">{title}</Typography>
-          <Typography
-            component="h6"
-            mt={theme.spacing(1)}
-            color={theme.palette.text.secondary}
-          >
+          <Typography fontSize={13} color="text.tertiary">
+            {title}
+          </Typography>
+          <Typography component="h6" mt={theme.spacing(1)} color={theme.palette.text.secondary}>
             {desc}
           </Typography>
         </>

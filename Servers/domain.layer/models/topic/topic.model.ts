@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { AssessmentModel } from "../assessment/assessment.model";
 import { ITopic } from "../../interfaces/i.topic";
 import { numberValidation } from "../../validations/number.valid";
@@ -69,7 +63,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
     title: string,
     assessment_id: number,
     order_no?: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TopicModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
@@ -81,7 +75,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessment_id
+        assessment_id,
       );
     }
 
@@ -90,7 +84,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -108,18 +102,11 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
   /**
    * Update topic information with validation
    */
-  async updateTopic(updateData: {
-    title?: string;
-    order_no?: number;
-  }): Promise<void> {
+  async updateTopic(updateData: { title?: string; order_no?: number }): Promise<void> {
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Topic title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Topic title is required", "title", updateData.title);
       }
       this.title = updateData.title.trim();
     }
@@ -130,7 +117,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -142,18 +129,14 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
    */
   async validateTopicData(): Promise<void> {
     if (!this.title || this.title.trim().length === 0) {
-      throw new ValidationException(
-        "Topic title is required",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Topic title is required", "title", this.title);
     }
 
     if (!this.assessment_id || !numberValidation(this.assessment_id, 1)) {
       throw new ValidationException(
         "Valid assessment_id is required",
         "assessment_id",
-        this.assessment_id
+        this.assessment_id,
       );
     }
 
@@ -161,7 +144,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
   }
@@ -178,11 +161,10 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
    */
   canBeModified(): boolean {
     if (this.isDemoTopic()) {
-      throw new BusinessLogicException(
-        "Demo topics cannot be modified",
-        "DEMO_TOPIC_RESTRICTION",
-        { topicId: this.id, assessmentId: this.assessment_id }
-      );
+      throw new BusinessLogicException("Demo topics cannot be modified", "DEMO_TOPIC_RESTRICTION", {
+        topicId: this.id,
+        assessmentId: this.assessment_id,
+      });
     }
     return true;
   }
@@ -233,11 +215,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
    */
   static async findByIdWithValidation(id: number): Promise<TopicModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const topic = await TopicModel.findByPk(id);
@@ -256,7 +234,7 @@ export class TopicModel extends Model<TopicModel> implements ITopic {
       throw new ValidationException(
         "Valid assessment_id is required (must be >= 1)",
         "assessment_id",
-        assessmentId
+        assessmentId,
       );
     }
 

@@ -14,7 +14,7 @@ import {
  */
 export function generateRiskDistributionChart(
   data: RiskDistributionData[],
-  options: { width?: number; height?: number; title?: string } = {}
+  options: { width?: number; height?: number; title?: string } = {},
 ): string {
   const { width = 400, height = 200, title = "Risk Distribution" } = options;
 
@@ -67,7 +67,7 @@ export function generateRiskDistributionChart(
  */
 export function generateRiskDonutChart(
   data: RiskDistributionData[],
-  options: { size?: number; title?: string } = {}
+  options: { size?: number; title?: string } = {},
 ): string {
   const { size = 200, title = "" } = options;
 
@@ -141,7 +141,7 @@ export function generateRiskDonutChart(
  */
 export function generateComplianceProgressChart(
   data: ComplianceProgressData[],
-  options: { width?: number; title?: string } = {}
+  options: { width?: number; title?: string } = {},
 ): string {
   const { width = 400, title = "Compliance Progress" } = options;
 
@@ -167,11 +167,7 @@ export function generateComplianceProgressChart(
     const y = titleHeight + index * rowHeight;
     const progressWidth = (item.percentage / 100) * (width - 60);
     const progressColor =
-      item.percentage >= 80
-        ? "#027A48"
-        : item.percentage >= 50
-          ? "#B54708"
-          : "#B42318";
+      item.percentage >= 80 ? "#027A48" : item.percentage >= 50 ? "#B54708" : "#B42318";
 
     // Category label
     svg += `<text x="0" y="${y + labelHeight}" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1C2130">${item.category}</text>`;
@@ -200,7 +196,7 @@ export function generateComplianceProgressChart(
  */
 export function generateRiskLegend(
   data: RiskDistributionData[],
-  options: { width?: number; inline?: boolean } = {}
+  options: { width?: number; inline?: boolean } = {},
 ): string {
   const { width = 300, inline = true } = options;
 
@@ -241,7 +237,7 @@ export function generateRiskLegend(
  */
 export function generateAssessmentStatusChart(
   data: AssessmentStatusData[],
-  options: { size?: number; title?: string } = {}
+  options: { size?: number; title?: string } = {},
 ): string {
   const { size = 200, title = "Assessment Status" } = options;
 
@@ -315,7 +311,7 @@ export function generateAssessmentStatusChart(
  */
 export function generateAssessmentLegend(
   data: AssessmentStatusData[],
-  options: { width?: number } = {}
+  options: { width?: number } = {},
 ): string {
   const { width = 300 } = options;
 

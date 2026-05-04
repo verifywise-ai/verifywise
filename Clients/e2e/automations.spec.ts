@@ -7,14 +7,10 @@ test.describe("Automations", () => {
     await expect(page).toHaveURL(/\/automations/);
 
     // Page should show automation-related content or empty state
-    await expect(
-      page.getByText(/automation/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/automation/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/automations");
     await page.waitForLoadState("domcontentloaded");
 
@@ -37,9 +33,7 @@ test.describe("Automations", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("automation list or create button is visible", async ({
-    authedPage: page,
-  }) => {
+  test("automation list or create button is visible", async ({ authedPage: page }) => {
     await page.goto("/automations");
 
     const content = page

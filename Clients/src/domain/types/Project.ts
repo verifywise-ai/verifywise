@@ -28,9 +28,16 @@ export type Project = {
   target_industry?: string;
   description?: string;
   is_organizational?: boolean;
-  status?: "Not started" | "In progress" | "Under review" | "Completed" | "Closed" | "On hold" | "Rejected";
+  status?:
+    | "Not started"
+    | "In progress"
+    | "Under review"
+    | "Completed"
+    | "Closed"
+    | "On hold"
+    | "Rejected";
   has_pending_approval?: boolean;
-  approval_status?: 'pending' | 'rejected' | null;
+  approval_status?: "pending" | "rejected" | null;
   _source?: string; // Plugin source identifier (e.g., 'jira-assets')
   // vendors: string[];
 

@@ -1,5 +1,5 @@
-import { FC, memo } from 'react';
-import { Box, Typography, Paper, useTheme } from '@mui/material';
+import { FC, memo } from "react";
+import { Box, Typography, Paper, useTheme } from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -10,13 +10,13 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-} from 'recharts';
-import { VWDonutChart, vwTooltipStyle, axisTick, axisLine, gridStroke } from '../Charts/VWCharts';
-import palette, { chart as chartPalette } from '../../themes/palette';
+} from "recharts";
+import { VWDonutChart, vwTooltipStyle, axisTick, axisLine, gridStroke } from "../Charts/VWCharts";
+import palette, { chart as chartPalette } from "../../themes/palette";
 
 interface ChartData {
-  type: 'bar' | 'pie' | 'table' | 'donut' | 'line';
-  data: {label: string, value: number, color?: string}[] ;
+  type: "bar" | "pie" | "table" | "donut" | "line";
+  data: { label: string; value: number; color?: string }[];
   title: string;
   series?: Array<{
     label: string;
@@ -45,7 +45,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
   const hasValidData = data && Array.isArray(data) && data.length > 0;
   const hasValidSeries = series && Array.isArray(series) && series.length > 0 && xAxisLabels;
 
-  if (type === 'line') {
+  if (type === "line") {
     // Line chart can use either series or data
     if (!hasValidSeries && !hasValidData) {
       return null;
@@ -59,13 +59,13 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
 
   const renderChart = () => {
     switch (type) {
-      case 'line': {
+      case "line": {
         // Line chart for timeseries data with series
         if (hasValidSeries) {
           // Transform series + xAxisLabels into Recharts-compatible data array
           const lineData = xAxisLabels!.map((label, i) => {
             const point: Record<string, string | number> = { label };
-            series!.forEach(s => {
+            series!.forEach((s) => {
               point[s.label] = s.data[i] ?? 0;
             });
             return point;
@@ -96,7 +96,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
 
         // Fallback for simple line chart using data array
         if (!hasValidData) return null;
-        const simpleLineData = data.map(item => ({ label: item.label, value: item.value }));
+        const simpleLineData = data.map((item) => ({ label: item.label, value: item.value }));
         return (
           <ResponsiveContainer width={320} height={250} minWidth={0}>
             <LineChart data={simpleLineData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
@@ -117,8 +117,8 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
         );
       }
 
-      case 'bar': {
-        const barChartData = data.map(item => ({ label: item.label, value: item.value }));
+      case "bar": {
+        const barChartData = data.map((item) => ({ label: item.label, value: item.value }));
         return (
           <ResponsiveContainer width={300} height={size} minWidth={0}>
             <BarChart data={barChartData} margin={{ left: 0, right: 20, top: 20, bottom: 0 }}>
@@ -137,13 +137,11 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
         );
       }
 
-      case 'pie':
-      case 'donut': {
-        const isPie = type === 'pie';
-        const chartData = data.map(item => ({ name: item.label, value: item.value }));
-        const colors = data.map(
-          (item, i) => item.color || chartPalette[i % chartPalette.length]
-        );
+      case "pie":
+      case "donut": {
+        const isPie = type === "pie";
+        const chartData = data.map((item) => ({ name: item.label, value: item.value }));
+        const colors = data.map((item, i) => item.color || chartPalette[i % chartPalette.length]);
         return (
           <VWDonutChart
             data={chartData}
@@ -157,26 +155,26 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
         );
       }
 
-      case 'table':
+      case "table":
         return (
-          <Box sx={{ width: '100%', minWidth: 200 }}>
+          <Box sx={{ width: "100%", minWidth: 200 }}>
             {data.map((item, index) => (
               <Box
                 key={`row-${index}`}
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   gap: 3,
-                  padding: '5px 0',
-                  borderBottom: index < data.length - 1 ? 1 : 'none',
-                  borderColor: 'divider',
+                  padding: "5px 0",
+                  borderBottom: index < data.length - 1 ? 1 : "none",
+                  borderColor: "divider",
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: theme.typography.caption.fontSize,
-                    color: 'text.secondary',
+                    color: "text.secondary",
                   }}
                 >
                   {item.label}
@@ -185,7 +183,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
                   sx={{
                     fontSize: theme.typography.caption.fontSize,
                     fontWeight: 600,
-                    color: 'text.primary',
+                    color: "text.primary",
                   }}
                 >
                   {item.value}
@@ -210,24 +208,32 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
       sx={{
         padding: 2,
         marginTop: 1,
-        bgcolor: 'background.paper',
+        bgcolor: "background.paper",
         border: 1,
-        borderColor: 'divider',
+        borderColor: "divider",
         borderRadius: 2,
-        width: '100%',
+        width: "100%",
       }}
     >
       {title && (
-        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, marginBottom: type === 'table' ? 1 : 2, fontSize: theme.typography.body2.fontSize }}>
+        <Typography
+          variant="subtitle2"
+          gutterBottom
+          sx={{
+            fontWeight: 600,
+            marginBottom: type === "table" ? 1 : 2,
+            fontSize: theme.typography.body2.fontSize,
+          }}
+        >
           {title}
         </Typography>
       )}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: type === 'table' ? 'auto' : 200,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: type === "table" ? "auto" : 200,
         }}
       >
         {renderChart()}

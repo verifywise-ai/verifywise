@@ -72,12 +72,9 @@ describe("Test Integration Repository", () => {
       await getMlflowConfig();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/config",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/config", {
+        signal: undefined,
+      });
     });
 
     it("should return the response data on successful API call", async () => {
@@ -104,12 +101,9 @@ describe("Test Integration Repository", () => {
 
       await getMlflowConfig({ signal: controller.signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/config",
-        {
-          signal: controller.signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/config", {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -122,9 +116,7 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getMlflowConfig()).rejects.toThrow("Network timeout");
     });
@@ -147,12 +139,9 @@ describe("Test Integration Repository", () => {
       await getMlflowSyncStatus();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/sync-status",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/sync-status", {
+        signal: undefined,
+      });
     });
 
     it("should return the response data on successful API call", async () => {
@@ -179,12 +168,9 @@ describe("Test Integration Repository", () => {
 
       await getMlflowSyncStatus({ signal: controller.signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/sync-status",
-        {
-          signal: controller.signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/sync-status", {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -197,9 +183,7 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Connection refused"));
 
       await expect(getMlflowSyncStatus()).rejects.toThrow("Connection refused");
     });
@@ -218,12 +202,9 @@ describe("Test Integration Repository", () => {
       await getMlflowModels();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/models",
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/models", {
+        signal: undefined,
+      });
     });
 
     it("should return the response data on successful API call", async () => {
@@ -242,12 +223,9 @@ describe("Test Integration Repository", () => {
 
       await getMlflowModels({ signal: controller.signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/integrations/mlflow/models",
-        {
-          signal: controller.signal,
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/integrations/mlflow/models", {
+        signal: controller.signal,
+      });
     });
 
     it("should return unconfigured state when MLflow is not configured", async () => {
@@ -275,9 +253,7 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getMlflowModels()).rejects.toThrow("Network timeout");
     });
@@ -307,10 +283,7 @@ describe("Test Integration Repository", () => {
       await testMlflowConnection(testData);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/integrations/mlflow/test",
-        testData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/integrations/mlflow/test", testData);
     });
 
     it("should return the response data on successful API call", async () => {
@@ -351,13 +324,9 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(testMlflowConnection(testData)).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(testMlflowConnection(testData)).rejects.toThrow("Connection refused");
     });
   });
 
@@ -380,10 +349,7 @@ describe("Test Integration Repository", () => {
       await configureMlflow(configData);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/integrations/mlflow/configure",
-        configData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/integrations/mlflow/configure", configData);
     });
 
     it("should return the response data on successful API call", async () => {
@@ -409,13 +375,9 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(configureMlflow(configData)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(configureMlflow(configData)).rejects.toThrow("Network timeout");
     });
   });
 
@@ -436,10 +398,7 @@ describe("Test Integration Repository", () => {
       await triggerMlflowSync();
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/integrations/mlflow/sync",
-        {},
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/integrations/mlflow/sync", {});
     });
 
     it("should return the response data on successful API call", async () => {
@@ -465,9 +424,7 @@ describe("Test Integration Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Connection refused"));
 
       await expect(triggerMlflowSync()).rejects.toThrow("Connection refused");
     });

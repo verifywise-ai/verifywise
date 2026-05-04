@@ -79,15 +79,16 @@ const AlertsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Notification components for displaying feedback messages to users.
-          Alerts can be used as inline messages or toast notifications.
+          Notification components for displaying feedback messages to users. Alerts can be used as
+          inline messages or toast notifications.
         </Typography>
       </Box>
 
       {/* Alert Variants */}
       <SpecSection title="Alert variants">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Four semantic variants for different message types. Each has a dedicated color scheme and icon.
+          Four semantic variants for different message types. Each has a dedicated color scheme and
+          icon.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
@@ -133,7 +134,16 @@ const AlertsSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -164,7 +174,13 @@ const AlertsSection: React.FC = () => {
           Colors are defined in singleTheme.alertStyles and theme.palette.status
         </Typography>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gap: "16px",
+          }}
+        >
           <AlertColorCard
             variant="Success"
             textColor={status.success.text}
@@ -383,9 +399,7 @@ const AlertPreview: React.FC<AlertPreviewProps> = ({
             <Typography sx={{ fontWeight: 700, color: colors.text, fontSize: 13 }}>
               {title}
             </Typography>
-            <Typography sx={{ color: colors.text, fontSize: 13 }}>
-              {body}
-            </Typography>
+            <Typography sx={{ color: colors.text, fontSize: 13 }}>{body}</Typography>
           </Stack>
         </Box>
       </Box>
@@ -436,9 +450,7 @@ const AlertColorCard: React.FC<AlertColorCardProps> = ({
           justifyContent: "center",
         }}
       >
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: textColor }}>
-          {variant}
-        </Typography>
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: textColor }}>{variant}</Typography>
       </Box>
       <Box sx={{ p: "12px" }}>
         <Box sx={{ display: "flex", gap: "8px", mb: "8px" }}>
@@ -457,7 +469,9 @@ const AlertColorCard: React.FC<AlertColorCardProps> = ({
             <Typography sx={{ fontSize: 10, color: theme.palette.text.accent, mb: "2px" }}>
               Text
             </Typography>
-            <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}>
+            <Typography
+              sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}
+            >
               {textColor}
             </Typography>
           </Box>
@@ -476,12 +490,16 @@ const AlertColorCard: React.FC<AlertColorCardProps> = ({
             <Typography sx={{ fontSize: 10, color: theme.palette.text.accent, mb: "2px" }}>
               Background
             </Typography>
-            <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}>
+            <Typography
+              sx={{ fontSize: 11, fontFamily: "monospace", color: theme.palette.text.primary }}
+            >
               {bgColor}
             </Typography>
           </Box>
         </Box>
-        <Typography sx={{ fontSize: 10, color: theme.palette.text.accent, fontFamily: "monospace" }}>
+        <Typography
+          sx={{ fontSize: 10, color: theme.palette.text.accent, fontFamily: "monospace" }}
+        >
           {themeKey}
         </Typography>
       </Box>
@@ -539,9 +557,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -563,9 +579,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -616,9 +630,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

@@ -24,7 +24,7 @@ export function GroupStatsCard({ title, completed, total }: GroupStatsCardProps)
         completed: validCompleted,
         total: validTotal,
         progress,
-        percentage: isNaN(percentage) ? 0 : percentage
+        percentage: isNaN(percentage) ? 0 : percentage,
       };
     });
   }, [title, completed, total]);

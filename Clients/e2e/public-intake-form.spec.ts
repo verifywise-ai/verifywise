@@ -28,7 +28,12 @@ const test = base.extend<{ publicFormUrl: string | null }>({
         .or(authPage.locator('a[href*="use-case-form-intake"]'))
         .or(authPage.locator('a[href*="/intake/"]'));
 
-      if (await publicLink.first().isVisible().catch(() => false)) {
+      if (
+        await publicLink
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         formUrl = await publicLink.first().getAttribute("href");
       }
     } catch {
@@ -82,10 +87,7 @@ test.describe("Public Intake Form", () => {
 
   // --- Tier 1: Form rendering (requires a real form) ---
 
-  test("renders form fields when a valid form exists", async ({
-    publicFormUrl,
-    page,
-  }) => {
+  test("renders form fields when a valid form exists", async ({ publicFormUrl, page }) => {
     if (!publicFormUrl) {
       test.skip();
       return;
@@ -102,7 +104,10 @@ test.describe("Public Intake Form", () => {
       .or(page.locator("textarea"));
 
     if (
-      !(await formFields.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await formFields
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -124,15 +129,17 @@ test.describe("Public Intake Form", () => {
       .getByRole("button", { name: /submit/i })
       .or(page.getByRole("button", { name: /send/i }));
 
-    if (await submitBtn.first().isVisible().catch(() => false)) {
+    if (
+      await submitBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(submitBtn.first()).toBeVisible();
     }
   });
 
-  test("form shows contact info fields (name and email)", async ({
-    publicFormUrl,
-    page,
-  }) => {
+  test("form shows contact info fields (name and email)", async ({ publicFormUrl, page }) => {
     if (!publicFormUrl) {
       test.skip();
       return;
@@ -149,10 +156,20 @@ test.describe("Public Intake Form", () => {
       .getByPlaceholder(/email/i)
       .or(page.getByRole("textbox", { name: /email/i }));
 
-    if (await nameField.first().isVisible().catch(() => false)) {
+    if (
+      await nameField
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(nameField.first()).toBeVisible();
     }
-    if (await emailField.first().isVisible().catch(() => false)) {
+    if (
+      await emailField
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(emailField.first()).toBeVisible();
     }
   });
@@ -176,7 +193,12 @@ test.describe("Public Intake Form", () => {
       .getByRole("button", { name: /submit/i })
       .or(page.getByRole("button", { name: /send/i }));
 
-    if (!(await submitBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await submitBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -191,17 +213,19 @@ test.describe("Public Intake Form", () => {
       .or(page.locator('[class*="error" i]'))
       .or(page.locator(".Mui-error"));
 
-    if (await errorMsg.first().isVisible().catch(() => false)) {
+    if (
+      await errorMsg
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(errorMsg.first()).toBeVisible();
     }
   });
 
   // --- Tier 2: Math captcha ---
 
-  test("math captcha is displayed on the form", async ({
-    publicFormUrl,
-    page,
-  }) => {
+  test("math captcha is displayed on the form", async ({ publicFormUrl, page }) => {
     if (!publicFormUrl) {
       test.skip();
       return;
@@ -217,17 +241,19 @@ test.describe("Public Intake Form", () => {
       .or(page.getByText(/captcha/i))
       .or(page.locator('[class*="captcha" i]'));
 
-    if (await captcha.first().isVisible().catch(() => false)) {
+    if (
+      await captcha
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(captcha.first()).toBeVisible();
     }
   });
 
   // --- Tier 3: Powered by footer ---
 
-  test("shows Powered by VerifyWise footer", async ({
-    publicFormUrl,
-    page,
-  }) => {
+  test("shows Powered by VerifyWise footer", async ({ publicFormUrl, page }) => {
     if (!publicFormUrl) {
       test.skip();
       return;
@@ -238,7 +264,12 @@ test.describe("Public Intake Form", () => {
 
     const footer = page.getByText(/powered by/i).or(page.getByText(/verifywise/i));
 
-    if (await footer.first().isVisible().catch(() => false)) {
+    if (
+      await footer
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(footer.first()).toBeVisible();
     }
   });

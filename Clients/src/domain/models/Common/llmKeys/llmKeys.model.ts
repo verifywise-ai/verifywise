@@ -95,14 +95,14 @@ export class LLMKeysModel {
   ];
 
   static getAvailableProviders(): LLMProviderName[] {
-    return this.PROVIDER_CONFIGS.map(p => p.name);
+    return this.PROVIDER_CONFIGS.map((p) => p.name);
   }
 
   static getProviderConfig(name: LLMProviderName): LLMProviderConfig | undefined {
-    return this.PROVIDER_CONFIGS.find(p => p.name === name);
+    return this.PROVIDER_CONFIGS.find((p) => p.name === name);
   }
 
   static getProviderIdByName(name: LLMProviderName): LLMProviderId | undefined {
-    return this.PROVIDER_CONFIGS.find(p => p.name === name)?.id;
+    return this.PROVIDER_CONFIGS.find((p) => p.name === name)?.id;
   }
 }

@@ -86,7 +86,12 @@ const ButtonToggle = memo(function ButtonToggle({
   }, [activeIndex, options.length]);
 
   return (
-    <Box ref={containerRef} role="tablist" aria-label="Toggle options" sx={frameworkTabsContainerStyle(height)}>
+    <Box
+      ref={containerRef}
+      role="tablist"
+      aria-label="Toggle options"
+      sx={frameworkTabsContainerStyle(height)}
+    >
       {/* Sliding background */}
       <Box sx={getSliderStyle(sliderPosition)} />
 
@@ -94,7 +99,9 @@ const ButtonToggle = memo(function ButtonToggle({
       {options.map((option, index) => (
         <Box
           key={option.value}
-          ref={(el: HTMLDivElement | null) => { tabRefs.current[index] = el; }}
+          ref={(el: HTMLDivElement | null) => {
+            tabRefs.current[index] = el;
+          }}
           role="tab"
           aria-selected={option.value === value}
           tabIndex={option.value === value ? 0 : -1}

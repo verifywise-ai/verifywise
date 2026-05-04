@@ -1,11 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import {
-  Breadcrumbs as MUIBreadcrumbs,
-  Link,
-  Typography,
-  Stack,
-  useTheme,
-} from "@mui/material";
+import { Breadcrumbs as MUIBreadcrumbs, Link, Typography, Stack, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getRouteMapping, getRouteIcon } from "./routeMapping";
 
@@ -49,7 +43,7 @@ function Breadcrumbs({
       }
       return `${text.substring(0, maxLabelLength)}...`;
     },
-    [truncateLabels, maxLabelLength]
+    [truncateLabels, maxLabelLength],
   );
 
   /**
@@ -72,10 +66,11 @@ function Breadcrumbs({
     const breadcrumbs: BreadcrumbItemPresentation[] = [];
 
     // Add home item (skip for module pages that have their own root breadcrumb)
-    const skipHome = location.pathname.startsWith("/ai-gateway") ||
-                     location.pathname.startsWith("/evals") ||
-                     location.pathname.startsWith("/ai-detection") ||
-                     location.pathname.startsWith("/shadow-ai");
+    const skipHome =
+      location.pathname.startsWith("/ai-gateway") ||
+      location.pathname.startsWith("/evals") ||
+      location.pathname.startsWith("/ai-detection") ||
+      location.pathname.startsWith("/shadow-ai");
     if (!skipHome) {
       breadcrumbs.push({
         label: homeLabel,
@@ -116,14 +111,7 @@ function Breadcrumbs({
     });
 
     return breadcrumbs;
-  }, [
-    location.pathname,
-    autoGenerate,
-    homeLabel,
-    homePath,
-    showCurrentPage,
-    pathToLabel,
-  ]);
+  }, [location.pathname, autoGenerate, homeLabel, homePath, showCurrentPage, pathToLabel]);
 
   /**
    * Handle breadcrumb item click
@@ -146,7 +134,7 @@ function Breadcrumbs({
         navigate(item.path);
       }
     },
-    [navigate, onItemClick]
+    [navigate, onItemClick],
   );
 
   /**
@@ -164,36 +152,29 @@ function Breadcrumbs({
         <Typography
           variant="body2"
           component="span"
-          title={
-            isLabelTruncated || item.tooltip
-              ? item.tooltip || item.label
-              : undefined
-          }
+          title={isLabelTruncated || item.tooltip ? item.tooltip || item.label : undefined}
           sx={{
             fontSize: "13px",
             fontWeight: isLast ? 500 : 400,
             color: theme.palette.text.secondary,
             cursor: isDisabled ? "default" : "pointer",
             "&:hover": {
-              color: isDisabled
-                ? theme.palette.text.secondary
-                : theme.palette.primary.main,
+              color: isDisabled ? theme.palette.text.secondary : theme.palette.primary.main,
               backgroundColor: isDisabled
-                ? (theme.palette.mode === "dark"
+                ? theme.palette.mode === "dark"
                   ? "rgba(255, 255, 255, 0.06)"
-                  : "rgba(0, 0, 0, 0.04)")
-                : (theme.palette.mode === "dark"
+                  : "rgba(0, 0, 0, 0.04)"
+                : theme.palette.mode === "dark"
                   ? "rgba(255, 255, 255, 0.12)"
-                  : "rgba(0, 0, 0, 0.08)"),
+                  : "rgba(0, 0, 0, 0.08)",
             },
             transition: "color 0.2s ease, background-color 0.2s ease",
             textDecoration: "none",
             lineHeight: 1.2,
             display: "flex",
             alignItems: "center",
-            backgroundColor: theme.palette.mode === "dark"
-              ? "rgba(255, 255, 255, 0.06)"
-              : "rgba(0, 0, 0, 0.04)",
+            backgroundColor:
+              theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.04)",
             padding: "3px 10px",
             borderRadius: "4px",
             gap: "6px",
@@ -253,7 +234,7 @@ function Breadcrumbs({
         </Link>
       );
     },
-    [truncateText, handleItemClick, theme]
+    [truncateText, handleItemClick, theme],
   );
 
   const breadcrumbItems = items || generateBreadcrumbs;
@@ -294,7 +275,7 @@ function Breadcrumbs({
         }}
       >
         {breadcrumbItems.map((item, index) =>
-          renderBreadcrumbItem(item as BreadcrumbItemPresentation, index, breadcrumbItems.length)
+          renderBreadcrumbItem(item as BreadcrumbItemPresentation, index, breadcrumbItems.length),
         )}
       </MUIBreadcrumbs>
     </Stack>

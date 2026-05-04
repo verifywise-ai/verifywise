@@ -54,7 +54,13 @@ const ADMIN_ONLY = ["Admin"];
  * @body    { repository_url: string }
  * @rateLimit 30 requests per 15 minutes per IP
  */
-router.post("/scans", aiDetectionScanLimiter, authenticateJWT, authorize(WRITE_ROLES), startScanController);
+router.post(
+  "/scans",
+  aiDetectionScanLimiter,
+  authenticateJWT,
+  authorize(WRITE_ROLES),
+  startScanController,
+);
 
 /**
  * @route   GET /ai-detection/scans
@@ -92,7 +98,12 @@ router.get("/scans/:scanId/status", authenticateJWT, authorize(ALL_ROLES), getSc
  * @access  Private - All roles
  * @query   page, limit, confidence
  */
-router.get("/scans/:scanId/findings", authenticateJWT, authorize(ALL_ROLES), getScanFindingsController);
+router.get(
+  "/scans/:scanId/findings",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getScanFindingsController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/security-findings
@@ -100,14 +111,24 @@ router.get("/scans/:scanId/findings", authenticateJWT, authorize(ALL_ROLES), get
  * @access  Private - All roles
  * @query   page, limit, severity
  */
-router.get("/scans/:scanId/security-findings", authenticateJWT, authorize(ALL_ROLES), getSecurityFindingsController);
+router.get(
+  "/scans/:scanId/security-findings",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getSecurityFindingsController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/security-summary
  * @desc    Get security summary for a scan
  * @access  Private - All roles
  */
-router.get("/scans/:scanId/security-summary", authenticateJWT, authorize(ALL_ROLES), getSecuritySummaryController);
+router.get(
+  "/scans/:scanId/security-summary",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getSecuritySummaryController,
+);
 
 /**
  * @route   POST /ai-detection/scans/:scanId/cancel
@@ -129,14 +150,24 @@ router.delete("/scans/:scanId", authenticateJWT, authorize(ADMIN_ONLY), deleteSc
  * @access  Private - Admin, Editor
  * @body    { governance_status: "reviewed" | "approved" | "flagged" | null }
  */
-router.patch("/scans/:scanId/findings/:findingId/governance", authenticateJWT, authorize(WRITE_ROLES), updateGovernanceStatusController);
+router.patch(
+  "/scans/:scanId/findings/:findingId/governance",
+  authenticateJWT,
+  authorize(WRITE_ROLES),
+  updateGovernanceStatusController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/governance-summary
  * @desc    Get governance summary for a scan
  * @access  Private - All roles
  */
-router.get("/scans/:scanId/governance-summary", authenticateJWT, authorize(ALL_ROLES), getGovernanceSummaryController);
+router.get(
+  "/scans/:scanId/governance-summary",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getGovernanceSummaryController,
+);
 
 /**
  * @route   GET /ai-detection/stats
@@ -151,7 +182,12 @@ router.get("/stats", authenticateJWT, authorize(ALL_ROLES), getAIDetectionStatsC
  * @access  Private - All roles
  * @returns JSON file with AI-BOM format
  */
-router.get("/scans/:scanId/export/ai-bom", authenticateJWT, authorize(ALL_ROLES), exportAIBOMController);
+router.get(
+  "/scans/:scanId/export/ai-bom",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  exportAIBOMController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/dependency-graph
@@ -159,7 +195,12 @@ router.get("/scans/:scanId/export/ai-bom", authenticateJWT, authorize(ALL_ROLES)
  * @access  Private - All roles
  * @returns { nodes: DependencyGraphNode[], edges: DependencyGraphEdge[], metadata: {...} }
  */
-router.get("/scans/:scanId/dependency-graph", authenticateJWT, authorize(ALL_ROLES), getDependencyGraphController);
+router.get(
+  "/scans/:scanId/dependency-graph",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getDependencyGraphController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/compliance
@@ -167,34 +208,59 @@ router.get("/scans/:scanId/dependency-graph", authenticateJWT, authorize(ALL_ROL
  * @access  Private - All roles
  * @returns { mappings: [...], checklist: [...], summary: {...} }
  */
-router.get("/scans/:scanId/compliance", authenticateJWT, authorize(ALL_ROLES), getComplianceMappingController);
+router.get(
+  "/scans/:scanId/compliance",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getComplianceMappingController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/risk-score
  * @desc    Get risk score with dimension breakdown for a scan
  * @access  Private - All roles
  */
-router.get("/scans/:scanId/risk-score", authenticateJWT, authorize(ALL_ROLES), getRiskScoreController);
+router.get(
+  "/scans/:scanId/risk-score",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getRiskScoreController,
+);
 
 /**
  * @route   POST /ai-detection/scans/:scanId/risk-score/recalculate
  * @desc    Recalculate risk score for a completed scan
  * @access  Private - Admin, Editor
  */
-router.post("/scans/:scanId/risk-score/recalculate", authenticateJWT, authorize(WRITE_ROLES), recalculateRiskScoreController);
+router.post(
+  "/scans/:scanId/risk-score/recalculate",
+  authenticateJWT,
+  authorize(WRITE_ROLES),
+  recalculateRiskScoreController,
+);
 
 /**
  * @route   GET /ai-detection/risk-scoring/config
  * @desc    Get risk scoring configuration (weights, LLM settings)
  * @access  Private - All roles
  */
-router.get("/risk-scoring/config", authenticateJWT, authorize(ALL_ROLES), getRiskScoringConfigController);
+router.get(
+  "/risk-scoring/config",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  getRiskScoringConfigController,
+);
 
 /**
  * @route   PATCH /ai-detection/risk-scoring/config
  * @desc    Update risk scoring configuration
  * @access  Private - Admin only
  */
-router.patch("/risk-scoring/config", authenticateJWT, authorize(ADMIN_ONLY), updateRiskScoringConfigController);
+router.patch(
+  "/risk-scoring/config",
+  authenticateJWT,
+  authorize(ADMIN_ONLY),
+  updateRiskScoringConfigController,
+);
 
 export default router;

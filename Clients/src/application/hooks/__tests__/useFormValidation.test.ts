@@ -11,8 +11,8 @@ interface TestForm {
 
 describe("useFormValidation", () => {
   const validators = {
-    name: (v: unknown) => (v as string).length < 2 ? "Name too short" : "",
-    email: (v: unknown) => !(v as string).includes("@") ? "Invalid email" : "",
+    name: (v: unknown) => ((v as string).length < 2 ? "Name too short" : ""),
+    email: (v: unknown) => (!(v as string).includes("@") ? "Invalid email" : ""),
     confirmPassword: (v: unknown, values: TestForm) =>
       v !== values.password ? "Passwords must match" : "",
   };
@@ -28,7 +28,12 @@ describe("useFormValidation", () => {
     const { result } = renderHook(() => useFormValidation<TestForm>(validators));
 
     act(() => {
-      result.current.validateField("name", "a", { name: "a", email: "", confirmPassword: "", password: "" });
+      result.current.validateField("name", "a", {
+        name: "a",
+        email: "",
+        confirmPassword: "",
+        password: "",
+      });
     });
 
     expect(result.current.errors.name).toBe("Name too short");
@@ -39,10 +44,20 @@ describe("useFormValidation", () => {
     const { result } = renderHook(() => useFormValidation<TestForm>(validators));
 
     act(() => {
-      result.current.validateField("name", "a", { name: "a", email: "", confirmPassword: "", password: "" });
+      result.current.validateField("name", "a", {
+        name: "a",
+        email: "",
+        confirmPassword: "",
+        password: "",
+      });
     });
     act(() => {
-      result.current.validateField("name", "Alice", { name: "Alice", email: "", confirmPassword: "", password: "" });
+      result.current.validateField("name", "Alice", {
+        name: "Alice",
+        email: "",
+        confirmPassword: "",
+        password: "",
+      });
     });
 
     expect(result.current.errors.name).toBe("");
@@ -53,7 +68,12 @@ describe("useFormValidation", () => {
     const { result } = renderHook(() => useFormValidation<TestForm>(validators));
 
     act(() => {
-      result.current.validateField("name", "x", { name: "x", email: "", confirmPassword: "", password: "" });
+      result.current.validateField("name", "x", {
+        name: "x",
+        email: "",
+        confirmPassword: "",
+        password: "",
+      });
     });
     act(() => {
       result.current.clearFieldError("name");

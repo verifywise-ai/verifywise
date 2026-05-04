@@ -47,14 +47,7 @@ const mockPolicies = [
   },
 ];
 
-const mockTags = [
-  "gdpr",
-  "ccpa",
-  "hipaa",
-  "iso-27001",
-  "data-protection",
-  "security",
-];
+const mockTags = ["gdpr", "ccpa", "hipaa", "iso-27001", "data-protection", "security"];
 
 const mockPolicyInput: PolicyInput = {
   title: "New Policy",
@@ -231,9 +224,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to fetch policy with ID 1",
-        );
+        expect((err as APIError).message).toContain("Failed to fetch policy with ID 1");
       }
     });
 
@@ -249,9 +240,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to fetch policy with ID 999",
-        );
+        expect((err as APIError).message).toContain("Failed to fetch policy with ID 999");
       }
     });
 
@@ -275,10 +264,7 @@ describe("policy.repository", () => {
 
       const result = await createPolicy(mockPolicyInput);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/policies",
-        mockPolicyInput,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/policies", mockPolicyInput);
       expect(result).toEqual(mockPolicy);
     });
 
@@ -355,10 +341,7 @@ describe("policy.repository", () => {
 
       const result = await updatePolicy(1, mockPolicyInput);
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/policies/1",
-        mockPolicyInput,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/policies/1", mockPolicyInput);
       expect(result).toEqual(updatedPolicy);
     });
 
@@ -390,9 +373,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to update policy with ID 1",
-        );
+        expect((err as APIError).message).toContain("Failed to update policy with ID 1");
       }
     });
 
@@ -408,9 +389,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to update policy with ID 999",
-        );
+        expect((err as APIError).message).toContain("Failed to update policy with ID 999");
       }
     });
 
@@ -474,9 +453,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to delete policy with ID 1",
-        );
+        expect((err as APIError).message).toContain("Failed to delete policy with ID 1");
       }
     });
 
@@ -492,9 +469,7 @@ describe("policy.repository", () => {
         expect.fail("Should have thrown APIError");
       } catch (err) {
         expect(err).toBeInstanceOf(APIError);
-        expect((err as APIError).message).toContain(
-          "Failed to delete policy with ID 999",
-        );
+        expect((err as APIError).message).toContain("Failed to delete policy with ID 999");
       }
     });
 

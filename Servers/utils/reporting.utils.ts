@@ -42,7 +42,7 @@ export const getProjectRisksReportQuery = async (projectId: number, organization
 
 export const getMembersByProjectIdQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IProjectsMembers[]> => {
   const members = await sequelize.query(
     `SELECT * FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
@@ -50,7 +50,7 @@ export const getMembersByProjectIdQuery = async (
       replacements: { project_id: projectId, organizationId },
       mapToModel: true,
       model: ProjectsMembersModel,
-    }
+    },
   );
   return members;
 };
@@ -61,11 +61,10 @@ interface GetGeneratedReportsOptions {
   transaction?: Transaction;
 }
 
-export const getGeneratedReportsQuery = async ({
-  userId,
-  role,
-  transaction,
-}: GetGeneratedReportsOptions, organizationId: number) => {
+export const getGeneratedReportsQuery = async (
+  { userId, role, transaction }: GetGeneratedReportsOptions,
+  organizationId: number,
+) => {
   const validSources = [
     "Project risks report",
     "Compliance tracker report",
@@ -96,12 +95,15 @@ export const getGeneratedReportsQuery = async ({
     JOIN users u ON report.uploaded_by = u.id`,
   ];
 
-  const whereConditions = [`report.organization_id = :organizationId`, `report.source IN (:sources)`];
+  const whereConditions = [
+    `report.organization_id = :organizationId`,
+    `report.source IN (:sources)`,
+  ];
   const replacements: any = { sources: validSources, organizationId };
 
   if (!isAdmin) {
     baseQueryParts.push(
-      `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`
+      `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
     );
     whereConditions.push(`(p.owner = :userId OR pm.user_id = :userId)`);
     replacements.userId = userId;
@@ -123,7 +125,7 @@ export const getGeneratedReportsQuery = async ({
 export const deleteReportByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Clean up any virtual folder mappings for this file
   await sequelize.query(
@@ -131,7 +133,7 @@ export const deleteReportByIdQuery = async (
     {
       replacements: { id, organizationId },
       transaction,
-    }
+    },
   );
 
   const result = await sequelize.query(
@@ -142,31 +144,34 @@ export const deleteReportByIdQuery = async (
       model: FileModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
 
   return result.length > 0;
 };
 
 export const getReportByIdQuery = async (id: number, organizationId: number) => {
-  const result = await sequelize.query(`SELECT * FROM files WHERE organization_id = :organizationId AND id = :id`, {
-    replacements: { id, organizationId },
-    mapToModel: true,
-    model: FileModel,
-  });
+  const result = await sequelize.query(
+    `SELECT * FROM files WHERE organization_id = :organizationId AND id = :id`,
+    {
+      replacements: { id, organizationId },
+      mapToModel: true,
+      model: FileModel,
+    },
+  );
   return result[0];
 };
 
 export const getAssessmentReportQuery = async (
   projectId: number,
   frameworkId: number,
-  organizationId: number
+  organizationId: number,
 ) => {
   const projectFrameworkIdQuery = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = :framework_id`,
     {
       replacements: { project_id: projectId, framework_id: frameworkId, organizationId },
-    }
+    },
   )) as [{ id: number }[], number];
   const projectFrameworkId = projectFrameworkIdQuery[0][0]?.id;
   if (!projectFrameworkId) {
@@ -176,7 +181,7 @@ export const getAssessmentReportQuery = async (
     `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
     {
       replacements: { projects_frameworks_id: projectFrameworkId, organizationId },
-    }
+    },
   )) as [{ id: number }[], number];
 
   const assessmentIdValue = assessmentId[0]?.[0]?.id;
@@ -192,19 +197,15 @@ export const getAssessmentReportQuery = async (
               const questionAnswers = await getAllQuestionsQuery(
                 subtopic.id!,
                 assessmentIdValue,
-                organizationId
+                organizationId,
               );
-              (subtopic.dataValues as any).questions = questionAnswers.map(
-                (q) => ({ ...q })
-              );
+              (subtopic.dataValues as any).questions = questionAnswers.map((q) => ({ ...q }));
             }
-          })
+          }),
         );
-        (topic.dataValues as any).subtopics = subtopicStruct.map((s) =>
-          s.get({ plain: true })
-        );
+        (topic.dataValues as any).subtopics = subtopicStruct.map((s) => s.get({ plain: true }));
       }
-    })
+    }),
   );
   const allAssessments = allTopics.map((topic) => topic.get({ plain: true }));
   return allAssessments;
@@ -213,22 +214,19 @@ export const getAssessmentReportQuery = async (
 export const getAnnexesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const annexes = (await sequelize.query(
-    `SELECT * FROM annex_struct_iso ORDER BY id;`,
-    {
-      mapToModel: true,
-      ...(transaction ? { transaction } : {}),
-    }
-  )) as [AnnexStructISOModel[], number];
+  const annexes = (await sequelize.query(`SELECT * FROM annex_struct_iso ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [AnnexStructISOModel[], number];
 
   for (const annex of annexes[0]) {
     const annexCategories = await annexCategoriesQuery(
       projectFrameworkId,
       annex.id,
       organizationId,
-      transaction
+      transaction,
     );
     (annex as any).annexCategories = annexCategories;
   }
@@ -239,7 +237,7 @@ export const annexCategoriesQuery = async (
   projectFrameworkId: number,
   annexId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const annexCategories = await sequelize.query(
     `SELECT acs.id, acs.title, acs.description, acs.order_no, ac.status, ac.is_applicable, ac.justification_for_exclusion, ac.implementation_description
@@ -255,13 +253,16 @@ export const annexCategoriesQuery = async (
       },
       type: QueryTypes.SELECT,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return annexCategories;
 };
 
-export const getComplianceReportQuery = async (projectFrameworkId: number, organizationId: number) => {
+export const getComplianceReportQuery = async (
+  projectFrameworkId: number,
+  organizationId: number,
+) => {
   const compliances = await getComplianceEUByProjectIdQuery(projectFrameworkId, organizationId);
   return compliances;
 };
@@ -269,22 +270,19 @@ export const getComplianceReportQuery = async (projectFrameworkId: number, organ
 export const getClausesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const clauses = (await sequelize.query(
-    `SELECT * FROM clauses_struct_iso ORDER BY id;`,
-    {
-      mapToModel: true,
-      ...(transaction ? { transaction } : {}),
-    }
-  )) as [ClauseStructISOModel[], number];
+  const clauses = (await sequelize.query(`SELECT * FROM clauses_struct_iso ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ClauseStructISOModel[], number];
 
   for (const clause of clauses[0]) {
     const subClauses = await subClausesQuery(
       projectFrameworkId,
       clause.id,
       organizationId,
-      transaction
+      transaction,
     );
     (clause as any).subClauses = subClauses;
   }
@@ -295,7 +293,7 @@ export const subClausesQuery = async (
   projectFrameworkId: number,
   clauseId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   return await sequelize.query(
     `SELECT scs.id, scs.title, scs.order_no, scs.summary, sc.status, sc.implementation_description
@@ -311,6 +309,6 @@ export const subClausesQuery = async (
       },
       type: QueryTypes.SELECT,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 };

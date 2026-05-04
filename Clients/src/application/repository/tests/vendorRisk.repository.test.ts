@@ -138,7 +138,9 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getVendorRisksByProjectId({ projectId: 1 })).rejects.toThrow("Connection refused");
+      await expect(getVendorRisksByProjectId({ projectId: 1 })).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 
@@ -302,7 +304,9 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateVendorRisk({ id: 1, body: { name: "Test" } })).rejects.toThrow("Connection refused");
+      await expect(updateVendorRisk({ id: 1, body: { name: "Test" } })).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 

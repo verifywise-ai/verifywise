@@ -13,14 +13,10 @@ test.describe("Model Inventory", () => {
     await expect(page).toHaveURL(/\/model-inventory/);
 
     // Page should show model-related content or empty state
-    await expect(
-      page.getByText(/model/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/model/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/model-inventory");
     await page.waitForLoadState("domcontentloaded");
 
@@ -57,15 +53,18 @@ test.describe("Model Inventory", () => {
 
   // --- Tier 2: Search & Filter ---
 
-  test("search box accepts input and filters results", async ({
-    authedPage: page,
-  }) => {
+  test("search box accepts input and filters results", async ({ authedPage: page }) => {
     await page.goto("/model-inventory");
     const searchInput = page
       .getByPlaceholder(/search/i)
       .or(page.locator('[data-testid="search-input"]'));
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-model");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -75,16 +74,19 @@ test.describe("Model Inventory", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Add model button opens and closes modal", async ({
-    authedPage: page,
-  }) => {
+  test("Add model button opens and closes modal", async ({ authedPage: page }) => {
     await page.goto("/model-inventory");
     const addBtn = page
       .locator('[data-joyride-id="add-model-button"]')
       .or(page.getByRole("button", { name: /add.*model/i }))
       .or(page.getByRole("button", { name: /new.*model/i }));
 
-    if (await addBtn.first().isVisible().catch(() => false)) {
+    if (
+      await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await addBtn.first().click();
       // Verify modal content appears
       await expect(
@@ -94,7 +96,7 @@ test.describe("Model Inventory", () => {
           .or(page.getByText(/create model/i))
           .or(page.getByRole("dialog"))
           .or(page.locator(".MuiDrawer-root"))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -112,7 +114,12 @@ test.describe("Model Inventory", () => {
       .or(page.getByRole("button", { name: /add.*model/i }))
       .or(page.getByRole("button", { name: /new.*model/i }));
 
-    if (!(await addBtn.first().isVisible().catch(() => false))) {
+    if (
+      !(await addBtn
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -130,7 +137,12 @@ test.describe("Model Inventory", () => {
     const versionInput = page
       .getByRole("textbox", { name: /version/i })
       .or(page.getByPlaceholder(/version/i));
-    if (await versionInput.first().isVisible().catch(() => false)) {
+    if (
+      await versionInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await versionInput.first().fill("1.0");
     }
 
@@ -138,20 +150,28 @@ test.describe("Model Inventory", () => {
     const providerInput = page
       .getByRole("textbox", { name: /provider/i })
       .or(page.getByPlaceholder(/provider/i));
-    if (await providerInput.first().isVisible().catch(() => false)) {
+    if (
+      await providerInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await providerInput.first().fill("E2E Provider");
     }
 
     // Submit
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
     // Verify: Search for the created model
     const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill(modelName);
       await page.waitForTimeout(500);
     }
@@ -161,17 +181,32 @@ test.describe("Model Inventory", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
       const deleteBtn = page.getByRole("menuitem", {
         name: /delete|archive|remove/i,
       });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);
@@ -188,10 +223,7 @@ test.describe("Model Inventory", () => {
       await page.goto("/model-inventory");
 
       // Click on a model row to navigate to detail
-      const modelRow = page
-        .getByRole("row")
-        .nth(1)
-        .or(page.locator("tr").nth(1));
+      const modelRow = page.getByRole("row").nth(1).or(page.locator("tr").nth(1));
 
       if (!(await modelRow.isVisible().catch(() => false))) {
         test.skip();
@@ -206,7 +238,12 @@ test.describe("Model Inventory", () => {
         .or(page.locator('[aria-label*="share" i]'))
         .or(page.locator('[data-testid*="share"]'));
 
-      if (await shareBtn.first().isVisible().catch(() => false)) {
+      if (
+        await shareBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await shareBtn.first().click();
         await page.waitForTimeout(500);
 
@@ -236,7 +273,12 @@ test.describe("Model Inventory", () => {
         .getByRole("button", { name: /share/i })
         .or(page.locator('[aria-label*="share" i]'));
 
-      if (!(await shareBtn.first().isVisible().catch(() => false))) {
+      if (
+        !(await shareBtn
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         test.skip();
         return;
       }
@@ -247,8 +289,16 @@ test.describe("Model Inventory", () => {
       const toggle = page
         .getByRole("switch")
         .or(page.getByRole("checkbox", { name: /enable|share/i }));
-      if (await toggle.first().isVisible().catch(() => false)) {
-        const isChecked = await toggle.first().isChecked().catch(() => false);
+      if (
+        await toggle
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        const isChecked = await toggle
+          .first()
+          .isChecked()
+          .catch(() => false);
         if (!isChecked) {
           await toggle.first().click();
           await page.waitForTimeout(1000);
@@ -256,12 +306,20 @@ test.describe("Model Inventory", () => {
 
         // Verify link input field appears with URL content
         const linkInput = page
-          .locator('input[readonly]')
+          .locator("input[readonly]")
           .or(page.locator('input[type="text"]'))
           .or(page.getByRole("textbox"));
 
-        if (await linkInput.first().isVisible().catch(() => false)) {
-          const linkValue = await linkInput.first().inputValue().catch(() => "");
+        if (
+          await linkInput
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
+          const linkValue = await linkInput
+            .first()
+            .inputValue()
+            .catch(() => "");
           if (linkValue) {
             expect(linkValue).toContain("/");
           }
@@ -271,9 +329,7 @@ test.describe("Model Inventory", () => {
       await page.keyboard.press("Escape");
     });
 
-    test("copy link button copies to clipboard", async ({
-      authedPage: page,
-    }) => {
+    test("copy link button copies to clipboard", async ({ authedPage: page }) => {
       await page.goto("/model-inventory");
 
       const modelRow = page.getByRole("row").nth(1);
@@ -288,7 +344,12 @@ test.describe("Model Inventory", () => {
         .getByRole("button", { name: /share/i })
         .or(page.locator('[aria-label*="share" i]'));
 
-      if (!(await shareBtn.first().isVisible().catch(() => false))) {
+      if (
+        !(await shareBtn
+          .first()
+          .isVisible()
+          .catch(() => false))
+      ) {
         test.skip();
         return;
       }
@@ -300,16 +361,24 @@ test.describe("Model Inventory", () => {
         .getByRole("button", { name: /copy/i })
         .or(page.locator('[aria-label*="copy" i]'));
 
-      if (await copyBtn.first().isVisible().catch(() => false)) {
+      if (
+        await copyBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         // Grant clipboard permission and click copy
         await copyBtn.first().click();
         await page.waitForTimeout(500);
 
         // Verify some visual feedback (tooltip, snackbar, or icon change)
-        const feedback = page
-          .getByText(/copied/i)
-          .or(page.getByRole("alert"));
-        if (await feedback.first().isVisible().catch(() => false)) {
+        const feedback = page.getByText(/copied/i).or(page.getByRole("alert"));
+        if (
+          await feedback
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await expect(feedback.first()).toBeVisible();
         }
       }
@@ -321,15 +390,10 @@ test.describe("Model Inventory", () => {
   // --- Tier 5: Model lifecycle detail ---
 
   test.describe("Model Lifecycle Detail", () => {
-    test("clicking a model row navigates to detail page", async ({
-      authedPage: page,
-    }) => {
+    test("clicking a model row navigates to detail page", async ({ authedPage: page }) => {
       await page.goto("/model-inventory");
 
-      const modelRow = page
-        .getByRole("row")
-        .nth(1)
-        .or(page.locator("tr").nth(1));
+      const modelRow = page.getByRole("row").nth(1).or(page.locator("tr").nth(1));
 
       if (!(await modelRow.isVisible().catch(() => false))) {
         test.skip();
@@ -340,17 +404,14 @@ test.describe("Model Inventory", () => {
 
       // Should navigate to a model detail page
       const isDetailPage =
-        page.url().includes("/model-inventory/models/") ||
-        page.url().includes("/model-inventory/");
+        page.url().includes("/model-inventory/models/") || page.url().includes("/model-inventory/");
 
       if (isDetailPage) {
         await expect(page.locator("body")).not.toBeEmpty();
       }
     });
 
-    test("model detail page shows tabs or sections", async ({
-      authedPage: page,
-    }) => {
+    test("model detail page shows tabs or sections", async ({ authedPage: page }) => {
       await page.goto("/model-inventory");
 
       const modelRow = page.getByRole("row").nth(1);
@@ -370,7 +431,12 @@ test.describe("Model Inventory", () => {
         .or(page.getByText(/risk/i))
         .or(page.getByRole("heading"));
 
-      if (await sections.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      if (
+        await sections
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false)
+      ) {
         await expect(sections.first()).toBeVisible();
       }
     });
@@ -385,7 +451,12 @@ test.describe("Model Inventory", () => {
         .or(page.getByText(/no.*risk/i))
         .or(page.getByRole("heading"));
 
-      if (await content.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      if (
+        await content
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false)
+      ) {
         await expect(content.first()).toBeVisible();
       }
     });

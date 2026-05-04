@@ -18,7 +18,7 @@ export class ISO27001SubClauseStructModel {
   }
 
   static createNewISO27001SubClauseStruct(
-    data: ISO27001SubClauseStructModel
+    data: ISO27001SubClauseStructModel,
   ): ISO27001SubClauseStructModel {
     return new ISO27001SubClauseStructModel(data);
   }

@@ -53,9 +53,7 @@ const SUBMISSION_SELECT_COLUMNS = `
 /**
  * Get all intake forms for an organization
  */
-export const getAllIntakeFormsQuery = async (
-  organizationId: number
-): Promise<IIntakeForm[]> => {
+export const getAllIntakeFormsQuery = async (organizationId: number): Promise<IIntakeForm[]> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
     FROM intake_forms
@@ -64,7 +62,7 @@ export const getAllIntakeFormsQuery = async (
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return forms as IIntakeForm[];
 };
@@ -74,7 +72,7 @@ export const getAllIntakeFormsQuery = async (
  */
 export const getIntakeFormByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
@@ -83,7 +81,7 @@ export const getIntakeFormByIdQuery = async (
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return forms.length > 0 ? (forms[0] as IIntakeForm) : null;
 };
@@ -93,7 +91,7 @@ export const getIntakeFormByIdQuery = async (
  */
 export const getIntakeFormBySlugQuery = async (
   slug: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT ${FORM_SELECT_COLUMNS}
@@ -102,7 +100,7 @@ export const getIntakeFormBySlugQuery = async (
     {
       replacements: { organizationId, slug },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return forms.length > 0 ? (forms[0] as IIntakeForm) : null;
 };
@@ -112,7 +110,7 @@ export const getIntakeFormBySlugQuery = async (
  */
 export const getActivePublicFormQuery = async (
   slug: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPublicIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT
@@ -128,7 +126,7 @@ export const getActivePublicFormQuery = async (
     {
       replacements: { organizationId, slug, status: IntakeFormStatus.ACTIVE },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return forms.length > 0 ? (forms[0] as IPublicIntakeForm) : null;
 };
@@ -138,7 +136,7 @@ export const getActivePublicFormQuery = async (
  */
 export const getFormByPublicIdQuery = async (
   publicId: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPublicIntakeForm | null> => {
   const forms = await sequelize.query(
     `SELECT
@@ -154,7 +152,7 @@ export const getFormByPublicIdQuery = async (
     {
       replacements: { organizationId, publicId, status: IntakeFormStatus.ACTIVE },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return forms.length > 0 ? (forms[0] as IPublicIntakeForm) : null;
 };
@@ -165,7 +163,7 @@ export const getFormByPublicIdQuery = async (
 export const createIntakeFormQuery = async (
   data: ICreateIntakeFormInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeForm> => {
   const slug = data.slug || generateSlug(data.name);
   const uniqueSlug = await ensureUniqueSlug(slug, organizationId, transaction);
@@ -200,14 +198,12 @@ export const createIntakeFormQuery = async (
           : null,
         llmKeyId: data.llmKeyId || null,
         suggestedQuestionsEnabled: data.suggestedQuestionsEnabled || false,
-        designSettings: data.designSettings
-          ? JSON.stringify(data.designSettings)
-          : null,
+        designSettings: data.designSettings ? JSON.stringify(data.designSettings) : null,
         createdBy: data.createdBy,
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result[0] as IIntakeForm;
@@ -220,7 +216,7 @@ export const updateIntakeFormQuery = async (
   id: number,
   data: IUpdateIntakeFormInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeForm | null> => {
   const updates: string[] = [];
   const replacements: Record<string, unknown> = { organizationId, id };
@@ -280,9 +276,7 @@ export const updateIntakeFormQuery = async (
   }
   if (data.designSettings !== undefined) {
     updates.push("design_settings = :designSettings");
-    replacements.designSettings = data.designSettings
-      ? JSON.stringify(data.designSettings)
-      : null;
+    replacements.designSettings = data.designSettings ? JSON.stringify(data.designSettings) : null;
   }
 
   if (updates.length === 0) {
@@ -300,7 +294,7 @@ export const updateIntakeFormQuery = async (
       replacements,
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0 ? (result[0] as IIntakeForm) : null;
@@ -312,7 +306,7 @@ export const updateIntakeFormQuery = async (
 export const deleteIntakeFormQuery = async (
   id: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM intake_forms
@@ -325,7 +319,7 @@ export const deleteIntakeFormQuery = async (
         archived: IntakeFormStatus.ARCHIVED,
       },
       transaction,
-    }
+    },
   );
   const rowCount = (result as any)[1] ?? 0;
   return rowCount > 0;
@@ -337,13 +331,13 @@ export const deleteIntakeFormQuery = async (
 export const archiveIntakeFormQuery = async (
   id: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeForm | null> => {
   return updateIntakeFormQuery(
     id,
     { status: IntakeFormStatus.ARCHIVED },
     organizationId,
-    transaction
+    transaction,
   );
 };
 
@@ -352,7 +346,7 @@ export const archiveIntakeFormQuery = async (
  */
 export const archiveExpiredFormsQuery = async (
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> => {
   const result = await sequelize.query(
     `UPDATE intake_forms
@@ -369,7 +363,7 @@ export const archiveExpiredFormsQuery = async (
       },
       type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   );
   return result[1]; // Number of affected rows
 };
@@ -386,7 +380,7 @@ export const getSubmissionsByFormIdQuery = async (
   organizationId: number,
   status?: IntakeSubmissionStatus,
   limit: number = 200,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<IIntakeSubmission[]> => {
   let query = `SELECT ${SUBMISSION_SELECT_COLUMNS}
   FROM intake_submissions
@@ -414,7 +408,7 @@ export const getSubmissionsByFormIdQuery = async (
  */
 export const getPendingSubmissionsQuery = async (
   organizationId: number,
-  status?: IntakeSubmissionStatus
+  status?: IntakeSubmissionStatus,
 ): Promise<IIntakeSubmission[]> => {
   const statusFilter = status ? "AND s.status = :status" : "";
   const submissions = await sequelize.query(
@@ -438,7 +432,7 @@ export const getPendingSubmissionsQuery = async (
     {
       replacements: status ? { organizationId, status } : { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return submissions as IIntakeSubmission[];
@@ -451,7 +445,7 @@ export const getSubmissionByIdQuery = async (
   id: number,
   organizationId: number,
   transaction?: Transaction,
-  forUpdate?: boolean
+  forUpdate?: boolean,
 ): Promise<IIntakeSubmission | null> => {
   const lock = forUpdate ? " FOR UPDATE" : "";
   const submissions = await sequelize.query(
@@ -462,7 +456,7 @@ export const getSubmissionByIdQuery = async (
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return submissions.length > 0 ? (submissions[0] as IIntakeSubmission) : null;
@@ -474,7 +468,7 @@ export const getSubmissionByIdQuery = async (
 export const createSubmissionQuery = async (
   data: ICreateIntakeSubmissionInput,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeSubmission> => {
   // Use atomic subquery for resubmission count to avoid read-then-write race condition
   const resubmissionCountExpr = data.originalSubmissionId
@@ -503,7 +497,7 @@ export const createSubmissionQuery = async (
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   // Supersede the original submission when this is a resubmission
@@ -523,7 +517,7 @@ export const createSubmissionQuery = async (
         },
         type: QueryTypes.UPDATE,
         transaction,
-      }
+      },
     );
   }
 
@@ -538,7 +532,7 @@ export const approveSubmissionQuery = async (
   entityId: number,
   reviewedBy: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeSubmission | null> => {
   const result = await sequelize.query(
     `UPDATE intake_submissions
@@ -556,7 +550,7 @@ export const approveSubmissionQuery = async (
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0 ? (result[0] as IIntakeSubmission) : null;
@@ -570,7 +564,7 @@ export const rejectSubmissionQuery = async (
   rejectionReason: string,
   reviewedBy: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IIntakeSubmission | null> => {
   const result = await sequelize.query(
     `UPDATE intake_submissions
@@ -588,7 +582,7 @@ export const rejectSubmissionQuery = async (
       },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   );
 
   return result.length > 0 ? (result[0] as IIntakeSubmission) : null;
@@ -601,7 +595,7 @@ export const updateSubmissionRiskQuery = async (
   id: number,
   riskResult: IRiskAssessment,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE intake_submissions
@@ -616,7 +610,7 @@ export const updateSubmissionRiskQuery = async (
       },
       type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   );
 };
 
@@ -627,7 +621,7 @@ export const updateSubmissionRiskOverrideQuery = async (
   id: number,
   override: IRiskOverride,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE intake_submissions
@@ -642,7 +636,7 @@ export const updateSubmissionRiskOverrideQuery = async (
       },
       type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   );
 };
 
@@ -650,7 +644,7 @@ export const updateSubmissionRiskOverrideQuery = async (
  * Get submission stats for dashboard
  */
 export const getSubmissionStatsQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<IIntakeSubmissionStats> => {
   const result = await sequelize.query(
     `SELECT
@@ -670,7 +664,7 @@ export const getSubmissionStatsQuery = async (
         superseded: IntakeSubmissionStatus.SUPERSEDED,
       },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const stats = result[0] as any;
@@ -690,7 +684,7 @@ export const getSubmissionStatsQuery = async (
 export const getSubmissionByEntityQuery = async (
   entityType: string,
   entityId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   submission: IIntakeSubmission;
   formName: string;
@@ -725,7 +719,7 @@ export const getSubmissionByEntityQuery = async (
         status: IntakeSubmissionStatus.APPROVED,
       },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   if (results.length === 0) return null;
@@ -773,7 +767,7 @@ export const getSubmissionByEntityQuery = async (
  */
 export const checkRateLimitQuery = async (
   ipAddress: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `SELECT COUNT(*) as count
@@ -784,7 +778,7 @@ export const checkRateLimitQuery = async (
     {
       replacements: { organizationId, ipAddress },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   const count = parseInt((result[0] as any).count, 10) || 0;
@@ -814,7 +808,7 @@ export async function ensureUniqueSlug(
   slug: string,
   organizationId: number,
   transaction?: Transaction,
-  excludeId?: number
+  excludeId?: number,
 ): Promise<string> {
   let uniqueSlug = slug;
   let counter = 1;
@@ -853,16 +847,11 @@ export async function ensureUniqueSlug(
 /**
  * Get tenant slug from organization ID
  */
-export async function getTenantSlugById(
-  organizationId: number
-): Promise<string | null> {
-  const result = await sequelize.query(
-    `SELECT slug FROM organizations WHERE id = :id`,
-    {
-      replacements: { id: organizationId },
-      type: QueryTypes.SELECT,
-    }
-  );
+export async function getTenantSlugById(organizationId: number): Promise<string | null> {
+  const result = await sequelize.query(`SELECT slug FROM organizations WHERE id = :id`, {
+    replacements: { id: organizationId },
+    type: QueryTypes.SELECT,
+  });
 
   return result.length > 0 ? (result[0] as any).slug : null;
 }
@@ -871,15 +860,12 @@ export async function getTenantSlugById(
  * Get organization ID from organization slug
  */
 export async function getTenantHashBySlug(
-  slug: string
+  slug: string,
 ): Promise<{ id: number; hash: string } | null> {
-  const result = await sequelize.query(
-    `SELECT id FROM organizations WHERE slug = :slug`,
-    {
-      replacements: { slug },
-      type: QueryTypes.SELECT,
-    }
-  );
+  const result = await sequelize.query(`SELECT id FROM organizations WHERE slug = :slug`, {
+    replacements: { slug },
+    type: QueryTypes.SELECT,
+  });
 
   if (result.length === 0) {
     return null;
@@ -893,17 +879,14 @@ export async function getTenantHashBySlug(
  * Get users by IDs (for per-form recipients)
  */
 export async function getUsersByIds(
-  userIds: number[]
+  userIds: number[],
 ): Promise<Array<{ id: number; name: string; email: string }>> {
   if (!userIds || userIds.length === 0) return [];
 
-  const result = await sequelize.query(
-    `SELECT id, name, email FROM users WHERE id = ANY(:ids)`,
-    {
-      replacements: { ids: userIds },
-      type: QueryTypes.SELECT,
-    }
-  );
+  const result = await sequelize.query(`SELECT id, name, email FROM users WHERE id = ANY(:ids)`, {
+    replacements: { ids: userIds },
+    type: QueryTypes.SELECT,
+  });
 
   return result as Array<{ id: number; name: string; email: string }>;
 }
@@ -912,17 +895,17 @@ export async function getUsersByIds(
  * Resolve organization from publicId — direct lookup in shared intake_forms table.
  */
 export async function getOrganizationByPublicId(
-  publicId: string
+  publicId: string,
 ): Promise<{ orgId: number } | null> {
   // Validate publicId format (8 or 16 char hex string) to prevent injection
   if (!/^[a-f0-9]{8,16}$/i.test(publicId)) {
     return null;
   }
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT organization_id as org_id FROM intake_forms WHERE public_id = :publicId LIMIT 1`,
-    { replacements: { publicId }, type: QueryTypes.SELECT }
-  ) as Array<{ org_id: number }>;
+    { replacements: { publicId }, type: QueryTypes.SELECT },
+  )) as Array<{ org_id: number }>;
 
   if (result.length > 0) {
     return { orgId: result[0].org_id };
@@ -935,7 +918,7 @@ export async function getOrganizationByPublicId(
  * @deprecated Use getOrganizationByPublicId instead. Maintained for backward compatibility.
  */
 export async function getTenantByPublicId(
-  publicId: string
+  publicId: string,
 ): Promise<{ tenantHash: string; orgId: number } | null> {
   const result = await getOrganizationByPublicId(publicId);
   if (!result) return null;

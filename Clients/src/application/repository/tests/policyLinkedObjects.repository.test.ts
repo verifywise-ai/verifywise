@@ -45,23 +45,17 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: mockLinkedObject };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/5/linked-objects",
-        {
-          linkedEntityType: "vendor",
-          linkedEntityId: 10,
-          relationship: "compliant_with",
-        },
-      );
+      const result = await createPolicyLinkedObjects("/policies/5/linked-objects", {
+        linkedEntityType: "vendor",
+        linkedEntityId: 10,
+        relationship: "compliant_with",
+      });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/policies/5/linked-objects",
-        {
-          linkedEntityType: "vendor",
-          linkedEntityId: 10,
-          relationship: "compliant_with",
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/policies/5/linked-objects", {
+        linkedEntityType: "vendor",
+        linkedEntityId: 10,
+        relationship: "compliant_with",
+      });
       expect(result).toEqual(mockLinkedObject);
     });
 
@@ -70,12 +64,9 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: responseData };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/1/linked-objects",
-        {
-          type: "vendor",
-        },
-      );
+      const result = await createPolicyLinkedObjects("/policies/1/linked-objects", {
+        type: "vendor",
+      });
 
       expect(result).toEqual(responseData);
     });
@@ -107,10 +98,7 @@ describe("policyLinkedObjects.repository", () => {
 
       await createPolicyLinkedObjects("/policies/5/linked-objects", inputData);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/policies/5/linked-objects",
-        inputData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/policies/5/linked-objects", inputData);
     });
 
     it("should handle nested data structures", async () => {
@@ -126,15 +114,9 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: { ...mockLinkedObject, ...nestedData } };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/5/linked-objects",
-        nestedData,
-      );
+      const result = await createPolicyLinkedObjects("/policies/5/linked-objects", nestedData);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/policies/5/linked-objects",
-        nestedData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/policies/5/linked-objects", nestedData);
       expect(result).toEqual(expect.objectContaining(nestedData));
     });
 
@@ -142,12 +124,9 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: mockLinkedObjects };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/5/linked-objects/batch",
-        {
-          linkedObjects: mockLinkedObjects,
-        },
-      );
+      const result = await createPolicyLinkedObjects("/policies/5/linked-objects/batch", {
+        linkedObjects: mockLinkedObjects,
+      });
 
       expect(result).toEqual(mockLinkedObjects);
       expect(Array.isArray(result)).toBe(true);
@@ -157,9 +136,9 @@ describe("policyLinkedObjects.repository", () => {
       const error = new Error("Network error");
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/5/linked-objects", {}),
-      ).rejects.toThrow("Network error");
+      await expect(createPolicyLinkedObjects("/policies/5/linked-objects", {})).rejects.toThrow(
+        "Network error",
+      );
     });
 
     it("should handle 400 bad request error", async () => {
@@ -169,9 +148,9 @@ describe("policyLinkedObjects.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/5/linked-objects", {}),
-      ).rejects.toEqual(error);
+      await expect(createPolicyLinkedObjects("/policies/5/linked-objects", {})).rejects.toEqual(
+        error,
+      );
     });
 
     it("should handle 404 not found error", async () => {
@@ -181,9 +160,9 @@ describe("policyLinkedObjects.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/999/linked-objects", {}),
-      ).rejects.toEqual(error);
+      await expect(createPolicyLinkedObjects("/policies/999/linked-objects", {})).rejects.toEqual(
+        error,
+      );
     });
 
     it("should handle 409 conflict error", async () => {
@@ -225,9 +204,9 @@ describe("policyLinkedObjects.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/5/linked-objects", {}),
-      ).rejects.toEqual(error);
+      await expect(createPolicyLinkedObjects("/policies/5/linked-objects", {})).rejects.toEqual(
+        error,
+      );
     });
 
     it("should handle 500 server error", async () => {
@@ -237,9 +216,9 @@ describe("policyLinkedObjects.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/5/linked-objects", {}),
-      ).rejects.toEqual(error);
+      await expect(createPolicyLinkedObjects("/policies/5/linked-objects", {})).rejects.toEqual(
+        error,
+      );
     });
 
     it("should handle 503 service unavailable error", async () => {
@@ -249,9 +228,9 @@ describe("policyLinkedObjects.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createPolicyLinkedObjects("/policies/5/linked-objects", {}),
-      ).rejects.toEqual(error);
+      await expect(createPolicyLinkedObjects("/policies/5/linked-objects", {})).rejects.toEqual(
+        error,
+      );
     });
 
     it("should log errors to console", async () => {
@@ -265,10 +244,7 @@ describe("policyLinkedObjects.repository", () => {
         // expected
       }
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating policy linked objects:",
-        error,
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating policy linked objects:", error);
       consoleErrorSpy.mockRestore();
     });
 
@@ -276,15 +252,9 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: { id: 1 } };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/5/linked-objects",
-        {},
-      );
+      const result = await createPolicyLinkedObjects("/policies/5/linked-objects", {});
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/policies/5/linked-objects",
-        {},
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/policies/5/linked-objects", {});
       expect(result).toEqual({ id: 1 });
     });
 
@@ -345,13 +315,10 @@ describe("policyLinkedObjects.repository", () => {
       const response = { data: responseData };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);
 
-      const result = await createPolicyLinkedObjects(
-        "/policies/5/linked-objects",
-        {
-          linkedEntityType: "vendor",
-          linkedEntityId: 10,
-        },
-      );
+      const result = await createPolicyLinkedObjects("/policies/5/linked-objects", {
+        linkedEntityType: "vendor",
+        linkedEntityId: 10,
+      });
 
       expect(result).toEqual(responseData);
       expect(result.metadata).toBeDefined();

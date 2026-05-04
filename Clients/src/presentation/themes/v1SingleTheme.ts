@@ -17,8 +17,7 @@ const effects = {
 
 const shadowEffect = {
   NoShadow: "none",
-  primary:
-    "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
+  primary: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
 };
 
 const fontSizes = {
@@ -467,7 +466,7 @@ const iconButtonsRectangle = {
   "&:disabled": {
     backgroundColor: "transparent",
     borderColor: "#E2E4E9",
-  }
+  },
 };
 
 const singleTheme = {

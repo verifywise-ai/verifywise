@@ -42,9 +42,7 @@ export const useTipManager = (entityName: string) => {
     const dismissedTips = getDismissedTips(storageKey);
 
     // Find the first tip that hasn't been dismissed
-    const nextTipIndex = entityTips.findIndex(
-      (_, index) => !dismissedTips.includes(index)
-    );
+    const nextTipIndex = entityTips.findIndex((_, index) => !dismissedTips.includes(index));
 
     if (nextTipIndex !== -1) {
       setCurrentTip(entityTips[nextTipIndex]);

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllEntities } from "../repository/entity.repository";
 import { Dashboard } from "../../domain/types/Dashboard";
 
-const DASHBOARD_QUERY_KEY = ['dashboard'] as const;
+const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 
 export const useDashboard = () => {
   const queryClient = useQueryClient();

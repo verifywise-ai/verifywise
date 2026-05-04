@@ -18,12 +18,7 @@ import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
 
-import {
-  containerStyle,
-  headerContainerStyle,
-  addButtonStyle,
-  tabListStyle,
-} from "./styles";
+import { containerStyle, headerContainerStyle, addButtonStyle, tabListStyle } from "./styles";
 import allowedRoles from "../../../../application/constants/permissions";
 import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router-dom";
@@ -37,7 +32,7 @@ const FRAMEWORK_IDS = {
 
 const TRACKER_TABS = [
   { label: "Requirements", value: "compliance" },
-  { label: "Controls", value: "assessment" },
+  { label: "Assessments", value: "assessment" },
 ] as const;
 
 type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
@@ -51,17 +46,11 @@ const ProjectFrameworks = ({
   triggerRefresh?: (isTrigger: boolean, toastMessage?: string) => void;
   initialFrameworkId: number;
 }) => {
-  const {
-    filteredFrameworks,
-    loading,
-    error,
-    refreshFilteredFrameworks,
-    allFrameworks,
-  } = useFrameworks({
-    listOfFrameworks: project.framework,
-  });
-  const [selectedFrameworkId, setSelectedFrameworkId] =
-    useState<number>(initialFrameworkId);
+  const { filteredFrameworks, loading, error, refreshFilteredFrameworks, allFrameworks } =
+    useFrameworks({
+      listOfFrameworks: project.framework,
+    });
+  const [selectedFrameworkId, setSelectedFrameworkId] = useState<number>(initialFrameworkId);
   const [selectedFramework, setSelectedFramework] = useState<number>(0);
   const [tracker, setTracker] = useState<TrackerTab>("compliance");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,32 +66,24 @@ const ProjectFrameworks = ({
     countToTrigger: 1,
   });
 
-  const isManagingFrameworksDisabled =
-    !allowedRoles.frameworks.manage.includes(userRoleName);
+  const isManagingFrameworksDisabled = !allowedRoles.frameworks.manage.includes(userRoleName);
 
   // Filter out organizational frameworks
-  const nonOrganizationalFrameworks = useMemo(
-    () => {
-        return allFrameworks.filter((framework: Framework) => !framework.is_organizational)
-    }, [allFrameworks]
-  );
+  const nonOrganizationalFrameworks = useMemo(() => {
+    return allFrameworks.filter((framework: Framework) => !framework.is_organizational);
+  }, [allFrameworks]);
 
   useEffect(() => {
     changeComponentVisibility("projectFrameworks", allVisible);
-    changeComponentVisibility(
-      "compliance",
-      tracker === "compliance" && allVisible
-    );
+    changeComponentVisibility("compliance", tracker === "compliance" && allVisible);
   }, [allVisible, tracker, changeComponentVisibility]);
 
   const associatedFrameworkIds = project.framework?.map((f) => f.framework_id) || [];
 
   const projectFrameworks = useMemo(
     () =>
-      filteredFrameworks.filter((fw: Framework) =>
-        associatedFrameworkIds.includes(Number(fw.id))
-      ),
-    [filteredFrameworks, associatedFrameworkIds]
+      filteredFrameworks.filter((fw: Framework) => associatedFrameworkIds.includes(Number(fw.id))),
+    [filteredFrameworks, associatedFrameworkIds],
   );
 
   useEffect(() => {
@@ -113,7 +94,9 @@ const ProjectFrameworks = ({
       // If initialFrameworkId is provided and valid, use it
       if (initialFrameworkId && validIds.includes(initialFrameworkId)) {
         setSelectedFrameworkId(initialFrameworkId);
-        const index = projectFrameworks.findIndex((fw: Framework) => Number(fw.id) === initialFrameworkId);
+        const index = projectFrameworks.findIndex(
+          (fw: Framework) => Number(fw.id) === initialFrameworkId,
+        );
         setSelectedFramework(index >= 0 ? index : 0);
         // Check for subtab parameter first, then controlId, default to assessment
         if (subtabParam === "compliance" || subtabParam === "assessment") {
@@ -123,10 +106,7 @@ const ProjectFrameworks = ({
         }
       }
       // Otherwise, use the default logic
-      else if (
-        !selectedFrameworkId ||
-        !validIds.includes(selectedFrameworkId)
-      ) {
+      else if (!selectedFrameworkId || !validIds.includes(selectedFrameworkId)) {
         const initialFramework = projectFrameworks[0];
         setSelectedFrameworkId(Number(initialFramework.id));
         setSelectedFramework(0);
@@ -141,7 +121,7 @@ const ProjectFrameworks = ({
     selectedFrameworkId,
     initialFrameworkId,
     hasInitialized,
-    searchParams
+    searchParams,
   ]);
 
   const handleFrameworkSelect = (index: number) => {
@@ -221,7 +201,14 @@ const ProjectFrameworks = ({
               mb: 3,
             }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={text.disabled} strokeWidth="2">
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={text.disabled}
+              strokeWidth="2"
+            >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
@@ -229,8 +216,8 @@ const ProjectFrameworks = ({
             No frameworks installed
           </Box>
           <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>
-            This use case doesn't have any compliance frameworks yet.
-            Add a framework to start tracking controls and assessments.
+            This use case doesn't have any compliance frameworks yet. Add a framework to start
+            tracking controls and assessments.
           </Box>
           <Button
             variant="contained"
@@ -245,53 +232,63 @@ const ProjectFrameworks = ({
     }
 
     return (
-    <>
-      <TabFilterBar
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        applicabilityFilter={applicabilityFilter}
-        onApplicabilityChange={setApplicabilityFilter}
-        showStatusFilter={
-          isEUAIAct && (tracker === "compliance" || tracker === "assessment")
-        }
-        showApplicabilityFilter={false}
-        statusOptions={statusOptions}
-        ownerFilter={ownerFilter}
-        onOwnerChange={setOwnerFilter}
-        approverFilter={approverFilter}
-        onApproverChange={setApproverFilter}
-        dueDateFilter={dueDateFilter}
-        onDueDateChange={setDueDateFilter}
-        showOwnerFilter={isEUAIAct && tracker === "compliance"}
-        showApproverFilter={isEUAIAct && tracker === "compliance"}
-        showDueDateFilter={isEUAIAct && tracker === "compliance"}
-        ownerOptions={userOptions}
-        approverOptions={userOptions}
-      />
-      <TabContext value={tracker}>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}>
-          <TabList
-            onChange={(_, v) => setTracker(v)}
-            TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
-            sx={tabListStyle}
-          >
-            {tabs.map((tab) => (
-              <Tab
-                key={tab.value}
-                sx={tabStyle}
-                label={tab.label}
-                value={tab.value}
-                disableRipple
-                data-joyride-id={
-                  tab.value === "compliance" ? "compliance-heading" : undefined
-                }
-                ref={tab.value === "compliance" ? refs[0] : undefined}
-              />
-            ))}
-          </TabList>
-        </Box>
-        {isEUAIAct ? (
-          <>
+      <>
+        <TabFilterBar
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          applicabilityFilter={applicabilityFilter}
+          onApplicabilityChange={setApplicabilityFilter}
+          showStatusFilter={isEUAIAct && (tracker === "compliance" || tracker === "assessment")}
+          showApplicabilityFilter={false}
+          statusOptions={statusOptions}
+          ownerFilter={ownerFilter}
+          onOwnerChange={setOwnerFilter}
+          approverFilter={approverFilter}
+          onApproverChange={setApproverFilter}
+          dueDateFilter={dueDateFilter}
+          onDueDateChange={setDueDateFilter}
+          showOwnerFilter={isEUAIAct && tracker === "compliance"}
+          showApproverFilter={isEUAIAct && tracker === "compliance"}
+          showDueDateFilter={isEUAIAct && tracker === "compliance"}
+          ownerOptions={userOptions}
+          approverOptions={userOptions}
+        />
+        <TabContext value={tracker}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}>
+            <TabList
+              onChange={(_, v) => setTracker(v)}
+              TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+              sx={tabListStyle}
+            >
+              {tabs.map((tab) => (
+                <Tab
+                  key={tab.value}
+                  sx={tabStyle}
+                  label={tab.label}
+                  value={tab.value}
+                  disableRipple
+                  data-joyride-id={tab.value === "compliance" ? "compliance-heading" : undefined}
+                  ref={tab.value === "compliance" ? refs[0] : undefined}
+                />
+              ))}
+            </TabList>
+          </Box>
+          {isEUAIAct ? (
+            <>
+              <TabPanel value="compliance" sx={tabPanelStyle}>
+                <ComplianceTracker
+                  project={project}
+                  statusFilter={statusFilter}
+                  ownerFilter={ownerFilter}
+                  approverFilter={approverFilter}
+                  dueDateFilter={dueDateFilter}
+                />
+              </TabPanel>
+              <TabPanel value="assessment" sx={tabPanelStyle}>
+                <AssessmentTracker project={project} statusFilter={statusFilter} />
+              </TabPanel>
+            </>
+          ) : (
             <TabPanel value="compliance" sx={tabPanelStyle}>
               <ComplianceTracker
                 project={project}
@@ -301,31 +298,28 @@ const ProjectFrameworks = ({
                 dueDateFilter={dueDateFilter}
               />
             </TabPanel>
-            <TabPanel value="assessment" sx={tabPanelStyle}>
-              <AssessmentTracker
-                project={project}
-                statusFilter={statusFilter}
-              />
-            </TabPanel>
-          </>
-        ) : (
-          <TabPanel value="compliance" sx={tabPanelStyle}>
-            <ComplianceTracker
-              project={project}
-              statusFilter={statusFilter}
-              ownerFilter={ownerFilter}
-              approverFilter={approverFilter}
-              dueDateFilter={dueDateFilter}
-            />
-          </TabPanel>
-        )}
-      </TabContext>
-    </>
+          )}
+        </TabContext>
+      </>
     );
   }, [
-    statusFilter, applicabilityFilter, ownerFilter, approverFilter, dueDateFilter,
-    isEUAIAct, tracker, statusOptions, userOptions, tabs, refs, project, tabListStyle,
-    projectFrameworks.length, loading, isManagingFrameworksDisabled, setIsModalOpen
+    statusFilter,
+    applicabilityFilter,
+    ownerFilter,
+    approverFilter,
+    dueDateFilter,
+    isEUAIAct,
+    tracker,
+    statusOptions,
+    userOptions,
+    tabs,
+    refs,
+    project,
+    tabListStyle,
+    projectFrameworks.length,
+    loading,
+    isManagingFrameworksDisabled,
+    setIsModalOpen,
   ]);
 
   if (error) {
@@ -342,7 +336,8 @@ const ProjectFrameworks = ({
   }
 
   // Check if plugin is providing custom framework controls
-  const hasCustomFrameworkPlugin = getComponentsForSlot(PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK).length > 0;
+  const hasCustomFrameworkPlugin =
+    getComponentsForSlot(PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK).length > 0;
 
   // Render the "Manage frameworks" button
   const renderManageButton = () => (
@@ -362,11 +357,7 @@ const ProjectFrameworks = ({
       {!hasCustomFrameworkPlugin && (
         <Box sx={headerContainerStyle}>
           {loading ? (
-            <CustomizableSkeleton
-              variant="rectangular"
-              width={200}
-              height={40}
-            />
+            <CustomizableSkeleton variant="rectangular" width={200} height={40} />
           ) : projectFrameworks.length > 0 ? (
             <ButtonToggle
               options={projectFrameworks.map((fw: Framework, index: number) => ({
@@ -406,17 +397,16 @@ const ProjectFrameworks = ({
         project={project}
         onFrameworksChanged={(action, frameworkId?: number) => {
           if (triggerRefresh) {
-            if (action === "add")
-              triggerRefresh(true, "Framework added successfully");
+            if (action === "add") triggerRefresh(true, "Framework added successfully");
             else if (action === "remove") {
               triggerRefresh(true, "Framework removed successfully");
               // Find a framework whose id is not the removed one, and set its id as selected
               const nextFramework = project.framework?.find(
-                (f) => Number(f.framework_id) !== frameworkId
+                (f) => Number(f.framework_id) !== frameworkId,
               );
               if (nextFramework) {
                 const index = projectFrameworks.findIndex(
-                  (fw: Framework) => Number(fw.id) === nextFramework.framework_id
+                  (fw: Framework) => Number(fw.id) === nextFramework.framework_id,
                 );
                 handleFrameworkSelect(index >= 0 ? index : 0);
               }
@@ -453,7 +443,14 @@ const ProjectFrameworks = ({
               mb: 3,
             }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={text.disabled} strokeWidth="2">
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={text.disabled}
+              strokeWidth="2"
+            >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
@@ -461,8 +458,8 @@ const ProjectFrameworks = ({
             No frameworks installed
           </Box>
           <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>
-            This use case doesn't have any compliance frameworks yet.
-            Add a framework to start tracking controls and assessments.
+            This use case doesn't have any compliance frameworks yet. Add a framework to start
+            tracking controls and assessments.
           </Box>
           <Button
             variant="contained"

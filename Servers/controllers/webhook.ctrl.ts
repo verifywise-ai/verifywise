@@ -25,10 +25,7 @@ import logger from "../utils/logger/fileLogger";
  * Headers: X-Hub-Signature-256, X-GitHub-Event
  * Body: raw JSON (parsed after signature verification)
  */
-export async function githubWebhookController(
-  req: Request,
-  res: Response
-): Promise<Response> {
+export async function githubWebhookController(req: Request, res: Response): Promise<Response> {
   logger.info("Processing GitHub webhook");
 
   try {
@@ -115,7 +112,7 @@ export async function githubWebhookController(
   } catch (error) {
     logger.error(
       "Failed to process GitHub webhook:",
-      error instanceof Error ? error : new Error(String(error))
+      error instanceof Error ? error : new Error(String(error)),
     );
 
     // Always return 200 to prevent GitHub from retrying on internal errors

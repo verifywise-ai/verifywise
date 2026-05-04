@@ -130,14 +130,10 @@ export const ENTITY_HISTORY_CONFIGS: {
   },
 };
 
-export const getEntityHistoryConfig = (
-  entityType: EntityType
-): EntityHistoryConfig => {
+export const getEntityHistoryConfig = (entityType: EntityType): EntityHistoryConfig => {
   const config = ENTITY_HISTORY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(
-      `No history configuration found for entity type: ${entityType}`
-    );
+    throw new Error(`No history configuration found for entity type: ${entityType}`);
   }
   return config;
 };

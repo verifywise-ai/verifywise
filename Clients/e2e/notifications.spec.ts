@@ -7,9 +7,7 @@ test.describe("Snackbar / Toast Notifications", () => {
     });
   });
 
-  test("success snackbar appears on CRUD action", async ({
-    authedPage: page,
-  }) => {
+  test("success snackbar appears on CRUD action", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     const taskTitle = `E2E Notif ${Date.now()}`;
 
@@ -28,9 +26,7 @@ test.describe("Snackbar / Toast Notifications", () => {
     await expect(titleInput.first()).toBeVisible({ timeout: 10_000 });
     await titleInput.first().fill(taskTitle);
 
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1500);
 
@@ -42,14 +38,17 @@ test.describe("Snackbar / Toast Notifications", () => {
       .or(page.getByText(/success/i))
       .or(page.getByText(/created/i));
 
-    if (await snackbar.first().isVisible().catch(() => false)) {
+    if (
+      await snackbar
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(snackbar.first()).toBeVisible();
     }
   });
 
-  test("snackbar auto-dismisses after timeout", async ({
-    authedPage: page,
-  }) => {
+  test("snackbar auto-dismisses after timeout", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     const taskTitle = `E2E AutoDismiss ${Date.now()}`;
 
@@ -67,17 +66,18 @@ test.describe("Snackbar / Toast Notifications", () => {
     await expect(titleInput.first()).toBeVisible({ timeout: 10_000 });
     await titleInput.first().fill(taskTitle);
 
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
-    const snackbar = page
-      .getByRole("alert")
-      .or(page.locator(".MuiSnackbar-root"));
+    const snackbar = page.getByRole("alert").or(page.locator(".MuiSnackbar-root"));
 
-    if (await snackbar.first().isVisible().catch(() => false)) {
+    if (
+      await snackbar
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       // Wait for auto-dismiss (typically 4-6 seconds)
       await page.waitForTimeout(7000);
 
@@ -90,9 +90,7 @@ test.describe("Snackbar / Toast Notifications", () => {
     }
   });
 
-  test("error notification on failed action", async ({
-    authedPage: page,
-  }) => {
+  test("error notification on failed action", async ({ authedPage: page }) => {
     // Route API to return 500 for task creation
     await page.route("**/api/tasks", (route) => {
       if (route.request().method() === "POST") {
@@ -121,9 +119,7 @@ test.describe("Snackbar / Toast Notifications", () => {
     await expect(titleInput.first()).toBeVisible({ timeout: 10_000 });
     await titleInput.first().fill(`E2E Error Test ${Date.now()}`);
 
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(2000);
 
@@ -135,7 +131,12 @@ test.describe("Snackbar / Toast Notifications", () => {
       .or(page.getByText(/error/i))
       .or(page.getByText(/failed/i));
 
-    if (await errorAlert.first().isVisible().catch(() => false)) {
+    if (
+      await errorAlert
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(errorAlert.first()).toBeVisible();
     }
 

@@ -3,23 +3,21 @@ import { QueryTypes, Transaction } from "sequelize";
 import { ISlackWebhook } from "../domain.layer/interfaces/i.slackWebhook";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
 
-export const getAllSlackWebhooksQuery = async (
-  userId: string
-): Promise<ISlackWebhook[]> => {
+export const getAllSlackWebhooksQuery = async (userId: string): Promise<ISlackWebhook[]> => {
   const slackWebhooks = await sequelize.query(
     `SELECT * FROM slack_webhooks WHERE user_id = :userId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { userId },
       mapToModel: true,
       model: SlackWebhookModel,
-    }
+    },
   );
   return slackWebhooks;
 };
 
 export const getSlackWebhookByIdAndChannelQuery = async (
   id: number,
-  channel: string
+  channel: string,
 ): Promise<ISlackWebhook[]> => {
   const result = await sequelize.query(
     `SELECT * FROM slack_webhooks WHERE user_id = :id AND channel = :channel`,
@@ -27,14 +25,14 @@ export const getSlackWebhookByIdAndChannelQuery = async (
       replacements: { id, channel: `${channel}` },
       mapToModel: true,
       model: SlackWebhookModel,
-    }
+    },
   );
   return result;
 };
 
 export const getSlackWebhookByIdAndRoutingType = async (
   id: number,
-  routing_type: string
+  routing_type: string,
 ): Promise<ISlackWebhook[]> => {
   const result = await sequelize.query(
     `SELECT * FROM slack_webhooks WHERE user_id = :id AND routing_type && :routing_type`,
@@ -42,14 +40,14 @@ export const getSlackWebhookByIdAndRoutingType = async (
       replacements: { id, routing_type: `{${routing_type}}` },
       mapToModel: true,
       model: SlackWebhookModel,
-    }
+    },
   );
   return result;
 };
 
 export const createNewSlackWebhookQuery = async (
   data: Partial<ISlackWebhook>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SlackWebhookModel> => {
   const result = await sequelize.query(
     `INSERT INTO slack_webhooks (
@@ -78,7 +76,7 @@ export const createNewSlackWebhookQuery = async (
       mapToModel: true,
       model: SlackWebhookModel,
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -86,10 +84,9 @@ export const createNewSlackWebhookQuery = async (
 export const updateSlackWebhookByIdQuery = async (
   id: number,
   updateData: Partial<SlackWebhookModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SlackWebhookModel | null> => {
-  const updateSlackWebhookData: Partial<Record<keyof SlackWebhookModel, any>> =
-    {};
+  const updateSlackWebhookData: Partial<Record<keyof SlackWebhookModel, any>> = {};
   const setClause = ["routing_type", "is_active"]
     .filter((f) => {
       if (f == "routing_type" && updateData.routing_type) {
@@ -128,17 +125,14 @@ export const updateSlackWebhookByIdQuery = async (
 
 export const deleteSlackWebhookByIdQuery = async (
   id: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM slack_webhooks WHERE id = :id RETURNING *`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: SlackWebhookModel,
-      type: QueryTypes.DELETE,
-      transaction,
-    }
-  );
+  const result = await sequelize.query(`DELETE FROM slack_webhooks WHERE id = :id RETURNING *`, {
+    replacements: { id },
+    mapToModel: true,
+    model: SlackWebhookModel,
+    type: QueryTypes.DELETE,
+    transaction,
+  });
   return result.length > 0;
 };

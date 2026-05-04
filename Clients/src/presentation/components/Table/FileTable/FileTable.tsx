@@ -1,11 +1,7 @@
 import React, { useState, useMemo } from "react";
 import FileBasicTable from "../FilesBasicTable/FileBasicTable";
 import { Stack } from "@mui/material";
-import {
-  ArrowUp as AscendingIcon,
-  ArrowDown as DescendingIcon,
-  FileText,
-} from "lucide-react";
+import { ArrowUp as AscendingIcon, ArrowDown as DescendingIcon, FileText } from "lucide-react";
 import { EmptyState } from "../../EmptyState";
 import { FileModel } from "../../../../domain/models/Common/file/file.model";
 import { IFileTableProps } from "../../../types/interfaces/i.table";
@@ -75,7 +71,7 @@ const FileTable: React.FC<IFileTableProps> = ({
             }
           : col;
       }),
-    [cols, sortField, sortDirection]
+    [cols, sortField, sortDirection],
   );
 
   const rows = useMemo(
@@ -90,7 +86,7 @@ const FileTable: React.FC<IFileTableProps> = ({
         version: file.version,
         reviewStatus: file.reviewStatus,
       })),
-    [sortedFiles]
+    [sortedFiles],
   );
 
   return files.length === 0 ? (

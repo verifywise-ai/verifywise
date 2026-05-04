@@ -6,25 +6,17 @@ export interface FetchReportsParams {
   limit?: number;
 }
 
-const fetchReports = async (
-  params: FetchReportsParams,
-  organizationId: number
-): Promise<any[]> => {
+const fetchReports = async (params: FetchReportsParams, organizationId: number): Promise<any[]> => {
   try {
     // Use Admin role to get all reports for the advisor
-    let reports = await getGeneratedReportsQuery(
-      { userId: 0, role: "Admin" },
-      organizationId
-    );
+    let reports = await getGeneratedReportsQuery({ userId: 0, role: "Admin" }, organizationId);
 
     if (!Array.isArray(reports)) reports = [];
 
     // Apply filters
     if (params.source) {
       reports = reports.filter(
-        (r: any) =>
-          r.source &&
-          r.source.toLowerCase().includes(params.source!.toLowerCase())
+        (r: any) => r.source && r.source.toLowerCase().includes(params.source!.toLowerCase()),
       );
     }
 
@@ -47,20 +39,17 @@ const fetchReports = async (
   } catch (error) {
     logger.error("Error fetching reports:", error);
     throw new Error(
-      `Failed to fetch reports: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch reports: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getReportingAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
-    let reports = await getGeneratedReportsQuery(
-      { userId: 0, role: "Admin" },
-      organizationId
-    );
+    let reports = await getGeneratedReportsQuery({ userId: 0, role: "Admin" }, organizationId);
 
     if (!Array.isArray(reports)) reports = [];
     const total = reports.length;
@@ -76,19 +65,14 @@ const getReportingAnalytics = async (
     const projectDistribution: Record<string, number> = {};
     reports.forEach((r: any) => {
       const project = r.project_title || "Unknown";
-      projectDistribution[project] =
-        (projectDistribution[project] || 0) + 1;
+      projectDistribution[project] = (projectDistribution[project] || 0) + 1;
     });
 
     // Recent reports (last 5)
     const recentReports = [...reports]
       .sort((a: any, b: any) => {
-        const dateA = a.uploaded_time
-          ? new Date(a.uploaded_time).getTime()
-          : 0;
-        const dateB = b.uploaded_time
-          ? new Date(b.uploaded_time).getTime()
-          : 0;
+        const dateA = a.uploaded_time ? new Date(a.uploaded_time).getTime() : 0;
+        const dateB = b.uploaded_time ? new Date(b.uploaded_time).getTime() : 0;
         return dateB - dateA;
       })
       .slice(0, 5)
@@ -108,7 +92,7 @@ const getReportingAnalytics = async (
   } catch (error) {
     logger.error("Error getting reporting analytics:", error);
     throw new Error(
-      `Failed to get reporting analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get reporting analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

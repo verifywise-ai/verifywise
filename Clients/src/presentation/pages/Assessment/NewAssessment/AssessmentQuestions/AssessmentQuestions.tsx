@@ -2,15 +2,7 @@
  * This file is currently in use
  */
 
-import {
-  Box,
-  Button,
-  Chip,
-  Stack,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, Button, Chip, Stack, Tooltip, Typography, useTheme } from "@mui/material";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import RichTextEditor from "../../../../components/RichTextEditor";
 import { priorities, PriorityLevel } from "../priorities";
@@ -20,9 +12,7 @@ import { text, background, border as borderPalette } from "../../../../themes/pa
 interface AssessmentQuestionsProps {
   assessmentsValues: Topic[];
   activeTab: number;
-  setAssessmentsValue: (
-    value: ((prevValue: Topic[]) => Topic[]) | Topic[]
-  ) => void;
+  setAssessmentsValue: (value: ((prevValue: Topic[]) => Topic[]) | Topic[]) => void;
   handleOpenFileUploadModal: () => void;
 }
 
@@ -50,16 +40,15 @@ const AssessmentQuestions = ({
       const newAssessmentValues = [...prevValues];
 
       const subtopicIndex = newAssessmentValues[activeTab].subtopics.findIndex(
-        (st) => st.id === subtopicId
+        (st) => st.id === subtopicId,
       );
 
       const questionIndex = newAssessmentValues[activeTab].subtopics[
         subtopicIndex
       ].questions.findIndex((q) => q.id === questionId);
 
-      newAssessmentValues[activeTab].subtopics[subtopicIndex].questions[
-        questionIndex
-      ].answer = answer;
+      newAssessmentValues[activeTab].subtopics[subtopicIndex].questions[questionIndex].answer =
+        answer;
 
       return newAssessmentValues;
     };
@@ -71,9 +60,7 @@ const AssessmentQuestions = ({
     <>
       {assessmentsValues[activeTab]?.subtopics.map((subtopic) => (
         <Stack key={subtopic.id} mb={15}>
-          <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>
-            {subtopic.name}
-          </Typography>
+          <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>{subtopic.name}</Typography>
           {subtopic.questions.map((question) => (
             <Box key={question.id} mt={10}>
               <Box
@@ -113,8 +100,7 @@ const AssessmentQuestions = ({
                 <Chip
                   label={question.priorityLevel}
                   sx={{
-                    backgroundColor:
-                      priorities[question.priorityLevel as PriorityLevel].color,
+                    backgroundColor: priorities[question.priorityLevel as PriorityLevel].color,
                     color: `${background.main}`,
                   }}
                   size="small"
@@ -125,8 +111,7 @@ const AssessmentQuestions = ({
                 toolbar="full"
                 key={`${assessmentsValues[activeTab].id}-${subtopic.id}-${question.id}`}
                 onContentChange={(content: string) => {
-                  const cleanedContent =
-                    " " + content.replace(/^<p>/, "").replace(/<\/p>$/, "");
+                  const cleanedContent = " " + content.replace(/^<p>/, "").replace(/<\/p>$/, "");
 
                   handleAssessmentChange({
                     activeTab,
@@ -162,7 +147,7 @@ const AssessmentQuestions = ({
                   sx={{
                     mt: 2,
                     borderRadius: 2,
-                    minWidth: 155,      // ✅ minimum width
+                    minWidth: 155, // ✅ minimum width
                     height: 25,
                     fontSize: 11,
                     border: "1px solid #d0d5dd",
@@ -173,16 +158,12 @@ const AssessmentQuestions = ({
                       border: "1px solid #d0d5dd",
                     },
                   }}
-                  disableRipple={
-                    theme.components?.MuiButton?.defaultProps?.disableRipple
-                  }
+                  disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
                   onClick={handleOpenFileUploadModal}
                 >
                   Add, remove or download evidence
                 </Button>
-                <Typography
-                  sx={{ fontSize: 11, color: "text.secondary", fontWeight: "300" }}
-                >
+                <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: "300" }}>
                   {question.isRequired === true ? "required" : ""}
                 </Typography>
               </Stack>

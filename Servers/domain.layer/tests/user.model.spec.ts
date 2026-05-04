@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  BusinessLogicException,
-} from "../exceptions/custom.exception";
+import { ValidationException, BusinessLogicException } from "../exceptions/custom.exception";
 import { emailValidation } from "../validations/email.valid";
 import { passwordValidation } from "../validations/password.valid";
 import { numberValidation } from "../validations/number.valid";
@@ -56,7 +53,7 @@ class TestUserModel {
     surname: string,
     email: string,
     password: string,
-    role_id: number
+    role_id: number,
   ): Promise<TestUserModel> {
     // Validate email
     if (!emailValidation(email)) {
@@ -70,7 +67,7 @@ class TestUserModel {
         "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
         "password",
         undefined,
-        { metadata: { validationDetails: passwordValidationResult } }
+        { metadata: { validationDetails: passwordValidationResult } },
       );
     }
 
@@ -104,27 +101,15 @@ class TestUserModel {
     }
 
     if (!this.surname || this.surname.trim().length === 0) {
-      throw new ValidationException(
-        "Surname is required",
-        "surname",
-        this.surname
-      );
+      throw new ValidationException("Surname is required", "surname", this.surname);
     }
 
     if (!this.email || !emailValidation(this.email)) {
-      throw new ValidationException(
-        "Valid email is required",
-        "email",
-        this.email
-      );
+      throw new ValidationException("Valid email is required", "email", this.email);
     }
 
     if (!this.role_id || !numberValidation(this.role_id, 1)) {
-      throw new ValidationException(
-        "Valid role_id is required",
-        "role_id",
-        this.role_id
-      );
+      throw new ValidationException("Valid role_id is required", "role_id", this.role_id);
     }
   }
 
@@ -140,7 +125,7 @@ class TestUserModel {
         "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
         "password",
         undefined,
-        { metadata: { validationDetails: passwordValidationResult } }
+        { metadata: { validationDetails: passwordValidationResult } },
       );
     }
 
@@ -153,7 +138,7 @@ class TestUserModel {
       throw new BusinessLogicException(
         "Demo users cannot perform admin actions",
         "DEMO_USER_RESTRICTION",
-        { userId: this.id, userEmail: this.email }
+        { userId: this.id, userEmail: this.email },
       );
     }
     return this.isAdmin();
@@ -161,11 +146,10 @@ class TestUserModel {
 
   canModifyUser(targetUserId: number): boolean {
     if (this.isDemoUser()) {
-      throw new BusinessLogicException(
-        "Demo users cannot modify users",
-        "DEMO_USER_RESTRICTION",
-        { userId: this.id, userEmail: this.email }
-      );
+      throw new BusinessLogicException("Demo users cannot modify users", "DEMO_USER_RESTRICTION", {
+        userId: this.id,
+        userEmail: this.email,
+      });
     }
 
     // Admin can modify any user
@@ -234,7 +218,7 @@ describe("UserModel", () => {
         validUserData.surname,
         validUserData.email,
         validUserData.password,
-        validUserData.role_id
+        validUserData.role_id,
       );
 
       // Assert
@@ -257,8 +241,8 @@ describe("UserModel", () => {
           validUserData.surname,
           "invalid-email",
           validUserData.password,
-          validUserData.role_id
-        )
+          validUserData.role_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -270,8 +254,8 @@ describe("UserModel", () => {
           validUserData.surname,
           validUserData.email,
           "weak",
-          validUserData.role_id
-        )
+          validUserData.role_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -283,8 +267,8 @@ describe("UserModel", () => {
           validUserData.surname,
           validUserData.email,
           validUserData.password,
-          0
-        )
+          0,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -311,9 +295,7 @@ describe("UserModel", () => {
       user.role_id = validUserData.role_id;
 
       // Act & Assert
-      await expect(user.validateUserData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(user.validateUserData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty surname", async () => {
@@ -325,9 +307,7 @@ describe("UserModel", () => {
       user.role_id = validUserData.role_id;
 
       // Act & Assert
-      await expect(user.validateUserData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(user.validateUserData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -363,9 +343,7 @@ describe("UserModel", () => {
       const user = new TestUserModel();
 
       // Act & Assert
-      await expect(user.updatePassword("weak")).rejects.toThrow(
-        ValidationException
-      );
+      await expect(user.updatePassword("weak")).rejects.toThrow(ValidationException);
     });
   });
 
@@ -392,9 +370,7 @@ describe("UserModel", () => {
       user.is_demo = true;
 
       // Act & Assert
-      expect(() => user.canPerformAdminAction()).toThrow(
-        BusinessLogicException
-      );
+      expect(() => user.canPerformAdminAction()).toThrow(BusinessLogicException);
     });
   });
 

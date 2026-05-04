@@ -1,14 +1,4 @@
-import {
-  Button,
-  Modal,
-  Stack,
-  Typography,
-  useTheme,
-  Divider,
-  Box,
-  Tabs,
-  Tab,
-} from "@mui/material";
+import { Button, Modal, Stack, Typography, useTheme, Divider, Box, Tabs, Tab } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 
 import React, { useState } from "react";
@@ -123,21 +113,13 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             {title}
           </Typography>
 
-          <CloseIcon
-            size={20}
-            onClick={handleClose}
-            style={{ cursor: "pointer" }}
-          />
+          <CloseIcon size={20} onClick={handleClose} style={{ cursor: "pointer" }} />
         </Stack>
         <Typography fontSize={13}>{content}</Typography>
         <DropDowns />
 
         {responseMessage && (
-          <Typography
-            fontSize={13}
-            color="error"
-            sx={{ mb: 2, fontWeight: 500 }}
-          >
+          <Typography fontSize={13} color="error" sx={{ mb: 2, fontWeight: 500 }}>
             {responseMessage}
           </Typography>
         )}
@@ -150,20 +132,16 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             indicatorColor="primary"
             sx={{
               justifyContent: "flex-start",
-              '& .MuiTab-root': {
-                color: 'primary.main',
+              "& .MuiTab-root": {
+                color: "primary.main",
               },
-              '& .Mui-selected': {
-                color: 'primary.main',
-              }
+              "& .Mui-selected": {
+                color: "primary.main",
+              },
             }}
           >
             {subControlTlts.map((_, index) => (
-              <Tab
-                key={index}
-                label={`Control ${index + 1}`}
-                sx={{ textTransform: "none" }}
-              />
+              <Tab key={index} label={`Control ${index + 1}`} sx={{ textTransform: "none" }} />
             ))}
           </Tabs>
         </Box>
@@ -178,49 +156,39 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             width: "fit-content",
           }}
         >
-          {["Overview", "Evidence", "Auditor Feedback"].map(
-            (section, index) => (
-              <Button
-                key={index}
-                variant={getVariant(activeSection, section)}
-                onClick={() => handleSectionChange(section)}
-                disableRipple
-                sx={{
-                  ...buttonTabStyles,
-                  backgroundColor:
-                    activeSection === section ? "border.light" : "transparent",
-                  fontWeight: activeSection === section ? "500" : 300,
-                }}
-              >
-                {section}
-              </Button>
-            )
-          )}
+          {["Overview", "Evidence", "Auditor Feedback"].map((section, index) => (
+            <Button
+              key={index}
+              variant={getVariant(activeSection, section)}
+              onClick={() => handleSectionChange(section)}
+              disableRipple
+              sx={{
+                ...buttonTabStyles,
+                backgroundColor: activeSection === section ? "border.light" : "transparent",
+                fontWeight: activeSection === section ? "500" : 300,
+              }}
+            >
+              {section}
+            </Button>
+          ))}
         </Stack>
 
         {/* Dynamic Content Based on Active Section */}
         <Box>
-          <Typography
-            fontSize={16}
-            fontWeight={600}
-            sx={{ textAlign: "left", mb: 3 }}
-          >
+          <Typography fontSize={16} fontWeight={600} sx={{ textAlign: "left", mb: 3 }}>
             {subControlTlts[selectedTab]}
           </Typography>
           <Typography variant="body1" sx={{ mb: 5 }}>
             {"hiiiiiiiiiiiiiiiiii =D"}
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique
-            atque natus accusantium molestiae illum labore a ut dolorem
-            doloribus maiores rerum quibusdam, sapiente amet itaque ad culpa
-            quidem nostrum quo mollitia nihil reiciendis autem perspiciatis
-            minus nobis. Ab delectus consequatur harum minima similique
-            possimus? Nostrum at porro vel nisi assumenda facere voluptatem
-            nobis fuga repudiandae in minus temporibus voluptatibus sint
-            accusamus quia laboriosam laudantium, eum optio facilis, aliquam
-            quasi quae a consequuntur. Sed quibusdam beatae perferendis dolorum
-            nihil harum sunt unde vel pariatur quasi id placeat nulla accusamus
-            delectus deleniti soluta illum dolorem, reprehenderit explicabo quo
-            ex? Quod, non illum.
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique atque natus
+            accusantium molestiae illum labore a ut dolorem doloribus maiores rerum quibusdam,
+            sapiente amet itaque ad culpa quidem nostrum quo mollitia nihil reiciendis autem
+            perspiciatis minus nobis. Ab delectus consequatur harum minima similique possimus?
+            Nostrum at porro vel nisi assumenda facere voluptatem nobis fuga repudiandae in minus
+            temporibus voluptatibus sint accusamus quia laboriosam laudantium, eum optio facilis,
+            aliquam quasi quae a consequuntur. Sed quibusdam beatae perferendis dolorum nihil harum
+            sunt unde vel pariatur quasi id placeat nulla accusamus delectus deleniti soluta illum
+            dolorem, reprehenderit explicabo quo ex? Quod, non illum.
           </Typography>
           {activeSection === "Overview" && (
             <Typography variant="body1">
@@ -236,9 +204,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
               deletedFilesIds={[]}
               onDeletedFilesChange={(ids) => console.log("Deleted Files:", ids)} // Add a handler
               uploadFiles={[]}
-              onUploadFilesChange={(files) =>
-                console.log("Uploaded Files:", files)
-              } // Add a handler
+              onUploadFilesChange={(files) => console.log("Uploaded Files:", files)} // Add a handler
             />
           )}
         </Box>
@@ -250,10 +216,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             mt: 2,
           }}
         >
-          <Stack
-            gap={theme.spacing(4)}
-            sx={{ display: "flex", flexDirection: "row" }}
-          >
+          <Stack gap={theme.spacing(4)} sx={{ display: "flex", flexDirection: "row" }}>
             <Button
               variant="contained"
               onClick={() => console.log("Previous Control clicked")}

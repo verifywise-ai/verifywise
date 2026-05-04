@@ -22,7 +22,7 @@ export function InfoCard({
   actionIcon,
   actionTooltip,
   onActionClick,
-  isActionActive = false
+  isActionActive = false,
 }: InfoCardProps) {
   return (
     <Stack sx={infoCardStyle}>

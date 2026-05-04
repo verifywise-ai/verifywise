@@ -1,8 +1,13 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
-import { createNewEvidence, deleteEvidenceById, getAllEvidences, getEvidenceById, updateEvidenceById } from "../controllers/evidenceHub.ctrl";
-
+import {
+  createNewEvidence,
+  deleteEvidenceById,
+  getAllEvidences,
+  getEvidenceById,
+  updateEvidenceById,
+} from "../controllers/evidenceHub.ctrl";
 
 // GET all evidences
 router.get("/", authenticateJWT, getAllEvidences);

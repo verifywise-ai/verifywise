@@ -6,7 +6,7 @@ import { QueryTypes, Transaction } from "sequelize";
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IVendorRisk[]> => {
   let whereClause = "";
   switch (filter) {
@@ -27,7 +27,7 @@ export const getVendorRisksByProjectIdQuery = async (
       replacements: { organizationId, project_id: projectId },
       mapToModel: true,
       model: VendorRiskModel,
-    }
+    },
   );
   return vendorRisks;
 };
@@ -35,7 +35,7 @@ export const getVendorRisksByProjectIdQuery = async (
 export const getVendorRisksByVendorIdQuery = async (
   vendorId: number,
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IVendorRisk[]> => {
   let whereClause = "";
   switch (filter) {
@@ -56,7 +56,7 @@ export const getVendorRisksByVendorIdQuery = async (
       replacements: { organizationId, vendor_id: vendorId },
       mapToModel: true,
       model: VendorRiskModel,
-    }
+    },
   );
   return vendorRisks;
 };
@@ -64,7 +64,7 @@ export const getVendorRisksByVendorIdQuery = async (
 export const getVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
 ): Promise<(IVendorRisk & { frameworks?: number[] }) | null> => {
   const whereClause = includeDeleted
     ? "WHERE organization_id = :organizationId AND id = :id"
@@ -75,7 +75,7 @@ export const getVendorRiskByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: VendorRiskModel,
-    }
+    },
   );
   if (!result[0]) return null;
 
@@ -87,7 +87,7 @@ export const getVendorRiskByIdQuery = async (
   try {
     const frameworkResult = (await sequelize.query(
       `SELECT framework_id FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
-      { replacements: { vendorRiskId: id, organizationId } }
+      { replacements: { vendorRiskId: id, organizationId } },
     )) as [{ framework_id: number }[], number];
     if (frameworkResult[0].length > 0) {
       vendorRisk.frameworks = frameworkResult[0].map((f) => f.framework_id);
@@ -102,7 +102,7 @@ export const getVendorRiskByIdQuery = async (
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<VendorRiskModel> => {
   const result = await sequelize.query(
     `INSERT INTO vendorRisks (
@@ -130,7 +130,7 @@ export const createNewVendorRiskQuery = async (
       model: VendorRiskModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -139,9 +139,11 @@ export const updateVendorRiskByIdQuery = async (
   id: number,
   vendorRisk: Partial<VendorRiskModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<VendorRiskModel | null> => {
-  const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & { organizationId?: number } = {};
+  const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
+    organizationId?: number;
+  } = {};
   const setClause = [
     "vendor_id",
     "risk_description",
@@ -157,8 +159,7 @@ export const updateVendorRiskByIdQuery = async (
         vendorRisk[f as keyof VendorRiskModel] !== undefined &&
         vendorRisk[f as keyof VendorRiskModel]
       ) {
-        updateVendorRisk[f as keyof VendorRiskModel] =
-          vendorRisk[f as keyof VendorRiskModel];
+        updateVendorRisk[f as keyof VendorRiskModel] = vendorRisk[f as keyof VendorRiskModel];
         return true;
       }
       return false;
@@ -185,7 +186,7 @@ export const updateVendorRiskByIdQuery = async (
 export const deleteVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
@@ -195,7 +196,7 @@ export const deleteVendorRiskByIdQuery = async (
       model: VendorRiskModel,
       type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -203,7 +204,7 @@ export const deleteVendorRiskByIdQuery = async (
 export const deleteVendorRisksForVendorQuery = async (
   vendorId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id`,
@@ -213,14 +214,14 @@ export const deleteVendorRisksForVendorQuery = async (
       model: VendorRiskModel,
       type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
 
 export const getAllVendorRisksAllProjectsQuery = async (
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ) => {
   let whereClause = "";
   switch (filter) {
@@ -264,7 +265,7 @@ export const getAllVendorRisksAllProjectsQuery = async (
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return risks;
 };
@@ -273,7 +274,7 @@ export const createVendorRiskFrameworkAssociations = async (
   frameworks: number[],
   vendorRiskId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   if (!frameworks || frameworks.length === 0) return;
 
@@ -296,28 +297,28 @@ export const createVendorRiskFrameworkAssociations = async (
     {
       replacements,
       transaction,
-    }
+    },
   );
 };
 
 export const deleteVendorRiskFrameworkAssociations = async (
   vendorRiskId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `DELETE FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
     {
       replacements: { vendorRiskId, organizationId },
       transaction,
-    }
+    },
   );
 };
 
 export const getVendorRisksByFrameworkIdQuery = async (
   frameworkId: number,
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<any[]> => {
   let whereClause = "";
   switch (filter) {
@@ -344,18 +345,18 @@ export const getVendorRisksByFrameworkIdQuery = async (
     {
       replacements: { frameworkId, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return risks;
 };
 
 export const getVendorRiskFrameworkIds = async (
   vendorRiskId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number[]> => {
   const result = (await sequelize.query(
     `SELECT framework_id FROM frameworks_vendorrisks WHERE vendorrisk_id = :vendorRiskId AND organization_id = :organizationId`,
-    { replacements: { vendorRiskId, organizationId } }
+    { replacements: { vendorRiskId, organizationId } },
   )) as [{ framework_id: number }[], number];
   return result[0].map((f) => f.framework_id);
 };

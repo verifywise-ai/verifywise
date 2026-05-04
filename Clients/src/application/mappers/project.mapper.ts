@@ -1,16 +1,13 @@
 /**
  * Project Mapper
- * 
+ *
  * Maps between Project DTOs (API layer) and Project domain models.
  * Handles data transformation, type conversion, and validation.
  */
 
 import { ProjectModel } from "../../domain/models/Common/project/project.model";
 import { Project } from "../../domain/types/Project";
-import {
-  ProjectResponseDTO,
-  CreateProjectDTO,
-} from "../dtos/project.dto";
+import { ProjectResponseDTO, CreateProjectDTO } from "../dtos/project.dto";
 import { AiRiskClassification } from "../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../domain/enums/highRiskRole.enum";
 import { CreateProjectFormUserModel } from "../../domain/models/Common/user/user.model";
@@ -18,9 +15,7 @@ import { CreateProjectFormUserModel } from "../../domain/models/Common/user/user
 /**
  * Converts API risk classification to domain enum
  */
-export function mapRiskClassification(
-  value: number | string
-): AiRiskClassification {
+export function mapRiskClassification(value: number | string): AiRiskClassification {
   if (typeof value === "number") {
     // Map numeric values to enum (assuming 0-3 mapping)
     const numericMapping: Record<number, AiRiskClassification> = {
@@ -33,7 +28,7 @@ export function mapRiskClassification(
   }
   // Map string values to enum
   const mapping: Record<string, AiRiskClassification> = {
-    "prohibited": AiRiskClassification.PROHIBITED,
+    prohibited: AiRiskClassification.PROHIBITED,
     "high risk": AiRiskClassification.HIGH_RISK,
     "limited risk": AiRiskClassification.LIMITED_RISK,
     "minimal risk": AiRiskClassification.MINIMAL_RISK,
@@ -58,7 +53,7 @@ export function mapHighRiskRole(value: number | string): HighRiskRole {
 
 /**
  * Maps a ProjectResponseDTO to a Project domain type
- * 
+ *
  * @param dto - Project response DTO from API
  * @returns Project domain type
  */
@@ -70,8 +65,12 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     owner: dto.owner,
     members: Array.isArray(dto.members) ? dto.members.map(String) : [],
     start_date: new Date(dto.start_date),
-    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification) as unknown as Project["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role) as unknown as Project["type_of_high_risk_role"],
+    ai_risk_classification: mapRiskClassification(
+      dto.ai_risk_classification,
+    ) as unknown as Project["ai_risk_classification"],
+    type_of_high_risk_role: mapHighRiskRole(
+      dto.type_of_high_risk_role,
+    ) as unknown as Project["type_of_high_risk_role"],
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
@@ -91,7 +90,7 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
 
 /**
  * Maps a ProjectResponseDTO to a ProjectModel
- * 
+ *
  * @param dto - Project response DTO from API
  * @returns ProjectModel instance
  */
@@ -111,13 +110,13 @@ export function mapProjectResponseDTOToModel(dto: ProjectResponseDTO): ProjectMo
     created_at: dto.created_at ? new Date(dto.created_at) : undefined,
     is_organizational: dto.is_organizational ?? false,
   };
-  
+
   return new ProjectModel(projectData);
 }
 
 /**
  * Maps an array of ProjectResponseDTOs to Project domain types
- * 
+ *
  * @param dtos - Array of project response DTOs
  * @returns Array of Project domain types
  */
@@ -127,7 +126,7 @@ export function mapProjectResponseDTOsToProjects(dtos: ProjectResponseDTO[]): Pr
 
 /**
  * Maps an array of ProjectResponseDTOs to ProjectModel instances
- * 
+ *
  * @param dtos - Array of project response DTOs
  * @returns Array of ProjectModel instances
  */
@@ -137,7 +136,7 @@ export function mapProjectResponseDTOsToModels(dtos: ProjectResponseDTO[]): Proj
 
 /**
  * Maps CreateProjectFormValues to CreateProjectDTO
- * 
+ *
  * @param formValues - Form values from presentation layer
  * @returns CreateProjectDTO
  */
@@ -153,7 +152,7 @@ export function mapCreateProjectFormToDTO(formValues: {
   return {
     project_title: formValues.project_title,
     owner: formValues.owner,
-    members: formValues.members.map(m => ({
+    members: formValues.members.map((m) => ({
       _id: m._id,
       name: m.name,
       surname: m.surname,
@@ -165,4 +164,3 @@ export function mapCreateProjectFormToDTO(formValues: {
     goal: formValues.goal,
   };
 }
-

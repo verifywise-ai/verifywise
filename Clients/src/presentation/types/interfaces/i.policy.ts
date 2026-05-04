@@ -45,10 +45,14 @@ export interface PolicyStatusCardProps {
  */
 export interface PolicyFormProps {
   formData: import("../../../domain/interfaces/i.policy").PolicyFormData;
-  setFormData: React.Dispatch<React.SetStateAction<import("../../../domain/interfaces/i.policy").PolicyFormData>>;
+  setFormData: React.Dispatch<
+    React.SetStateAction<import("../../../domain/interfaces/i.policy").PolicyFormData>
+  >;
   tags: string[];
   errors: import("../../../domain/interfaces/i.policy").PolicyFormErrors;
-  clearFieldError: (field: keyof import("../../../domain/interfaces/i.policy").PolicyFormData) => void;
+  clearFieldError: (
+    field: keyof import("../../../domain/interfaces/i.policy").PolicyFormData,
+  ) => void;
 }
 
 /**

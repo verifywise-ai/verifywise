@@ -43,11 +43,11 @@ export class FileModel {
 
   static createNewFile(data: Partial<FileModel>): FileModel {
     return new FileModel({
-      id: data.id || '',
-      fileName: data.fileName || '',
+      id: data.id || "",
+      fileName: data.fileName || "",
       uploadDate: data.uploadDate || new Date(),
-      uploader: data.uploader || '',
-      ...data
+      uploader: data.uploader || "",
+      ...data,
     } as FileModel);
   }
 
@@ -56,7 +56,8 @@ export class FileModel {
       id: apiData.id,
       fileName: apiData.fileName,
       type: apiData.type,
-      uploadDate: typeof apiData.uploadDate === 'string' ? new Date(apiData.uploadDate) : apiData.uploadDate,
+      uploadDate:
+        typeof apiData.uploadDate === "string" ? new Date(apiData.uploadDate) : apiData.uploadDate,
       uploader: apiData.uploader,
       uploaderName: apiData.uploaderName,
       size: apiData.size,
@@ -86,7 +87,7 @@ export class FileModel {
 
   getFormattedSize(): string {
     if (!this.size) return "Unknown";
-    
+
     const units = ["B", "KB", "MB", "GB"];
     let size = this.size;
     let unitIndex = 0;
@@ -100,27 +101,27 @@ export class FileModel {
   }
 
   getFileExtension(): string {
-    const parts = this.fileName.split('.');
-    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    const parts = this.fileName.split(".");
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
   }
 
   isImageFile(): boolean {
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'];
+    const imageExtensions = ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"];
     return imageExtensions.includes(this.getFileExtension());
   }
 
   isDocumentFile(): boolean {
-    const docExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt'];
+    const docExtensions = ["pdf", "doc", "docx", "txt", "rtf", "odt"];
     return docExtensions.includes(this.getFileExtension());
   }
 
   isSpreadsheetFile(): boolean {
-    const spreadsheetExtensions = ['xls', 'xlsx', 'csv', 'ods'];
+    const spreadsheetExtensions = ["xls", "xlsx", "csv", "ods"];
     return spreadsheetExtensions.includes(this.getFileExtension());
   }
 
   isPresentationFile(): boolean {
-    const presentationExtensions = ['ppt', 'pptx', 'odp'];
+    const presentationExtensions = ["ppt", "pptx", "odp"];
     return presentationExtensions.includes(this.getFileExtension());
   }
 
@@ -135,14 +136,14 @@ export class FileModel {
   markAsEvidence(): FileModel {
     return new FileModel({
       ...this,
-      isEvidence: true
+      isEvidence: true,
     } as FileModel);
   }
 
   unmarkAsEvidence(): FileModel {
     return new FileModel({
       ...this,
-      isEvidence: false
+      isEvidence: false,
     } as FileModel);
   }
 
@@ -150,14 +151,14 @@ export class FileModel {
     return new FileModel({
       ...this,
       projectId,
-      projectTitle
+      projectTitle,
     } as FileModel);
   }
 
   updateSource(source: string): FileModel {
     return new FileModel({
       ...this,
-      source
+      source,
     } as FileModel);
   }
 
@@ -166,11 +167,11 @@ export class FileModel {
   }
 
   getFileCategory(): string {
-    if (this.isImageFile()) return 'Image';
-    if (this.isDocumentFile()) return 'Document';
-    if (this.isSpreadsheetFile()) return 'Spreadsheet';
-    if (this.isPresentationFile()) return 'Presentation';
-    return 'Other';
+    if (this.isImageFile()) return "Image";
+    if (this.isDocumentFile()) return "Document";
+    if (this.isSpreadsheetFile()) return "Spreadsheet";
+    if (this.isPresentationFile()) return "Presentation";
+    return "Other";
   }
 
   getDaysOld(): number {

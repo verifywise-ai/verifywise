@@ -1,6 +1,6 @@
 /**
  * FileUpload component exports
- * 
+ *
  * The main component is FileManagementDialog which provides:
  * - File list display with download/delete actions
  * - Add new files via file input

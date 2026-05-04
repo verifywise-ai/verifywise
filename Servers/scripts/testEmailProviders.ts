@@ -29,10 +29,7 @@ const testTemplate = `
 </mjml>
 `;
 
-async function testProvider(
-  providerType: "resend" | "smtp",
-  testEmail: string
-) {
+async function testProvider(providerType: "resend" | "smtp", testEmail: string) {
   console.log(`\n🧪 Testing ${providerType.toUpperCase()} provider...`);
 
   try {

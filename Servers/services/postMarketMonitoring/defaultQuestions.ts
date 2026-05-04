@@ -27,9 +27,11 @@ export interface DefaultQuestion {
  */
 export const DEFAULT_PMM_QUESTIONS: DefaultQuestion[] = [
   {
-    question_text: "Have you reviewed all identified risks and their mitigations for this use case?",
+    question_text:
+      "Have you reviewed all identified risks and their mitigations for this use case?",
     question_type: "yes_no",
-    suggestion_text: "Consider reviewing the risk register and ensuring all high-priority risks have adequate mitigation measures in place.",
+    suggestion_text:
+      "Consider reviewing the risk register and ensuring all high-priority risks have adequate mitigation measures in place.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 9",
@@ -37,7 +39,8 @@ export const DEFAULT_PMM_QUESTIONS: DefaultQuestion[] = [
   {
     question_text: "Have you reviewed the connected AI models and their associated risks?",
     question_type: "yes_no",
-    suggestion_text: "Review the model inventory to ensure all models are performing as expected and risks are properly documented.",
+    suggestion_text:
+      "Review the model inventory to ensure all models are performing as expected and risks are properly documented.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 9",
@@ -45,23 +48,28 @@ export const DEFAULT_PMM_QUESTIONS: DefaultQuestion[] = [
   {
     question_text: "Have you reviewed the connected vendors and their associated risks?",
     question_type: "yes_no",
-    suggestion_text: "Check vendor compliance status and ensure all vendor-related risks are being actively managed.",
+    suggestion_text:
+      "Check vendor compliance status and ensure all vendor-related risks are being actively managed.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 72",
   },
   {
-    question_text: "Have there been any incidents, malfunctions, or unexpected behaviors to report?",
+    question_text:
+      "Have there been any incidents, malfunctions, or unexpected behaviors to report?",
     question_type: "yes_no",
-    suggestion_text: "Document any incidents in the incident management system and ensure proper escalation procedures are followed.",
+    suggestion_text:
+      "Document any incidents in the incident management system and ensure proper escalation procedures are followed.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 72",
   },
   {
-    question_text: "Have any changes been made to the AI system or its operating environment since the last review?",
+    question_text:
+      "Have any changes been made to the AI system or its operating environment since the last review?",
     question_type: "yes_no",
-    suggestion_text: "Ensure all changes are properly documented and assessed for their impact on risk levels.",
+    suggestion_text:
+      "Ensure all changes are properly documented and assessed for their impact on risk levels.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 9",
@@ -69,7 +77,8 @@ export const DEFAULT_PMM_QUESTIONS: DefaultQuestion[] = [
   {
     question_text: "Are all required technical documentation and logs up to date?",
     question_type: "yes_no",
-    suggestion_text: "Review documentation requirements and ensure all technical records are current and accessible.",
+    suggestion_text:
+      "Review documentation requirements and ensure all technical records are current and accessible.",
     is_required: true,
     allows_flag_for_concern: true,
     eu_ai_act_article: "Article 9",
@@ -87,9 +96,7 @@ export const DEFAULT_PMM_QUESTIONS: DefaultQuestion[] = [
 /**
  * Convert default questions to the format needed for database insertion
  */
-export const getDefaultQuestionsForConfig = (
-  configId: number
-): IPMMQuestionCreate[] => {
+export const getDefaultQuestionsForConfig = (configId: number): IPMMQuestionCreate[] => {
   return DEFAULT_PMM_QUESTIONS.map((q, index) => ({
     config_id: configId,
     question_text: q.question_text,
@@ -127,7 +134,7 @@ export const getDefaultQuestionsAsTemplate = (): IPMMQuestionCreate[] => {
 export const seedDefaultQuestions = async (
   configId: number,
   organizationId: number,
-  addQuestionFn: (question: IPMMQuestionCreate, organizationId: number) => Promise<any>
+  addQuestionFn: (question: IPMMQuestionCreate, organizationId: number) => Promise<any>,
 ): Promise<void> => {
   const questions = getDefaultQuestionsForConfig(configId);
 

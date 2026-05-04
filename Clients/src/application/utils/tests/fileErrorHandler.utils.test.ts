@@ -44,14 +44,14 @@ describe("fileErrorHandler.utils", () => {
     it("returns 404 message for download context (long message)", () => {
       const msg = getFileErrorMessage({ statusCode: 404 }, "download");
       expect(msg).toBe(
-        "File not found on the server. It may have been deleted.\n\nPlease refresh the page to update the file list."
+        "File not found on the server. It may have been deleted.\n\nPlease refresh the page to update the file list.",
       );
     });
 
     it("returns 404 message for delete context (long message)", () => {
       const msg = getFileErrorMessage({ statusCode: 404 }, "delete");
       expect(msg).toBe(
-        "File not found on the server. It may have already been deleted.\n\nPlease refresh the page to update the file list."
+        "File not found on the server. It may have already been deleted.\n\nPlease refresh the page to update the file list.",
       );
     });
 
@@ -68,7 +68,7 @@ describe("fileErrorHandler.utils", () => {
     it('handles error.message including "not found" for download context', () => {
       const msg = getFileErrorMessage({ message: "resource not found" }, "download");
       expect(msg).toBe(
-        "File not found on the server. It may have been deleted.\n\nPlease refresh the page to update the file list."
+        "File not found on the server. It may have been deleted.\n\nPlease refresh the page to update the file list.",
       );
     });
 
@@ -88,7 +88,10 @@ describe("fileErrorHandler.utils", () => {
     });
 
     it("returns original error.message when descriptive and no special match", () => {
-      const msg = getFileErrorMessage({ message: "Something went wrong but is descriptive" }, "general");
+      const msg = getFileErrorMessage(
+        { message: "Something went wrong but is descriptive" },
+        "general",
+      );
       expect(msg).toBe("Something went wrong but is descriptive");
     });
 
@@ -99,7 +102,9 @@ describe("fileErrorHandler.utils", () => {
 
     it("returns default context message when no statusCode and no message (download)", () => {
       const msg = getFileErrorMessage({}, "download");
-      expect(msg).toBe("Failed to download file. The file may have been deleted or you don't have permission.");
+      expect(msg).toBe(
+        "Failed to download file. The file may have been deleted or you don't have permission.",
+      );
     });
 
     it("returns default context message when no statusCode and no message (delete)", () => {

@@ -67,19 +67,13 @@ describe("Test Logs Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getAllLogs({ routeUrl: "/logs" })).rejects.toEqual(
-        mockError,
-      );
+      await expect(getAllLogs({ routeUrl: "/logs" })).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getAllLogs({ routeUrl: "/logs" })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getAllLogs({ routeUrl: "/logs" })).rejects.toThrow("Network timeout");
     });
   });
 });

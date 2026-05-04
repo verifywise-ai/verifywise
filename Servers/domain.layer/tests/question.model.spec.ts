@@ -67,15 +67,11 @@ class TestQuestionModel {
     order_no?: number,
     dropdown_options?: any[],
     evidence_files?: any[],
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestQuestionModel> {
     // Validate required fields
     if (!question || question.trim().length === 0) {
-      throw new ValidationException(
-        "Question text is required",
-        "question",
-        question
-      );
+      throw new ValidationException("Question text is required", "question", question);
     }
 
     if (!hint || hint.trim().length === 0) {
@@ -83,33 +79,17 @@ class TestQuestionModel {
     }
 
     if (!answer_type || answer_type.trim().length === 0) {
-      throw new ValidationException(
-        "Answer type is required",
-        "answer_type",
-        answer_type
-      );
+      throw new ValidationException("Answer type is required", "answer_type", answer_type);
     }
 
     if (!input_type || input_type.trim().length === 0) {
-      throw new ValidationException(
-        "Input type is required",
-        "input_type",
-        input_type
-      );
+      throw new ValidationException("Input type is required", "input_type", input_type);
     }
 
     // Validate priority_level
-    const validPriorities = [
-      "high priority",
-      "medium priority",
-      "low priority",
-    ];
+    const validPriorities = ["high priority", "medium priority", "low priority"];
     if (!validPriorities.includes(priority_level)) {
-      throw new ValidationException(
-        "Invalid priority level",
-        "priority_level",
-        priority_level
-      );
+      throw new ValidationException("Invalid priority level", "priority_level", priority_level);
     }
 
     // Validate subtopic_id
@@ -117,7 +97,7 @@ class TestQuestionModel {
       throw new ValidationException(
         "Valid subtopic_id is required (must be >= 1)",
         "subtopic_id",
-        subtopic_id
+        subtopic_id,
       );
     }
 
@@ -126,7 +106,7 @@ class TestQuestionModel {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -167,11 +147,7 @@ class TestQuestionModel {
   }): Promise<void> {
     if (updateData.question !== undefined) {
       if (!updateData.question || updateData.question.trim().length === 0) {
-        throw new ValidationException(
-          "Question text is required",
-          "question",
-          updateData.question
-        );
+        throw new ValidationException("Question text is required", "question", updateData.question);
       }
       this.question = updateData.question.trim();
     }
@@ -179,50 +155,37 @@ class TestQuestionModel {
     if (updateData.status !== undefined) {
       const validStatuses = ["Not started", "In progress", "Done"];
       if (!validStatuses.includes(updateData.status)) {
-        throw new ValidationException(
-          "Invalid status value",
-          "status",
-          updateData.status
-        );
+        throw new ValidationException("Invalid status value", "status", updateData.status);
       }
       this.status = updateData.status;
     }
 
     // Update other fields if provided
     if (updateData.hint !== undefined) this.hint = updateData.hint.trim();
-    if (updateData.priority_level !== undefined)
-      this.priority_level = updateData.priority_level;
-    if (updateData.answer_type !== undefined)
-      this.answer_type = updateData.answer_type.trim();
-    if (updateData.input_type !== undefined)
-      this.input_type = updateData.input_type.trim();
+    if (updateData.priority_level !== undefined) this.priority_level = updateData.priority_level;
+    if (updateData.answer_type !== undefined) this.answer_type = updateData.answer_type.trim();
+    if (updateData.input_type !== undefined) this.input_type = updateData.input_type.trim();
     if (updateData.evidence_required !== undefined)
       this.evidence_required = updateData.evidence_required;
-    if (updateData.is_required !== undefined)
-      this.is_required = updateData.is_required;
+    if (updateData.is_required !== undefined) this.is_required = updateData.is_required;
     if (updateData.order_no !== undefined) this.order_no = updateData.order_no;
     if (updateData.dropdown_options !== undefined)
       this.dropdown_options = updateData.dropdown_options;
-    if (updateData.evidence_files !== undefined)
-      this.evidence_files = updateData.evidence_files;
+    if (updateData.evidence_files !== undefined) this.evidence_files = updateData.evidence_files;
     if (updateData.answer !== undefined) this.answer = updateData.answer;
   }
 
   // Instance method to validate question data
   async validateQuestionData(): Promise<void> {
     if (!this.question || this.question.trim().length === 0) {
-      throw new ValidationException(
-        "Question text is required",
-        "question",
-        this.question
-      );
+      throw new ValidationException("Question text is required", "question", this.question);
     }
 
     if (!this.subtopic_id || !numberValidation(this.subtopic_id, 1)) {
       throw new ValidationException(
         "Valid subtopic_id is required",
         "subtopic_id",
-        this.subtopic_id
+        this.subtopic_id,
       );
     }
   }
@@ -238,7 +201,7 @@ class TestQuestionModel {
       throw new BusinessLogicException(
         "Demo questions cannot be modified",
         "DEMO_QUESTION_RESTRICTION",
-        { questionId: this.id, subtopicId: this.subtopic_id }
+        { questionId: this.id, subtopicId: this.subtopic_id },
       );
     }
     return true;
@@ -263,11 +226,7 @@ class TestQuestionModel {
   // Static method to find question by ID with validation
   static async findByIdWithValidation(id: number): Promise<TestQuestionModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
@@ -291,14 +250,12 @@ class TestQuestionModel {
   }
 
   // Static method to find questions by subtopic ID
-  static async findBySubtopicId(
-    subtopicId: number
-  ): Promise<TestQuestionModel[]> {
+  static async findBySubtopicId(subtopicId: number): Promise<TestQuestionModel[]> {
     if (!numberValidation(subtopicId, 1)) {
       throw new ValidationException(
         "Valid subtopic_id is required (must be >= 1)",
         "subtopic_id",
-        subtopicId
+        subtopicId,
       );
     }
 
@@ -345,7 +302,7 @@ describe("QuestionModel", () => {
         validQuestionData.input_type,
         validQuestionData.evidence_required,
         validQuestionData.is_required,
-        validQuestionData.subtopic_id
+        validQuestionData.subtopic_id,
       );
 
       expect(question).toBeInstanceOf(TestQuestionModel);
@@ -365,8 +322,8 @@ describe("QuestionModel", () => {
           validQuestionData.input_type,
           validQuestionData.evidence_required,
           validQuestionData.is_required,
-          validQuestionData.subtopic_id
-        )
+          validQuestionData.subtopic_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -380,8 +337,8 @@ describe("QuestionModel", () => {
           validQuestionData.input_type,
           validQuestionData.evidence_required,
           validQuestionData.is_required,
-          validQuestionData.subtopic_id
-        )
+          validQuestionData.subtopic_id,
+        ),
       ).rejects.toThrow(ValidationException);
     });
 
@@ -395,8 +352,8 @@ describe("QuestionModel", () => {
           validQuestionData.input_type,
           validQuestionData.evidence_required,
           validQuestionData.is_required,
-          0
-        )
+          0,
+        ),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -417,17 +374,15 @@ describe("QuestionModel", () => {
     it("should throw ValidationException for empty question update", async () => {
       const question = new TestQuestionModel(validQuestionData);
 
-      await expect(question.updateQuestion({ question: "" })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(question.updateQuestion({ question: "" })).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid status", async () => {
       const question = new TestQuestionModel(validQuestionData);
 
-      await expect(
-        question.updateQuestion({ status: "Invalid" as any })
-      ).rejects.toThrow(ValidationException);
+      await expect(question.updateQuestion({ status: "Invalid" as any })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -444,9 +399,7 @@ describe("QuestionModel", () => {
         question: "",
       });
 
-      await expect(question.validateQuestionData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(question.validateQuestionData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -521,14 +474,14 @@ describe("QuestionModel", () => {
 
     it("should throw ValidationException for invalid ID", async () => {
       await expect(TestQuestionModel.findByIdWithValidation(0)).rejects.toThrow(
-        ValidationException
+        ValidationException,
       );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestQuestionModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestQuestionModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -542,9 +495,7 @@ describe("QuestionModel", () => {
     });
 
     it("should throw ValidationException for invalid subtopic_id", async () => {
-      await expect(TestQuestionModel.findBySubtopicId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestQuestionModel.findBySubtopicId(0)).rejects.toThrow(ValidationException);
     });
   });
 });

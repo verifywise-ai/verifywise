@@ -1,14 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { getAllProjects } from '../repository/project.repository';
-import { Project } from '../../domain/types/Project';
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { getAllProjects } from "../repository/project.repository";
+import { Project } from "../../domain/types/Project";
 
 // Query keys for projects
 export const projectQueryKeys = {
-  all: ['projects'] as const,
-  lists: () => [...projectQueryKeys.all, 'list'] as const,
+  all: ["projects"] as const,
+  lists: () => [...projectQueryKeys.all, "list"] as const,
   list: () => [...projectQueryKeys.lists()] as const,
-  details: () => [...projectQueryKeys.all, 'detail'] as const,
+  details: () => [...projectQueryKeys.all, "detail"] as const,
   detail: (id: string) => [...projectQueryKeys.details(), id] as const,
 };
 
@@ -28,7 +28,7 @@ export const useProjects = () => {
       return response?.data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,   // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Filter projects to only include approved ones (no pending/rejected approvals)
@@ -40,11 +40,7 @@ export const useProjects = () => {
       const approvalStatus = (project as any).approval_status;
 
       // Exclude projects with pending or rejected approval status
-      return (
-        !hasPendingApproval &&
-        approvalStatus !== 'pending' &&
-        approvalStatus !== 'rejected'
-      );
+      return !hasPendingApproval && approvalStatus !== "pending" && approvalStatus !== "rejected";
     });
   }, [query.data]);
 

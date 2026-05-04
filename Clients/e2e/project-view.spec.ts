@@ -16,13 +16,11 @@ test.describe("Project View", () => {
         .or(page.getByText(/use case/i))
         .or(page.getByRole("tablist"))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/project-view");
     await page.waitForLoadState("domcontentloaded");
 
@@ -44,9 +42,7 @@ test.describe("Project View", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays project details or selection prompt", async ({
-    authedPage: page,
-  }) => {
+  test("displays project details or selection prompt", async ({ authedPage: page }) => {
     await page.goto("/project-view");
 
     // Should show project details, tabs, or a prompt to select a project

@@ -27,18 +27,12 @@ const VULNERABLE_GROUP_FLAGS = [
   { key: "Other", label: "Other" },
 ];
 
-function AffectedPersonsSection({
-  assessment,
-  onUpdate,
-  isSaving,
-}: AffectedPersonsSectionProps) {
+function AffectedPersonsSection({ assessment, onUpdate, isSaving }: AffectedPersonsSectionProps) {
   const theme = useTheme();
 
-  const [affectedGroups, setAffectedGroups] = useState(
-    assessment.affected_groups ?? ""
-  );
+  const [affectedGroups, setAffectedGroups] = useState(assessment.affected_groups ?? "");
   const [vulnerabilityContext, setVulnerabilityContext] = useState(
-    assessment.vulnerability_context ?? ""
+    assessment.vulnerability_context ?? "",
   );
 
   const handleAffectedGroupsBlur = () => {
@@ -68,10 +62,17 @@ function AffectedPersonsSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)(a)
           </a>{" "}
-          requires identifying the categories of natural persons and groups likely to be affected. Recital 96 highlights special consideration for vulnerable groups including minors, persons with disabilities, and those in asymmetric power relationships.
+          requires identifying the categories of natural persons and groups likely to be affected.
+          Recital 96 highlights special consideration for vulnerable groups including minors,
+          persons with disabilities, and those in asymmetric power relationships.
         </>
       }
     >
@@ -122,9 +123,7 @@ function AffectedPersonsSection({
           }}
         >
           {VULNERABLE_GROUP_FLAGS.map((group) => {
-            const isChecked = (assessment.group_flags ?? []).includes(
-              group.key
-            );
+            const isChecked = (assessment.group_flags ?? []).includes(group.key);
             return (
               <Checkbox
                 key={group.key}
@@ -132,9 +131,7 @@ function AffectedPersonsSection({
                 label={group.label}
                 isChecked={isChecked}
                 value={group.key}
-                onChange={(e) =>
-                  handleFlagChange(group.key, e.target.checked)
-                }
+                onChange={(e) => handleFlagChange(group.key, e.target.checked)}
                 isDisabled={isSaving}
               />
             );

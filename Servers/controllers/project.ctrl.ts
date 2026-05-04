@@ -25,11 +25,7 @@ import { createISOFrameworkQuery } from "../utils/iso42001.utils";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
 import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
 import {
@@ -50,16 +46,18 @@ import {
   recordUseCaseDeletion,
 } from "../utils/useCaseChangeHistory.utils";
 import { getApprovalWorkflowByIdQuery } from "../utils/approvalWorkflow.utils";
-import { createApprovalRequestQuery, hasPendingApprovalQuery, getPendingApprovalRequestIdQuery, withdrawApprovalRequestQuery } from "../utils/approvalRequest.utils";
+import {
+  createApprovalRequestQuery,
+  hasPendingApprovalQuery,
+  getPendingApprovalRequestIdQuery,
+  withdrawApprovalRequestQuery,
+} from "../utils/approvalRequest.utils";
 // SSE notifications disabled for now - can be re-enabled later if needed
 // import { notifyStepApprovers } from "../services/notification.service";
 import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 
-export async function getAllProjects(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAllProjects(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllProjects",
     functionName: "getAllProjects",
@@ -76,7 +74,7 @@ export async function getAllProjects(
 
     const projects = (await getAllProjectsQuery(
       { userId, role },
-      req.organizationId!
+      req.organizationId!,
     )) as IProjectAttributes[];
 
     // Add approval status fields to each project
@@ -89,21 +87,21 @@ export async function getAllProjects(
           const hasPendingApproval = await hasPendingApprovalQuery(
             project.id,
             "use_case",
-            req.organizationId!
+            req.organizationId!,
           );
 
           // Get the approval status (pending, rejected, or null)
           const approvalStatus = await getApprovalStatusQuery(
             project.id,
             "use_case",
-            req.organizationId!
+            req.organizationId!,
           );
 
           // Add approval status to project response
           ((project as any).dataValues as any).has_pending_approval = hasPendingApproval;
           ((project as any).dataValues as any).approval_status = approvalStatus;
         }
-      })
+      }),
     );
 
     // Fetch additional use-cases from plugins (e.g., JIRA Assets)
@@ -112,7 +110,7 @@ export async function getAllProjects(
       const pluginUseCases = await PluginService.getDataFromProviders(
         "use-cases",
         req.organizationId!,
-        sequelize
+        sequelize,
       );
       if (pluginUseCases.length > 0) {
         console.log(`[getAllProjects] Merging ${pluginUseCases.length} use-cases from plugins`);
@@ -148,10 +146,7 @@ export async function getAllProjects(
   }
 }
 
-export async function getProjectById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getProjectById(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -170,7 +165,7 @@ export async function getProjectById(
       const hasPendingApproval = await hasPendingApprovalQuery(
         projectId,
         "use_case",
-        req.organizationId!
+        req.organizationId!,
       );
 
       // Get the approval status (pending, rejected, or null)
@@ -178,7 +173,7 @@ export async function getProjectById(
       const approvalStatus = await getApprovalStatusQuery(
         projectId,
         "use_case",
-        req.organizationId!
+        req.organizationId!,
       );
 
       // Add approval status to project response
@@ -251,7 +246,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       newProject.framework,
       req.organizationId!,
       req.userId!,
-      transaction
+      transaction,
     );
 
     // Only create frameworks immediately if NO approval workflow is assigned
@@ -265,7 +260,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             createdProject.id!,
             newProject.enable_ai_data_insertion,
             req.organizationId!,
-            transaction
+            transaction,
           );
           frameworks["eu"] = eu;
         } else if (framework === 2) {
@@ -273,7 +268,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             createdProject.id!,
             newProject.enable_ai_data_insertion,
             req.organizationId!,
-            transaction
+            transaction,
           );
           frameworks["iso42001"] = iso42001;
         } else if (framework === 3) {
@@ -281,7 +276,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             createdProject.id!,
             newProject.enable_ai_data_insertion,
             req.organizationId!,
-            transaction
+            transaction,
           );
           frameworks["iso27001"] = iso27001;
         } else if (framework === 4) {
@@ -289,7 +284,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             createdProject.id!,
             newProject.enable_ai_data_insertion,
             req.organizationId!,
-            transaction
+            transaction,
           );
           frameworks["nist_ai_rmf"] = nist;
         }
@@ -320,7 +315,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             description: createdProject.description,
             status: createdProject.status,
           },
-          transaction
+          transaction,
         );
       }
 
@@ -337,18 +332,18 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         const workflow = await getApprovalWorkflowByIdQuery(
           createdProject.approval_workflow_id,
           req.organizationId!,
-          transaction
+          transaction,
         );
 
         console.log("Workflow fetched:", workflow ? "YES" : "NO");
         if (workflow) {
-          const workflowSteps = workflow.get('steps') as any;
+          const workflowSteps = workflow.get("steps") as any;
           console.log("Workflow ID:", (workflow as any).id);
           console.log("Workflow steps:", workflowSteps);
           console.log("Number of steps:", workflowSteps?.length);
         }
 
-        const workflowSteps = workflow ? workflow.get('steps') as any : null;
+        const workflowSteps = workflow ? (workflow.get("steps") as any) : null;
         if (workflow && workflowSteps && workflowSteps.length > 0) {
           console.log("Creating approval request...");
           const approvalRequestData = {
@@ -370,7 +365,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             approvalRequestData,
             workflowSteps,
             req.organizationId!,
-            transaction
+            transaction,
           );
           console.log("Approval request created successfully!");
 
@@ -451,7 +446,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         {
           title: `Project created`,
           message: `${actor.name} ${actor.surname} created Project ${createdProject.project_title}.`,
-        }
+        },
       ).catch(async (slackError) => {
         await logFailure({
           eventType: "Create",
@@ -479,7 +474,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             entityUrl: `/project-view?projectId=${createdProject.id}`,
           },
           assignerName,
-          baseUrl
+          baseUrl,
         ).catch((err) => console.error("Failed to send owner notification:", err));
       }
 
@@ -487,7 +482,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         STATUS_CODE[201]({
           project: createdProject,
           frameworks,
-        })
+        }),
       );
     }
 
@@ -544,10 +539,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   }
 }
 
-export async function updateProjectById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const updateData = req.body;
@@ -590,8 +582,7 @@ export async function updateProjectById(
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
-    const updatedProject: Partial<ProjectModel> & { members?: number[] } =
-      updateData;
+    const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
     const members = updatedProject.members || [];
 
     delete updatedProject.members;
@@ -611,7 +602,7 @@ export async function updateProjectById(
     const currentMembers = await getCurrentProjectMembers(
       projectId,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     const project = await updateProjectByIdQuery(
@@ -619,23 +610,20 @@ export async function updateProjectById(
       updatedProject,
       members,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (project) {
       // Track and record changes for use case history
       if (req.userId && existingProject) {
-        const changes = await trackUseCaseChanges(
-          existingProject,
-          updatedProject
-        );
+        const changes = await trackUseCaseChanges(existingProject, updatedProject);
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             projectId,
             req.userId,
             req.organizationId!,
             changes,
-            transaction
+            transaction,
           );
         }
       }
@@ -669,16 +657,14 @@ export async function updateProjectById(
             entityUrl: `/project-view?projectId=${projectId}`,
           },
           assignerName,
-          baseUrl
+          baseUrl,
         ).catch((err) => console.error("Failed to send owner notification:", err));
       }
 
       // Calculate which members actually got added (both new and re-added)
       // This includes users who weren't in currentMembers but are now in the final project
       const finalMembers = project.members || [];
-      const addedMembers = finalMembers.filter(
-        (m) => !currentMembers.includes(m)
-      );
+      const addedMembers = finalMembers.filter((m) => !currentMembers.includes(m));
 
       // Send notification to users who were added (fire-and-forget, don't block response)
       for (const memberId of addedMembers) {
@@ -688,18 +674,13 @@ export async function updateProjectById(
 
           if (memberUser) {
             // Validate role_id is a number
-            if (
-              typeof memberUser.role_id !== "number" ||
-              !Number.isInteger(memberUser.role_id)
-            ) {
+            if (typeof memberUser.role_id !== "number" || !Number.isInteger(memberUser.role_id)) {
               await logFailure({
                 eventType: "Update",
                 description: `Invalid role_id type for member ${memberId}: expected number, got ${typeof memberUser.role_id} (${memberUser.role_id})`,
                 functionName: "updateProjectById",
                 fileName: "project.ctrl.ts",
-                error: new Error(
-                  `Invalid role_id type: ${typeof memberUser.role_id}`
-                ),
+                error: new Error(`Invalid role_id type: ${typeof memberUser.role_id}`),
                 userId: req.userId!,
                 tenantId: req.organizationId!,
               });
@@ -816,10 +797,7 @@ export async function updateProjectById(
   }
 }
 
-export async function deleteProjectById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function deleteProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -837,15 +815,17 @@ export async function deleteProjectById(
       projectId,
       "use_case",
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (pendingApprovalRequestId) {
-      console.log(`Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`);
+      console.log(
+        `Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
+      );
       await withdrawApprovalRequestQuery(
         pendingApprovalRequestId,
         req.organizationId!,
-        transaction
+        transaction,
       );
       console.log(`Approval request ${pendingApprovalRequestId} withdrawn successfully`);
     }
@@ -853,18 +833,13 @@ export async function deleteProjectById(
     // Record deletion in change history BEFORE deleting the project
     // (due to foreign key constraint on use_case_change_history table)
     if (req.userId) {
-      await recordUseCaseDeletion(
-        projectId,
-        req.userId,
-        req.organizationId!,
-        transaction
-      );
+      await recordUseCaseDeletion(projectId, req.userId, req.organizationId!, transaction);
     }
 
     const deletedProject = await deleteProjectByIdQuery(
       projectId,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (deletedProject) {
@@ -909,10 +884,7 @@ export async function deleteProjectById(
   }
 }
 
-export async function getProjectStatsById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getProjectStatsById(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -966,10 +938,7 @@ export async function getProjectStatsById(
   }
 }
 
-export async function getProjectRisksCalculations(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getProjectRisksCalculations(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -981,10 +950,7 @@ export async function getProjectRisksCalculations(
   });
 
   try {
-    const projectRisksCalculations = await calculateProjectRisks(
-      projectId,
-      req.organizationId!
-    );
+    const projectRisksCalculations = await calculateProjectRisks(projectId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -997,11 +963,7 @@ export async function getProjectRisksCalculations(
 
     return res
       .status(projectRisksCalculations ? 200 : 204)
-      .json(
-        STATUS_CODE[projectRisksCalculations ? 200 : 204](
-          projectRisksCalculations
-        )
-      );
+      .json(STATUS_CODE[projectRisksCalculations ? 200 : 204](projectRisksCalculations));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -1017,10 +979,7 @@ export async function getProjectRisksCalculations(
   }
 }
 
-export async function getVendorRisksCalculations(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getVendorRisksCalculations(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -1032,10 +991,7 @@ export async function getVendorRisksCalculations(
   });
 
   try {
-    const vendorRisksCalculations = await calculateVendirRisks(
-      projectId,
-      req.organizationId!
-    );
+    const vendorRisksCalculations = await calculateVendirRisks(projectId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -1048,11 +1004,7 @@ export async function getVendorRisksCalculations(
 
     return res
       .status(vendorRisksCalculations ? 200 : 204)
-      .json(
-        STATUS_CODE[vendorRisksCalculations ? 200 : 204](
-          vendorRisksCalculations
-        )
-      );
+      .json(STATUS_CODE[vendorRisksCalculations ? 200 : 204](vendorRisksCalculations));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -1069,7 +1021,9 @@ export async function getVendorRisksCalculations(
 }
 
 export async function getCompliances(req: Request, res: Response) {
-  const projectId = parseInt(Array.isArray(req.params.projid) ? req.params.projid[0] : req.params.projid);
+  const projectId = parseInt(
+    Array.isArray(req.params.projid) ? req.params.projid[0] : req.params.projid,
+  );
 
   logProcessing({
     description: `starting getCompliances for project ID ${projectId}`,
@@ -1084,23 +1038,23 @@ export async function getCompliances(req: Request, res: Response) {
     if (project) {
       const controlCategories = (await getControlCategoryByProjectIdQuery(
         project.id!,
-        req.organizationId!
+        req.organizationId!,
       )) as IControlCategory[];
       for (const category of controlCategories) {
         if (category) {
           const controls = (await getAllControlsByControlGroupQuery(
             category.id,
-            req.organizationId!
+            req.organizationId!,
           )) as IControl[];
           for (const control of controls) {
             if (control && control.id) {
               const subControls = await getAllSubcontrolsByControlIdQuery(
                 control.id,
-                req.organizationId!
+                req.organizationId!,
               );
               control.numberOfSubcontrols = subControls.length;
               control.numberOfDoneSubcontrols = subControls.filter(
-                (sub) => sub.status === "Done"
+                (sub) => sub.status === "Done",
               ).length;
               control.subControls = subControls;
             }
@@ -1160,8 +1114,10 @@ export async function projectComplianceProgress(req: Request, res: Response) {
   try {
     const project = await getProjectByIdQuery(projectId, req.organizationId!);
     if (project) {
-      const { totalSubcontrols, doneSubcontrols } =
-        await countSubControlsByProjectId(project.id!, req.organizationId!);
+      const { totalSubcontrols, doneSubcontrols } = await countSubControlsByProjectId(
+        project.id!,
+        req.organizationId!,
+      );
 
       await logSuccess({
         eventType: "Read",
@@ -1176,7 +1132,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
         STATUS_CODE[200]({
           allsubControls: totalSubcontrols,
           allDonesubControls: doneSubcontrols,
-        })
+        }),
       );
     }
 
@@ -1219,8 +1175,10 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
   try {
     const project = await getProjectByIdQuery(projectId, req.organizationId!);
     if (project) {
-      const { totalAssessments, answeredAssessments } =
-        await countAnswersByProjectId(project.id!, req.organizationId!);
+      const { totalAssessments, answeredAssessments } = await countAnswersByProjectId(
+        project.id!,
+        req.organizationId!,
+      );
 
       await logSuccess({
         eventType: "Read",
@@ -1235,7 +1193,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
         STATUS_CODE[200]({
           totalQuestions: totalAssessments,
           answeredQuestions: answeredAssessments,
-        })
+        }),
       );
     }
 
@@ -1264,10 +1222,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
   }
 }
 
-export async function allProjectsComplianceProgress(
-  req: Request,
-  res: Response
-) {
+export async function allProjectsComplianceProgress(req: Request, res: Response) {
   let totalNumberOfSubcontrols = 0;
   let totalNumberOfDoneSubcontrols = 0;
   logProcessing({
@@ -1288,11 +1243,13 @@ export async function allProjectsComplianceProgress(
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
-          const { totalSubcontrols, doneSubcontrols } =
-            await countSubControlsByProjectId(project.id!, req.organizationId!);
+          const { totalSubcontrols, doneSubcontrols } = await countSubControlsByProjectId(
+            project.id!,
+            req.organizationId!,
+          );
           totalNumberOfSubcontrols += parseInt(totalSubcontrols);
           totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols);
-        })
+        }),
       );
 
       await logSuccess({
@@ -1308,7 +1265,7 @@ export async function allProjectsComplianceProgress(
         STATUS_CODE[200]({
           allsubControls: totalNumberOfSubcontrols,
           allDonesubControls: totalNumberOfDoneSubcontrols,
-        })
+        }),
       );
     }
 
@@ -1337,10 +1294,7 @@ export async function allProjectsComplianceProgress(
   }
 }
 
-export async function allProjectsAssessmentProgress(
-  req: Request,
-  res: Response
-) {
+export async function allProjectsAssessmentProgress(req: Request, res: Response) {
   let totalNumberOfQuestions = 0;
   let totalNumberOfAnsweredQuestions = 0;
   logProcessing({
@@ -1361,11 +1315,13 @@ export async function allProjectsAssessmentProgress(
     if (projects && projects.length > 0) {
       await Promise.all(
         projects.map(async (project) => {
-          const { totalAssessments, answeredAssessments } =
-            await countAnswersByProjectId(project.id!, req.organizationId!);
+          const { totalAssessments, answeredAssessments } = await countAnswersByProjectId(
+            project.id!,
+            req.organizationId!,
+          );
           totalNumberOfQuestions += parseInt(totalAssessments);
           totalNumberOfAnsweredQuestions += parseInt(answeredAssessments);
-        })
+        }),
       );
 
       await logSuccess({
@@ -1381,7 +1337,7 @@ export async function allProjectsAssessmentProgress(
         STATUS_CODE[200]({
           totalQuestions: totalNumberOfQuestions,
           answeredQuestions: totalNumberOfAnsweredQuestions,
-        })
+        }),
       );
     }
 
@@ -1410,10 +1366,7 @@ export async function allProjectsAssessmentProgress(
   }
 }
 
-export async function updateProjectStatus(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateProjectStatus(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { status } = req.body;
@@ -1448,7 +1401,7 @@ export async function updateProjectStatus(
       { status, last_updated: new Date(), last_updated_by: req.userId! },
       [], // no members update
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (updatedProject) {
@@ -1465,7 +1418,7 @@ export async function updateProjectStatus(
               newValue: String(status || "-"),
             },
           ],
-          transaction
+          transaction,
         );
       }
 
@@ -1484,9 +1437,7 @@ export async function updateProjectStatus(
     }
 
     await transaction.rollback();
-    return res
-      .status(500)
-      .json(STATUS_CODE[500]("Failed to update project status"));
+    return res.status(500).json(STATUS_CODE[500]("Failed to update project status"));
   } catch (error) {
     await transaction.rollback();
 

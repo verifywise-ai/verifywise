@@ -29,13 +29,7 @@ export async function createProject({ body }: { body: any }): Promise<any> {
   return response;
 }
 
-export async function updateProject({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateProject({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.patch(`/projects/${id}`, body);
   return response;
 }

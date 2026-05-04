@@ -17,22 +17,18 @@ import {
  */
 export async function createInstallation(
   plugin_key: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPluginInstallation> {
   // Validate required fields
   if (!plugin_key || plugin_key.trim().length === 0) {
-    throw new ValidationException(
-      "Plugin key is required",
-      "plugin_key",
-      plugin_key
-    );
+    throw new ValidationException("Plugin key is required", "plugin_key", plugin_key);
   }
 
   if (!organizationId || organizationId < 1) {
     throw new ValidationException(
       "Valid organization ID is required",
       "organizationId",
-      organizationId
+      organizationId,
     );
   }
 
@@ -45,15 +41,11 @@ export async function createInstallation(
       {
         replacements: { plugin_key: plugin_key.trim(), organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (existing && existing.length > 0) {
-      throw new ValidationException(
-        "Plugin is already installed",
-        "plugin_key",
-        plugin_key
-      );
+      throw new ValidationException("Plugin is already installed", "plugin_key", plugin_key);
     }
 
     // Create new installation record
@@ -69,7 +61,7 @@ export async function createInstallation(
           status: PluginInstallationStatus.INSTALLED,
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
     return (result[0] as any)[0] as IPluginInstallation;
@@ -79,7 +71,7 @@ export async function createInstallation(
     }
 
     // Check if it's a Sequelize error
-    if (error.name === 'SequelizeDatabaseError') {
+    if (error.name === "SequelizeDatabaseError") {
       throw new Error(`Database error: ${error.original?.message || error.message}`);
     }
 
@@ -92,7 +84,7 @@ export async function createInstallation(
  */
 export async function findByPlugin(
   plugin_key: string,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPluginInstallation | null> {
   const results = await sequelize.query(
     `SELECT * FROM plugin_installations
@@ -101,7 +93,7 @@ export async function findByPlugin(
     {
       replacements: { plugin_key: plugin_key.trim(), organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return results.length > 0 ? (results[0] as IPluginInstallation) : null;
@@ -110,9 +102,7 @@ export async function findByPlugin(
 /**
  * Get all installed plugins for an organization
  */
-export async function getInstalledPlugins(
-  organizationId: number
-): Promise<IPluginInstallation[]> {
+export async function getInstalledPlugins(organizationId: number): Promise<IPluginInstallation[]> {
   const results = await sequelize.query(
     `SELECT * FROM plugin_installations
      WHERE organization_id = :organizationId
@@ -120,7 +110,7 @@ export async function getInstalledPlugins(
     {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return results as IPluginInstallation[];
@@ -131,14 +121,10 @@ export async function getInstalledPlugins(
  */
 export async function findById(
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPluginInstallation | null> {
   if (!id || id < 1) {
-    throw new ValidationException(
-      "Valid installation ID is required (must be >= 1)",
-      "id",
-      id
-    );
+    throw new ValidationException("Valid installation ID is required (must be >= 1)", "id", id);
   }
 
   const results = await sequelize.query(
@@ -148,7 +134,7 @@ export async function findById(
     {
       replacements: { id, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
 
   return results.length > 0 ? (results[0] as IPluginInstallation) : null;
@@ -159,7 +145,7 @@ export async function findById(
  */
 export async function findByIdWithValidation(
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPluginInstallation> {
   const installation = await findById(id, organizationId);
 
@@ -176,7 +162,7 @@ export async function findByIdWithValidation(
 export async function updateStatus(
   id: number,
   organizationId: number,
-  status: PluginInstallationStatus
+  status: PluginInstallationStatus,
 ): Promise<IPluginInstallation> {
   const results = await sequelize.query(
     `UPDATE plugin_installations
@@ -186,7 +172,7 @@ export async function updateStatus(
     {
       replacements: { id, organizationId, status },
       type: QueryTypes.UPDATE,
-    }
+    },
   );
 
   if (!results || !results[0] || !(results[0] as any)[0]) {
@@ -199,17 +185,14 @@ export async function updateStatus(
 /**
  * Delete installation
  */
-export async function deleteInstallation(
-  id: number,
-  organizationId: number
-): Promise<void> {
+export async function deleteInstallation(id: number, organizationId: number): Promise<void> {
   await sequelize.query(
     `DELETE FROM plugin_installations
      WHERE id = :id AND organization_id = :organizationId`,
     {
       replacements: { id, organizationId },
       type: QueryTypes.DELETE,
-    }
+    },
   );
 }
 
@@ -219,7 +202,7 @@ export async function deleteInstallation(
 export async function updateConfiguration(
   id: number,
   organizationId: number,
-  configuration: any
+  configuration: any,
 ): Promise<IPluginInstallation> {
   const results = await sequelize.query(
     `UPDATE plugin_installations
@@ -229,11 +212,15 @@ export async function updateConfiguration(
     {
       replacements: { id, organizationId, configuration: JSON.stringify(configuration) },
       type: QueryTypes.UPDATE,
-    }
+    },
   );
 
   if (!results || !results[0] || !(results[0] as any)[0]) {
-    throw new NotFoundException("Plugin installation not found after configuration update", "installation", id);
+    throw new NotFoundException(
+      "Plugin installation not found after configuration update",
+      "installation",
+      id,
+    );
   }
 
   return (results[0] as any)[0] as IPluginInstallation;

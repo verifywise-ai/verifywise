@@ -16,21 +16,12 @@ export async function getControlById({
   return response.data;
 }
 
-export async function createControl({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createControl({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/controls", body);
   return response;
 }
 
-
-export async function deleteControl({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteControl({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/controls/${id}`);
   return response;
 }
@@ -55,9 +46,9 @@ export async function getControlByIdAndProject({
     projectFrameworkId: projectFrameworkId.toString(),
   });
 
-  if (owner && owner !== '') params.append('owner', owner);
-  if (approver && approver !== '') params.append('approver', approver);
-  if (dueDateFilter && dueDateFilter !== '') params.append('dueDateFilter', dueDateFilter);
+  if (owner && owner !== "") params.append("owner", owner);
+  if (approver && approver !== "") params.append("approver", approver);
+  if (dueDateFilter && dueDateFilter !== "") params.append("dueDateFilter", dueDateFilter);
 
   const response = await apiServices.get(`/eu-ai-act/controlById?${params.toString()}`, {
     signal,
@@ -72,9 +63,12 @@ export async function getControlCategoriesByProject({
   projectFrameworkId: number;
   signal?: AbortSignal;
 }): Promise<any> {
-  const response = await apiServices.get(`/eu-ai-act/controlCategories?projectFrameworkId=${projectFrameworkId}`, {
-    signal,
-  });
+  const response = await apiServices.get(
+    `/eu-ai-act/controlCategories?projectFrameworkId=${projectFrameworkId}`,
+    {
+      signal,
+    },
+  );
   return response.data;
 }
 
@@ -125,12 +119,15 @@ export async function getControlsByControlCategoryId({
     projectFrameworkId: projectFrameworkId.toString(),
   });
 
-  if (owner && owner !== '') params.append('owner', owner);
-  if (approver && approver !== '') params.append('approver', approver);
-  if (dueDateFilter && dueDateFilter !== '') params.append('dueDateFilter', dueDateFilter);
+  if (owner && owner !== "") params.append("owner", owner);
+  if (approver && approver !== "") params.append("approver", approver);
+  if (dueDateFilter && dueDateFilter !== "") params.append("dueDateFilter", dueDateFilter);
 
-  const response = await apiServices.get(`/eu-ai-act/controls/byControlCategoryId/${controlCategoryId}?${params.toString()}`, {
-    signal,
-  });
+  const response = await apiServices.get(
+    `/eu-ai-act/controls/byControlCategoryId/${controlCategoryId}?${params.toString()}`,
+    {
+      signal,
+    },
+  );
   return response.data;
 }

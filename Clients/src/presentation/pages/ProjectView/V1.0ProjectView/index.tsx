@@ -1,9 +1,5 @@
 import { Stack, Typography } from "@mui/material";
-import {
-  projectViewHeaderDesc,
-  projectViewHeaderTitle,
-  tabPanelStyle,
-} from "./style";
+import { projectViewHeaderDesc, projectViewHeaderTitle, tabPanelStyle } from "./style";
 import TabPanel from "@mui/lab/TabPanel";
 import { SyntheticEvent, useState, useEffect, useMemo } from "react";
 import TabContext from "@mui/lab/TabContext";
@@ -174,13 +170,13 @@ const VWProjectView = () => {
 
   // Check approval status
   const approvalStatus = project && (project as any).approval_status;
-  const isApprovalBlocked = approvalStatus === 'pending' || approvalStatus === 'rejected';
+  const isApprovalBlocked = approvalStatus === "pending" || approvalStatus === "rejected";
 
   // Determine tooltip message based on approval status
   const getDisabledTooltip = () => {
-    if (approvalStatus === 'rejected') {
+    if (approvalStatus === "rejected") {
       return "This use case has been rejected. All tabs are disabled as the use case is no longer usable.";
-    } else if (approvalStatus === 'pending') {
+    } else if (approvalStatus === "pending") {
       return "This use case has a pending approval request. All tabs are disabled until the request is approved.";
     }
     return "This tab is currently unavailable.";
@@ -188,18 +184,12 @@ const VWProjectView = () => {
 
   return (
     <Stack className="vw-project-view">
-      <PageBreadcrumbs
-        items={breadcrumbItems}
-        autoGenerate={false}
-        showCurrentPage={true}
-      />
+      <PageBreadcrumbs items={breadcrumbItems} autoGenerate={false} showCurrentPage={true} />
       {toast.visible && <CustomizableToast title={toast.message} />}
       <Stack className="vw-project-view-header" sx={{ mb: 10 }}>
         {project ? (
           <>
-            <Typography sx={projectViewHeaderTitle}>
-              Use-case general view
-            </Typography>
+            <Typography sx={projectViewHeaderTitle}>Use-case general view</Typography>
             <Typography sx={projectViewHeaderDesc}>
               This use case includes all the governance process status of{" "}
               <Typography component="span" sx={{ color: "brand.primary", fontSize: "inherit" }}>
@@ -339,10 +329,10 @@ const VWProjectView = () => {
                     framework === "iso-42001"
                       ? 2
                       : framework === "eu-ai-act"
-                      ? 1
-                      : project.framework && project.framework.length > 0
-                      ? project.framework[0].framework_id
-                      : 1
+                        ? 1
+                        : project.framework && project.framework.length > 0
+                          ? project.framework[0].framework_id
+                          : 1
                   }
                 />
               )

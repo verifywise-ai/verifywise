@@ -16,22 +16,15 @@ import { TopicModel } from "../domain.layer/models/topic/topic.model";
 import { SubtopicModel } from "../domain.layer/models/subtopic/subtopic.model";
 import { sequelize } from "../database/db";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-  logSuccess,
-} from "../utils/logger/logHelper";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 
-export async function getAllAssessments(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAllAssessments(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllAssessments",
     functionName: "getAllAssessments",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -43,7 +36,7 @@ export async function getAllAssessments(
       functionName: "getAllAssessments",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res
@@ -57,17 +50,14 @@ export async function getAllAssessments(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function getAssessmentById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAssessmentById(req: Request, res: Response): Promise<any> {
   const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -75,14 +65,11 @@ export async function getAssessmentById(
     functionName: "getAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
-    const assessment = await getAssessmentByIdQuery(
-      assessmentId,
-      req.organizationId!
-    );
+    const assessment = await getAssessmentByIdQuery(assessmentId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -90,12 +77,10 @@ export async function getAssessmentById(
       functionName: "getAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
-    return res
-      .status(assessment ? 200 : 404)
-      .json(STATUS_CODE[assessment ? 200 : 404](assessment));
+    return res.status(assessment ? 200 : 404).json(STATUS_CODE[assessment ? 200 : 404](assessment));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -104,24 +89,21 @@ export async function getAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function createAssessment(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function createAssessment(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   logProcessing({
     description: "starting createAssessment",
     functionName: "createAssessment",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -133,12 +115,11 @@ export async function createAssessment(
         STATUS_CODE[400]({
           message: "project_id is required",
           field: "project_id",
-        })
+        }),
       );
     }
 
-    const createdAssessment =
-      await AssessmentModel.CreateNewAssessment(assessmentData);
+    const createdAssessment = await AssessmentModel.CreateNewAssessment(assessmentData);
 
     if (createdAssessment) {
       await transaction.commit();
@@ -149,14 +130,14 @@ export async function createAssessment(
         functionName: "createAssessment",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!
+        tenantId: req.organizationId!,
       });
 
       return res.status(201).json(
         STATUS_CODE[201]({
           message: "Assessment created successfully",
           assessment: createdAssessment.toSafeJSON(),
-        })
+        }),
       );
     }
 
@@ -168,13 +149,13 @@ export async function createAssessment(
       functionName: "createAssessment",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(503).json(
       STATUS_CODE[503]({
         message: "Failed to create assessment",
-      })
+      }),
     );
   } catch (error) {
     await transaction.rollback();
@@ -186,7 +167,7 @@ export async function createAssessment(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -197,10 +178,7 @@ export async function createAssessment(
   }
 }
 
-export async function updateAssessmentById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateAssessmentById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   logProcessing({
@@ -208,7 +186,7 @@ export async function updateAssessmentById(
     functionName: "updateAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
@@ -219,12 +197,14 @@ export async function updateAssessmentById(
         STATUS_CODE[400]({
           message: "project_id is required",
           field: "project_id",
-        })
+        }),
       );
     }
 
-    const [updatedCount, updatedAssessments] =
-      await AssessmentModel.UpdateAssessment(assessmentId, assessmentData);
+    const [updatedCount, updatedAssessments] = await AssessmentModel.UpdateAssessment(
+      assessmentId,
+      assessmentData,
+    );
 
     if (updatedCount > 0 && updatedAssessments.length > 0) {
       await transaction.commit();
@@ -235,14 +215,14 @@ export async function updateAssessmentById(
         functionName: "updateAssessmentById",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!
+        tenantId: req.organizationId!,
       });
 
       return res.status(202).json(
         STATUS_CODE[202]({
           message: "Assessment updated successfully",
           assessment: updatedAssessments[0].toSafeJSON(),
-        })
+        }),
       );
     }
 
@@ -254,14 +234,14 @@ export async function updateAssessmentById(
       functionName: "updateAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(
       STATUS_CODE[404]({
         message: "Assessment not found or no changes made",
         assessmentId: assessmentId,
-      })
+      }),
     );
   } catch (error) {
     await transaction.rollback();
@@ -273,7 +253,7 @@ export async function updateAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     if (error instanceof ValidationException) {
@@ -284,10 +264,7 @@ export async function updateAssessmentById(
   }
 }
 
-export async function deleteAssessmentById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function deleteAssessmentById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   logProcessing({
@@ -295,14 +272,14 @@ export async function deleteAssessmentById(
     functionName: "deleteAssessmentById",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
     const deletedAssessment = await deleteAssessmentByIdQuery(
       assessmentId,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (deletedAssessment) {
@@ -314,7 +291,7 @@ export async function deleteAssessmentById(
         functionName: "deleteAssessmentById",
         fileName: "assessment.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!
+        tenantId: req.organizationId!,
       });
 
       return res.status(202).json(STATUS_CODE[202](deletedAssessment));
@@ -326,7 +303,7 @@ export async function deleteAssessmentById(
       functionName: "deleteAssessmentById",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -340,7 +317,7 @@ export async function deleteAssessmentById(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -355,30 +332,27 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
     functionName: "getAnswers",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
     const assessment = (await getAssessmentByIdQuery(
       assessmentId,
-      req.organizationId!
+      req.organizationId!,
     )) as AssessmentModel;
     const topics = (await getTopicByAssessmentIdQuery(
       assessment.id!,
-      req.organizationId!
+      req.organizationId!,
     )) as TopicModel[];
 
     for (let topic of topics) {
       const subTopics = (await getSubTopicByTopicIdQuery(
         topic.id!,
-        req.organizationId!
+        req.organizationId!,
       )) as SubtopicModel[];
 
       for (let subTopic of subTopics) {
-        const questions = await getQuestionBySubTopicIdQuery(
-          subTopic.id!,
-          req.organizationId!
-        );
+        const questions = await getQuestionBySubTopicIdQuery(subTopic.id!, req.organizationId!);
         (subTopic.dataValues as any)["questions"] = questions;
       }
       (topic.dataValues as any)["subTopics"] = subTopics;
@@ -391,7 +365,7 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
       functionName: "getAnswers",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ message: assessment }));
@@ -403,17 +377,14 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function getAssessmentByProjectId(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAssessmentByProjectId(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -421,14 +392,11 @@ export async function getAssessmentByProjectId(
     functionName: "getAssessmentByProjectId",
     fileName: "assessment.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!
+    tenantId: req.organizationId!,
   });
 
   try {
-    const assessments = await getAssessmentByProjectIdQuery(
-      projectId,
-      req.organizationId!
-    );
+    const assessments = await getAssessmentByProjectIdQuery(projectId, req.organizationId!);
 
     await logSuccess({
       eventType: "Read",
@@ -436,16 +404,12 @@ export async function getAssessmentByProjectId(
       functionName: "getAssessmentByProjectId",
       fileName: "assessment.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res
       .status(assessments && assessments.length !== 0 ? 200 : 204)
-      .json(
-        STATUS_CODE[assessments && assessments.length !== 0 ? 200 : 204](
-          assessments || {}
-        )
-      );
+      .json(STATUS_CODE[assessments && assessments.length !== 0 ? 200 : 204](assessments || {}));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -454,7 +418,7 @@ export async function getAssessmentByProjectId(
       fileName: "assessment.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!
+      tenantId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

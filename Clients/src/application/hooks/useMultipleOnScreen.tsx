@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
  * Options for the `useMultipleOnScreen` hook.
  *
  * @interface UseMultipleOnScreenOptions
- * 
+ *
  * @property {number} countToTrigger - The number of elements that need to be on screen
  * before the hook triggers the desired action.
- * 
+ *
  * @property {IntersectionObserverInit} [options] - Optional configuration object for the
  * `IntersectionObserver`, allowing customization of root, rootMargin, and threshold.
  */
@@ -29,21 +29,23 @@ const useMultipleOnScreen = <T extends Element>({
   const [refs, setRefs] = useState<((node: T | null) => void)[]>([]);
 
   useEffect(() => {
-    const newRefs: ((node: T | null) => void)[] = Array(countToTrigger).fill(null).map(() => {
-      let observer: IntersectionObserver | null = null;
+    const newRefs: ((node: T | null) => void)[] = Array(countToTrigger)
+      .fill(null)
+      .map(() => {
+        let observer: IntersectionObserver | null = null;
 
-      return (node: T | null) => {
-        if (observer) observer.disconnect();
+        return (node: T | null) => {
+          if (observer) observer.disconnect();
 
-        if (node) {
-          observer = new IntersectionObserver(([entry]) => {
-            setVisibleCount(prev => (entry.isIntersecting ? prev + 1 : prev - 1));
-          }, options);
+          if (node) {
+            observer = new IntersectionObserver(([entry]) => {
+              setVisibleCount((prev) => (entry.isIntersecting ? prev + 1 : prev - 1));
+            }, options);
 
-          observer.observe(node);
-        }
-      };
-    });
+            observer.observe(node);
+          }
+        };
+      });
 
     setRefs(newRefs);
   }, [countToTrigger, options]);

@@ -4,7 +4,7 @@ import { AutomationModel } from "../automation/automation.model";
 export interface IActionExecutionResult {
   action_id?: number;
   action_type: string;
-  status: 'success' | 'failure';
+  status: "success" | "failure";
   result_data?: object;
   error_message?: string;
   executed_at?: Date;
@@ -16,7 +16,7 @@ export interface IAutomationExecutionLog {
   triggered_at?: Date;
   trigger_data?: object;
   action_results?: IActionExecutionResult[];
-  status?: 'success' | 'partial_success' | 'failure';
+  status?: "success" | "partial_success" | "failure";
   error_message?: string;
   created_at?: Date;
 }
@@ -26,7 +26,10 @@ export interface IAutomationExecutionLog {
   timestamps: true,
   underscored: true,
 })
-export class AutomationExecutionLogModel extends Model<AutomationExecutionLogModel> implements IAutomationExecutionLog {
+export class AutomationExecutionLogModel
+  extends Model<AutomationExecutionLogModel>
+  implements IAutomationExecutionLog
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -68,9 +71,9 @@ export class AutomationExecutionLogModel extends Model<AutomationExecutionLogMod
   @Column({
     type: DataType.TEXT,
     allowNull: false,
-    defaultValue: 'success',
+    defaultValue: "success",
   })
-  status?: 'success' | 'partial_success' | 'failure';
+  status?: "success" | "partial_success" | "failure";
 
   @Column({
     type: DataType.TEXT,
@@ -102,8 +105,8 @@ export class AutomationExecutionLogModel extends Model<AutomationExecutionLogMod
   static async createExecutionLog(
     automation_id: number,
     trigger_data: object = {},
-    status: 'success' | 'partial_success' | 'failure' = 'success',
-    error_message?: string
+    status: "success" | "partial_success" | "failure" = "success",
+    error_message?: string,
   ): Promise<AutomationExecutionLogModel> {
     const log = new AutomationExecutionLogModel();
     log.automation_id = automation_id;
@@ -121,11 +124,11 @@ export class AutomationExecutionLogModel extends Model<AutomationExecutionLogMod
   static async findByAutomationId(
     automation_id: number,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<{ logs: AutomationExecutionLogModel[]; total: number }> {
     const { rows, count } = await AutomationExecutionLogModel.findAndCountAll({
       where: { automation_id },
-      order: [['triggered_at', 'DESC']],
+      order: [["triggered_at", "DESC"]],
       limit,
       offset,
     });
@@ -145,14 +148,32 @@ export class AutomationExecutionLogModel extends Model<AutomationExecutionLogMod
     const stats = await AutomationExecutionLogModel.findAll({
       where: { automation_id },
       attributes: [
-        [AutomationExecutionLogModel.sequelize!.fn('COUNT', '*'), 'total_executions'],
-        [AutomationExecutionLogModel.sequelize!.fn('SUM',
-          AutomationExecutionLogModel.sequelize!.literal("CASE WHEN status = 'success' THEN 1 ELSE 0 END")
-        ), 'successful_executions'],
-        [AutomationExecutionLogModel.sequelize!.fn('SUM',
-          AutomationExecutionLogModel.sequelize!.literal("CASE WHEN status = 'failure' THEN 1 ELSE 0 END")
-        ), 'failed_executions'],
-        [AutomationExecutionLogModel.sequelize!.fn('MAX', AutomationExecutionLogModel.sequelize!.col('triggered_at')), 'last_execution_at'],
+        [AutomationExecutionLogModel.sequelize!.fn("COUNT", "*"), "total_executions"],
+        [
+          AutomationExecutionLogModel.sequelize!.fn(
+            "SUM",
+            AutomationExecutionLogModel.sequelize!.literal(
+              "CASE WHEN status = 'success' THEN 1 ELSE 0 END",
+            ),
+          ),
+          "successful_executions",
+        ],
+        [
+          AutomationExecutionLogModel.sequelize!.fn(
+            "SUM",
+            AutomationExecutionLogModel.sequelize!.literal(
+              "CASE WHEN status = 'failure' THEN 1 ELSE 0 END",
+            ),
+          ),
+          "failed_executions",
+        ],
+        [
+          AutomationExecutionLogModel.sequelize!.fn(
+            "MAX",
+            AutomationExecutionLogModel.sequelize!.col("triggered_at"),
+          ),
+          "last_execution_at",
+        ],
       ],
       raw: true,
     });
@@ -179,8 +200,8 @@ export class AutomationExecutionLogModel extends Model<AutomationExecutionLogMod
       status: this.status,
       error_message: this.error_message,
       execution_time_ms: this.execution_time_ms,
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

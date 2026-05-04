@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { OnboardingState, UserPreferences, SampleProjectData } from "../../presentation/types/interfaces/i.onboarding";
+import {
+  OnboardingState,
+  UserPreferences,
+  SampleProjectData,
+} from "../../presentation/types/interfaces/i.onboarding";
 import { VerifyWiseContext } from "../contexts/VerifyWise.context";
 import { useAuth } from "./useAuth";
 import { setOnboardingStatus as setReduxOnboardingStatus } from "../redux/auth/authSlice";
@@ -96,13 +100,13 @@ export const useOnboarding = () => {
           return currentState;
         });
       } catch (error) {
-        console.error('Failed to parse storage event:', error);
+        console.error("Failed to parse storage event:", error);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, [userId]);
 

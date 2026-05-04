@@ -8,10 +8,7 @@ import { TiersModel } from "../tiers/tiers.model";
   timestamps: true,
   underscored: true,
 })
-export class SubscriptionModel
-  extends Model<SubscriptionModel>
-  implements ISubscription
-{
+export class SubscriptionModel extends Model<SubscriptionModel> implements ISubscription {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

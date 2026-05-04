@@ -29,15 +29,8 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-  logSuccess,
-} from "../utils/logger/logHelper";
-import {
-  sanitizeViewName,
-  sanitizeViewConfig,
-} from "../utils/entityGraphSecurity.utils";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
+import { sanitizeViewName, sanitizeViewConfig } from "../utils/entityGraphSecurity.utils";
 
 // Maximum number of saved views per user
 const MAX_VIEWS_PER_USER = 20;
@@ -59,7 +52,7 @@ export class EntityGraphViewsService {
     name: string,
     config: EntityGraphViewConfig,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphViewsModel> {
     logProcessing({
       description: "Starting EntityGraphViewsService.createView",
@@ -73,44 +66,29 @@ export class EntityGraphViewsService {
       // Validate and sanitize name
       const nameValidation = sanitizeViewName(name);
       if (!nameValidation.valid) {
-        throw new ValidationException(
-          nameValidation.error || "Invalid view name",
-          "name",
-          name
-        );
+        throw new ValidationException(nameValidation.error || "Invalid view name", "name", name);
       }
       const sanitizedName = nameValidation.sanitized;
 
       // Validate and sanitize config
       const configValidation = sanitizeViewConfig(config);
       if (!configValidation.valid) {
-        throw new ValidationException(
-          configValidation.error || "Invalid config",
-          "config",
-          config
-        );
+        throw new ValidationException(configValidation.error || "Invalid config", "config", config);
       }
       const sanitizedConfig = configValidation.sanitized as EntityGraphViewConfig;
 
       if (!userId || userId < 1) {
-        throw new ValidationException(
-          "Valid user ID is required",
-          "userId",
-          userId
-        );
+        throw new ValidationException("Valid user ID is required", "userId", userId);
       }
 
       // Check if user has reached the limit
-      const viewCount = await getViewCountByUserQuery(
-        userId,
-        organizationId
-      );
+      const viewCount = await getViewCountByUserQuery(userId, organizationId);
 
       if (viewCount >= MAX_VIEWS_PER_USER) {
         throw new BusinessLogicException(
           `Maximum of ${MAX_VIEWS_PER_USER} saved views allowed per user`,
           "MAX_VIEWS_REACHED",
-          { currentCount: viewCount, maxAllowed: MAX_VIEWS_PER_USER }
+          { currentCount: viewCount, maxAllowed: MAX_VIEWS_PER_USER },
         );
       }
 
@@ -119,7 +97,7 @@ export class EntityGraphViewsService {
         sanitizedName,
         userId,
         organizationId,
-        sanitizedConfig
+        sanitizedConfig,
       );
 
       // Save to database
@@ -158,10 +136,7 @@ export class EntityGraphViewsService {
    * @param {number} organizationId - Organization ID
    * @returns {Promise<EntityGraphViewsModel[]>} Array of views
    */
-  static async getViews(
-    userId: number,
-    organizationId: number
-  ): Promise<EntityGraphViewsModel[]> {
+  static async getViews(userId: number, organizationId: number): Promise<EntityGraphViewsModel[]> {
     logProcessing({
       description: "Starting EntityGraphViewsService.getViews",
       functionName: "getViews",
@@ -210,7 +185,7 @@ export class EntityGraphViewsService {
   static async getViewById(
     viewId: number,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphViewsModel | null> {
     try {
       const view = await getViewByIdQuery(viewId, organizationId);
@@ -244,7 +219,7 @@ export class EntityGraphViewsService {
     name: string | undefined,
     config: EntityGraphViewConfig | undefined,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<EntityGraphViewsModel> {
     logProcessing({
       description: `Starting EntityGraphViewsService.updateView for ID ${viewId}`,
@@ -260,11 +235,7 @@ export class EntityGraphViewsService {
       if (name !== undefined) {
         const nameValidation = sanitizeViewName(name);
         if (!nameValidation.valid) {
-          throw new ValidationException(
-            nameValidation.error || "Invalid view name",
-            "name",
-            name
-          );
+          throw new ValidationException(nameValidation.error || "Invalid view name", "name", name);
         }
         sanitizedName = nameValidation.sanitized;
       }
@@ -277,7 +248,7 @@ export class EntityGraphViewsService {
           throw new ValidationException(
             configValidation.error || "Invalid config",
             "config",
-            config
+            config,
           );
         }
         sanitizedConfig = configValidation.sanitized as EntityGraphViewConfig;
@@ -295,7 +266,7 @@ export class EntityGraphViewsService {
         throw new BusinessLogicException(
           "Only the view owner can update this view",
           "VIEW_UPDATE_FORBIDDEN",
-          { viewId, userId }
+          { viewId, userId },
         );
       }
 
@@ -304,7 +275,7 @@ export class EntityGraphViewsService {
         viewId,
         sanitizedName,
         sanitizedConfig,
-        organizationId
+        organizationId,
       );
 
       if (!updatedView) {
@@ -349,7 +320,7 @@ export class EntityGraphViewsService {
   static async deleteView(
     viewId: number,
     userId: number,
-    organizationId: number
+    organizationId: number,
   ): Promise<boolean> {
     logProcessing({
       description: `Starting EntityGraphViewsService.deleteView for ID ${viewId}`,
@@ -372,7 +343,7 @@ export class EntityGraphViewsService {
         throw new BusinessLogicException(
           "Only the view owner can delete this view",
           "VIEW_DELETE_FORBIDDEN",
-          { viewId, userId }
+          { viewId, userId },
         );
       }
 

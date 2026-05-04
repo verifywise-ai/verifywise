@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Box, Typography, Stack } from "@mui/material";
 import {
-  Box,
-  Typography,
-  Stack,
-} from "@mui/material";
-import { Trash2 as DeleteIconRed, Pencil as EditIconGrey, Check as CheckGreenIcon } from "lucide-react";
+  Trash2 as DeleteIconRed,
+  Pencil as EditIconGrey,
+  Check as CheckGreenIcon,
+} from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
@@ -68,13 +68,13 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
 
     window.addEventListener(
       "customFrameworkCountChanged" as any,
-      handleCustomFrameworkCount as EventListener
+      handleCustomFrameworkCount as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         "customFrameworkCountChanged" as any,
-        handleCustomFrameworkCount as EventListener
+        handleCustomFrameworkCount as EventListener,
       );
     };
   }, [organizationalProject.id]);
@@ -109,9 +109,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
       if (response.status >= 200 && response.status < 300) {
         // Remove the project from context
         setProjects((prevProjects) =>
-          prevProjects.filter(
-            (project) => project.id !== organizationalProject.id
-          )
+          prevProjects.filter((project) => project.id !== organizationalProject.id),
         );
         setAlert({
           variant: "success",
@@ -251,51 +249,51 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
               alignItems: "center",
             }}
           >
-          <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1, color: "text.black" }}>
-              {organizationalProject.project_title}
-            </Typography>
-            <Typography sx={{ fontSize: 13, color: "#666666" }}>
-              Organizational framework
-            </Typography>
+            <Box>
+              <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1, color: "text.black" }}>
+                {organizationalProject.project_title}
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "#666666" }}>
+                Organizational framework
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={2}>
+              <CustomizableButton
+                variant="outlined"
+                icon={<EditIconGrey size={16} />}
+                text="Edit framework"
+                onClick={handleEditProjectClick}
+                isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
+                sx={{
+                  borderColor: "#D1D5DB",
+                  width: "170px",
+                  color: "#374151",
+                  "&:hover": {
+                    borderColor: "text.disabled",
+                    backgroundColor: "background.accent",
+                  },
+                }}
+              />
+
+              <CustomizableButton
+                variant="outlined"
+                icon={<DeleteIconRed size={16} />}
+                text="Delete framework"
+                onClick={handleDeleteProjectClick}
+                isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                sx={{
+                  borderColor: "#F87171",
+                  width: "170px",
+                  color: "#DC2626",
+                  "&:hover": {
+                    borderColor: "#EF4444",
+                    backgroundColor: "#FEF2F2",
+                  },
+                }}
+              />
+            </Stack>
           </Box>
-
-          <Stack direction="row" spacing={2}>
-            <CustomizableButton
-              variant="outlined"
-              icon={<EditIconGrey size={16} />}
-              text="Edit framework"
-              onClick={handleEditProjectClick}
-              isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
-              sx={{
-                borderColor: "#D1D5DB",
-                width: "170px",
-                color: "#374151",
-                "&:hover": {
-                  borderColor: "text.disabled",
-                  backgroundColor: "background.accent",
-                },
-              }}
-            />
-
-            <CustomizableButton
-              variant="outlined"
-              icon={<DeleteIconRed size={16} />}
-              text="Delete framework"
-              onClick={handleDeleteProjectClick}
-              isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
-              sx={{
-                borderColor: "#F87171",
-                width: "170px",
-                color: "#DC2626",
-                "&:hover": {
-                  borderColor: "#EF4444",
-                  backgroundColor: "#FEF2F2",
-                },
-              }}
-            />
-          </Stack>
-        </Box>
         </Box>
       </Box>
 
@@ -323,7 +321,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           {availableFrameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
             // Total frameworks = system frameworks + custom frameworks (from plugin events)
-            const totalFrameworkCount = (organizationalProject.framework?.length || 0) + customFrameworkCount;
+            const totalFrameworkCount =
+              (organizationalProject.framework?.length || 0) + customFrameworkCount;
             const onlyOneFramework = totalFrameworkCount === 1 && isAdded;
 
             return (
@@ -397,8 +396,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                       variant="contained"
                       text="Add"
                       isDisabled={
-                        isLoading ||
-                        !allowedRoles.frameworks.manage.includes(userRoleName)
+                        isLoading || !allowedRoles.frameworks.manage.includes(userRoleName)
                       }
                       onClick={() => handleAddFramework(fw)}
                       sx={{
@@ -471,9 +469,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           title="Confirm delete"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to delete the framework "
-              {organizationalProject.project_title}"? This action cannot be
-              undone and will remove all associated data.
+              Are you sure you want to delete the framework "{organizationalProject.project_title}"?
+              This action cannot be undone and will remove all associated data.
             </Typography>
           }
           cancelText="Cancel"
@@ -491,8 +488,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           title="Confirm framework removal"
           body={
             <Typography fontSize={13}>
-              Are you sure you want to remove {frameworkToRemove.name} from
-              the framework?
+              Are you sure you want to remove {frameworkToRemove.name} from the framework?
             </Typography>
           }
           cancelText="Cancel"

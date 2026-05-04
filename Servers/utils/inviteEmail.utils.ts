@@ -22,9 +22,7 @@ interface InviteEmailResult {
  * Generates a token, builds the invite link, and sends the invite email.
  * Shared by initial invite (vwmailer) and resend (invitation controller).
  */
-export const sendInviteEmail = async (
-  params: InviteEmailParams
-): Promise<InviteEmailResult> => {
+export const sendInviteEmail = async (params: InviteEmailParams): Promise<InviteEmailResult> => {
   const { email, name, surname, roleId, organizationId } = params;
 
   const token = generateInviteToken({
@@ -39,10 +37,7 @@ export const sendInviteEmail = async (
     token,
   }).toString()}`;
 
-  const templatePath = path.resolve(
-    __dirname,
-    "../templates/account-creation-email.mjml"
-  );
+  const templatePath = path.resolve(__dirname, "../templates/account-creation-email.mjml");
   const template = await fs.readFile(templatePath, "utf8");
 
   const info = await sendEmail(email, "Create your account", template, {

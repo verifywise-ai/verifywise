@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Convert `advisor_conversations.created_at` and `updated_at` from naive

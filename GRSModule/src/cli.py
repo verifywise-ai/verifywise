@@ -52,6 +52,7 @@ from judge.resume import load_completed_judgements
 from judge.stats import compute_judge_stats
 from judge.manifest import write_judge_manifest
 from reports.judge_report import build_judge_report
+from judge.patch import run_judge_patch
 
 from leaderboard.aggregate import aggregate_from_judge_scores
 from leaderboard.discovery import list_judge_score_files
@@ -693,6 +694,89 @@ def _cmd_generate(args: argparse.Namespace) -> int:
         return 0
 
 
+    if args.stage == "judge-patch":
+        scenarios_path = final_dir / "scenarios.jsonl"
+        if not scenarios_path.exists():
+            console.print(f"[red]Missing:[/red] {scenarios_path} (run --stage validate first)")
+            return 2
+
+        patch_dim = args.patch_dimension
+        rubric = load_judge_rubric(Path(args.judge_rubric))
+
+        dim_ids = [d.dimension_id for d in rubric.dimensions]
+        if patch_dim not in dim_ids:
+            console.print(f"[red]Dimension '{patch_dim}' not in rubric. Available: {dim_ids}[/red]")
+            return 2
+
+        scenarios = list(read_jsonl(scenarios_path))
+        scenario_map = {s["scenario_id"]: s for s in scenarios}
+
+        judge_spec = ModelSpec(
+            provider=args.judge_provider,
+            model_id=args.judge_model_id,
+            region=getattr(args, "judge_region", None),
+            profile=getattr(args, "judge_profile", None),
+        )
+        judge_client = build_client(judge_spec)
+        cfg = JudgeConfig(
+            judge_model_id=args.judge_model_id,
+            judge_provider=args.judge_provider,
+            temperature=float(args.judge_temperature),
+            max_tokens=int(args.judge_max_tokens),
+        )
+
+        scores_dir = Path(args.judge_out_dir) if args.judge_out_dir else (final_dir / "judge_scores")
+        responses_dir = Path(args.responses_dir) if args.responses_dir else (final_dir / "responses")
+
+        if args.patch_score_file:
+            score_file_path = Path(args.patch_score_file)
+            if not score_file_path.exists():
+                console.print(f"[red]Score file not found:[/red] {score_file_path}")
+                return 2
+            score_files = [score_file_path]
+        else:
+            score_files = list_judge_score_files(scores_dir)
+
+        if not score_files:
+            console.print(f"[red]No judge score files found in:[/red] {scores_dir}")
+            return 2
+
+        for score_file in score_files:
+            records = list(read_jsonl(score_file))
+            resp_file = responses_dir / score_file.name
+
+            if not resp_file.exists():
+                console.print(f"[yellow]Skipping (no response file):[/yellow] {score_file.name}")
+                continue
+
+            responses = list(read_jsonl(resp_file))
+            response_map = {(r["scenario_id"], r["model_id"]): r for r in responses}
+
+            patched, failures, skipped = run_judge_patch(
+                records=records,
+                scenario_map=scenario_map,
+                response_map=response_map,
+                client=judge_client,
+                full_rubric=rubric,
+                patch_dimension_id=patch_dim,
+                cfg=cfg,
+                retry_max_attempts=int(args.judge_retry_max_attempts),
+            )
+
+            patched_by_key = {(r["scenario_id"], r["candidate_model_id"]): r for r in patched}
+            final_records = [patched_by_key.get((r["scenario_id"], r["candidate_model_id"]), r) for r in records]
+
+            write_jsonl(score_file, final_records)
+
+            fail_path = scores_dir / (score_file.name + ".patch_failures.jsonl")
+            write_jsonl(fail_path, failures)
+
+            console.print(f"[bold green]Patched:[/bold green] {score_file.name}")
+            console.print(f"  patched={len(patched)}, skipped={skipped}, failed={len(failures)}")
+
+        console.print("[bold green]judge-patch complete.[/bold green]")
+        return 0
+
     console.print(f"[red]Unsupported stage:[/red] {args.stage}")
     return 2
 
@@ -702,7 +786,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     gen = sub.add_parser("generate", help="Generate artifacts for the scenario pipeline")
-    gen.add_argument("--stage", choices=["seeds", "render", "perturb", "validate", "backfill-base", "infer", "judge", "leaderboard"], required=True)
+    gen.add_argument("--stage", choices=["seeds", "render", "perturb", "validate", "backfill-base", "infer", "judge", "judge-patch", "leaderboard"], required=True)
     gen.add_argument("--seed", default="42")
     gen.add_argument("--per-obligation", default="2")
     gen.add_argument("--mutations", default="configs/mutations.yaml")
@@ -730,6 +814,8 @@ def main() -> None:
     gen.add_argument("--judge-resume", action="store_true")
     gen.add_argument("--judge-model-filter", default=None, help="Only judge responses from this candidate model (raw model_id, e.g. openai/gpt-4o-mini)")
     gen.add_argument("--judge-retry-max-attempts", default="5")
+    gen.add_argument("--patch-dimension", default="accountability_transparency", help="Dimension ID to retroactively score")
+    gen.add_argument("--patch-score-file", default=None, help="Path to a single judge score JSONL file to patch (omit to patch all files in the scores dir)")
     gen.add_argument("--judge-scores-dir", default=None)
     gen.add_argument("--leaderboard-out-dir", default=None)
     gen.add_argument("--models-config", default=None)

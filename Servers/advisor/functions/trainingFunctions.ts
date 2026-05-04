@@ -10,7 +10,7 @@ export interface FetchTrainingRecordsParams {
 
 const fetchTrainingRecords = async (
   params: FetchTrainingRecordsParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<any[]> => {
   try {
     let records = await getAllTrainingRegistarQuery(organizationId);
@@ -22,15 +22,12 @@ const fetchTrainingRecords = async (
     if (params.department) {
       records = records.filter(
         (r: any) =>
-          r.department &&
-          r.department.toLowerCase().includes(params.department!.toLowerCase())
+          r.department && r.department.toLowerCase().includes(params.department!.toLowerCase()),
       );
     }
     if (params.provider) {
       records = records.filter(
-        (r: any) =>
-          r.provider &&
-          r.provider.toLowerCase().includes(params.provider!.toLowerCase())
+        (r: any) => r.provider && r.provider.toLowerCase().includes(params.provider!.toLowerCase()),
       );
     }
 
@@ -52,14 +49,14 @@ const fetchTrainingRecords = async (
   } catch (error) {
     logger.error("Error fetching training records:", error);
     throw new Error(
-      `Failed to fetch training records: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch training records: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getTrainingAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const records = await getAllTrainingRegistarQuery(organizationId);
@@ -76,8 +73,7 @@ const getTrainingAnalytics = async (
     const departmentDistribution: Record<string, number> = {};
     records.forEach((r: any) => {
       if (r.department) {
-        departmentDistribution[r.department] =
-          (departmentDistribution[r.department] || 0) + 1;
+        departmentDistribution[r.department] = (departmentDistribution[r.department] || 0) + 1;
       }
     });
 
@@ -85,15 +81,14 @@ const getTrainingAnalytics = async (
     const providerDistribution: Record<string, number> = {};
     records.forEach((r: any) => {
       if (r.provider) {
-        providerDistribution[r.provider] =
-          (providerDistribution[r.provider] || 0) + 1;
+        providerDistribution[r.provider] = (providerDistribution[r.provider] || 0) + 1;
       }
     });
 
     // Total people trained
     const totalPeopleTrained = records.reduce(
       (sum: number, r: any) => sum + (r.numberOfPeople || r.people || 0),
-      0
+      0,
     );
 
     return {
@@ -106,31 +101,24 @@ const getTrainingAnalytics = async (
   } catch (error) {
     logger.error("Error getting training analytics:", error);
     throw new Error(
-      `Failed to get training analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get training analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
 
 const getTrainingExecutiveSummary = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<any> => {
   try {
     const records = await getAllTrainingRegistarQuery(organizationId);
     const total = records.length;
 
-    const completedCount = records.filter(
-      (r: any) => r.status === "Completed"
-    ).length;
-    const inProgressCount = records.filter(
-      (r: any) => r.status === "In Progress"
-    ).length;
-    const plannedCount = records.filter(
-      (r: any) => r.status === "Planned"
-    ).length;
+    const completedCount = records.filter((r: any) => r.status === "Completed").length;
+    const inProgressCount = records.filter((r: any) => r.status === "In Progress").length;
+    const plannedCount = records.filter((r: any) => r.status === "Planned").length;
 
-    const completionRate =
-      total > 0 ? Math.round((completedCount / total) * 100) : 0;
+    const completionRate = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
     // Department coverage
     const departments = new Set<string>();
@@ -141,7 +129,7 @@ const getTrainingExecutiveSummary = async (
     // Total people
     const totalPeopleTrained = records.reduce(
       (sum: number, r: any) => sum + (r.numberOfPeople || r.people || 0),
-      0
+      0,
     );
 
     return {
@@ -157,7 +145,7 @@ const getTrainingExecutiveSummary = async (
   } catch (error) {
     logger.error("Error getting training executive summary:", error);
     throw new Error(
-      `Failed to get training executive summary: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get training executive summary: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

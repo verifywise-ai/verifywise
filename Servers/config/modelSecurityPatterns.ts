@@ -65,23 +65,45 @@ export const CRITICAL_OPERATORS: DangerousOperator[] = [
   // Built-in dangerous functions (Python 3)
   {
     module: "builtins",
-    operators: ["eval", "exec", "compile", "open", "__import__", "breakpoint", "getattr", "setattr", "delattr"],
+    operators: [
+      "eval",
+      "exec",
+      "compile",
+      "open",
+      "__import__",
+      "breakpoint",
+      "getattr",
+      "setattr",
+      "delattr",
+    ],
     severity: "critical",
     description: "Built-in functions that can execute arbitrary code or access system resources",
   },
   // Built-in dangerous functions (Python 2 - legacy but still found in many pickle files)
   {
     module: "__builtin__",
-    operators: ["eval", "exec", "compile", "open", "__import__", "execfile", "file", "input", "raw_input"],
+    operators: [
+      "eval",
+      "exec",
+      "compile",
+      "open",
+      "__import__",
+      "execfile",
+      "file",
+      "input",
+      "raw_input",
+    ],
     severity: "critical",
-    description: "Python 2 built-in functions that can execute arbitrary code or access system resources",
+    description:
+      "Python 2 built-in functions that can execute arbitrary code or access system resources",
   },
   // OS module - full system access
   {
     module: "os",
     operators: "*",
     severity: "critical",
-    description: "Operating system interface - can execute commands, modify files, access environment",
+    description:
+      "Operating system interface - can execute commands, modify files, access environment",
   },
   // NT module (Windows-specific os)
   {
@@ -724,7 +746,7 @@ export const MODEL_FILE_EXTENSIONS: Record<string, { risk: SecuritySeverity; sca
  */
 export function checkDangerousOperator(
   moduleName: string,
-  operatorName: string
+  operatorName: string,
 ): DangerousOperator | null {
   // Normalize module name (handle submodules)
   const normalizedModule = moduleName.toLowerCase();
@@ -803,13 +825,13 @@ export function getModelFileExtensions(): string[] {
  * These magic methods are the primary mechanism for pickle-based attacks.
  */
 export const PICKLE_MAGIC_METHODS: string[] = [
-  "__reduce__",      // Returns callable + args for reconstruction
-  "__reduce_ex__",   // Extended reduce with protocol version
-  "__setstate__",    // Called with deserialized state dict
-  "__getstate__",    // Called during pickling, less dangerous but can leak data
-  "__del__",         // Destructor - executes on garbage collection
-  "__new__",         // Object creation hook
-  "__init__",        // Initialization hook
+  "__reduce__", // Returns callable + args for reconstruction
+  "__reduce_ex__", // Extended reduce with protocol version
+  "__setstate__", // Called with deserialized state dict
+  "__getstate__", // Called during pickling, less dangerous but can leak data
+  "__del__", // Destructor - executes on garbage collection
+  "__new__", // Object creation hook
+  "__init__", // Initialization hook
 ];
 
 /**
@@ -828,22 +850,22 @@ export const PICKLE_MAGIC_PATTERN = /__(reduce|reduce_ex|setstate|getstate|del|n
  */
 export const PICKLE_OPCODES = {
   // Import operations - load global symbols
-  GLOBAL: 0x63,         // 'c' - Import module.name (proto 0-2)
-  STACK_GLOBAL: 0x93,   // proto 4+ - Import from stack
-  INST: 0x69,           // 'i' - Legacy instantiate (proto 0)
+  GLOBAL: 0x63, // 'c' - Import module.name (proto 0-2)
+  STACK_GLOBAL: 0x93, // proto 4+ - Import from stack
+  INST: 0x69, // 'i' - Legacy instantiate (proto 0)
 
   // Execution operations - actually run code
-  REDUCE: 0x52,         // 'R' - Call function with args from stack
-  BUILD: 0x62,          // 'b' - Call __setstate__ with state
-  OBJ: 0x6f,            // 'o' - Build object
-  NEWOBJ: 0x81,         // proto 2+ - Build new object
-  NEWOBJ_EX: 0x92,      // proto 4+ - Build new object with kwargs
+  REDUCE: 0x52, // 'R' - Call function with args from stack
+  BUILD: 0x62, // 'b' - Call __setstate__ with state
+  OBJ: 0x6f, // 'o' - Build object
+  NEWOBJ: 0x81, // proto 2+ - Build new object
+  NEWOBJ_EX: 0x92, // proto 4+ - Build new object with kwargs
 
   // These indicate end of pickle (used for stacked pickles)
-  STOP: 0x2e,           // '.' - End of pickle
+  STOP: 0x2e, // '.' - End of pickle
 
   // Protocol markers
-  PROTO: 0x80,          // Protocol version marker
+  PROTO: 0x80, // Protocol version marker
 } as const;
 
 /**
@@ -919,7 +941,7 @@ export function detectPickleOpcodes(buffer: Buffer): {
  * @returns Escalated severity level
  */
 export function getEscalatedSeverity(
-  opcodeResult: ReturnType<typeof detectPickleOpcodes>
+  opcodeResult: ReturnType<typeof detectPickleOpcodes>,
 ): SecuritySeverity {
   // GLOBAL + REDUCE = definite code execution
   if ((opcodeResult.hasGlobal || opcodeResult.hasStackGlobal) && opcodeResult.hasReduce) {

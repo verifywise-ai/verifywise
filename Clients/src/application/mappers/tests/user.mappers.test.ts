@@ -23,12 +23,8 @@ describe("Test user mappers functions", () => {
       expect(user.roleId).toBe(dto.role_id);
       expect(user.created_at).toBeInstanceOf(Date);
       expect(user.last_login).toBeInstanceOf(Date);
-      expect(user.created_at?.toISOString()).toBe(
-        new Date(dto.created_at as string).toISOString(),
-      );
-      expect(user.last_login?.toISOString()).toBe(
-        new Date(dto.last_login as string).toISOString(),
-      );
+      expect(user.created_at?.toISOString()).toBe(new Date(dto.created_at as string).toISOString());
+      expect(user.last_login?.toISOString()).toBe(new Date(dto.last_login as string).toISOString());
       expect(user.is_demo).toBe(dto.is_demo);
       expect(user.organization_id).toBe(dto.organization_id);
       expect(user.pwd_set).toBe(dto.pwd_set);

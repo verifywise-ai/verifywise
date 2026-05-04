@@ -44,7 +44,7 @@ export const recordModelInventoryChange = async (
   fieldName?: string,
   oldValue?: string,
   newValue?: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityChange(
     "model_inventory",
@@ -55,7 +55,7 @@ export const recordModelInventoryChange = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };
 
@@ -68,7 +68,7 @@ export const recordMultipleFieldChanges = async (
   changedByUserId: number,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordMultipleFieldChangesGeneric(
     "model_inventory",
@@ -76,7 +76,7 @@ export const recordMultipleFieldChanges = async (
     changedByUserId,
     organizationId,
     changes,
-    transaction
+    transaction,
   );
 };
 
@@ -88,15 +88,9 @@ export const getModelInventoryChangeHistory = async (
   modelInventoryId: number,
   organizationId: number,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ data: any[]; hasMore: boolean; total: number }> => {
-  return getEntityChangeHistory(
-    "model_inventory",
-    modelInventoryId,
-    organizationId,
-    limit,
-    offset
-  );
+  return getEntityChangeHistory("model_inventory", modelInventoryId, organizationId, limit, offset);
 };
 
 /**
@@ -105,7 +99,7 @@ export const getModelInventoryChangeHistory = async (
  */
 export const trackModelInventoryChanges = async (
   oldModel: ModelInventoryModel,
-  newModel: Partial<ModelInventoryModel>
+  newModel: Partial<ModelInventoryModel>,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   return trackEntityChanges("model_inventory", oldModel, newModel);
 };
@@ -119,7 +113,7 @@ export const recordModelInventoryCreation = async (
   changedByUserId: number,
   organizationId: number,
   modelData: Partial<ModelInventoryModel>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityCreation(
     "model_inventory",
@@ -127,7 +121,7 @@ export const recordModelInventoryCreation = async (
     changedByUserId,
     organizationId,
     modelData,
-    transaction
+    transaction,
   );
 };
 
@@ -139,14 +133,14 @@ export const recordModelInventoryDeletion = async (
   modelInventoryId: number,
   changedByUserId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEntityDeletion(
     "model_inventory",
     modelInventoryId,
     changedByUserId,
     organizationId,
-    transaction
+    transaction,
   );
 };
 
@@ -160,7 +154,7 @@ export const recordEvidenceAddedToModel = async (
   organizationId: number,
   evidenceName: string,
   evidenceType: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEvidenceAddedToEntity(
     "model_inventory",
@@ -169,7 +163,7 @@ export const recordEvidenceAddedToModel = async (
     organizationId,
     evidenceName,
     evidenceType,
-    transaction
+    transaction,
   );
 };
 
@@ -183,7 +177,7 @@ export const recordEvidenceRemovedFromModel = async (
   organizationId: number,
   evidenceName: string,
   evidenceType: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEvidenceRemovedFromEntity(
     "model_inventory",
@@ -192,7 +186,7 @@ export const recordEvidenceRemovedFromModel = async (
     organizationId,
     evidenceName,
     evidenceType,
-    transaction
+    transaction,
   );
 };
 
@@ -208,7 +202,7 @@ export const recordEvidenceFieldChangeForModel = async (
   fieldName: string,
   oldValue: string,
   newValue: string,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   return recordEvidenceFieldChangeForEntity(
     "model_inventory",
@@ -219,6 +213,6 @@ export const recordEvidenceFieldChangeForModel = async (
     fieldName,
     oldValue,
     newValue,
-    transaction
+    transaction,
   );
 };

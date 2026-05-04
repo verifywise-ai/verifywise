@@ -79,7 +79,7 @@ export const getSupportedFileTypesString = (): string => {
   const categories = Object.values(ALLOWED_FILE_TYPES);
 
   return categories
-    .map(category => `${category.label} (${category.extensions.join(", ")})`)
+    .map((category) => `${category.label} (${category.extensions.join(", ")})`)
     .join(", ");
 };
 
@@ -132,9 +132,7 @@ export const validateFile = (file: File): { valid: boolean; error?: string } => 
   if (!file.type || !ALLOWED_MIME_TYPES.has(file.type)) {
     return {
       valid: false,
-      error: file.type
-        ? "Unsupported file type"
-        : "File type could not be determined",
+      error: file.type ? "Unsupported file type" : "File type could not be determined",
     };
   }
 

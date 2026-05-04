@@ -16,10 +16,7 @@ export function StatsCard({ title, completed, total }: StatsCardProps) {
     return isNaN(num) || num < 0 ? 0 : num;
   }, [total]);
 
-  const progress = useMemo(
-    () => `${completedNum}/${totalNum}`,
-    [completedNum, totalNum]
-  );
+  const progress = useMemo(() => `${completedNum}/${totalNum}`, [completedNum, totalNum]);
   const percentage = useMemo(() => {
     if (totalNum === 0) return 0;
     const result = Math.floor((completedNum / totalNum) * 100);

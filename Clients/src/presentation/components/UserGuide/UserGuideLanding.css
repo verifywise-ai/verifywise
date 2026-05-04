@@ -6,7 +6,7 @@
 }
 
 .collection-card:hover {
-  border-color: #13715B;
+  border-color: #13715b;
   box-shadow: 0px 4px 24px -4px rgba(16, 24, 40, 0.08);
 }
 
@@ -24,7 +24,7 @@
 }
 
 .fast-find-item:hover .arrow-icon {
-  color: #13715B;
+  color: #13715b;
 }
 
 /* Search input focus */

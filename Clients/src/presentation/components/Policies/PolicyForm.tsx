@@ -1,9 +1,4 @@
-import {
-  Stack,
-  Typography,
-  useTheme,
-  Box,
-} from "@mui/material";
+import { Stack, Typography, useTheme, Box } from "@mui/material";
 import Field from "../Inputs/Field";
 import Select from "../Inputs/Select";
 import DatePicker from "../Inputs/Datepicker";
@@ -14,7 +9,6 @@ import { useCallback } from "react";
 import { PolicyFormData, PolicyFormProps } from "../../types/interfaces/i.policy";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import { background } from "../../themes/palette";
-
 
 const statuses: PolicyFormData["status"][] = [
   "Draft",
@@ -36,26 +30,28 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
   const { users } = useUsers();
 
   const handleOnMultiSelect = useCallback(
-    (prop: keyof PolicyFormData) =>
-      (_event: React.SyntheticEvent, newValue: any[]) => {
-        setFormData((prevValues) => ({
-          ...prevValues,
-          [prop]: newValue,
-        }));
-        clearFieldError(prop);
-      },
-    [clearFieldError]
+    (prop: keyof PolicyFormData) => (_event: React.SyntheticEvent, newValue: any[]) => {
+      setFormData((prevValues) => ({
+        ...prevValues,
+        [prop]: newValue,
+      }));
+      clearFieldError(prop);
+    },
+    [clearFieldError],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setFormData((prevValues: any) => ({
-        ...prevValues,
-        nextReviewDate: newDate ? newDate.toISOString() : "",
-      }));
-      clearFieldError("nextReviewDate");
-    }
-  }, [clearFieldError]);
+  const handleDateChange = useCallback(
+    (newDate: Dayjs | null) => {
+      if (newDate?.isValid()) {
+        setFormData((prevValues: any) => ({
+          ...prevValues,
+          nextReviewDate: newDate ? newDate.toISOString() : "",
+        }));
+        clearFieldError("nextReviewDate");
+      }
+    },
+    [clearFieldError],
+  );
 
   return (
     <Stack direction="row" spacing={2} alignItems="flex-start">
@@ -90,24 +86,17 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
         error={errors.assignedReviewers}
         value={formData.assignedReviewers}
         options={
-          users.filter(
-            (user) =>
-              !formData.assignedReviewers.some((u) => u.id === user.id)
-          ) || []
+          users.filter((user) => !formData.assignedReviewers.some((u) => u.id === user.id)) || []
         }
         noOptionsText={
-          formData.assignedReviewers.length === users.length
-            ? "All members selected"
-            : "No options"
+          formData.assignedReviewers.length === users.length ? "All members selected" : "No options"
         }
         onChange={handleOnMultiSelect("assignedReviewers")}
         getOptionLabel={(user) => `${user.name} ${user.surname}`}
         renderOption={(props, option) => {
           const { key, ...optionProps } = props;
           const userEmail =
-            option.email.length > 30
-              ? `${option.email.slice(0, 30)}...`
-              : option.email;
+            option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
           return (
             <Box key={key} component="li" {...optionProps}>
               <Typography sx={{ fontSize: "13px" }}>
@@ -140,11 +129,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
         error={errors.tags}
         value={formData.tags}
         options={tags.filter((tag) => !formData.tags.includes(tag))}
-        noOptionsText={
-          formData.tags.length === tags.length
-            ? "All tags selected"
-            : "No options"
-        }
+        noOptionsText={formData.tags.length === tags.length ? "All tags selected" : "No options"}
         onChange={handleOnMultiSelect("tags")}
         getOptionLabel={(tag) => tag}
         renderOption={(props, option) => {
@@ -164,9 +149,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
       <Stack sx={{ width: 160, flexShrink: 0 }}>
         <DatePicker
           label="Next review date"
-          date={
-            formData.nextReviewDate ? dayjs(formData.nextReviewDate) : null
-          }
+          date={formData.nextReviewDate ? dayjs(formData.nextReviewDate) : null}
           handleDateChange={handleDateChange}
           sx={{ width: "100%" }}
           isRequired

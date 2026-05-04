@@ -10,13 +10,14 @@ export const styles = {
   accordionSummary: commonStyles.accordionSummary,
   expandIcon: commonStyles.expandIcon,
 
-  statusBadge: (status: string) => ({
-    borderRadius: "4px",
-    padding: "5px",
-    backgroundColor: getStatusColor(status),
-    color: `${background.main}`,
-    height: "fit-content",
-  }) as SxProps<Theme>,
+  statusBadge: (status: string) =>
+    ({
+      borderRadius: "4px",
+      padding: "5px",
+      backgroundColor: getStatusColor(status),
+      color: `${background.main}`,
+      height: "fit-content",
+    }) as SxProps<Theme>,
 
   loadingContainer: {
     padding: "16px",
@@ -33,20 +34,21 @@ export const styles = {
     color: "#666",
   } as SxProps<Theme>,
 
-  controlRow: (isLast: boolean, isFlashing: boolean) => ({
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "16px",
-    borderBottom: isLast ? "none" : `1px solid ${borderPalette.light}`,
-    cursor: "pointer",
-    fontSize: 13,
-    animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : 'none',
-    '&:hover': {
-      backgroundColor: isFlashing ? 'transparent' : 'background.surface',
-    },
-  }) as SxProps<Theme>,
+  controlRow: (isLast: boolean, isFlashing: boolean) =>
+    ({
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "16px",
+      borderBottom: isLast ? "none" : `1px solid ${borderPalette.light}`,
+      cursor: "pointer",
+      fontSize: 13,
+      animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
+      "&:hover": {
+        backgroundColor: isFlashing ? "transparent" : "background.surface",
+      },
+    }) as SxProps<Theme>,
 
   controlTitle: {
     fontWeight: 600,
@@ -55,4 +57,4 @@ export const styles = {
   controlDescription: {
     fontSize: 13,
   } as SxProps<Theme>,
-}; 
+};

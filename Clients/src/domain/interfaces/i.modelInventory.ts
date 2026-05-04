@@ -28,13 +28,13 @@ export interface IModelInventory {
 }
 
 export interface FileResponse {
-    id: number;
-    filename: string;
-    size: number;
-    mimetype: string;
-    upload_date: string;
-    uploaded_by: number;
-    modelId?: string; // optional
+  id: number;
+  filename: string;
+  size: number;
+  mimetype: string;
+  upload_date: string;
+  uploaded_by: number;
+  modelId?: string; // optional
 }
 
 export interface ModelInventorySummary {

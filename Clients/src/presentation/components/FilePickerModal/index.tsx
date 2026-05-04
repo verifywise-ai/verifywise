@@ -11,9 +11,17 @@ import {
   TextField,
   useTheme,
 } from "@mui/material";
-import { FileText as FileIcon, Image as ImageIcon, File as DefaultFileIcon, Search } from "lucide-react";
+import {
+  FileText as FileIcon,
+  Image as ImageIcon,
+  File as DefaultFileIcon,
+  Search,
+} from "lucide-react";
 import StandardModal from "../Modals/StandardModal";
-import { getFilesWithMetadata, FileMetadata } from "../../../application/repository/file.repository";
+import {
+  getFilesWithMetadata,
+  FileMetadata,
+} from "../../../application/repository/file.repository";
 import { FileData } from "../../../domain/types/File";
 
 interface FilePickerModalProps {
@@ -30,10 +38,8 @@ const getFileIcon = (filename: string) => {
   if (["pdf"].includes(ext)) return <FileIcon size={20} color="#E53935" />;
   if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext))
     return <ImageIcon size={20} color="#1E88E5" />;
-  if (["doc", "docx", "txt", "rtf"].includes(ext))
-    return <FileIcon size={20} color="#00ACC1" />;
-  if (["xls", "xlsx", "csv"].includes(ext))
-    return <FileIcon size={20} color="#43A047" />;
+  if (["doc", "docx", "txt", "rtf"].includes(ext)) return <FileIcon size={20} color="#00ACC1" />;
+  if (["xls", "xlsx", "csv"].includes(ext)) return <FileIcon size={20} color="#43A047" />;
   return <DefaultFileIcon size={20} color="#757575" />;
 };
 
@@ -249,7 +255,11 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
             </Box>
           ) : error ? (
             <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-              <Typography sx={{ fontSize: theme.typography.fontSize, color: theme.palette.status.error.text }}>{error}</Typography>
+              <Typography
+                sx={{ fontSize: theme.typography.fontSize, color: theme.palette.status.error.text }}
+              >
+                {error}
+              </Typography>
             </Box>
           ) : filteredFiles.length === 0 ? (
             <Box
@@ -259,7 +269,13 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                 px: 3,
               }}
             >
-              <Typography sx={{ fontSize: theme.typography.fontSize, color: theme.palette.text.secondary, mb: 0.5 }}>
+              <Typography
+                sx={{
+                  fontSize: theme.typography.fontSize,
+                  color: theme.palette.text.secondary,
+                  mb: 0.5,
+                }}
+              >
                 {searchTerm ? "No files match your search" : "No files available"}
               </Typography>
               <Typography sx={{ fontSize: 12, color: theme.palette.text.accent }}>
@@ -267,7 +283,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
               </Typography>
             </Box>
           ) : (
-            <Stack divider={<Box sx={{ borderBottom: `1px solid ${theme.palette.background.fill}` }} />}>
+            <Stack
+              divider={<Box sx={{ borderBottom: `1px solid ${theme.palette.background.fill}` }} />}
+            >
               {filteredFiles.map((file) => (
                 <Box
                   key={file.id}
@@ -281,7 +299,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     cursor: "pointer",
                     backgroundColor: selectedIds.has(file.id) ? "#F0F7FF" : "transparent",
                     "&:hover": {
-                      backgroundColor: selectedIds.has(file.id) ? "#E3EFFD" : theme.palette.background.accent,
+                      backgroundColor: selectedIds.has(file.id)
+                        ? "#E3EFFD"
+                        : theme.palette.background.accent,
                     },
                     transition: "background-color 0.12s ease",
                   }}
@@ -333,7 +353,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                         </Typography>
                       )}
                       {file.size && file.uploader_name && (
-                        <Typography sx={{ fontSize: 11, color: theme.palette.border.dark }}>•</Typography>
+                        <Typography sx={{ fontSize: 11, color: theme.palette.border.dark }}>
+                          •
+                        </Typography>
                       )}
                       {file.uploader_name && (
                         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
@@ -341,7 +363,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                         </Typography>
                       )}
                       {(file.size || file.uploader_name) && file.upload_date && (
-                        <Typography sx={{ fontSize: 11, color: theme.palette.border.dark }}>•</Typography>
+                        <Typography sx={{ fontSize: 11, color: theme.palette.border.dark }}>
+                          •
+                        </Typography>
                       )}
                       {file.upload_date && (
                         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
@@ -350,7 +374,6 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                       )}
                     </Stack>
                   </Box>
-
                 </Box>
               ))}
             </Stack>

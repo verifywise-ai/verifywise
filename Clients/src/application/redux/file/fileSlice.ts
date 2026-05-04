@@ -26,7 +26,6 @@ const fileSlice = createSlice({
     removeFile: (state, action: PayloadAction<string>) => {
       state.files = state.files.filter((file) => file.id !== action.payload);
     },
-    
   },
 });
 

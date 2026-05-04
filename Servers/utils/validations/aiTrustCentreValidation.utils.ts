@@ -90,8 +90,7 @@ export const validateOverviewInfo = (value: any): ValidationResult => {
     if (!colorPattern.test(value.header_color.trim())) {
       return {
         isValid: false,
-        message:
-          "Header color must be a valid color format (hex, rgb, or named color)",
+        message: "Header color must be a valid color format (hex, rgb, or named color)",
         code: "INVALID_COLOR_FORMAT",
       };
     }
@@ -99,11 +98,7 @@ export const validateOverviewInfo = (value: any): ValidationResult => {
 
   // Validate logo file ID if provided (optional)
   if (value.logo !== undefined && value.logo !== null && value.logo !== "") {
-    const logoValidation = validateForeignKey(
-      value.logo,
-      "Logo file ID",
-      false
-    );
+    const logoValidation = validateForeignKey(value.logo, "Logo file ID", false);
     if (!logoValidation.isValid) {
       return logoValidation;
     }
@@ -132,16 +127,12 @@ export const validateOverviewIntro = (value: any): ValidationResult => {
     value.purpose_text !== null &&
     value.purpose_text !== ""
   ) {
-    const purposeValidation = validateString(
-      value.purpose_text,
-      "Purpose text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PURPOSE_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PURPOSE_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const purposeValidation = validateString(value.purpose_text, "Purpose text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PURPOSE_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PURPOSE_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!purposeValidation.isValid) {
       return purposeValidation;
     }
@@ -154,16 +145,12 @@ export const validateOverviewIntro = (value: any): ValidationResult => {
     value.our_statement_text !== null &&
     value.our_statement_text !== ""
   ) {
-    const statementValidation = validateString(
-      value.our_statement_text,
-      "Our statement text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.STATEMENT_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.STATEMENT_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const statementValidation = validateString(value.our_statement_text, "Our statement text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.STATEMENT_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.STATEMENT_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!statementValidation.isValid) {
       return statementValidation;
     }
@@ -176,16 +163,12 @@ export const validateOverviewIntro = (value: any): ValidationResult => {
     value.our_mission_text !== null &&
     value.our_mission_text !== ""
   ) {
-    const missionValidation = validateString(
-      value.our_mission_text,
-      "Our mission text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.MISSION_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.MISSION_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const missionValidation = validateString(value.our_mission_text, "Our mission text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.MISSION_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.MISSION_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!missionValidation.isValid) {
       return missionValidation;
     }
@@ -198,9 +181,7 @@ export const validateOverviewIntro = (value: any): ValidationResult => {
  * Validates overview company description section
  * Only validates text fields if they are visible and have content
  */
-export const validateOverviewCompanyDescription = (
-  value: any
-): ValidationResult => {
+export const validateOverviewCompanyDescription = (value: any): ValidationResult => {
   if (!value || typeof value !== "object") {
     return {
       isValid: false,
@@ -216,16 +197,12 @@ export const validateOverviewCompanyDescription = (
     value.background_text !== null &&
     value.background_text !== ""
   ) {
-    const backgroundValidation = validateString(
-      value.background_text,
-      "Background text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.BACKGROUND_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.BACKGROUND_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const backgroundValidation = validateString(value.background_text, "Background text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.BACKGROUND_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.BACKGROUND_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!backgroundValidation.isValid) {
       return backgroundValidation;
     }
@@ -238,16 +215,12 @@ export const validateOverviewCompanyDescription = (
     value.core_benefits_text !== null &&
     value.core_benefits_text !== ""
   ) {
-    const benefitsValidation = validateString(
-      value.core_benefits_text,
-      "Core benefits text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.CORE_BENEFITS_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.CORE_BENEFITS_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const benefitsValidation = validateString(value.core_benefits_text, "Core benefits text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.CORE_BENEFITS_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.CORE_BENEFITS_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!benefitsValidation.isValid) {
       return benefitsValidation;
     }
@@ -268,7 +241,7 @@ export const validateOverviewCompanyDescription = (
         minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.COMPLIANCE_DOC_TEXT.MIN,
         maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.COMPLIANCE_DOC_TEXT.MAX,
         trimWhitespace: true,
-      }
+      },
     );
     if (!complianceValidation.isValid) {
       return complianceValidation;
@@ -282,9 +255,7 @@ export const validateOverviewCompanyDescription = (
  * Validates overview terms and contact section
  * Only validates text fields if they are visible and have content
  */
-export const validateOverviewTermsAndContact = (
-  value: any
-): ValidationResult => {
+export const validateOverviewTermsAndContact = (value: any): ValidationResult => {
   if (!value || typeof value !== "object") {
     return {
       isValid: false,
@@ -318,16 +289,12 @@ export const validateOverviewTermsAndContact = (
     value.privacy_text !== null &&
     value.privacy_text !== ""
   ) {
-    const privacyValidation = validateString(
-      value.privacy_text,
-      "Privacy text",
-      {
-        required: false,
-        minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PRIVACY_TEXT.MIN,
-        maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PRIVACY_TEXT.MAX,
-        trimWhitespace: true,
-      }
-    );
+    const privacyValidation = validateString(value.privacy_text, "Privacy text", {
+      required: false,
+      minLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PRIVACY_TEXT.MIN,
+      maxLength: AI_TRUST_CENTRE_VALIDATION_LIMITS.PRIVACY_TEXT.MAX,
+      trimWhitespace: true,
+    });
     if (!privacyValidation.isValid) {
       return privacyValidation;
     }
@@ -474,12 +441,9 @@ export const createResourceSchema = {
  * Validation schema for updating AI Trust Centre resource
  */
 export const updateResourceSchema = {
-  name: (value: any) =>
-    value !== undefined ? validateResourceName(value) : { isValid: true },
+  name: (value: any) => (value !== undefined ? validateResourceName(value) : { isValid: true }),
   description: (value: any) =>
-    value !== undefined
-      ? validateResourceDescription(value)
-      : { isValid: true },
+    value !== undefined ? validateResourceDescription(value) : { isValid: true },
 };
 
 /**
@@ -496,18 +460,12 @@ export const createSubprocessorSchema = {
  * Validation schema for updating AI Trust Centre subprocessor
  */
 export const updateSubprocessorSchema = {
-  name: (value: any) =>
-    value !== undefined ? validateSubprocessorName(value) : { isValid: true },
+  name: (value: any) => (value !== undefined ? validateSubprocessorName(value) : { isValid: true }),
   purpose: (value: any) =>
-    value !== undefined
-      ? validateSubprocessorPurpose(value)
-      : { isValid: true },
+    value !== undefined ? validateSubprocessorPurpose(value) : { isValid: true },
   location: (value: any) =>
-    value !== undefined
-      ? validateSubprocessorLocation(value)
-      : { isValid: true },
-  url: (value: any) =>
-    value !== undefined ? validateSubprocessorURL(value) : { isValid: true },
+    value !== undefined ? validateSubprocessorLocation(value) : { isValid: true },
+  url: (value: any) => (value !== undefined ? validateSubprocessorURL(value) : { isValid: true }),
 };
 
 /**
@@ -515,7 +473,7 @@ export const updateSubprocessorSchema = {
  */
 export const validateAITrustCentreFileUpload = (
   file: any,
-  type: "logo" | "resource"
+  type: "logo" | "resource",
 ): ValidationResult => {
   if (!file) {
     return {
@@ -580,7 +538,7 @@ export const validateAITrustCentreFileUpload = (
  * Only validates content when the section is actually visible
  */
 export const validateOverviewBusinessRules = (
-  data: Partial<IAITrustCentreOverview>
+  data: Partial<IAITrustCentreOverview>,
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -599,8 +557,7 @@ export const validateOverviewBusinessRules = (
 
     if (
       data.intro.our_statement_visible &&
-      (!data.intro.our_statement_text ||
-        data.intro.our_statement_text.trim().length < 10)
+      (!data.intro.our_statement_text || data.intro.our_statement_text.trim().length < 10)
     ) {
       errors.push({
         field: "intro.our_statement_text",
@@ -611,8 +568,7 @@ export const validateOverviewBusinessRules = (
 
     if (
       data.intro.our_mission_visible &&
-      (!data.intro.our_mission_text ||
-        data.intro.our_mission_text.trim().length < 10)
+      (!data.intro.our_mission_text || data.intro.our_mission_text.trim().length < 10)
     ) {
       errors.push({
         field: "intro.our_mission_text",
@@ -631,8 +587,7 @@ export const validateOverviewBusinessRules = (
     ) {
       errors.push({
         field: "company_description.background_text",
-        message:
-          "Background text is required when background section is visible",
+        message: "Background text is required when background section is visible",
         code: "MISSING_BACKGROUND_CONTENT",
       });
     }
@@ -644,8 +599,7 @@ export const validateOverviewBusinessRules = (
     ) {
       errors.push({
         field: "company_description.core_benefits_text",
-        message:
-          "Core benefits text is required when core benefits section is visible",
+        message: "Core benefits text is required when core benefits section is visible",
         code: "MISSING_BENEFITS_CONTENT",
       });
     }
@@ -655,8 +609,7 @@ export const validateOverviewBusinessRules = (
   if (data.info?.terms_and_contact_visible && data.terms_and_contact) {
     if (
       data.terms_and_contact.email_visible &&
-      (!data.terms_and_contact.email_text ||
-        data.terms_and_contact.email_text.trim().length < 3)
+      (!data.terms_and_contact.email_text || data.terms_and_contact.email_text.trim().length < 3)
     ) {
       errors.push({
         field: "terms_and_contact.email_text",
@@ -675,7 +628,7 @@ export const validateOverviewBusinessRules = (
  * Complete validation for AI Trust Centre resource creation with business rules
  */
 export const validateResourceCreate = (
-  data: Partial<IAITrustCentreResources>
+  data: Partial<IAITrustCentreResources>,
 ): ValidationError[] => {
   const validationErrors = validateSchema(data, createResourceSchema);
   return validationErrors;
@@ -687,9 +640,7 @@ export const validateResourceCreate = (
 export const validateResourceUpdate = (data: any): ValidationError[] => {
   // Check if at least one field is provided for update
   const updateFields = ["name", "description", "visible"];
-  const hasUpdateField = updateFields.some(
-    (field) => data[field] !== undefined
-  );
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
     return [
@@ -710,9 +661,7 @@ export const validateResourceUpdate = (data: any): ValidationError[] => {
 export const validateSubprocessorUpdate = (data: any): ValidationError[] => {
   // Check if at least one field is provided for update
   const updateFields = ["name", "purpose", "location", "url"];
-  const hasUpdateField = updateFields.some(
-    (field) => data[field] !== undefined
-  );
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
     return [
@@ -731,7 +680,7 @@ export const validateSubprocessorUpdate = (data: any): ValidationError[] => {
  * Complete validation for AI Trust Centre subprocessor creation with business rules
  */
 export const validateSubprocessorCreate = (
-  data: Partial<IAITrustCentreSubprocessors>
+  data: Partial<IAITrustCentreSubprocessors>,
 ): ValidationError[] => {
   const validationErrors = validateSchema(data, createSubprocessorSchema);
   // Add any subprocessor-specific business rules here if needed
@@ -742,7 +691,7 @@ export const validateSubprocessorCreate = (
  * Complete validation for AI Trust Centre overview update
  */
 export const validateOverviewUpdate = (
-  data: Partial<IAITrustCentreOverview>
+  data: Partial<IAITrustCentreOverview>,
 ): ValidationError[] => {
   const validationErrors: ValidationError[] = [];
   const businessErrors = validateOverviewBusinessRules(data);
@@ -771,23 +720,18 @@ export const validateOverviewUpdate = (
   }
 
   if (data.company_description !== undefined) {
-    const companyValidation = validateOverviewCompanyDescription(
-      data.company_description
-    );
+    const companyValidation = validateOverviewCompanyDescription(data.company_description);
     if (!companyValidation.isValid) {
       validationErrors.push({
         field: "company_description",
-        message:
-          companyValidation.message || "Invalid company description section",
+        message: companyValidation.message || "Invalid company description section",
         code: companyValidation.code || "INVALID_COMPANY_DESCRIPTION",
       });
     }
   }
 
   if (data.terms_and_contact !== undefined) {
-    const termsValidation = validateOverviewTermsAndContact(
-      data.terms_and_contact
-    );
+    const termsValidation = validateOverviewTermsAndContact(data.terms_and_contact);
     if (!termsValidation.isValid) {
       validationErrors.push({
         field: "terms_and_contact",

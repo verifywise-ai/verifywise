@@ -15,7 +15,7 @@ interface AutoCompleteFieldProps<
   T,
   Multiple extends boolean | undefined = undefined,
   DisableClearable extends boolean | undefined = undefined,
-  FreeSolo extends boolean | undefined = undefined
+  FreeSolo extends boolean | undefined = undefined,
 > extends Omit<AutocompleteProps<T, Multiple, DisableClearable, FreeSolo>, "renderInput" | "sx"> {
   label?: string;
   placeholder?: string;
@@ -30,7 +30,7 @@ function AutoCompleteField<
   T,
   Multiple extends boolean | undefined = undefined,
   DisableClearable extends boolean | undefined = undefined,
-  FreeSolo extends boolean | undefined = undefined
+  FreeSolo extends boolean | undefined = undefined,
 >({
   label,
   placeholder,
@@ -62,8 +62,8 @@ function AutoCompleteField<
     const s = sx as Record<string, unknown>;
     return Object.fromEntries(
       Object.entries(s).filter(
-        ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key)
-      )
+        ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key),
+      ),
     );
   })();
 
@@ -80,11 +80,7 @@ function AutoCompleteField<
         >
           {label}
           {isRequired && (
-            <Typography
-              component="span"
-              ml={theme.spacing(1)}
-              color={theme.palette.error.text}
-            >
+            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
               *
             </Typography>
           )}

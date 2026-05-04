@@ -40,9 +40,7 @@ const makeGetMock = ({
     "/frameworks": ok(frameworks),
     "/users": ok(users),
   };
-  vi.mocked(apiServices.get).mockImplementation((url: string) =>
-    Promise.resolve(map[url] as any),
-  );
+  vi.mocked(apiServices.get).mockImplementation((url: string) => Promise.resolve(map[url] as any));
 };
 
 describe("Test EntityGraph Repository", () => {
@@ -117,9 +115,7 @@ describe("Test EntityGraph Repository", () => {
     it("should still return data from successful endpoints when some fail", async () => {
       const user = { id: 1, name: "Alice", surname: "Smith" };
       vi.mocked(apiServices.get).mockImplementation((url: string) =>
-        url === "/users"
-          ? Promise.resolve(ok([user]) as any)
-          : Promise.reject(new Error("fail")),
+        url === "/users" ? Promise.resolve(ok([user]) as any) : Promise.reject(new Error("fail")),
       );
 
       const result = await fetchEntityGraphData();
@@ -283,9 +279,7 @@ describe("Test EntityGraph Repository", () => {
 
       await fetchEntityGraphData();
 
-      const calledUrls = vi
-        .mocked(apiServices.get)
-        .mock.calls.map(([url]) => url);
+      const calledUrls = vi.mocked(apiServices.get).mock.calls.map(([url]) => url);
       expect(calledUrls).toEqual(
         expect.arrayContaining([
           "/projects",

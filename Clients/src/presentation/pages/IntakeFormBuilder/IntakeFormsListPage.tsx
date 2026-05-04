@@ -94,11 +94,7 @@ function RiskTierChip({ submission }: { submission: IntakeSubmission }) {
   if (!submission.riskTier && !submission.riskAssessment) {
     return <CircularProgress size={14} sx={{ color: theme.palette.text.accent }} />;
   }
-  const tier = (
-    submission.riskTier ||
-    submission.riskAssessment?.tier ||
-    ""
-  ).toLowerCase();
+  const tier = (submission.riskTier || submission.riskAssessment?.tier || "").toLowerCase();
   if (!tier) return <Chip label="Pending" />;
   const label = tier.charAt(0).toUpperCase() + tier.slice(1);
   return <Chip label={label} />;
@@ -130,9 +126,7 @@ export function IntakeFormsListPage() {
   const theme = useTheme();
 
   // Main tab derived from URL path
-  const mainTab = location.pathname.includes("/intake-forms/submissions")
-    ? "submissions"
-    : "forms";
+  const mainTab = location.pathname.includes("/intake-forms/submissions") ? "submissions" : "forms";
 
   // --- Forms state ---
   const [forms, setForms] = useState<IntakeForm[]>([]);
@@ -159,7 +153,9 @@ export function IntakeFormsListPage() {
 
   // --- Create form dialog state ---
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedEntityType, setSelectedEntityType] = useState<IntakeEntityType>(IntakeEntityType.USE_CASE);
+  const [selectedEntityType, setSelectedEntityType] = useState<IntakeEntityType>(
+    IntakeEntityType.USE_CASE,
+  );
 
   // --- Submissions state ---
   const [submissions, setSubmissions] = useState<IntakeSubmission[]>([]);
@@ -216,29 +212,23 @@ export function IntakeFormsListPage() {
   const filteredForms = forms.filter((form) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return (
-        form.name.toLowerCase().includes(q) ||
-        form.description.toLowerCase().includes(q)
-      );
+      return form.name.toLowerCase().includes(q) || form.description.toLowerCase().includes(q);
     }
     return true;
   });
 
   // Pagination helpers
-  const paginatedForms = filteredForms.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  const paginatedForms = filteredForms.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const handleChangePage = (
     _event: React.MouseEvent<HTMLButtonElement> | null,
-    newPage: number
+    newPage: number,
   ) => {
     setPage(newPage);
   };
 
   const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const newVal = parseInt(event.target.value, 10);
     setRowsPerPage(newVal);
@@ -264,7 +254,7 @@ export function IntakeFormsListPage() {
     (s) =>
       !submissionsSearch ||
       (s.submitterName || "").toLowerCase().includes(submissionsSearch.toLowerCase()) ||
-      (s.submitterEmail || "").toLowerCase().includes(submissionsSearch.toLowerCase())
+      (s.submitterEmail || "").toLowerCase().includes(submissionsSearch.toLowerCase()),
   );
 
   // ============================================================================
@@ -292,7 +282,11 @@ export function IntakeFormsListPage() {
     if (selectedForm?.publicId) {
       window.open(`/${selectedForm.publicId}/use-case-form-intake`, "_blank");
     } else {
-      setSnackbar({ open: true, message: "Publish the form first to generate a preview link", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "Publish the form first to generate a preview link",
+        severity: "error",
+      });
     }
     handleMenuClose();
   };
@@ -300,11 +294,20 @@ export function IntakeFormsListPage() {
   const handleCopyLink = () => {
     if (selectedForm?.publicId) {
       const link = `${window.location.origin}/${selectedForm.publicId}/use-case-form-intake`;
-      navigator.clipboard.writeText(link)
-        .then(() => setSnackbar({ open: true, message: "Link copied to clipboard", severity: "success" }))
-        .catch(() => setSnackbar({ open: true, message: "Failed to copy link", severity: "error" }));
+      navigator.clipboard
+        .writeText(link)
+        .then(() =>
+          setSnackbar({ open: true, message: "Link copied to clipboard", severity: "success" }),
+        )
+        .catch(() =>
+          setSnackbar({ open: true, message: "Failed to copy link", severity: "error" }),
+        );
     } else {
-      setSnackbar({ open: true, message: "Publish the form first to generate a shareable link", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "Publish the form first to generate a shareable link",
+        severity: "error",
+      });
     }
     handleMenuClose();
   };
@@ -452,13 +455,23 @@ export function IntakeFormsListPage() {
               <Table sx={singleTheme.tableStyles.primary.frame}>
                 <TableHead>
                   <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Form name</TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Entity type</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Form name
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Entity type
+                    </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Status</TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Fields</TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Created</TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Updated</TableCell>
-                    <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: 48, minWidth: 48 }} />
+                    <TableCell
+                      sx={{
+                        ...singleTheme.tableStyles.primary.header.cell,
+                        width: 48,
+                        minWidth: 48,
+                      }}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -471,7 +484,11 @@ export function IntakeFormsListPage() {
                       <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                         <Box>
                           <Typography
-                            sx={{ fontWeight: 500, fontSize: "13px", color: theme.palette.text.primary }}
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: "13px",
+                              color: theme.palette.text.primary,
+                            }}
                           >
                             {form.name}
                           </Typography>
@@ -514,7 +531,10 @@ export function IntakeFormsListPage() {
                           {form.updatedAt ? formatDate(form.updatedAt) : "\u2014"}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={singleTheme.tableStyles.primary.body.cell} onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        sx={singleTheme.tableStyles.primary.body.cell}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <IconButton
                           disableRipple={
                             theme.components?.MuiIconButton?.defaultProps?.disableRipple
@@ -540,15 +560,10 @@ export function IntakeFormsListPage() {
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 25]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => (
-                        <TablePaginationActions {...props} />
-                      )}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: p, count }) =>
-                        `Page ${p + 1} of ${Math.max(
-                          0,
-                          Math.ceil(count / rowsPerPage)
-                        )}`
+                        `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                       }
                       slotProps={{
                         select: {
@@ -574,7 +589,12 @@ export function IntakeFormsListPage() {
       {mainTab === "submissions" && (
         <>
           {/* Filter + Search */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: "8px" }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ mb: "8px" }}
+          >
             <Select
               id="submission-status-filter"
               value={submissionStatusFilter}
@@ -612,12 +632,24 @@ export function IntakeFormsListPage() {
               <Table sx={singleTheme.tableStyles.primary.frame}>
                 <TableHead>
                   <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Submitter</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Submitter
+                    </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Form</TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Status</TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Risk tier</TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Submitted</TableCell>
-                    <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: 100, minWidth: 100 }} />
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Risk tier
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Submitted
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        ...singleTheme.tableStyles.primary.header.cell,
+                        width: 100,
+                        minWidth: 100,
+                      }}
+                    />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -639,7 +671,11 @@ export function IntakeFormsListPage() {
                       >
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <Typography
-                            sx={{ fontWeight: 500, fontSize: "13px", color: theme.palette.text.primary }}
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: "13px",
+                              color: theme.palette.text.primary,
+                            }}
                           >
                             {submission.submitterName || submission.submitterEmail || "Anonymous"}
                           </Typography>
@@ -657,9 +693,8 @@ export function IntakeFormsListPage() {
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <Stack direction="row" alignItems="center" gap="8px">
                             <Chip label={submission.status} />
-                            {submission.resubmissionCount > 0 && submission.status !== "superseded" && (
-                              <Chip label="resubmitted" />
-                            )}
+                            {submission.resubmissionCount > 0 &&
+                              submission.status !== "superseded" && <Chip label="resubmitted" />}
                           </Stack>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
@@ -719,34 +754,26 @@ export function IntakeFormsListPage() {
           <ListItemIcon>
             <Edit size={18} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
-            Edit
-          </ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Edit</ListItemText>
         </MenuItem>
         {selectedForm?.status === IntakeFormStatus.ACTIVE && [
           <MenuItem key="preview" onClick={handlePreview}>
             <ListItemIcon>
               <Eye size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
-              Preview
-            </ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Preview</ListItemText>
           </MenuItem>,
           <MenuItem key="copy" onClick={handleCopyLink}>
             <ListItemIcon>
               <Copy size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
-              Copy link
-            </ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Copy link</ListItemText>
           </MenuItem>,
           <MenuItem key="archive" onClick={handleArchiveClick}>
             <ListItemIcon>
               <Archive size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
-              Archive
-            </ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Archive</ListItemText>
           </MenuItem>,
         ]}
         {(selectedForm?.status === IntakeFormStatus.DRAFT ||
@@ -755,9 +782,7 @@ export function IntakeFormsListPage() {
             <ListItemIcon>
               <Trash2 size={18} color={theme.palette.status.error.text} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>
-              Delete
-            </ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Delete</ListItemText>
           </MenuItem>
         )}
       </Menu>
@@ -786,13 +811,33 @@ export function IntakeFormsListPage() {
               type: IntakeEntityType.USE_CASE,
               label: "Use case",
               description: "Collect information about an AI use case or project",
-              icon: <FolderTree size={20} strokeWidth={1.5} color={selectedEntityType === IntakeEntityType.USE_CASE ? theme.palette.primary.main : theme.palette.other.icon} />,
+              icon: (
+                <FolderTree
+                  size={20}
+                  strokeWidth={1.5}
+                  color={
+                    selectedEntityType === IntakeEntityType.USE_CASE
+                      ? theme.palette.primary.main
+                      : theme.palette.other.icon
+                  }
+                />
+              ),
             },
             {
               type: IntakeEntityType.MODEL,
               label: "Model inventory",
               description: "Collect information about an AI model",
-              icon: <ListIcon size={20} strokeWidth={1.5} color={selectedEntityType === IntakeEntityType.MODEL ? theme.palette.primary.main : theme.palette.other.icon} />,
+              icon: (
+                <ListIcon
+                  size={20}
+                  strokeWidth={1.5}
+                  color={
+                    selectedEntityType === IntakeEntityType.MODEL
+                      ? theme.palette.primary.main
+                      : theme.palette.other.icon
+                  }
+                />
+              ),
             },
           ].map((option) => (
             <Box
@@ -803,21 +848,30 @@ export function IntakeFormsListPage() {
                 alignItems: "center",
                 gap: "12px",
                 p: "12px",
-                border: selectedEntityType === option.type ? `1px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.border.dark}`,
+                border:
+                  selectedEntityType === option.type
+                    ? `1px solid ${theme.palette.primary.main}`
+                    : `1px solid ${theme.palette.border.dark}`,
                 borderRadius: "4px",
                 cursor: "pointer",
-                backgroundColor: selectedEntityType === option.type ? theme.palette.background.fill : theme.palette.background.main,
+                backgroundColor:
+                  selectedEntityType === option.type
+                    ? theme.palette.background.fill
+                    : theme.palette.background.main,
                 transition: "all 0.15s ease",
                 "&:hover": {
-                  borderColor: selectedEntityType === option.type ? theme.palette.primary.main : theme.palette.text.accent,
+                  borderColor:
+                    selectedEntityType === option.type
+                      ? theme.palette.primary.main
+                      : theme.palette.text.accent,
                 },
               }}
             >
-              <Box sx={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-                {option.icon}
-              </Box>
+              <Box sx={{ flexShrink: 0, display: "flex", alignItems: "center" }}>{option.icon}</Box>
               <Box>
-                <Typography sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.secondary }}>
+                <Typography
+                  sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.secondary }}
+                >
                   {option.label}
                 </Typography>
                 <Typography sx={{ fontSize: "12px", color: theme.palette.other.icon }}>

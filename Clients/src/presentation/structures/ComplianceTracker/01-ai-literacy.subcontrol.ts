@@ -19,8 +19,7 @@ export const AIliteracy = {
         },
         {
           id: 2,
-          title:
-            "We provide AI literacy and ethics training to relevant personnel.",
+          title: "We provide AI literacy and ethics training to relevant personnel.",
           description:
             "Training equips employees to responsibly manage and understand AI systems, fostering ethics and legal adherence.",
         },
@@ -45,8 +44,7 @@ export const AIliteracy = {
       subControls: [
         {
           id: 1,
-          title:
-            "We clearly define roles and responsibilities related to AI risk management.",
+          title: "We clearly define roles and responsibilities related to AI risk management.",
           description:
             "Roles and responsibilities streamline risk management and assign clear accountability for compliance efforts.",
         },

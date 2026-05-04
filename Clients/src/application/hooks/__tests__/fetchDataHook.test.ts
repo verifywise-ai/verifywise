@@ -34,7 +34,7 @@ describe("fetchData", () => {
     expect(setData).not.toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("Error fetching data from /projects"),
-      expect.any(Error)
+      expect.any(Error),
     );
     consoleSpy.mockRestore();
   });

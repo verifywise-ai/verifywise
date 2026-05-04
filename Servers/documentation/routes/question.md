@@ -31,7 +31,6 @@ const upload = multer({ Storage: multer.memoryStorage() });
 ### GET Routes
 
 - **Get All Questions**
-
   - Route: `/`
   - Handler: `getAllQuestions`
   - Authentication: JWT (currently commented out)

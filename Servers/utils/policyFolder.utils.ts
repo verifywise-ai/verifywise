@@ -16,7 +16,7 @@ import { IVirtualFolder } from "../domain.layer/interfaces/i.virtualFolder";
  */
 export const getPolicyFoldersQuery = async (
   organizationId: number,
-  policyId: number
+  policyId: number,
 ): Promise<IVirtualFolder[]> => {
   const result = await sequelize.query(
     `SELECT vf.*
@@ -27,7 +27,7 @@ export const getPolicyFoldersQuery = async (
     {
       replacements: { policyId, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result as IVirtualFolder[];
 };
@@ -37,7 +37,7 @@ export const getPolicyFoldersQuery = async (
  */
 export const getPolicyIdsInFolderQuery = async (
   organizationId: number,
-  folderId: number
+  folderId: number,
 ): Promise<number[]> => {
   const result = await sequelize.query<{ policy_id: number }>(
     `SELECT policy_id FROM policy_folder_mappings
@@ -45,7 +45,7 @@ export const getPolicyIdsInFolderQuery = async (
     {
       replacements: { folderId, organizationId },
       type: QueryTypes.SELECT,
-    }
+    },
   );
   return result.map((r) => r.policy_id);
 };
@@ -58,7 +58,7 @@ export const bulkUpdatePolicyFoldersQuery = async (
   policyId: number,
   folderIds: number[],
   userId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   // Delete existing assignments
   await sequelize.query(
@@ -67,7 +67,7 @@ export const bulkUpdatePolicyFoldersQuery = async (
     {
       replacements: { policyId, organizationId },
       transaction,
-    }
+    },
   );
 
   // Add new assignments
@@ -91,7 +91,7 @@ export const bulkUpdatePolicyFoldersQuery = async (
       {
         replacements,
         transaction,
-      }
+      },
     );
   }
 };

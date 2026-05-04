@@ -34,8 +34,8 @@ export class ValidationErrors extends Error {
   public errors: ValidationError[];
 
   constructor(errors: ValidationError[]) {
-    super('Validation failed');
-    this.name = 'ValidationErrors';
+    super("Validation failed");
+    this.name = "ValidationErrors";
     this.errors = errors;
   }
 }
@@ -53,7 +53,7 @@ export const validateString = (
     pattern?: RegExp;
     allowEmpty?: boolean;
     trimWhitespace?: boolean;
-  } = {}
+  } = {},
 ): ValidationResult => {
   const {
     required = false,
@@ -61,7 +61,7 @@ export const validateString = (
     maxLength = Infinity,
     pattern,
     allowEmpty = false,
-    trimWhitespace = true
+    trimWhitespace = true,
   } = options;
 
   // Check if value exists
@@ -70,7 +70,7 @@ export const validateString = (
       return {
         isValid: false,
         message: `${fieldName} is required`,
-        code: 'REQUIRED_FIELD'
+        code: "REQUIRED_FIELD",
       };
     }
     return { isValid: true };
@@ -83,11 +83,11 @@ export const validateString = (
   }
 
   // Check empty string
-  if (!allowEmpty && stringValue === '' && required) {
+  if (!allowEmpty && stringValue === "" && required) {
     return {
       isValid: false,
       message: `${fieldName} cannot be empty`,
-      code: 'EMPTY_STRING'
+      code: "EMPTY_STRING",
     };
   }
 
@@ -96,7 +96,7 @@ export const validateString = (
     return {
       isValid: false,
       message: `${fieldName} must be at least ${minLength} characters long`,
-      code: 'MIN_LENGTH'
+      code: "MIN_LENGTH",
     };
   }
 
@@ -104,7 +104,7 @@ export const validateString = (
     return {
       isValid: false,
       message: `${fieldName} cannot exceed ${maxLength} characters`,
-      code: 'MAX_LENGTH'
+      code: "MAX_LENGTH",
     };
   }
 
@@ -113,7 +113,7 @@ export const validateString = (
     return {
       isValid: false,
       message: `${fieldName} format is invalid`,
-      code: 'INVALID_FORMAT'
+      code: "INVALID_FORMAT",
     };
   }
 
@@ -132,23 +132,23 @@ export const validateNumber = (
     max?: number;
     integer?: boolean;
     positive?: boolean;
-  } = {}
+  } = {},
 ): ValidationResult => {
   const {
     required = false,
     min = -Infinity,
     max = Infinity,
     integer = false,
-    positive = false
+    positive = false,
   } = options;
 
   // Check if value exists
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     if (required) {
       return {
         isValid: false,
         message: `${fieldName} is required`,
-        code: 'REQUIRED_FIELD'
+        code: "REQUIRED_FIELD",
       };
     }
     return { isValid: true };
@@ -162,7 +162,7 @@ export const validateNumber = (
     return {
       isValid: false,
       message: `${fieldName} must be a valid number`,
-      code: 'INVALID_NUMBER'
+      code: "INVALID_NUMBER",
     };
   }
 
@@ -171,7 +171,7 @@ export const validateNumber = (
     return {
       isValid: false,
       message: `${fieldName} must be an integer`,
-      code: 'INVALID_INTEGER'
+      code: "INVALID_INTEGER",
     };
   }
 
@@ -180,7 +180,7 @@ export const validateNumber = (
     return {
       isValid: false,
       message: `${fieldName} must be positive`,
-      code: 'INVALID_POSITIVE'
+      code: "INVALID_POSITIVE",
     };
   }
 
@@ -189,7 +189,7 @@ export const validateNumber = (
     return {
       isValid: false,
       message: `${fieldName} must be at least ${min}`,
-      code: 'MIN_VALUE'
+      code: "MIN_VALUE",
     };
   }
 
@@ -197,7 +197,7 @@ export const validateNumber = (
     return {
       isValid: false,
       message: `${fieldName} cannot exceed ${max}`,
-      code: 'MAX_VALUE'
+      code: "MAX_VALUE",
     };
   }
 
@@ -211,15 +211,15 @@ export const validateEnum = <T extends string>(
   value: unknown,
   fieldName: string,
   allowedValues: readonly T[],
-  required: boolean = false
+  required: boolean = false,
 ): ValidationResult => {
   // Check if value exists
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     if (required) {
       return {
         isValid: false,
         message: `${fieldName} is required`,
-        code: 'REQUIRED_FIELD'
+        code: "REQUIRED_FIELD",
       };
     }
     return { isValid: true };
@@ -233,7 +233,7 @@ export const validateEnum = <T extends string>(
         return {
           isValid: false,
           message: `${fieldName} is required`,
-          code: 'REQUIRED_FIELD'
+          code: "REQUIRED_FIELD",
         };
       }
       return { isValid: true };
@@ -245,8 +245,8 @@ export const validateEnum = <T extends string>(
       if (typeof element !== "string" || !allowedValues.includes(element as T)) {
         return {
           isValid: false,
-          message: `${fieldName}[${i}] must be one of: ${allowedValues.join(', ')}`,
-          code: 'INVALID_ENUM'
+          message: `${fieldName}[${i}] must be one of: ${allowedValues.join(", ")}`,
+          code: "INVALID_ENUM",
         };
       }
     }
@@ -257,8 +257,8 @@ export const validateEnum = <T extends string>(
   if (typeof value !== "string" || !allowedValues.includes(value as T)) {
     return {
       isValid: false,
-      message: `${fieldName} must be one of: ${allowedValues.join(', ')}`,
-      code: 'INVALID_ENUM'
+      message: `${fieldName} must be one of: ${allowedValues.join(", ")}`,
+      code: "INVALID_ENUM",
     };
   }
 
@@ -277,23 +277,17 @@ export const validateDate = (
     maxDate?: Date;
     futureOnly?: boolean;
     pastOnly?: boolean;
-  } = {}
+  } = {},
 ): ValidationResult => {
-  const {
-    required = false,
-    minDate,
-    maxDate,
-    futureOnly = false,
-    pastOnly = false
-  } = options;
+  const { required = false, minDate, maxDate, futureOnly = false, pastOnly = false } = options;
 
   // Check if value exists
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     if (required) {
       return {
         isValid: false,
         message: `${fieldName} is required`,
-        code: 'REQUIRED_FIELD'
+        code: "REQUIRED_FIELD",
       };
     }
     return { isValid: true };
@@ -307,7 +301,7 @@ export const validateDate = (
     return {
       isValid: false,
       message: `${fieldName} must be a valid date`,
-      code: 'INVALID_DATE'
+      code: "INVALID_DATE",
     };
   }
 
@@ -318,7 +312,7 @@ export const validateDate = (
     return {
       isValid: false,
       message: `${fieldName} must be a future date`,
-      code: 'FUTURE_DATE_REQUIRED'
+      code: "FUTURE_DATE_REQUIRED",
     };
   }
 
@@ -327,7 +321,7 @@ export const validateDate = (
     return {
       isValid: false,
       message: `${fieldName} must be a past date`,
-      code: 'PAST_DATE_REQUIRED'
+      code: "PAST_DATE_REQUIRED",
     };
   }
 
@@ -335,8 +329,8 @@ export const validateDate = (
   if (minDate && dateValue < minDate) {
     return {
       isValid: false,
-      message: `${fieldName} cannot be before ${minDate.toISOString().split('T')[0]}`,
-      code: 'MIN_DATE'
+      message: `${fieldName} cannot be before ${minDate.toISOString().split("T")[0]}`,
+      code: "MIN_DATE",
     };
   }
 
@@ -344,8 +338,8 @@ export const validateDate = (
   if (maxDate && dateValue > maxDate) {
     return {
       isValid: false,
-      message: `${fieldName} cannot be after ${maxDate.toISOString().split('T')[0]}`,
-      code: 'MAX_DATE'
+      message: `${fieldName} cannot be after ${maxDate.toISOString().split("T")[0]}`,
+      code: "MAX_DATE",
     };
   }
 
@@ -358,15 +352,15 @@ export const validateDate = (
 export const validateForeignKey = (
   value: unknown,
   fieldName: string,
-  required: boolean = false
+  required: boolean = false,
 ): ValidationResult => {
   // Check if value exists
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     if (required) {
       return {
         isValid: false,
         message: `${fieldName} is required`,
-        code: 'REQUIRED_FIELD'
+        code: "REQUIRED_FIELD",
       };
     }
     return { isValid: true };
@@ -380,7 +374,7 @@ export const validateForeignKey = (
     return {
       isValid: false,
       message: `${fieldName} must be a valid ID`,
-      code: 'INVALID_ID'
+      code: "INVALID_ID",
     };
   }
 
@@ -390,8 +384,8 @@ export const validateForeignKey = (
   if (!Number.isInteger(numValue) || numValue < minValue) {
     return {
       isValid: false,
-      message: `${fieldName} must be a ${required ? 'positive ' : ''}valid integer${required ? '' : ' (0 or greater)'}`,
-      code: 'INVALID_ID'
+      message: `${fieldName} must be a ${required ? "positive " : ""}valid integer${required ? "" : " (0 or greater)"}`,
+      code: "INVALID_ID",
     };
   }
 
@@ -403,7 +397,7 @@ export const validateForeignKey = (
  */
 export const validateSchema = (
   data: Record<string, unknown>,
-  schema: Record<string, (value: unknown) => ValidationResult>
+  schema: Record<string, (value: unknown) => ValidationResult>,
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
 
@@ -413,9 +407,9 @@ export const validateSchema = (
     if (!result.isValid) {
       errors.push({
         field,
-        message: result.message || 'Invalid value',
-        code: result.code || 'INVALID_VALUE',
-        value: data[field]
+        message: result.message || "Invalid value",
+        code: result.code || "INVALID_VALUE",
+        value: data[field],
       });
     }
   }
@@ -443,21 +437,19 @@ export const validateSchema = (
  * );
  * ```
  */
-export const validateRequest = (
-  schema: Record<string, (value: unknown) => ValidationResult>
-) => {
+export const validateRequest = (schema: Record<string, (value: unknown) => ValidationResult>) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const errors = validateSchema(req.body, schema);
 
     if (errors.length > 0) {
       res.status(400).json({
-        status: 'error',
-        message: 'Validation failed',
-        errors: errors.map(err => ({
+        status: "error",
+        message: "Validation failed",
+        errors: errors.map((err) => ({
           field: err.field,
           message: err.message,
-          code: err.code
-        }))
+          code: err.code,
+        })),
       });
       return;
     }
@@ -469,13 +461,21 @@ export const validateRequest = (
 /**
  * Sanitization utilities
  */
-export const sanitizeString = (value: string, options: {
-  trim?: boolean;
-  toLowerCase?: boolean;
-  toUpperCase?: boolean;
-  removeSpecialChars?: boolean;
-} = {}): string => {
-  const { trim = true, toLowerCase = false, toUpperCase = false, removeSpecialChars = false } = options;
+export const sanitizeString = (
+  value: string,
+  options: {
+    trim?: boolean;
+    toLowerCase?: boolean;
+    toUpperCase?: boolean;
+    removeSpecialChars?: boolean;
+  } = {},
+): string => {
+  const {
+    trim = true,
+    toLowerCase = false,
+    toUpperCase = false,
+    removeSpecialChars = false,
+  } = options;
 
   let sanitized = value;
 
@@ -492,7 +492,7 @@ export const sanitizeString = (value: string, options: {
   }
 
   if (removeSpecialChars) {
-    sanitized = sanitized.replace(/[^\w\s]/gi, '');
+    sanitized = sanitized.replace(/[^\w\s]/gi, "");
   }
 
   return sanitized;
@@ -507,16 +507,16 @@ export const VALIDATION_PATTERNS = {
   URL: /^https?:\/\/.+/,
   ALPHANUMERIC: /^[a-zA-Z0-9]+$/,
   LETTERS_ONLY: /^[a-zA-Z\s]+$/,
-  NUMBERS_ONLY: /^[0-9]+$/
+  NUMBERS_ONLY: /^[0-9]+$/,
 } as const;
 
 /**
  * Common enum values for vendor risks
  */
 export const VENDOR_RISK_ENUMS = {
-  IMPACT: ['Negligible', 'Minor', 'Moderate', 'Major', 'Critical'] as const,
-  LIKELIHOOD: ['Rare', 'Unlikely', 'Possible', 'Likely', 'Almost certain'] as const,
-  RISK_SEVERITY: ['Negligible', 'Minor', 'Moderate', 'Major', 'Catastrophic'] as const
+  IMPACT: ["Negligible", "Minor", "Moderate", "Major", "Critical"] as const,
+  LIKELIHOOD: ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"] as const,
+  RISK_SEVERITY: ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"] as const,
 } as const;
 
 /** Matches valid plugin keys: lowercase alphanumeric + hyphens, 1-64 chars */

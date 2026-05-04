@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Box, Stack, Typography, useTheme, Divider, Snackbar, FormControlLabel } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  Divider,
+  Snackbar,
+  FormControlLabel,
+} from "@mui/material";
 import { Copy } from "lucide-react";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Toggle from "../../../components/Inputs/Toggle";
@@ -150,8 +158,8 @@ const TogglesSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Selection controls for binary choices and view switching.
-          Includes Checkbox, Toggle (Switch), ViewToggle, and ButtonToggle components.
+          Selection controls for binary choices and view switching. Includes Checkbox, Toggle
+          (Switch), ViewToggle, and ButtonToggle components.
         </Typography>
       </Box>
 
@@ -165,7 +173,16 @@ const TogglesSection: React.FC = () => {
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Basic usage
             </Typography>
             <Stack spacing="24px">
@@ -202,7 +219,17 @@ const TogglesSection: React.FC = () => {
               </ExampleWithCode>
             </Stack>
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "32px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "32px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Sizes
             </Typography>
             <Stack spacing="24px">
@@ -270,7 +297,16 @@ const TogglesSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -298,22 +334,27 @@ const TogglesSection: React.FC = () => {
       {/* Toggle (Switch) */}
       <SpecSection title="Toggle (Switch)">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Custom styled MUI Switch component. Uses square corners to match checkbox style.
-          Green when active, border.light color when inactive.
+          Custom styled MUI Switch component. Uses square corners to match checkbox style. Green
+          when active, border.light color when inactive.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Usage examples
             </Typography>
             <Stack spacing="24px">
-              <ExampleWithCode
-                label="Basic toggle"
-                code={toggleSnippets.basic}
-                onCopy={handleCopy}
-              >
+              <ExampleWithCode label="Basic toggle" code={toggleSnippets.basic} onCopy={handleCopy}>
                 <Box sx={{ display: "flex", gap: "16px", alignItems: "center" }}>
                   <Toggle
                     checked={toggleEnabled}
@@ -372,7 +413,16 @@ const TogglesSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -399,14 +449,23 @@ const TogglesSection: React.FC = () => {
       {/* ViewToggle */}
       <SpecSection title="ViewToggle">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Toggle button group for switching between card and table views.
-          Uses lucide-react icons (LayoutGrid, List) with MUI ToggleButtonGroup.
+          Toggle button group for switching between card and table views. Uses lucide-react icons
+          (LayoutGrid, List) with MUI ToggleButtonGroup.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Usage examples
             </Typography>
             <Stack spacing="24px">
@@ -416,10 +475,7 @@ const TogglesSection: React.FC = () => {
                 onCopy={handleCopy}
               >
                 <Box sx={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                  <ViewToggle
-                    viewMode={viewMode}
-                    onViewChange={setViewMode}
-                  />
+                  <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
                   <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary }}>
                     Current: {viewMode} view
                   </Typography>
@@ -431,18 +487,23 @@ const TogglesSection: React.FC = () => {
                 code={viewToggleSnippets.disabled}
                 onCopy={handleCopy}
               >
-                <ViewToggle
-                  viewMode="card"
-                  onViewChange={() => {}}
-                  disabled={true}
-                />
+                <ViewToggle viewMode="card" onViewChange={() => {}} disabled={true} />
               </ExampleWithCode>
             </Stack>
           </Box>
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -468,14 +529,23 @@ const TogglesSection: React.FC = () => {
       {/* ButtonToggle */}
       <SpecSection title="ButtonToggle">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Segmented control with sliding indicator. Supports any number of options.
-          Used for switching between related views or time periods.
+          Segmented control with sliding indicator. Supports any number of options. Used for
+          switching between related views or time periods.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Live Examples */}
           <Box sx={{ flex: "1 1 400px", minWidth: 320 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Usage examples
             </Typography>
             <Stack spacing="24px">
@@ -515,7 +585,16 @@ const TogglesSection: React.FC = () => {
 
           {/* Specifications */}
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -650,9 +729,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -679,9 +756,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -740,9 +815,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

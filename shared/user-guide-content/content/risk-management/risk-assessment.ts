@@ -61,7 +61,7 @@ export const riskAssessmentContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Risk name', text: 'A clear, descriptive name for the risk' },
-        { bold: 'Risk owner', text: 'The person responsible for managing this risk' },
+        { bold: 'Action owner', text: 'The person responsible for managing this risk' },
         { bold: 'Risk description', text: 'Detailed explanation of the risk and its potential consequences' },
         { bold: 'AI lifecycle phase', text: 'When in the AI lifecycle this risk applies' },
         { bold: 'Risk category', text: 'Classification of the risk type' },
@@ -149,7 +149,7 @@ export const riskAssessmentContent: ArticleContent = {
         { level: 'Unlikely', description: 'Not expected but possible' },
         { level: 'Possible', description: 'May occur at some point' },
         { level: 'Likely', description: 'Expected to occur' },
-        { level: 'Almost certain', description: 'Will almost definitely occur' },
+        { level: 'Almost Certain', description: 'Will almost definitely occur' },
       ],
     },
     {

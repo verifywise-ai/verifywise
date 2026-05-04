@@ -21,7 +21,7 @@ let policyTemplates: PolicyTemplate[] = [];
 try {
   const templatesPath = path.join(
     __dirname,
-    "../../../../Clients/public/data/PolicyTemplates.json"
+    "../../../../Clients/public/data/PolicyTemplates.json",
   );
   const templatesContent = fs.readFileSync(templatesPath, "utf-8");
   policyTemplates = JSON.parse(templatesContent);
@@ -53,7 +53,7 @@ interface PolicyWithReviewers {
 
 const fetchPolicies = async (
   params: FetchPoliciesParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<Partial<PolicyWithReviewers>[]> => {
   let policies: PolicyWithReviewers[] = [];
 
@@ -106,7 +106,7 @@ const fetchPolicies = async (
   } catch (error) {
     logger.error("Error fetching policies:", error);
     throw new Error(
-      `Failed to fetch policies: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to fetch policies: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -139,7 +139,7 @@ export interface PolicyAnalytics {
 
 const getPolicyAnalytics = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<PolicyAnalytics> => {
   try {
     const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
@@ -203,7 +203,10 @@ const getPolicyAnalytics = async (
     });
 
     // 4. Author Workload
-    const authorMap = new Map<number, { count: number; publishedCount: number; draftCount: number }>();
+    const authorMap = new Map<
+      number,
+      { count: number; publishedCount: number; draftCount: number }
+    >();
     policies.forEach((policy) => {
       if (policy.author_id) {
         const existing = authorMap.get(policy.author_id) || {
@@ -251,7 +254,7 @@ const getPolicyAnalytics = async (
   } catch (error) {
     logger.error("Error getting policy analytics:", error);
     throw new Error(
-      `Failed to get policy analytics: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get policy analytics: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -294,7 +297,7 @@ export interface PolicyExecutiveSummary {
 
 const getPolicyExecutiveSummary = async (
   _params: Record<string, unknown>,
-  organizationId: number
+  organizationId: number,
 ): Promise<PolicyExecutiveSummary> => {
   try {
     const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
@@ -335,8 +338,7 @@ const getPolicyExecutiveSummary = async (
     // Policies needing attention
     const policiesNeedingAttention = policies
       .filter((p) => {
-        const isOverdue =
-          p.next_review_date && new Date(p.next_review_date) < now;
+        const isOverdue = p.next_review_date && new Date(p.next_review_date) < now;
         const isStale =
           p.status === "Draft" &&
           p.last_updated_at &&
@@ -348,7 +350,7 @@ const getPolicyExecutiveSummary = async (
         let reason = "";
         if (p.next_review_date && new Date(p.next_review_date) < now) {
           daysOverdue = Math.floor(
-            (now.getTime() - new Date(p.next_review_date).getTime()) / (1000 * 60 * 60 * 24)
+            (now.getTime() - new Date(p.next_review_date).getTime()) / (1000 * 60 * 60 * 24),
           );
           reason = "Overdue for review";
         } else {
@@ -408,9 +410,7 @@ const getPolicyExecutiveSummary = async (
       coveredTags: uniqueTags.size,
       totalPossibleTags: POLICY_TAGS.length,
       percentage:
-        POLICY_TAGS.length > 0
-          ? Math.round((uniqueTags.size / POLICY_TAGS.length) * 100)
-          : 0,
+        POLICY_TAGS.length > 0 ? Math.round((uniqueTags.size / POLICY_TAGS.length) * 100) : 0,
     };
 
     return {
@@ -432,7 +432,7 @@ const getPolicyExecutiveSummary = async (
   } catch (error) {
     logger.error("Error getting policy executive summary:", error);
     throw new Error(
-      `Failed to get policy executive summary: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get policy executive summary: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -454,7 +454,7 @@ interface PolicyTemplateResult {
 
 const searchPolicyTemplates = async (
   params: SearchPolicyTemplatesParams,
-  _organizationId: number
+  _organizationId: number,
 ): Promise<PolicyTemplateResult[]> => {
   try {
     let templates = [...policyTemplates];
@@ -462,12 +462,12 @@ const searchPolicyTemplates = async (
     // Apply filters
     if (params.category) {
       templates = templates.filter(
-        (t) => t.category.toLowerCase() === params.category!.toLowerCase()
+        (t) => t.category.toLowerCase() === params.category!.toLowerCase(),
       );
     }
     if (params.tag) {
       templates = templates.filter((t) =>
-        t.tags.some((tag) => tag.toLowerCase().includes(params.tag!.toLowerCase()))
+        t.tags.some((tag) => tag.toLowerCase().includes(params.tag!.toLowerCase())),
       );
     }
     if (params.search) {
@@ -475,7 +475,7 @@ const searchPolicyTemplates = async (
       templates = templates.filter(
         (t) =>
           t.title.toLowerCase().includes(searchLower) ||
-          t.description.toLowerCase().includes(searchLower)
+          t.description.toLowerCase().includes(searchLower),
       );
     }
 
@@ -494,7 +494,7 @@ const searchPolicyTemplates = async (
   } catch (error) {
     logger.error("Error searching policy templates:", error);
     throw new Error(
-      `Failed to search policy templates: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to search policy templates: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };
@@ -514,7 +514,7 @@ interface TemplateRecommendation {
 
 const getTemplateRecommendations = async (
   params: GetTemplateRecommendationsParams,
-  organizationId: number
+  organizationId: number,
 ): Promise<TemplateRecommendation[]> => {
   try {
     const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
@@ -551,7 +551,7 @@ const getTemplateRecommendations = async (
       const similarExists = policies.some(
         (p) =>
           p.title.toLowerCase().includes(template.title.toLowerCase()) ||
-          template.title.toLowerCase().includes(p.title.toLowerCase())
+          template.title.toLowerCase().includes(p.title.toLowerCase()),
       );
       if (similarExists) {
         score -= 10;
@@ -581,7 +581,7 @@ const getTemplateRecommendations = async (
   } catch (error) {
     logger.error("Error getting template recommendations:", error);
     throw new Error(
-      `Failed to get template recommendations: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to get template recommendations: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 };

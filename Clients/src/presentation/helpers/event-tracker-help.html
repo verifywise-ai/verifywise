@@ -1,21 +1,19 @@
 <div>
   <h3>Event Tracker</h3>
   <p>
-    The Event Tracker provides a comprehensive monitoring and logging system
-    that gives you a live window into VerifyWise operations. It records every
-    user action and system event, then lets you dive into raw logs for deeper
-    troubleshooting. Use it to see who did what, spot patterns, and keep your
-    application healthy.
+    The Event Tracker provides a comprehensive monitoring and logging system that gives you a live
+    window into VerifyWise operations. It records every user action and system event, then lets you
+    dive into raw logs for deeper troubleshooting. Use it to see who did what, spot patterns, and
+    keep your application healthy.
   </p>
 
   <section>
     <h4>System Overview</h4>
     <p>
-      The Event Tracker serves as your central monitoring hub, capturing and
-      displaying all system activities in real-time. It provides two main views:
-      structured event data for user actions and raw application logs for
-      technical troubleshooting. This dual approach ensures comprehensive
-      visibility into both user behavior and system performance.
+      The Event Tracker serves as your central monitoring hub, capturing and displaying all system
+      activities in real-time. It provides two main views: structured event data for user actions
+      and raw application logs for technical troubleshooting. This dual approach ensures
+      comprehensive visibility into both user behavior and system performance.
     </p>
   </section>
 
@@ -24,57 +22,37 @@
 
     <h5>Events Tab</h5>
     <p>
-      The Events tab displays structured user activity data in a tabular format,
-      providing clear visibility into user actions and system interactions:
+      The Events tab displays structured user activity data in a tabular format, providing clear
+      visibility into user actions and system interactions:
     </p>
 
     <ul>
       <li>
-        <strong>Structured Data:</strong> Organized event information with clear
-        categorization
+        <strong>Structured Data:</strong> Organized event information with clear categorization
       </li>
+      <li><strong>User Activity Tracking:</strong> Monitor who performed what actions and when</li>
       <li>
-        <strong>User Activity Tracking:</strong> Monitor who performed what
-        actions and when
+        <strong>Event Type Classification:</strong> Categorized events (Create, Read, Update,
+        Delete, Error)
       </li>
-      <li>
-        <strong>Event Type Classification:</strong> Categorized events (Create,
-        Read, Update, Delete, Error)
-      </li>
-      <li>
-        <strong>Timestamp Information:</strong> Precise timing of all user
-        actions
-      </li>
-      <li>
-        <strong>Pagination Support:</strong> Navigate through large datasets
-        efficiently
-      </li>
+      <li><strong>Timestamp Information:</strong> Precise timing of all user actions</li>
+      <li><strong>Pagination Support:</strong> Navigate through large datasets efficiently</li>
     </ul>
 
     <h5>Logs Tab</h5>
     <p>
-      The Logs tab provides access to raw application logs for technical
-      analysis and troubleshooting:
+      The Logs tab provides access to raw application logs for technical analysis and
+      troubleshooting:
     </p>
 
     <ul>
       <li><strong>Raw Log Data:</strong> Unfiltered application log entries</li>
+      <li><strong>Real-Time Updates:</strong> Live log monitoring with refresh capability</li>
       <li>
-        <strong>Real-Time Updates:</strong> Live log monitoring with refresh
-        capability
+        <strong>Log Level Highlighting:</strong> Color-coded log levels for quick identification
       </li>
-      <li>
-        <strong>Log Level Highlighting:</strong> Color-coded log levels for
-        quick identification
-      </li>
-      <li>
-        <strong>Scrollable Interface:</strong> Easy navigation through extensive
-        log data
-      </li>
-      <li>
-        <strong>Line Numbering:</strong> Reference specific log entries for
-        debugging
-      </li>
+      <li><strong>Scrollable Interface:</strong> Easy navigation through extensive log data</li>
+      <li><strong>Line Numbering:</strong> Reference specific log entries for debugging</li>
     </ul>
   </section>
 
@@ -82,45 +60,25 @@
     <h4>Events Table Structure</h4>
 
     <h5>Table Columns</h5>
-    <p>
-      The Events table displays comprehensive event information with the
-      following columns:
-    </p>
+    <p>The Events table displays comprehensive event information with the following columns:</p>
 
     <ul>
       <li><strong>ID:</strong> Unique identifier for each event</li>
-      <li>
-        <strong>Event Type:</strong> Categorized action type with color-coded
-        badges
-      </li>
-      <li>
-        <strong>Description:</strong> Detailed description of the action
-        performed
-      </li>
-      <li>
-        <strong>User (ID):</strong> User who performed the action with user ID
-      </li>
+      <li><strong>Event Type:</strong> Categorized action type with color-coded badges</li>
+      <li><strong>Description:</strong> Detailed description of the action performed</li>
+      <li><strong>User (ID):</strong> User who performed the action with user ID</li>
       <li><strong>Timestamp:</strong> Date and time when the event occurred</li>
     </ul>
 
     <h5>Event Type Categories</h5>
-    <p>
-      Events are classified into five main categories with distinct visual
-      indicators:
-    </p>
+    <p>Events are classified into five main categories with distinct visual indicators:</p>
 
     <ul>
       <li><strong>Create (Green):</strong> New resource creation events</li>
       <li><strong>Read (Blue):</strong> Data retrieval and viewing actions</li>
-      <li>
-        <strong>Update (Yellow):</strong> Modification and editing operations
-      </li>
-      <li>
-        <strong>Delete (Red):</strong> Resource deletion and removal actions
-      </li>
-      <li>
-        <strong>Error (Orange):</strong> System errors and exception events
-      </li>
+      <li><strong>Update (Yellow):</strong> Modification and editing operations</li>
+      <li><strong>Delete (Red):</strong> Resource deletion and removal actions</li>
+      <li><strong>Error (Orange):</strong> System errors and exception events</li>
     </ul>
   </section>
 
@@ -129,65 +87,29 @@
 
     <h5>Log Display</h5>
     <ul>
-      <li>
-        <strong>Log File Header:</strong> Shows "Application Logs" title and log
-        count
-      </li>
-      <li>
-        <strong>Real-Time Information:</strong> Displays current log status and
-        message
-      </li>
-      <li>
-        <strong>Line Count:</strong> Shows total number of log lines available
-      </li>
-      <li>
-        <strong>Refresh Button:</strong> Manual refresh capability for latest
-        logs
-      </li>
+      <li><strong>Log File Header:</strong> Shows "Application Logs" title and log count</li>
+      <li><strong>Real-Time Information:</strong> Displays current log status and message</li>
+      <li><strong>Line Count:</strong> Shows total number of log lines available</li>
+      <li><strong>Refresh Button:</strong> Manual refresh capability for latest logs</li>
     </ul>
 
     <h5>Log Level Highlighting</h5>
-    <p>
-      The system automatically highlights different log levels with color
-      coding:
-    </p>
+    <p>The system automatically highlights different log levels with color coding:</p>
 
     <ul>
-      <li>
-        <strong>Error (Red):</strong> Critical errors requiring immediate
-        attention
-      </li>
-      <li>
-        <strong>Warning (Orange):</strong> Warning messages and potential issues
-      </li>
-      <li>
-        <strong>Success (Green):</strong> Successful operations and
-        confirmations
-      </li>
-      <li>
-        <strong>Info (Blue):</strong> General information and status updates
-      </li>
-      <li>
-        <strong>Debug (Purple):</strong> Debug information for development
-      </li>
+      <li><strong>Error (Red):</strong> Critical errors requiring immediate attention</li>
+      <li><strong>Warning (Orange):</strong> Warning messages and potential issues</li>
+      <li><strong>Success (Green):</strong> Successful operations and confirmations</li>
+      <li><strong>Info (Blue):</strong> General information and status updates</li>
+      <li><strong>Debug (Purple):</strong> Debug information for development</li>
     </ul>
 
     <h5>Log Navigation</h5>
     <ul>
-      <li>
-        <strong>Scrollable View:</strong> Vertical scrolling through log entries
-      </li>
-      <li>
-        <strong>Line Numbers:</strong> Sequential numbering for easy reference
-      </li>
-      <li>
-        <strong>Hover Effects:</strong> Visual feedback when hovering over log
-        lines
-      </li>
-      <li>
-        <strong>Monospace Font:</strong> Consistent formatting for log
-        readability
-      </li>
+      <li><strong>Scrollable View:</strong> Vertical scrolling through log entries</li>
+      <li><strong>Line Numbers:</strong> Sequential numbering for easy reference</li>
+      <li><strong>Hover Effects:</strong> Visual feedback when hovering over log lines</li>
+      <li><strong>Monospace Font:</strong> Consistent formatting for log readability</li>
     </ul>
   </section>
 
@@ -196,58 +118,26 @@
 
     <h5>User Activity Monitoring</h5>
     <ul>
-      <li>
-        <strong>Action Tracking:</strong> Monitor all user interactions with the
-        system
-      </li>
-      <li>
-        <strong>User Identification:</strong> Track which users performed
-        specific actions
-      </li>
-      <li>
-        <strong>Timestamp Precision:</strong> Accurate timing of all user
-        activities
-      </li>
-      <li>
-        <strong>Action Descriptions:</strong> Detailed information about what
-        was performed
-      </li>
+      <li><strong>Action Tracking:</strong> Monitor all user interactions with the system</li>
+      <li><strong>User Identification:</strong> Track which users performed specific actions</li>
+      <li><strong>Timestamp Precision:</strong> Accurate timing of all user activities</li>
+      <li><strong>Action Descriptions:</strong> Detailed information about what was performed</li>
     </ul>
 
     <h5>System Health Monitoring</h5>
     <ul>
-      <li>
-        <strong>Error Detection:</strong> Identify system errors and exceptions
-      </li>
-      <li>
-        <strong>Performance Tracking:</strong> Monitor system performance
-        through logs
-      </li>
-      <li>
-        <strong>Pattern Recognition:</strong> Spot recurring issues and trends
-      </li>
-      <li>
-        <strong>Audit Trail:</strong> Complete record of all system activities
-      </li>
+      <li><strong>Error Detection:</strong> Identify system errors and exceptions</li>
+      <li><strong>Performance Tracking:</strong> Monitor system performance through logs</li>
+      <li><strong>Pattern Recognition:</strong> Spot recurring issues and trends</li>
+      <li><strong>Audit Trail:</strong> Complete record of all system activities</li>
     </ul>
 
     <h5>Compliance and Security</h5>
     <ul>
-      <li>
-        <strong>Audit Compliance:</strong> Maintain detailed audit trails for
-        compliance
-      </li>
-      <li>
-        <strong>Security Monitoring:</strong> Track security-related events and
-        access
-      </li>
-      <li>
-        <strong>Data Integrity:</strong> Monitor data changes and modifications
-      </li>
-      <li>
-        <strong>Access Control:</strong> Track user permissions and access
-        patterns
-      </li>
+      <li><strong>Audit Compliance:</strong> Maintain detailed audit trails for compliance</li>
+      <li><strong>Security Monitoring:</strong> Track security-related events and access</li>
+      <li><strong>Data Integrity:</strong> Monitor data changes and modifications</li>
+      <li><strong>Access Control:</strong> Track user permissions and access patterns</li>
     </ul>
   </section>
 
@@ -258,81 +148,41 @@
     <ul>
       <li><strong>Events Tab:</strong> Switch to structured event data view</li>
       <li><strong>Logs Tab:</strong> Switch to raw application logs view</li>
-      <li>
-        <strong>Visual Indicators:</strong> Clear tab highlighting for current
-        view
-      </li>
+      <li><strong>Visual Indicators:</strong> Clear tab highlighting for current view</li>
     </ul>
 
     <h5>Pagination and Data Management</h5>
     <ul>
-      <li>
-        <strong>Events Pagination:</strong> Navigate through large event
-        datasets
-      </li>
-      <li>
-        <strong>Rows Per Page:</strong> Adjustable display density (5, 10, 15,
-        25 rows)
-      </li>
-      <li>
-        <strong>Page Navigation:</strong> Easy movement between data pages
-      </li>
-      <li>
-        <strong>Data Range Display:</strong> Clear indication of current data
-        range
-      </li>
+      <li><strong>Events Pagination:</strong> Navigate through large event datasets</li>
+      <li><strong>Rows Per Page:</strong> Adjustable display density (5, 10, 15, 25 rows)</li>
+      <li><strong>Page Navigation:</strong> Easy movement between data pages</li>
+      <li><strong>Data Range Display:</strong> Clear indication of current data range</li>
     </ul>
 
     <h5>Refresh and Updates</h5>
     <ul>
       <li><strong>Manual Refresh:</strong> Update data on demand</li>
-      <li>
-        <strong>Real-Time Updates:</strong> Automatic data refresh capabilities
-      </li>
-      <li>
-        <strong>Loading States:</strong> Clear indication during data loading
-      </li>
-      <li>
-        <strong>Error Handling:</strong> Graceful error display and recovery
-      </li>
+      <li><strong>Real-Time Updates:</strong> Automatic data refresh capabilities</li>
+      <li><strong>Loading States:</strong> Clear indication during data loading</li>
+      <li><strong>Error Handling:</strong> Graceful error display and recovery</li>
     </ul>
   </section>
 
   <section>
     <h4>Event Tracker Benefits</h4>
     <ul>
+      <li><strong>System Transparency:</strong> Complete visibility into all system activities</li>
+      <li><strong>Debugging Support:</strong> Detailed logs for troubleshooting issues</li>
       <li>
-        <strong>System Transparency:</strong> Complete visibility into all
-        system activities
+        <strong>User Behavior Analysis:</strong> Understand how users interact with the system
       </li>
+      <li><strong>Security Monitoring:</strong> Track and identify potential security issues</li>
       <li>
-        <strong>Debugging Support:</strong> Detailed logs for troubleshooting
-        issues
+        <strong>Performance Optimization:</strong> Identify bottlenecks and performance issues
       </li>
-      <li>
-        <strong>User Behavior Analysis:</strong> Understand how users interact
-        with the system
-      </li>
-      <li>
-        <strong>Security Monitoring:</strong> Track and identify potential
-        security issues
-      </li>
-      <li>
-        <strong>Performance Optimization:</strong> Identify bottlenecks and
-        performance issues
-      </li>
-      <li>
-        <strong>Compliance Support:</strong> Maintain audit trails for
-        regulatory compliance
-      </li>
-      <li>
-        <strong>Proactive Monitoring:</strong> Early detection of system
-        problems
-      </li>
-      <li>
-        <strong>Historical Analysis:</strong> Review past activities and system
-        states
-      </li>
+      <li><strong>Compliance Support:</strong> Maintain audit trails for regulatory compliance</li>
+      <li><strong>Proactive Monitoring:</strong> Early detection of system problems</li>
+      <li><strong>Historical Analysis:</strong> Review past activities and system states</li>
     </ul>
   </section>
 
@@ -341,59 +191,28 @@
 
     <h5>System Administration</h5>
     <ul>
-      <li>
-        <strong>User Activity Review:</strong> Monitor user actions and system
-        usage
-      </li>
-      <li>
-        <strong>Error Investigation:</strong> Investigate system errors and
-        exceptions
-      </li>
-      <li>
-        <strong>Performance Analysis:</strong> Analyze system performance and
-        bottlenecks
-      </li>
-      <li>
-        <strong>Security Auditing:</strong> Review security events and access
-        patterns
-      </li>
+      <li><strong>User Activity Review:</strong> Monitor user actions and system usage</li>
+      <li><strong>Error Investigation:</strong> Investigate system errors and exceptions</li>
+      <li><strong>Performance Analysis:</strong> Analyze system performance and bottlenecks</li>
+      <li><strong>Security Auditing:</strong> Review security events and access patterns</li>
     </ul>
 
     <h5>Development and Debugging</h5>
     <ul>
+      <li><strong>Bug Tracking:</strong> Trace issues through detailed log analysis</li>
+      <li><strong>Feature Testing:</strong> Monitor new feature usage and performance</li>
+      <li><strong>Integration Testing:</strong> Verify system integrations and data flow</li>
       <li>
-        <strong>Bug Tracking:</strong> Trace issues through detailed log
-        analysis
-      </li>
-      <li>
-        <strong>Feature Testing:</strong> Monitor new feature usage and
-        performance
-      </li>
-      <li>
-        <strong>Integration Testing:</strong> Verify system integrations and
-        data flow
-      </li>
-      <li>
-        <strong>Performance Tuning:</strong> Optimize system performance based
-        on usage patterns
+        <strong>Performance Tuning:</strong> Optimize system performance based on usage patterns
       </li>
     </ul>
 
     <h5>Compliance and Auditing</h5>
     <ul>
-      <li>
-        <strong>Regulatory Compliance:</strong> Maintain required audit trails
-      </li>
-      <li>
-        <strong>Data Governance:</strong> Track data access and modifications
-      </li>
-      <li>
-        <strong>Access Control:</strong> Monitor user permissions and access
-      </li>
-      <li>
-        <strong>Incident Response:</strong> Investigate security incidents and
-        breaches
-      </li>
+      <li><strong>Regulatory Compliance:</strong> Maintain required audit trails</li>
+      <li><strong>Data Governance:</strong> Track data access and modifications</li>
+      <li><strong>Access Control:</strong> Monitor user permissions and access</li>
+      <li><strong>Incident Response:</strong> Investigate security incidents and breaches</li>
     </ul>
   </section>
 
@@ -402,36 +221,17 @@
 
     <h5>Empty State Scenarios</h5>
     <ul>
-      <li>
-        <strong>No Events:</strong> Clear indication when no event data is
-        available
-      </li>
-      <li>
-        <strong>No Logs:</strong> Appropriate messaging when no logs are present
-      </li>
-      <li>
-        <strong>Loading States:</strong> Clear loading indicators during data
-        fetch
-      </li>
+      <li><strong>No Events:</strong> Clear indication when no event data is available</li>
+      <li><strong>No Logs:</strong> Appropriate messaging when no logs are present</li>
+      <li><strong>Loading States:</strong> Clear loading indicators during data fetch</li>
     </ul>
 
     <h5>Error Handling</h5>
     <ul>
-      <li>
-        <strong>Connection Errors:</strong> Graceful handling of network issues
-      </li>
-      <li>
-        <strong>Data Loading Errors:</strong> Clear error messages for failed
-        data loads
-      </li>
-      <li>
-        <strong>Permission Errors:</strong> Appropriate messaging for access
-        restrictions
-      </li>
-      <li>
-        <strong>System Errors:</strong> User-friendly error display and recovery
-        options
-      </li>
+      <li><strong>Connection Errors:</strong> Graceful handling of network issues</li>
+      <li><strong>Data Loading Errors:</strong> Clear error messages for failed data loads</li>
+      <li><strong>Permission Errors:</strong> Appropriate messaging for access restrictions</li>
+      <li><strong>System Errors:</strong> User-friendly error display and recovery options</li>
     </ul>
   </section>
 
@@ -440,60 +240,35 @@
 
     <h5>Event Monitoring</h5>
     <ul>
+      <li><strong>Regular Review:</strong> Periodically review events for unusual patterns</li>
+      <li><strong>Error Investigation:</strong> Promptly investigate error events</li>
       <li>
-        <strong>Regular Review:</strong> Periodically review events for unusual
-        patterns
+        <strong>User Activity Analysis:</strong> Monitor user behavior for security and optimization
       </li>
       <li>
-        <strong>Error Investigation:</strong> Promptly investigate error events
-      </li>
-      <li>
-        <strong>User Activity Analysis:</strong> Monitor user behavior for
-        security and optimization
-      </li>
-      <li>
-        <strong>Performance Monitoring:</strong> Track system performance
-        through event patterns
+        <strong>Performance Monitoring:</strong> Track system performance through event patterns
       </li>
     </ul>
 
     <h5>Log Analysis</h5>
     <ul>
       <li>
-        <strong>Log Level Awareness:</strong> Understand different log levels
-        and their significance
+        <strong>Log Level Awareness:</strong> Understand different log levels and their significance
       </li>
+      <li><strong>Pattern Recognition:</strong> Look for recurring patterns in log data</li>
       <li>
-        <strong>Pattern Recognition:</strong> Look for recurring patterns in log
-        data
+        <strong>Error Correlation:</strong> Correlate errors with user actions and system events
       </li>
-      <li>
-        <strong>Error Correlation:</strong> Correlate errors with user actions
-        and system events
-      </li>
-      <li>
-        <strong>Regular Cleanup:</strong> Manage log data volume for optimal
-        performance
-      </li>
+      <li><strong>Regular Cleanup:</strong> Manage log data volume for optimal performance</li>
     </ul>
 
     <h5>Security and Compliance</h5>
     <ul>
+      <li><strong>Access Monitoring:</strong> Regularly review user access patterns</li>
+      <li><strong>Data Protection:</strong> Ensure sensitive data is not exposed in logs</li>
+      <li><strong>Audit Trail Maintenance:</strong> Maintain complete and accurate audit trails</li>
       <li>
-        <strong>Access Monitoring:</strong> Regularly review user access
-        patterns
-      </li>
-      <li>
-        <strong>Data Protection:</strong> Ensure sensitive data is not exposed
-        in logs
-      </li>
-      <li>
-        <strong>Audit Trail Maintenance:</strong> Maintain complete and accurate
-        audit trails
-      </li>
-      <li>
-        <strong>Incident Response:</strong> Use event data for security incident
-        investigation
+        <strong>Incident Response:</strong> Use event data for security incident investigation
       </li>
     </ul>
   </section>
@@ -501,34 +276,15 @@
   <section>
     <h4>Troubleshooting</h4>
     <ul>
+      <li><strong>Events Not Loading:</strong> Check network connection and refresh the page</li>
+      <li><strong>Logs Not Updating:</strong> Use the refresh button to manually update logs</li>
+      <li><strong>Empty Data:</strong> Verify system activity and check for recent events</li>
       <li>
-        <strong>Events Not Loading:</strong> Check network connection and
-        refresh the page
+        <strong>Permission Issues:</strong> Contact administrator to verify access permissions
       </li>
-      <li>
-        <strong>Logs Not Updating:</strong> Use the refresh button to manually
-        update logs
-      </li>
-      <li>
-        <strong>Empty Data:</strong> Verify system activity and check for recent
-        events
-      </li>
-      <li>
-        <strong>Permission Issues:</strong> Contact administrator to verify
-        access permissions
-      </li>
-      <li>
-        <strong>Performance Issues:</strong> Check system resources and log data
-        volume
-      </li>
-      <li>
-        <strong>Display Problems:</strong> Clear browser cache and refresh the
-        page
-      </li>
-      <li>
-        <strong>Data Inconsistencies:</strong> Report discrepancies to system
-        administrators
-      </li>
+      <li><strong>Performance Issues:</strong> Check system resources and log data volume</li>
+      <li><strong>Display Problems:</strong> Clear browser cache and refresh the page</li>
+      <li><strong>Data Inconsistencies:</strong> Report discrepancies to system administrators</li>
     </ul>
   </section>
 </div>

@@ -15,7 +15,8 @@ export const RecordKeeping = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The performance criteria for the AI application were established based on accuracy, latency, and scalability. These criteria were determined through a series of benchmarks and tests performed on the models in real-world conditions. The criteria align with the application’s objectives by ensuring that the AI can perform in diverse environments, while also meeting latency requirements for real-time operations and scalability for large data sets."
+        answer:
+          "The performance criteria for the AI application were established based on accuracy, latency, and scalability. These criteria were determined through a series of benchmarks and tests performed on the models in real-world conditions. The criteria align with the application’s objectives by ensuring that the AI can perform in diverse environments, while also meeting latency requirements for real-time operations and scalability for large data sets.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const RecordKeeping = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The policies and procedures for retaining logs are designed to ensure compliance with audit and regulatory requirements. All automatically generated logs are securely stored in a cloud-based logging service for a minimum of six months. Regular backups are taken, and access controls are implemented to protect the integrity of the logs. Retention policies are reviewed annually to ensure they meet legal and operational requirements."
+        answer:
+          "The policies and procedures for retaining logs are designed to ensure compliance with audit and regulatory requirements. All automatically generated logs are securely stored in a cloud-based logging service for a minimum of six months. Regular backups are taken, and access controls are implemented to protect the integrity of the logs. Retention policies are reviewed annually to ensure they meet legal and operational requirements.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const RecordKeeping = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The model was tested on extreme values and protected attributes using a series of edge-case scenarios and adversarial tests. These tests revealed that while the model performed well on standard inputs, its performance degraded on extreme or rare cases, particularly with protected attributes such as age and gender. These results have informed further model refinement, including improved pre-processing techniques and bias mitigation strategies."
+        answer:
+          "The model was tested on extreme values and protected attributes using a series of edge-case scenarios and adversarial tests. These tests revealed that while the model performed well on standard inputs, its performance degraded on extreme or rare cases, particularly with protected attributes such as age and gender. These results have informed further model refinement, including improved pre-processing techniques and bias mitigation strategies.",
       },
       {
         order_no: 4,
@@ -57,7 +60,8 @@ export const RecordKeeping = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Failure patterns were identified through rigorous testing of the model under diverse conditions, including variations in input data and environmental factors. These patterns showed that the model struggled with certain language dialects and uncommon data types, revealing its limitations in generalization. Further research has been initiated to address these shortcomings by introducing a more diverse training dataset and improving model robustness to various input scenarios."
+        answer:
+          "Failure patterns were identified through rigorous testing of the model under diverse conditions, including variations in input data and environmental factors. These patterns showed that the model struggled with certain language dialects and uncommon data types, revealing its limitations in generalization. Further research has been initiated to address these shortcomings by introducing a more diverse training dataset and improving model robustness to various input scenarios.",
       },
     ],
   },

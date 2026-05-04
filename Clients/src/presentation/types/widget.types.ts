@@ -195,9 +195,6 @@ export interface DatePickerProps extends DatePickerCoreProps {
 }
 
 export interface SelectProps extends SelectCorProps {
-  onChange: (
-    event: SelectChangeEvent<string | number>,
-    child: React.ReactNode
-  ) => void;
+  onChange: (event: SelectChangeEvent<string | number>, child: React.ReactNode) => void;
   sx?: object;
 }

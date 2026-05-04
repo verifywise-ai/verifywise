@@ -83,6 +83,11 @@ export const riskMitigationContent: ArticleContent = {
           description: 'Mitigation has been postponed to a later date.',
         },
         {
+          icon: 'XCircle',
+          title: 'Canceled',
+          description: 'Mitigation has been cancelled and will not be pursued.',
+        },
+        {
           icon: 'AlertTriangle',
           title: 'Requires review',
           description: 'Mitigation needs additional review or reassessment.',
@@ -105,7 +110,7 @@ export const riskMitigationContent: ArticleContent = {
         { bold: 'Mitigation plan', text: 'Describe the specific actions to reduce the risk' },
         { bold: 'Implementation strategy', text: 'Outline how the mitigation will be executed' },
         { bold: 'Deadline', text: 'Set a target date for completing the mitigation' },
-        { bold: 'Risk owner', text: 'Assign responsibility for implementing the mitigation' },
+        { bold: 'Approver', text: 'Assign responsibility for approving the mitigation' },
       ],
     },
     {
@@ -121,9 +126,8 @@ export const riskMitigationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Auto-calculated risk level', text: 'The initial risk level based on likelihood and severity' },
-        { bold: 'Current risk level', text: 'The present risk level after any controls are in place' },
-        { bold: 'Final risk level', text: 'The expected residual risk after all mitigations are complete' },
+        { bold: 'Current risk level', text: 'The present risk level captured on the mitigation form (manually selected from Low / Medium / High / Critical)' },
+        { bold: 'Residual risk', text: 'Calculated automatically from residual likelihood × residual severity once mitigations are in place' },
       ],
     },
     {
@@ -195,7 +199,7 @@ export const riskMitigationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Risk owner completes the mitigation plan' },
+        { text: 'Action owner completes the mitigation plan' },
         { text: 'Risk is assigned to an approver for review' },
         { text: 'Approver reviews the mitigation approach and evidence' },
         { text: 'Approval status is updated to reflect the decision' },

@@ -23,7 +23,9 @@ function getEntityTypeDisplayName(entityType: IntakeEntityType): string {
 /**
  * Get admin users for an organization (fallback when no per-form recipients)
  */
-async function getAdminUsersForOrganization(organizationId: number): Promise<Array<{ id: number; name: string; email: string }>> {
+async function getAdminUsersForOrganization(
+  organizationId: number,
+): Promise<Array<{ id: number; name: string; email: string }>> {
   try {
     const admins = await sequelize.query(
       `SELECT u.id, u.name, u.email
@@ -33,7 +35,7 @@ async function getAdminUsersForOrganization(organizationId: number): Promise<Arr
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
     return admins as Array<{ id: number; name: string; email: string }>;
   } catch (error) {
@@ -57,7 +59,7 @@ function buildResubmitLink(
   resubmissionToken: string,
   publicId?: string,
   tenantSlug?: string,
-  formSlug?: string
+  formSlug?: string,
 ): string {
   if (publicId) {
     return buildFrontendUrl(`/${publicId}/use-case-form-intake?token=${resubmissionToken}`);
@@ -79,7 +81,7 @@ export async function sendSubmissionReceivedEmail(
   resubmissionToken: string,
   publicId?: string,
   tenantSlug?: string,
-  formSlug?: string
+  formSlug?: string,
 ): Promise<void> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
@@ -93,10 +95,12 @@ export async function sendSubmissionReceivedEmail(
         formName,
         submissionId: String(submissionId),
         resubmitLink,
-      }
+      },
     );
 
-    logger.info(`Submission received email sent to ${submitterEmail} for submission #${submissionId}`);
+    logger.info(
+      `Submission received email sent to ${submitterEmail} for submission #${submissionId}`,
+    );
   } catch (error) {
     logger.error("Failed to send submission received email:", error);
   }
@@ -112,7 +116,7 @@ export async function sendNewSubmissionAdminNotification(
   submitterName: string,
   submitterEmail: string,
   submissionId: number,
-  entityType: IntakeEntityType
+  entityType: IntakeEntityType,
 ): Promise<void> {
   try {
     let recipients: Array<{ id: number; name: string; email: string }>;
@@ -147,7 +151,7 @@ export async function sendNewSubmissionAdminNotification(
             submissionId: String(submissionId),
             entityType: entityTypeDisplay,
             reviewLink,
-          }
+          },
         );
       } catch (error) {
         logger.error(`Failed to send admin notification to ${recipient.email}:`, error);
@@ -168,7 +172,7 @@ export async function sendSubmissionApprovedEmail(
   submitterName: string,
   formName: string,
   submissionId: number,
-  entityType: IntakeEntityType
+  entityType: IntakeEntityType,
 ): Promise<void> {
   try {
     const entityTypeDisplay = getEntityTypeDisplayName(entityType);
@@ -182,10 +186,12 @@ export async function sendSubmissionApprovedEmail(
         formName,
         submissionId: String(submissionId),
         entityType: entityTypeDisplay,
-      }
+      },
     );
 
-    logger.info(`Submission approved email sent to ${submitterEmail} for submission #${submissionId}`);
+    logger.info(
+      `Submission approved email sent to ${submitterEmail} for submission #${submissionId}`,
+    );
   } catch (error) {
     logger.error("Failed to send submission approved email:", error);
   }
@@ -203,7 +209,7 @@ export async function sendSubmissionRejectedEmail(
   resubmissionToken: string,
   publicId: string,
   tenantSlug?: string,
-  formSlug?: string
+  formSlug?: string,
 ): Promise<void> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
@@ -218,10 +224,12 @@ export async function sendSubmissionRejectedEmail(
         submissionId: String(submissionId),
         rejectionReason,
         resubmitLink,
-      }
+      },
     );
 
-    logger.info(`Submission rejected email sent to ${submitterEmail} for submission #${submissionId}`);
+    logger.info(
+      `Submission rejected email sent to ${submitterEmail} for submission #${submissionId}`,
+    );
   } catch (error) {
     logger.error("Failed to send submission rejected email:", error);
   }

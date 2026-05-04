@@ -42,30 +42,27 @@ export type {
 /**
  * Get PMM configuration by project ID
  */
-export const getConfigByProjectId = (
-  projectId: number
-): Promise<PMMConfigWithDetails> => pmmService.getConfigByProjectId(projectId);
+export const getConfigByProjectId = (projectId: number): Promise<PMMConfigWithDetails> =>
+  pmmService.getConfigByProjectId(projectId);
 
 /**
  * Create a new PMM configuration
  */
-export const createConfig = (
-  data: PMMConfigCreateRequest
-): Promise<PMMConfigWithDetails> => pmmService.createConfig(data);
+export const createConfig = (data: PMMConfigCreateRequest): Promise<PMMConfigWithDetails> =>
+  pmmService.createConfig(data);
 
 /**
  * Update an existing PMM configuration
  */
 export const updateConfig = (
   configId: number,
-  data: PMMConfigUpdateRequest
+  data: PMMConfigUpdateRequest,
 ): Promise<PMMConfigWithDetails> => pmmService.updateConfig(configId, data);
 
 /**
  * Delete a PMM configuration
  */
-export const deleteConfig = (configId: number): Promise<void> =>
-  pmmService.deleteConfig(configId);
+export const deleteConfig = (configId: number): Promise<void> => pmmService.deleteConfig(configId);
 
 // ==================== Questions ====================
 
@@ -78,24 +75,19 @@ export const getQuestions = (configId: number): Promise<PMMQuestion[]> =>
 /**
  * Get organization-level template questions
  */
-export const getOrgQuestions = (): Promise<PMMQuestion[]> =>
-  pmmService.getOrgQuestions();
+export const getOrgQuestions = (): Promise<PMMQuestion[]> => pmmService.getOrgQuestions();
 
 /**
  * Add a new question
  */
-export const addQuestion = (
-  configId: number,
-  data: PMMQuestionCreate
-): Promise<PMMQuestion> => pmmService.addQuestion(configId, data);
+export const addQuestion = (configId: number, data: PMMQuestionCreate): Promise<PMMQuestion> =>
+  pmmService.addQuestion(configId, data);
 
 /**
  * Update a question
  */
-export const updateQuestion = (
-  questionId: number,
-  data: PMMQuestionUpdate
-): Promise<PMMQuestion> => pmmService.updateQuestion(questionId, data);
+export const updateQuestion = (questionId: number, data: PMMQuestionUpdate): Promise<PMMQuestion> =>
+  pmmService.updateQuestion(questionId, data);
 
 /**
  * Delete a question
@@ -107,7 +99,7 @@ export const deleteQuestion = (questionId: number): Promise<void> =>
  * Reorder questions
  */
 export const reorderQuestions = (
-  orders: Array<{ id: number; display_order: number }>
+  orders: Array<{ id: number; display_order: number }>,
 ): Promise<void> => pmmService.reorderQuestions(orders);
 
 // ==================== Cycles ====================
@@ -115,31 +107,27 @@ export const reorderQuestions = (
 /**
  * Get active monitoring cycle for a project
  */
-export const getActiveCycle = (
-  projectId: number
-): Promise<PMMCycleWithDetails | null> => pmmService.getActiveCycle(projectId);
+export const getActiveCycle = (projectId: number): Promise<PMMCycleWithDetails | null> =>
+  pmmService.getActiveCycle(projectId);
 
 /**
  * Get cycle by ID
  */
-export const getCycleById = (
-  cycleId: number
-): Promise<PMMCycleWithDetails> => pmmService.getCycleById(cycleId);
+export const getCycleById = (cycleId: number): Promise<PMMCycleWithDetails> =>
+  pmmService.getCycleById(cycleId);
 
 /**
  * Save responses (partial save)
  */
-export const saveResponses = (
-  cycleId: number,
-  responses: PMMResponseSave[]
-): Promise<void> => pmmService.saveResponses(cycleId, responses);
+export const saveResponses = (cycleId: number, responses: PMMResponseSave[]): Promise<void> =>
+  pmmService.saveResponses(cycleId, responses);
 
 /**
  * Submit completed cycle
  */
 export const submitCycle = (
   cycleId: number,
-  data: PMMCycleSubmitRequest
+  data: PMMCycleSubmitRequest,
 ): Promise<{ message: string; report_generated: boolean; report_filename?: string }> =>
   pmmService.submitCycle(cycleId, data);
 
@@ -149,7 +137,7 @@ export const submitCycle = (
 export const flagConcern = (
   cycleId: number,
   questionId: number,
-  responseValue: boolean | string | string[]
+  responseValue: boolean | string | string[],
 ): Promise<void> => pmmService.flagConcern(cycleId, questionId, responseValue);
 
 // ==================== Reports ====================
@@ -157,9 +145,8 @@ export const flagConcern = (
 /**
  * Get reports with filters
  */
-export const getReports = (
-  filters: PMMReportsFilterRequest
-): Promise<PMMReportsResponse> => pmmService.getReports(filters);
+export const getReports = (filters: PMMReportsFilterRequest): Promise<PMMReportsResponse> =>
+  pmmService.getReports(filters);
 
 /**
  * Download a report PDF
@@ -172,14 +159,11 @@ export const downloadReport = (reportId: number): Promise<void> =>
 /**
  * Reassign stakeholder for a cycle
  */
-export const reassignStakeholder = (
-  cycleId: number,
-  stakeholderId: number
-): Promise<void> => pmmService.reassignStakeholder(cycleId, stakeholderId);
+export const reassignStakeholder = (cycleId: number, stakeholderId: number): Promise<void> =>
+  pmmService.reassignStakeholder(cycleId, stakeholderId);
 
 /**
  * Manually start a new monitoring cycle
  */
-export const startNewCycle = (
-  projectId: number
-): Promise<PMMCycleWithDetails> => pmmService.startNewCycle(projectId);
+export const startNewCycle = (projectId: number): Promise<PMMCycleWithDetails> =>
+  pmmService.startNewCycle(projectId);

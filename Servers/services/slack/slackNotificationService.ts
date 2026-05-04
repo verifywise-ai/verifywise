@@ -5,14 +5,18 @@ import { ISlackWebhook } from "../../domain.layer/interfaces/i.slackWebhook";
 import { getSlackWebhookByIdAndRoutingType } from "../../utils/slackWebhook.utils";
 import { disableSlackActivity } from "../../controllers/slackWebhook.ctrl";
 
-export const inviteBotToChannel = async (accessToken: string, channelId: string, botUserId: string) => {
+export const inviteBotToChannel = async (
+  accessToken: string,
+  channelId: string,
+  botUserId: string,
+) => {
   // Use the USER token (not bot token) to invite the bot
   const userClient = new WebClient(accessToken);
-  
+
   try {
     // First, verify the channel exists and is accessible
     const channelInfo = await userClient.conversations.info({
-      channel: channelId
+      channel: channelId,
     });
 
     if (channelInfo.channel?.is_private) {
@@ -21,22 +25,22 @@ export const inviteBotToChannel = async (accessToken: string, channelId: string,
         channel: channelId,
         users: botUserId!,
       });
-      
+
       logger.info(`Bot successfully invited to channel ${channelId}:`, {
         channel: channelId,
       });
     }
-    
+
     return { success: true };
   } catch (error: any) {
     logger.info(`Error inviting bot to ${channelId}:`, {
-        messageId: error.message,
-        channel: channelId,
+      messageId: error.message,
+      channel: channelId,
     });
-    
+
     throw error;
   }
-}
+};
 
 const getClient = (accessToken: string, iv: string) => {
   const { data, success, error } = decryptText({ iv: iv, value: accessToken });
@@ -52,27 +56,21 @@ export const sendSlackNotification = async (
 ) => {
   try {
     const { userId, routingType } = params;
-    const slackIntegrations: ISlackWebhook[] =
-      await getSlackWebhookByIdAndRoutingType(userId, routingType);
+    const slackIntegrations: ISlackWebhook[] = await getSlackWebhookByIdAndRoutingType(
+      userId,
+      routingType,
+    );
     await Promise.all(
-      slackIntegrations.map((integration) =>
-        sendImmediateMessage(integration, message),
-      ),
+      slackIntegrations.map((integration) => sendImmediateMessage(integration, message)),
     );
   } catch (error: any) {
     logger.error("Error sending Slack Notification:", error);
   }
 };
 
-export const sendImmediateMessage = async (
-  integration: ISlackWebhook,
-  message: any,
-) => {
+export const sendImmediateMessage = async (integration: ISlackWebhook, message: any) => {
   try {
-    const client = getClient(
-      integration.access_token,
-      integration.access_token_iv as string,
-    );
+    const client = getClient(integration.access_token, integration.access_token_iv as string);
 
     const channel = integration.channel_id;
     const msg = formatSlackMessage(message);

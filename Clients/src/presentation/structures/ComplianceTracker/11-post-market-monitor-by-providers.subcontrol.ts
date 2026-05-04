@@ -49,8 +49,7 @@ export const PostMarketMonitoringByProviders = {
       subControls: [
         {
           id: 1,
-          title:
-            "We track and respond to errors and incidents through measurable activities.",
+          title: "We track and respond to errors and incidents through measurable activities.",
           description:
             "Effective tracking and response minimize the impact of errors and improve system resilience and compliance.",
         },
@@ -68,8 +67,7 @@ export const PostMarketMonitoringByProviders = {
       subControls: [
         {
           id: 1,
-          title:
-            "We consult with experts and end-users to inform risk management.",
+          title: "We consult with experts and end-users to inform risk management.",
           description:
             "Input from diverse perspectives ensures risk management strategies are comprehensive and practical.",
         },
@@ -82,8 +80,7 @@ export const PostMarketMonitoringByProviders = {
       id: 5,
       icon: Checked,
       title: "AI System Change Documentation",
-      description:
-        "Document changes to AI systems and their performance post-deployment.",
+      description: "Document changes to AI systems and their performance post-deployment.",
       subControls: [
         {
           id: 1,
@@ -100,15 +97,13 @@ export const PostMarketMonitoringByProviders = {
         },
         {
           id: 3,
-          title:
-            "We regularly review and update AI systems to maintain regulatory compliance.",
+          title: "We regularly review and update AI systems to maintain regulatory compliance.",
           description:
             "Regular reviews ensure AI systems evolve in line with regulatory changes and industry standards.",
         },
         {
           id: 4,
-          title:
-            "We ensure that any system changes are documented and assessed for compliance.",
+          title: "We ensure that any system changes are documented and assessed for compliance.",
           description:
             "Thorough documentation and assessment of changes prevent compliance gaps and support accountability.",
         },

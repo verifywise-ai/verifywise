@@ -5,10 +5,7 @@ import { SelectChangeEvent } from "@mui/material/Select";
 import Field from "../../../../components/Inputs/Field";
 import Select from "../../../../components/Inputs/Select";
 import Chip from "../../../../components/Chip";
-import {
-  FriaAssessment,
-  FriaRight,
-} from "../../../../../application/hooks/useFria";
+import { FriaAssessment, FriaRight } from "../../../../../application/hooks/useFria";
 import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaSectionCard from "../FriaSectionCard";
 import { EU_ACT_LINK } from "../friaConstants";
@@ -28,16 +25,11 @@ const DEPLOYMENT_DECISION_OPTIONS = [
   { _id: "Pending", name: "Pending" },
 ];
 
-function SummarySection({
-  assessment,
-  rights,
-  onUpdate,
-  isSaving,
-}: SummarySectionProps) {
+function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySectionProps) {
   const theme = useTheme();
 
   const [decisionConditions, setDecisionConditions] = useState(
-    assessment.decision_conditions ?? ""
+    assessment.decision_conditions ?? "",
   );
 
   const flaggedRights = rights.filter((r) => r.flagged);
@@ -59,11 +51,22 @@ function SummarySection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(5)
           </a>{" "}
-          requires deployers to inform the market surveillance authority of the outcome of the assessment, and to use the results as input when notifying authorities under{" "}
-          <a href={`${EU_ACT_LINK}#art_49`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          requires deployers to inform the market surveillance authority of the outcome of the
+          assessment, and to use the results as input when notifying authorities under{" "}
+          <a
+            href={`${EU_ACT_LINK}#art_49`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 49(1)
           </a>
           . The FRIA must be kept up to date and repeated when circumstances materially change.
@@ -90,7 +93,9 @@ function SummarySection({
           }}
         >
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Completion
             </Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -98,7 +103,9 @@ function SummarySection({
             </Typography>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Risk score
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -109,7 +116,9 @@ function SummarySection({
             </Box>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Rights flagged
             </Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -117,7 +126,9 @@ function SummarySection({
             </Typography>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Status
             </Typography>
             <Chip label={assessment.status} size="small" />
@@ -126,17 +137,14 @@ function SummarySection({
 
         {flaggedRights.length > 0 && (
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "8px" }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "8px" }}
+            >
               Flagged rights
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {flaggedRights.map((right) => (
-                <Chip
-                  key={right.id}
-                  label={right.right_title}
-                  variant="warning"
-                  size="small"
-                />
+                <Chip key={right.id} label={right.right_title} variant="warning" size="small" />
               ))}
             </Box>
           </Box>

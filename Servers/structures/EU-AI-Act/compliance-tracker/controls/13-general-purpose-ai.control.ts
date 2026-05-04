@@ -1,8 +1,7 @@
 export const GeneralPurposeAImodels = [
   {
     order_no: 1,
-    title:
-      "Classify general-purpose AI models and determine whether they pose systemic risk.",
+    title: "Classify general-purpose AI models and determine whether they pose systemic risk.",
     description:
       "Assess each GPAI model against the systemic-risk threshold and maintain classification documentation (Art 51).",
     article: "Art. 51",
@@ -56,8 +55,7 @@ export const GeneralPurposeAImodels = [
   },
   {
     order_no: 3,
-    title:
-      "Establish a copyright compliance policy and publish a training content summary.",
+    title: "Establish a copyright compliance policy and publish a training content summary.",
     description:
       "Copyright compliance policy and publicly available training data summary (Art 52.1.c-d).",
     article: "Art. 52(1)(c)-(d)",
@@ -80,8 +78,7 @@ export const GeneralPurposeAImodels = [
   },
   {
     order_no: 4,
-    title:
-      "Assess and mitigate systemic risks for models classified as posing systemic risk.",
+    title: "Assess and mitigate systemic risks for models classified as posing systemic risk.",
     description:
       "Systemic-risk obligations for GPAI-with-systemic-risk providers: evaluation, risk assessment, incident reporting, cybersecurity (Art 53).",
     article: "Art. 53",
@@ -97,8 +94,7 @@ export const GeneralPurposeAImodels = [
         order_no: 2,
         title:
           "We have assessed possible systemic risks, including their sources, that may stem from the development, placing on the market, or use of the model.",
-        description:
-          "Systemic risk register with sources, scenarios, and mitigation coverage.",
+        description: "Systemic risk register with sources, scenarios, and mitigation coverage.",
       },
       {
         order_no: 3,

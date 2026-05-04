@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Typography } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useCallback } from "react";
 import { Database, Upload, FileText, ClipboardCheck } from "lucide-react";
@@ -135,11 +128,7 @@ const DatasetsTable: React.FC<DatasetsTableProps> = ({
   return (
     <TableContainer>
       <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-        <StandardTableHead
-          columns={columns}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
+        <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>
             <TableRow>

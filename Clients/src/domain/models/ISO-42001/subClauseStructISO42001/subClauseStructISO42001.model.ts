@@ -18,7 +18,7 @@ export class SubClauseStructISO42001Model {
   }
 
   static createNewSubClauseStructISO42001(
-    data: SubClauseStructISO42001Model
+    data: SubClauseStructISO42001Model,
   ): SubClauseStructISO42001Model {
     return new SubClauseStructISO42001Model(data);
   }

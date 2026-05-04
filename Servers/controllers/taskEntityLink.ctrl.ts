@@ -11,23 +11,14 @@ import {
 } from "../utils/taskEntityLink.utils";
 import { getTaskByIdQuery } from "../utils/task.utils";
 import { sequelize } from "../database/db";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 /**
  * Add an entity link to a task
  * POST /tasks/:id/entities
  */
-export async function addTaskEntityLink(
-  req: Request,
-  res: Response
-): Promise<any> {
-  const taskId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+export async function addTaskEntityLink(req: Request, res: Response): Promise<any> {
+  const taskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `starting addTaskEntityLink for task ID ${taskId}`,
@@ -49,9 +40,7 @@ export async function addTaskEntityLink(
     // Validate entity_type
     if (!entity_type || !isValidEntityType(entity_type)) {
       await transaction.rollback();
-      return res.status(400).json(
-        STATUS_CODE[400](`Invalid entity_type: ${entity_type}`)
-      );
+      return res.status(400).json(STATUS_CODE[400](`Invalid entity_type: ${entity_type}`));
     }
 
     // Validate entity_id
@@ -61,11 +50,7 @@ export async function addTaskEntityLink(
     }
 
     // Check if task exists
-    const task = await getTaskByIdQuery(
-      taskId,
-      { userId, role },
-      req.organizationId!
-    );
+    const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
 
     if (!task) {
       await transaction.rollback();
@@ -77,14 +62,14 @@ export async function addTaskEntityLink(
       entity_id,
       entity_type as EntityType,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (!entityExists) {
       await transaction.rollback();
-      return res.status(404).json(
-        STATUS_CODE[404](`${entity_type} with id ${entity_id} not found`)
-      );
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](`${entity_type} with id ${entity_id} not found`));
     }
 
     // Check if link already exists
@@ -93,14 +78,12 @@ export async function addTaskEntityLink(
       entity_id,
       entity_type as EntityType,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (linkExists) {
       await transaction.rollback();
-      return res.status(409).json(
-        STATUS_CODE[409]("This entity is already linked to this task")
-      );
+      return res.status(409).json(STATUS_CODE[409]("This entity is already linked to this task"));
     }
 
     // Create the link
@@ -112,7 +95,7 @@ export async function addTaskEntityLink(
         entity_name: entity_name || undefined,
       },
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -148,13 +131,8 @@ export async function addTaskEntityLink(
  * Get all entity links for a task
  * GET /tasks/:id/entities
  */
-export async function getTaskEntityLinks(
-  req: Request,
-  res: Response
-): Promise<any> {
-  const taskId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+export async function getTaskEntityLinks(req: Request, res: Response): Promise<any> {
+  const taskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `starting getTaskEntityLinks for task ID ${taskId}`,
@@ -171,11 +149,7 @@ export async function getTaskEntityLinks(
     }
 
     // Check if task exists
-    const task = await getTaskByIdQuery(
-      taskId,
-      { userId, role },
-      req.organizationId!
-    );
+    const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
 
     if (!task) {
       return res.status(404).json(STATUS_CODE[404]("Task not found"));
@@ -212,15 +186,10 @@ export async function getTaskEntityLinks(
  * Remove an entity link from a task
  * DELETE /tasks/:id/entities/:linkId
  */
-export async function removeTaskEntityLink(
-  req: Request,
-  res: Response
-): Promise<any> {
-  const taskId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  );
+export async function removeTaskEntityLink(req: Request, res: Response): Promise<any> {
+  const taskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const linkId = parseInt(
-    Array.isArray(req.params.linkId) ? req.params.linkId[0] : req.params.linkId
+    Array.isArray(req.params.linkId) ? req.params.linkId[0] : req.params.linkId,
   );
 
   logProcessing({
@@ -239,11 +208,7 @@ export async function removeTaskEntityLink(
     }
 
     // Check if task exists
-    const task = await getTaskByIdQuery(
-      taskId,
-      { userId, role },
-      req.organizationId!
-    );
+    const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
 
     if (!task) {
       await transaction.rollback();
@@ -254,7 +219,7 @@ export async function removeTaskEntityLink(
       linkId,
       taskId,
       req.organizationId!,
-      transaction
+      transaction,
     );
 
     if (!deleted) {
@@ -273,9 +238,7 @@ export async function removeTaskEntityLink(
       tenantId: req.organizationId!,
     });
 
-    return res.status(200).json(
-      STATUS_CODE[200]({ message: "Entity link removed successfully" })
-    );
+    return res.status(200).json(STATUS_CODE[200]({ message: "Entity link removed successfully" }));
   } catch (error) {
     await transaction.rollback();
 

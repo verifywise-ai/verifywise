@@ -4,19 +4,9 @@
  */
 
 import React, { useMemo, useCallback } from "react";
-import {
-  Stack,
-  Box,
-  Typography,
-  Checkbox,
-  Collapse,
-  useTheme,
-} from "@mui/material";
+import { Stack, Box, Typography, Checkbox, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
-import {
-  getAvailableSections,
-  ReportSectionGroup,
-} from "../constants";
+import { getAvailableSections, ReportSectionGroup } from "../constants";
 import { brand } from "../../../../themes/palette";
 
 interface SectionSelectorProps {
@@ -43,7 +33,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
 
   const availableGroups = useMemo(
     () => getAvailableSections(frameworkId, isOrganizational),
-    [frameworkId, isOrganizational]
+    [frameworkId, isOrganizational],
   );
 
   // Calculate all available section IDs for "Select All" functionality
@@ -91,7 +81,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
         [sectionId]: !selection[sectionId],
       });
     },
-    [selection, onSelectionChange]
+    [selection, onSelectionChange],
   );
 
   // Handle group toggle (toggles all children)
@@ -106,7 +96,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
       });
       onSelectionChange(newSelection);
     },
-    [selection, onSelectionChange]
+    [selection, onSelectionChange],
   );
 
   // Get group checkbox state (checked, unchecked, or indeterminate)
@@ -119,7 +109,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
       if (selectedCount === groupSectionIds.length) return "checked";
       return "indeterminate";
     },
-    [selection]
+    [selection],
   );
 
   // Toggle group expansion
@@ -150,7 +140,6 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
       height: "16px",
     },
   };
-
 
   const rowStyles = {
     display: "flex",
@@ -194,7 +183,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
           onChange={handleSelectAll}
           sx={checkboxStyles}
           size="small"
-                  />
+        />
         <Typography
           sx={{
             fontSize: "13px",
@@ -228,7 +217,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
                   onChange={() => handleGroupToggle(group)}
                   sx={checkboxStyles}
                   size="small"
-                                  />
+                />
                 <Typography
                   sx={{
                     fontSize: "13px",
@@ -239,10 +228,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
                   {group.label}
                 </Typography>
               </Box>
-              <Box
-                sx={expandIconStyles}
-                onClick={(e) => toggleGroupExpand(group.id, e)}
-              >
+              <Box sx={expandIconStyles} onClick={(e) => toggleGroupExpand(group.id, e)}>
                 {isExpanded ? (
                   <ChevronDown size={14} color={theme.palette.text.secondary} />
                 ) : (
@@ -277,9 +263,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
                       }}
                     >
                       {section.label}
-                      {aiEnhanced && (
-                        <Sparkles size={12} color={brand.primary} />
-                      )}
+                      {aiEnhanced && <Sparkles size={12} color={brand.primary} />}
                     </Typography>
                   </Box>
                 ))}

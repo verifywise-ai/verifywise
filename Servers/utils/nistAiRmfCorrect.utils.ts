@@ -2,19 +2,21 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
 import { STATUSES } from "../types/status.type";
-import { deleteAllFileEntityLinksForEntities, getEvidenceFilesForEntities, getEvidenceFilesForEntity } from "./files/evidenceFiles.utils";
+import {
+  deleteAllFileEntityLinksForEntities,
+  getEvidenceFilesForEntities,
+  getEvidenceFilesForEntity,
+} from "./files/evidenceFiles.utils";
 
 /**
  * Pre-check function to ensure NIST AI RMF infrastructure exists before starting main transaction
  * In shared-schema architecture, tables already exist in public schema - this is now a no-op
  */
-export const ensureNISTAI_RMFDInfrastructure = async (
-  _organizationId: number
-): Promise<void> => {
+export const ensureNISTAI_RMFDInfrastructure = async (_organizationId: number): Promise<void> => {
   // In shared-schema architecture, the nist_ai_rmf_subcategories table exists in the shared schema
   // with organization_id column for tenant isolation. No per-tenant setup needed.
   console.log(
-    `[NIST AI RMF Utils] Infrastructure check completed for organization ${_organizationId} (shared-schema mode)`
+    `[NIST AI RMF Utils] Infrastructure check completed for organization ${_organizationId} (shared-schema mode)`,
   );
 };
 
@@ -23,7 +25,7 @@ export const ensureNISTAI_RMFDInfrastructure = async (
  */
 export const countSubcategoriesNISTByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubcategories: string;
   doneSubcategories: string;
@@ -34,7 +36,7 @@ export const countSubcategoriesNISTByProjectId = async (
      WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ totalSubcategories: string; doneSubcategories: string }[], number];
   return result[0][0];
 };
@@ -44,7 +46,7 @@ export const countSubcategoriesNISTByProjectId = async (
  */
 export const countSubcategoryAssignmentsNISTByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubcategories: string;
   assignedSubcategories: string;
@@ -57,11 +59,8 @@ export const countSubcategoryAssignmentsNISTByProjectId = async (
      WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
-  )) as [
-    { totalSubcategories: string; assignedSubcategories: string }[],
-    number,
-  ];
+    },
+  )) as [{ totalSubcategories: string; assignedSubcategories: string }[], number];
 
   return result[0][0];
 };
@@ -72,32 +71,60 @@ export const countSubcategoryAssignmentsNISTByProjectId = async (
 export const getAllFunctionsWithCategoriesQuery = async (
   _projectFrameworkId: number,
   _organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   // Function metadata
-  const FUNCTION_METADATA: Record<string, { title: string; description: string; order_no: number }> = {
-    'GOVERN': { title: 'Govern', description: 'Policies, processes, procedures, and practices across the organization related to the mapping, measuring, and managing of AI risks are in place, transparent, and implemented effectively.', order_no: 1 },
-    'MAP': { title: 'Map', description: 'Context is established and understood. Categorization of the AI system is performed.', order_no: 2 },
-    'MEASURE': { title: 'Measure', description: 'Appropriate methods and metrics are identified and applied.', order_no: 3 },
-    'MANAGE': { title: 'Manage', description: 'AI risks based on assessments and other analytical output from the MAP and MEASURE functions are prioritized, responded to, and managed.', order_no: 4 },
+  const FUNCTION_METADATA: Record<
+    string,
+    { title: string; description: string; order_no: number }
+  > = {
+    GOVERN: {
+      title: "Govern",
+      description:
+        "Policies, processes, procedures, and practices across the organization related to the mapping, measuring, and managing of AI risks are in place, transparent, and implemented effectively.",
+      order_no: 1,
+    },
+    MAP: {
+      title: "Map",
+      description:
+        "Context is established and understood. Categorization of the AI system is performed.",
+      order_no: 2,
+    },
+    MEASURE: {
+      title: "Measure",
+      description: "Appropriate methods and metrics are identified and applied.",
+      order_no: 3,
+    },
+    MANAGE: {
+      title: "Manage",
+      description:
+        "AI risks based on assessments and other analytical output from the MAP and MEASURE functions are prioritized, responded to, and managed.",
+      order_no: 4,
+    },
   };
 
   // Get distinct functions from categories_struct
   const functionsRaw = (await sequelize.query(
     `SELECT DISTINCT function FROM nist_ai_rmf_categories_struct ORDER BY function`,
-    { ...(transaction ? { transaction } : {}) }
+    { ...(transaction ? { transaction } : {}) },
   )) as [{ function: string }[], number];
 
-  const functions = functionsRaw[0].map((f) => {
-    const meta = FUNCTION_METADATA[f.function] || { title: f.function, description: '', order_no: 99 };
-    return {
-      type: f.function,
-      title: meta.title,
-      description: meta.description,
-      order_no: meta.order_no,
-      categories: [] as any[],
-    };
-  }).sort((a, b) => a.order_no - b.order_no);
+  const functions = functionsRaw[0]
+    .map((f) => {
+      const meta = FUNCTION_METADATA[f.function] || {
+        title: f.function,
+        description: "",
+        order_no: 99,
+      };
+      return {
+        type: f.function,
+        title: meta.title,
+        description: meta.description,
+        order_no: meta.order_no,
+        categories: [] as any[],
+      };
+    })
+    .sort((a, b) => a.order_no - b.order_no);
 
   // Get categories for each function
   for (let func of functions) {
@@ -109,7 +136,7 @@ export const getAllFunctionsWithCategoriesQuery = async (
       {
         replacements: { function: func.type },
         ...(transaction ? { transaction } : {}),
-      }
+      },
     )) as [any[], number];
 
     func.categories = categories[0];
@@ -123,7 +150,7 @@ export const getAllFunctionsWithCategoriesQuery = async (
 export const getAllCategoriesWithSubcategoriesQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const subcategories = (await sequelize.query(
     `SELECT
@@ -161,7 +188,7 @@ export const getAllCategoriesWithSubcategoriesQuery = async (
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   )) as [any[], number];
 
   // Batch fetch evidence files from file_entity_links
@@ -172,7 +199,7 @@ export const getAllCategoriesWithSubcategoriesQuery = async (
       organizationId,
       "nist_ai_rmf",
       "subcategory",
-      subcategoryIds
+      subcategoryIds,
     );
   }
 
@@ -190,7 +217,7 @@ export const getAllCategoriesWithSubcategoriesQuery = async (
 export const getSubcategoryByIdQuery = async (
   subcategoryId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const subcategory = (await sequelize.query(
     `SELECT
@@ -213,7 +240,7 @@ export const getSubcategoryByIdQuery = async (
     {
       replacements: { organizationId, id: subcategoryId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   )) as [any[], number];
 
   const result = subcategory[0][0];
@@ -223,7 +250,7 @@ export const getSubcategoryByIdQuery = async (
       organizationId,
       "nist_ai_rmf",
       "subcategory",
-      subcategoryId
+      subcategoryId,
     );
   }
   return result;
@@ -237,21 +264,21 @@ export const createNISTAI_RMFFrameworkQuery = async (
   _enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean = false
+  is_mock_data: boolean = false,
 ) => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 4`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
-    }
+    },
   )) as [{ id: number }[], number];
 
   const subcategoryIds = await createNewSubcategoriesQuery(
     projectFrameworkId[0][0].id,
     organizationId,
     transaction,
-    is_mock_data
+    is_mock_data,
   );
 
   return {
@@ -267,7 +294,7 @@ export const createNewSubcategoriesQuery = async (
   projectFrameworkId: number,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean
+  is_mock_data: boolean,
 ) => {
   // Get all subcategories from struct table
   const structSubcategories = (await sequelize.query(
@@ -282,8 +309,14 @@ export const createNewSubcategoriesQuery = async (
          ELSE 5
        END,
        order_no ASC, subcategory_id ASC`,
-    { transaction, type: QueryTypes.SELECT }
-  )) as Array<{ id: number; function: string; subcategory_id: number; description: string; order_no: number }>;
+    { transaction, type: QueryTypes.SELECT },
+  )) as Array<{
+    id: number;
+    function: string;
+    subcategory_id: number;
+    description: string;
+    order_no: number;
+  }>;
 
   const subcategoryIds = [];
 
@@ -306,7 +339,7 @@ export const createNewSubcategoriesQuery = async (
           is_demo: is_mock_data,
         },
         transaction,
-      }
+      },
     )) as [{ id: number }[], number];
 
     subcategoryIds.push(result[0][0].id);
@@ -331,12 +364,12 @@ export const updateSubcategoryQuery = async (
   }[] = [],
   deletedFiles: number[] = [],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Build update for non-file fields only (files are managed via file_entity_links)
-  const updateSubcategory: Partial<
-    Record<keyof NISTAIMRFSubcategoryModel, any>
-  > & { organizationId?: number } = { id, organizationId };
+  const updateSubcategory: Partial<Record<keyof NISTAIMRFSubcategoryModel, any>> & {
+    organizationId?: number;
+  } = { id, organizationId };
   const setClause = [
     "implementation_description",
     "status",
@@ -347,9 +380,7 @@ export const updateSubcategoryQuery = async (
     "auditor_feedback",
   ]
     .reduce((acc: string[], field) => {
-      if (
-        subcategory[field as keyof NISTAIMRFSubcategoryModel] != undefined
-      ) {
+      if (subcategory[field as keyof NISTAIMRFSubcategoryModel] != undefined) {
         let value = subcategory[field as keyof NISTAIMRFSubcategoryModel];
 
         // Handle empty strings for integer fields
@@ -379,7 +410,7 @@ export const updateSubcategoryQuery = async (
       {
         replacements: { organizationId, id },
         transaction,
-      }
+      },
     )) as [NISTAIMRFSubcategoryModel[], number];
   } else {
     const query = `UPDATE nist_ai_rmf_subcategories SET ${setClause}, updated_at = NOW() WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
@@ -399,7 +430,7 @@ export const updateSubcategoryQuery = async (
       {
         replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -415,7 +446,7 @@ export const updateSubcategoryQuery = async (
       {
         replacements: { organizationId, fileId, entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -424,7 +455,7 @@ export const updateSubcategoryQuery = async (
     organizationId,
     "nist_ai_rmf",
     "subcategory",
-    id
+    id,
   );
   const returnResult = result[0][0] as any;
   if (returnResult) {
@@ -440,7 +471,7 @@ export const updateSubcategoryQuery = async (
 export const deleteSubcategoriesNISTByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Get all subcategory IDs first to clean up file_entity_links
   const subcategoryIds = (await sequelize.query(
@@ -449,7 +480,7 @@ export const deleteSubcategoriesNISTByProjectIdQuery = async (
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   )) as { id: number }[];
 
   // Clean up file_entity_links for subcategories (evidence files)
@@ -459,7 +490,7 @@ export const deleteSubcategoriesNISTByProjectIdQuery = async (
       "nist_ai_rmf",
       "subcategory",
       subcategoryIds.map((s) => s.id),
-      transaction
+      transaction,
     );
   }
 
@@ -471,7 +502,7 @@ export const deleteSubcategoriesNISTByProjectIdQuery = async (
       model: NISTAIMRFSubcategoryModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -482,7 +513,7 @@ export const deleteSubcategoriesNISTByProjectIdQuery = async (
 export const deleteProjectFrameworkNISTQuery = async (
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 4`,
@@ -490,7 +521,7 @@ export const deleteProjectFrameworkNISTQuery = async (
       replacements: { organizationId, project_id: projectId },
       transaction,
       type: QueryTypes.SELECT,
-    }
+    },
   )) as Array<{ id: number }>;
 
   // Check if the project has a NIST AI RMF framework before trying to delete subcategories
@@ -498,7 +529,7 @@ export const deleteProjectFrameworkNISTQuery = async (
     await deleteSubcategoriesNISTByProjectIdQuery(
       projectFrameworkId[0].id,
       organizationId,
-      transaction
+      transaction,
     );
   }
 
@@ -507,7 +538,7 @@ export const deleteProjectFrameworkNISTQuery = async (
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };

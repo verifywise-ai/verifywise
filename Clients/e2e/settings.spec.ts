@@ -8,13 +8,14 @@ test.describe("Settings", () => {
 
     // Page should show settings-related content
     await expect(
-      page.getByText(/setting/i).or(page.getByText(/organization/i)).first()
+      page
+        .getByText(/setting/i)
+        .or(page.getByText(/organization/i))
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
 
@@ -50,9 +51,7 @@ test.describe("Settings", () => {
 
   // --- Tier 1: Tab navigation ---
 
-  test("clicking Password tab navigates to /settings/password", async ({
-    authedPage: page,
-  }) => {
+  test("clicking Password tab navigates to /settings/password", async ({ authedPage: page }) => {
     await page.goto("/settings");
     const passwordTab = page.getByRole("tab").filter({ hasText: /^password$/i });
     await expect(passwordTab.first()).toBeVisible({ timeout: 10_000 });
@@ -72,9 +71,7 @@ test.describe("Settings", () => {
     });
   });
 
-  test("clicking Profile tab returns to profile view", async ({
-    authedPage: page,
-  }) => {
+  test("clicking Profile tab returns to profile view", async ({ authedPage: page }) => {
     await page.goto("/settings/password");
     const profileTab = page.getByRole("tab").filter({ hasText: /^profile$/i });
     await expect(profileTab.first()).toBeVisible({ timeout: 10_000 });
@@ -85,9 +82,7 @@ test.describe("Settings", () => {
 
   // --- Tier 3: Password form fields ---
 
-  test("password settings page shows password form fields", async ({
-    authedPage: page,
-  }) => {
+  test("password settings page shows password form fields", async ({ authedPage: page }) => {
     await page.goto("/settings/password");
     await page.waitForLoadState("domcontentloaded");
 
@@ -98,12 +93,8 @@ test.describe("Settings", () => {
       .or(page.getByText(/current password/i))
       .or(page.getByPlaceholder(/old password/i))
       .or(page.getByText(/old password/i));
-    const newPwd = page
-      .getByPlaceholder(/new password/i)
-      .or(page.getByText(/new password/i));
-    const confirmPwd = page
-      .getByPlaceholder(/confirm/i)
-      .or(page.getByText(/confirm/i));
+    const newPwd = page.getByPlaceholder(/new password/i).or(page.getByText(/new password/i));
+    const confirmPwd = page.getByPlaceholder(/confirm/i).or(page.getByText(/confirm/i));
 
     await expect(currentPwd.first()).toBeVisible({ timeout: 15_000 });
     await expect(newPwd.first()).toBeVisible({ timeout: 10_000 });
@@ -112,9 +103,7 @@ test.describe("Settings", () => {
 
   // --- Tier 3: Profile settings ---
 
-  test("profile tab shows editable fields and save button", async ({
-    authedPage: page,
-  }) => {
+  test("profile tab shows editable fields and save button", async ({ authedPage: page }) => {
     await page.goto("/settings");
 
     // Look for profile edit fields
@@ -125,18 +114,20 @@ test.describe("Settings", () => {
     await expect(nameField.first()).toBeVisible({ timeout: 10_000 });
 
     // Look for save button
-    const saveBtn = page
-      .getByRole("button", { name: /save|update/i });
-    if (await saveBtn.first().isVisible().catch(() => false)) {
+    const saveBtn = page.getByRole("button", { name: /save|update/i });
+    if (
+      await saveBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(saveBtn.first()).toBeVisible();
     }
   });
 
   // --- Tier 3: Password validation ---
 
-  test("password form validates mismatched passwords", async ({
-    authedPage: page,
-  }) => {
+  test("password form validates mismatched passwords", async ({ authedPage: page }) => {
     await page.goto("/settings/password");
 
     const newPwdInput = page
@@ -146,15 +137,29 @@ test.describe("Settings", () => {
       .getByPlaceholder(/confirm/i)
       .or(page.locator('input[type="password"]').nth(2));
 
-    if (await newPwdInput.first().isVisible().catch(() => false)) {
+    if (
+      await newPwdInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await newPwdInput.first().fill("NewPassword#1");
-      if (await confirmPwdInput.first().isVisible().catch(() => false)) {
+      if (
+        await confirmPwdInput
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await confirmPwdInput.first().fill("DifferentPassword#2");
 
         // Try to submit
-        const saveBtn = page
-          .getByRole("button", { name: /save|update|change/i });
-        if (await saveBtn.first().isVisible().catch(() => false)) {
+        const saveBtn = page.getByRole("button", { name: /save|update|change/i });
+        if (
+          await saveBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await saveBtn.first().click();
           await page.waitForTimeout(500);
 
@@ -165,7 +170,12 @@ test.describe("Settings", () => {
             .or(page.getByText(/error/i))
             .or(page.locator(".Mui-error"))
             .or(page.getByRole("alert"));
-          if (await error.first().isVisible().catch(() => false)) {
+          if (
+            await error
+              .first()
+              .isVisible()
+              .catch(() => false)
+          ) {
             await expect(error.first()).toBeVisible();
           }
         }
@@ -175,9 +185,7 @@ test.describe("Settings", () => {
 
   // --- Tier 3: Team tab ---
 
-  test("team tab shows invite button and team table", async ({
-    authedPage: page,
-  }) => {
+  test("team tab shows invite button and team table", async ({ authedPage: page }) => {
     await page.goto("/settings/organization");
 
     // Look for team-related elements
@@ -190,21 +198,22 @@ test.describe("Settings", () => {
       .or(page.getByText(/member/i))
       .or(page.getByText(/team/i));
 
-    await expect(
-      inviteBtn.or(teamTable).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(inviteBtn.or(teamTable).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("invite button opens modal with email and role fields", async ({
-    authedPage: page,
-  }) => {
+  test("invite button opens modal with email and role fields", async ({ authedPage: page }) => {
     await page.goto("/settings/organization");
 
     const inviteBtn = page
       .getByRole("button", { name: /invite/i })
       .or(page.getByRole("button", { name: /add.*member/i }));
 
-    if (await inviteBtn.first().isVisible().catch(() => false)) {
+    if (
+      await inviteBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await inviteBtn.first().click();
 
       // Verify modal with email and role fields
@@ -216,7 +225,12 @@ test.describe("Settings", () => {
         .or(page.getByText(/select.*role/i))
         .or(page.getByText(/role/i));
 
-      if (await emailField.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      if (
+        await emailField
+          .first()
+          .isVisible({ timeout: 10_000 })
+          .catch(() => false)
+      ) {
         await expect(emailField.first()).toBeVisible();
       }
       await page.keyboard.press("Escape");

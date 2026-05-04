@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ControlModel } from "../control/control.model";
 import { UserModel } from "../user/user.model";
 import { ISubcontrol } from "../../interfaces/i.subcontrol";
@@ -20,10 +14,7 @@ import {
   timestamps: true,
   underscored: true,
 })
-export class SubcontrolModel
-  extends Model<SubcontrolModel>
-  implements ISubcontrol
-{
+export class SubcontrolModel extends Model<SubcontrolModel> implements ISubcontrol {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -58,11 +49,7 @@ export class SubcontrolModel
   approver?: number;
 
   @Column({
-    type: DataType.ENUM(
-      "Acceptable risk",
-      "Residual risk",
-      "Unacceptable risk"
-    ),
+    type: DataType.ENUM("Acceptable risk", "Residual risk", "Unacceptable risk"),
   })
   risk_review?: "Acceptable risk" | "Residual risk" | "Unacceptable risk";
 
@@ -168,22 +155,18 @@ export class SubcontrolModel
     feedback_description?: string,
     evidence_files?: any[],
     feedback_files?: any[],
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<SubcontrolModel> {
     // Validate required fields
     if (!title || title.trim().length === 0) {
-      throw new ValidationException(
-        "Subcontrol title is required",
-        "title",
-        title
-      );
+      throw new ValidationException("Subcontrol title is required", "title", title);
     }
 
     if (!description || description.trim().length === 0) {
       throw new ValidationException(
         "Subcontrol description is required",
         "description",
-        description
+        description,
       );
     }
 
@@ -192,7 +175,7 @@ export class SubcontrolModel
       throw new ValidationException(
         "Valid control_id is required (must be >= 1)",
         "control_id",
-        control_id
+        control_id,
       );
     }
 
@@ -201,7 +184,7 @@ export class SubcontrolModel
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        order_no
+        order_no,
       );
     }
 
@@ -210,17 +193,13 @@ export class SubcontrolModel
       throw new ValidationException(
         "Valid approver ID is required (must be >= 1)",
         "approver",
-        approver
+        approver,
       );
     }
 
     // Validate owner if provided
     if (owner !== undefined && !numberValidation(owner, 1)) {
-      throw new ValidationException(
-        "Valid owner ID is required (must be >= 1)",
-        "owner",
-        owner
-      );
+      throw new ValidationException("Valid owner ID is required (must be >= 1)", "owner", owner);
     }
 
     // Validate reviewer if provided
@@ -228,7 +207,7 @@ export class SubcontrolModel
       throw new ValidationException(
         "Valid reviewer ID is required (must be >= 1)",
         "reviewer",
-        reviewer
+        reviewer,
       );
     }
 
@@ -277,25 +256,18 @@ export class SubcontrolModel
     // Validate title if provided
     if (updateData.title !== undefined) {
       if (!updateData.title || updateData.title.trim().length === 0) {
-        throw new ValidationException(
-          "Subcontrol title is required",
-          "title",
-          updateData.title
-        );
+        throw new ValidationException("Subcontrol title is required", "title", updateData.title);
       }
       this.title = updateData.title.trim();
     }
 
     // Validate description if provided
     if (updateData.description !== undefined) {
-      if (
-        !updateData.description ||
-        updateData.description.trim().length === 0
-      ) {
+      if (!updateData.description || updateData.description.trim().length === 0) {
         throw new ValidationException(
           "Subcontrol description is required",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
       this.description = updateData.description.trim();
@@ -307,7 +279,7 @@ export class SubcontrolModel
         throw new ValidationException(
           "Order number must be a positive integer",
           "order_no",
-          updateData.order_no
+          updateData.order_no,
         );
       }
       this.order_no = updateData.order_no;
@@ -319,7 +291,7 @@ export class SubcontrolModel
         throw new ValidationException(
           "Valid approver ID is required (must be >= 1)",
           "approver",
-          updateData.approver
+          updateData.approver,
         );
       }
       this.approver = updateData.approver;
@@ -331,7 +303,7 @@ export class SubcontrolModel
         throw new ValidationException(
           "Valid owner ID is required (must be >= 1)",
           "owner",
-          updateData.owner
+          updateData.owner,
         );
       }
       this.owner = updateData.owner;
@@ -343,7 +315,7 @@ export class SubcontrolModel
         throw new ValidationException(
           "Valid reviewer ID is required (must be >= 1)",
           "reviewer",
-          updateData.reviewer
+          updateData.reviewer,
         );
       }
       this.reviewer = updateData.reviewer;
@@ -388,59 +360,39 @@ export class SubcontrolModel
    */
   async validateSubcontrolData(): Promise<void> {
     if (!this.title || this.title.trim().length === 0) {
-      throw new ValidationException(
-        "Subcontrol title is required",
-        "title",
-        this.title
-      );
+      throw new ValidationException("Subcontrol title is required", "title", this.title);
     }
 
     if (!this.description || this.description.trim().length === 0) {
       throw new ValidationException(
         "Subcontrol description is required",
         "description",
-        this.description
+        this.description,
       );
     }
 
     if (!this.control_id || !numberValidation(this.control_id, 1)) {
-      throw new ValidationException(
-        "Valid control_id is required",
-        "control_id",
-        this.control_id
-      );
+      throw new ValidationException("Valid control_id is required", "control_id", this.control_id);
     }
 
     if (this.order_no !== undefined && !numberValidation(this.order_no, 1)) {
       throw new ValidationException(
         "Order number must be a positive integer",
         "order_no",
-        this.order_no
+        this.order_no,
       );
     }
 
     if (this.approver !== undefined && !numberValidation(this.approver, 1)) {
-      throw new ValidationException(
-        "Valid approver ID is required",
-        "approver",
-        this.approver
-      );
+      throw new ValidationException("Valid approver ID is required", "approver", this.approver);
     }
 
     if (this.owner !== undefined && !numberValidation(this.owner, 1)) {
-      throw new ValidationException(
-        "Valid owner ID is required",
-        "owner",
-        this.owner
-      );
+      throw new ValidationException("Valid owner ID is required", "owner", this.owner);
     }
 
     if (this.reviewer !== undefined && !numberValidation(this.reviewer, 1)) {
-      throw new ValidationException(
-        "Valid reviewer ID is required",
-        "reviewer",
-        this.reviewer
-      );
+      throw new ValidationException("Valid reviewer ID is required", "reviewer", this.reviewer);
     }
   }
 
@@ -459,7 +411,7 @@ export class SubcontrolModel
       throw new BusinessLogicException(
         "Demo subcontrols cannot be modified",
         "DEMO_SUBCONTROL_RESTRICTION",
-        { subcontrolId: this.id, controlId: this.control_id }
+        { subcontrolId: this.id, controlId: this.control_id },
       );
     }
     return true;
@@ -590,11 +542,7 @@ export class SubcontrolModel
    */
   static async findByIdWithValidation(id: number): Promise<SubcontrolModel> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const subcontrol = await SubcontrolModel.findByPk(id);
@@ -613,7 +561,7 @@ export class SubcontrolModel
       throw new ValidationException(
         "Valid control_id is required (must be >= 1)",
         "control_id",
-        controlId
+        controlId,
       );
     }
 
@@ -628,14 +576,10 @@ export class SubcontrolModel
    */
   static async updateSubcontrolById(
     id: number,
-    updateData: Partial<ISubcontrol>
+    updateData: Partial<ISubcontrol>,
   ): Promise<[number, SubcontrolModel[]]> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await SubcontrolModel.update(updateData, {
@@ -649,11 +593,7 @@ export class SubcontrolModel
    */
   static async deleteSubcontrolById(id: number): Promise<number> {
     if (!numberValidation(id, 1)) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await SubcontrolModel.destroy({

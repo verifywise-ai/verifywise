@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAITrustCentreOverview, updateAITrustCentreOverview } from '../repository/aiTrustCentre.repository';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getAITrustCentreOverview,
+  updateAITrustCentreOverview,
+} from "../repository/aiTrustCentre.repository";
 
 export interface AITrustCentreOverviewData {
   info?: {
@@ -52,7 +55,7 @@ export interface AITrustCentreOverviewData {
 }
 
 // Query key for overview data
-export const overviewQueryKey = ['aiTrustCentre', 'overview'] as const;
+export const overviewQueryKey = ["aiTrustCentre", "overview"] as const;
 
 // Hook for fetching overview data
 export const useAITrustCentreOverviewQuery = () => {
@@ -81,7 +84,7 @@ export const useAITrustCentreOverviewMutation = () => {
       queryClient.invalidateQueries({ queryKey: overviewQueryKey });
     },
     onError: (error: any) => {
-      console.error('Error updating AI Trust Centre overview:', error);
+      console.error("Error updating AI Trust Centre overview:", error);
     },
   });
 };

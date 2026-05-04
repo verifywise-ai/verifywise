@@ -18,9 +18,7 @@ interface TeamMemberInvite {
 const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
   const { organizationId } = useAuth();
   const { roles } = useRoles();
-  const [invites, setInvites] = useState<TeamMemberInvite[]>([
-    { email: "", role: "editor" },
-  ]);
+  const [invites, setInvites] = useState<TeamMemberInvite[]>([{ email: "", role: "editor" }]);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -41,7 +39,10 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
 
     if (filledInvites.length > 0 && emptyInvites.length > 1) {
       // Keep filled invites and only one empty row
-      const finalInvites: TeamMemberInvite[] = [...filledInvites, { email: "", role: "editor" as const }];
+      const finalInvites: TeamMemberInvite[] = [
+        ...filledInvites,
+        { email: "", role: "editor" as const },
+      ];
       setInvites(finalInvites);
     } else {
       setInvites(newInvites);
@@ -76,11 +77,13 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
             surname: "",
             roleId: getRoleId(invite.role),
             organizationId: String(organizationId || ""),
-          })
+          }),
         );
 
         await Promise.all(invitePromises);
-        setSuccessMessage(`Successfully sent ${validInvites.length} invitation${validInvites.length > 1 ? 's' : ''}!`);
+        setSuccessMessage(
+          `Successfully sent ${validInvites.length} invitation${validInvites.length > 1 ? "s" : ""}!`,
+        );
 
         // Clear invites after successful send
         setInvites([{ email: "", role: "editor" }]);
@@ -89,12 +92,18 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
         setTimeout(() => setSuccessMessage(null), 3000);
       } catch (error: any) {
         // Check if it's an email service configuration error (expected in local dev)
-        const isEmailConfigError = error?.message?.includes("email") || error?.message?.includes("mail");
+        const isEmailConfigError =
+          error?.message?.includes("email") || error?.message?.includes("mail");
 
         if (isEmailConfigError) {
           // Use console.warn for expected local development scenario
-          console.warn("Email service not available (expected in local development):", error?.message);
-          setErrorMessage("Email service not configured. Invitations cannot be sent in local development.");
+          console.warn(
+            "Email service not available (expected in local development):",
+            error?.message,
+          );
+          setErrorMessage(
+            "Email service not configured. Invitations cannot be sent in local development.",
+          );
         } else {
           // Use console.error for unexpected errors
           console.error("Unexpected error sending invitations:", error);
@@ -175,7 +184,15 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
               }}
             />
 
-            <Box sx={{ minWidth: "150px", flexShrink: 0, pointerEvents: "auto", position: "relative", zIndex: 1 }}>
+            <Box
+              sx={{
+                minWidth: "150px",
+                flexShrink: 0,
+                pointerEvents: "auto",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
               <Select
                 id={`role-${index}`}
                 value={invite.role}

@@ -59,12 +59,8 @@ function ApplicabilityScopeSection({
   onUpdate,
   isSaving,
 }: ApplicabilityScopeSectionProps) {
-  const [periodFrequency, setPeriodFrequency] = useState(
-    assessment.period_frequency ?? ""
-  );
-  const [friaRationale, setFriaRationale] = useState(
-    assessment.fria_rationale ?? ""
-  );
+  const [periodFrequency, setPeriodFrequency] = useState(assessment.period_frequency ?? "");
+  const [friaRationale, setFriaRationale] = useState(assessment.fria_rationale ?? "");
 
   const handleSelectChange =
     (field: keyof FriaAssessment) => (e: SelectChangeEvent<string | number>) => {
@@ -96,22 +92,43 @@ function ApplicabilityScopeSection({
       euActContent={
         <>
           <strong>EU AI Act reference:</strong>{" "}
-          <a href={`${EU_ACT_LINK}#art_6`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_6`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 6
           </a>{" "}
           defines classification rules for high-risk AI systems.{" "}
-          <a href={`${EU_ACT_LINK}#anx_I`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#anx_I`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Annex I
           </a>{" "}
           lists Union harmonisation legislation, and{" "}
-          <a href={`${EU_ACT_LINK}#anx_III`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#anx_III`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Annex III
           </a>{" "}
           enumerates high-risk use-case areas. A FRIA is mandatory under{" "}
-          <a href={`${EU_ACT_LINK}#art_27`} target="_blank" rel="noopener noreferrer" style={{ color: brand.primary }}>
+          <a
+            href={`${EU_ACT_LINK}#art_27`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: brand.primary }}
+          >
             Article 27(1)
           </a>{" "}
-          for deployers that are bodies governed by public law or private entities providing public services.
+          for deployers that are bodies governed by public law or private entities providing public
+          services.
         </>
       }
     >

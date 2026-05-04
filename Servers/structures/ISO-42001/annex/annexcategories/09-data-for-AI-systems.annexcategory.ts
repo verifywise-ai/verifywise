@@ -1,9 +1,7 @@
 import { AnnexCategoryISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryISO.model";
 import { AnnexCategoryStructISO } from "../../../../domain.layer/frameworks/ISO-42001/annexCategoryStructISO.model";
 
-export const DataForAISystems: Partial<
-  AnnexCategoryStructISO & AnnexCategoryISO
->[] = [
+export const DataForAISystems: Partial<AnnexCategoryStructISO & AnnexCategoryISO>[] = [
   {
     sub_id: 1.1,
     order_no: 1,
@@ -26,8 +24,7 @@ export const DataForAISystems: Partial<
     is_applicable: true,
     implementation_description:
       "Data acquisition complies with legal and ethical standards with documented approval.",
-    auditor_feedback:
-      "Data acquisition processes meet regulatory requirements.",
+    auditor_feedback: "Data acquisition processes meet regulatory requirements.",
   },
   {
     sub_id: 3.1,
@@ -81,8 +78,7 @@ export const DataForAISystems: Partial<
     sub_id: 7.1,
     order_no: 7,
     title: "Data labeling and annotation",
-    description:
-      "Managing data labeling and annotation processes for AI systems.",
+    description: "Managing data labeling and annotation processes for AI systems.",
     guidance:
       "Data labeling and annotation processes should be defined, documented, and quality-controlled to ensure labels are accurate, consistent, and appropriate for the intended AI system purpose. Labeler qualifications and inter-annotator agreement should be monitored.",
     is_applicable: true,
@@ -95,8 +91,7 @@ export const DataForAISystems: Partial<
     sub_id: 8.1,
     order_no: 8,
     title: "Data bias assessment",
-    description:
-      "Assessing and mitigating bias in data used for AI systems.",
+    description: "Assessing and mitigating bias in data used for AI systems.",
     guidance:
       "Data used for AI systems should be assessed for potential biases that could lead to unfair, discriminatory, or harmful outcomes. Identified biases should be documented and mitigated through appropriate techniques.",
     is_applicable: true,
@@ -109,8 +104,7 @@ export const DataForAISystems: Partial<
     sub_id: 9.1,
     order_no: 9,
     title: "Data retention",
-    description:
-      "Defining and implementing data retention policies for AI-related data.",
+    description: "Defining and implementing data retention policies for AI-related data.",
     guidance:
       "Retention periods for data used in AI systems — including training data, validation data, model outputs, and logs — should be defined based on legal, regulatory, and operational requirements, and enforced through documented procedures.",
     is_applicable: true,
@@ -123,8 +117,7 @@ export const DataForAISystems: Partial<
     sub_id: 10.1,
     order_no: 10,
     title: "Data deletion and disposal",
-    description:
-      "Secure deletion and disposal of AI-related data.",
+    description: "Secure deletion and disposal of AI-related data.",
     guidance:
       "Data used in AI systems should be securely deleted or disposed of when no longer needed or when retention periods expire, ensuring that deletion is complete and verifiable, particularly for personal or sensitive data.",
     is_applicable: true,
@@ -137,8 +130,7 @@ export const DataForAISystems: Partial<
     sub_id: 11.1,
     order_no: 11,
     title: "Data transfer",
-    description:
-      "Managing the transfer of data used in AI systems.",
+    description: "Managing the transfer of data used in AI systems.",
     guidance:
       "Transfer of data used in AI systems — whether internal or to third parties — should be governed by documented procedures addressing authorization, encryption, contractual safeguards, and compliance with data protection regulations including cross-border transfer restrictions.",
     is_applicable: true,

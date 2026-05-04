@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  NotFoundException,
-} from "../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../exceptions/custom.exception";
 
 // Mock sequelize-typescript
 jest.mock("sequelize-typescript", () => ({
@@ -38,45 +35,30 @@ class TestFrameworkModel {
   }
 
   // Static method to create new framework
-  static async createNewFramework(
-    name: string,
-    description: string
-  ): Promise<TestFrameworkModel> {
+  static async createNewFramework(name: string, description: string): Promise<TestFrameworkModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
       throw new ValidationException("Name is required", "name", name);
     }
 
     if (name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", name);
     }
 
     if (name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", name);
     }
 
     // Validate description
     if (!description || description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        description
-      );
+      throw new ValidationException("Description is required", "description", description);
     }
 
     if (description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        description
+        description,
       );
     }
 
@@ -84,7 +66,7 @@ class TestFrameworkModel {
       throw new ValidationException(
         "Description must not exceed 1000 characters",
         "description",
-        description
+        description,
       );
     }
 
@@ -98,25 +80,18 @@ class TestFrameworkModel {
   }
 
   // Instance methods
-  async updateFramework(updateData: {
-    name?: string;
-    description?: string;
-  }): Promise<void> {
+  async updateFramework(updateData: { name?: string; description?: string }): Promise<void> {
     // Validate name if provided
     if (updateData.name !== undefined) {
       if (!updateData.name || updateData.name.trim().length === 0) {
-        throw new ValidationException(
-          "Name is required",
-          "name",
-          updateData.name
-        );
+        throw new ValidationException("Name is required", "name", updateData.name);
       }
 
       if (updateData.name.trim().length < 2) {
         throw new ValidationException(
           "Name must be at least 2 characters long",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -124,7 +99,7 @@ class TestFrameworkModel {
         throw new ValidationException(
           "Name must not exceed 255 characters",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -133,14 +108,11 @@ class TestFrameworkModel {
 
     // Validate description if provided
     if (updateData.description !== undefined) {
-      if (
-        !updateData.description ||
-        updateData.description.trim().length === 0
-      ) {
+      if (!updateData.description || updateData.description.trim().length === 0) {
         throw new ValidationException(
           "Description is required",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -148,7 +120,7 @@ class TestFrameworkModel {
         throw new ValidationException(
           "Description must be at least 10 characters long",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -156,7 +128,7 @@ class TestFrameworkModel {
         throw new ValidationException(
           "Description must not exceed 1000 characters",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -170,34 +142,22 @@ class TestFrameworkModel {
     }
 
     if (this.name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", this.name);
     }
 
     if (this.name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", this.name);
     }
 
     if (!this.description || this.description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        this.description
-      );
+      throw new ValidationException("Description is required", "description", this.description);
     }
 
     if (this.description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        this.description
+        this.description,
       );
     }
 
@@ -205,7 +165,7 @@ class TestFrameworkModel {
       throw new ValidationException(
         "Description must not exceed 1000 characters",
         "description",
-        this.description
+        this.description,
       );
     }
   }
@@ -278,11 +238,7 @@ class TestFrameworkModel {
   // Static methods for database operations
   static async findByIdWithValidation(id: number): Promise<TestFrameworkModel> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     // Mock database lookup
@@ -317,11 +273,7 @@ class TestFrameworkModel {
 
   static async findByName(name: string): Promise<TestFrameworkModel[]> {
     if (!name || name.trim().length === 0) {
-      throw new ValidationException(
-        "Name is required for search",
-        "name",
-        name
-      );
+      throw new ValidationException("Name is required for search", "name", name);
     }
 
     return [
@@ -336,14 +288,10 @@ class TestFrameworkModel {
 
   static async updateFrameworkById(
     id: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestFrameworkModel[]]> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return [1, [new TestFrameworkModel({ id, ...updateData })]];
@@ -351,11 +299,7 @@ class TestFrameworkModel {
 
   static async deleteFrameworkById(id: number): Promise<number> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return 1;
@@ -417,64 +361,52 @@ describe("FrameworkModel", () => {
     it("should create framework with valid data", async () => {
       const framework = await TestFrameworkModel.createNewFramework(
         validFrameworkData.name,
-        validFrameworkData.description
+        validFrameworkData.description,
       );
 
       expect(framework).toBeInstanceOf(TestFrameworkModel);
       expect(framework.name).toBe("Test Framework");
       expect(framework.description).toBe(
-        "This is a test framework description that is long enough"
+        "This is a test framework description that is long enough",
       );
       expect(framework.created_at).toBeInstanceOf(Date);
     });
 
     it("should throw ValidationException for empty name", async () => {
       await expect(
-        TestFrameworkModel.createNewFramework(
-          "",
-          validFrameworkData.description
-        )
+        TestFrameworkModel.createNewFramework("", validFrameworkData.description),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for short name", async () => {
       await expect(
-        TestFrameworkModel.createNewFramework(
-          "A",
-          validFrameworkData.description
-        )
+        TestFrameworkModel.createNewFramework("A", validFrameworkData.description),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for long name", async () => {
       const longName = "A".repeat(256);
       await expect(
-        TestFrameworkModel.createNewFramework(
-          longName,
-          validFrameworkData.description
-        )
+        TestFrameworkModel.createNewFramework(longName, validFrameworkData.description),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for empty description", async () => {
       await expect(
-        TestFrameworkModel.createNewFramework(validFrameworkData.name, "")
+        TestFrameworkModel.createNewFramework(validFrameworkData.name, ""),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for short description", async () => {
       await expect(
-        TestFrameworkModel.createNewFramework(validFrameworkData.name, "Short")
+        TestFrameworkModel.createNewFramework(validFrameworkData.name, "Short"),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for long description", async () => {
       const longDescription = "A".repeat(1001);
       await expect(
-        TestFrameworkModel.createNewFramework(
-          validFrameworkData.name,
-          longDescription
-        )
+        TestFrameworkModel.createNewFramework(validFrameworkData.name, longDescription),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -495,25 +427,21 @@ describe("FrameworkModel", () => {
         description: "This is an updated description that is long enough",
       });
 
-      expect(framework.description).toBe(
-        "This is an updated description that is long enough"
-      );
+      expect(framework.description).toBe("This is an updated description that is long enough");
     });
 
     it("should throw ValidationException for invalid name update", async () => {
       const framework = new TestFrameworkModel(validFrameworkData);
 
-      await expect(framework.updateFramework({ name: "A" })).rejects.toThrow(
-        ValidationException
-      );
+      await expect(framework.updateFramework({ name: "A" })).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid description update", async () => {
       const framework = new TestFrameworkModel(validFrameworkData);
 
-      await expect(
-        framework.updateFramework({ description: "Short" })
-      ).rejects.toThrow(ValidationException);
+      await expect(framework.updateFramework({ description: "Short" })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -528,9 +456,7 @@ describe("FrameworkModel", () => {
         ...validFrameworkData,
         name: "A",
       });
-      await expect(framework.validateFrameworkData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(framework.validateFrameworkData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid description", async () => {
@@ -538,9 +464,7 @@ describe("FrameworkModel", () => {
         ...validFrameworkData,
         description: "Short",
       });
-      await expect(framework.validateFrameworkData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(framework.validateFrameworkData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -719,15 +643,15 @@ describe("FrameworkModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestFrameworkModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestFrameworkModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestFrameworkModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestFrameworkModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -747,26 +671,23 @@ describe("FrameworkModel", () => {
     });
 
     it("should throw ValidationException for empty name", async () => {
-      await expect(TestFrameworkModel.findByName("")).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestFrameworkModel.findByName("")).rejects.toThrow(ValidationException);
     });
   });
 
   describe("updateFrameworkById", () => {
     it("should update framework by ID", async () => {
-      const [affected, updated] = await TestFrameworkModel.updateFrameworkById(
-        1,
-        { name: "Updated Name" }
-      );
+      const [affected, updated] = await TestFrameworkModel.updateFrameworkById(1, {
+        name: "Updated Name",
+      });
       expect(affected).toBe(1);
       expect(updated[0].name).toBe("Updated Name");
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestFrameworkModel.updateFrameworkById(0, { name: "Updated" })
-      ).rejects.toThrow(ValidationException);
+      await expect(TestFrameworkModel.updateFrameworkById(0, { name: "Updated" })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
@@ -777,9 +698,7 @@ describe("FrameworkModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(TestFrameworkModel.deleteFrameworkById(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestFrameworkModel.deleteFrameworkById(0)).rejects.toThrow(ValidationException);
     });
   });
 

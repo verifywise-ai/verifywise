@@ -14,7 +14,17 @@ import {
   Box,
   useTheme,
 } from "@mui/material";
-import { ChevronsUpDown, ChevronUp, ChevronDown, AlertTriangle, Bot, RefreshCw, Plug, ShieldCheck, Settings } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  AlertTriangle,
+  Bot,
+  RefreshCw,
+  Plug,
+  ShieldCheck,
+  Settings,
+} from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
 import { EmptyState } from "../../components/EmptyState";
@@ -33,7 +43,6 @@ import {
   agentPagination,
 } from "./style";
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
-
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -97,9 +106,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -201,7 +208,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 variant="contained"
                 onClick={onSync}
                 isDisabled={isSyncing}
-                startIcon={<RefreshCw size={14} style={isSyncing ? { animation: "spin 1s linear infinite" } : undefined} />}
+                startIcon={
+                  <RefreshCw
+                    size={14}
+                    style={isSyncing ? { animation: "spin 1s linear infinite" } : undefined}
+                  />
+                }
                 sx={{ height: 34 }}
               />
               <CustomizableButton
@@ -242,12 +254,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 ...singleTheme.tableStyles.primary.header.cell,
                 ...(sortable
                   ? {
-                    cursor: "pointer",
-                    userSelect: "none",
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    },
-                  }
+                      cursor: "pointer",
+                      userSelect: "none",
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      },
+                    }
                   : {}),
               }}
               onClick={() => sortable && handleSort(column.label)}
@@ -263,10 +275,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 <div
                   style={{
                     fontWeight: 400,
-                    color:
-                      sortConfig.key === column.label
-                        ? "primary.main"
-                        : "inherit",
+                    color: sortConfig.key === column.label ? "primary.main" : "inherit",
                   }}
                 >
                   {column.label}
@@ -276,23 +285,16 @@ const AgentTable: React.FC<AgentTableProps> = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color:
-                        sortConfig.key === column.label
-                          ? "primary.main"
-                          : "text.disabled",
+                      color: sortConfig.key === column.label ? "primary.main" : "text.disabled",
                     }}
                   >
-                    {sortConfig.key === column.label &&
-                      sortConfig.direction === "asc" && (
-                        <ChevronUp size={16} />
-                      )}
-                    {sortConfig.key === column.label &&
-                      sortConfig.direction === "desc" && (
-                        <ChevronDown size={16} />
-                      )}
-                    {sortConfig.key !== column.label && (
-                      <ChevronsUpDown size={16} />
+                    {sortConfig.key === column.label && sortConfig.direction === "asc" && (
+                      <ChevronUp size={16} />
                     )}
+                    {sortConfig.key === column.label && sortConfig.direction === "desc" && (
+                      <ChevronDown size={16} />
+                    )}
+                    {sortConfig.key !== column.label && <ChevronsUpDown size={16} />}
                   </Box>
                 )}
               </Box>
@@ -305,83 +307,65 @@ const AgentTable: React.FC<AgentTableProps> = ({
 
   const tableBody = (
     <TableBody>
-      {sortedData
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((agent) => (
-          <TableRow
-            key={agent.id}
-            sx={singleTheme.tableStyles.primary.body.row}
-            onClick={() => onRowClick(agent)}
-          >
-            {isColVisible('display_name') && (
-              <TableCell sx={cellStyle}>{agent.display_name}</TableCell>
-            )}
-            {isColVisible('source_system') && (
-              <TableCell sx={cellStyle}>{agent.source_system}</TableCell>
-            )}
-            {isColVisible('primitive_type') && (
-              <TableCell sx={cellStyle}>{agent.primitive_type}</TableCell>
-            )}
-            {isColVisible('permissions') && (
-              <TableCell sx={cellStyle}>
-                <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
-                  {(agent.permission_categories || []).slice(0, 3).map((cat) => (
-                    <MuiChip
-                      key={cat}
-                      label={cat}
-                      size="small"
-                      sx={permissionChip}
-                    />
-                  ))}
-                  {(agent.permission_categories || []).length > 3 && (
-                    <MuiChip
-                      label={`+${agent.permission_categories.length - 3}`}
-                      size="small"
-                      sx={permissionChip}
-                    />
-                  )}
-                </Stack>
-              </TableCell>
-            )}
-            {isColVisible('last_activity') && (
-              <TableCell sx={cellStyle}>
-                {formatDate(agent.last_activity)}
-              </TableCell>
-            )}
-            {isColVisible('review_status') && (
-              <TableCell sx={cellStyle}>
-                <Chip label={agent.review_status} />
-              </TableCell>
-            )}
-            {isColVisible('stale') && (
-              <TableCell sx={{ ...cellStyle, width: 40 }}>
-                {agent.is_stale && (
-                  <AlertTriangle
-                    size={14}
-                    strokeWidth={1.5}
-                    color="#F9A825"
+      {sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((agent) => (
+        <TableRow
+          key={agent.id}
+          sx={singleTheme.tableStyles.primary.body.row}
+          onClick={() => onRowClick(agent)}
+        >
+          {isColVisible("display_name") && (
+            <TableCell sx={cellStyle}>{agent.display_name}</TableCell>
+          )}
+          {isColVisible("source_system") && (
+            <TableCell sx={cellStyle}>{agent.source_system}</TableCell>
+          )}
+          {isColVisible("primitive_type") && (
+            <TableCell sx={cellStyle}>{agent.primitive_type}</TableCell>
+          )}
+          {isColVisible("permissions") && (
+            <TableCell sx={cellStyle}>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+                {(agent.permission_categories || []).slice(0, 3).map((cat) => (
+                  <MuiChip key={cat} label={cat} size="small" sx={permissionChip} />
+                ))}
+                {(agent.permission_categories || []).length > 3 && (
+                  <MuiChip
+                    label={`+${agent.permission_categories.length - 3}`}
+                    size="small"
+                    sx={permissionChip}
                   />
                 )}
-              </TableCell>
-            )}
-            {isColVisible('actions') && (
-              <TableCell
-                sx={{ ...cellStyle, width: 40 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <IconButton
-                  id={agent.id}
-                  onEdit={() => onEdit(agent)}
-                  onDelete={() => onDelete(agent)}
-                  onMouseEvent={() => { }}
-                  warningTitle="Delete this agent?"
-                  warningMessage="When you delete this agent, all data related to this agent will be removed. This action is non-recoverable."
-                  type="Vendor"
-                />
-              </TableCell>
-            )}
-          </TableRow>
-        ))}
+              </Stack>
+            </TableCell>
+          )}
+          {isColVisible("last_activity") && (
+            <TableCell sx={cellStyle}>{formatDate(agent.last_activity)}</TableCell>
+          )}
+          {isColVisible("review_status") && (
+            <TableCell sx={cellStyle}>
+              <Chip label={agent.review_status} />
+            </TableCell>
+          )}
+          {isColVisible("stale") && (
+            <TableCell sx={{ ...cellStyle, width: 40 }}>
+              {agent.is_stale && <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />}
+            </TableCell>
+          )}
+          {isColVisible("actions") && (
+            <TableCell sx={{ ...cellStyle, width: 40 }} onClick={(e) => e.stopPropagation()}>
+              <IconButton
+                id={agent.id}
+                onEdit={() => onEdit(agent)}
+                onDelete={() => onDelete(agent)}
+                onMouseEvent={() => {}}
+                warningTitle="Delete this agent?"
+                warningMessage="When you delete this agent, all data related to this agent will be removed. This action is non-recoverable."
+                type="Vendor"
+              />
+            </TableCell>
+          )}
+        </TableRow>
+      ))}
     </TableBody>
   );
 
@@ -392,7 +376,10 @@ const AgentTable: React.FC<AgentTableProps> = ({
         {tableBody}
         <TableFooter>
           <TableRow sx={agentFooterRow(theme)}>
-            <TableCell colSpan={Math.max(1, visibleColumnsArray.length - 1)} sx={agentShowingText(theme)}>
+            <TableCell
+              colSpan={Math.max(1, visibleColumnsArray.length - 1)}
+              sx={agentShowingText(theme)}
+            >
               Showing {getRange} of {sortedData.length} agent(s)
             </TableCell>
             <TablePagination
@@ -402,15 +389,10 @@ const AgentTable: React.FC<AgentTableProps> = ({
               rowsPerPage={rowsPerPage}
               rowsPerPageOptions={[5, 10, 15, 25]}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              ActionsComponent={(props) => (
-                <TablePaginationActions {...props} />
-              )}
+              ActionsComponent={(props) => <TablePaginationActions {...props} />}
               labelRowsPerPage="Rows per page"
               labelDisplayedRows={({ page, count }) =>
-                `Page ${page + 1} of ${Math.max(
-                  0,
-                  Math.ceil(count / rowsPerPage)
-                )}`
+                `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
               }
               slotProps={{
                 select: {

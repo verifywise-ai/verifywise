@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { IISO27001ClauseStruct } from "../../interfaces/i.ISO27001ClauseStruct";
 import { FrameworkModel } from "../../models/frameworks/frameworks.model";
 
@@ -14,7 +8,8 @@ import { FrameworkModel } from "../../models/frameworks/frameworks.model";
 })
 export class ISO27001ClauseStructModel
   extends Model<ISO27001ClauseStructModel>
-  implements IISO27001ClauseStruct {
+  implements IISO27001ClauseStruct
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -178,7 +173,7 @@ export class ISO27001ClauseStructModel
       id: this.id,
       arrangement: this.arrangement,
       title: this.title,
-      framework_id: this.framework_id
+      framework_id: this.framework_id,
     };
   }
 
@@ -188,5 +183,4 @@ export class ISO27001ClauseStructModel
   getDisplayName(): string {
     return `${this.arrangement}. ${this.title}`;
   }
-
 }

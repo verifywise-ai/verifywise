@@ -5,7 +5,7 @@ export const leaderboardContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'The leaderboard is listed in the sidebar but not yet available. This page will be enabled in a future release.',
+      text: 'The leaderboard is planned for a future release. The sidebar item is currently hidden in the UI; this page documents the expected behaviour when the feature ships.',
     },
     {
       type: 'heading',

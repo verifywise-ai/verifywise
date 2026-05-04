@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   async up(queryInterface) {
@@ -29,6 +29,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query('DROP TABLE IF EXISTS verifywise.frameworks_vendorrisks;');
-  }
+    await queryInterface.sequelize.query("DROP TABLE IF EXISTS verifywise.frameworks_vendorrisks;");
+  },
 };

@@ -63,9 +63,7 @@ describe("Test Search Repository", () => {
 
       vi.mocked(infraWiseSearch).mockRejectedValue(mockError);
 
-      await expect(performWiseSearch({ q: "risk" })).rejects.toThrow(
-        "Search failed",
-      );
+      await expect(performWiseSearch({ q: "risk" })).rejects.toThrow("Search failed");
     });
   });
 

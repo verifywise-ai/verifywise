@@ -83,7 +83,10 @@ class EvalModelsService {
    */
   async updateModel(modelId: string, request: UpdateModelRequest): Promise<SavedModel | null> {
     try {
-      const response = await CustomAxios.put<UpdateModelResponse>(`${this.baseUrl}/${modelId}`, request);
+      const response = await CustomAxios.put<UpdateModelResponse>(
+        `${this.baseUrl}/${modelId}`,
+        request,
+      );
       return response.data.model;
     } catch (error) {
       console.error("Failed to update model:", error);

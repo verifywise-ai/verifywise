@@ -19,7 +19,10 @@ import palette from "../../../themes/palette";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { resolveMessageVariables, streamPromptTest, StreamPromptTestResult } from "../shared";
 
-interface Message { role: string; content: string }
+interface Message {
+  role: string;
+  content: string;
+}
 
 interface TestCase {
   variables: Record<string, string>;
@@ -66,17 +69,25 @@ export default function TestDatasetPanel({
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const loadDatasets = useCallback(async () => {
     try {
-      const res = await apiServices.get<Record<string, any>>(`/ai-gateway/prompts/${promptId}/test-datasets`);
+      const res = await apiServices.get<Record<string, any>>(
+        `/ai-gateway/prompts/${promptId}/test-datasets`,
+      );
       setDatasets(res?.data?.test_datasets || res?.data?.data || []);
-    } catch { /* silently handle */ }
+    } catch {
+      /* silently handle */
+    }
   }, [promptId]);
 
-  useEffect(() => { loadDatasets(); }, [loadDatasets]);
+  useEffect(() => {
+    loadDatasets();
+  }, [loadDatasets]);
 
   const selectDataset = (id: string) => {
     if (id === "new") {
@@ -90,7 +101,9 @@ export default function TestDatasetPanel({
     if (ds) {
       setSelectedDatasetId(ds.id);
       setDatasetName(ds.name);
-      setTestCases(ds.test_cases.length > 0 ? ds.test_cases : [{ variables: {}, expected_output: "" }]);
+      setTestCases(
+        ds.test_cases.length > 0 ? ds.test_cases : [{ variables: {}, expected_output: "" }],
+      );
       setResults([]);
     }
   };
@@ -108,14 +121,14 @@ export default function TestDatasetPanel({
   const updateVar = (rowIdx: number, varName: string, value: string) => {
     setTestCases((prev) =>
       prev.map((tc, i) =>
-        i === rowIdx ? { ...tc, variables: { ...tc.variables, [varName]: value } } : tc
-      )
+        i === rowIdx ? { ...tc, variables: { ...tc.variables, [varName]: value } } : tc,
+      ),
     );
   };
 
   const updateExpected = (rowIdx: number, value: string) => {
     setTestCases((prev) =>
-      prev.map((tc, i) => (i === rowIdx ? { ...tc, expected_output: value } : tc))
+      prev.map((tc, i) => (i === rowIdx ? { ...tc, expected_output: value } : tc)),
     );
   };
 
@@ -123,24 +136,37 @@ export default function TestDatasetPanel({
     setIsSaving(true);
     try {
       if (selectedDatasetId === "new") {
-        const res = await apiServices.post<Record<string, any>>(`/ai-gateway/prompts/${promptId}/test-datasets`, {
-          name: datasetName,
-          test_cases: testCases,
-        });
+        const res = await apiServices.post<Record<string, any>>(
+          `/ai-gateway/prompts/${promptId}/test-datasets`,
+          {
+            name: datasetName,
+            test_cases: testCases,
+          },
+        );
         const created = res?.data?.test_dataset || res?.data?.data;
         if (created) {
           setSelectedDatasetId(created.id);
           setDatasets((prev) => [created, ...prev]);
         }
       } else {
-        await apiServices.patch(`/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`, {
-          name: datasetName,
-          test_cases: testCases,
-        });
-        setDatasets((prev) => prev.map((d) => (d.id === selectedDatasetId ? { ...d, name: datasetName, test_cases: testCases } : d)));
+        await apiServices.patch(
+          `/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`,
+          {
+            name: datasetName,
+            test_cases: testCases,
+          },
+        );
+        setDatasets((prev) =>
+          prev.map((d) =>
+            d.id === selectedDatasetId ? { ...d, name: datasetName, test_cases: testCases } : d,
+          ),
+        );
       }
-    } catch { /* silently handle */ }
-    finally { setIsSaving(false); }
+    } catch {
+      /* silently handle */
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const runSingle = async (tc: TestCase, idx: number, signal: AbortSignal): Promise<void> => {
@@ -202,13 +228,17 @@ export default function TestDatasetPanel({
   const deleteDataset = async () => {
     if (selectedDatasetId === "new") return;
     try {
-      await apiServices.delete(`/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`);
+      await apiServices.delete(
+        `/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`,
+      );
       setDatasets((prev) => prev.filter((d) => d.id !== selectedDatasetId));
       setSelectedDatasetId("new");
       setDatasetName("New dataset");
       setTestCases([{ variables: {}, expected_output: "" }]);
       setResults([]);
-    } catch { /* silently handle */ }
+    } catch {
+      /* silently handle */
+    }
   };
 
   const datasetItems = [
@@ -264,8 +294,19 @@ export default function TestDatasetPanel({
         </Box>
         {isRunning && (
           <Box sx={{ mt: "8px" }}>
-            <LinearProgress variant="determinate" value={progress} sx={{ height: 4, borderRadius: 2, bgcolor: "#E4E7EC", "& .MuiLinearProgress-bar": { bgcolor: "#13715B" } }} />
-            <Typography fontSize={11} color="text.secondary" mt={0.5}>{progress}% complete</Typography>
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                height: 4,
+                borderRadius: 2,
+                bgcolor: "#E4E7EC",
+                "& .MuiLinearProgress-bar": { bgcolor: "#13715B" },
+              }}
+            />
+            <Typography fontSize={11} color="text.secondary" mt={0.5}>
+              {progress}% complete
+            </Typography>
           </Box>
         )}
       </Box>
@@ -318,13 +359,17 @@ export default function TestDatasetPanel({
                       </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
-                      <Typography fontSize={11}>{result?.latency ? `${result.latency}ms` : "-"}</Typography>
+                      <Typography fontSize={11}>
+                        {result?.latency ? `${result.latency}ms` : "-"}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
                       <Typography fontSize={11}>{result?.tokens ? result.tokens : "-"}</Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
-                      <Typography fontSize={11}>{result?.cost ? `$${result.cost.toFixed(4)}` : "-"}</Typography>
+                      <Typography fontSize={11}>
+                        {result?.cost ? `$${result.cost.toFixed(4)}` : "-"}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
                       {testCases.length > 1 && (
@@ -342,10 +387,21 @@ export default function TestDatasetPanel({
 
         <Box
           onClick={addRow}
-          sx={{ px: "16px", py: "8px", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", color: "primary.main", "&:hover": { textDecoration: "underline" } }}
+          sx={{
+            px: "16px",
+            py: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            cursor: "pointer",
+            color: "primary.main",
+            "&:hover": { textDecoration: "underline" },
+          }}
         >
           <Plus size={13} strokeWidth={1.5} />
-          <Typography fontSize={12} fontWeight={500}>Add test case</Typography>
+          <Typography fontSize={12} fontWeight={500}>
+            Add test case
+          </Typography>
         </Box>
       </Box>
     </Box>

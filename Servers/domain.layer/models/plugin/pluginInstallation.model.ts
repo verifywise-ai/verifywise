@@ -2,10 +2,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { IPluginInstallation } from "../../interfaces/i.pluginInstallation";
 import { PluginInstallationStatus } from "../../enums/plugin.enum";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 /**
  * Plugin Installation Model
@@ -17,22 +14,18 @@ export class PluginInstallationModel {
    */
   static async createInstallation(
     plugin_key: string,
-    organization_id: number
+    organization_id: number,
   ): Promise<IPluginInstallation> {
     // Validate required fields
     if (!plugin_key || plugin_key.trim().length === 0) {
-      throw new ValidationException(
-        "Plugin key is required",
-        "plugin_key",
-        plugin_key
-      );
+      throw new ValidationException("Plugin key is required", "plugin_key", plugin_key);
     }
 
     if (!organization_id || organization_id < 1) {
       throw new ValidationException(
         "Valid organization ID is required (must be >= 1)",
         "organization_id",
-        organization_id
+        organization_id,
       );
     }
 
@@ -44,15 +37,11 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id, plugin_key: plugin_key.trim() },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     if (existing && existing.length > 0) {
-      throw new ValidationException(
-        "Plugin is already installed",
-        "plugin_key",
-        plugin_key
-      );
+      throw new ValidationException("Plugin is already installed", "plugin_key", plugin_key);
     }
 
     // Create installation record
@@ -68,7 +57,7 @@ export class PluginInstallationModel {
           status: PluginInstallationStatus.INSTALLED,
         },
         type: QueryTypes.INSERT,
-      }
+      },
     );
 
     return (result[0] as any)[0] as IPluginInstallation;
@@ -79,7 +68,7 @@ export class PluginInstallationModel {
    */
   static async findByPlugin(
     plugin_key: string,
-    organization_id: number
+    organization_id: number,
   ): Promise<IPluginInstallation | null> {
     const results = await sequelize.query(
       `SELECT * FROM plugin_installations
@@ -88,7 +77,7 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id, plugin_key: plugin_key.trim() },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return results.length > 0 ? (results[0] as IPluginInstallation) : null;
@@ -97,9 +86,7 @@ export class PluginInstallationModel {
   /**
    * Get all installed plugins for an organization
    */
-  static async getInstalledPlugins(
-    organization_id: number
-  ): Promise<IPluginInstallation[]> {
+  static async getInstalledPlugins(organization_id: number): Promise<IPluginInstallation[]> {
     const results = await sequelize.query(
       `SELECT * FROM plugin_installations
        WHERE organization_id = :organization_id
@@ -107,7 +94,7 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return results as IPluginInstallation[];
@@ -116,16 +103,9 @@ export class PluginInstallationModel {
   /**
    * Find installation by ID
    */
-  static async findById(
-    id: number,
-    organization_id: number
-  ): Promise<IPluginInstallation | null> {
+  static async findById(id: number, organization_id: number): Promise<IPluginInstallation | null> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid installation ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid installation ID is required (must be >= 1)", "id", id);
     }
 
     const results = await sequelize.query(
@@ -135,7 +115,7 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id, id },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     return results.length > 0 ? (results[0] as IPluginInstallation) : null;
@@ -146,7 +126,7 @@ export class PluginInstallationModel {
    */
   static async findByIdWithValidation(
     id: number,
-    organization_id: number
+    organization_id: number,
   ): Promise<IPluginInstallation> {
     const installation = await this.findById(id, organization_id);
 
@@ -163,7 +143,7 @@ export class PluginInstallationModel {
   static async updateStatus(
     id: number,
     organization_id: number,
-    status: PluginInstallationStatus
+    status: PluginInstallationStatus,
   ): Promise<IPluginInstallation> {
     const results = await sequelize.query(
       `UPDATE plugin_installations
@@ -173,7 +153,7 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id, id, status },
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     if (!results || !results[0] || !(results[0] as any)[0]) {
@@ -186,17 +166,14 @@ export class PluginInstallationModel {
   /**
    * Delete installation
    */
-  static async delete(
-    id: number,
-    organization_id: number
-  ): Promise<void> {
+  static async delete(id: number, organization_id: number): Promise<void> {
     await sequelize.query(
       `DELETE FROM plugin_installations
        WHERE organization_id = :organization_id AND id = :id`,
       {
         replacements: { organization_id, id },
         type: QueryTypes.DELETE,
-      }
+      },
     );
   }
 
@@ -206,7 +183,7 @@ export class PluginInstallationModel {
   static async updateConfiguration(
     id: number,
     organization_id: number,
-    configuration: any
+    configuration: any,
   ): Promise<IPluginInstallation> {
     const results = await sequelize.query(
       `UPDATE plugin_installations
@@ -216,11 +193,15 @@ export class PluginInstallationModel {
       {
         replacements: { organization_id, id, configuration: JSON.stringify(configuration) },
         type: QueryTypes.UPDATE,
-      }
+      },
     );
 
     if (!results || !results[0] || !(results[0] as any)[0]) {
-      throw new NotFoundException("Plugin installation not found after configuration update", "installation", id);
+      throw new NotFoundException(
+        "Plugin installation not found after configuration update",
+        "installation",
+        id,
+      );
     }
 
     return (results[0] as any)[0] as IPluginInstallation;

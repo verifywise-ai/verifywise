@@ -36,11 +36,7 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
     >
       {/* Close button in top right - always show so users can exit */}
       {continuous && (
-        <button
-          {...skipProps}
-          className="tour-close-button"
-          aria-label="Close tour"
-        >
+        <button {...skipProps} className="tour-close-button" aria-label="Close tour">
           <X size={18} />
         </button>
       )}
@@ -105,17 +101,11 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
         {/* Buttons */}
         <Box sx={{ display: "flex", gap: "8px" }}>
           {currentIndex > 0 && (
-            <button
-              {...backProps}
-              className="tour-back-button"
-            >
+            <button {...backProps} className="tour-back-button">
               Back
             </button>
           )}
-          <button
-            {...primaryProps}
-            className="tour-primary-button"
-          >
+          <button {...primaryProps} className="tour-primary-button">
             {isLastStep ? "Finish" : "Next"}
           </button>
         </Box>
@@ -130,8 +120,7 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
           width: 100,
           height: 100,
           borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(19, 113, 91, 0.2) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(19, 113, 91, 0.2) 0%, transparent 70%)",
           pointerEvents: "none",
         }}
       />

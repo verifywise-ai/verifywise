@@ -401,11 +401,9 @@ describe("Test File Repository", () => {
         projectId,
       });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/files",
-        expect.any(FormData),
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/files", expect.any(FormData), {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       const formData = vi.mocked(apiServices.post).mock.calls[0][1] as FormData;
       expect(formData.get("delete")).toBe(JSON.stringify(deleteFileIds));
@@ -450,10 +448,7 @@ describe("Test File Repository", () => {
 
       const response = await getFilesWithMetadata({ signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/with-metadata",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/with-metadata", { signal });
       expect(response.files).toHaveLength(1);
       expect(response.files[0].id).toBe("42");
       expect(response.pagination).toEqual({ page: 1, limit: 10, total: 1 });
@@ -529,10 +524,7 @@ describe("Test File Repository", () => {
 
       const response = await getFileMetadata({ id, signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/42/metadata",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/42/metadata", { signal });
       expect(response.id).toBe("42");
       expect(response.filename).toBe("report.pdf");
       expect(response.tags).toEqual(["tag1"]);
@@ -583,11 +575,9 @@ describe("Test File Repository", () => {
 
       const response = await updateFileMetadata({ id, updates, signal });
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        "/file-manager/42/metadata",
-        updates,
-        { signal },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith("/file-manager/42/metadata", updates, {
+        signal,
+      });
       expect(response.id).toBe("42");
       expect(response.tags).toEqual(["updated"]);
       expect(response.review_status).toBe("pending_review");
@@ -717,13 +707,10 @@ describe("Test File Repository", () => {
 
       const response = await getFilePreview({ id, signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/file-1/preview",
-        {
-          signal,
-          responseType: "blob",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/file-1/preview", {
+        signal,
+        responseType: "blob",
+      });
       expect(response).toEqual(mockBlob);
     });
 
@@ -736,13 +723,10 @@ describe("Test File Repository", () => {
 
       await getFilePreview({ id: "file-2" });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/file-2/preview",
-        {
-          signal: undefined,
-          responseType: "blob",
-        },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/file-2/preview", {
+        signal: undefined,
+        responseType: "blob",
+      });
     });
   });
 
@@ -763,10 +747,7 @@ describe("Test File Repository", () => {
 
       const response = await getFileVersionHistory({ id, signal });
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/42/versions",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/42/versions", { signal });
       expect(response).toHaveLength(2);
       expect(response[0].id).toBe("42");
       expect(response[1].id).toBe("43");
@@ -886,13 +867,9 @@ describe("Test File Repository", () => {
 
       const response = await attachFilesToEntity(params);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/files/attach-bulk",
-        params,
-        {
-          signal: undefined,
-        },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/files/attach-bulk", params, {
+        signal: undefined,
+      });
       expect(response).toEqual(mockData);
     });
 
@@ -919,11 +896,7 @@ describe("Test File Repository", () => {
 
       const response = await attachFilesToEntity(params, signal);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/files/attach-bulk",
-        params,
-        { signal },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/files/attach-bulk", params, { signal });
       expect(response).toEqual(mockData);
     });
   });
@@ -987,17 +960,11 @@ describe("Test File Repository", () => {
         data: [rawFileMock],
       });
 
-      const response = await getEntityFiles(
-        "eu_ai_act",
-        "subcontrol",
-        10,
-        signal,
-      );
+      const response = await getEntityFiles("eu_ai_act", "subcontrol", 10, signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/files/entity/eu_ai_act/subcontrol/10",
-        { signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/files/entity/eu_ai_act/subcontrol/10", {
+        signal,
+      });
       expect(response).toHaveLength(1);
       expect(response[0].id).toBe("42");
       expect(response[0].filename).toBe("report.pdf");
@@ -1013,10 +980,9 @@ describe("Test File Repository", () => {
 
       const response = await getEntityFiles("nist_ai", "assessment", 5);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/files/entity/nist_ai/assessment/5",
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith("/files/entity/nist_ai/assessment/5", {
+        signal: undefined,
+      });
       expect(response).toEqual([]);
     });
 

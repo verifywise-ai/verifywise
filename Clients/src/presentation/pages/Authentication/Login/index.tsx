@@ -8,7 +8,14 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router-dom";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useDispatch } from "react-redux";
-import { setAuthToken, setExpiration, setOnboardingStatus, setIsOrgCreator, setIsSuperAdmin, setActiveOrganizationId } from "../../../../application/redux/auth/authSlice";
+import {
+  setAuthToken,
+  setExpiration,
+  setOnboardingStatus,
+  setIsOrgCreator,
+  setIsSuperAdmin,
+  setActiveOrganizationId,
+} from "../../../../application/redux/auth/authSlice";
 import Alert from "../../../components/Alert";
 import { ENV_VARs } from "../../../../../env.vars";
 import { loginUser } from "../../../../application/repository/user.repository";
@@ -61,9 +68,7 @@ const LoginLoadingOverlay: React.FC = () => {
             <React.Fragment key={wordIndex}>
               {word.split("").map((char, charIndex) => {
                 const totalIndex =
-                  words.slice(0, wordIndex).join(" ").length +
-                  (wordIndex > 0 ? 1 : 0) +
-                  charIndex;
+                  words.slice(0, wordIndex).join(" ").length + (wordIndex > 0 ? 1 : 0) + charIndex;
 
                 return (
                   <Box
@@ -140,11 +145,9 @@ const Login: React.FC = () => {
   }, []);
 
   // Handle changes in input fields
-  const handleChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues({ ...values, [prop]: event.target.value });
-    };
+  const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [prop]: event.target.value });
+  };
 
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -229,13 +232,10 @@ const Login: React.FC = () => {
 
           logEngine({
             type: "error",
-            message: `Server error during login: ${
-              errorMessage || "Unknown error"
-            }`,
+            message: `Server error during login: ${errorMessage || "Unknown error"}`,
           });
         } else if (error.message === "Network Error" || !error.response) {
-          message =
-            "Network error. Please check your connection and try again.";
+          message = "Network error. Please check your connection and try again.";
 
           logEngine({
             type: "error",
@@ -243,10 +243,8 @@ const Login: React.FC = () => {
           });
         } else {
           // Handle other unexpected status codes - these are worth logging
-          const errorMessage =
-            responseData?.message || responseData?.error || error.message;
-          message =
-            errorMessage || "An unexpected error occurred. Please try again.";
+          const errorMessage = responseData?.message || responseData?.error || error.message;
+          message = errorMessage || "An unexpected error occurred. Please try again.";
 
           logEngine({
             type: "error",
@@ -320,9 +318,7 @@ const Login: React.FC = () => {
             Verify
             <span style={{ color: singleTheme.textColors.theme }}>Wise</span>
           </Typography>
-          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-            {loginText}
-          </Typography>
+          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>{loginText}</Typography>
           {showSetupBanner && (
             <Stack
               direction="row"
@@ -343,9 +339,8 @@ const Login: React.FC = () => {
                   flex: 1,
                 }}
               >
-                Welcome to VerifyWise! To get started, log in with your
-                superadmin credentials to create an organization and invite
-                users.
+                Welcome to VerifyWise! To get started, log in with your superadmin credentials to
+                create an organization and invite users.
               </Typography>
               <IconButton
                 disableRipple

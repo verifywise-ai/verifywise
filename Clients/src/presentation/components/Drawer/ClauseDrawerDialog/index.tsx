@@ -11,7 +11,7 @@
  * - Notes: Collaboration notes (lazy-loaded)
  */
 
-import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
+import React, { useState, useEffect, useMemo, Suspense, lazy, useRef } from "react";
 import {
   Box,
   Button,
@@ -48,7 +48,9 @@ import StandardModal from "../../Modals/StandardModal";
 import { text } from "../../../themes/palette";
 
 // Lazy-loaded components
-const LinkedRisksPopup = lazy(() => import("../../LinkedRisks").then(m => ({ default: m.LinkedRisksPopup })));
+const LinkedRisksPopup = lazy(() =>
+  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
+);
 const NotesTab = lazy(() => import("../../Notes/NotesTab"));
 const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
 
@@ -73,7 +75,11 @@ import {
   getEntityById,
   updateEntityById,
 } from "../../../../application/repository/entity.repository";
-import { getFileById, attachFilesToEntity, getEntityFiles } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+  getEntityFiles,
+} from "../../../../application/repository/file.repository";
 import allowedRoles from "../../../../application/constants/permissions";
 import { FilePickerModal } from "../../FilePickerModal";
 
@@ -110,6 +116,18 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const memberOptions = useMemo(
+    () => [
+      { _id: "" as string | number, name: "(none)" },
+      ...projectMembers.map((user) => ({
+        _id: user.id as string | number,
+        name: `${user.name}`,
+        email: user.email,
+        surname: user.surname,
+      })),
+    ],
+    [projectMembers],
+  );
 
   // ========================================================================
   // STATE - FORM DATA
@@ -148,8 +166,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
 
   // Risk detail modal state
   const [isRiskDetailModalOpen, setIsRiskDetailModalOpen] = useState(false);
-  const [selectedRiskForView, setSelectedRiskForView] =
-    useState<LinkedRisk | null>(null);
+  const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRisk | null>(null);
   const [riskFormData, setRiskFormData] = useState<RiskFormValues | undefined>(undefined);
   const onRiskSubmitRef = useRef<(() => void) | null>(null);
 
@@ -157,10 +174,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled =
-    !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled =
-    !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
 
   // ========================================================================
   // TAB CONFIGURATION
@@ -222,15 +237,10 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
       if (response.data) {
         setFormData({
           status: response.data.status || ISO42001Status.NOT_STARTED,
-          implementation_description:
-            response.data.implementation_description || "",
+          implementation_description: response.data.implementation_description || "",
           owner: response.data.owner ? response.data.owner.toString() : "",
-          reviewer: response.data.reviewer
-            ? response.data.reviewer.toString()
-            : "",
-          approver: response.data.approver
-            ? response.data.approver.toString()
-            : "",
+          reviewer: response.data.reviewer ? response.data.reviewer.toString() : "",
+          approver: response.data.approver ? response.data.approver.toString() : "",
           auditor_feedback: response.data.auditor_feedback || "",
         });
 
@@ -303,11 +313,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
     let linkedFiles: FileData[] = [];
     if (subclause?.id) {
       try {
-        const response = await getEntityFiles(
-          "iso_42001",
-          "subclause",
-          subclause.id
-        );
+        const response = await getEntityFiles("iso_42001", "subclause", subclause.id);
         if (response && Array.isArray(response)) {
           linkedFiles = response.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
@@ -547,15 +553,10 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
 
       // Add form fields
       formDataToSend.append("status", formData.status);
-      formDataToSend.append(
-        "implementation_description",
-        formData.implementation_description
-      );
-      if (formData.owner) formDataToSend.append("owner", formData.owner);
-      if (formData.reviewer)
-        formDataToSend.append("reviewer", formData.reviewer);
-      if (formData.approver)
-        formDataToSend.append("approver", formData.approver);
+      formDataToSend.append("implementation_description", formData.implementation_description);
+      formDataToSend.append("owner", formData.owner || "");
+      formDataToSend.append("reviewer", formData.reviewer || "");
+      formDataToSend.append("approver", formData.approver || "");
       formDataToSend.append("auditor_feedback", formData.auditor_feedback);
 
       if (date) {
@@ -594,7 +595,9 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
         // Attach pending files after successful save
         if (pendingAttachFiles.length > 0 && subclause?.id) {
           try {
-            const fileIds = pendingAttachFiles.map((f) => typeof f.id === 'number' ? f.id : parseInt(String(f.id)));
+            const fileIds = pendingAttachFiles.map((f) =>
+              typeof f.id === "number" ? f.id : parseInt(String(f.id)),
+            );
             await attachFilesToEntity({
               file_ids: fileIds,
               framework_type: "iso_42001",
@@ -624,8 +627,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
         throw new Error(response.data?.message || "Failed to save clause");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An error occurred";
       handleAlert({
         variant: "error",
         body: errorMessage,
@@ -713,10 +715,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
         anchor="right"
         id={`iso42001-clause-drawer-dialog-${subclause?.order_no}`}
       >
-        <Stack
-          className="iso42001-clause-drawer-dialog-content"
-          sx={{ width: 850 }}
-        >
+        <Stack className="iso42001-clause-drawer-dialog-content" sx={{ width: 850 }}>
           {/* HEADER */}
           <Stack
             direction="row"
@@ -725,8 +724,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
             padding="15px 20px"
           >
             <Typography fontSize={15} fontWeight={700}>
-              {subclause?.subclause_id
-                ?? (clause?.clause_no
+              {subclause?.subclause_id ??
+                (clause?.clause_no
                   ? `${clause.clause_no}.${subclause?.order_no || 1}`
                   : "Clause")}{" "}
               {subclause?.title}
@@ -747,21 +746,14 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
           {/* TAB NAVIGATION */}
           <TabContext value={activeTab}>
             <Box sx={{ padding: "0 20px" }}>
-              <TabBar
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={handleTabChange}
-              />
+              <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
             </Box>
 
             {/* ================================================================ */}
             {/* DETAILS TAB */}
             {/* ================================================================ */}
 
-            <TabPanel
-              value="details"
-              sx={{ padding: "15px 20px", gap: "15px" }}
-            >
+            <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
               <Stack gap="15px">
                 {/* Summary Panel */}
                 {subclause?.summary && (
@@ -793,60 +785,51 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600 }}
-                    >
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
                       Key Questions:
                     </Typography>
                     <Stack spacing={1}>
-                      {(subclause?.questions || subclause?.key_questions)?.map(
-                        (question, idx) => (
-                          <Typography
-                            key={idx}
-                            fontSize={12}
-                            color="#666"
-                            sx={{ pl: 1, position: "relative" }}
-                          >
-                            • {question}
-                          </Typography>
-                        )
-                      )}
+                      {(subclause?.questions || subclause?.key_questions)?.map((question, idx) => (
+                        <Typography
+                          key={idx}
+                          fontSize={12}
+                          color="#666"
+                          sx={{ pl: 1, position: "relative" }}
+                        >
+                          • {question}
+                        </Typography>
+                      ))}
                     </Stack>
                   </Stack>
                 )}
 
                 {/* Evidence Examples Panel */}
-                {subclause?.evidence_examples &&
-                  subclause?.evidence_examples.length > 0 && (
-                    <Stack
-                      sx={{
-                        border: "1px solid #d5e8d5",
-                        padding: "12px",
-                        backgroundColor: "#f5fef5",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Typography
-                        fontSize={13}
-                        sx={{ marginBottom: "8px", fontWeight: 600 }}
-                      >
-                        Evidence Examples:
-                      </Typography>
-                      <Stack spacing={1}>
-                        {subclause.evidence_examples.map((example, idx) => (
-                          <Typography
-                            key={idx}
-                            fontSize={12}
-                            color="#666"
-                            sx={{ pl: 1, position: "relative" }}
-                          >
-                            • {example}
-                          </Typography>
-                        ))}
-                      </Stack>
+                {subclause?.evidence_examples && subclause?.evidence_examples.length > 0 && (
+                  <Stack
+                    sx={{
+                      border: "1px solid #d5e8d5",
+                      padding: "12px",
+                      backgroundColor: "#f5fef5",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                      Evidence Examples:
+                    </Typography>
+                    <Stack spacing={1}>
+                      {subclause.evidence_examples.map((example, idx) => (
+                        <Typography
+                          key={idx}
+                          fontSize={12}
+                          color="#666"
+                          sx={{ pl: 1, position: "relative" }}
+                        >
+                          • {example}
+                        </Typography>
+                      ))}
                     </Stack>
-                  )}
+                  </Stack>
+                )}
 
                 {/* Implementation Description */}
                 <Stack>
@@ -857,10 +840,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                     toolbar="full"
                     initialContent={formData.implementation_description}
                     onContentChange={(content) =>
-                      handleFieldChange(
-                        "implementation_description",
-                        content
-                      )
+                      handleFieldChange("implementation_description", content)
                     }
                     placeholder="Describe how this requirement is implemented..."
                     isEditable={!isEditingDisabled}
@@ -890,12 +870,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   label="Owner:"
                   value={formData.owner ? parseInt(formData.owner) : ""}
                   onChange={handleSelectChange("owner")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder="Select owner"
                   disabled={isEditingDisabled}
@@ -906,12 +881,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   label="Reviewer:"
                   value={formData.reviewer ? parseInt(formData.reviewer) : ""}
                   onChange={handleSelectChange("reviewer")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder="Select reviewer"
                   disabled={isEditingDisabled}
@@ -922,12 +892,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   label="Approver:"
                   value={formData.approver ? parseInt(formData.approver) : ""}
                   onChange={handleSelectChange("approver")}
-                  items={projectMembers.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name}`,
-                    email: user.email,
-                    surname: user.surname,
-                  }))}
+                  items={memberOptions}
                   sx={inputStyles}
                   placeholder="Select approver"
                   disabled={isEditingDisabled}
@@ -950,9 +915,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   <Field
                     type="description"
                     value={formData.auditor_feedback}
-                    onChange={(e) =>
-                      handleFieldChange("auditor_feedback", e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                     placeholder="Enter audit feedback..."
                     disabled={isAuditingDisabled}
                   />
@@ -971,8 +934,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 </Typography>
 
                 <Typography variant="body2" color="text.tertiary">
-                  Upload evidence files to document how this requirement is
-                  implemented.
+                  Upload evidence files to document how this requirement is implemented.
                 </Typography>
 
                 {/* File Input Button */}
@@ -1095,9 +1057,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                             >
                               {file.fileName}
                             </Typography>
-                            <Typography
-                              sx={{ fontSize: 11, color: "status.default.text" }}
-                            >
+                            <Typography sx={{ fontSize: 11, color: "status.default.text" }}>
                               {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ""}
                               {file.size && file.source ? " • " : ""}
                               {file.source ? `Source: ${file.source}` : ""}
@@ -1109,12 +1069,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                           <Tooltip title="Download file">
                             <IconButton
                               size="small"
-                              onClick={() =>
-                                handleDownloadFile(
-                                  file.id.toString(),
-                                  file.fileName
-                                )
-                              }
+                              onClick={() => handleDownloadFile(file.id.toString(), file.fileName)}
                               sx={{
                                 color: "text.tertiary",
                                 "&:hover": {
@@ -1130,9 +1085,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                           <Tooltip title="Delete file">
                             <IconButton
                               size="small"
-                              onClick={() =>
-                                handleDeleteEvidenceFile(file.id.toString())
-                              }
+                              onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                               disabled={isEditingDisabled}
                               sx={{
                                 color: "text.tertiary",
@@ -1154,9 +1107,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 {/* Upload Queue Files */}
                 {uploadFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>
                       Pending upload
                     </Typography>
                     {uploadFiles.map((file) => (
@@ -1195,9 +1146,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                               {file.fileName}
                             </Typography>
                             {file.size && (
-                              <Typography
-                                sx={{ fontSize: 11, color: "#B45309" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "#B45309" }}>
                                 {(file.size / 1024).toFixed(1)} KB
                               </Typography>
                             )}
@@ -1207,9 +1156,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                         <Tooltip title="Remove from queue">
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              handleDeleteUploadFile(file.id.toString())
-                            }
+                            onClick={() => handleDeleteUploadFile(file.id.toString())}
                             sx={{
                               color: "#92400E",
                               "&:hover": {
@@ -1229,9 +1176,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 {/* Pending Attach Files */}
                 {pendingAttachFiles.length > 0 && (
                   <Stack spacing={1}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}
-                    >
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}>
                       Pending attach
                     </Typography>
                     {pendingAttachFiles.map((file) => (
@@ -1293,26 +1238,27 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 )}
 
                 {/* Empty State */}
-                {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
-                  <Box
-                    sx={{
-                      textAlign: "center",
-                      py: 4,
-                      color: "text.tertiary",
-                      border: `2px dashed ${theme.palette.border.dark}`,
-                      borderRadius: 1,
-                      backgroundColor: "background.accent",
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      No evidence files uploaded yet
-                    </Typography>
-                    <Typography variant="caption" color={text.disabled}>
-                      Click "Add evidence files" to upload documentation for
-                      this requirement
-                    </Typography>
-                  </Box>
-                )}
+                {evidenceFiles.length === 0 &&
+                  uploadFiles.length === 0 &&
+                  pendingAttachFiles.length === 0 && (
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 4,
+                        color: "text.tertiary",
+                        border: `2px dashed ${theme.palette.border.dark}`,
+                        borderRadius: 1,
+                        backgroundColor: "background.accent",
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        No evidence files uploaded yet
+                      </Typography>
+                      <Typography variant="caption" color={text.disabled}>
+                        Click "Add evidence files" to upload documentation for this requirement
+                      </Typography>
+                    </Box>
+                  )}
               </Stack>
             </TabPanel>
 
@@ -1327,8 +1273,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 </Typography>
 
                 <Typography variant="body2" color="text.tertiary">
-                  Link risks from your risk database to track which risks are
-                  being addressed by this implementation.
+                  Link risks from your risk database to track which risks are being addressed by
+                  this implementation.
                 </Typography>
 
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -1401,9 +1347,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                               {risk.risk_name}
                             </Typography>
                             {risk.risk_level && (
-                              <Typography
-                                sx={{ fontSize: 11, color: "text.tertiary" }}
-                              >
+                              <Typography sx={{ fontSize: 11, color: "text.tertiary" }}>
                                 Risk level: {risk.risk_level}
                               </Typography>
                             )}
@@ -1470,8 +1414,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                       No risks linked yet
                     </Typography>
                     <Typography variant="caption" color={text.disabled}>
-                      Click "Add/remove risks" to link risks from your risk
-                      database
+                      Click "Add/remove risks" to link risks from your risk database
                     </Typography>
                   </Box>
                 )}
@@ -1568,16 +1511,17 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
       </StandardModal>
 
       {/* ALERT */}
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
 
       {/* File Picker Modal for attaching existing files */}
       <FilePickerModal
         open={showFilePicker}
         onClose={() => setShowFilePicker(false)}
         onSelect={handleAttachExistingFiles}
-        excludeFileIds={[...evidenceFiles.map((f) => String(f.id)), ...pendingAttachFiles.map((f) => String(f.id))]}
+        excludeFileIds={[
+          ...evidenceFiles.map((f) => String(f.id)),
+          ...pendingAttachFiles.map((f) => String(f.id)),
+        ]}
         multiSelect={true}
         title="Attach Existing Files as Evidence"
       />

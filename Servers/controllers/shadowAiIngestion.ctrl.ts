@@ -12,10 +12,7 @@ import { Transaction } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger from "../utils/logger/fileLogger";
 import { validateApiKeyWithCache } from "../utils/shadowAiApiKey.utils";
-import {
-  normalizeEvent,
-  insertEventsQuery,
-} from "../utils/shadowAiIngestion.utils";
+import { normalizeEvent, insertEventsQuery } from "../utils/shadowAiIngestion.utils";
 import {
   matchDomain,
   ensureTenantTool,
@@ -75,9 +72,7 @@ export async function ingestEvents(req: Request, res: Response) {
   const apiKey = req.headers["x-api-key"] as string;
 
   if (!apiKey) {
-    return res
-      .status(401)
-      .json(STATUS_CODE[401]("Missing X-API-Key header"));
+    return res.status(401).json(STATUS_CODE[401]("Missing X-API-Key header"));
   }
 
   // Validate API key and resolve organization
@@ -90,17 +85,13 @@ export async function ingestEvents(req: Request, res: Response) {
   }
 
   if (!organizationId) {
-    return res
-      .status(401)
-      .json(STATUS_CODE[401]("Invalid or revoked API key"));
+    return res.status(401).json(STATUS_CODE[401]("Invalid or revoked API key"));
   }
 
   // Validate request body
   const body = req.body as ShadowAiIngestionRequest;
   if (!body.events || !Array.isArray(body.events)) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]("Request body must contain an 'events' array"));
+    return res.status(400).json(STATUS_CODE[400]("Request body must contain an 'events' array"));
   }
 
   if (body.events.length === 0) {
@@ -110,23 +101,25 @@ export async function ingestEvents(req: Request, res: Response) {
   if (body.events.length > MAX_EVENTS_PER_REQUEST) {
     return res
       .status(413)
-      .json(
-        STATUS_CODE[413](
-          `Maximum ${MAX_EVENTS_PER_REQUEST} events per request`
-        )
-      );
+      .json(STATUS_CODE[413](`Maximum ${MAX_EVENTS_PER_REQUEST} events per request`));
   }
 
   // Check rate limit from organization settings
   try {
     const settings = await getSettingsQuery(organizationId);
-    if (!checkRateLimit(String(organizationId), settings.rate_limit_max_events_per_hour, body.events.length)) {
+    if (
+      !checkRateLimit(
+        String(organizationId),
+        settings.rate_limit_max_events_per_hour,
+        body.events.length,
+      )
+    ) {
       return res
         .status(429)
         .json(
           STATUS_CODE[429](
-            `Rate limit exceeded: max ${settings.rate_limit_max_events_per_hour} events/hour`
-          )
+            `Rate limit exceeded: max ${settings.rate_limit_max_events_per_hour} events/hour`,
+          ),
         );
     }
   } catch (error) {
@@ -143,18 +136,14 @@ export async function ingestEvents(req: Request, res: Response) {
         .status(400)
         .json(
           STATUS_CODE[400](
-            `Event at index ${i} missing required field(s): user_email, destination, timestamp`
-          )
+            `Event at index ${i} missing required field(s): user_email, destination, timestamp`,
+          ),
         );
     }
     if (!EMAIL_REGEX.test(evt.user_email)) {
       return res
         .status(400)
-        .json(
-          STATUS_CODE[400](
-            `Event at index ${i} has invalid user_email format`
-          )
-        );
+        .json(STATUS_CODE[400](`Event at index ${i} has invalid user_email format`));
     }
   }
 
@@ -190,7 +179,7 @@ export async function ingestEvents(req: Request, res: Response) {
             : Promise.resolve(null),
         ]);
         return { registryMatch, model };
-      })
+      }),
     );
 
     // Step 2: Process results sequentially (ensureTenantTool does DB writes)
@@ -221,7 +210,7 @@ export async function ingestEvents(req: Request, res: Response) {
         const { id: toolId, isNew } = await ensureTenantTool(
           organizationId,
           registryMatch,
-          transaction
+          transaction,
         );
         detectedToolId = toolId;
 
@@ -230,10 +219,7 @@ export async function ingestEvents(req: Request, res: Response) {
           newToolNames.set(toolId, registryMatch.name);
         }
 
-        toolEventCounts.set(
-          toolId,
-          (toolEventCounts.get(toolId) || 0) + 1
-        );
+        toolEventCounts.set(toolId, (toolEventCounts.get(toolId) || 0) + 1);
         if (!toolUserSets.has(toolId)) {
           toolUserSets.set(toolId, new Set());
         }
@@ -273,11 +259,7 @@ export async function ingestEvents(req: Request, res: Response) {
     }
 
     // Batch insert all events
-    const insertedCount = await insertEventsQuery(
-      organizationId,
-      processedEvents,
-      transaction
-    );
+    const insertedCount = await insertEventsQuery(organizationId, processedEvents, transaction);
 
     // Update tool counters
     for (const [toolId, count] of toolEventCounts.entries()) {
@@ -286,14 +268,14 @@ export async function ingestEvents(req: Request, res: Response) {
         toolId,
         count,
         toolUserSets.get(toolId) || new Set(),
-        transaction
+        transaction,
       );
     }
 
     await transaction.commit();
 
     logger.debug(
-      `✅ Ingested ${insertedCount} shadow AI events for organization ${organizationId}`
+      `✅ Ingested ${insertedCount} shadow AI events for organization ${organizationId}`,
     );
 
     // Evaluate alert rules asynchronously (don't block the response)
@@ -314,7 +296,7 @@ export async function ingestEvents(req: Request, res: Response) {
       STATUS_CODE[200]({
         ingested: insertedCount,
         tools_matched: toolEventCounts.size,
-      })
+      }),
     );
   } catch (error) {
     if (transaction) {

@@ -23,16 +23,15 @@ jest.mock("../../utils/context/context", () => ({
 
 import authenticateJWT, { roleMap } from "../auth.middleware";
 import { getTokenPayload } from "../../utils/jwt.utils";
-import {
-  doesUserBelongsToOrganizationQuery,
-  getUserByIdQuery,
-} from "../../utils/user.utils";
+import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../../utils/user.utils";
 import { getTenantHash } from "../../tools/getTenantHash";
 import { isValidTenantHash } from "../../utils/security.utils";
 
 // Cast mocks for type safety
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
-const mockBelongsToOrg = doesUserBelongsToOrganizationQuery as jest.MockedFunction<typeof doesUserBelongsToOrganizationQuery>;
+const mockBelongsToOrg = doesUserBelongsToOrganizationQuery as jest.MockedFunction<
+  typeof doesUserBelongsToOrganizationQuery
+>;
 const mockGetUserById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
 const mockGetTenantHash = getTenantHash as jest.MockedFunction<typeof getTenantHash>;
 const mockIsValidTenantHash = isValidTenantHash as jest.MockedFunction<typeof isValidTenantHash>;

@@ -32,13 +32,9 @@ const AutomationsPage: React.FC = () => {
   const theme = useTheme();
   const { data: projects = [] } = useProjects();
   const [automations, setAutomations] = useState<Automation[]>([]);
-  const [selectedAutomationId, setSelectedAutomationId] = useState<
-    string | null
-  >(null);
+  const [selectedAutomationId, setSelectedAutomationId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [selectedItemType, setSelectedItemType] = useState<
-    "trigger" | "action" | null
-  >(null);
+  const [selectedItemType, setSelectedItemType] = useState<"trigger" | "action" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -55,17 +51,12 @@ const AutomationsPage: React.FC = () => {
 
   // Get selected item (trigger or action) for configuration panel
   const selectedItem = React.useMemo(() => {
-    if (!selectedAutomation || !selectedItemId || !selectedItemType)
-      return null;
+    if (!selectedAutomation || !selectedItemId || !selectedItemType) return null;
 
     if (selectedItemType === "trigger") {
-      return selectedAutomation.trigger?.id === selectedItemId
-        ? selectedAutomation.trigger
-        : null;
+      return selectedAutomation.trigger?.id === selectedItemId ? selectedAutomation.trigger : null;
     } else {
-      return (
-        selectedAutomation.actions.find((a) => a.id === selectedItemId) || null
-      );
+      return selectedAutomation.actions.find((a) => a.id === selectedItemId) || null;
     }
   }, [selectedAutomation, selectedItemId, selectedItemType]);
 
@@ -73,7 +64,7 @@ const AutomationsPage: React.FC = () => {
   const filteredAutomations = automations.filter(
     (automation) =>
       automation.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      automation.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      automation.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Fetch existing automations
@@ -93,133 +84,157 @@ const AutomationsPage: React.FC = () => {
 
         // Map backend automations to frontend format
         const mappedAutomations: Automation[] = await Promise.all(
-          backendAutomations.map(async (backendAuto: { id: number; trigger_id: number; name: string; description?: string; is_active: boolean; created_at: string; updated_at?: string; params?: string }) => {
-            // Find the trigger
-            const trigger = triggers.find(
-              (t: { id: number; key: string; label: string; description?: string }) => t.id === backendAuto.trigger_id
-            );
+          backendAutomations.map(
+            async (backendAuto: {
+              id: number;
+              trigger_id: number;
+              name: string;
+              description?: string;
+              is_active: boolean;
+              created_at: string;
+              updated_at?: string;
+              params?: string;
+            }) => {
+              // Find the trigger
+              const trigger = triggers.find(
+                (t: { id: number; key: string; label: string; description?: string }) =>
+                  t.id === backendAuto.trigger_id,
+              );
 
-            // Fetch actions for this trigger to get action details
-            let actionsData: Array<{ id: number; key: string; label: string; description?: string }> = [];
-            if (trigger) {
-              actionsData = await getActionsByTriggerId(trigger.id);
-            }
-
-            // Fetch detailed automation data including actions
-            const detailData = await getAutomation(backendAuto.id);
-
-            // Parse trigger params from the automation (check both backendAuto and detailData)
-            const paramsSource = detailData.params || backendAuto.params;
-            const triggerParams = paramsSource
-              ? typeof paramsSource === "string"
-                ? JSON.parse(paramsSource)
-                : paramsSource
-              : {};
-
-            // Map backend trigger key to frontend format
-            const mapBackendTriggerToFrontend = (
-              backendKey: string
-            ): { type: string; changeType?: string } => {
-              // Check if this is an added/updated/deleted trigger
-              const addedMatch = backendKey.match(/^(.+)_added$/);
-              const updatedMatch = backendKey.match(/^(.+)_updated$/);
-              const deletedMatch = backendKey.match(/^(.+)_deleted$/);
-
-              if (addedMatch) {
-                return {
-                  type: `${addedMatch[1]}_updated`,
-                  changeType: "Added",
-                };
-              } else if (updatedMatch) {
-                return {
-                  type: `${updatedMatch[1]}_updated`,
-                  changeType: "Updated",
-                };
-              } else if (deletedMatch) {
-                return {
-                  type: `${deletedMatch[1]}_updated`,
-                  changeType: "Deleted",
-                };
+              // Fetch actions for this trigger to get action details
+              let actionsData: Array<{
+                id: number;
+                key: string;
+                label: string;
+                description?: string;
+              }> = [];
+              if (trigger) {
+                actionsData = await getActionsByTriggerId(trigger.id);
               }
 
-              // Return as-is for other triggers (like vendor_review_date_approaching)
-              return { type: backendKey };
-            };
+              // Fetch detailed automation data including actions
+              const detailData = await getAutomation(backendAuto.id);
 
-            const { type: frontendTriggerType, changeType } =
-              trigger ? mapBackendTriggerToFrontend(trigger.key) : { type: 'unknown', changeType: undefined };
+              // Parse trigger params from the automation (check both backendAuto and detailData)
+              const paramsSource = detailData.params || backendAuto.params;
+              const triggerParams = paramsSource
+                ? typeof paramsSource === "string"
+                  ? JSON.parse(paramsSource)
+                  : paramsSource
+                : {};
 
-            // Merge the changeType into trigger params if it exists
-            const finalTriggerParams = changeType
-              ? { ...triggerParams, changeType }
-              : triggerParams;
+              // Map backend trigger key to frontend format
+              const mapBackendTriggerToFrontend = (
+                backendKey: string,
+              ): { type: string; changeType?: string } => {
+                // Check if this is an added/updated/deleted trigger
+                const addedMatch = backendKey.match(/^(.+)_added$/);
+                const updatedMatch = backendKey.match(/^(.+)_updated$/);
+                const deletedMatch = backendKey.match(/^(.+)_deleted$/);
 
-            // Map trigger to frontend format
-            const frontendTrigger: Trigger | null = trigger
-              ? {
-                  id: String(trigger.id),
-                  type: frontendTriggerType as Trigger["type"],
-                  name: trigger.label,
-                  description: trigger.description || "",
-                  configuration: finalTriggerParams,
-                }
-              : null;
-
-            // Map actions to frontend format
-            const frontendActions: Action[] = (detailData.actions || []).map(
-              (action: { id: number; action_type_id: number; params: string | Record<string, unknown>; order: number }) => {
-                const actionType = actionsData.find(
-                  (a: { id: number; key: string; label: string; description?: string }) => a.id === action.action_type_id
-                );
-
-                // Parse params if string
-                let parsedParams: Record<string, unknown> =
-                  typeof action.params === "string"
-                    ? JSON.parse(action.params) as Record<string, unknown>
-                    : (action.params as Record<string, unknown>) || {};
-
-                // Convert 'to' array of emails back to user IDs for the multi-select component
-                if (parsedParams.to && Array.isArray(parsedParams.to)) {
-                  // Map email addresses back to user IDs
-                  const userIds = parsedParams.to
-                    .map((email: unknown) => {
-                      if (typeof email !== 'string') return null;
-                      const user = users.find((u: { id: string | number; email: string }) => u.email === email);
-                      return user ? user.id : null;
-                    })
-                    .filter((id: unknown): id is string | number => id !== null);
-
-                  parsedParams = {
-                    ...parsedParams,
-                    to: userIds,
+                if (addedMatch) {
+                  return {
+                    type: `${addedMatch[1]}_updated`,
+                    changeType: "Added",
+                  };
+                } else if (updatedMatch) {
+                  return {
+                    type: `${updatedMatch[1]}_updated`,
+                    changeType: "Updated",
+                  };
+                } else if (deletedMatch) {
+                  return {
+                    type: `${deletedMatch[1]}_updated`,
+                    changeType: "Deleted",
                   };
                 }
 
-                return {
-                  id: String(action.id),
-                  type: (actionType?.key || "send_email") as ActionType,
-                  name: actionType?.label || "Send Email",
-                  description: actionType?.description || "",
-                  configuration: parsedParams,
-                  order: action.order || 0,
-                };
-              }
-            );
+                // Return as-is for other triggers (like vendor_review_date_approaching)
+                return { type: backendKey };
+              };
 
-            return {
-              id: String(backendAuto.id),
-              name: backendAuto.name,
-              description: backendAuto.description || "No description",
-              isActive: backendAuto.is_active ?? false,
-              trigger: frontendTrigger,
-              actions: frontendActions,
-              status: backendAuto.is_active ? "active" : "inactive",
-              createdAt: new Date(backendAuto.created_at),
-              updatedAt: new Date(
-                backendAuto.updated_at || backendAuto.created_at
-              ),
-            };
-          })
+              const { type: frontendTriggerType, changeType } = trigger
+                ? mapBackendTriggerToFrontend(trigger.key)
+                : { type: "unknown", changeType: undefined };
+
+              // Merge the changeType into trigger params if it exists
+              const finalTriggerParams = changeType
+                ? { ...triggerParams, changeType }
+                : triggerParams;
+
+              // Map trigger to frontend format
+              const frontendTrigger: Trigger | null = trigger
+                ? {
+                    id: String(trigger.id),
+                    type: frontendTriggerType as Trigger["type"],
+                    name: trigger.label,
+                    description: trigger.description || "",
+                    configuration: finalTriggerParams,
+                  }
+                : null;
+
+              // Map actions to frontend format
+              const frontendActions: Action[] = (detailData.actions || []).map(
+                (action: {
+                  id: number;
+                  action_type_id: number;
+                  params: string | Record<string, unknown>;
+                  order: number;
+                }) => {
+                  const actionType = actionsData.find(
+                    (a: { id: number; key: string; label: string; description?: string }) =>
+                      a.id === action.action_type_id,
+                  );
+
+                  // Parse params if string
+                  let parsedParams: Record<string, unknown> =
+                    typeof action.params === "string"
+                      ? (JSON.parse(action.params) as Record<string, unknown>)
+                      : (action.params as Record<string, unknown>) || {};
+
+                  // Convert 'to' array of emails back to user IDs for the multi-select component
+                  if (parsedParams.to && Array.isArray(parsedParams.to)) {
+                    // Map email addresses back to user IDs
+                    const userIds = parsedParams.to
+                      .map((email: unknown) => {
+                        if (typeof email !== "string") return null;
+                        const user = users.find(
+                          (u: { id: string | number; email: string }) => u.email === email,
+                        );
+                        return user ? user.id : null;
+                      })
+                      .filter((id: unknown): id is string | number => id !== null);
+
+                    parsedParams = {
+                      ...parsedParams,
+                      to: userIds,
+                    };
+                  }
+
+                  return {
+                    id: String(action.id),
+                    type: (actionType?.key || "send_email") as ActionType,
+                    name: actionType?.label || "Send Email",
+                    description: actionType?.description || "",
+                    configuration: parsedParams,
+                    order: action.order || 0,
+                  };
+                },
+              );
+
+              return {
+                id: String(backendAuto.id),
+                name: backendAuto.name,
+                description: backendAuto.description || "No description",
+                isActive: backendAuto.is_active ?? false,
+                trigger: frontendTrigger,
+                actions: frontendActions,
+                status: backendAuto.is_active ? "active" : "inactive",
+                createdAt: new Date(backendAuto.created_at),
+                updatedAt: new Date(backendAuto.updated_at || backendAuto.created_at),
+              };
+            },
+          ),
         );
 
         setAutomations(mappedAutomations);
@@ -236,7 +251,7 @@ const AutomationsPage: React.FC = () => {
         if (showLoading) setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Load automations on mount
@@ -337,16 +352,14 @@ const AutomationsPage: React.FC = () => {
                 status: newIsActive ? "active" : "inactive",
                 updatedAt: new Date(),
               }
-            : auto
-        )
+            : auto,
+        ),
       );
 
       // Show toast for new automation
       setToast({
         variant: "info",
-        body: newIsActive
-          ? "This automation is enabled"
-          : "This automation is disabled",
+        body: newIsActive ? "This automation is enabled" : "This automation is disabled",
         visible: true,
       });
       return;
@@ -362,8 +375,8 @@ const AutomationsPage: React.FC = () => {
               status: newIsActive ? "active" : "inactive",
               updatedAt: new Date(),
             }
-          : auto
-      )
+          : auto,
+      ),
     );
 
     try {
@@ -375,9 +388,7 @@ const AutomationsPage: React.FC = () => {
       // Show success toast
       setToast({
         variant: "success",
-        body: newIsActive
-          ? "This automation is enabled"
-          : "This automation is disabled",
+        body: newIsActive ? "This automation is enabled" : "This automation is disabled",
         visible: true,
       });
     } catch (error) {
@@ -393,8 +404,8 @@ const AutomationsPage: React.FC = () => {
                 status: !newIsActive ? "active" : "inactive",
                 updatedAt: new Date(),
               }
-            : auto
-        )
+            : auto,
+        ),
       );
 
       // Show error toast
@@ -411,15 +422,12 @@ const AutomationsPage: React.FC = () => {
       prev.map((automation) =>
         automation.id === automationId
           ? { ...automation, name: newName, updatedAt: new Date() }
-          : automation
-      )
+          : automation,
+      ),
     );
   };
 
-  const handleUpdateAutomationDescription = (
-    automationId: string,
-    newDescription: string
-  ) => {
+  const handleUpdateAutomationDescription = (automationId: string, newDescription: string) => {
     setAutomations((prev) =>
       prev.map((automation) =>
         automation.id === automationId
@@ -428,8 +436,8 @@ const AutomationsPage: React.FC = () => {
               description: newDescription,
               updatedAt: new Date(),
             }
-          : automation
-      )
+          : automation,
+      ),
     );
   };
 
@@ -489,7 +497,7 @@ const AutomationsPage: React.FC = () => {
           name: newName,
           updatedAt: new Date(),
         };
-      })
+      }),
     );
 
     // Auto-select the new trigger for configuration
@@ -505,8 +513,7 @@ const AutomationsPage: React.FC = () => {
 
     // Set dynamic default subject and body based on trigger type for email actions
     if (actionTemplate.type === "send_email" && selectedAutomation?.trigger) {
-      const changeType =
-        selectedAutomation.trigger.configuration?.changeType || "Added";
+      const changeType = selectedAutomation.trigger.configuration?.changeType || "Added";
       const isUpdate = changeType === "Updated";
 
       switch (selectedAutomation.trigger.type) {
@@ -541,8 +548,7 @@ This notification was sent on {{date_and_time}}.`;
           break;
         case "model_updated":
           if (isUpdate) {
-            configuration.subject =
-              "Model {{model.name}} ({{model.provider}}) has been updated";
+            configuration.subject = "Model {{model.name}} ({{model.provider}}) has been updated";
             configuration.body = `A model has been updated in the system.
 
 Model Information:
@@ -572,8 +578,7 @@ This notification was sent on {{date_and_time}}.`;
           break;
         case "project_updated":
           if (isUpdate) {
-            configuration.subject =
-              'Project "{{project.title}}" has been updated';
+            configuration.subject = 'Project "{{project.title}}" has been updated';
             configuration.body = `A project has been updated in the system.
 
 Project Information:
@@ -673,8 +678,7 @@ This notification was sent on {{date_and_time}}.`;
           break;
         case "training_updated":
           if (isUpdate) {
-            configuration.subject =
-              'Training "{{training.name}}" has been updated';
+            configuration.subject = 'Training "{{training.name}}" has been updated';
             configuration.body = `A training has been updated in the system.
 
 Training Information:
@@ -705,8 +709,7 @@ This notification was sent on {{date_and_time}}.`;
           break;
         case "policy_updated":
           if (isUpdate) {
-            configuration.subject =
-              'Policy "{{policy.title}}" has been updated';
+            configuration.subject = 'Policy "{{policy.title}}" has been updated';
             configuration.body = `A policy has been updated in the system.
 
 Policy Information:
@@ -788,8 +791,7 @@ This notification was sent on {{date_and_time}}.`;
           }
           break;
         case "vendor_review_date_approaching":
-          configuration.subject =
-            "Review for {{vendor.name}} due on {{review_date}}";
+          configuration.subject = "Review for {{vendor.name}} due on {{review_date}}";
           configuration.body = `This is a reminder that a vendor review is approaching.
 
 Review Details:
@@ -809,21 +811,15 @@ This notification was sent on {{date_and_time}}.`;
           break;
         case "scheduled_report": {
           // Get selected report types from trigger configuration
-          const reportTypes =
-            selectedAutomation?.trigger?.configuration?.reportType || [];
-          const reportTypeArray = Array.isArray(reportTypes)
-            ? reportTypes
-            : [reportTypes];
+          const reportTypes = selectedAutomation?.trigger?.configuration?.reportType || [];
+          const reportTypeArray = Array.isArray(reportTypes) ? reportTypes : [reportTypes];
           const isOrgLevel =
-            selectedAutomation?.trigger?.configuration?.reportLevel ===
-            "organization";
+            selectedAutomation?.trigger?.configuration?.reportLevel === "organization";
 
           // Build dynamic email subject
           if (reportTypeArray.length === 1) {
             configuration.subject = `Scheduled Report: ${reportTypeArray[0]}`;
-          } else if (
-            reportTypeArray.includes("All reports combined in one file")
-          ) {
+          } else if (reportTypeArray.includes("All reports combined in one file")) {
             configuration.subject = "Scheduled Report: All Reports";
           } else {
             configuration.subject = "Scheduled Report: Multiple Reports";
@@ -886,8 +882,8 @@ This is an automated report generated by VerifyWise. The complete report is atta
               actions: [...automation.actions, newAction],
               updatedAt: new Date(),
             }
-          : automation
-      )
+          : automation,
+      ),
     );
 
     // Auto-select the new action for configuration
@@ -907,8 +903,8 @@ This is an automated report generated by VerifyWise. The complete report is atta
       prev.map((automation) =>
         automation.id === selectedAutomationId
           ? { ...automation, trigger: null, updatedAt: new Date() }
-          : automation
-      )
+          : automation,
+      ),
     );
 
     setSelectedItemId(null);
@@ -926,8 +922,8 @@ This is an automated report generated by VerifyWise. The complete report is atta
               actions: automation.actions.filter((a) => a.id !== actionId),
               updatedAt: new Date(),
             }
-          : automation
-      )
+          : automation,
+      ),
     );
 
     if (selectedItemId === actionId) {
@@ -943,10 +939,7 @@ This is an automated report generated by VerifyWise. The complete report is atta
       prev.map((automation) => {
         if (automation.id !== selectedAutomationId) return automation;
 
-        if (
-          selectedItemType === "trigger" &&
-          automation.trigger?.id === selectedItemId
-        ) {
+        if (selectedItemType === "trigger" && automation.trigger?.id === selectedItemId) {
           // Check if changeType has changed
           const oldChangeType = automation.trigger.configuration?.changeType;
           const newChangeType = configuration.changeType;
@@ -966,7 +959,7 @@ This is an automated report generated by VerifyWise. The complete report is atta
 
             // Helper function to generate email templates based on trigger type and changeType
             const generateEmailTemplate = (
-              triggerType: string
+              triggerType: string,
             ): { subject: string; body: string } | null => {
               switch (triggerType) {
                 case "vendor_updated":
@@ -1005,8 +998,7 @@ This notification was sent on {{date_and_time}}.`,
                 case "model_updated":
                   if (isUpdate) {
                     return {
-                      subject:
-                        "Model {{model.name}} ({{model.provider}}) has been updated",
+                      subject: "Model {{model.name}} ({{model.provider}}) has been updated",
                       body: `A model has been updated in the system.
 
 Model Information:
@@ -1238,9 +1230,7 @@ This notification was sent on {{date_and_time}}.`,
                           : "New incident has been reported"
                       }`,
                       body: `An incident has been ${
-                        changeType === "Deleted"
-                          ? "deleted from"
-                          : "reported in"
+                        changeType === "Deleted" ? "deleted from" : "reported in"
                       } the system.
 
 Incident Details:
@@ -1283,25 +1273,21 @@ This notification was sent on {{date_and_time}}.`,
             };
 
             // Update all email actions with new templates
-            const emailTemplate = generateEmailTemplate(
-              updatedAutomation.trigger.type
-            );
+            const emailTemplate = generateEmailTemplate(updatedAutomation.trigger.type);
             if (emailTemplate) {
-              updatedAutomation.actions = updatedAutomation.actions.map(
-                (action) => {
-                  if (action.type === "send_email") {
-                    return {
-                      ...action,
-                      configuration: {
-                        ...action.configuration,
-                        subject: emailTemplate.subject,
-                        body: emailTemplate.body,
-                      },
-                    };
-                  }
-                  return action;
+              updatedAutomation.actions = updatedAutomation.actions.map((action) => {
+                if (action.type === "send_email") {
+                  return {
+                    ...action,
+                    configuration: {
+                      ...action.configuration,
+                      subject: emailTemplate.subject,
+                      body: emailTemplate.body,
+                    },
+                  };
                 }
-              );
+                return action;
+              });
             }
           }
 
@@ -1310,16 +1296,14 @@ This notification was sent on {{date_and_time}}.`,
           return {
             ...automation,
             actions: automation.actions.map((action) =>
-              action.id === selectedItemId
-                ? { ...action, configuration }
-                : action
+              action.id === selectedItemId ? { ...action, configuration } : action,
             ),
             updatedAt: new Date(),
           };
         }
 
         return automation;
-      })
+      }),
     );
   };
 
@@ -1334,7 +1318,7 @@ This notification was sent on {{date_and_time}}.`,
 
     // Validate that send_email actions have recipients
     const sendEmailActions = selectedAutomation.actions.filter(
-      (action) => action.type === "send_email"
+      (action) => action.type === "send_email",
     );
     for (const action of sendEmailActions) {
       const recipients = action.configuration?.to;
@@ -1356,10 +1340,7 @@ This notification was sent on {{date_and_time}}.`,
       const isExistingAutomation = !isNaN(Number(selectedAutomation.id));
 
       // Map frontend trigger type + changeType to backend trigger key
-      const mapTriggerKey = (
-        triggerType: string,
-        changeType: string
-      ): string => {
+      const mapTriggerKey = (triggerType: string, changeType: string): string => {
         // Extract the entity type from trigger (e.g., "vendor_updated" -> "vendor")
         const entityType = triggerType.replace("_updated", "");
 
@@ -1371,13 +1352,10 @@ This notification was sent on {{date_and_time}}.`,
       };
 
       // Get the changeType from trigger configuration (default to 'Added' if not set)
-      const changeType =
-        selectedAutomation.trigger.configuration?.changeType || "Added";
+      const changeType = selectedAutomation.trigger.configuration?.changeType || "Added";
 
       // Get the backend trigger key based on trigger type and changeType
-      const backendTriggerKey = selectedAutomation.trigger.type.endsWith(
-        "_updated"
-      )
+      const backendTriggerKey = selectedAutomation.trigger.type.endsWith("_updated")
         ? mapTriggerKey(selectedAutomation.trigger.type, changeType)
         : selectedAutomation.trigger.type;
 
@@ -1386,13 +1364,12 @@ This notification was sent on {{date_and_time}}.`,
 
       // Find the trigger ID that matches our mapped backend trigger key
       const triggerData = triggers.find(
-        (t: { id: number; key: string; label: string; description?: string }) => t.key === backendTriggerKey
+        (t: { id: number; key: string; label: string; description?: string }) =>
+          t.key === backendTriggerKey,
       );
 
       if (!triggerData) {
-        throw new Error(
-          `Trigger type "${backendTriggerKey}" not found in backend`
-        );
+        throw new Error(`Trigger type "${backendTriggerKey}" not found in backend`);
       }
 
       // Get all actions to map action types to IDs
@@ -1403,60 +1380,57 @@ This notification was sent on {{date_and_time}}.`,
       const users = usersResponse.data;
 
       // Prepare the actions data
-      const processedActions = selectedAutomation.actions.map(
-        (action, index) => {
-          // Find the action type ID
-          const actionData = availableActions.find(
-            (a: { id: number; key: string; label: string; description?: string }) => a.key === action.type
-          );
+      const processedActions = selectedAutomation.actions.map((action, index) => {
+        // Find the action type ID
+        const actionData = availableActions.find(
+          (a: { id: number; key: string; label: string; description?: string }) =>
+            a.key === action.type,
+        );
 
-          if (!actionData) {
-            throw new Error(
-              `Action type "${action.type}" not found for this trigger`
-            );
-          }
-
-          // Process the configuration to ensure 'to' field is an array of emails
-          const processedParams = { ...action.configuration };
-
-          // If 'to' field exists, convert it to an array of email addresses
-          if (processedParams.to) {
-            let recipientIds: string[] = [];
-
-            if (typeof processedParams.to === "string") {
-              // Split by comma if it's a string
-              recipientIds = processedParams.to
-                .split(",")
-                .map((item: string) => item.trim())
-                .filter((item: string) => item.length > 0);
-            } else if (Array.isArray(processedParams.to)) {
-              // Already an array
-              recipientIds = processedParams.to;
-            }
-
-            // Convert user IDs to email addresses
-            processedParams.to = recipientIds
-              .map((id: string) => {
-                // // Check if it's already an email address
-                // if (id.includes('@')) {
-                //   return id;
-                // }
-                // Otherwise, it's a user ID - look up the email
-                const user = users.find(
-                  (u: { id: string | number; email: string }) => String(u.id) === String(id)
-                );
-                return user ? user.email : id;
-              })
-              .filter((email: string) => email && email.length > 0);
-          }
-
-          return {
-            action_type_id: actionData.id,
-            params: processedParams,
-            order: index + 1,
-          };
+        if (!actionData) {
+          throw new Error(`Action type "${action.type}" not found for this trigger`);
         }
-      );
+
+        // Process the configuration to ensure 'to' field is an array of emails
+        const processedParams = { ...action.configuration };
+
+        // If 'to' field exists, convert it to an array of email addresses
+        if (processedParams.to) {
+          let recipientIds: string[] = [];
+
+          if (typeof processedParams.to === "string") {
+            // Split by comma if it's a string
+            recipientIds = processedParams.to
+              .split(",")
+              .map((item: string) => item.trim())
+              .filter((item: string) => item.length > 0);
+          } else if (Array.isArray(processedParams.to)) {
+            // Already an array
+            recipientIds = processedParams.to;
+          }
+
+          // Convert user IDs to email addresses
+          processedParams.to = recipientIds
+            .map((id: string) => {
+              // // Check if it's already an email address
+              // if (id.includes('@')) {
+              //   return id;
+              // }
+              // Otherwise, it's a user ID - look up the email
+              const user = users.find(
+                (u: { id: string | number; email: string }) => String(u.id) === String(id),
+              );
+              return user ? user.email : id;
+            })
+            .filter((email: string) => email && email.length > 0);
+        }
+
+        return {
+          action_type_id: actionData.id,
+          params: processedParams,
+          order: index + 1,
+        };
+      });
 
       let response;
 
@@ -1465,9 +1439,7 @@ This notification was sent on {{date_and_time}}.`,
         const updateData = {
           triggerId: triggerData.id,
           name: selectedAutomation.name,
-          params: JSON.stringify(
-            selectedAutomation.trigger.configuration || {}
-          ),
+          params: JSON.stringify(selectedAutomation.trigger.configuration || {}),
           actions: processedActions,
         };
 
@@ -1491,9 +1463,7 @@ This notification was sent on {{date_and_time}}.`,
         const automationData = {
           triggerId: triggerData.id,
           name: selectedAutomation.name,
-          params: JSON.stringify(
-            selectedAutomation.trigger.configuration || {}
-          ),
+          params: JSON.stringify(selectedAutomation.trigger.configuration || {}),
           actions: processedActions,
         };
 
@@ -1522,7 +1492,8 @@ This notification was sent on {{date_and_time}}.`,
     } catch (error) {
       console.error("Error saving automation:", error);
       const errorMessage =
-        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+          ?.message ||
         (error as { message?: string })?.message ||
         "Failed to save automation";
 
@@ -1538,8 +1509,7 @@ This notification was sent on {{date_and_time}}.`,
   };
 
   // Check if we should show configuration panel
-  const showConfigurationPanel =
-    automations.length > 0 && (selectedItem || selectedAutomation);
+  const showConfigurationPanel = automations.length > 0 && (selectedItem || selectedAutomation);
 
   return (
     <Stack className="vwhome" gap={"16px"}>
@@ -1612,15 +1582,11 @@ This notification was sent on {{date_and_time}}.`,
               onDeleteTrigger={handleDeleteTrigger}
               onDeleteAction={handleDeleteAction}
               onUpdateAutomationName={(newName) =>
-                selectedAutomation &&
-                handleRenameAutomation(selectedAutomation.id, newName)
+                selectedAutomation && handleRenameAutomation(selectedAutomation.id, newName)
               }
               onUpdateAutomationDescription={(newDescription) =>
                 selectedAutomation &&
-                handleUpdateAutomationDescription(
-                  selectedAutomation.id,
-                  newDescription
-                )
+                handleUpdateAutomationDescription(selectedAutomation.id, newDescription)
               }
               onSave={handleSaveAutomation}
               isSaving={isSaving}
@@ -1664,8 +1630,7 @@ This notification was sent on {{date_and_time}}.`,
                 onConfigurationChange={handleUpdateConfiguration}
                 automationName={selectedAutomation?.name}
                 onAutomationNameChange={(newName) =>
-                  selectedAutomation &&
-                  handleRenameAutomation(selectedAutomation.id, newName)
+                  selectedAutomation && handleRenameAutomation(selectedAutomation.id, newName)
                 }
                 projects={projects}
               />

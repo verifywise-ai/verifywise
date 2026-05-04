@@ -120,8 +120,8 @@ export const generatingReportsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Go to the Reporting section from the sidebar under Assurance' },
-        { text: 'Click "Generate use case report"' },
-        { text: 'Select the use case from the dropdown' },
+        { text: 'Click "Generate report" and choose "Use case report" from the dropdown menu' },
+        { text: 'Select the use case from the dropdown in the modal' },
         { text: 'Choose one or more report types (you can select multiple)' },
         { text: 'Optionally enter a custom name for the report' },
         { text: 'Click "Generate report"' },
@@ -154,8 +154,8 @@ export const generatingReportsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Go to the Reporting section' },
-        { text: 'Click "Generate organization report"' },
-        { text: 'Select the organization from the dropdown' },
+        { text: 'Click "Generate report" and choose "Organization report" from the dropdown menu' },
+        { text: 'Select the organization from the dropdown in the modal' },
         { text: 'Select the framework for the report' },
         { text: 'Choose the report types to include' },
         { text: 'Optionally enter a custom report name' },

@@ -41,17 +41,16 @@ const handlers: AiActionHandler[] = [
  * uses this to dispatch post-approval execution by the `tool_name` stored
  * in `approval_requests.entity_data`.
  */
-export const AI_ACTION_HANDLERS: Record<string, AiActionHandler> =
-  Object.fromEntries(handlers.map((h) => [h.toolName, h]));
+export const AI_ACTION_HANDLERS: Record<string, AiActionHandler> = Object.fromEntries(
+  handlers.map((h) => [h.toolName, h]),
+);
 
 /**
  * Look up a handler by tool name. Returns `undefined` when no handler is
  * registered — callers should treat that as an error (it means either a
  * dead approval row pointing at a removed tool, or a tampered payload).
  */
-export function getAiActionHandler(
-  toolName: string,
-): AiActionHandler | undefined {
+export function getAiActionHandler(toolName: string): AiActionHandler | undefined {
   return AI_ACTION_HANDLERS[toolName];
 }
 
@@ -72,9 +71,5 @@ export const aiActionToolDefinitions = handlers.map((h) => h.toolDefinition);
  */
 export const aiActionFilers: Record<
   string,
-  (
-    params: Record<string, unknown>,
-    tenant: number,
-    userId?: number,
-  ) => Promise<unknown>
+  (params: Record<string, unknown>, tenant: number, userId?: number) => Promise<unknown>
 > = Object.fromEntries(handlers.map((h) => [h.toolName, h.file]));

@@ -33,7 +33,7 @@ export async function insertEventsQuery(
     job_title?: string;
     manager_email?: string;
   }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<number> {
   if (events.length === 0) return 0;
 
@@ -61,7 +61,7 @@ async function insertEventChunk(
     job_title?: string;
     manager_email?: string;
   }>,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   const values: string[] = [];
   const replacements: Record<string, any> = { organizationId };
@@ -70,7 +70,7 @@ async function insertEventChunk(
     values.push(
       `(:organizationId, :user_email_${i}, :destination_${i}, :uri_path_${i}, :http_method_${i},
         :action_${i}, :detected_tool_id_${i}, :detected_model_${i},
-        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i})`
+        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i})`,
     );
     replacements[`user_email_${i}`] = evt.user_email;
     replacements[`destination_${i}`] = evt.destination;
@@ -105,13 +105,13 @@ async function insertEventChunk(
  */
 export async function getNewlyDetectedToolIds(
   organizationId: number,
-  sinceMinutes: number = 5
+  sinceMinutes: number = 5,
 ): Promise<number[]> {
   const [rows] = await sequelize.query(
     `SELECT id FROM shadow_ai_tools
      WHERE organization_id = :organizationId
        AND first_detected_at > NOW() - INTERVAL '1 minute' * :sinceMinutes`,
-    { replacements: { organizationId, sinceMinutes } }
+    { replacements: { organizationId, sinceMinutes } },
   );
 
   return (rows as any[]).map((r) => r.id);
@@ -136,9 +136,7 @@ export function normalizeEvent(rawEvent: {
     destination: rawEvent.destination.toLowerCase().trim(),
     uri_path: rawEvent.uri_path || undefined,
     http_method: rawEvent.http_method?.toUpperCase() || undefined,
-    action: (rawEvent.action === "blocked" ? "blocked" : "allowed") as
-      | "allowed"
-      | "blocked",
+    action: (rawEvent.action === "blocked" ? "blocked" : "allowed") as "allowed" | "blocked",
     event_timestamp: new Date(rawEvent.timestamp),
     department: rawEvent.department || undefined,
     job_title: rawEvent.job_title || undefined,

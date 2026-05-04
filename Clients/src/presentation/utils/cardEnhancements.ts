@@ -12,9 +12,7 @@ export const getDistributionSummary = (statusData: IStatusData[]): string => {
 
   if (significantStatuses.length === 0) return "";
 
-  return significantStatuses
-    .map((status) => `${status.value} ${status.label}`)
-    .join(", ");
+  return significantStatuses.map((status) => `${status.value} ${status.label}`).join(", ");
 };
 
 // Generate quick stats based on entity type and data
@@ -28,37 +26,37 @@ export const getQuickStats = (
     | "incidents"
     | undefined,
   total: number,
-  statusData?: IStatusData[]
+  statusData?: IStatusData[],
 ): string => {
   if (!entityType || total === 0) return "";
 
   switch (entityType) {
     case "models": {
       const productionModels =
-        statusData?.find((s) => s.label.toLowerCase().includes("production"))
-          ?.value || Math.floor(total * 0.4);
+        statusData?.find((s) => s.label.toLowerCase().includes("production"))?.value ||
+        Math.floor(total * 0.4);
       return `${productionModels} in production`;
     }
 
     case "trainings": {
       const completedTrainings =
-        statusData?.find((s) => s.label.toLowerCase().includes("completed"))
-          ?.value || Math.floor(total * 0.6);
+        statusData?.find((s) => s.label.toLowerCase().includes("completed"))?.value ||
+        Math.floor(total * 0.6);
       const completionRate = Math.round((completedTrainings / total) * 100);
       return `${completionRate}% completion rate`;
     }
 
     case "policies": {
       const publishedPolicies =
-        statusData?.find((s) => s.label.toLowerCase().includes("published"))
-          ?.value || Math.floor(total * 0.5);
+        statusData?.find((s) => s.label.toLowerCase().includes("published"))?.value ||
+        Math.floor(total * 0.5);
       return `${publishedPolicies} published`;
     }
 
     case "vendors": {
       const activeVendors =
-        statusData?.find((s) => s.label.toLowerCase().includes("active"))
-          ?.value || Math.floor(total * 0.7);
+        statusData?.find((s) => s.label.toLowerCase().includes("active"))?.value ||
+        Math.floor(total * 0.7);
       return `${activeVendors} active`;
     }
 
@@ -67,24 +65,20 @@ export const getQuickStats = (
         statusData
           ?.filter(
             (s) =>
-              s.label.toLowerCase().includes("high") &&
-              !s.label.toLowerCase().includes("very")
+              s.label.toLowerCase().includes("high") && !s.label.toLowerCase().includes("very"),
           )
-          ?.reduce((sum, item) => sum + item.value, 0) ||
-        Math.floor(total * 0.2);
+          ?.reduce((sum, item) => sum + item.value, 0) || Math.floor(total * 0.2);
       const veryHighRisks =
-        statusData?.find((s) => s.label.toLowerCase().includes("very high"))
-          ?.value || Math.floor(total * 0.05);
+        statusData?.find((s) => s.label.toLowerCase().includes("very high"))?.value ||
+        Math.floor(total * 0.05);
       const criticalCount = highRisks + veryHighRisks;
-      return criticalCount > 0
-        ? `${criticalCount} require attention`
-        : "All risks managed";
+      return criticalCount > 0 ? `${criticalCount} require attention` : "All risks managed";
     }
 
     case "incidents": {
       const openIncidents =
-        statusData?.find((s) => s.label.toLowerCase().includes("open"))
-          ?.value || Math.floor(total * 0.3);
+        statusData?.find((s) => s.label.toLowerCase().includes("open"))?.value ||
+        Math.floor(total * 0.3);
       return openIncidents > 0 ? `${openIncidents} open` : "All resolved";
     }
 
@@ -103,7 +97,7 @@ export const hasCriticalItems = (
     | "vendorRisks"
     | "incidents"
     | undefined,
-  statusData?: IStatusData[]
+  statusData?: IStatusData[],
 ): { hasCritical: boolean; actionLabel: string; actionRoute: string } => {
   if (!entityType || !statusData) {
     return { hasCritical: false, actionLabel: "", actionRoute: "" };
@@ -111,12 +105,9 @@ export const hasCriticalItems = (
 
   switch (entityType) {
     case "vendorRisks": {
-      const highRisk =
-        statusData.find((s) => s.label.toLowerCase().includes("high"))?.value ||
-        0;
+      const highRisk = statusData.find((s) => s.label.toLowerCase().includes("high"))?.value || 0;
       const veryHighRisk =
-        statusData.find((s) => s.label.toLowerCase().includes("very high"))
-          ?.value || 0;
+        statusData.find((s) => s.label.toLowerCase().includes("very high"))?.value || 0;
       const criticalRisks = highRisk + veryHighRisk;
 
       return {
@@ -128,11 +119,8 @@ export const hasCriticalItems = (
 
     case "policies": {
       const inReview =
-        statusData.find((s) => s.label.toLowerCase().includes("in review"))
-          ?.value || 0;
-      const draft =
-        statusData.find((s) => s.label.toLowerCase().includes("draft"))
-          ?.value || 0;
+        statusData.find((s) => s.label.toLowerCase().includes("in review"))?.value || 0;
+      const draft = statusData.find((s) => s.label.toLowerCase().includes("draft"))?.value || 0;
       const needsAttention = inReview + draft;
 
       return {
@@ -144,8 +132,7 @@ export const hasCriticalItems = (
 
     case "trainings": {
       const inProgress =
-        statusData.find((s) => s.label.toLowerCase().includes("in progress"))
-          ?.value || 0;
+        statusData.find((s) => s.label.toLowerCase().includes("in progress"))?.value || 0;
 
       return {
         hasCritical: inProgress > 0,
@@ -156,8 +143,7 @@ export const hasCriticalItems = (
 
     case "vendors": {
       const requiresFollowUp =
-        statusData.find((s) => s.label.toLowerCase().includes("follow up"))
-          ?.value || 0;
+        statusData.find((s) => s.label.toLowerCase().includes("follow up"))?.value || 0;
 
       return {
         hasCritical: requiresFollowUp > 0,
@@ -168,8 +154,7 @@ export const hasCriticalItems = (
 
     case "incidents": {
       const openIncidents =
-        statusData.find((s) => s.label.toLowerCase().includes("open"))
-          ?.value || 0;
+        statusData.find((s) => s.label.toLowerCase().includes("open"))?.value || 0;
 
       return {
         hasCritical: openIncidents > 0,
@@ -194,20 +179,17 @@ export const getPriorityLevel = (
     | "incidents"
     | undefined,
   total: number,
-  statusData?: IStatusData[]
+  statusData?: IStatusData[],
 ): "none" | "medium" | "high" => {
   if (!entityType || total === 0) return "none";
 
   switch (entityType) {
     case "vendorRisks": {
       const veryHighRisk =
-        statusData?.find((s) => s.label.toLowerCase().includes("very high"))
-          ?.value || 0;
+        statusData?.find((s) => s.label.toLowerCase().includes("very high"))?.value || 0;
       const highRisk =
         statusData?.find(
-          (s) =>
-            s.label.toLowerCase().includes("high") &&
-            !s.label.toLowerCase().includes("very")
+          (s) => s.label.toLowerCase().includes("high") && !s.label.toLowerCase().includes("very"),
         )?.value || 0;
 
       if (veryHighRisk > 0) return "high";
@@ -216,9 +198,7 @@ export const getPriorityLevel = (
     }
 
     case "policies": {
-      const overdue =
-        statusData?.find((s) => s.label.toLowerCase().includes("draft"))
-          ?.value || 0;
+      const overdue = statusData?.find((s) => s.label.toLowerCase().includes("draft"))?.value || 0;
       const draftPercentage = (overdue / total) * 100;
 
       if (draftPercentage > 30) return "high";
@@ -228,8 +208,7 @@ export const getPriorityLevel = (
 
     case "trainings": {
       const completed =
-        statusData?.find((s) => s.label.toLowerCase().includes("completed"))
-          ?.value || 0;
+        statusData?.find((s) => s.label.toLowerCase().includes("completed"))?.value || 0;
       const completionRate = (completed / total) * 100;
 
       if (completionRate < 50) return "high";
@@ -239,8 +218,7 @@ export const getPriorityLevel = (
 
     case "incidents": {
       const openIncidents =
-        statusData?.find((s) => s.label.toLowerCase().includes("open"))
-          ?.value || 0;
+        statusData?.find((s) => s.label.toLowerCase().includes("open"))?.value || 0;
       const openPercentage = (openIncidents / total) * 100;
 
       if (openPercentage > 50) return "high";

@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  triggerBrowserDownload,
-  extractFilenameFromHeaders,
-} from "../browserDownload.utils";
+import { triggerBrowserDownload, extractFilenameFromHeaders } from "../browserDownload.utils";
 
 describe("triggerBrowserDownload", () => {
   beforeEach(() => {
@@ -11,12 +8,8 @@ describe("triggerBrowserDownload", () => {
 
   it("creates an anchor element, clicks it, and cleans up", () => {
     const mockUrl = "blob:http://localhost/fake-id";
-    const createObjectURLSpy = vi
-      .spyOn(window.URL, "createObjectURL")
-      .mockReturnValue(mockUrl);
-    const revokeObjectURLSpy = vi
-      .spyOn(window.URL, "revokeObjectURL")
-      .mockImplementation(() => {});
+    const createObjectURLSpy = vi.spyOn(window.URL, "createObjectURL").mockReturnValue(mockUrl);
+    const revokeObjectURLSpy = vi.spyOn(window.URL, "revokeObjectURL").mockImplementation(() => {});
 
     const clickSpy = vi.fn();
     const removeSpy = vi.fn();

@@ -33,57 +33,34 @@ import authorize from "../middleware/accessControl.middleware";
  * List all approval workflows
  * @access All authenticated users (needed for use-case creation)
  */
-router.get(
-  "/",
-  authenticateJWT,
-  getAllApprovalWorkflows
-);
+router.get("/", authenticateJWT, getAllApprovalWorkflows);
 
 /**
  * GET /approval-workflows/:id
  * Get approval workflow by ID with steps
  * @access All authenticated users (needed for viewing workflow details)
  */
-router.get(
-  "/:id",
-  authenticateJWT,
-  getApprovalWorkflowById
-);
+router.get("/:id", authenticateJWT, getApprovalWorkflowById);
 
 /**
  * POST /approval-workflows
  * Create new approval workflow
  * @access Admin only
  */
-router.post(
-  "/",
-  authenticateJWT,
-  authorize(["Admin"]),
-  createApprovalWorkflow
-);
+router.post("/", authenticateJWT, authorize(["Admin"]), createApprovalWorkflow);
 
 /**
  * PUT /approval-workflows/:id
  * Update approval workflow
  * @access Admin only
  */
-router.put(
-  "/:id",
-  authenticateJWT,
-  authorize(["Admin"]),
-  updateApprovalWorkflow
-);
+router.put("/:id", authenticateJWT, authorize(["Admin"]), updateApprovalWorkflow);
 
 /**
  * DELETE /approval-workflows/:id
  * Delete approval workflow
  * @access Admin only
  */
-router.delete(
-  "/:id",
-  authenticateJWT,
-  authorize(["Admin"]),
-  deleteApprovalWorkflow
-);
+router.delete("/:id", authenticateJWT, authorize(["Admin"]), deleteApprovalWorkflow);
 
 export default router;

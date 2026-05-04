@@ -1,9 +1,6 @@
 import { Button, Modal, Stack, Typography, useTheme } from "@mui/material";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
-import {
-  BasicModalCancelButtonStyle,
-  BasicModalDeleteButtonStyle,
-} from "../Basic/style";
+import { BasicModalCancelButtonStyle, BasicModalDeleteButtonStyle } from "../Basic/style";
 
 interface ModelRiskConfirmationProps {
   isOpen: boolean;
@@ -22,7 +19,7 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
 
   useModalKeyHandling({
     isOpen,
-    onClose: () => setIsOpen(false)
+    onClose: () => setIsOpen(false),
   });
 
   const handleKeepRisks = () => {
@@ -44,7 +41,7 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
     <Modal
       open={isOpen}
       onClose={(_event, reason) => {
-        if (reason !== 'backdropClick') {
+        if (reason !== "backdropClick") {
           setIsOpen(false);
         }
       }}
@@ -73,19 +70,12 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
           },
         }}
       >
-        <Typography
-          id="modal-risk-confirmation"
-          fontSize={16}
-          fontWeight={600}
-        >
+        <Typography id="modal-risk-confirmation" fontSize={16} fontWeight={600}>
           Model has associated risks
         </Typography>
-        <Typography
-          id="risk-confirmation-message"
-          fontSize={13}
-          textAlign={"justify"}
-        >
-          This model has associated risks. What would you like to do with the risks when deleting this model?
+        <Typography id="risk-confirmation-message" fontSize={13} textAlign={"justify"}>
+          This model has associated risks. What would you like to do with the risks when deleting
+          this model?
         </Typography>
         <Stack
           direction="row"

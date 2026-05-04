@@ -9,8 +9,16 @@ vi.mock("../../repository/taskEntityLink.repository", () => ({
   removeTaskEntityLink: vi.fn(),
 }));
 
-import { useTaskEntityLinks, useAddTaskEntityLink, useRemoveTaskEntityLink } from "../useTaskEntityLinks";
-import { getTaskEntityLinks, addTaskEntityLink, removeTaskEntityLink } from "../../repository/taskEntityLink.repository";
+import {
+  useTaskEntityLinks,
+  useAddTaskEntityLink,
+  useRemoveTaskEntityLink,
+} from "../useTaskEntityLinks";
+import {
+  getTaskEntityLinks,
+  addTaskEntityLink,
+  removeTaskEntityLink,
+} from "../../repository/taskEntityLink.repository";
 
 const mockGetLinks = vi.mocked(getTaskEntityLinks);
 const mockAddLink = vi.mocked(addTaskEntityLink);
@@ -28,7 +36,9 @@ describe("useTaskEntityLinks", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("fetches links for a task", async () => {
-    mockGetLinks.mockResolvedValue([{ id: 1, task_id: 5, entity_id: 10, entity_type: "project" }] as any);
+    mockGetLinks.mockResolvedValue([
+      { id: 1, task_id: 5, entity_id: 10, entity_type: "project" },
+    ] as any);
 
     const { result } = renderHook(() => useTaskEntityLinks(5), { wrapper: createWrapper() });
 
@@ -37,7 +47,9 @@ describe("useTaskEntityLinks", () => {
   });
 
   it("does not fetch when taskId is undefined", () => {
-    const { result } = renderHook(() => useTaskEntityLinks(undefined), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useTaskEntityLinks(undefined), {
+      wrapper: createWrapper(),
+    });
     expect(result.current.fetchStatus).toBe("idle");
   });
 });

@@ -114,11 +114,7 @@ export async function getTaskById({
  * @returns {Promise<any>} The created task data
  * @throws Will throw an error if the request fails
  */
-export async function createTask({
-  body,
-}: {
-  body: Partial<ITask>;
-}): Promise<any> {
+export async function createTask({ body }: { body: Partial<ITask> }): Promise<any> {
   try {
     const response = await apiServices.post("/tasks", body);
     return response.data;
@@ -161,11 +157,7 @@ export async function updateTask({
  * @returns {Promise<any>} The deletion response
  * @throws Will throw an error if the request fails
  */
-export async function deleteTask({
-  id,
-}: {
-  id: string | number;
-}): Promise<any> {
+export async function deleteTask({ id }: { id: string | number }): Promise<any> {
   try {
     const response = await apiServices.delete(`/tasks/${id}`);
     return response.data;
@@ -192,10 +184,7 @@ export async function updateTaskStatus({
   status: TaskStatus;
 }): Promise<any> {
   try {
-    const response = await apiServices.put(
-      `/tasks/${id}`,
-      { status }
-    );
+    const response = await apiServices.put(`/tasks/${id}`, { status });
     return response.data;
   } catch (error) {
     console.error("Error updating task status:", error);
@@ -220,10 +209,7 @@ export async function updateTaskPriority({
   priority: TaskPriority;
 }): Promise<any> {
   try {
-    const response = await apiServices.put(
-      `/tasks/${id}`,
-      { priority }
-    );
+    const response = await apiServices.put(`/tasks/${id}`, { priority });
     return response.data;
   } catch (error) {
     console.error("Error updating priority:", error);
@@ -239,11 +225,7 @@ export async function updateTaskPriority({
  * @returns {Promise<any>} The restored task data
  * @throws Will throw an error if the request fails
  */
-export async function restoreTask({
-  id,
-}: {
-  id: string | number;
-}): Promise<any> {
+export async function restoreTask({ id }: { id: string | number }): Promise<any> {
   try {
     const response = await apiServices.put(`/tasks/${id}/restore`, {});
     return response.data;
@@ -261,11 +243,7 @@ export async function restoreTask({
  * @returns {Promise<any>} The deletion response
  * @throws Will throw an error if the request fails
  */
-export async function hardDeleteTask({
-  id,
-}: {
-  id: string | number;
-}): Promise<any> {
+export async function hardDeleteTask({ id }: { id: string | number }): Promise<any> {
   try {
     const response = await apiServices.delete(`/tasks/${id}/hard`);
     return response.data;

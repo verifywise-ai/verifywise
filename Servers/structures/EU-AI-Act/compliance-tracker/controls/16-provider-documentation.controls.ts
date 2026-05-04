@@ -53,8 +53,7 @@ export const ProviderDocumentation = [
         order_no: 7,
         title:
           "Residual risks associated with each hazard and the overall residual risk are judged to be acceptable.",
-        description:
-          "Residual risk acceptance records signed off by the risk owner (Art 9.7).",
+        description: "Residual risk acceptance records signed off by the risk owner (Art 9.7).",
       },
     ],
   },
@@ -115,8 +114,7 @@ export const ProviderDocumentation = [
         order_no: 2,
         title:
           "Technical documentation includes: general description, detailed description of elements and development process, information about monitoring/functioning/control, description of the risk management system, description of relevant changes made through the system's lifecycle, list of harmonized standards applied, and a copy of the EU declaration of conformity (Annex IV).",
-        description:
-          "Annex IV-aligned technical documentation covering all required sections.",
+        description: "Annex IV-aligned technical documentation covering all required sections.",
       },
     ],
   },
@@ -124,8 +122,7 @@ export const ProviderDocumentation = [
     order_no: 4,
     title:
       "Design high-risk AI systems with logging capabilities enabling the recording of events relevant for identifying risk and facilitating post-market monitoring.",
-    description:
-      "Automatic logging of relevant events across the system lifecycle (Art 12).",
+    description: "Automatic logging of relevant events across the system lifecycle (Art 12).",
     article: "Art. 12",
     subControls: [
       {
@@ -156,8 +153,7 @@ export const ProviderDocumentation = [
         order_no: 1,
         title:
           "Levels of accuracy and the relevant accuracy metrics are declared in the instructions for use.",
-        description:
-          "Accuracy levels and metrics declared in end-user instructions (Art 15.2).",
+        description: "Accuracy levels and metrics declared in end-user instructions (Art 15.2).",
       },
       {
         order_no: 2,
@@ -179,8 +175,7 @@ export const ProviderDocumentation = [
     order_no: 6,
     title:
       "Keep technical documentation and automatically generated logs available for the period required by law.",
-    description:
-      "Retention of technical documentation and automatic logs (Art 18-19).",
+    description: "Retention of technical documentation and automatic logs (Art 18-19).",
     article: "Art. 18-19",
     subControls: [
       {

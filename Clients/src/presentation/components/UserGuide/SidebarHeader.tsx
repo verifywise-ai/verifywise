@@ -1,7 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Home, ChevronDown, ChevronLeft, ChevronRight, Search, ExternalLink, X } from 'lucide-react';
-import { colors, typography, spacing, border } from './styles/theme';
-import './SidebarHeader.css';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Home,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ExternalLink,
+  X,
+} from "lucide-react";
+import { colors, typography, spacing, border } from "./styles/theme";
+import "./SidebarHeader.css";
 
 interface BreadcrumbItem {
   label: string;
@@ -53,8 +61,8 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Focus search input when opened
@@ -78,14 +86,16 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       {/* Main header row */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           gap: spacing.sm,
         }}
       >
         {/* Left side: Navigation + Breadcrumb dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
+        <div
+          style={{ display: "flex", alignItems: "center", gap: spacing.xs, flex: 1, minWidth: 0 }}
+        >
           {/* Navigation buttons - only shown when showNavigation is true */}
           {showNavigation && (
             <>
@@ -95,15 +105,15 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 disabled={!canGoBack}
                 className="header-icon-button"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   width: 28,
                   height: 28,
-                  backgroundColor: 'transparent',
-                  border: 'none',
+                  backgroundColor: "transparent",
+                  border: "none",
                   borderRadius: border.radius,
-                  cursor: canGoBack ? 'pointer' : 'default',
+                  cursor: canGoBack ? "pointer" : "default",
                   color: canGoBack ? colors.text.secondary : colors.border.default,
                   flexShrink: 0,
                   opacity: canGoBack ? 1 : 0.5,
@@ -119,15 +129,15 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 disabled={!canGoForward}
                 className="header-icon-button"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   width: 28,
                   height: 28,
-                  backgroundColor: 'transparent',
-                  border: 'none',
+                  backgroundColor: "transparent",
+                  border: "none",
                   borderRadius: border.radius,
-                  cursor: canGoForward ? 'pointer' : 'default',
+                  cursor: canGoForward ? "pointer" : "default",
                   color: canGoForward ? colors.text.secondary : colors.border.default,
                   flexShrink: 0,
                   opacity: canGoForward ? 1 : 0.5,
@@ -143,15 +153,15 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 disabled={breadcrumbs.length <= 1}
                 className="header-icon-button"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   width: 28,
                   height: 28,
-                  backgroundColor: 'transparent',
-                  border: 'none',
+                  backgroundColor: "transparent",
+                  border: "none",
                   borderRadius: border.radius,
-                  cursor: breadcrumbs.length > 1 ? 'pointer' : 'default',
+                  cursor: breadcrumbs.length > 1 ? "pointer" : "default",
                   color: breadcrumbs.length > 1 ? colors.text.secondary : colors.border.default,
                   flexShrink: 0,
                   opacity: breadcrumbs.length > 1 ? 1 : 0.5,
@@ -164,20 +174,20 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           )}
 
           {/* Breadcrumb dropdown */}
-          <div ref={dropdownRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+          <div ref={dropdownRef} style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <button
               onClick={() => breadcrumbs.length > 1 && setIsDropdownOpen(!isDropdownOpen)}
               className="breadcrumb-dropdown-trigger"
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 4,
-                padding: '4px 8px',
-                backgroundColor: 'transparent',
-                border: 'none',
+                padding: "4px 8px",
+                backgroundColor: "transparent",
+                border: "none",
                 borderRadius: border.radius,
-                cursor: breadcrumbs.length > 1 ? 'pointer' : 'default',
-                maxWidth: '100%',
+                cursor: breadcrumbs.length > 1 ? "pointer" : "default",
+                maxWidth: "100%",
               }}
             >
               <span
@@ -186,12 +196,12 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   fontSize: typography.fontSize.sm,
                   fontWeight: typography.fontWeight.medium,
                   color: colors.text.primary,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
-                {currentBreadcrumb?.label || 'User guide'}
+                {currentBreadcrumb?.label || "User guide"}
               </span>
               {breadcrumbs.length > 1 && (
                 <ChevronDown
@@ -200,8 +210,8 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   color={colors.text.muted}
                   style={{
                     flexShrink: 0,
-                    transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0)',
-                    transition: 'transform 150ms ease',
+                    transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)",
+                    transition: "transform 150ms ease",
                   }}
                 />
               )}
@@ -212,18 +222,18 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               <div
                 className="breadcrumb-dropdown"
                 style={{
-                  position: 'absolute',
-                  top: '100%',
+                  position: "absolute",
+                  top: "100%",
                   left: 0,
                   marginTop: 4,
                   backgroundColor: colors.background.white,
                   border: border.default,
                   borderRadius: border.radius,
-                  boxShadow: '0 4px 12px rgba(16, 24, 40, 0.12)',
+                  boxShadow: "0 4px 12px rgba(16, 24, 40, 0.12)",
                   minWidth: 180,
                   maxWidth: 280,
                   zIndex: 100,
-                  overflow: 'hidden',
+                  overflow: "hidden",
                 }}
               >
                 {breadcrumbs.slice(0, -1).map((item, index) => (
@@ -235,13 +245,13 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                     }}
                     className="breadcrumb-item"
                     style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '10px 14px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      textAlign: 'left',
-                      cursor: 'pointer',
+                      display: "block",
+                      width: "100%",
+                      padding: "10px 14px",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      textAlign: "left",
+                      cursor: "pointer",
                       fontFamily: typography.fontFamily.sans,
                       fontSize: typography.fontSize.sm,
                       color: colors.text.primary,
@@ -256,22 +266,22 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
         </div>
 
         {/* Right side: Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
           {/* Open in new tab - only shown when showOpenInNewTab is true */}
           {showOpenInNewTab && (
             <button
               onClick={onOpenInNewTab}
               className="header-icon-button"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 width: 28,
                 height: 28,
-                backgroundColor: 'transparent',
-                border: 'none',
+                backgroundColor: "transparent",
+                border: "none",
                 borderRadius: border.radius,
-                cursor: 'pointer',
+                cursor: "pointer",
                 color: colors.text.secondary,
               }}
               title="Open in new tab"
@@ -283,17 +293,17 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           {/* Search toggle */}
           <button
             onClick={onSearchToggle}
-            className={`header-icon-button ${isSearchOpen ? 'active' : ''}`}
+            className={`header-icon-button ${isSearchOpen ? "active" : ""}`}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               width: 28,
               height: 28,
-              backgroundColor: isSearchOpen ? colors.background.alt : 'transparent',
-              border: 'none',
+              backgroundColor: isSearchOpen ? colors.background.alt : "transparent",
+              border: "none",
               borderRadius: border.radius,
-              cursor: 'pointer',
+              cursor: "pointer",
               color: isSearchOpen ? colors.brand.primary : colors.text.secondary,
             }}
             title="Search"
@@ -306,15 +316,15 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             onClick={onClose}
             className="header-icon-button"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               width: 28,
               height: 28,
-              backgroundColor: 'transparent',
-              border: 'none',
+              backgroundColor: "transparent",
+              border: "none",
               borderRadius: border.radius,
-              cursor: 'pointer',
+              cursor: "pointer",
               color: colors.text.secondary,
             }}
             title="Close"
@@ -327,17 +337,17 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       {/* Search input (collapsible) */}
       {isSearchOpen && (
         <div style={{ marginTop: spacing.sm }}>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: "relative" }}>
             <Search
               size={14}
               strokeWidth={1.5}
               color={colors.text.muted}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
               }}
             />
             <input
@@ -348,7 +358,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               className="search-input"
               style={{
-                width: '100%',
+                width: "100%",
                 height: 32,
                 fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamily.sans,
@@ -357,7 +367,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 border: border.default,
                 paddingLeft: 32,
                 paddingRight: 12,
-                boxSizing: 'border-box',
+                boxSizing: "border-box",
               }}
             />
           </div>

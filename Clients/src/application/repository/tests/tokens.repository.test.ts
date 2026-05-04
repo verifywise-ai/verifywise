@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
-import {
-  createApiToken,
-  getApiTokens,
-  deleteApiToken,
-} from "../tokens.repository";
+import { createApiToken, getApiTokens, deleteApiToken } from "../tokens.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {
@@ -117,9 +113,7 @@ describe("tokens.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getApiTokens({ routeUrl: "/api/tokens" })).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(getApiTokens({ routeUrl: "/api/tokens" })).rejects.toThrow("Connection refused");
     });
   });
 
@@ -150,9 +144,7 @@ describe("tokens.repository", () => {
 
       vi.mocked(apiServices.delete).mockRejectedValue(mockError);
 
-      await expect(
-        deleteApiToken({ routeUrl: "/api/tokens/999" }),
-      ).rejects.toThrow();
+      await expect(deleteApiToken({ routeUrl: "/api/tokens/999" })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -160,9 +152,9 @@ describe("tokens.repository", () => {
 
       vi.mocked(apiServices.delete).mockRejectedValue(networkError);
 
-      await expect(
-        deleteApiToken({ routeUrl: "/api/tokens/1" }),
-      ).rejects.toThrow("Network timeout");
+      await expect(deleteApiToken({ routeUrl: "/api/tokens/1" })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 });

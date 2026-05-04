@@ -23,7 +23,6 @@ import authenticateJWT from "../middleware/auth.middleware";
 ### GET Routes
 
 - **Get All Topics**
-
   - Route: `/`
   - Handler: `getAllTopics`
   - Authentication: JWT (currently commented out)

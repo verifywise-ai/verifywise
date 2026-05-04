@@ -59,36 +59,34 @@ const VWProjectRisksTableBody = ({
   sortConfig,
   visibleColumns,
 }: IVWProjectRisksTableRow) => {
-  const isColVisible = (colId: string) =>
-    !visibleColumns || visibleColumns.has(colId);
+  const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
   const { userRoleName } = useAuth();
   const { users } = useUsers();
-  const isDeletingAllowed =
-    allowedRoles.projectRisks.delete.includes(userRoleName);
+  const isDeletingAllowed = allowedRoles.projectRisks.delete.includes(userRoleName);
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
-  
+
   const getCellStyle = (row: RiskModel) => ({
     ...cellStyle,
     ...(row.is_deleted && {
-      textDecoration: 'line-through',
-    })
+      textDecoration: "line-through",
+    }),
   });
   const handleEditRisk = (row: RiskModel, event?: React.SyntheticEvent) => {
     setSelectedRow(row);
     setInputValues({
       ...row,
-      assessment_mapping: row.assessment_mapping ? Number(row.assessment_mapping) : 0
+      assessment_mapping: row.assessment_mapping ? Number(row.assessment_mapping) : 0,
     });
     // ensure the anchor is an HTMLElement or null to satisfy the setter type
     const anchorEl = (event?.currentTarget as unknown as HTMLElement) ?? null;
     setAnchor(anchorEl);
   };
   const [showMitigations, setShowMitigations] = useState(false);
-  const [showMitigationProjectRisk, setShowMitigationProjectRisk] =
-    useState<ProjectRisk | null>(null);
-
+  const [showMitigationProjectRisk, setShowMitigationProjectRisk] = useState<ProjectRisk | null>(
+    null,
+  );
 
   const [showLinkedPoliciesToRisk, setShowLinkedPoliciesToRisk] = useState(false);
 
@@ -96,8 +94,6 @@ const VWProjectRisksTableBody = ({
   const riskId = searchParams.get("riskId");
 
   const [selectedRiskId, setSelectedRiskId] = useState<number | null>(null);
-
-
 
   useEffect(() => {
     if (riskId) {
@@ -108,16 +104,16 @@ const VWProjectRisksTableBody = ({
     }
   }, []);
 
-  const toggleMitigations = (
-    risk: RiskModel,
-    e: React.MouseEvent<HTMLElement>
-  ) => {
+  const toggleMitigations = (risk: RiskModel, e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     setShowMitigations((prev) => !prev);
     const riskMitigation: ProjectRisk = {
       ...risk,
       risk_owner: risk.risk_owner?.toString(),
-      risk_approval: risk.risk_approval !== undefined && risk.risk_approval !== null ? String(risk.risk_approval) : "",
+      risk_approval:
+        risk.risk_approval !== undefined && risk.risk_approval !== null
+          ? String(risk.risk_approval)
+          : "",
     } as unknown as ProjectRisk;
     setShowMitigationProjectRisk(riskMitigation);
   };
@@ -127,15 +123,13 @@ const VWProjectRisksTableBody = ({
   };
 
   const handleViewLinkedPolicies = async (riskId: number) => {
-    setSelectedRiskId(riskId)
+    setSelectedRiskId(riskId);
     setShowLinkedPoliciesToRisk(true);
   };
 
   const displayUserFullName = (userId: number) => {
     const currentUser = users.find((user: User) => user.id === userId);
-    const fullName = currentUser
-      ? `${currentUser.name} ${currentUser.surname}`
-      : "";
+    const fullName = currentUser ? `${currentUser.name} ${currentUser.surname}` : "";
     return fullName.length > 30 ? `${fullName.slice(0, 30)}...` : fullName;
   };
 
@@ -152,19 +146,20 @@ const VWProjectRisksTableBody = ({
                   ...singleTheme.tableStyles.primary.body.row,
                   ...(row.is_deleted && {
                     opacity: 0.7,
-                    backgroundColor: theme.palette.action?.hover || '#fafafa',
-                  })
+                    backgroundColor: theme.palette.action?.hover || "#fafafa",
+                  }),
                 }}
                 onClick={(e) => handleEditRisk(row, e)}
               >
                 <TableCell
                   sx={{
                     ...getCellStyle(row),
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "risk_name"
-                      ? "#e8e8e8"
-                      : "#fafafa",
+                    backgroundColor:
+                      flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "risk_name"
+                          ? "#e8e8e8"
+                          : "#fafafa",
                   }}
                 >
                   {row.risk_name
@@ -177,45 +172,42 @@ const VWProjectRisksTableBody = ({
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "risk_owner"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "risk_owner"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
-                    {row.risk_owner
-                      ? displayUserFullName(Number(row.risk_owner))
-                      : "-"}
+                    {row.risk_owner ? displayUserFullName(Number(row.risk_owner)) : "-"}
                   </TableCell>
                 )}
                 {isColVisible("severity") && (
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "severity"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "severity"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
-                    {row.severity ? (
-                      <Chip label={row.severity} />
-                    ) : (
-                      "-"
-                    )}
+                    {row.severity ? <Chip label={row.severity} /> : "-"}
                   </TableCell>
                 )}
                 {isColVisible("ale_estimate") && (
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "ale_estimate"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "ale_estimate"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
                     {row.ale_estimate != null
@@ -227,29 +219,27 @@ const VWProjectRisksTableBody = ({
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "mitigation_status"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "mitigation_status"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
-                    {row.mitigation_status ? (
-                      <Chip label={row.mitigation_status} />
-                    ) : (
-                      "-"
-                    )}
+                    {row.mitigation_status ? <Chip label={row.mitigation_status} /> : "-"}
                   </TableCell>
                 )}
                 {isColVisible("risk_level_autocalculated") && (
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "risk_level_autocalculated"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "risk_level_autocalculated"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
                     {row.risk_level_autocalculated ? (
@@ -263,11 +253,12 @@ const VWProjectRisksTableBody = ({
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "deadline"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "deadline"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
                     {row.deadline ? displayFormattedDate(row.deadline.toString()) : "NA"}
@@ -277,17 +268,16 @@ const VWProjectRisksTableBody = ({
                   <TableCell
                     sx={{
                       ...getCellStyle(row),
-                      backgroundColor: flashRow === row.id
-                        ? singleTheme.flashColors.background
-                        : sortConfig.key === "controls_mapping"
-                        ? "background.surface"
-                        : "",
+                      backgroundColor:
+                        flashRow === row.id
+                          ? singleTheme.flashColors.background
+                          : sortConfig.key === "controls_mapping"
+                            ? "background.surface"
+                            : "",
                     }}
                   >
                     <VWLink
-                      onClick={(e: React.MouseEvent<HTMLElement>) =>
-                        toggleMitigations(row, e)
-                      }
+                      onClick={(e: React.MouseEvent<HTMLElement>) => toggleMitigations(row, e)}
                     >
                       View controls
                     </VWLink>
@@ -297,11 +287,12 @@ const VWProjectRisksTableBody = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
                     minWidth: "80px",
-                    backgroundColor: flashRow === row.id
-                      ? singleTheme.flashColors.background
-                      : sortConfig.key === "actions"
-                      ? "background.surface"
-                      : "",
+                    backgroundColor:
+                      flashRow === row.id
+                        ? singleTheme.flashColors.background
+                        : sortConfig.key === "actions"
+                          ? "background.surface"
+                          : "",
                   }}
                 >
                   <Stack direction="row" alignItems="center" gap={0.5}>
@@ -315,7 +306,9 @@ const VWProjectRisksTableBody = ({
                         id={row.id!}
                         type="risk"
                         onMouseEvent={(e) => handleEditRisk(row, e)}
-                        onDelete={() => { handleDeleteRisk(row.id!); }}
+                        onDelete={() => {
+                          handleDeleteRisk(row.id!);
+                        }}
                         onEdit={() => handleEditRisk(row)}
                         openLinkedPolicies={() => handleViewLinkedPolicies(row.id!)}
                         warningTitle="Delete this project risk?"
@@ -398,20 +391,16 @@ const VWProjectRisksTableBody = ({
         </Dialog>
       )}
 
-      {
-        showLinkedPoliciesToRisk && (
-          <ProjectRiskLinkedPolicies 
-            type = "risk"
-            riskId = {selectedRiskId}
-            isOpen = {showLinkedPoliciesToRisk}
-            onClose={() => {
-              setShowLinkedPoliciesToRisk(false);
-            }}/>
-  
-        )
-      }
-
-
+      {showLinkedPoliciesToRisk && (
+        <ProjectRiskLinkedPolicies
+          type="risk"
+          riskId={selectedRiskId}
+          isOpen={showLinkedPoliciesToRisk}
+          onClose={() => {
+            setShowLinkedPoliciesToRisk(false);
+          }}
+        />
+      )}
     </>
   );
 };

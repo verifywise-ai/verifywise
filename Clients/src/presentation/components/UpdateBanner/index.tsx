@@ -26,10 +26,7 @@ export default function UpdateBanner() {
         boxShadow: theme.boxShadow,
       }}
     >
-      <Box
-        sx={{ color: theme.palette.primary.main, maxHeight: "16px" }}
-        aria-hidden="true"
-      >
+      <Box sx={{ color: theme.palette.primary.main, maxHeight: "16px" }} aria-hidden="true">
         <Info size={16} />
       </Box>
       <Typography

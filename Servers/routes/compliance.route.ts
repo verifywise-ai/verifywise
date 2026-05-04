@@ -24,7 +24,7 @@ const router = express.Router();
 import {
   getComplianceScore,
   getComplianceScoreByOrganization,
-  getComplianceDetails
+  getComplianceDetails,
 } from "../controllers/compliance.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";

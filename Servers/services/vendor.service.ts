@@ -69,7 +69,7 @@ export interface ServiceContext {
 export async function createVendor(
   input: CreateVendorInput,
   ctx: ServiceContext,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<VendorModel> {
   // Create vendor model with validation
   const vendorModel = await VendorModel.createNewVendor(
@@ -89,7 +89,7 @@ export async function createVendor(
     input.business_criticality,
     input.past_issues,
     input.regulatory_exposure,
-    input.risk_score
+    input.risk_score,
   );
 
   // Validate vendor data
@@ -99,24 +99,14 @@ export async function createVendor(
   vendorModel.canBeModified();
 
   // Persist to database
-  const createdVendor = await createNewVendorQuery(
-    vendorModel,
-    ctx.organizationId,
-    transaction
-  );
+  const createdVendor = await createNewVendorQuery(vendorModel, ctx.organizationId, transaction);
 
   if (!createdVendor || createdVendor.id === undefined) {
     throw new DatabaseException("Failed to create vendor");
   }
 
   // Record creation in change history
-  await recordVendorCreation(
-    createdVendor.id,
-    ctx.userId,
-    ctx.organizationId,
-    input,
-    transaction
-  );
+  await recordVendorCreation(createdVendor.id, ctx.userId, ctx.organizationId, input, transaction);
 
   return createdVendor;
 }
@@ -138,7 +128,7 @@ export async function updateVendor(
   vendorId: number,
   input: UpdateVendorInput,
   ctx: ServiceContext,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<VendorModel | null> {
   // Find existing vendor
   const existingVendor = await getVendorByIdQuery(vendorId, ctx.organizationId);
@@ -185,7 +175,7 @@ export async function updateVendor(
       role: ctx.role,
       transaction,
     },
-    ctx.organizationId
+    ctx.organizationId,
   );
 
   if (!updatedVendor) {
@@ -199,7 +189,7 @@ export async function updateVendor(
       ctx.userId,
       ctx.organizationId,
       changes,
-      transaction
+      transaction,
     );
   }
 

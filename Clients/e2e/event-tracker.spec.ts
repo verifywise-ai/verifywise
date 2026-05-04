@@ -17,13 +17,11 @@ test.describe("Event Tracker (WatchTower)", () => {
         .or(page.getByText(/log/i))
         .or(page.getByText(/tracker/i))
         .or(page.getByRole("heading"))
-        .first()
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/event-tracker");
     await page.waitForLoadState("domcontentloaded");
 
@@ -45,9 +43,7 @@ test.describe("Event Tracker (WatchTower)", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("displays event list or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("displays event list or empty state", async ({ authedPage: page }) => {
     await page.goto("/event-tracker");
 
     // Should show event logs, activity feed, or empty state
@@ -66,11 +62,8 @@ test.describe("Event Tracker (WatchTower)", () => {
     await page.goto("/event-tracker/logs");
     await expect(page).toHaveURL(/\/event-tracker\/logs/);
 
-    await expect(
-      page
-        .getByText(/log/i)
-        .or(page.getByRole("heading"))
-        .first()
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/log/i).or(page.getByRole("heading")).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

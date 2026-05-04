@@ -1,10 +1,4 @@
-import {
-  Box,
-  Typography,
-  Stack,
-  LinearProgress,
-  Chip,
-} from "@mui/material";
+import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { brand, text } from "../../../themes/palette";
@@ -29,13 +23,8 @@ interface UploadProgressProps {
   totalFiles: number;
 }
 
-export default function UploadProgress({
-  results,
-  totalFiles,
-}: UploadProgressProps) {
-  const completed = results.filter(
-    (r) => r.status === "success" || r.status === "error"
-  ).length;
+export default function UploadProgress({ results, totalFiles }: UploadProgressProps) {
+  const completed = results.filter((r) => r.status === "success" || r.status === "error").length;
   const successCount = results.filter((r) => r.status === "success").length;
   const errorCount = results.filter((r) => r.status === "error").length;
   const progress = totalFiles > 0 ? (completed / totalFiles) * 100 : 0;
@@ -47,9 +36,7 @@ export default function UploadProgress({
       <Box>
         <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
-            {isComplete
-              ? "Upload complete"
-              : `Uploading ${completed + 1} of ${totalFiles}...`}
+            {isComplete ? "Upload complete" : `Uploading ${completed + 1} of ${totalFiles}...`}
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
             {completed}/{totalFiles}
@@ -126,9 +113,7 @@ export default function UploadProgress({
               {result.fileName}
             </Typography>
             {result.status === "pending" && (
-              <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>
-                Waiting...
-              </Typography>
+              <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>Waiting...</Typography>
             )}
             {result.status === "uploading" && (
               <Loader2
@@ -137,9 +122,7 @@ export default function UploadProgress({
                 style={{ animation: `${spin} 1s linear infinite` }}
               />
             )}
-            {result.status === "success" && (
-              <CheckCircle2 size={16} color="#079455" />
-            )}
+            {result.status === "success" && <CheckCircle2 size={16} color="#079455" />}
             {result.status === "error" && (
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <XCircle size={16} color="#F04438" />

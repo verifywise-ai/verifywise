@@ -1,19 +1,13 @@
 import { Model, Column, DataType, Table } from "sequelize-typescript";
 import { IFramework } from "../../interfaces/i.framework";
-import {
-  ValidationException,
-  NotFoundException,
-} from "../../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "frameworks",
   timestamps: true,
   underscored: true,
 })
-export class FrameworkModel
-  extends Model<FrameworkModel>
-  implements IFramework
-{
+export class FrameworkModel extends Model<FrameworkModel> implements IFramework {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -52,45 +46,30 @@ export class FrameworkModel
   /**
    * Create a new framework with comprehensive validation
    */
-  static async createNewFramework(
-    name: string,
-    description: string
-  ): Promise<FrameworkModel> {
+  static async createNewFramework(name: string, description: string): Promise<FrameworkModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
       throw new ValidationException("Name is required", "name", name);
     }
 
     if (name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", name);
     }
 
     if (name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", name);
     }
 
     // Validate description
     if (!description || description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        description
-      );
+      throw new ValidationException("Description is required", "description", description);
     }
 
     if (description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        description
+        description,
       );
     }
 
@@ -98,7 +77,7 @@ export class FrameworkModel
       throw new ValidationException(
         "Description must not exceed 1000 characters",
         "description",
-        description
+        description,
       );
     }
 
@@ -114,25 +93,18 @@ export class FrameworkModel
   /**
    * Update framework information with validation
    */
-  async updateFramework(updateData: {
-    name?: string;
-    description?: string;
-  }): Promise<void> {
+  async updateFramework(updateData: { name?: string; description?: string }): Promise<void> {
     // Validate name if provided
     if (updateData.name !== undefined) {
       if (!updateData.name || updateData.name.trim().length === 0) {
-        throw new ValidationException(
-          "Name is required",
-          "name",
-          updateData.name
-        );
+        throw new ValidationException("Name is required", "name", updateData.name);
       }
 
       if (updateData.name.trim().length < 2) {
         throw new ValidationException(
           "Name must be at least 2 characters long",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -140,7 +112,7 @@ export class FrameworkModel
         throw new ValidationException(
           "Name must not exceed 255 characters",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -149,14 +121,11 @@ export class FrameworkModel
 
     // Validate description if provided
     if (updateData.description !== undefined) {
-      if (
-        !updateData.description ||
-        updateData.description.trim().length === 0
-      ) {
+      if (!updateData.description || updateData.description.trim().length === 0) {
         throw new ValidationException(
           "Description is required",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -164,7 +133,7 @@ export class FrameworkModel
         throw new ValidationException(
           "Description must be at least 10 characters long",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -172,7 +141,7 @@ export class FrameworkModel
         throw new ValidationException(
           "Description must not exceed 1000 characters",
           "description",
-          updateData.description
+          updateData.description,
         );
       }
 
@@ -189,34 +158,22 @@ export class FrameworkModel
     }
 
     if (this.name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", this.name);
     }
 
     if (this.name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", this.name);
     }
 
     if (!this.description || this.description.trim().length === 0) {
-      throw new ValidationException(
-        "Description is required",
-        "description",
-        this.description
-      );
+      throw new ValidationException("Description is required", "description", this.description);
     }
 
     if (this.description.trim().length < 10) {
       throw new ValidationException(
         "Description must be at least 10 characters long",
         "description",
-        this.description
+        this.description,
       );
     }
 
@@ -224,7 +181,7 @@ export class FrameworkModel
       throw new ValidationException(
         "Description must not exceed 1000 characters",
         "description",
-        this.description
+        this.description,
       );
     }
   }
@@ -321,11 +278,7 @@ export class FrameworkModel
    */
   static async findByIdWithValidation(id: number): Promise<FrameworkModel> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     const framework = await FrameworkModel.findByPk(id);
@@ -350,11 +303,7 @@ export class FrameworkModel
    */
   static async findByName(name: string): Promise<FrameworkModel[]> {
     if (!name || name.trim().length === 0) {
-      throw new ValidationException(
-        "Name is required for search",
-        "name",
-        name
-      );
+      throw new ValidationException("Name is required for search", "name", name);
     }
 
     return await FrameworkModel.findAll({
@@ -372,14 +321,10 @@ export class FrameworkModel
    */
   static async updateFrameworkById(
     id: number,
-    updateData: Partial<IFramework>
+    updateData: Partial<IFramework>,
   ): Promise<[number, FrameworkModel[]]> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await FrameworkModel.update(updateData, {
@@ -393,11 +338,7 @@ export class FrameworkModel
    */
   static async deleteFrameworkById(id: number): Promise<number> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return await FrameworkModel.destroy({
@@ -456,7 +397,7 @@ export class FrameworkModel
       id: this.id,
       name: this.name,
       description: this.description,
-      created_at: (this.createdAt ?? this.created_at),
+      created_at: this.createdAt ?? this.created_at,
       ageInDays: this.getAgeInDays(),
       isActive: this.isActive(),
       isRecent: this.isRecent(),

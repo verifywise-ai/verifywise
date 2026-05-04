@@ -1,5 +1,5 @@
-import { Theme } from '@mui/material/styles';
-import { background, status } from '../themes/palette';
+import { Theme } from "@mui/material/styles";
+import { background, status } from "../themes/palette";
 
 /**
  * Centralized input styles for consistent hover, focus, and interaction states
@@ -57,50 +57,51 @@ export const getInputStyles = (theme: Theme, options: InputStylesOptions = {}) =
 
   // Color definitions
   const defaultBorderColor = theme.palette.border.dark;
-  const hoverBorder = hoverBorderColor || '#5FA896';
+  const hoverBorder = hoverBorderColor || "#5FA896";
   const focusBorder = focusBorderColor || theme.palette.primary.main;
   const focusRing = focusRingColor || `${theme.palette.primary.main}1A`; // 10% opacity
   const errorBorder = theme.palette.status?.error?.border || theme.palette.error.main;
 
   return {
-    '& fieldset': {
+    "& fieldset": {
       borderColor: hasError ? errorBorder : defaultBorderColor,
       borderRadius: theme.shape.borderRadius,
-      transition: 'border-color 150ms ease-in-out, box-shadow 150ms ease-in-out',
+      transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
     },
 
     // Hover state (when not disabled, not focused, and not in error)
     ...(!disableHover && {
-      '&:not(:has(.Mui-disabled)):not(:has(.Mui-focused)) .MuiOutlinedInput-root:hover fieldset': {
+      "&:not(:has(.Mui-disabled)):not(:has(.Mui-focused)) .MuiOutlinedInput-root:hover fieldset": {
         borderColor: hasError ? errorBorder : hoverBorder,
       },
     }),
 
     // Focus state - enhanced border and focus ring
-    '& .MuiOutlinedInput-root.Mui-focused fieldset': {
+    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
       borderColor: hasError ? errorBorder : `${focusBorder} !important`,
-      borderWidth: '2px',
-      ...(!disableFocusRing && !hasError && {
-        boxShadow: `0 0 0 3px ${focusRing}`,
-      }),
+      borderWidth: "2px",
+      ...(!disableFocusRing &&
+        !hasError && {
+          boxShadow: `0 0 0 3px ${focusRing}`,
+        }),
     },
 
     // Error state
     ...(hasError && {
-      '& .MuiOutlinedInput-root fieldset': {
+      "& .MuiOutlinedInput-root fieldset": {
         borderColor: `${errorBorder} !important`,
       },
-      '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-        borderWidth: '2px',
+      "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+        borderWidth: "2px",
         boxShadow: `0 0 0 3px ${errorBorder}1A`, // 10% opacity
       },
     }),
 
     // Disabled state
-    '& .MuiOutlinedInput-root.Mui-disabled': {
+    "& .MuiOutlinedInput-root.Mui-disabled": {
       backgroundColor: theme.palette.grey?.[50] || background.accent,
-      cursor: 'not-allowed',
-      '& fieldset': {
+      cursor: "not-allowed",
+      "& fieldset": {
         borderColor: theme.palette.grey?.[300] || status.default.border,
       },
     },
@@ -122,47 +123,48 @@ export const getSelectStyles = (theme: Theme, options: InputStylesOptions = {}) 
   } = options;
 
   const defaultBorderColor = theme.palette.border.dark;
-  const hoverBorder = hoverBorderColor || '#5FA896';
+  const hoverBorder = hoverBorderColor || "#5FA896";
   const focusBorder = focusBorderColor || theme.palette.primary.main;
   const focusRing = focusRingColor || `${theme.palette.primary.main}1A`;
   const errorBorder = theme.palette.status?.error?.border || theme.palette.error.main;
 
   return {
-    '& .MuiOutlinedInput-notchedOutline': {
+    "& .MuiOutlinedInput-notchedOutline": {
       borderColor: hasError ? errorBorder : defaultBorderColor,
       borderRadius: theme.shape.borderRadius,
-      transition: 'border-color 150ms ease-in-out, box-shadow 150ms ease-in-out',
+      transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
     },
 
     // Hover state
     ...(!disableHover && {
-      '&:not(.Mui-disabled):hover .MuiOutlinedInput-notchedOutline': {
+      "&:not(.Mui-disabled):hover .MuiOutlinedInput-notchedOutline": {
         borderColor: hasError ? errorBorder : hoverBorder,
       },
     }),
 
     // Focus state
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
       borderColor: hasError ? errorBorder : `${focusBorder} !important`,
-      borderWidth: '2px',
-      ...(!disableFocusRing && !hasError && {
-        boxShadow: `0 0 0 3px ${focusRing}`,
-      }),
+      borderWidth: "2px",
+      ...(!disableFocusRing &&
+        !hasError && {
+          boxShadow: `0 0 0 3px ${focusRing}`,
+        }),
     },
 
     // Error state for focused
     ...(hasError && {
-      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-        borderWidth: '2px',
+      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+        borderWidth: "2px",
         boxShadow: `0 0 0 3px ${errorBorder}1A`,
       },
     }),
 
     // Disabled state
-    '&.Mui-disabled': {
+    "&.Mui-disabled": {
       backgroundColor: theme.palette.grey?.[50] || background.accent,
-      cursor: 'not-allowed',
-      '& .MuiOutlinedInput-notchedOutline': {
+      cursor: "not-allowed",
+      "& .MuiOutlinedInput-notchedOutline": {
         borderColor: theme.palette.grey?.[300] || status.default.border,
       },
     },
@@ -192,58 +194,59 @@ export const getAutocompleteStyles = (theme: Theme, options: InputStylesOptions 
   } = options;
 
   const defaultBorderColor = theme.palette.border.dark;
-  const hoverBorder = hoverBorderColor || '#5FA896';
+  const hoverBorder = hoverBorderColor || "#5FA896";
   const focusBorder = focusBorderColor || theme.palette.primary.main;
   const focusRing = focusRingColor || `${theme.palette.primary.main}1A`;
   const errorBorder = theme.palette.status?.error?.border || theme.palette.error.main;
 
   return {
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': {
+    "& .MuiOutlinedInput-root": {
+      "& fieldset": {
         borderColor: hasError ? errorBorder : defaultBorderColor,
         borderRadius: theme.shape.borderRadius,
-        transition: 'border-color 150ms ease-in-out, box-shadow 150ms ease-in-out',
+        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
       },
 
       // Hover state
       ...(!disableHover && {
-        '&:not(.Mui-disabled):hover fieldset': {
+        "&:not(.Mui-disabled):hover fieldset": {
           borderColor: hasError ? errorBorder : hoverBorder,
         },
       }),
 
       // Focus state
-      '&.Mui-focused fieldset': {
+      "&.Mui-focused fieldset": {
         borderColor: hasError ? errorBorder : `${focusBorder} !important`,
-        borderWidth: '2px',
-        ...(!disableFocusRing && !hasError && {
-          boxShadow: `0 0 0 3px ${focusRing}`,
-        }),
+        borderWidth: "2px",
+        ...(!disableFocusRing &&
+          !hasError && {
+            boxShadow: `0 0 0 3px ${focusRing}`,
+          }),
       },
 
       // Error focus state
       ...(hasError && {
-        '&.Mui-focused fieldset': {
-          borderWidth: '2px',
+        "&.Mui-focused fieldset": {
+          borderWidth: "2px",
           boxShadow: `0 0 0 3px ${errorBorder}1A`,
         },
       }),
 
       // Disabled state
-      '&.Mui-disabled': {
+      "&.Mui-disabled": {
         backgroundColor: theme.palette.grey?.[50] || background.accent,
-        '& fieldset': {
+        "& fieldset": {
           borderColor: theme.palette.grey?.[300] || status.default.border,
         },
       },
     },
 
     ...(hasError && {
-      '& .MuiOutlinedInput-root fieldset': {
+      "& .MuiOutlinedInput-root fieldset": {
         borderColor: `${errorBorder} !important`,
       },
-      '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-        borderWidth: '2px',
+      "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+        borderWidth: "2px",
         boxShadow: `0 0 0 3px ${errorBorder}1A`,
       },
     }),
@@ -264,27 +267,27 @@ export const getSearchBoxStyles = (theme: Theme, options: InputStylesOptions = {
   } = options;
 
   const defaultBorderColor = theme.palette.border.dark;
-  const hoverBorder = hoverBorderColor || '#5FA896';
+  const hoverBorder = hoverBorderColor || "#5FA896";
   const focusBorder = focusBorderColor || theme.palette.primary.main;
   const focusRing = focusRingColor || `${theme.palette.primary.main}1A`;
 
   return {
     border: `1px solid ${defaultBorderColor}`,
     borderRadius: theme.shape.borderRadius,
-    transition: 'border-color 150ms ease-in-out, box-shadow 150ms ease-in-out',
+    transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
 
     // Hover state
     ...(!disableHover && {
-      '&:hover': {
+      "&:hover": {
         borderColor: hoverBorder,
       },
     }),
 
     // Focus-within state (when input inside is focused)
-    '&:focus-within': {
+    "&:focus-within": {
       borderColor: `${focusBorder}`,
-      borderWidth: '2px',
-      padding: '9px', // Compensate for 2px border (was 10px with 1px border)
+      borderWidth: "2px",
+      padding: "9px", // Compensate for 2px border (was 10px with 1px border)
       ...(!disableFocusRing && {
         boxShadow: `0 0 0 3px ${focusRing}`,
       }),
@@ -295,14 +298,14 @@ export const getSearchBoxStyles = (theme: Theme, options: InputStylesOptions = {
 /**
  * Helper function to get cursor style based on input type
  */
-export const getInputCursor = (type: 'text' | 'select' | 'datepicker' | 'button'): string => {
+export const getInputCursor = (type: "text" | "select" | "datepicker" | "button"): string => {
   switch (type) {
-    case 'select':
-    case 'datepicker':
-    case 'button':
-      return 'pointer';
-    case 'text':
+    case "select":
+    case "datepicker":
+    case "button":
+      return "pointer";
+    case "text":
     default:
-      return 'text';
+      return "text";
   }
 };

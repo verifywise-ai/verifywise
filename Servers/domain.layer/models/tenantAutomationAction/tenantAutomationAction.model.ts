@@ -9,7 +9,10 @@ import { AutomationActionModel } from "../automationAction/automationAction.mode
   timestamps: true,
   underscored: true,
 })
-export class TenantAutomationActionModel extends Model<TenantAutomationActionModel> implements ITenantAutomationAction {
+export class TenantAutomationActionModel
+  extends Model<TenantAutomationActionModel>
+  implements ITenantAutomationAction
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -70,7 +73,7 @@ export class TenantAutomationActionModel extends Model<TenantAutomationActionMod
     automation_id: number,
     action_type_id: number,
     params?: Record<string, any>,
-    order: number = 1
+    order: number = 1,
   ): Promise<TenantAutomationActionModel> {
     // Validate required fields
     if (!automation_id) {
@@ -144,7 +147,11 @@ export class TenantAutomationActionModel extends Model<TenantAutomationActionMod
     if (updateData.action_type_id !== undefined) {
       const actionType = await AutomationActionModel.findByPk(updateData.action_type_id);
       if (!actionType) {
-        throw new ValidationException("Action type not found", "action_type_id", updateData.action_type_id);
+        throw new ValidationException(
+          "Action type not found",
+          "action_type_id",
+          updateData.action_type_id,
+        );
       }
       this.action_type_id = updateData.action_type_id;
     }
@@ -155,7 +162,11 @@ export class TenantAutomationActionModel extends Model<TenantAutomationActionMod
 
     if (updateData.order !== undefined) {
       if (updateData.order < 1) {
-        throw new ValidationException("Order must be a positive integer", "order", updateData.order);
+        throw new ValidationException(
+          "Order must be a positive integer",
+          "order",
+          updateData.order,
+        );
       }
       this.order = updateData.order;
     }
@@ -214,8 +225,8 @@ export class TenantAutomationActionModel extends Model<TenantAutomationActionMod
       action_type: this.action_type?.toJSON(),
       params: this.params,
       order: this.order,
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

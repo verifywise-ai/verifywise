@@ -1,18 +1,7 @@
-import {
-  Box,
-  Chip,
-  Stack,
-  Tooltip,
-  Typography,
-  Dialog,
-  useTheme,
-} from "@mui/material";
+import { Box, Chip, Stack, Tooltip, Typography, Dialog, useTheme } from "@mui/material";
 import { Question } from "../../../domain/types/Question";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
-import {
-  priorities,
-  PriorityLevel,
-} from "../../pages/Assessment/NewAssessment/priorities";
+import { priorities, PriorityLevel } from "../../pages/Assessment/NewAssessment/priorities";
 import RichTextEditor from "../RichTextEditor";
 import { useCallback, useState, useEffect, Suspense } from "react";
 import FileManagementDialog from "../Inputs/FileUpload/FileManagementDialog";
@@ -45,11 +34,7 @@ import { border as borderPalette } from "../../themes/palette";
  * Usage:
  * <QuestionFrame question={questionObject} />
  */
-const QuestionFrame = ({
-  question,
-  setRefreshKey,
-  currentProjectId,
-}: IQuestionProps) => {
+const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionProps) => {
   const theme = useTheme();
   const { userRoleName, userId } = useAuth();
   const [values, setValues] = useState<Question>({
@@ -59,20 +44,16 @@ const QuestionFrame = ({
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
 
   const [alert, setAlert] = useState<AlertProps | null>(null);
-  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] =
-    useState<boolean>(false);
+  const [isLinkedRisksModalOpen, setIsLinkedRisksModalOpen] = useState<boolean>(false);
   const [selectedRisks, setSelectedRisks] = useState<number[]>([]);
   const [deletedRisks, setDeletedRisks] = useState<number[]>([]);
-  const [auditedStatusModalOpen, setAuditedStatusModalOpen] =
-    useState<boolean>(false);
-  
+  const [auditedStatusModalOpen, setAuditedStatusModalOpen] = useState<boolean>(false);
+
   // File management state
   const [pendingFiles, setPendingFiles] = useState<FileData[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
 
-  const isEditingDisabled = !(allowedRoles?.frameworks?.edit || []).includes(
-    userRoleName || ""
-  );
+  const isEditingDisabled = !(allowedRoles?.frameworks?.edit || []).includes(userRoleName || "");
 
   const STATUS_OPTIONS = [
     { _id: "notStarted", name: "Not started" },
@@ -94,8 +75,7 @@ const QuestionFrame = ({
       statusValue === "Done" &&
       (selectedRisks.length > 0 ||
         (values.risks?.length || 0) > 0 ||
-        ((values.risks?.length || 0) > 0 &&
-          deletedRisks.length === (values.risks?.length || 0)))
+        ((values.risks?.length || 0) > 0 && deletedRisks.length === (values.risks?.length || 0)))
     ) {
       setAuditedStatusModalOpen(true);
     }
@@ -119,19 +99,19 @@ const QuestionFrame = ({
     try {
       // Build FormData if we have files to upload
       const formDataToSend = new FormData();
-      
+
       // Add basic fields
       formDataToSend.append("answer", values.answer || "");
       formDataToSend.append("status", values.status || "notStarted");
       formDataToSend.append("question_id", question.question_id?.toString() || "");
       formDataToSend.append("user_id", userId?.toString() || "");
       formDataToSend.append("project_id", currentProjectId?.toString() || "");
-      
+
       // Add deleted file IDs
       formDataToSend.append("delete", JSON.stringify(deletedFileIds));
       formDataToSend.append("risksDelete", JSON.stringify(deletedRisks));
       formDataToSend.append("risksMitigated", JSON.stringify(selectedRisks));
-      
+
       // Add pending files
       pendingFiles.forEach((file) => {
         if (file.data instanceof Blob) {
@@ -147,7 +127,7 @@ const QuestionFrame = ({
         answerId: question.answer_id,
         body: formDataToSend,
       });
-      
+
       if (response.status === 202) {
         setValues({
           ...response.data.data,
@@ -196,14 +176,12 @@ const QuestionFrame = ({
       });
       return;
     }
-    
+
     // Mark file for deletion (will be deleted on save)
     setDeletedFileIds((prev) => [...prev, fileIdNumber]);
-    
+
     // Remove from local display
-    const newEvidenceFiles = (values?.evidence_files || []).filter(
-      (file) => file?.id !== fileId
-    );
+    const newEvidenceFiles = (values?.evidence_files || []).filter((file) => file?.id !== fileId);
     setValues((prevValues) => ({
       ...prevValues,
       evidence_files: newEvidenceFiles,
@@ -243,10 +221,7 @@ const QuestionFrame = ({
                   },
                 }}
               >
-                <Box
-                  component="span"
-                  sx={{ display: "inline-flex", cursor: "pointer" }}
-                >
+                <Box component="span" sx={{ display: "inline-flex", cursor: "pointer" }}>
                   <GreyCircleInfoIcon size={16} />
                 </Box>
               </Tooltip>
@@ -271,9 +246,8 @@ const QuestionFrame = ({
             label={question.priority_level || "low priority"}
             sx={{
               backgroundColor:
-                priorities[
-                  (question.priority_level || "low priority") as PriorityLevel
-                ]?.color || "#666",
+                priorities[(question.priority_level || "low priority") as PriorityLevel]?.color ||
+                "#666",
               color: "background.main",
               borderRadius: theme.shape.borderRadius,
             }}
@@ -522,9 +496,7 @@ const QuestionFrame = ({
           />
         </Suspense>
       </Dialog>
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
     </Box>
   );
 };

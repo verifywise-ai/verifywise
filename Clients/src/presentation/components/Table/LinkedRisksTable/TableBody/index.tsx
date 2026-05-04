@@ -12,18 +12,12 @@ import Checkbox from "../../../Inputs/Checkbox";
 
 import singleTheme from "../../../../themes/v1SingleTheme";
 import Chip from "../../../Chip";
-import {
-  paginationStyle,
-  paginationDropdown,
-  paginationSelect,
-} from "../../styles";
+import { paginationStyle, paginationDropdown, paginationSelect } from "../../styles";
 import TablePaginationActions from "../../../TablePagination";
 import { IProjectRiskTableBodyProps } from "../../../../types/interfaces/i.table";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 
-const SelectorVertical = (props: any) => (
-  <ChevronsUpDown size={16} {...props} />
-);
+const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
   rows,
   page,
@@ -42,7 +36,7 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
     (_: unknown, newPage: number) => {
       setCurrentPagingation(newPage);
     },
-    [setCurrentPagingation]
+    [setCurrentPagingation],
   );
 
   const handleChangeRowsPerPage = useCallback(
@@ -50,13 +44,10 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
       setRowsPerPage(parseInt(event.target.value, 10));
       setCurrentPagingation(0);
     },
-    [setRowsPerPage, setCurrentPagingation]
+    [setRowsPerPage, setCurrentPagingation],
   );
 
-  const handleRowClick = (
-    riskData: RiskModel,
-    event: React.ChangeEvent | React.MouseEvent
-  ) => {
+  const handleRowClick = (riskData: RiskModel, event: React.ChangeEvent | React.MouseEvent) => {
     event.stopPropagation();
     const riskId = riskData.id;
 
@@ -92,7 +83,7 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
                     size="small"
                     id={`linked-risk-${row.id}`}
                     isChecked={checkedRows.includes(row.id!)}
-                    value={row.id ? row.id.toString(): ""}
+                    value={row.id ? row.id.toString() : ""}
                     onChange={(e) => handleRowClick(row, e)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -105,18 +96,10 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
                   {row.risk_description ? row.risk_description : "-"}
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {row.risk_severity ? (
-                    <Chip label={row.risk_severity} />
-                  ) : (
-                    "-"
-                  )}
+                  {row.risk_severity ? <Chip label={row.risk_severity} /> : "-"}
                 </TableCell>
-                <TableCell sx={cellStyle}>
-                  {row.likelihood ? row.likelihood : "-"}
-                </TableCell>
-                <TableCell sx={cellStyle}>
-                  {row.risk_category ? row.risk_category : "-"}
-                </TableCell>
+                <TableCell sx={cellStyle}>{row.likelihood ? row.likelihood : "-"}</TableCell>
+                <TableCell sx={cellStyle}>{row.risk_category ? row.risk_category : "-"}</TableCell>
               </TableRow>
             ))}
       </TableBody>
@@ -139,10 +122,7 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
             ActionsComponent={(props) => <TablePaginationActions {...props} />}
             labelRowsPerPage="Risks per page"
             labelDisplayedRows={({ page, count }) =>
-              `Page ${page + 1} of ${Math.max(
-                0,
-                Math.ceil(count / rowsPerPage)
-              )}`
+              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
             }
             sx={paginationStyle}
             slotProps={{

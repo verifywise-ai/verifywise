@@ -8,7 +8,10 @@ type IAITrustCentreOverviewTermsAndContact = IAITrustCentreOverview["terms_and_c
   timestamps: true,
   underscored: true,
 })
-export class AITrustCenterTermsAndContactModel extends Model<AITrustCenterTermsAndContactModel> implements IAITrustCentreOverviewTermsAndContact {
+export class AITrustCenterTermsAndContactModel
+  extends Model<AITrustCenterTermsAndContactModel>
+  implements IAITrustCentreOverviewTermsAndContact
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

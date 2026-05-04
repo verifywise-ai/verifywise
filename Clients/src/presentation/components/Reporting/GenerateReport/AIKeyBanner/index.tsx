@@ -43,8 +43,8 @@ const AIKeyBanner: React.FC<AIKeyBannerProps> = ({ onClose }) => {
             lineHeight: 1.5,
           }}
         >
-          Configure an LLM key to generate reports with executive summaries, key
-          findings and recommendations.
+          Configure an LLM key to generate reports with executive summaries, key findings and
+          recommendations.
         </Typography>
         <Button
           size="small"

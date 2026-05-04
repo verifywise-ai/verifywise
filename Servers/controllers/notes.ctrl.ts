@@ -58,27 +58,15 @@ export async function createNote(req: Request, res: Response): Promise<any> {
 
     // Validate required fields
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Note content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Note content is required", "content", content);
     }
 
     if (!attached_to) {
-      throw new ValidationException(
-        "attached_to is required",
-        "attached_to",
-        attached_to
-      );
+      throw new ValidationException("attached_to is required", "attached_to", attached_to);
     }
 
     if (!attached_to_id) {
-      throw new ValidationException(
-        "attached_to_id is required",
-        "attached_to_id",
-        attached_to_id
-      );
+      throw new ValidationException("attached_to_id is required", "attached_to_id", attached_to_id);
     }
 
     // Use service for business logic (includes sanitization)
@@ -87,7 +75,7 @@ export async function createNote(req: Request, res: Response): Promise<any> {
       author_id,
       attached_to as NotesAttachedToEnum,
       attached_to_id,
-      organization_id
+      organization_id,
     );
 
     return res.status(201).json(STATUS_CODE[201](savedNote.toJSON()));
@@ -138,8 +126,12 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
   });
 
   try {
-    const attachedTo = Array.isArray(req.query.attachedTo) ? req.query.attachedTo[0] : req.query.attachedTo;
-    const attachedToId = Array.isArray(req.query.attachedToId) ? req.query.attachedToId[0] : req.query.attachedToId;
+    const attachedTo = Array.isArray(req.query.attachedTo)
+      ? req.query.attachedTo[0]
+      : req.query.attachedTo;
+    const attachedToId = Array.isArray(req.query.attachedToId)
+      ? req.query.attachedToId[0]
+      : req.query.attachedToId;
     const organization_id = req.organizationId!;
 
     // Validate required query parameters
@@ -147,7 +139,7 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
       throw new ValidationException(
         "attachedTo query parameter is required",
         "attachedTo",
-        attachedTo
+        attachedTo,
       );
     }
 
@@ -155,7 +147,7 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
       throw new ValidationException(
         "attachedToId query parameter is required",
         "attachedToId",
-        attachedToId
+        attachedToId,
       );
     }
 
@@ -164,7 +156,7 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
       attachedTo as NotesAttachedToEnum,
       attachedToId as string,
       organization_id,
-      req.userId!
+      req.userId!,
     );
 
     const responseData = notes.map((note) => note.toJSON());
@@ -223,20 +215,12 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
   try {
     // Validate note ID
     if (isNaN(noteId) || noteId < 1) {
-      throw new ValidationException(
-        "Valid note ID is required",
-        "id",
-        req.params.id
-      );
+      throw new ValidationException("Valid note ID is required", "id", req.params.id);
     }
 
     // Validate required fields
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Note content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Note content is required", "content", content);
     }
 
     // Use service for business logic (includes permission checks and sanitization)
@@ -245,7 +229,7 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
       content,
       userId,
       userRole,
-      organization_id
+      organization_id,
     );
 
     return res.status(200).json(STATUS_CODE[200](updatedNote.toJSON()));
@@ -298,11 +282,7 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
   try {
     // Validate note ID
     if (isNaN(noteId) || noteId < 1) {
-      throw new ValidationException(
-        "Valid note ID is required",
-        "id",
-        req.params.id
-      );
+      throw new ValidationException("Valid note ID is required", "id", req.params.id);
     }
 
     // Use service for business logic (includes permission checks)

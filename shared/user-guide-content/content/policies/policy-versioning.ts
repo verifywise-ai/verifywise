@@ -40,7 +40,7 @@ export const policyVersioningContent: ArticleContent = {
         },
         {
           icon: 'Eye',
-          title: 'Under review',
+          title: 'Under Review',
           description: 'The policy is complete and awaiting review by designated stakeholders.',
         },
         {
@@ -79,7 +79,7 @@ export const policyVersioningContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Draft', text: 'Author creates or updates the policy content' },
-        { bold: 'Under review', text: 'Author submits the policy for stakeholder review' },
+        { bold: 'Under Review', text: 'Author submits the policy for stakeholder review' },
         { bold: 'Approved', text: 'Reviewers confirm the policy meets requirements' },
         { bold: 'Published', text: 'Policy becomes active and authoritative' },
         { bold: 'Archived', text: 'When superseded, policy is archived for reference' },
@@ -184,9 +184,9 @@ export const policyVersioningContent: ArticleContent = {
         },
         {
           collectionId: 'policies',
-          articleId: 'policy-approval',
-          title: 'Policy templates',
-          description: 'Use pre-built templates for common policies',
+          articleId: 'policy-templates',
+          title: 'Policy templates library',
+          description: 'Browse, filter and create policies from pre-built templates',
         },
       ],
     },

@@ -86,10 +86,7 @@ export const LOW_RISK_PROVIDERS = [
  * - api_call findings: Always HIGH (active data transmission)
  * - library findings: Based on provider classification
  */
-export function calculateRiskLevel(
-  provider: string,
-  findingType: FindingType
-): RiskLevel {
+export function calculateRiskLevel(provider: string, findingType: FindingType): RiskLevel {
   // Secret findings are always high risk - exposed credentials
   if (findingType === "secret") {
     return "high";
@@ -138,19 +135,14 @@ export function shouldScanLine(line: string, pattern: DetectionPattern): boolean
 
   // Fast keyword check (case-insensitive)
   const lowerLine = line.toLowerCase();
-  return pattern.keywords.some((keyword) =>
-    lowerLine.includes(keyword.toLowerCase())
-  );
+  return pattern.keywords.some((keyword) => lowerLine.includes(keyword.toLowerCase()));
 }
 
 /**
  * Check if any pattern's keywords match the line
  * Used for bulk filtering before detailed scanning
  */
-export function lineMatchesAnyKeyword(
-  line: string,
-  patterns: DetectionPattern[]
-): boolean {
+export function lineMatchesAnyKeyword(line: string, patterns: DetectionPattern[]): boolean {
   const lowerLine = line.toLowerCase();
 
   for (const pattern of patterns) {
@@ -211,10 +203,7 @@ export function calculateEntropy(str: string): number {
  * @param minEntropy - Minimum entropy threshold (default: 3.0)
  * @returns true if entropy is high enough
  */
-export function meetsEntropyThreshold(
-  matchedText: string,
-  minEntropy: number = 3.0
-): boolean {
+export function meetsEntropyThreshold(matchedText: string, minEntropy: number = 3.0): boolean {
   // Extract the secret part (after = or : if present)
   const secretMatch = matchedText.match(/[=:]\s*["']?([^"'\s]+)["']?/);
   const secretPart = secretMatch ? secretMatch[1] : matchedText;
@@ -248,7 +237,7 @@ export function truncateMatch(text: string, maxLength: number = 100): string {
 export function extractSecretValue(matchedText: string): string | null {
   // Try to extract value after = or :
   const patterns = [
-    /["']([^"']+)["']/,           // Quoted value
+    /["']([^"']+)["']/, // Quoted value
     /[=:]\s*["']?([^\s"']+)["']?/, // Assignment value
   ];
 
@@ -287,18 +276,27 @@ export function maskSecret(secret: string): string {
  */
 export const CODE_EXTENSIONS = [
   ".py",
-  ".js", ".mjs", ".cjs",
-  ".ts", ".tsx", ".jsx",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".jsx",
   ".java",
   ".go",
   ".rb",
   ".rs",
-  ".cpp", ".cc", ".c", ".h", ".hpp",
+  ".cpp",
+  ".cc",
+  ".c",
+  ".h",
+  ".hpp",
   ".cs",
   ".scala",
   ".kt",
   ".swift",
-  ".r", ".R",
+  ".r",
+  ".R",
   ".jl",
 ] as const;
 

@@ -17,7 +17,6 @@ interface NoProjectProps {
  */
 
 const NoProject = ({ message }: NoProjectProps) => {
-
   return (
     <NoProjectBox>
       <EmptyState icon={FolderOpen} message={message} />

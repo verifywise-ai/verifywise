@@ -26,7 +26,7 @@ export const historyContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Repository', text: 'Owner and name of the scanned repository' },
-        { bold: 'Status', text: 'Current state: Completed, Failed, Cancelled or Scanning' },
+        { bold: 'Status', text: 'Current state: Pending, Cloning, Scanning, Completed, Failed or Cancelled' },
         { bold: 'Risk score', text: 'AGRS letter grade (A through F) and numeric score, if calculated' },
         { bold: 'Findings', text: 'Total detections: libraries, API calls, secrets, security issues' },
         { bold: 'Files scanned', text: 'Total source files analyzed' },

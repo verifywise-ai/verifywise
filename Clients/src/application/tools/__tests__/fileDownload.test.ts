@@ -16,7 +16,10 @@ vi.mock("../../../presentation/utils/browserDownload.utils", () => ({
 import { handleDownload, handleAutoDownload } from "../fileDownload";
 import { generateReport } from "../../repository/entity.repository";
 import { downloadFileFromManager } from "../../repository/file.repository";
-import { triggerBrowserDownload, extractFilenameFromHeaders } from "../../../presentation/utils/browserDownload.utils";
+import {
+  triggerBrowserDownload,
+  extractFilenameFromHeaders,
+} from "../../../presentation/utils/browserDownload.utils";
 
 const mockGenerateReport = vi.mocked(generateReport);
 const mockDownloadFile = vi.mocked(downloadFileFromManager);
@@ -50,7 +53,7 @@ describe("fileDownload", () => {
 
     it("throws error when fileId is empty", async () => {
       await expect(handleDownload("", "report.pdf")).rejects.toThrow(
-        "Cannot download file: missing file ID"
+        "Cannot download file: missing file ID",
       );
     });
 

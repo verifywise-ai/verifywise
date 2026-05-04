@@ -26,7 +26,7 @@ export async function loadModelPatterns(): Promise<IShadowAiModelPattern[]> {
   const [rows] = await sequelize.query(
     `SELECT id, name, domain_pattern, path_regex
      FROM shadow_ai_model_patterns
-     ORDER BY name`
+     ORDER BY name`,
   );
 
   patternCache = rows as IShadowAiModelPattern[];
@@ -51,10 +51,7 @@ export function clearModelPatternCache(): void {
  *
  * Returns null if no pattern matches or no model can be extracted.
  */
-export async function extractModel(
-  destination: string,
-  uriPath?: string
-): Promise<string | null> {
+export async function extractModel(destination: string, uriPath?: string): Promise<string | null> {
   if (!uriPath) return null;
 
   const patterns = await loadModelPatterns();

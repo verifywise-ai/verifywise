@@ -52,10 +52,10 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
 
     // When editing, exclude the current folder's name from the check
     const namesToCheck = isEdit
-      ? existingSiblingNames.filter(n => n.toLowerCase() !== editFolder.name.toLowerCase())
+      ? existingSiblingNames.filter((n) => n.toLowerCase() !== editFolder.name.toLowerCase())
       : existingSiblingNames;
 
-    return namesToCheck.some(n => n.toLowerCase() === trimmedName);
+    return namesToCheck.some((n) => n.toLowerCase() === trimmedName);
   })();
 
   // Reset form when modal opens/closes or edit folder changes
@@ -96,7 +96,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
     const input: IVirtualFolderInput = {
       name: name.trim(),
       description: description.trim() || null,
-      parent_id: editFolder ? editFolder.parent_id : (parentFolder?.id || null),
+      parent_id: editFolder ? editFolder.parent_id : parentFolder?.id || null,
       color: color,
     };
 
@@ -104,7 +104,8 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   };
 
   // Determine the error message to display
-  const displayError = error || (isDuplicateName ? "A folder with this name already exists in this location" : null);
+  const displayError =
+    error || (isDuplicateName ? "A folder with this name already exists in this location" : null);
 
   // Disable submit if there's an error or duplicate name
   const isSubmitDisabled = isSubmitting || !name.trim() || isDuplicateName;
@@ -248,7 +249,6 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             ))}
           </Box>
         </Stack>
-
       </Stack>
     </StandardModal>
   );

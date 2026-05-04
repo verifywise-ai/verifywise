@@ -17,8 +17,7 @@ const AlertBody: React.FC<AlertBodyProps> = ({ body, textColor }) => {
   const link = linkMatch ? linkMatch[0] : null;
 
   // Limit link to 35 characters
-  const limitedLink =
-    link && link.length > 25 ? link.substring(0, 25) + "..." : link;
+  const limitedLink = link && link.length > 25 ? link.substring(0, 25) + "..." : link;
 
   const handleCopy = async () => {
     if (link) {
@@ -29,14 +28,11 @@ const AlertBody: React.FC<AlertBodyProps> = ({ body, textColor }) => {
   };
 
   return (
-    <Typography sx={{ fontWeight: 400, color: textColor, whiteSpace: 'pre-line' }}>
+    <Typography sx={{ fontWeight: 400, color: textColor, whiteSpace: "pre-line" }}>
       {link ? (
         <>
           {bodyString.split(link)[0]}
-          <Box
-            component="span"
-            sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}
-          >
+          <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
             {limitedLink}
             <IconButton
               size="small"
@@ -61,11 +57,7 @@ const AlertBody: React.FC<AlertBodyProps> = ({ body, textColor }) => {
                     Copied!
                   </Typography>
                 ) : (
-                  <ContentCopyIcon
-                     size={13}
-                     style={{ color: textColor }}
-                     aria-hidden="true"
-                  />
+                  <ContentCopyIcon size={13} style={{ color: textColor }} aria-hidden="true" />
                 )}
               </Box>
             </IconButton>

@@ -14,7 +14,17 @@ import {
   TableContainer,
   Box,
 } from "@mui/material";
-import { Trash2, Eye, ChevronsUpDown, ChevronUp, ChevronDown, Scale, Users, BarChart3, FileText } from "lucide-react";
+import {
+  Trash2,
+  Eye,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  Scale,
+  Users,
+  BarChart3,
+  FileText,
+} from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
 import { EmptyState } from "../../components/EmptyState";
@@ -55,7 +65,10 @@ const columns = [
 function getResultSummary(audit: BiasAuditSummary) {
   if (audit.status !== "completed" || !audit.results) return "—";
   const flags = audit.results.flags_count;
-  if (flags === 0) return <Typography sx={{ fontSize: 13, color: palette.status.success.text }}>No flags</Typography>;
+  if (flags === 0)
+    return (
+      <Typography sx={{ fontSize: 13, color: palette.status.success.text }}>No flags</Typography>
+    );
   return (
     <Typography sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}>
       {flags} flag{flags !== 1 ? "s" : ""}
@@ -100,7 +113,9 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
       try {
         const parsed = JSON.parse(saved);
         if (parsed.key && parsed.direction) return parsed;
-      } catch { /* use default */ }
+      } catch {
+        /* use default */
+      }
     }
     return { key: "date", direction: "desc" };
   });
@@ -174,9 +189,7 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
     const q = searchQuery.toLowerCase();
     const filtered = audits.filter((a) => {
       const systemName = ((a.config?.systemName as string | undefined) || "").toLowerCase();
-      return (
-        a.presetName.toLowerCase().includes(q) || systemName.includes(q)
-      );
+      return a.presetName.toLowerCase().includes(q) || systemName.includes(q);
     });
     if (!sortConfig.key || !sortConfig.direction) return filtered;
 
@@ -202,7 +215,12 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
       />
 
       {/* Search + New bias audit button */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: "18px", mb: 3 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mt: "18px", mb: 3 }}
+      >
         <Box sx={{ maxWidth: 320 }}>
           <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Search audits..." />
         </Box>
@@ -290,9 +308,17 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                           {col.label}
                         </Typography>
                         {col.sortable && (
-                          <Box sx={{ display: "flex", alignItems: "center", color: isActive ? "primary.main" : palette.text.disabled }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              color: isActive ? "primary.main" : palette.text.disabled,
+                            }}
+                          >
                             {isActive && sortConfig.direction === "asc" && <ChevronUp size={14} />}
-                            {isActive && sortConfig.direction === "desc" && <ChevronDown size={14} />}
+                            {isActive && sortConfig.direction === "desc" && (
+                              <ChevronDown size={14} />
+                            )}
                             {!isActive && <ChevronsUpDown size={14} />}
                           </Box>
                         )}
@@ -313,7 +339,9 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Stack spacing={0.25}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}>
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}
+                      >
                         {(audit.config?.systemName as string | undefined) || audit.presetName}
                       </Typography>
                       {(audit.config?.systemName as string | undefined) && (
@@ -323,9 +351,15 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                       )}
                     </Stack>
                   </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getModeChip(audit.mode)}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getStatusChip(audit.status)}</TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{getResultSummary(audit)}</TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {getModeChip(audit.mode)}
+                  </TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {getStatusChip(audit.status)}
+                  </TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {getResultSummary(audit)}
+                  </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     {audit.modelInventoryId ? (
                       <Box
@@ -344,7 +378,9 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                         Linked
                       </Box>
                     ) : (
-                      <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>Unlinked</Typography>
+                      <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
+                        Unlinked
+                      </Typography>
                     )}
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
@@ -352,7 +388,10 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                       {formatDate(audit.createdAt)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell} onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    sx={singleTheme.tableStyles.primary.body.cell}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Stack direction="row" spacing={0.5}>
                       <IconButton
                         size="small"

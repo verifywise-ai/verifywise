@@ -14,9 +14,7 @@ test.describe("Compliance Tracker", () => {
 
   // --- Tier 0: Navigate to compliance tracker via project view ---
 
-  test("compliance tracker renders in frameworks tab", async ({
-    authedPage: page,
-  }) => {
+  test("compliance tracker renders in frameworks tab", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
     await expect(page).toHaveURL(/\/project-view/);
 
@@ -31,7 +29,10 @@ test.describe("Compliance Tracker", () => {
       .or(page.getByRole("navigation"));
 
     if (
-      !(await content.first().isVisible({ timeout: 15_000 }).catch(() => false))
+      !(await content
+        .first()
+        .isVisible({ timeout: 15_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -42,9 +43,7 @@ test.describe("Compliance Tracker", () => {
 
   // --- Tier 1: Progress stats ---
 
-  test("displays compliance progress stats", async ({
-    authedPage: page,
-  }) => {
+  test("displays compliance progress stats", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     // Should show subcontrol progress (e.g., "Subcontrols 5/20")
@@ -56,7 +55,10 @@ test.describe("Compliance Tracker", () => {
       .or(page.locator('[class*="progress" i]'));
 
     if (
-      !(await progressContent.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await progressContent
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -79,7 +81,10 @@ test.describe("Compliance Tracker", () => {
       .or(page.locator('[class*="category" i]'));
 
     if (
-      !(await categories.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await categories
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       // May not have any categories if no framework is assigned
       test.skip();
@@ -91,9 +96,7 @@ test.describe("Compliance Tracker", () => {
 
   // --- Tier 2: Expand/collapse control category ---
 
-  test("clicking a control category expands it", async ({
-    authedPage: page,
-  }) => {
+  test("clicking a control category expands it", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     // Find expandable control category elements
@@ -103,7 +106,10 @@ test.describe("Compliance Tracker", () => {
       .or(page.locator('[class*="category" i]'));
 
     if (
-      !(await categories.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await categories
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -119,25 +125,29 @@ test.describe("Compliance Tracker", () => {
       .or(page.getByRole("row"))
       .or(page.getByText(/status/i));
 
-    if (await controlContent.first().isVisible().catch(() => false)) {
+    if (
+      await controlContent
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(controlContent.first()).toBeVisible();
     }
   });
 
   // --- Tier 2: Framework tab switching ---
 
-  test("can switch between frameworks if multiple are assigned", async ({
-    authedPage: page,
-  }) => {
+  test("can switch between frameworks if multiple are assigned", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     // Look for framework tabs (e.g., EU AI Act, ISO 42001)
-    const frameworkTabs = page
-      .getByRole("tab")
-      .or(page.locator('[role="tab"]'));
+    const frameworkTabs = page.getByRole("tab").or(page.locator('[role="tab"]'));
 
     if (
-      !(await frameworkTabs.first().isVisible({ timeout: 10_000 }).catch(() => false))
+      !(await frameworkTabs
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false))
     ) {
       test.skip();
       return;
@@ -160,9 +170,7 @@ test.describe("Compliance Tracker", () => {
 
   // --- Tier 2: Filter controls ---
 
-  test("filter bar is available for controls", async ({
-    authedPage: page,
-  }) => {
+  test("filter bar is available for controls", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
 
     // Look for filter elements
@@ -172,16 +180,19 @@ test.describe("Compliance Tracker", () => {
       .or(page.getByPlaceholder(/search/i))
       .or(page.locator('[class*="filter" i]'));
 
-    if (await filterElements.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+    if (
+      await filterElements
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false)
+    ) {
       await expect(filterElements.first()).toBeVisible();
     }
   });
 
   // --- Accessibility ---
 
-  test("compliance tracker has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("compliance tracker has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/project-view?tab=frameworks");
     await page.waitForLoadState("domcontentloaded");
 

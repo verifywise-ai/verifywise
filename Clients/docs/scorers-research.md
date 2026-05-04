@@ -9,6 +9,7 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
 ## Three Main Scorer Types
 
 ### 1. LLM-as-Judge (most common)
+
 - Uses another LLM to evaluate outputs
 - Best for subjective criteria (tone, helpfulness, creativity)
 - Requires: prompt template, scoring rubric, judge model selection
@@ -18,11 +19,13 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
   - **DAG**: Decision trees with branching logic
 
 ### 2. Code-based (TypeScript/Python)
+
 - Deterministic, fast, cheap
 - Best for: exact match, regex, keyword presence, format validation
 - Returns numeric score or boolean
 
 ### 3. Pre-built/Library
+
 - Ready-to-use metrics for common tasks
 - Examples: Hallucination detection, RAG relevance, Toxicity, Factuality
 
@@ -30,28 +33,28 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
 
 ## Vendor Comparison
 
-| Feature | Braintrust | DeepEval | LangSmith | Arize Phoenix |
-|---------|-----------|----------|-----------|---------------|
-| **Scorer Types** | LLM Judge, TypeScript, Python | LLM-as-Judge (G-Eval, QAG, DAG) | Python/TS custom evaluators | Pre-built + Custom LLM |
-| **Score Range** | 0-1 with choice labels | 0-1 with threshold (default 0.5) | Numeric, boolean, categorical, or multiple | Binary or multi-class labels mapped to scores |
-| **Custom Prompts** | Yes (multi-turn builder) | G-Eval supports custom criteria | Custom evaluator functions | Custom prompts with label mappings |
-| **CoT Support** | Toggle option | Built into G-Eval | Via custom logic | Via prompt template |
-| **Pre-built Metrics** | AutoEvals library | Hallucination, RAG, Toxicity, etc. | embedding_distance, exact_match, etc. | 15+ pre-built (Hallucination, QA, RAG, etc.) |
+| Feature               | Braintrust                    | DeepEval                           | LangSmith                                  | Arize Phoenix                                 |
+| --------------------- | ----------------------------- | ---------------------------------- | ------------------------------------------ | --------------------------------------------- |
+| **Scorer Types**      | LLM Judge, TypeScript, Python | LLM-as-Judge (G-Eval, QAG, DAG)    | Python/TS custom evaluators                | Pre-built + Custom LLM                        |
+| **Score Range**       | 0-1 with choice labels        | 0-1 with threshold (default 0.5)   | Numeric, boolean, categorical, or multiple | Binary or multi-class labels mapped to scores |
+| **Custom Prompts**    | Yes (multi-turn builder)      | G-Eval supports custom criteria    | Custom evaluator functions                 | Custom prompts with label mappings            |
+| **CoT Support**       | Toggle option                 | Built into G-Eval                  | Via custom logic                           | Via prompt template                           |
+| **Pre-built Metrics** | AutoEvals library             | Hallucination, RAG, Toxicity, etc. | embedding_distance, exact_match, etc.      | 15+ pre-built (Hallucination, QA, RAG, etc.)  |
 
 ---
 
 ## Braintrust's UI Components (Reference Screenshot)
 
-| Field | Purpose |
-|-------|---------|
-| Name/Slug | Identifier for the scorer |
-| Type toggle | LLM judge / TypeScript / Python |
-| AI providers | Select judge model (OpenAI, Anthropic, etc.) |
-| Prompt builder | System + User messages for the judge |
-| CoT toggle | Enable chain-of-thought reasoning |
-| Choice scores | Map labels to numeric scores (0-1) |
-| Description | Document what the scorer evaluates |
-| Metadata | Additional config/tags |
+| Field          | Purpose                                      |
+| -------------- | -------------------------------------------- |
+| Name/Slug      | Identifier for the scorer                    |
+| Type toggle    | LLM judge / TypeScript / Python              |
+| AI providers   | Select judge model (OpenAI, Anthropic, etc.) |
+| Prompt builder | System + User messages for the judge         |
+| CoT toggle     | Enable chain-of-thought reasoning            |
+| Choice scores  | Map labels to numeric scores (0-1)           |
+| Description    | Document what the scorer evaluates           |
+| Metadata       | Additional config/tags                       |
 
 ---
 
@@ -69,24 +72,26 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
 
 ## Common Pre-built Metrics by Use Case
 
-| Use Case | Metrics |
-|----------|---------|
-| **RAG** | Context relevancy, Answer faithfulness, Hallucination |
-| **Chatbot** | Helpfulness, Coherence, Toxicity |
-| **Safety** | Bias detection, Harmful content, PII leakage |
-| **Code Gen** | Correctness, Syntax validity, Test pass rate |
-| **Summarization** | Factual consistency, Coverage, Conciseness |
+| Use Case          | Metrics                                               |
+| ----------------- | ----------------------------------------------------- |
+| **RAG**           | Context relevancy, Answer faithfulness, Hallucination |
+| **Chatbot**       | Helpfulness, Coherence, Toxicity                      |
+| **Safety**        | Bias detection, Harmful content, PII leakage          |
+| **Code Gen**      | Correctness, Syntax validity, Test pass rate          |
+| **Summarization** | Factual consistency, Coverage, Conciseness            |
 
 ---
 
 ## DeepEval Specific Techniques
 
 ### G-Eval
+
 - Most versatile metric type
 - Uses LLM-as-a-judge with chain-of-thoughts (CoT)
 - Can evaluate ANY custom criteria with human-like accuracy
 
 ### DAG (Deep Acyclic Graph)
+
 - Decision tree powered by LLM-as-a-judge
 - Node types:
   - **Task nodes**: Break down test case into atomic units
@@ -95,6 +100,7 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
   - **Verdict nodes**: Return final score based on evaluation path
 
 ### QAG (Question Answer Generation)
+
 - Constrains verdicts to binary "yes" or "no"
 - Very little room for stochasticity
 - Used in RAG metrics like contextual precision
@@ -104,6 +110,7 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
 ## Implementation Recommendations for VerifyWise
 
 ### Phase 1: Core UI
+
 - Scorer list view with table (name, type, status, last modified)
 - Create scorer modal/page with:
   - Name & slug fields
@@ -112,6 +119,7 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
   - Description field
 
 ### Phase 2: Pre-built Library
+
 - Add pre-built scorers for common use cases:
   - Hallucination detection
   - Answer relevancy
@@ -119,6 +127,7 @@ Scorers (also called evaluators/metrics) are functions that assess LLM outputs a
   - Factual consistency
 
 ### Phase 3: Advanced Features
+
 - Code editor for TypeScript/Python scorers
 - Scorer versioning
 - A/B testing scorers

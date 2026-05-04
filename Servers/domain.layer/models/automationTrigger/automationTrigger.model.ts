@@ -7,7 +7,10 @@ import { ValidationException } from "../../exceptions/custom.exception";
   timestamps: true,
   underscored: true,
 })
-export class AutomationTriggerModel extends Model<AutomationTriggerModel> implements IAutomationTrigger {
+export class AutomationTriggerModel
+  extends Model<AutomationTriggerModel>
+  implements IAutomationTrigger
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -59,7 +62,7 @@ export class AutomationTriggerModel extends Model<AutomationTriggerModel> implem
     key: string,
     label: string,
     event_name: string,
-    description?: string
+    description?: string,
   ): Promise<AutomationTriggerModel> {
     // Validate required fields
     if (!key || key.trim().length === 0) {
@@ -120,7 +123,11 @@ export class AutomationTriggerModel extends Model<AutomationTriggerModel> implem
 
     if (updateData.event_name !== undefined) {
       if (!updateData.event_name || updateData.event_name.trim().length === 0) {
-        throw new ValidationException("Event name cannot be empty", "event_name", updateData.event_name);
+        throw new ValidationException(
+          "Event name cannot be empty",
+          "event_name",
+          updateData.event_name,
+        );
       }
       this.event_name = updateData.event_name.trim();
     }
@@ -153,8 +160,8 @@ export class AutomationTriggerModel extends Model<AutomationTriggerModel> implem
       label: this.label,
       event_name: this.event_name,
       description: this.description,
-      created_at: (this.createdAt ?? this.created_at),
-      updated_at: (this.updatedAt ?? this.updated_at),
+      created_at: this.createdAt ?? this.created_at,
+      updated_at: this.updatedAt ?? this.updated_at,
     };
   }
 }

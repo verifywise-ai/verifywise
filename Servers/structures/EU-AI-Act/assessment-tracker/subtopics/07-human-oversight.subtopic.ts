@@ -15,7 +15,8 @@ export const HumanOversight = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The AI system includes a supervisory framework where human operators continuously monitor and review key decisions. Alerts are triggered for any critical decision-making processes, ensuring that human intervention is available if necessary. Additionally, there are manual review checkpoints to ensure decisions made by the AI are aligned with company policies and ethical standards."
+        answer:
+          "The AI system includes a supervisory framework where human operators continuously monitor and review key decisions. Alerts are triggered for any critical decision-making processes, ensuring that human intervention is available if necessary. Additionally, there are manual review checkpoints to ensure decisions made by the AI are aligned with company policies and ethical standards.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const HumanOversight = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Effectiveness is ensured through a combination of specialized training for human overseers, continuous system testing for automation bias, and regular risk mitigation workshops. Oversight personnel are trained in understanding AI-generated outputs and are equipped with the knowledge to identify and address potential risks posed by automation."
+        answer:
+          "Effectiveness is ensured through a combination of specialized training for human overseers, continuous system testing for automation bias, and regular risk mitigation workshops. Oversight personnel are trained in understanding AI-generated outputs and are equipped with the knowledge to identify and address potential risks posed by automation.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const HumanOversight = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The organization conducts bi-annual ethical reviews led by a dedicated ethics committee comprising AI experts, legal advisors, and external consultants. These reviews assess the AI application’s compliance with ethical principles, focusing on fairness, transparency, and accountability, and adjusting practices as necessary."
+        answer:
+          "The organization conducts bi-annual ethical reviews led by a dedicated ethics committee comprising AI experts, legal advisors, and external consultants. These reviews assess the AI application’s compliance with ethical principles, focusing on fairness, transparency, and accountability, and adjusting practices as necessary.",
       },
     ],
   },
@@ -63,7 +66,8 @@ export const HumanOversight = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Human oversight is empowered through a real-time control dashboard, allowing authorized personnel to halt or adjust system operations at any time. Additionally, a set of predetermined intervention triggers ensures that human operators can intervene whenever fundamental rights risks are detected, such as biases or system errors."
+        answer:
+          "Human oversight is empowered through a real-time control dashboard, allowing authorized personnel to halt or adjust system operations at any time. Additionally, a set of predetermined intervention triggers ensures that human operators can intervene whenever fundamental rights risks are detected, such as biases or system errors.",
       },
       {
         order_no: 2,
@@ -77,7 +81,8 @@ export const HumanOversight = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Human deliberation is minimized in tasks where AI has proven high accuracy, such as data analysis and pattern recognition. However, human judgment is always involved in final decision-making for high-impact or ethical considerations, with a safeguard that allows human operators to review or override automated decisions."
+        answer:
+          "Human deliberation is minimized in tasks where AI has proven high accuracy, such as data analysis and pattern recognition. However, human judgment is always involved in final decision-making for high-impact or ethical considerations, with a safeguard that allows human operators to review or override automated decisions.",
       },
     ],
   },

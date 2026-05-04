@@ -199,19 +199,25 @@ export const DIMENSION_ORDER: DimensionKey[] = [
 
 export const DEFAULT_DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   data_sovereignty: 0.25,
-  transparency: 0.20,
-  security: 0.20,
+  transparency: 0.2,
+  security: 0.2,
   autonomy: 0.15,
-  supply_chain: 0.20,
+  supply_chain: 0.2,
 };
 
 export function getGradeLabel(grade: RiskGrade | null): string {
   switch (grade) {
-    case "A": return "Excellent";
-    case "B": return "Good";
-    case "C": return "Acceptable";
-    case "D": return "Needs attention";
-    case "F": return "Critical";
-    default: return "Not scored";
+    case "A":
+      return "Excellent";
+    case "B":
+      return "Good";
+    case "C":
+      return "Acceptable";
+    case "D":
+      return "Needs attention";
+    case "F":
+      return "Critical";
+    default:
+      return "Not scored";
   }
 }

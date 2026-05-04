@@ -59,9 +59,7 @@ describe("Test EU AI Act Repository", () => {
 
     it("should log the error and return false when updateEntityById throws", async () => {
       const error = new Error("Patch failed");
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(updateEntityById).mockRejectedValue(error);
 

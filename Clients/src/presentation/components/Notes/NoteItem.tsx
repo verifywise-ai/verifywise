@@ -28,11 +28,7 @@ import {
   Collapse,
 } from "@mui/material";
 import VWAvatar from "../Avatar/VWAvatar";
-import {
-  MoreVertical as MenuIcon,
-  Pencil as EditIcon,
-  Trash2 as DeleteIcon,
-} from "lucide-react";
+import { MoreVertical as MenuIcon, Pencil as EditIcon, Trash2 as DeleteIcon } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import ConfirmationModal from "../Dialogs/ConfirmationModal";
@@ -61,13 +57,7 @@ interface NoteItemProps {
   canDelete: boolean;
 }
 
-const NoteItem: React.FC<NoteItemProps> = ({
-  note,
-  onEdit,
-  onDelete,
-  canEdit,
-  canDelete,
-}) => {
+const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, canDelete }) => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -137,7 +127,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
     // Find the last space before maxLength to avoid cutting mid-word
     const truncated = content.substring(0, maxLength);
-    const lastSpaceIndex = truncated.lastIndexOf(' ');
+    const lastSpaceIndex = truncated.lastIndexOf(" ");
 
     // Use last space if it's reasonably close (70% rule), otherwise hard cut
     const cutoff = lastSpaceIndex > maxLength * 0.7 ? lastSpaceIndex : maxLength;
@@ -147,9 +137,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
   // Determine if content needs truncation
   const needsTruncation = note.content.length > TRUNCATE_LENGTH;
-  const displayContent = needsTruncation && !isExpanded
-    ? getTruncatedContent(note.content, TRUNCATE_LENGTH)
-    : note.content;
+  const displayContent =
+    needsTruncation && !isExpanded
+      ? getTruncatedContent(note.content, TRUNCATE_LENGTH)
+      : note.content;
 
   const authorName = note.author
     ? `${note.author.name} ${note.author.surname}`.trim()
@@ -203,11 +194,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
               alignItems="center"
               sx={{ flex: 1, gap: 2 }}
             >
-              <VWAvatar
-                user={avatarUser}
-                size="small"
-                showBorder={false}
-              />
+              <VWAvatar user={avatarUser} size="small" showBorder={false} />
 
               <Stack spacing={0} sx={{ flex: 1 }}>
                 <Typography
@@ -366,12 +353,8 @@ const NoteItem: React.FC<NoteItemProps> = ({
         <ConfirmationModal
           title="Confirm delete"
           body={
-            <Typography
-              fontSize={13}
-              sx={{ color: theme.palette.text.secondary }}
-            >
-              Are you sure you want to delete this note? This action cannot be
-              undone.
+            <Typography fontSize={13} sx={{ color: theme.palette.text.secondary }}>
+              Are you sure you want to delete this note? This action cannot be undone.
             </Typography>
           }
           cancelText="Cancel"

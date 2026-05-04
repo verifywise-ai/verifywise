@@ -188,7 +188,7 @@ components:
 
     ProjectRiskResponse:
       allOf:
-        - $ref: '#/components/schemas/ProjectRiskInput'
+        - $ref: "#/components/schemas/ProjectRiskInput"
         - type: object
           properties:
             id:
@@ -475,7 +475,6 @@ components:
 # PATHS (paste under paths:)
 # ─────────────────────────────────────────────────────
 paths:
-
   # ═══════════════════════════════════════════════════
   # PROJECT RISKS  (mounted at /api/projectRisks)
   # ═══════════════════════════════════════════════════
@@ -497,7 +496,7 @@ paths:
             default: active
           description: Filter by soft-delete state.
       responses:
-        '200':
+        "200":
           description: Array of project risks.
           content:
             application/json:
@@ -510,13 +509,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProjectRiskResponse'
-        '204':
+                      $ref: "#/components/schemas/ProjectRiskResponse"
+        "204":
           description: No project risks found.
-        '401':
+        "401":
           description: Unauthorized — missing or invalid JWT.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     post:
       tags: [Project Risks]
@@ -529,9 +528,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectRiskInput'
+              $ref: "#/components/schemas/ProjectRiskInput"
       responses:
-        '201':
+        "201":
           description: Project risk created.
           content:
             application/json:
@@ -542,8 +541,8 @@ paths:
                     type: string
                     example: Created
                   data:
-                    $ref: '#/components/schemas/ProjectRiskResponse'
-        '400':
+                    $ref: "#/components/schemas/ProjectRiskResponse"
+        "400":
           description: Validation error or quantitative risk validation failed.
           content:
             application/json:
@@ -564,12 +563,12 @@ paths:
                             type: array
                             items:
                               type: string
-        '401':
+        "401":
           description: Unauthorized.
-        '403':
+        "403":
           description: Business logic violation.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/projectRisks/by-projid/{id}:
     get:
@@ -593,7 +592,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of project risks.
           content:
             application/json:
@@ -606,13 +605,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProjectRiskResponse'
-        '204':
+                      $ref: "#/components/schemas/ProjectRiskResponse"
+        "204":
           description: No risks found for this project.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/projectRisks/by-frameworkid/{id}:
     get:
@@ -636,7 +635,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of project risks.
           content:
             application/json:
@@ -649,13 +648,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProjectRiskResponse'
-        '204':
+                      $ref: "#/components/schemas/ProjectRiskResponse"
+        "204":
           description: No risks found for this framework.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/projectRisks/{id}:
     get:
@@ -672,7 +671,7 @@ paths:
             type: integer
           description: Project risk ID.
       responses:
-        '200':
+        "200":
           description: Project risk found.
           content:
             application/json:
@@ -683,13 +682,13 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ProjectRiskResponse'
-        '204':
+                    $ref: "#/components/schemas/ProjectRiskResponse"
+        "204":
           description: Project risk not found.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     put:
       tags: [Project Risks]
@@ -709,9 +708,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectRiskInput'
+              $ref: "#/components/schemas/ProjectRiskInput"
       responses:
-        '200':
+        "200":
           description: Project risk updated.
           content:
             application/json:
@@ -722,17 +721,17 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ProjectRiskResponse'
-        '400':
+                    $ref: "#/components/schemas/ProjectRiskResponse"
+        "400":
           description: Validation error.
-        '401':
+        "401":
           description: Unauthorized.
-        '403':
+        "403":
           description: Business logic violation.
-        '404':
+        "404":
           description: Project risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags: [Project Risks]
@@ -748,7 +747,7 @@ paths:
             type: integer
           description: Project risk ID.
       responses:
-        '200':
+        "200":
           description: Project risk soft-deleted.
           content:
             application/json:
@@ -759,13 +758,13 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ProjectRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/ProjectRiskResponse"
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Project risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   # ═══════════════════════════════════════════════════
   # VENDOR RISKS  (mounted at /api/vendorRisks)
@@ -783,9 +782,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VendorRiskInput'
+              $ref: "#/components/schemas/VendorRiskInput"
       responses:
-        '201':
+        "201":
           description: Vendor risk created.
           content:
             application/json:
@@ -796,12 +795,12 @@ paths:
                     type: string
                     example: Created
                   data:
-                    $ref: '#/components/schemas/VendorRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/VendorRiskResponse"
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
-        '503':
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
+        "503":
           description: Service unavailable — creation returned null.
 
   /api/vendorRisks/all:
@@ -820,7 +819,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of vendor risks with vendor/project metadata.
           content:
             application/json:
@@ -833,11 +832,11 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VendorRiskAllProjectsResponse'
-        '401':
+                      $ref: "#/components/schemas/VendorRiskAllProjectsResponse"
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/vendorRisks/by-projid/{id}:
     get:
@@ -861,7 +860,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of vendor risks.
           content:
             application/json:
@@ -874,13 +873,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VendorRiskResponse'
-        '204':
+                      $ref: "#/components/schemas/VendorRiskResponse"
+        "204":
           description: No vendor risks found.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/vendorRisks/by-vendorid/{id}:
     get:
@@ -904,7 +903,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of vendor risks.
           content:
             application/json:
@@ -917,13 +916,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VendorRiskResponse'
-        '204':
+                      $ref: "#/components/schemas/VendorRiskResponse"
+        "204":
           description: No vendor risks found.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/vendorRisks/{id}:
     get:
@@ -939,7 +938,7 @@ paths:
             type: integer
           description: Vendor risk ID.
       responses:
-        '200':
+        "200":
           description: Vendor risk found.
           content:
             application/json:
@@ -950,13 +949,13 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/VendorRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/VendorRiskResponse"
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Vendor risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     patch:
       tags: [Vendor Risks]
@@ -997,7 +996,7 @@ paths:
                 risk_level:
                   type: string
       responses:
-        '202':
+        "202":
           description: Vendor risk updated.
           content:
             application/json:
@@ -1008,13 +1007,13 @@ paths:
                     type: string
                     example: Accepted
                   data:
-                    $ref: '#/components/schemas/VendorRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/VendorRiskResponse"
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Vendor risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags: [Vendor Risks]
@@ -1030,7 +1029,7 @@ paths:
             type: integer
           description: Vendor risk ID.
       responses:
-        '202':
+        "202":
           description: Vendor risk soft-deleted.
           content:
             application/json:
@@ -1041,13 +1040,13 @@ paths:
                     type: string
                     example: Accepted
                   data:
-                    $ref: '#/components/schemas/VendorRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/VendorRiskResponse"
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Vendor risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   # ═══════════════════════════════════════════════════
   # MODEL RISKS  (mounted at /api/modelRisks)
@@ -1069,7 +1068,7 @@ paths:
             enum: [active, deleted, all]
             default: active
       responses:
-        '200':
+        "200":
           description: Array of model risks (empty array if none found).
           content:
             application/json:
@@ -1082,11 +1081,11 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ModelRiskResponse'
-        '401':
+                      $ref: "#/components/schemas/ModelRiskResponse"
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     post:
       tags: [Model Risks]
@@ -1099,9 +1098,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '201':
+        "201":
           description: Model risk created.
           content:
             application/json:
@@ -1112,13 +1111,13 @@ paths:
                     type: string
                     example: Created
                   data:
-                    $ref: '#/components/schemas/ModelRiskResponse'
-        '400':
+                    $ref: "#/components/schemas/ModelRiskResponse"
+        "400":
           description: Validation error.
-        '401':
+        "401":
           description: Unauthorized.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
   /api/modelRisks/{id}:
     get:
@@ -1134,7 +1133,7 @@ paths:
             type: integer
           description: Model risk ID.
       responses:
-        '200':
+        "200":
           description: Model risk found.
           content:
             application/json:
@@ -1145,13 +1144,13 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ModelRiskResponse'
-        '401':
+                    $ref: "#/components/schemas/ModelRiskResponse"
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Model risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     put:
       tags: [Model Risks]
@@ -1171,9 +1170,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '200':
+        "200":
           description: Model risk updated.
           content:
             application/json:
@@ -1184,15 +1183,15 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ModelRiskResponse'
-        '400':
+                    $ref: "#/components/schemas/ModelRiskResponse"
+        "400":
           description: Validation error.
-        '401':
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Model risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     patch:
       tags: [Model Risks]
@@ -1212,9 +1211,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModelRiskInput'
+              $ref: "#/components/schemas/ModelRiskInput"
       responses:
-        '200':
+        "200":
           description: Model risk updated.
           content:
             application/json:
@@ -1225,15 +1224,15 @@ paths:
                     type: string
                     example: OK
                   data:
-                    $ref: '#/components/schemas/ModelRiskResponse'
-        '400':
+                    $ref: "#/components/schemas/ModelRiskResponse"
+        "400":
           description: Validation error.
-        '401':
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Model risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags: [Model Risks]
@@ -1249,7 +1248,7 @@ paths:
             type: integer
           description: Model risk ID.
       responses:
-        '200':
+        "200":
           description: Model risk deleted.
           content:
             application/json:
@@ -1262,9 +1261,9 @@ paths:
                   data:
                     type: string
                     example: Model risk deleted successfully.
-        '401':
+        "401":
           description: Unauthorized.
-        '404':
+        "404":
           description: Model risk not found.
-        '500':
-          $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          $ref: "#/components/schemas/ErrorResponse"

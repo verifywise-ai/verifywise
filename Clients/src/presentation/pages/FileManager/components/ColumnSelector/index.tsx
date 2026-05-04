@@ -7,20 +7,9 @@
  */
 
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Checkbox,
-  Popover,
-  Typography,
-  Stack,
-  Divider,
-} from "@mui/material";
+import { Box, Button, Checkbox, Popover, Typography, Stack, Divider } from "@mui/material";
 import { Columns } from "lucide-react";
-import {
-  ColumnConfig,
-  FileColumn,
-} from "../../../../../application/hooks/useFileColumnVisibility";
+import { ColumnConfig, FileColumn } from "../../../../../application/hooks/useFileColumnVisibility";
 import { brand, text, background, border as borderPalette } from "../../../../themes/palette";
 
 interface ColumnSelectorProps {
@@ -138,9 +127,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 cursor: column.alwaysVisible ? "not-allowed" : "pointer",
                 opacity: column.alwaysVisible ? 0.6 : 1,
                 "&:hover": {
-                  backgroundColor: column.alwaysVisible
-                    ? "transparent"
-                    : `${background.accent}`,
+                  backgroundColor: column.alwaysVisible ? "transparent" : `${background.accent}`,
                 },
               }}
             >

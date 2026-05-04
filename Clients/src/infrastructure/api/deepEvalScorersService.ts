@@ -29,7 +29,9 @@ class DeepEvalScorersService {
     return res.data as ListScorersResponse;
   }
 
-  async create(payload: Partial<DeepEvalScorer> & { name: string; metricKey: string }): Promise<DeepEvalScorer> {
+  async create(
+    payload: Partial<DeepEvalScorer> & { name: string; metricKey: string },
+  ): Promise<DeepEvalScorer> {
     // org_id is required by the backend - fetch current org if not provided
     let finalOrgId = payload.orgId;
     if (!finalOrgId) {
@@ -47,11 +49,11 @@ class DeepEvalScorersService {
         }
       }
     }
-    
+
     if (!finalOrgId) {
       throw new Error("No organization available. Please create an organization first.");
     }
-    
+
     const res = await CustomAxios.post("/deepeval/scorers", { ...payload, orgId: finalOrgId });
     return res.data as DeepEvalScorer;
   }
@@ -66,7 +68,10 @@ class DeepEvalScorersService {
     return res.data as { message: string; id: string };
   }
 
-  async test(id: string, payload: { input: string; output: string; expected?: string }): Promise<ScorerTestResult> {
+  async test(
+    id: string,
+    payload: { input: string; output: string; expected?: string },
+  ): Promise<ScorerTestResult> {
     const res = await CustomAxios.post(`/deepeval/scorers/${id}/test`, payload);
     return res.data as ScorerTestResult;
   }
@@ -87,5 +92,3 @@ export interface ScorerTestResult {
 }
 
 export const deepEvalScorersService = new DeepEvalScorersService();
-
-

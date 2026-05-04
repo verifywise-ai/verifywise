@@ -49,7 +49,7 @@ export const displayFormattedDate = (isoDate: string | Date): string => {
 
   const formattedDate = dayjs(dateStr).format(dateFormat);
   return formattedDate;
-}
+};
 /**
  * Converts an ISO date string to a formatted date and time string.
  *

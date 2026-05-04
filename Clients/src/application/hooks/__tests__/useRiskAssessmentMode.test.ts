@@ -7,7 +7,10 @@ vi.mock("../../repository/quantitativeRisk.repository", () => ({
 }));
 
 import { useRiskAssessmentMode } from "../useRiskAssessmentMode";
-import { getRiskAssessmentMode, updateRiskAssessmentMode } from "../../repository/quantitativeRisk.repository";
+import {
+  getRiskAssessmentMode,
+  updateRiskAssessmentMode,
+} from "../../repository/quantitativeRisk.repository";
 
 const mockGetMode = vi.mocked(getRiskAssessmentMode);
 const mockUpdateMode = vi.mocked(updateRiskAssessmentMode);

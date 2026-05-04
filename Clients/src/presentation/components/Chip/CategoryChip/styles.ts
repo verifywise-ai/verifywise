@@ -1,12 +1,12 @@
 import { useTheme } from "@mui/material";
 
 export const useCategoryStyles = () => {
-    const theme = useTheme();
+  const theme = useTheme();
 
-    return {
-        stackStyle: {
-            display: 'flex',
-            gap: theme.spacing(4),
-        },
-    };
+  return {
+    stackStyle: {
+      display: "flex",
+      gap: theme.spacing(4),
+    },
+  };
 };

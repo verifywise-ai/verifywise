@@ -6,10 +6,7 @@
 
 import { sequelize } from "../database/db";
 import { Transaction } from "sequelize";
-import {
-  IShadowAiRule,
-  IShadowAiAlertHistory,
-} from "../domain.layer/interfaces/i.shadowAi";
+import { IShadowAiRule, IShadowAiAlertHistory } from "../domain.layer/interfaces/i.shadowAi";
 
 /**
  * Safely parse a JSON string, returning a fallback value on failure.
@@ -26,9 +23,7 @@ function safeJsonParse<T>(value: unknown, fallback: T): T {
 /**
  * Get all active rules for an organization.
  */
-export async function getActiveRulesQuery(
-  organizationId: number
-): Promise<IShadowAiRule[]> {
+export async function getActiveRulesQuery(organizationId: number): Promise<IShadowAiRule[]> {
   const [rows] = await sequelize.query(
     `SELECT r.*,
        COALESCE(
@@ -40,7 +35,7 @@ export async function getActiveRulesQuery(
      FROM shadow_ai_rules r
      WHERE r.organization_id = :organizationId AND r.is_active = true
      ORDER BY r.created_at DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -54,9 +49,7 @@ export async function getActiveRulesQuery(
 /**
  * Get all rules for an organization.
  */
-export async function getAllRulesQuery(
-  organizationId: number
-): Promise<IShadowAiRule[]> {
+export async function getAllRulesQuery(organizationId: number): Promise<IShadowAiRule[]> {
   const [rows] = await sequelize.query(
     `SELECT r.*,
        COALESCE(
@@ -68,7 +61,7 @@ export async function getAllRulesQuery(
      FROM shadow_ai_rules r
      WHERE r.organization_id = :organizationId
      ORDER BY r.created_at DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -95,7 +88,7 @@ export async function createRuleQuery(
     created_by: number;
     notification_user_ids?: number[];
   },
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiRule> {
   const [result] = await sequelize.query(
     `INSERT INTO shadow_ai_rules
@@ -116,7 +109,7 @@ export async function createRuleQuery(
         created_by: rule.created_by,
       },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   const created = (result as any[])[0];
@@ -131,7 +124,7 @@ export async function createRuleQuery(
         {
           replacements: { organizationId, ruleId: created.id, userId },
           ...(transaction ? { transaction } : {}),
-        }
+        },
       );
     }
   }
@@ -160,7 +153,7 @@ export async function updateRuleQuery(
     cooldown_minutes?: number;
     notification_user_ids?: number[];
   },
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiRule | null> {
   // Build SET clause dynamically
   const setClauses: string[] = ["updated_at = NOW()"];
@@ -203,7 +196,7 @@ export async function updateRuleQuery(
     {
       replacements,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   const results = rows as any[];
@@ -216,7 +209,7 @@ export async function updateRuleQuery(
       {
         replacements: { organizationId, ruleId },
         ...(transaction ? { transaction } : {}),
-      }
+      },
     );
 
     for (const userId of updates.notification_user_ids) {
@@ -227,7 +220,7 @@ export async function updateRuleQuery(
         {
           replacements: { organizationId, ruleId, userId },
           ...(transaction ? { transaction } : {}),
-        }
+        },
       );
     }
   }
@@ -247,14 +240,14 @@ export async function updateRuleQuery(
 export async function deleteRuleQuery(
   organizationId: number,
   ruleId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
     `DELETE FROM shadow_ai_rules WHERE organization_id = :organizationId AND id = :ruleId RETURNING id`,
     {
       replacements: { organizationId, ruleId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (rows as any[]).length > 0;
@@ -269,7 +262,7 @@ export async function getAlertHistoryQuery(
     page?: number;
     limit?: number;
     ruleId?: number;
-  }
+  },
 ): Promise<{ alerts: IShadowAiAlertHistory[]; total: number }> {
   const page = options?.page || 1;
   const limit = options?.limit || 20;
@@ -290,12 +283,12 @@ export async function getAlertHistoryQuery(
      ${whereClause}
      ORDER BY fired_at DESC
      LIMIT :limit OFFSET :offset`,
-    { replacements }
+    { replacements },
   );
 
   const [countResult] = await sequelize.query(
     `SELECT COUNT(*) as total FROM shadow_ai_alert_history ${whereClause}`,
-    { replacements }
+    { replacements },
   );
 
   return {
@@ -317,7 +310,7 @@ export async function getAlertHistoryQuery(
  */
 export async function getRecentAlertKeys(
   organizationId: number,
-  rules: Array<{ id: number; cooldown_minutes: number }>
+  rules: Array<{ id: number; cooldown_minutes: number }>,
 ): Promise<Set<string>> {
   const result = new Set<string>();
   if (rules.length === 0) return result;
@@ -339,7 +332,7 @@ export async function getRecentAlertKeys(
        WHERE organization_id = :organizationId
          AND rule_id IN (:ruleIds)
          AND fired_at > NOW() - INTERVAL '1 minute' * :maxCooldown`,
-      { replacements: { organizationId, ruleIds, maxCooldown } }
+      { replacements: { organizationId, ruleIds, maxCooldown } },
     );
 
     for (const row of rows as any[]) {
@@ -384,7 +377,7 @@ export async function insertAlertHistoryQuery(
     trigger_data: Record<string, unknown>;
     actions_taken: Record<string, unknown>;
   },
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> {
   await sequelize.query(
     `INSERT INTO shadow_ai_alert_history
@@ -401,7 +394,6 @@ export async function insertAlertHistoryQuery(
         actions_taken: JSON.stringify(alert.actions_taken),
       },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 }
-

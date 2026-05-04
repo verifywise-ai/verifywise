@@ -58,8 +58,7 @@ export const ConformityAndMarketAccess = [
     order_no: 3,
     title:
       "Draw up a written or electronic EU declaration of conformity for each high-risk AI system and keep it at the disposal of authorities for 10 years.",
-    description:
-      "EU declaration of conformity contents and retention (Art 47, Annex V).",
+    description: "EU declaration of conformity contents and retention (Art 47, Annex V).",
     article: "Art. 47",
     subControls: [
       {
@@ -75,22 +74,19 @@ export const ConformityAndMarketAccess = [
     order_no: 4,
     title:
       "Affix the CE marking visibly, legibly, and indelibly to the high-risk AI system or its data plate/documentation.",
-    description:
-      "CE marking placement rules including documentation-only variants (Art 48).",
+    description: "CE marking placement rules including documentation-only variants (Art 48).",
     article: "Art. 48",
     subControls: [
       {
         order_no: 1,
         title: "The CE marking is affixed before the system is placed on the market.",
-        description:
-          "Pre-market CE marking affixation procedure in the release workflow.",
+        description: "Pre-market CE marking affixation procedure in the release workflow.",
       },
       {
         order_no: 2,
         title:
           "Where no physical product exists, the CE marking is included in the accompanying documentation.",
-        description:
-          "Documentation-based CE marking procedure for software-only systems.",
+        description: "Documentation-based CE marking procedure for software-only systems.",
       },
       {
         order_no: 3,

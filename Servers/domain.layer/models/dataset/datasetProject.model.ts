@@ -6,10 +6,7 @@ import { IDatasetProject } from "../../interfaces/i.dataset";
   timestamps: false,
   underscored: true,
 })
-export class DatasetProjectModel
-  extends Model<DatasetProjectModel>
-  implements IDatasetProject
-{
+export class DatasetProjectModel extends Model<DatasetProjectModel> implements IDatasetProject {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
@@ -51,7 +48,8 @@ export class DatasetProjectModel
       id: this.id,
       dataset_id: this.dataset_id,
       project_id: this.project_id,
-      created_at: (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
+      created_at:
+        (this.createdAt ?? this.created_at)?.toISOString?.() || this.createdAt || this.created_at,
     };
   }
 

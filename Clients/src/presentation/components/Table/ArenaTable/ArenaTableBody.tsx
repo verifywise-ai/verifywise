@@ -46,14 +46,18 @@ interface ArenaTableBodyProps {
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }) + ", " + date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return (
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }) +
+    ", " +
+    date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
 };
 
 // Helper to get contestant name from string or object
@@ -134,169 +138,159 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
 
   // Contestant chip variants cycling through standard VW Chip variants
   const contestantVariants: Array<"info" | "error" | "success" | "warning" | "default" | "high"> = [
-    "info", "error", "success", "warning", "high", "default",
+    "info",
+    "error",
+    "success",
+    "warning",
+    "high",
+    "default",
   ];
 
   return (
     <TableBody>
-      {rows
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((row) => (
-          <TableRow
-            key={row.id}
-            onClick={() => onRowClick?.(row)}
+      {rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
+        <TableRow
+          key={row.id}
+          onClick={() => onRowClick?.(row)}
+          sx={{
+            ...singleTheme.tableStyles.primary.body.row,
+            cursor: onRowClick ? "pointer" : "default",
+            "&:hover": {
+              backgroundColor: "background.accent",
+            },
+          }}
+        >
+          {/* BATTLE NAME */}
+          <TableCell
             sx={{
-              ...singleTheme.tableStyles.primary.body.row,
-              cursor: onRowClick ? "pointer" : "default",
-              "&:hover": {
-                backgroundColor: "background.accent",
-              },
+              ...singleTheme.tableStyles.primary.body.cell,
+              textTransform: "none",
             }}
           >
-            {/* BATTLE NAME */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textTransform: "none",
-              }}
-            >
-              <Typography sx={{ fontWeight: 500, fontSize: 13 }}>
-                {row.name}
-              </Typography>
-            </TableCell>
+            <Typography sx={{ fontWeight: 500, fontSize: 13 }}>{row.name}</Typography>
+          </TableCell>
 
-            {/* CONTESTANTS - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              <Stack
-                direction="row"
-                spacing={0.5}
-                justifyContent="center"
-                flexWrap="wrap"
-                gap={0.5}
-              >
-                {row.contestants?.slice(0, 4).map((contestant, idx) => {
-                  const name = getContestantName(contestant, idx);
-                  return (
-                    <Chip
-                      key={`${name}-${idx}`}
-                      label={name}
-                      size="small"
-                      uppercase={false}
-                      variant={contestantVariants[idx % contestantVariants.length]}
-                    />
-                  );
-                })}
-                {row.contestants?.length > 4 && (
-                  <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
-                    +{row.contestants.length - 4} more
-                  </Typography>
-                )}
-              </Stack>
-            </TableCell>
-
-            {/* DATASET - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              <Typography sx={{ fontSize: 12, color: "#475569" }}>
-                {row.dataset ? row.dataset.split('/').pop()?.replace('.json', '') || row.dataset : '-'}
-              </Typography>
-            </TableCell>
-
-            {/* WINNER - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              {row.status === "completed" && row.winner ? (
-                <Chip
-                  label={row.winner}
-                  size="small"
-                  uppercase={false}
-                  variant="success"
-                />
-              ) : row.status === "running" || row.status === "pending" ? (
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.75 }}>
-                  <Box
-                    component={Loader2}
-                    size={12}
-                    sx={{
-                      color: "#ef6c00",
-                      animation: `${spin} 1s linear infinite`,
-                    }}
+          {/* CONTESTANTS - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap" gap={0.5}>
+              {row.contestants?.slice(0, 4).map((contestant, idx) => {
+                const name = getContestantName(contestant, idx);
+                return (
+                  <Chip
+                    key={`${name}-${idx}`}
+                    label={name}
+                    size="small"
+                    uppercase={false}
+                    variant={contestantVariants[idx % contestantVariants.length]}
                   />
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      color: "#ef6c00",
-                      fontWeight: 500,
-                      animation: `${pulse} 1.5s ease-in-out infinite`,
-                    }}
-                  >
-                    Running...
-                  </Typography>
-                </Box>
-              ) : row.status === "failed" ? (
-                <Typography sx={{ fontSize: 12, color: "#c62828" }}>
-                  —
-                </Typography>
-              ) : (
-                <Typography sx={{ fontSize: 12, color: "text.disabled" }}>
-                  —
+                );
+              })}
+              {row.contestants?.length > 4 && (
+                <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
+                  +{row.contestants.length - 4} more
                 </Typography>
               )}
-            </TableCell>
+            </Stack>
+          </TableCell>
 
-            {/* DATE - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                textTransform: "none",
-              }}
-            >
-              <Typography sx={{ fontSize: "12px", color: "status.default.text" }}>
-                {formatDate(row.createdAt)}
-              </Typography>
-            </TableCell>
+          {/* DATASET - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            <Typography sx={{ fontSize: 12, color: "#475569" }}>
+              {row.dataset
+                ? row.dataset.split("/").pop()?.replace(".json", "") || row.dataset
+                : "-"}
+            </Typography>
+          </TableCell>
 
-            {/* ACTION - center aligned */}
-            <TableCell
-              sx={{
-                ...singleTheme.tableStyles.primary.body.cell,
-                textAlign: "center",
-                minWidth: "80px",
-                maxWidth: "80px",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {deleting === row.id ? (
-                <CircularProgress size={18} sx={{ color: "#6366f1" }} />
-              ) : (
-                <IconButton
-                  disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
-                  onClick={(e) => handleMenuOpen(e, row)}
-                  sx={singleTheme.iconButtons}
+          {/* WINNER - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            {row.status === "completed" && row.winner ? (
+              <Chip label={row.winner} size="small" uppercase={false} variant="success" />
+            ) : row.status === "running" || row.status === "pending" ? (
+              <Box
+                sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.75 }}
+              >
+                <Box
+                  component={Loader2}
+                  size={12}
+                  sx={{
+                    color: "#ef6c00",
+                    animation: `${spin} 1s linear infinite`,
+                  }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "#ef6c00",
+                    fontWeight: 500,
+                    animation: `${pulse} 1.5s ease-in-out infinite`,
+                  }}
                 >
-                  <MoreVertical size={18} />
-                </IconButton>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
+                  Running...
+                </Typography>
+              </Box>
+            ) : row.status === "failed" ? (
+              <Typography sx={{ fontSize: 12, color: "#c62828" }}>—</Typography>
+            ) : (
+              <Typography sx={{ fontSize: 12, color: "text.disabled" }}>—</Typography>
+            )}
+          </TableCell>
+
+          {/* DATE - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              textTransform: "none",
+            }}
+          >
+            <Typography sx={{ fontSize: "12px", color: "status.default.text" }}>
+              {formatDate(row.createdAt)}
+            </Typography>
+          </TableCell>
+
+          {/* ACTION - center aligned */}
+          <TableCell
+            sx={{
+              ...singleTheme.tableStyles.primary.body.cell,
+              textAlign: "center",
+              minWidth: "80px",
+              maxWidth: "80px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {deleting === row.id ? (
+              <CircularProgress size={18} sx={{ color: "#6366f1" }} />
+            ) : (
+              <IconButton
+                disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
+                onClick={(e) => handleMenuOpen(e, row)}
+                sx={singleTheme.iconButtons}
+              >
+                <MoreVertical size={18} />
+              </IconButton>
+            )}
+          </TableCell>
+        </TableRow>
+      ))}
 
       {/* Action Menu */}
       <Popover
@@ -434,4 +428,3 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
 };
 
 export default ArenaTableBody;
-

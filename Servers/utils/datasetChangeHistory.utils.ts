@@ -10,7 +10,7 @@ export const recordDatasetCreation = async (
   datasetId: number,
   userId: number | undefined,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ) => {
   try {
     await sequelize.query(
@@ -24,7 +24,7 @@ export const recordDatasetCreation = async (
           user_id: userId || null,
         },
         transaction,
-      }
+      },
     );
   } catch (error) {
     console.error("Error recording dataset creation:", error);
@@ -39,7 +39,7 @@ export const recordDatasetDeletion = async (
   datasetId: number,
   userId: number | undefined,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ) => {
   try {
     await sequelize.query(
@@ -53,7 +53,7 @@ export const recordDatasetDeletion = async (
           user_id: userId || null,
         },
         transaction,
-      }
+      },
     );
   } catch (error) {
     console.error("Error recording dataset deletion:", error);
@@ -66,7 +66,7 @@ export const recordDatasetDeletion = async (
  */
 export const trackDatasetChanges = (
   oldDataset: DatasetModel,
-  newData: Partial<DatasetModel>
+  newData: Partial<DatasetModel>,
 ): { field: string; oldValue: string; newValue: string }[] => {
   const changes: { field: string; oldValue: string; newValue: string }[] = [];
 
@@ -115,7 +115,7 @@ export const recordDatasetFieldChanges = async (
   changes: { field: string; oldValue: string; newValue: string }[],
   userId: number | undefined,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ) => {
   try {
     for (const change of changes) {
@@ -133,7 +133,7 @@ export const recordDatasetFieldChanges = async (
             user_id: userId || null,
           },
           transaction,
-        }
+        },
       );
     }
   } catch (error) {
@@ -145,10 +145,7 @@ export const recordDatasetFieldChanges = async (
 /**
  * Get change history for a dataset
  */
-export const getDatasetChangeHistory = async (
-  datasetId: number,
-  organizationId: number
-) => {
+export const getDatasetChangeHistory = async (datasetId: number, organizationId: number) => {
   try {
     const history = await sequelize.query(
       `SELECT dch.*, u.name as changed_by_name
@@ -160,7 +157,7 @@ export const getDatasetChangeHistory = async (
         replacements: { dataset_id: datasetId, organization_id: organizationId },
         mapToModel: true,
         model: DatasetChangeHistoryModel,
-      }
+      },
     );
     return history;
   } catch (error) {

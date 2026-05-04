@@ -3,5 +3,5 @@ export enum ModelRiskCategory {
   BIAS = "Bias & Fairness",
   SECURITY = "Security",
   DATA_QUALITY = "Data Quality",
-  COMPLIANCE = "Compliance"
+  COMPLIANCE = "Compliance",
 }

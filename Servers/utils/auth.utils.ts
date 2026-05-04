@@ -24,10 +24,7 @@ export interface AuthTokenResult {
  * @param res - Express response object for setting cookies
  * @returns Object containing both tokens
  */
-export function generateUserTokens(
-  userData: UserTokenData,
-  res: Response
-): AuthTokenResult {
+export function generateUserTokens(userData: UserTokenData, res: Response): AuthTokenResult {
   const tokenPayload = {
     id: userData.id,
     email: userData.email,
@@ -39,12 +36,12 @@ export function generateUserTokens(
   const refreshToken = generateRefreshToken(tokenPayload) as string;
 
   // Set refresh token as httpOnly cookie
-  res.cookie('refresh_token', refreshToken, {
+  res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
-    path: '/api/users',
+    path: "/api/users",
     expires: new Date(Date.now() + 1 * 3600 * 1000 * 24 * 30), // 30 days
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   return {

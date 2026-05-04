@@ -65,22 +65,12 @@ export async function fileCreateRisk(
   //    insert commit atomically.
   const transaction = await sequelize.transaction();
   try {
-    const workflow = await ensureAiActionWorkflow(
-      organizationId,
-      userId,
-      transaction,
-    );
+    const workflow = await ensureAiActionWorkflow(organizationId, userId, transaction);
 
-    const workflowSteps = await getWorkflowStepsQuery(
-      workflow.id!,
-      organizationId,
-      transaction,
-    );
+    const workflowSteps = await getWorkflowStepsQuery(workflow.id!, organizationId, transaction);
 
     if (!workflowSteps || workflowSteps.length === 0) {
-      throw new Error(
-        "AI Action workflow has no steps — cannot file approval request",
-      );
+      throw new Error("AI Action workflow has no steps — cannot file approval request");
     }
 
     const preview = renderCreateRiskPreview(parsed.data);
@@ -114,10 +104,7 @@ export async function fileCreateRisk(
     };
   } catch (error) {
     await transaction.rollback();
-    logger.error(
-      `[${CREATE_RISK_TOOL_NAME}] failed to file approval request`,
-      error,
-    );
+    logger.error(`[${CREATE_RISK_TOOL_NAME}] failed to file approval request`, error);
     return {
       status: "error",
       message: `Failed to file approval request: ${error instanceof Error ? error.message : "unknown error"}`,

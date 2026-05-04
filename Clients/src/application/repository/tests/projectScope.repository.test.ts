@@ -205,9 +205,7 @@ describe("projectScope.repository", () => {
       const error = new Error("Network timeout");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
-      await expect(getProjectScopeById({ id: 1 })).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getProjectScopeById({ id: 1 })).rejects.toThrow("Network timeout");
     });
   });
 
@@ -224,10 +222,7 @@ describe("projectScope.repository", () => {
 
       const result = await createProjectScope({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/projectScopes",
-        createData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/projectScopes", createData);
       expect(result).toEqual(response);
     });
 
@@ -257,10 +252,7 @@ describe("projectScope.repository", () => {
 
       await createProjectScope({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        "/projectScopes",
-        createData,
-      );
+      expect(apiServices.post).toHaveBeenCalledWith("/projectScopes", createData);
     });
 
     it("should handle validation errors on create", async () => {
@@ -283,9 +275,7 @@ describe("projectScope.repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      await expect(
-        createProjectScope({ body: { name: "Duplicate" } }),
-      ).rejects.toEqual(error);
+      await expect(createProjectScope({ body: { name: "Duplicate" } })).rejects.toEqual(error);
     });
 
     it("should handle 403 forbidden on create", async () => {
@@ -323,10 +313,7 @@ describe("projectScope.repository", () => {
 
       const result = await updateProjectScope({ id: 1, body: updateData });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/projectScopes/1",
-        updateData,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/projectScopes/1", updateData);
       expect(result).toEqual(response);
       expect(result.data.name).toBe("Updated Scope");
     });
@@ -366,10 +353,7 @@ describe("projectScope.repository", () => {
 
       await updateProjectScope({ id: 1, body: updateData });
 
-      expect(apiServices.put).toHaveBeenCalledWith(
-        "/projectScopes/1",
-        updateData,
-      );
+      expect(apiServices.put).toHaveBeenCalledWith("/projectScopes/1", updateData);
     });
 
     it("should handle scope not found on update", async () => {
@@ -379,9 +363,7 @@ describe("projectScope.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectScope({ id: 999, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectScope({ id: 999, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle validation errors on update", async () => {
@@ -391,9 +373,7 @@ describe("projectScope.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle 403 forbidden on update", async () => {
@@ -403,9 +383,7 @@ describe("projectScope.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(error);
     });
 
     it("should handle 409 conflict on update", async () => {
@@ -415,9 +393,7 @@ describe("projectScope.repository", () => {
       };
       vi.mocked(apiServices.put).mockRejectedValue(error);
 
-      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(
-        error,
-      );
+      await expect(updateProjectScope({ id: 1, body: {} })).rejects.toEqual(error);
     });
   });
 

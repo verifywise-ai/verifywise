@@ -12,11 +12,7 @@ import { FileType } from "../domain.layer/models/file/file.model";
 import { addFileToAnswerEU } from "../utils/eu.utils";
 import { sequelize } from "../database/db";
 import getUserFilesMetaDataQuery from "../utils/files/getUserFilesMetaData.utils";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
   createFileEntityLink,
   deleteFileEntityLink,
@@ -26,10 +22,7 @@ import {
   LinkType,
 } from "../repositories/file.repository";
 
-export async function getFileContentById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getFileContentById(req: Request, res: Response): Promise<any> {
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   // Validate fileId is a valid number
@@ -85,10 +78,7 @@ export async function getFileContentById(
       });
 
       res.setHeader("Content-Type", file.type);
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${file.filename}"`
-      );
+      res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
       return res.status(200).end(file.content);
     }
 
@@ -117,10 +107,7 @@ export async function getFileContentById(
   }
 }
 
-export async function getFileMetaByProjectId(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getFileMetaByProjectId(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
@@ -165,8 +152,12 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
   const userId = Number(req.userId);
 
   // Validate pagination parameters
-  const page = req.query.page ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page) : undefined;
-  const pageSize = req.query.pageSize ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize) : undefined;
+  const page = req.query.page
+    ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page)
+    : undefined;
+  const pageSize = req.query.pageSize
+    ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize)
+    : undefined;
 
   logProcessing({
     description: `starting getUserFilesMetaData for user ID ${userId}`,
@@ -184,15 +175,10 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
         ? (validPage - 1) * validPageSize
         : undefined;
 
-    const files = await getUserFilesMetaDataQuery(
-      req.role || "",
-      userId,
-      req.organizationId!,
-      {
-        limit: validPageSize,
-        offset,
-      }
-    );
+    const files = await getUserFilesMetaDataQuery(req.role || "", userId, req.organizationId!, {
+      limit: validPageSize,
+      offset,
+    });
 
     await logSuccess({
       eventType: "Read",
@@ -219,10 +205,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
   }
 };
 
-export async function postFileContent(
-  req: RequestWithFile,
-  res: Response
-): Promise<any> {
+export async function postFileContent(req: RequestWithFile, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
   logProcessing({
@@ -255,7 +238,7 @@ export async function postFileContent(
         body.project_id,
         "Assessment tracker group",
         req.organizationId!,
-        transaction
+        transaction,
       );
       uploadedFiles.push({
         id: uploadedFile.id!.toString(),
@@ -274,7 +257,7 @@ export async function postFileContent(
       uploadedFiles,
       filesToDelete,
       req.organizationId!,
-      transaction
+      transaction,
     );
     await transaction.commit();
 
@@ -312,10 +295,7 @@ export async function postFileContent(
  * POST /files/attach
  * Body: { file_id, framework_type, entity_type, entity_id, project_id?, link_type? }
  */
-export async function attachFileToEntity(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function attachFileToEntity(req: Request, res: Response): Promise<any> {
   const { file_id, framework_type, entity_type, entity_id, project_id, link_type } = req.body;
 
   // Validate required fields
@@ -351,7 +331,7 @@ export async function attachFileToEntity(
         link_type: (link_type as LinkType) || "evidence",
         created_by: req.userId,
       },
-      req.organizationId!
+      req.organizationId!,
     );
 
     await logSuccess({
@@ -390,10 +370,7 @@ export async function attachFileToEntity(
  * DELETE /files/detach
  * Body: { file_id, framework_type, entity_type, entity_id }
  */
-export async function detachFileFromEntity(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function detachFileFromEntity(req: Request, res: Response): Promise<any> {
   const { file_id, framework_type, entity_type, entity_id } = req.body;
 
   // Validate required fields
@@ -424,7 +401,7 @@ export async function detachFileFromEntity(
       framework_type as FrameworkType,
       entity_type as EntityType,
       parseInt(entity_id, 10),
-      req.organizationId!
+      req.organizationId!,
     );
 
     await logSuccess({
@@ -462,10 +439,7 @@ export async function detachFileFromEntity(
  * POST /files/attach-bulk
  * Body: { file_ids: number[], framework_type, entity_type, entity_id, project_id?, link_type? }
  */
-export async function attachFilesToEntity(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function attachFilesToEntity(req: Request, res: Response): Promise<any> {
   const { file_ids, framework_type, entity_type, entity_id, project_id, link_type } = req.body;
 
   // Validate required fields
@@ -510,7 +484,7 @@ export async function attachFilesToEntity(
             link_type: (link_type as LinkType) || "evidence",
             created_by: req.userId,
           },
-          req.organizationId!
+          req.organizationId!,
         );
 
         results.push({
@@ -529,7 +503,7 @@ export async function attachFilesToEntity(
 
     await logSuccess({
       eventType: "Create",
-      description: `Attached ${results.filter(r => r.success).length}/${file_ids.length} files to ${framework_type}/${entity_type}/${entity_id}`,
+      description: `Attached ${results.filter((r) => r.success).length}/${file_ids.length} files to ${framework_type}/${entity_type}/${entity_id}`,
       functionName: "attachFilesToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
@@ -560,10 +534,7 @@ export async function attachFilesToEntity(
  *
  * GET /files/entity/:framework_type/:entity_type/:entity_id
  */
-export async function getEntityFiles(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getEntityFiles(req: Request, res: Response): Promise<any> {
   const { framework_type, entity_type, entity_id } = req.params;
 
   // Validate required params
@@ -594,7 +565,7 @@ export async function getEntityFiles(
       framework_type as FrameworkType,
       entity_type as EntityType,
       parseInt(entityIdStr, 10),
-      req.organizationId!
+      req.organizationId!,
     );
 
     await logSuccess({

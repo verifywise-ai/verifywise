@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  getLLMKeyStatus,
-  LLMKeyStatus,
-} from "../repository/llmKeys.repository";
+import { getLLMKeyStatus, LLMKeyStatus } from "../repository/llmKeys.repository";
 
 export function useLLMKeyStatus() {
   const [data, setData] = useState<LLMKeyStatus | null>(null);

@@ -10,27 +10,29 @@ export const styles = {
   accordionSummary: commonStyles.accordionSummary,
   expandIcon: commonStyles.expandIcon,
 
-  subClauseRow: (isLast: boolean, isFlashing: boolean) => ({
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: "16px",
-    borderBottom: isLast ? "none" : `1px solid ${borderPalette.light}`,
-    cursor: "pointer",
-    fontSize: 13,
-    animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : 'none',
-    '&:hover': {
-      backgroundColor: isFlashing ? 'transparent' : 'background.surface',
-    },
-    alignItems: "center",
-  }) as SxProps<Theme>,
+  subClauseRow: (isLast: boolean, isFlashing: boolean) =>
+    ({
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      padding: "16px",
+      borderBottom: isLast ? "none" : `1px solid ${borderPalette.light}`,
+      cursor: "pointer",
+      fontSize: 13,
+      animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
+      "&:hover": {
+        backgroundColor: isFlashing ? "transparent" : "background.surface",
+      },
+      alignItems: "center",
+    }) as SxProps<Theme>,
 
-  statusBadge: (status: string) => ({
-    borderRadius: "4px",
-    padding: "5px",
-    backgroundColor: getStatusColor(status),
-    color: "background.main",
-  }) as SxProps<Theme>,
+  statusBadge: (status: string) =>
+    ({
+      borderRadius: "4px",
+      padding: "5px",
+      backgroundColor: getStatusColor(status),
+      color: "background.main",
+    }) as SxProps<Theme>,
 
   loadingContainer: {
     padding: "16px",
@@ -46,4 +48,4 @@ export const styles = {
     justifyContent: "center",
     color: "#666",
   } as SxProps<Theme>,
-}; 
+};

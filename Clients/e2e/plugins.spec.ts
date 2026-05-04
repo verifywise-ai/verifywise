@@ -8,14 +8,12 @@ test.describe("Plugins", () => {
 
     // Page should show plugin-related content — tighten to the page heading
     // to avoid strict-mode matches across nav links, tooltips, etc.
-    await expect(
-      page.getByRole("heading", { name: /^plugins$/i }).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: /^plugins$/i }).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/plugins");
     await page.waitForLoadState("domcontentloaded");
 
@@ -38,9 +36,7 @@ test.describe("Plugins", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("plugin list or marketplace is visible", async ({
-    authedPage: page,
-  }) => {
+  test("plugin list or marketplace is visible", async ({ authedPage: page }) => {
     await page.goto("/plugins");
 
     const content = page
@@ -62,7 +58,12 @@ test.describe("Plugins", () => {
       .getByRole("tab", { name: /marketplace/i })
       .or(page.getByText(/marketplace/i));
 
-    if (await marketplaceTab.first().isVisible().catch(() => false)) {
+    if (
+      await marketplaceTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await marketplaceTab.first().click();
       await page.waitForTimeout(1000);
     }
@@ -77,9 +78,7 @@ test.describe("Plugins", () => {
     await expect(pluginCards.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("my-plugins tab shows installed plugins or empty state", async ({
-    authedPage: page,
-  }) => {
+  test("my-plugins tab shows installed plugins or empty state", async ({ authedPage: page }) => {
     await page.goto("/plugins");
     await page.waitForTimeout(2000);
 
@@ -88,7 +87,12 @@ test.describe("Plugins", () => {
       .getByRole("tab", { name: /my plugin/i })
       .or(page.getByText(/my plugin/i));
 
-    if (!(await myPluginsTab.first().isVisible().catch(() => false))) {
+    if (
+      !(await myPluginsTab
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }

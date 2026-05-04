@@ -77,7 +77,13 @@ describe("ISO27001AnnexControlStructModel", () => {
 });
 
 describe("ISO27001AnnexStructModel", () => {
-  const data = { id: 1, arrangement: 5, title: "Annex A.5", order_no: 1, framework_id: 2 } as ISO27001AnnexStructModel;
+  const data = {
+    id: 1,
+    arrangement: 5,
+    title: "Annex A.5",
+    order_no: 1,
+    framework_id: 2,
+  } as ISO27001AnnexStructModel;
 
   it("constructor copies all fields", () => {
     const model = new ISO27001AnnexStructModel(data);
@@ -92,7 +98,12 @@ describe("ISO27001AnnexStructModel", () => {
 });
 
 describe("ISO27001ClauseStructModel", () => {
-  const data = { id: 1, arrangement: 4, title: "Context of the organization", framework_id: 2 } as ISO27001ClauseStructModel;
+  const data = {
+    id: 1,
+    arrangement: 4,
+    title: "Context of the organization",
+    framework_id: 2,
+  } as ISO27001ClauseStructModel;
 
   it("constructor copies all fields", () => {
     const model = new ISO27001ClauseStructModel(data);

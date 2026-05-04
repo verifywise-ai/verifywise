@@ -128,8 +128,7 @@ router.post("/register", authLimiter, registerJWT, createNewUser);
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 5, // limit each IP to 5 login requests per windowMs
-  message:
-    "Too many login attempts from this IP, please try again after a minute",
+  message: "Too many login attempts from this IP, please try again after a minute",
 });
 router.post("/login", loginLimiter, loginUser);
 
@@ -210,12 +209,7 @@ router.get("/:id/calculate-progress", authenticateJWT, calculateProgress);
 /**
  * Profile Photo Routes
  */
-router.post(
-  "/:id/profile-photo",
-  authenticateJWT,
-  upload.single("photo"),
-  uploadUserProfilePhoto
-);
+router.post("/:id/profile-photo", authenticateJWT, upload.single("photo"), uploadUserProfilePhoto);
 router.get("/:id/profile-photo", authenticateJWT, getUserProfilePhoto);
 router.delete("/:id/profile-photo", authenticateJWT, deleteUserProfilePhoto);
 

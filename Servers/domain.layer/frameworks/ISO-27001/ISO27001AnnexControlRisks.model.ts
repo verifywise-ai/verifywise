@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { RiskModel } from "../../models/risks/risk.model";
 import { ISO27001AnnexControlModel } from "./ISO27001AnnexControl.model";
 import { ISO27001SubClauseRisks } from "../../interfaces/i.ISO27001SubClauseRisks";

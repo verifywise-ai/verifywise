@@ -22,9 +22,9 @@ import {
 
 export const getPMMConfigByProjectIdQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMConfigWithDetails | null> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       p.project_title,
@@ -37,8 +37,8 @@ export const getPMMConfigByProjectIdQuery = async (
     WHERE c.organization_id = :organizationId AND c.project_id = :projectId;`,
     {
       replacements: { projectId, organizationId },
-    }
-  ) as [IPMMConfigWithDetails[], number];
+    },
+  )) as [IPMMConfigWithDetails[], number];
 
   if (result[0].length === 0) return null;
 
@@ -55,9 +55,9 @@ export const createPMMConfigQuery = async (
   configData: IPMMConfigCreateRequest,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMConfig> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_configs (
       organization_id, project_id, frequency_value, frequency_unit, start_date,
       reminder_days, escalation_days, escalation_contact_id,
@@ -81,8 +81,8 @@ export const createPMMConfigQuery = async (
         created_by: userId,
       },
       transaction,
-    }
-  ) as [IPMMConfig[], number];
+    },
+  )) as [IPMMConfig[], number];
 
   return result[0][0];
 };
@@ -91,7 +91,7 @@ export const updatePMMConfigQuery = async (
   configId: number,
   updateData: IPMMConfigUpdateRequest,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMConfig | null> => {
   const setClauses: string[] = [];
   const replacements: Record<string, any> = { configId, organizationId };
@@ -133,20 +133,20 @@ export const updatePMMConfigQuery = async (
 
   if (setClauses.length === 1) {
     // Only updated_at, nothing to update
-    const result = await sequelize.query(
+    const result = (await sequelize.query(
       `SELECT * FROM post_market_monitoring_configs WHERE organization_id = :organizationId AND id = :configId;`,
-      { replacements: { configId, organizationId }, transaction }
-    ) as [IPMMConfig[], number];
+      { replacements: { configId, organizationId }, transaction },
+    )) as [IPMMConfig[], number];
     return result[0][0] || null;
   }
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `UPDATE post_market_monitoring_configs
      SET ${setClauses.join(", ")}
      WHERE organization_id = :organizationId AND id = :configId
      RETURNING *;`,
-    { replacements, transaction }
-  ) as [IPMMConfig[], number];
+    { replacements, transaction },
+  )) as [IPMMConfig[], number];
 
   return result[0][0] || null;
 };
@@ -154,20 +154,20 @@ export const updatePMMConfigQuery = async (
 export const deletePMMConfigQuery = async (
   configId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM post_market_monitoring_configs WHERE organization_id = :organizationId AND id = :configId;`,
-    { replacements: { configId, organizationId }, transaction }
+    { replacements: { configId, organizationId }, transaction },
   );
   return (result as any)[1] > 0;
 };
 
 export const getActiveConfigsForNotificationHourQuery = async (
   hour: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMConfigWithDetails[]> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       p.project_title,
@@ -177,8 +177,8 @@ export const getActiveConfigsForNotificationHourQuery = async (
     LEFT JOIN projects p ON c.project_id = p.id AND p.organization_id = :organizationId
     LEFT JOIN users u ON c.escalation_contact_id = u.id
     WHERE c.organization_id = :organizationId AND c.is_active = true AND c.notification_hour = :hour;`,
-    { replacements: { hour, organizationId } }
-  ) as [IPMMConfigWithDetails[], number];
+    { replacements: { hour, organizationId } },
+  )) as [IPMMConfigWithDetails[], number];
 
   return result[0];
 };
@@ -189,18 +189,16 @@ export const getActiveConfigsForNotificationHourQuery = async (
 
 export const getPMMQuestionsQuery = async (
   configId: number | null,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMQuestion[]> => {
-  const whereClause = configId === null
-    ? "config_id IS NULL"
-    : "config_id = :configId";
+  const whereClause = configId === null ? "config_id IS NULL" : "config_id = :configId";
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT * FROM post_market_monitoring_questions
      WHERE organization_id = :organizationId AND ${whereClause}
      ORDER BY display_order ASC;`,
-    { replacements: { configId, organizationId } }
-  ) as [IPMMQuestion[], number];
+    { replacements: { configId, organizationId } },
+  )) as [IPMMQuestion[], number];
 
   return result[0];
 };
@@ -208,19 +206,19 @@ export const getPMMQuestionsQuery = async (
 export const addPMMQuestionQuery = async (
   questionData: IPMMQuestionCreate,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMQuestion> => {
   // Get next display order
-  const orderResult = await sequelize.query(
+  const orderResult = (await sequelize.query(
     `SELECT COALESCE(MAX(display_order), 0) + 1 as next_order
      FROM post_market_monitoring_questions
      WHERE organization_id = :organizationId AND ${questionData.config_id ? "config_id = :configId" : "config_id IS NULL"};`,
-    { replacements: { configId: questionData.config_id, organizationId }, transaction }
-  ) as [{ next_order: number }[], number];
+    { replacements: { configId: questionData.config_id, organizationId }, transaction },
+  )) as [{ next_order: number }[], number];
 
   const nextOrder = questionData.display_order ?? orderResult[0][0].next_order;
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_questions (
       organization_id, config_id, question_text, question_type, options,
       suggestion_text, is_required, allows_flag_for_concern,
@@ -244,8 +242,8 @@ export const addPMMQuestionQuery = async (
         eu_ai_act_article: questionData.eu_ai_act_article || null,
       },
       transaction,
-    }
-  ) as [IPMMQuestion[], number];
+    },
+  )) as [IPMMQuestion[], number];
 
   return result[0][0];
 };
@@ -254,7 +252,7 @@ export const updatePMMQuestionQuery = async (
   questionId: number,
   updateData: IPMMQuestionUpdate,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMQuestion | null> => {
   const setClauses: string[] = [];
   const replacements: Record<string, any> = { questionId, organizationId };
@@ -293,20 +291,20 @@ export const updatePMMQuestionQuery = async (
   }
 
   if (setClauses.length === 0) {
-    const result = await sequelize.query(
+    const result = (await sequelize.query(
       `SELECT * FROM post_market_monitoring_questions WHERE organization_id = :organizationId AND id = :questionId;`,
-      { replacements: { questionId, organizationId }, transaction }
-    ) as [IPMMQuestion[], number];
+      { replacements: { questionId, organizationId }, transaction },
+    )) as [IPMMQuestion[], number];
     return result[0][0] || null;
   }
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `UPDATE post_market_monitoring_questions
      SET ${setClauses.join(", ")}
      WHERE organization_id = :organizationId AND id = :questionId
      RETURNING *;`,
-    { replacements, transaction }
-  ) as [IPMMQuestion[], number];
+    { replacements, transaction },
+  )) as [IPMMQuestion[], number];
 
   return result[0][0] || null;
 };
@@ -314,12 +312,12 @@ export const updatePMMQuestionQuery = async (
 export const deletePMMQuestionQuery = async (
   questionId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM post_market_monitoring_questions
      WHERE organization_id = :organizationId AND id = :questionId AND is_system_default = false;`,
-    { replacements: { questionId, organizationId }, transaction }
+    { replacements: { questionId, organizationId }, transaction },
   );
   return (result as any)[1] > 0;
 };
@@ -327,7 +325,7 @@ export const deletePMMQuestionQuery = async (
 export const reorderPMMQuestionsQuery = async (
   questionOrders: Array<{ id: number; display_order: number }>,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   for (const item of questionOrders) {
     await sequelize.query(
@@ -337,7 +335,7 @@ export const reorderPMMQuestionsQuery = async (
       {
         replacements: { id: item.id, display_order: item.display_order, organizationId },
         transaction,
-      }
+      },
     );
   }
 };
@@ -352,9 +350,9 @@ export const createPMMCycleQuery = async (
   dueAt: Date,
   stakeholderId: number | null,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMCycle> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_cycles (
       organization_id, config_id, cycle_number, status, started_at, due_at, assigned_stakeholder_id
     ) VALUES (
@@ -369,17 +367,17 @@ export const createPMMCycleQuery = async (
         stakeholder_id: stakeholderId,
       },
       transaction,
-    }
-  ) as [IPMMCycle[], number];
+    },
+  )) as [IPMMCycle[], number];
 
   return result[0][0];
 };
 
 export const getActiveCycleByConfigIdQuery = async (
   configId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMCycleWithDetails | null> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       cfg.project_id,
@@ -398,17 +396,17 @@ export const getActiveCycleByConfigIdQuery = async (
     WHERE c.organization_id = :organizationId AND c.config_id = :configId AND c.status IN ('pending', 'in_progress', 'escalated')
     ORDER BY c.cycle_number DESC
     LIMIT 1;`,
-    { replacements: { configId, organizationId } }
-  ) as [IPMMCycleWithDetails[], number];
+    { replacements: { configId, organizationId } },
+  )) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
 };
 
 export const getActiveCycleByProjectIdQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMCycleWithDetails | null> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       cfg.project_id,
@@ -424,17 +422,17 @@ export const getActiveCycleByProjectIdQuery = async (
     WHERE c.organization_id = :organizationId AND cfg.project_id = :projectId AND c.status IN ('pending', 'in_progress', 'escalated')
     ORDER BY c.cycle_number DESC
     LIMIT 1;`,
-    { replacements: { projectId, organizationId } }
-  ) as [IPMMCycleWithDetails[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
 };
 
 export const getCycleByIdQuery = async (
   cycleId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMCycleWithDetails | null> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       cfg.project_id,
@@ -451,16 +449,16 @@ export const getCycleByIdQuery = async (
     LEFT JOIN users u ON c.assigned_stakeholder_id = u.id
     LEFT JOIN users cu ON c.completed_by = cu.id
     WHERE c.organization_id = :organizationId AND c.id = :cycleId;`,
-    { replacements: { cycleId, organizationId } }
-  ) as [IPMMCycleWithDetails[], number];
+    { replacements: { cycleId, organizationId } },
+  )) as [IPMMCycleWithDetails[], number];
 
   return result[0][0] || null;
 };
 
 export const getPendingCyclesForProcessingQuery = async (
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMCycleWithDetails[]> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       c.*,
       cfg.project_id,
@@ -479,8 +477,8 @@ export const getPendingCyclesForProcessingQuery = async (
     LEFT JOIN users eu ON cfg.escalation_contact_id = eu.id
     WHERE c.organization_id = :organizationId AND cfg.is_active = true
       AND c.status IN ('pending', 'in_progress', 'escalated');`,
-    { replacements: { organizationId } }
-  ) as [IPMMCycleWithDetails[], number];
+    { replacements: { organizationId } },
+  )) as [IPMMCycleWithDetails[], number];
 
   return result[0];
 };
@@ -489,39 +487,39 @@ export const updateCycleStatusQuery = async (
   cycleId: number,
   status: string,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET status = :status
      WHERE organization_id = :organizationId AND id = :cycleId;`,
-    { replacements: { cycleId, status, organizationId }, transaction }
+    { replacements: { cycleId, status, organizationId }, transaction },
   );
 };
 
 export const markCycleReminderSentQuery = async (
   cycleId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET reminder_sent_at = NOW()
      WHERE organization_id = :organizationId AND id = :cycleId;`,
-    { replacements: { cycleId, organizationId }, transaction }
+    { replacements: { cycleId, organizationId }, transaction },
   );
 };
 
 export const markCycleEscalationSentQuery = async (
   cycleId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET escalation_sent_at = NOW(), status = 'escalated'
      WHERE organization_id = :organizationId AND id = :cycleId;`,
-    { replacements: { cycleId, organizationId }, transaction }
+    { replacements: { cycleId, organizationId }, transaction },
   );
 };
 
@@ -529,13 +527,13 @@ export const completeCycleQuery = async (
   cycleId: number,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET status = 'completed', completed_at = NOW(), completed_by = :userId
      WHERE organization_id = :organizationId AND id = :cycleId;`,
-    { replacements: { cycleId, userId, organizationId }, transaction }
+    { replacements: { cycleId, userId, organizationId }, transaction },
   );
 };
 
@@ -543,26 +541,26 @@ export const reassignCycleStakeholderQuery = async (
   cycleId: number,
   newStakeholderId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET assigned_stakeholder_id = :stakeholderId
      WHERE organization_id = :organizationId AND id = :cycleId;`,
-    { replacements: { cycleId, stakeholderId: newStakeholderId, organizationId }, transaction }
+    { replacements: { cycleId, stakeholderId: newStakeholderId, organizationId }, transaction },
   );
 };
 
 export const getLatestCycleNumberQuery = async (
   configId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<number> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT COALESCE(MAX(cycle_number), 0) as latest_cycle
      FROM post_market_monitoring_cycles
      WHERE organization_id = :organizationId AND config_id = :configId;`,
-    { replacements: { configId, organizationId } }
-  ) as [{ latest_cycle: number }[], number];
+    { replacements: { configId, organizationId } },
+  )) as [{ latest_cycle: number }[], number];
 
   return result[0][0].latest_cycle;
 };
@@ -575,9 +573,9 @@ export const savePMMResponseQuery = async (
   cycleId: number,
   responseData: IPMMResponseSave,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMResponse> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_responses (
       organization_id, cycle_id, question_id, response_value, is_flagged
     ) VALUES (
@@ -598,8 +596,8 @@ export const savePMMResponseQuery = async (
         is_flagged: responseData.is_flagged ?? false,
       },
       transaction,
-    }
-  ) as [IPMMResponse[], number];
+    },
+  )) as [IPMMResponse[], number];
 
   return result[0][0];
 };
@@ -608,7 +606,7 @@ export const savePMMResponsesQuery = async (
   cycleId: number,
   responses: IPMMResponseSave[],
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMResponse[]> => {
   const savedResponses: IPMMResponse[] = [];
 
@@ -622,9 +620,9 @@ export const savePMMResponsesQuery = async (
 
 export const getPMMResponsesQuery = async (
   cycleId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMResponse[]> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       r.*,
       q.question_text,
@@ -635,17 +633,17 @@ export const getPMMResponsesQuery = async (
     JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
     WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId, organizationId } }
-  ) as [IPMMResponse[], number];
+    { replacements: { cycleId, organizationId } },
+  )) as [IPMMResponse[], number];
 
   return result[0];
 };
 
 export const getFlaggedResponsesQuery = async (
   cycleId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMResponse[]> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       r.*,
       q.question_text,
@@ -656,8 +654,8 @@ export const getFlaggedResponsesQuery = async (
     JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
     WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId AND r.is_flagged = true
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId, organizationId } }
-  ) as [IPMMResponse[], number];
+    { replacements: { cycleId, organizationId } },
+  )) as [IPMMResponse[], number];
 
   return result[0];
 };
@@ -672,9 +670,9 @@ export const createPMMReportQuery = async (
   fileId: number | null,
   userId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IPMMReport> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_reports (
       organization_id, cycle_id, file_id, context_snapshot, generated_by
     ) VALUES (
@@ -689,23 +687,23 @@ export const createPMMReportQuery = async (
         generated_by: userId,
       },
       transaction,
-    }
-  ) as [IPMMReport[], number];
+    },
+  )) as [IPMMReport[], number];
 
   return result[0][0];
 };
 
 export const getPMMReportByCycleIdQuery = async (
   cycleId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMReport | null> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT r.*, f.filename as file_name
      FROM post_market_monitoring_reports r
      LEFT JOIN files f ON r.file_id = f.id AND f.organization_id = :organizationId
      WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId;`,
-    { replacements: { cycleId, organizationId } }
-  ) as [IPMMReport[], number];
+    { replacements: { cycleId, organizationId } },
+  )) as [IPMMReport[], number];
 
   return result[0][0] || null;
 };
@@ -720,7 +718,7 @@ export const getPMMReportsQuery = async (
     page?: number;
     limit?: number;
   },
-  organizationId: number
+  organizationId: number,
 ): Promise<{ reports: any[]; total: number }> => {
   const page = filters.page || 1;
   const limit = filters.limit || 10;
@@ -746,23 +744,25 @@ export const getPMMReportsQuery = async (
     replacements.completedBy = filters.completedBy;
   }
   if (filters.flaggedOnly) {
-    whereClauses.push(`(SELECT COUNT(*) FROM post_market_monitoring_responses resp WHERE resp.organization_id = :organizationId AND resp.cycle_id = c.id AND resp.is_flagged = true) > 0`);
+    whereClauses.push(
+      `(SELECT COUNT(*) FROM post_market_monitoring_responses resp WHERE resp.organization_id = :organizationId AND resp.cycle_id = c.id AND resp.is_flagged = true) > 0`,
+    );
   }
 
   const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  const countResult = await sequelize.query(
+  const countResult = (await sequelize.query(
     `SELECT COUNT(*) as total
      FROM post_market_monitoring_reports r
      JOIN post_market_monitoring_cycles c ON r.cycle_id = c.id AND c.organization_id = :organizationId
      JOIN post_market_monitoring_configs cfg ON c.config_id = cfg.id AND cfg.organization_id = :organizationId
      ${whereClause};`,
-    { replacements }
-  ) as [{ total: string }[], number];
+    { replacements },
+  )) as [{ total: string }[], number];
 
   const total = parseInt(countResult[0][0].total, 10);
 
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       r.*,
       c.cycle_number,
@@ -782,8 +782,8 @@ export const getPMMReportsQuery = async (
      ${whereClause}
      ORDER BY r.generated_at DESC
      LIMIT :limit OFFSET :offset;`,
-    { replacements }
-  ) as [any[], number];
+    { replacements },
+  )) as [any[], number];
 
   return { reports: result[0], total };
 };
@@ -794,18 +794,18 @@ export const getPMMReportsQuery = async (
 
 export const getContextSnapshotQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<IPMMContextSnapshot> => {
   // Get project details
-  const projectResult = await sequelize.query(
+  const projectResult = (await sequelize.query(
     `SELECT project_title, status FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ project_title: string; status: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ project_title: string; status: string }[], number];
 
   const project = projectResult[0][0] || { project_title: "", status: "" };
 
   // Get risk counts
-  const riskResult = await sequelize.query(
+  const riskResult = (await sequelize.query(
     `SELECT
       COUNT(*) as total,
       SUM(CASE WHEN risk_severity = 'High' OR risk_severity = 'high' THEN 1 ELSE 0 END) as high_count,
@@ -813,50 +813,55 @@ export const getContextSnapshotQuery = async (
       SUM(CASE WHEN risk_severity = 'Low' OR risk_severity = 'low' THEN 1 ELSE 0 END) as low_count
      FROM risks
      WHERE organization_id = :organizationId AND project_id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
 
-  const risks = riskResult[0][0] || { total: "0", high_count: "0", medium_count: "0", low_count: "0" };
+  const risks = riskResult[0][0] || {
+    total: "0",
+    high_count: "0",
+    medium_count: "0",
+    low_count: "0",
+  };
 
   // Get model counts
-  const modelResult = await sequelize.query(
+  const modelResult = (await sequelize.query(
     `SELECT COUNT(*) as total FROM model_inventories WHERE organization_id = :organizationId AND project_id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ total: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ total: string }[], number];
 
   const models = parseInt(modelResult[0][0]?.total || "0", 10);
 
   // Get model risks count
-  const modelRiskResult = await sequelize.query(
+  const modelRiskResult = (await sequelize.query(
     `SELECT COUNT(*) as total
      FROM model_risks mr
      JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = :organizationId
      WHERE mr.organization_id = :organizationId AND mi.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ total: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ total: string }[], number];
 
   const modelRisks = parseInt(modelRiskResult[0][0]?.total || "0", 10);
 
   // Get vendor counts
-  const vendorResult = await sequelize.query(
+  const vendorResult = (await sequelize.query(
     `SELECT COUNT(DISTINCT v.id) as total
      FROM vendors v
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
      WHERE v.organization_id = :organizationId AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ total: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ total: string }[], number];
 
   const vendors = parseInt(vendorResult[0][0]?.total || "0", 10);
 
   // Get vendor risks count
-  const vendorRiskResult = await sequelize.query(
+  const vendorRiskResult = (await sequelize.query(
     `SELECT COUNT(*) as total
      FROM vendorrisks vr
      JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
      WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ total: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ total: string }[], number];
 
   const vendorRisks = parseInt(vendorRiskResult[0][0]?.total || "0", 10);
 
@@ -881,47 +886,47 @@ export const getContextSnapshotQuery = async (
 
 export const getAssignedStakeholderQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{ id: number; name: string; email: string } | null> => {
   // First try to get an assigned stakeholder from project members
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT u.id, u.name, u.email
      FROM users u
      JOIN projects_members pm ON u.id = pm.user_id AND pm.organization_id = :organizationId
      WHERE pm.project_id = :projectId
      ORDER BY pm.id ASC
      LIMIT 1;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ id: number; name: string; email: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ id: number; name: string; email: string }[], number];
 
   if (result[0].length > 0) {
     return result[0][0];
   }
 
   // Fallback to project owner
-  const ownerResult = await sequelize.query(
+  const ownerResult = (await sequelize.query(
     `SELECT u.id, u.name, u.email
      FROM users u
      JOIN projects p ON u.id = p.owner AND p.organization_id = :organizationId
      WHERE p.id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ id: number; name: string; email: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ id: number; name: string; email: string }[], number];
 
   return ownerResult[0][0] || null;
 };
 
 export const getProjectStakeholdersQuery = async (
   projectId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<Array<{ id: number; name: string; email: string }>> => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT DISTINCT u.id, u.name, u.email
      FROM users u
      LEFT JOIN projects_members pm ON u.id = pm.user_id AND pm.organization_id = :organizationId AND pm.project_id = :projectId
      LEFT JOIN projects p ON u.id = p.owner AND p.organization_id = :organizationId AND p.id = :projectId
      WHERE pm.project_id = :projectId OR p.id = :projectId;`,
-    { replacements: { projectId, organizationId } }
-  ) as [{ id: number; name: string; email: string }[], number];
+    { replacements: { projectId, organizationId } },
+  )) as [{ id: number; name: string; email: string }[], number];
 
   return result[0];
 };
@@ -933,25 +938,25 @@ export const getProjectStakeholdersQuery = async (
 export const deactivateConfigForProjectQuery = async (
   projectId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_configs
      SET is_active = false, updated_at = NOW()
      WHERE organization_id = :organizationId AND project_id = :projectId;`,
-    { replacements: { projectId, organizationId }, transaction }
+    { replacements: { projectId, organizationId }, transaction },
   );
 };
 
 export const cancelPendingCyclesForConfigQuery = async (
   configId: number,
   organizationId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE post_market_monitoring_cycles
      SET status = 'completed', completed_at = NOW()
      WHERE organization_id = :organizationId AND config_id = :configId AND status IN ('pending', 'in_progress');`,
-    { replacements: { configId, organizationId }, transaction }
+    { replacements: { configId, organizationId }, transaction },
   );
 };

@@ -5,12 +5,7 @@ import { Global } from "@emotion/react";
 import { IPageTourProps } from "../../types/interfaces/i.tour";
 import { brand } from "../../themes/palette";
 
-const PageTour: React.FC<IPageTourProps> = ({
-  steps,
-  run,
-  onFinish,
-  tourKey,
-}) => {
+const PageTour: React.FC<IPageTourProps> = ({ steps, run, onFinish, tourKey }) => {
   const [shouldRun, setShouldRun] = useState(false);
 
   useEffect(() => {
@@ -42,12 +37,7 @@ const PageTour: React.FC<IPageTourProps> = ({
   };
 
   const tooltipRenderer = (tooltipProps: TooltipRenderProps) => {
-    return (
-      <CustomStepWrapper
-        {...tooltipProps}
-        content={tooltipProps.step.content as any}
-      />
-    );
+    return <CustomStepWrapper {...tooltipProps} content={tooltipProps.step.content as any} />;
   };
 
   return (
@@ -94,7 +84,7 @@ const PageTour: React.FC<IPageTourProps> = ({
       />
       {/* Cast props for compat with both old and new react-joyride versions */}
       <Joyride
-        {...{
+        {...({
           steps: steps as unknown as Step[],
           run: shouldRun,
           continuous: true,
@@ -132,7 +122,7 @@ const PageTour: React.FC<IPageTourProps> = ({
               padding: 0,
             },
           },
-        } as any}
+        } as any)}
         floaterProps={{
           styles: {
             arrow: {

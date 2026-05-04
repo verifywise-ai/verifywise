@@ -130,11 +130,11 @@ export const aiDetectionSettingsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Prompt injection (LLM01)', text: 'Detect untrusted input concatenated into LLM prompts' },
-        { bold: 'Insecure output handling (LLM02)', text: 'Detect LLM output passed to dangerous sinks' },
+        { bold: 'Jailbreak risk (LLM02)', text: 'Detect LLM output passed to dangerous sinks' },
         { bold: 'Training data poisoning (LLM03)', text: 'Detect insecure model deserialization and untrusted sources' },
         { bold: 'Model denial of service (LLM04)', text: 'Detect missing token limits and timeouts' },
         { bold: 'Supply chain (LLM05)', text: 'Detect unpinned versions and untrusted model URLs' },
-        { bold: 'Sensitive info disclosure (LLM06)', text: 'Detect PII and credentials passed to LLM context' },
+        { bold: 'PII exposure (LLM06)', text: 'Detect PII and credentials passed to LLM context' },
         { bold: 'Insecure plugin design (LLM07)', text: 'Detect tools without input validation or schemas' },
         { bold: 'Excessive agency (LLM08)', text: 'Detect agents with overly broad access and no human oversight' },
         { bold: 'Overreliance (LLM09)', text: 'Detect missing human review and confidence thresholds' },

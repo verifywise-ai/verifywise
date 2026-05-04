@@ -1,7 +1,7 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface ExportColumn {
   id: string;
@@ -14,8 +14,8 @@ interface ExportRow {
 
 const sanitizeFilename = (filename: string): string => {
   return filename
-    .replace(/[<>:"/\\|?*]/g, '_')
-    .replace(/\.+/g, '.')
+    .replace(/[<>:"/\\|?*]/g, "_")
+    .replace(/\.+/g, ".")
     .slice(0, 200);
 };
 
@@ -25,22 +25,22 @@ const sanitizeFilename = (filename: string): string => {
 export const exportToCSV = (
   data: ExportRow[],
   columns: ExportColumn[],
-  filename: string = 'export'
+  filename: string = "export",
 ) => {
-  const headers = columns.map(col => col.label).join(',');
-  const rows = data.map(row =>
-    columns.map(col => {
-      const value = row[col.id] ?? '';
-      const strValue = String(value);
-      // Escape quotes and wrap in quotes if contains comma, quote, or newline
-      return strValue.match(/[,"\n]/)
-        ? `"${strValue.replace(/"/g, '""')}"`
-        : strValue;
-    }).join(',')
+  const headers = columns.map((col) => col.label).join(",");
+  const rows = data.map((row) =>
+    columns
+      .map((col) => {
+        const value = row[col.id] ?? "";
+        const strValue = String(value);
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        return strValue.match(/[,"\n]/) ? `"${strValue.replace(/"/g, '""')}"` : strValue;
+      })
+      .join(","),
   );
 
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const csv = [headers, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   saveAs(blob, `${sanitizeFilename(filename)}.csv`);
 };
 
@@ -50,12 +50,12 @@ export const exportToCSV = (
 export const exportToExcel = (
   data: ExportRow[],
   columns: ExportColumn[],
-  filename: string = 'export'
+  filename: string = "export",
 ) => {
   // Create worksheet data with headers
   const wsData = [
-    columns.map(col => col.label),
-    ...data.map(row => columns.map(col => row[col.id] ?? ''))
+    columns.map((col) => col.label),
+    ...data.map((row) => columns.map((col) => row[col.id] ?? "")),
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -64,14 +64,14 @@ export const exportToExcel = (
   const colWidths = columns.map((col) => {
     const maxLength = Math.max(
       col.label.length,
-      ...data.map(row => String(row[col.id] ?? '').length)
+      ...data.map((row) => String(row[col.id] ?? "").length),
     );
     return { wch: Math.min(maxLength + 2, 50) };
   });
-  ws['!cols'] = colWidths;
+  ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
 
   // Write and trigger download
   XLSX.writeFile(wb, `${sanitizeFilename(filename)}.xlsx`);
@@ -83,8 +83,8 @@ export const exportToExcel = (
 export const exportToPDF = (
   data: ExportRow[],
   columns: ExportColumn[],
-  filename: string = 'export',
-  title?: string
+  filename: string = "export",
+  title?: string,
 ) => {
   try {
     const doc = new jsPDF();
@@ -92,15 +92,13 @@ export const exportToPDF = (
     // Add title
     if (title) {
       doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.text(title, 14, 15);
     }
 
     // Prepare table data
-    const headers = columns.map(col => col.label);
-    const rows = data.map(row =>
-      columns.map(col => String(row[col.id] ?? ''))
-    );
+    const headers = columns.map((col) => col.label);
+    const rows = data.map((row) => columns.map((col) => String(row[col.id] ?? "")));
 
     // Use autoTable function
     autoTable(doc, {
@@ -113,7 +111,7 @@ export const exportToPDF = (
       },
       headStyles: {
         fillColor: [66, 139, 202],
-        fontStyle: 'bold',
+        fontStyle: "bold",
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245],
@@ -123,34 +121,28 @@ export const exportToPDF = (
 
     doc.save(`${sanitizeFilename(filename)}.pdf`);
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    alert('Failed to generate PDF. Please try again or use CSV/Excel export instead.');
+    console.error("Error generating PDF:", error);
+    alert("Failed to generate PDF. Please try again or use CSV/Excel export instead.");
   }
 };
 
 /**
  * Print table data - generates PDF and opens print dialog
  */
-export const printTable = (
-  data: ExportRow[],
-  columns: ExportColumn[],
-  title?: string
-) => {
+export const printTable = (data: ExportRow[], columns: ExportColumn[], title?: string) => {
   try {
     const doc = new jsPDF();
 
     // Add title
     if (title) {
       doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.text(title, 14, 15);
     }
 
     // Prepare table data
-    const headers = columns.map(col => col.label);
-    const rows = data.map(row =>
-      columns.map(col => String(row[col.id] ?? ''))
-    );
+    const headers = columns.map((col) => col.label);
+    const rows = data.map((row) => columns.map((col) => String(row[col.id] ?? "")));
 
     // Use autoTable function
     autoTable(doc, {
@@ -163,7 +155,7 @@ export const printTable = (
       },
       headStyles: {
         fillColor: [66, 139, 202],
-        fontStyle: 'bold',
+        fontStyle: "bold",
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245],
@@ -172,11 +164,11 @@ export const printTable = (
     });
 
     // Generate PDF as blob and open print dialog
-    const pdfBlob = doc.output('blob');
+    const pdfBlob = doc.output("blob");
     const blobUrl = URL.createObjectURL(pdfBlob);
 
     // Open in new window and trigger print
-    const printWindow = window.open(blobUrl, '_blank');
+    const printWindow = window.open(blobUrl, "_blank");
     if (printWindow) {
       printWindow.onload = () => {
         printWindow.print();
@@ -186,10 +178,10 @@ export const printTable = (
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } else {
       URL.revokeObjectURL(blobUrl);
-      alert('Please allow popups to print the table.');
+      alert("Please allow popups to print the table.");
     }
   } catch (error) {
-    console.error('Error generating print preview:', error);
-    alert('Failed to generate print preview. Please try exporting to PDF instead.');
+    console.error("Error generating print preview:", error);
+    alert("Failed to generate print preview. Please try exporting to PDF instead.");
   }
 };

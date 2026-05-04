@@ -9,15 +9,26 @@ vi.mock("../../../../application/repository/vendor.repository", () => ({
 }));
 
 // Stub localStorage if not available in test environment
-if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.getItem !== "function") {
+if (
+  typeof globalThis.localStorage === "undefined" ||
+  typeof globalThis.localStorage.getItem !== "function"
+) {
   const store: Record<string, string> = {};
   Object.defineProperty(globalThis, "localStorage", {
     value: {
       getItem: (key: string) => store[key] ?? null,
-      setItem: (key: string, val: string) => { store[key] = val; },
-      removeItem: (key: string) => { delete store[key]; },
-      clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
-      get length() { return Object.keys(store).length; },
+      setItem: (key: string, val: string) => {
+        store[key] = val;
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        Object.keys(store).forEach((k) => delete store[k]);
+      },
+      get length() {
+        return Object.keys(store).length;
+      },
       key: (i: number) => Object.keys(store)[i] ?? null,
     },
     writable: true,
@@ -104,9 +115,7 @@ describe("CustomizableBasicTable", () => {
     };
 
     renderWithProviders(<CustomizableBasicTable {...propsWithLong} />);
-    expect(
-      screen.getByText("A very long risk name that exc...")
-    ).toBeInTheDocument();
+    expect(screen.getByText("A very long risk name that exc...")).toBeInTheDocument();
   });
 
   it("should call setSelectedRow and setAnchorEl on row click", async () => {
@@ -135,9 +144,7 @@ describe("CustomizableBasicTable", () => {
   });
 
   it("should show pagination when paginated prop is true", () => {
-    renderWithProviders(
-      <CustomizableBasicTable {...defaultProps} paginated />
-    );
+    renderWithProviders(<CustomizableBasicTable {...defaultProps} paginated />);
     expect(screen.getByText(/Showing/)).toBeInTheDocument();
     expect(screen.getByText(/Rows per page/)).toBeInTheDocument();
   });

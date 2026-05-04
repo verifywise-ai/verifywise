@@ -1,31 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  getPaginationRowCount,
-  setPaginationRowCount,
-} from "../paginationStorage";
+import { getPaginationRowCount, setPaginationRowCount } from "../paginationStorage";
 
 function createMockStorage(): Storage {
   const storage = {} as Storage & Record<string, any>;
 
   Object.defineProperties(storage, {
     getItem: {
-      value: (key: string) => Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
+      value: (key: string) =>
+        Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
       enumerable: false,
       writable: true,
     },
     setItem: {
-      value: (key: string, value: string) => { storage[key] = String(value); },
+      value: (key: string, value: string) => {
+        storage[key] = String(value);
+      },
       enumerable: false,
       writable: true,
     },
     removeItem: {
-      value: (key: string) => { delete storage[key]; },
+      value: (key: string) => {
+        delete storage[key];
+      },
       enumerable: false,
       writable: true,
     },
     clear: {
       value: () => {
-        Object.keys(storage).forEach(key => delete storage[key]);
+        Object.keys(storage).forEach((key) => delete storage[key]);
       },
       enumerable: false,
     },
@@ -88,7 +90,7 @@ describe("paginationStorage", () => {
       expect(getPaginationRowCount("users", 10)).toBe(10);
       expect(console.warn).toHaveBeenCalledWith(
         "Failed to retrieve pagination setting from localStorage:",
-        expect.any(Error)
+        expect.any(Error),
       );
     });
 
@@ -112,9 +114,8 @@ describe("paginationStorage", () => {
 
       expect(console.warn).toHaveBeenCalledWith(
         "Failed to save pagination setting to localStorage:",
-        expect.any(Error)
+        expect.any(Error),
       );
     });
   });
-
 });

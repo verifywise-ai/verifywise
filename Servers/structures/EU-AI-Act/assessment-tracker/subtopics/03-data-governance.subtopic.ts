@@ -15,7 +15,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The identified risks include system downtime due to unplanned maintenance, data breaches during data transfer, and failure to comply with regulatory standards in the deployment region. These risks were prioritized based on their potential impact on the users and the business. Mitigation strategies include maintaining redundant infrastructure, employing encryption protocols for data transfer, and aligning deployment strategies with local regulations and compliance frameworks."
+        answer:
+          "The identified risks include system downtime due to unplanned maintenance, data breaches during data transfer, and failure to comply with regulatory standards in the deployment region. These risks were prioritized based on their potential impact on the users and the business. Mitigation strategies include maintaining redundant infrastructure, employing encryption protocols for data transfer, and aligning deployment strategies with local regulations and compliance frameworks.",
       },
       {
         order_no: 2,
@@ -29,7 +30,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We have implemented continuous monitoring mechanisms to detect undesired behaviors such as bias, errors, or security breaches. Real-time logging allows us to track the model''s actions and performance across various stages, from development to deployment. Automated alerts trigger responses to any irregularities or negative outcomes. Additionally, we conduct regular audits to ensure ongoing safety and transparency."
+        answer:
+          "We have implemented continuous monitoring mechanisms to detect undesired behaviors such as bias, errors, or security breaches. Real-time logging allows us to track the model''s actions and performance across various stages, from development to deployment. Automated alerts trigger responses to any irregularities or negative outcomes. Additionally, we conduct regular audits to ensure ongoing safety and transparency.",
       },
       {
         order_no: 3,
@@ -43,7 +45,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "To mitigate unforeseen effects after deployment, we have set up continuous post-deployment monitoring and feedback systems. These include performance analysis tools, user feedback collection, and rapid incident response protocols. In addition, our collaboration with the AI provider ensures that any new risks identified can be promptly addressed by updating the system or re-training models as necessary."
+        answer:
+          "To mitigate unforeseen effects after deployment, we have set up continuous post-deployment monitoring and feedback systems. These include performance analysis tools, user feedback collection, and rapid incident response protocols. In addition, our collaboration with the AI provider ensures that any new risks identified can be promptly addressed by updating the system or re-training models as necessary.",
       },
       {
         order_no: 4,
@@ -57,7 +60,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "The uncertainty and error margins in AI applications can result in unfair outcomes, especially for underrepresented or vulnerable groups. To address this, we perform thorough testing on diverse datasets to minimize biases. Post-deployment, we continuously assess model performance to ensure that no group faces disproportionate negative impacts. We also collaborate with the AI provider to incorporate fairness audits and make model adjustments when necessary."
+        answer:
+          "The uncertainty and error margins in AI applications can result in unfair outcomes, especially for underrepresented or vulnerable groups. To address this, we perform thorough testing on diverse datasets to minimize biases. Post-deployment, we continuously assess model performance to ensure that no group faces disproportionate negative impacts. We also collaborate with the AI provider to incorporate fairness audits and make model adjustments when necessary.",
       },
       {
         order_no: 5,
@@ -71,7 +75,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We have established clear incident reporting mechanisms outlined in our contractual agreements with the AI provider. These protocols include notifying relevant authorities and stakeholders immediately following any serious incidents. The AI provider is obligated to report any system failures or security breaches, and our organization has dedicated personnel for managing the communication and escalation process."
+        answer:
+          "We have established clear incident reporting mechanisms outlined in our contractual agreements with the AI provider. These protocols include notifying relevant authorities and stakeholders immediately following any serious incidents. The AI provider is obligated to report any system failures or security breaches, and our organization has dedicated personnel for managing the communication and escalation process.",
       },
       {
         order_no: 6,
@@ -85,7 +90,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Decommissioning the AI system may lead to risks such as loss of data access, unavailability of model insights, or disruption to users dependent on the system. To mitigate these risks, we have devised a comprehensive decommissioning plan that ensures data is securely archived, models are backed up, and users are informed well in advance. The plan also accounts for regulatory compliance regarding data retention and model dismantling."
+        answer:
+          "Decommissioning the AI system may lead to risks such as loss of data access, unavailability of model insights, or disruption to users dependent on the system. To mitigate these risks, we have devised a comprehensive decommissioning plan that ensures data is securely archived, models are backed up, and users are informed well in advance. The plan also accounts for regulatory compliance regarding data retention and model dismantling.",
       },
       {
         order_no: 7,
@@ -99,7 +105,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our AI application uses multiple data sources, including publicly available datasets, proprietary datasets, and data collected via web scraping and surveys. The input data primarily consists of text, images, and sensor data, while output data is predictions or classifications derived from these inputs. We ensure that all data sources are well documented, with metadata capturing information on data types, categories, IP rights, and volume. We have legal agreements in place to ensure lawful use of data."
+        answer:
+          "Our AI application uses multiple data sources, including publicly available datasets, proprietary datasets, and data collected via web scraping and surveys. The input data primarily consists of text, images, and sensor data, while output data is predictions or classifications derived from these inputs. We ensure that all data sources are well documented, with metadata capturing information on data types, categories, IP rights, and volume. We have legal agreements in place to ensure lawful use of data.",
       },
       {
         order_no: 8,
@@ -113,7 +120,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, the repository maintains detailed records of intellectual property rights and usage restrictions. Each dataset is tagged with its respective licenses and usage terms, ensuring compliance with deposit agreements. We also monitor data quality and completeness, with particular attention to missing data, outliers, and any imbalances in the dataset, which is documented for future reference."
+        answer:
+          "Yes, the repository maintains detailed records of intellectual property rights and usage restrictions. Each dataset is tagged with its respective licenses and usage terms, ensuring compliance with deposit agreements. We also monitor data quality and completeness, with particular attention to missing data, outliers, and any imbalances in the dataset, which is documented for future reference.",
       },
     ],
   },
@@ -133,7 +141,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization ensures data representativeness by sourcing data from diverse geographical regions and demographic groups. The data is thoroughly reviewed for accuracy by domain experts, and metadata, such as collection methods and volume, is consistently maintained. Challenges include inconsistent data formats and incomplete metadata for some datasets."
+        answer:
+          "Our organization ensures data representativeness by sourcing data from diverse geographical regions and demographic groups. The data is thoroughly reviewed for accuracy by domain experts, and metadata, such as collection methods and volume, is consistently maintained. Challenges include inconsistent data formats and incomplete metadata for some datasets.",
       },
       {
         order_no: 2,
@@ -147,7 +156,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, our AI system processes personal data, including demographic details and behavioral data collected through user interactions. This data is processed for personalizing content and improving user experience. All data is anonymized where necessary to maintain privacy."
+        answer:
+          "Yes, our AI system processes personal data, including demographic details and behavioral data collected through user interactions. This data is processed for personalizing content and improving user experience. All data is anonymized where necessary to maintain privacy.",
       },
       {
         order_no: 3,
@@ -161,7 +171,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our legal bases for processing personal and sensitive data include obtaining explicit consent from users and processing data for the performance of contractual obligations. Measures are in place to regularly audit data usage to ensure compliance with the original consent and to ensure that data is deleted within the agreed retention periods."
+        answer:
+          "Our legal bases for processing personal and sensitive data include obtaining explicit consent from users and processing data for the performance of contractual obligations. Measures are in place to regularly audit data usage to ensure compliance with the original consent and to ensure that data is deleted within the agreed retention periods.",
       },
       {
         order_no: 4,
@@ -175,7 +186,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We implement advanced encryption techniques both at rest and during transmission to ensure sensitive data is protected. Additionally, we regularly conduct vulnerability assessments and adversarial attack simulations to identify and mitigate any weaknesses in our system."
+        answer:
+          "We implement advanced encryption techniques both at rest and during transmission to ensure sensitive data is protected. Additionally, we regularly conduct vulnerability assessments and adversarial attack simulations to identify and mitigate any weaknesses in our system.",
       },
       {
         order_no: 5,
@@ -189,7 +201,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "We have conducted a comprehensive privacy impact assessment (PIA) to ensure compliance with GDPR. Key protected attributes include personal identification data, location data, and biometric data. We ensure that all protected attributes are handled with explicit consent and that data is anonymized or pseudonymized where appropriate."
+        answer:
+          "We have conducted a comprehensive privacy impact assessment (PIA) to ensure compliance with GDPR. Key protected attributes include personal identification data, location data, and biometric data. We ensure that all protected attributes are handled with explicit consent and that data is anonymized or pseudonymized where appropriate.",
       },
       {
         order_no: 6,
@@ -203,7 +216,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Our organization has implemented a robust system to manage data subject rights requests. This includes automated workflows to ensure that all requests for access, objection, and deletion are processed within the 30-day timeframe. We also maintain an audit trail to track the status of each request."
+        answer:
+          "Our organization has implemented a robust system to manage data subject rights requests. This includes automated workflows to ensure that all requests for access, objection, and deletion are processed within the 30-day timeframe. We also maintain an audit trail to track the status of each request.",
       },
       {
         order_no: 7,
@@ -217,7 +231,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, our organization has developed a comprehensive privacy policy that includes risk assessments and mitigation strategies. These strategies include encryption of personal data, user consent management, and regular security audits to ensure that the privacy of individuals is protected."
+        answer:
+          "Yes, our organization has developed a comprehensive privacy policy that includes risk assessments and mitigation strategies. These strategies include encryption of personal data, user consent management, and regular security audits to ensure that the privacy of individuals is protected.",
       },
       {
         order_no: 8,
@@ -231,7 +246,8 @@ export const DataGovernance = [
         isrequired: true,
         evidence_files: [],
         dropdown_options: [],
-        answer: "Yes, users have the right to delete their data from the system. They can initiate the process by contacting our data management team or through the platform’s interface. Upon request, data is anonymized or deleted in compliance with our data retention policy."
+        answer:
+          "Yes, users have the right to delete their data from the system. They can initiate the process by contacting our data management team or through the platform’s interface. Upon request, data is anonymized or deleted in compliance with our data retention policy.",
       },
     ],
   },

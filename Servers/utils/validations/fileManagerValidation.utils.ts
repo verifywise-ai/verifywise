@@ -138,7 +138,7 @@ export const canUploadFiles = (role: string): boolean => {
  */
 export const validateFileUpload = (
   file: Express.Multer.File,
-  userRole?: string
+  userRole?: string,
 ): { valid: boolean; error?: string } => {
   // Check user permissions (only if userRole is provided - for backward compatibility)
   if (userRole !== undefined && !canUploadFiles(userRole)) {

@@ -25,23 +25,16 @@
  * @module domain.layer/models/entityGraphGapRules
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 // Interface for a single gap rule
 export interface GapRule {
-  entityType: 'model' | 'risk' | 'control' | 'vendor' | 'useCase';
+  entityType: "model" | "risk" | "control" | "vendor" | "useCase";
   requirement: string;
-  severity: 'critical' | 'warning' | 'info';
+  severity: "critical" | "warning" | "info";
   enabled: boolean;
 }
 
@@ -101,15 +94,11 @@ export class EntityGraphGapRulesModel extends Model<EntityGraphGapRulesModel> {
   static async createGapRules(
     user_id: number,
     organization_id: number,
-    rules: GapRule[]
+    rules: GapRule[],
   ): Promise<EntityGraphGapRulesModel> {
     // Validate user_id
     if (!user_id || user_id < 1) {
-      throw new ValidationException(
-        "Valid user_id is required",
-        "user_id",
-        user_id
-      );
+      throw new ValidationException("Valid user_id is required", "user_id", user_id);
     }
 
     // Validate organization_id
@@ -117,17 +106,13 @@ export class EntityGraphGapRulesModel extends Model<EntityGraphGapRulesModel> {
       throw new ValidationException(
         "Valid organization_id is required",
         "organization_id",
-        organization_id
+        organization_id,
       );
     }
 
     // Validate rules array
     if (!Array.isArray(rules)) {
-      throw new ValidationException(
-        "Rules must be an array",
-        "rules",
-        rules
-      );
+      throw new ValidationException("Rules must be an array", "rules", rules);
     }
 
     // Validate each rule
@@ -136,7 +121,7 @@ export class EntityGraphGapRulesModel extends Model<EntityGraphGapRulesModel> {
         throw new ValidationException(
           "Each rule must have entityType, requirement, and severity",
           "rules",
-          rule
+          rule,
         );
       }
     }
@@ -157,11 +142,7 @@ export class EntityGraphGapRulesModel extends Model<EntityGraphGapRulesModel> {
   async updateRules(rules: GapRule[]): Promise<void> {
     // Validate rules array
     if (!Array.isArray(rules)) {
-      throw new ValidationException(
-        "Rules must be an array",
-        "rules",
-        rules
-      );
+      throw new ValidationException("Rules must be an array", "rules", rules);
     }
 
     // Validate each rule
@@ -170,7 +151,7 @@ export class EntityGraphGapRulesModel extends Model<EntityGraphGapRulesModel> {
         throw new ValidationException(
           "Each rule must have entityType, requirement, and severity",
           "rules",
-          rule
+          rule,
         );
       }
     }

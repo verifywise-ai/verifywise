@@ -1,9 +1,4 @@
-export type ControlStatus =
-  | "Waiting"
-  | "In progress"
-  | "Done"
-  | "Review"
-  | "Approved";
+export type ControlStatus = "Waiting" | "In progress" | "Done" | "Review" | "Approved";
 
 export interface IISO27001AnnexControl {
   id?: number;

@@ -38,11 +38,7 @@ import {
 import { sequelize } from "../database/db";
 import { RoleModel } from "../domain.layer/models/role/role.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
-import {
-  logProcessing,
-  logSuccess,
-  logFailure,
-} from "../utils/logger/logHelper";
+import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 /**
  * Retrieves all roles from the system
@@ -228,10 +224,7 @@ export async function createRole(req: Request, res: Response): Promise<any> {
   try {
     const newRole = req.body;
 
-    const roleObj = await RoleModel.createRole(
-      newRole.name,
-      newRole.description
-    );
+    const roleObj = await RoleModel.createRole(newRole.name, newRole.description);
     const createdRole = await createNewRoleQuery(roleObj, transaction);
 
     if (createdRole) {
@@ -319,10 +312,7 @@ export async function createRole(req: Request, res: Response): Promise<any> {
  *   }
  * }
  */
-export async function updateRoleById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function updateRoleById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const roleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -416,10 +406,7 @@ export async function updateRoleById(
  *   }
  * }
  */
-export async function deleteRoleById(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function deleteRoleById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const roleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 

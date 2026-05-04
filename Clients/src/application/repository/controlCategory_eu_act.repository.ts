@@ -16,32 +16,17 @@ export async function getControlCategoryById({
   return response.data;
 }
 
-export async function createControlCategory({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
-  const response = await apiServices.post("/controlCategory", body, {
-  });
+export async function createControlCategory({ body }: { body: any }): Promise<any> {
+  const response = await apiServices.post("/controlCategory", body, {});
   return response;
 }
 
-export async function updateControlCategory({
-  id,
-  body,
-}: {
-  id: number;
-  body: any;
-}): Promise<any> {
+export async function updateControlCategory({ id, body }: { id: number; body: any }): Promise<any> {
   const response = await apiServices.patch(`/controlCategory/${id}`, body);
   return response;
 }
 
-export async function deleteControlCategory({
-  id,
-}: {
-  id: number;
-}): Promise<any> {
+export async function deleteControlCategory({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/controlCategory/${id}`);
   return response;
 }

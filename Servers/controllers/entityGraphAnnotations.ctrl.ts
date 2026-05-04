@@ -23,10 +23,7 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  logFailure,
-  logProcessing,
-} from "../utils/logger/logHelper";
+import { logFailure, logProcessing } from "../utils/logger/logHelper";
 import { sanitizeErrorMessage } from "../utils/entityGraphSecurity.utils";
 
 /**
@@ -63,27 +60,15 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
 
     // Validate required fields
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Annotation content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Annotation content is required", "content", content);
     }
 
     if (!entity_type) {
-      throw new ValidationException(
-        "entity_type is required",
-        "entity_type",
-        entity_type
-      );
+      throw new ValidationException("entity_type is required", "entity_type", entity_type);
     }
 
     if (!entity_id) {
-      throw new ValidationException(
-        "entity_id is required",
-        "entity_id",
-        entity_id
-      );
+      throw new ValidationException("entity_id is required", "entity_id", entity_id);
     }
 
     const savedAnnotation = await EntityGraphAnnotationsService.saveAnnotation(
@@ -91,7 +76,7 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
       userId,
       entity_type,
       entity_id,
-      organizationId
+      organizationId,
     );
 
     return res.status(201).json(STATUS_CODE[201](savedAnnotation.toJSON()));
@@ -109,11 +94,9 @@ export async function saveAnnotation(req: Request, res: Response): Promise<any> 
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400]((error as Error).message));
     }
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to save annotation")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to save annotation")));
   }
 }
 
@@ -141,10 +124,7 @@ export async function getAnnotations(req: Request, res: Response): Promise<any> 
   try {
     const userId = req.userId!;
 
-    const annotations = await EntityGraphAnnotationsService.getAnnotations(
-      userId,
-      organizationId
-    );
+    const annotations = await EntityGraphAnnotationsService.getAnnotations(userId, organizationId);
 
     const responseData = annotations.map((annotation) => annotation.toJSON());
     return res.status(200).json(STATUS_CODE[200](responseData));
@@ -159,11 +139,11 @@ export async function getAnnotations(req: Request, res: Response): Promise<any> 
       organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to retrieve annotations")
-      )
-    );
+    return res
+      .status(500)
+      .json(
+        STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to retrieve annotations")),
+      );
   }
 }
 
@@ -177,10 +157,7 @@ export async function getAnnotations(req: Request, res: Response): Promise<any> 
  * @param {Response} res - Express response object
  * @returns {Promise<any>} JSON response with annotation or null
  */
-export async function getAnnotationByEntity(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function getAnnotationByEntity(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "Starting getAnnotationByEntity",
     functionName: "getAnnotationByEntity",
@@ -190,24 +167,27 @@ export async function getAnnotationByEntity(
   });
 
   try {
-    const entityType = Array.isArray(req.params.entityType) ? req.params.entityType[0] : req.params.entityType;
-    const entityId = Array.isArray(req.params.entityId) ? req.params.entityId[0] : req.params.entityId;
+    const entityType = Array.isArray(req.params.entityType)
+      ? req.params.entityType[0]
+      : req.params.entityType;
+    const entityId = Array.isArray(req.params.entityId)
+      ? req.params.entityId[0]
+      : req.params.entityId;
     const userId = req.userId!;
     const organizationId = req.organizationId!;
 
     if (!entityType || !entityId) {
-      throw new ValidationException(
-        "entityType and entityId are required",
-        "params",
-        { entityType, entityId }
-      );
+      throw new ValidationException("entityType and entityId are required", "params", {
+        entityType,
+        entityId,
+      });
     }
 
     const annotation = await EntityGraphAnnotationsService.getAnnotationByEntity(
       userId,
       entityType,
       entityId,
-      organizationId
+      organizationId,
     );
 
     return res.status(200).json(STATUS_CODE[200](annotation?.toJSON() || null));
@@ -225,11 +205,11 @@ export async function getAnnotationByEntity(
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400]((error as Error).message));
     }
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to retrieve annotation")
-      )
-    );
+    return res
+      .status(500)
+      .json(
+        STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to retrieve annotation")),
+      );
   }
 }
 
@@ -244,7 +224,10 @@ export async function getAnnotationByEntity(
  * @returns {Promise<any>} JSON response with success message or error
  */
 export async function deleteAnnotation(req: Request, res: Response): Promise<any> {
-  const annotationId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const annotationId = parseInt(
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+    10,
+  );
   const userId = req.userId!;
   const organizationId = req.organizationId!;
 
@@ -258,18 +241,10 @@ export async function deleteAnnotation(req: Request, res: Response): Promise<any
 
   try {
     if (isNaN(annotationId) || annotationId < 1) {
-      throw new ValidationException(
-        "Valid annotation ID is required",
-        "id",
-        req.params.id
-      );
+      throw new ValidationException("Valid annotation ID is required", "id", req.params.id);
     }
 
-    await EntityGraphAnnotationsService.deleteAnnotation(
-      annotationId,
-      userId,
-      organizationId
-    );
+    await EntityGraphAnnotationsService.deleteAnnotation(annotationId, userId, organizationId);
 
     return res.status(200).json(STATUS_CODE[200]("Annotation deleted successfully"));
   } catch (error) {
@@ -289,11 +264,9 @@ export async function deleteAnnotation(req: Request, res: Response): Promise<any
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400]((error as Error).message));
     }
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to delete annotation")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to delete annotation")));
   }
 }
 
@@ -307,10 +280,7 @@ export async function deleteAnnotation(req: Request, res: Response): Promise<any
  * @param {Response} res - Express response object
  * @returns {Promise<any>} JSON response with success message or error
  */
-export async function deleteAnnotationByEntity(
-  req: Request,
-  res: Response
-): Promise<any> {
+export async function deleteAnnotationByEntity(req: Request, res: Response): Promise<any> {
   const { entityType, entityId } = req.params;
   const userId = req.userId!;
   const organizationId = req.organizationId!;
@@ -325,18 +295,17 @@ export async function deleteAnnotationByEntity(
 
   try {
     if (!entityType || !entityId) {
-      throw new ValidationException(
-        "entityType and entityId are required",
-        "params",
-        { entityType, entityId }
-      );
+      throw new ValidationException("entityType and entityId are required", "params", {
+        entityType,
+        entityId,
+      });
     }
 
     await EntityGraphAnnotationsService.deleteAnnotationByEntity(
       userId,
       Array.isArray(entityType) ? entityType[0] : entityType,
       Array.isArray(entityId) ? entityId[0] : entityId,
-      organizationId
+      organizationId,
     );
 
     return res.status(200).json(STATUS_CODE[200]("Annotation deleted successfully"));
@@ -354,10 +323,8 @@ export async function deleteAnnotationByEntity(
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400]((error as Error).message));
     }
-    return res.status(500).json(
-      STATUS_CODE[500](
-        sanitizeErrorMessage(error as Error, "Failed to delete annotation")
-      )
-    );
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](sanitizeErrorMessage(error as Error, "Failed to delete annotation")));
   }
 }

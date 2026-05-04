@@ -15,9 +15,7 @@ import { extractUserToken } from "../tools/extractToken";
  * Backend enforces actual authorization.
  */
 export const useIsAdmin = (): boolean => {
-  const authToken = useSelector(
-    (state: { auth: { authToken: string } }) => state.auth.authToken
-  );
+  const authToken = useSelector((state: { auth: { authToken: string } }) => state.auth.authToken);
 
   if (!authToken) {
     return false;
@@ -34,9 +32,7 @@ export const useIsAdmin = (): boolean => {
  * Backend enforces actual authorization.
  */
 export const useUserRole = (): string | null => {
-  const authToken = useSelector(
-    (state: { auth: { authToken: string } }) => state.auth.authToken
-  );
+  const authToken = useSelector((state: { auth: { authToken: string } }) => state.auth.authToken);
 
   if (!authToken) {
     return null;

@@ -64,7 +64,7 @@ export const mcpServersContent: ArticleContent = {
         { field: 'Slug', required: 'Yes', description: 'Auto-generated from the name. Lowercase letters, digits and hyphens only. Must start with a letter or digit. Can\'t be changed after creation.' },
         { field: 'URL', required: 'Yes', description: 'The full URL of the MCP server (e.g., https://mcp-server.example.com).' },
         { field: 'Description', required: 'No', description: 'A short note about what this server does (e.g., "Exposes search and retrieval tools").' },
-        { field: 'Authentication', required: 'Yes', description: 'How the gateway authenticates with this server. Options: None, Bearer token, or API key.' },
+        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token, or API key.' },
       ],
     },
     {

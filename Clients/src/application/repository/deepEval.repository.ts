@@ -130,17 +130,16 @@ export { isSingleTurnPrompt, isMultiTurnConversation };
 // ==================== PROJECTS ====================
 
 export const createProject = (
-  projectData: Parameters<typeof deepEvalProjectsService.createProject>[0]
+  projectData: Parameters<typeof deepEvalProjectsService.createProject>[0],
 ) => deepEvalProjectsService.createProject(projectData);
 
 export const getAllProjects = () => deepEvalProjectsService.getAllProjects();
 
-export const getProject = (projectId: string) =>
-  deepEvalProjectsService.getProject(projectId);
+export const getProject = (projectId: string) => deepEvalProjectsService.getProject(projectId);
 
 export const updateProject = (
   projectId: string,
-  projectData: Parameters<typeof deepEvalProjectsService.updateProject>[1]
+  projectData: Parameters<typeof deepEvalProjectsService.updateProject>[1],
 ) => deepEvalProjectsService.updateProject(projectId, projectData);
 
 export const deleteProject = (projectId: string) =>
@@ -155,7 +154,7 @@ export const uploadDataset = (
   file: File,
   datasetType?: DatasetType,
   turnType?: TurnType,
-  orgId?: string
+  orgId?: string,
 ) => deepEvalDatasetsService.uploadDataset(file, datasetType, turnType, orgId);
 
 export const listDatasets = () => deepEvalDatasetsService.list();
@@ -166,28 +165,25 @@ export const listUploads = () => deepEvalDatasetsService.listUploads();
 
 export const listMyDatasets = () => deepEvalDatasetsService.listMy();
 
-export const deleteDatasets = (paths: string[]) =>
-  deepEvalDatasetsService.deleteDatasets(paths);
+export const deleteDatasets = (paths: string[]) => deepEvalDatasetsService.deleteDatasets(paths);
 
 // ==================== SCORERS ====================
 
-export const listScorers = (params?: { org_id?: string }) =>
-  deepEvalScorersService.list(params);
+export const listScorers = (params?: { org_id?: string }) => deepEvalScorersService.list(params);
 
-export const createScorer = (
-  payload: Parameters<typeof deepEvalScorersService.create>[0]
-) => deepEvalScorersService.create(payload);
+export const createScorer = (payload: Parameters<typeof deepEvalScorersService.create>[0]) =>
+  deepEvalScorersService.create(payload);
 
 export const updateScorer = (
   id: string,
-  payload: Parameters<typeof deepEvalScorersService.update>[1]
+  payload: Parameters<typeof deepEvalScorersService.update>[1],
 ) => deepEvalScorersService.update(id, payload);
 
 export const deleteScorer = (id: string) => deepEvalScorersService.delete(id);
 
 export const testScorer = (
   id: string,
-  payload: Parameters<typeof deepEvalScorersService.test>[1]
+  payload: Parameters<typeof deepEvalScorersService.test>[1],
 ) => deepEvalScorersService.test(id, payload);
 
 // ==================== ORGANIZATIONS ====================
@@ -202,11 +198,9 @@ export const updateOrg = (orgId: string, name: string, memberIds?: number[]) =>
 
 export const deleteOrg = (orgId: string) => deepEvalOrgsService.deleteOrg(orgId);
 
-export const getProjectsForOrg = (orgId: string) =>
-  deepEvalOrgsService.getProjectsForOrg(orgId);
+export const getProjectsForOrg = (orgId: string) => deepEvalOrgsService.getProjectsForOrg(orgId);
 
-export const setCurrentOrg = (orgId: string) =>
-  deepEvalOrgsService.setCurrentOrg(orgId);
+export const setCurrentOrg = (orgId: string) => deepEvalOrgsService.setCurrentOrg(orgId);
 
 export const getCurrentOrg = () => deepEvalOrgsService.getCurrentOrg();
 
@@ -219,45 +213,38 @@ export const addProjectToOrg = (orgId: string, projectId: string) =>
 
 export const getAllLlmApiKeys = () => evaluationLlmApiKeysService.getAllKeys();
 
-export const addLlmApiKey = (request: AddKeyRequest) =>
-  evaluationLlmApiKeysService.addKey(request);
+export const addLlmApiKey = (request: AddKeyRequest) => evaluationLlmApiKeysService.addKey(request);
 
 export const deleteLlmApiKey = (provider: LLMProvider) =>
   evaluationLlmApiKeysService.deleteKey(provider);
 
-export const hasLlmApiKey = (provider: LLMProvider) =>
-  evaluationLlmApiKeysService.hasKey(provider);
+export const hasLlmApiKey = (provider: LLMProvider) => evaluationLlmApiKeysService.hasKey(provider);
 
 export const verifyLlmApiKey = (provider: string, apiKey: string) =>
   evaluationLlmApiKeysService.verifyKey({ provider, apiKey });
 
 // ==================== EVALUATION LOGS ====================
 
-export const createLog = (
-  data: Parameters<typeof evaluationLogsService.createLog>[0]
-) => evaluationLogsService.createLog(data);
+export const createLog = (data: Parameters<typeof evaluationLogsService.createLog>[0]) =>
+  evaluationLogsService.createLog(data);
 
-export const getLogs = (
-  params: Parameters<typeof evaluationLogsService.getLogs>[0]
-) => evaluationLogsService.getLogs(params);
+export const getLogs = (params: Parameters<typeof evaluationLogsService.getLogs>[0]) =>
+  evaluationLogsService.getLogs(params);
 
 export const getLog = (logId: string) => evaluationLogsService.getLog(logId);
 
-export const getTraceLogs = (traceId: string) =>
-  evaluationLogsService.getTraceLogs(traceId);
+export const getTraceLogs = (traceId: string) => evaluationLogsService.getTraceLogs(traceId);
 
 // ==================== METRICS ====================
 
-export const createMetric = (
-  data: Parameters<typeof metricsService.createMetric>[0]
-) => metricsService.createMetric(data);
+export const createMetric = (data: Parameters<typeof metricsService.createMetric>[0]) =>
+  metricsService.createMetric(data);
 
-export const getMetrics = (
-  params: Parameters<typeof metricsService.getMetrics>[0]
-) => metricsService.getMetrics(params);
+export const getMetrics = (params: Parameters<typeof metricsService.getMetrics>[0]) =>
+  metricsService.getMetrics(params);
 
 export const getMetricAggregates = (
-  params: Parameters<typeof metricsService.getMetricAggregates>[0]
+  params: Parameters<typeof metricsService.getMetricAggregates>[0],
 ) => metricsService.getMetricAggregates(params);
 
 // ==================== MODEL VALIDATION ====================
@@ -270,16 +257,14 @@ export const validateModelForExperiment = (config: Record<string, unknown>) =>
 
 // ==================== EXPERIMENTS ====================
 
-export const createExperiment = (
-  data: Parameters<typeof experimentsService.createExperiment>[0]
-) => experimentsService.createExperiment(data);
+export const createExperiment = (data: Parameters<typeof experimentsService.createExperiment>[0]) =>
+  experimentsService.createExperiment(data);
 
-export const getExperiments = (
-  params: Parameters<typeof experimentsService.getExperiments>[0]
-) => experimentsService.getExperiments(params);
+export const getExperiments = (params: Parameters<typeof experimentsService.getExperiments>[0]) =>
+  experimentsService.getExperiments(params);
 
 export const getAllExperiments = (
-  params: Parameters<typeof experimentsService.getAllExperiments>[0]
+  params: Parameters<typeof experimentsService.getAllExperiments>[0],
 ) => experimentsService.getAllExperiments(params);
 
 export const getExperiment = (experimentId: string) =>
@@ -287,12 +272,12 @@ export const getExperiment = (experimentId: string) =>
 
 export const updateExperiment = (
   experimentId: string,
-  data: Parameters<typeof experimentsService.updateExperiment>[1]
+  data: Parameters<typeof experimentsService.updateExperiment>[1],
 ) => experimentsService.updateExperiment(experimentId, data);
 
 export const updateExperimentStatus = (
   experimentId: string,
-  data: Parameters<typeof experimentsService.updateExperimentStatus>[1]
+  data: Parameters<typeof experimentsService.updateExperimentStatus>[1],
 ) => experimentsService.updateExperimentStatus(experimentId, data);
 
 export const deleteExperiment = (experimentId: string) =>
@@ -302,14 +287,13 @@ export const deleteExperiment = (experimentId: string) =>
 
 export const getMonitorDashboard = (
   projectId: string,
-  params?: Parameters<typeof monitoringService.getDashboard>[1]
+  params?: Parameters<typeof monitoringService.getDashboard>[1],
 ) => monitoringService.getDashboard(projectId, params);
 
 // ==================== ARENA ====================
 
-export const createArenaComparison = (
-  data: CreateArenaComparisonRequest
-) => deepEvalArenaService.createComparison(data);
+export const createArenaComparison = (data: CreateArenaComparisonRequest) =>
+  deepEvalArenaService.createComparison(data);
 
 export const listArenaComparisons = (params?: { org_id?: string }) =>
   deepEvalArenaService.listComparisons(params);
@@ -325,26 +309,21 @@ export const deleteArenaComparison = (comparisonId: string) =>
 
 // ==================== BIAS AUDITS ====================
 
-export const listBiasAuditPresets = () =>
-  biasAuditService.listPresets();
+export const listBiasAuditPresets = () => biasAuditService.listPresets();
 
-export const getBiasAuditPreset = (presetId: string) =>
-  biasAuditService.getPreset(presetId);
+export const getBiasAuditPreset = (presetId: string) => biasAuditService.getPreset(presetId);
 
 export const runBiasAudit = (dataset: File, config: CreateBiasAuditConfig) =>
   biasAuditService.runAudit(dataset, config);
 
-export const getBiasAuditStatus = (auditId: string) =>
-  biasAuditService.getStatus(auditId);
+export const getBiasAuditStatus = (auditId: string) => biasAuditService.getStatus(auditId);
 
-export const getBiasAuditResults = (auditId: string) =>
-  biasAuditService.getResults(auditId);
+export const getBiasAuditResults = (auditId: string) => biasAuditService.getResults(auditId);
 
 export const listBiasAudits = (params?: { org_id?: string; project_id?: string }) =>
   biasAuditService.listAudits(params);
 
-export const deleteBiasAudit = (auditId: string) =>
-  biasAuditService.deleteAudit(auditId);
+export const deleteBiasAudit = (auditId: string) => biasAuditService.deleteAudit(auditId);
 
 export const updateBiasAuditName = (auditId: string, systemName: string) =>
   biasAuditService.updateAuditName(auditId, systemName);
@@ -352,5 +331,4 @@ export const updateBiasAuditName = (auditId: string, systemName: string) =>
 export const downloadBiasAuditReport = (auditId: string) =>
   biasAuditService.downloadReport(auditId);
 
-export const parseBiasAuditCsvHeaders = (dataset: File) =>
-  biasAuditService.parseHeaders(dataset);
+export const parseBiasAuditCsvHeaders = (dataset: File) => biasAuditService.parseHeaders(dataset);

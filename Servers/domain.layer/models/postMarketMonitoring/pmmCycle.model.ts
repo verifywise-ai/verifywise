@@ -9,10 +9,7 @@ import {
   HasOne,
 } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
-import {
-  IPMMCycle,
-  CycleStatus,
-} from "../../interfaces/i.postMarketMonitoring";
+import { IPMMCycle, CycleStatus } from "../../interfaces/i.postMarketMonitoring";
 import { PMMConfigModel } from "./pmmConfig.model";
 import { PMMResponseModel } from "./pmmResponse.model";
 import { PMMReportModel } from "./pmmReport.model";

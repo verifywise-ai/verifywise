@@ -1,19 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
-  FC,
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-  Suspense,
-} from "react";
-import {
-  useTheme,
-  Stack,
-  Box,
-  FormControlLabel,
-  Typography,
-} from "@mui/material";
+import React, { FC, useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import { useTheme, Stack, Box, FormControlLabel, Typography } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import Toggle from "../../Inputs/Toggle";
 import { lazy } from "react";
@@ -29,10 +16,7 @@ import {
   DatasetType,
   DataClassification,
 } from "../../../../domain/enums/dataset.enum";
-import {
-  NewDatasetFormValues,
-  NewDatasetProps,
-} from "../../../../domain/interfaces/i.dataset";
+import { NewDatasetFormValues, NewDatasetProps } from "../../../../domain/interfaces/i.dataset";
 import dayjs, { Dayjs } from "dayjs";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
@@ -98,9 +82,7 @@ const NewDataset: FC<NewDatasetProps> = ({
 }) => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState("details");
-  const [values, setValues] = useState<NewDatasetFormValues>(
-    initialData || initialState
-  );
+  const [values, setValues] = useState<NewDatasetFormValues>(initialData || initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validators = useMemo(
@@ -137,7 +119,7 @@ const NewDataset: FC<NewDatasetProps> = ({
         return r.accepted ? "" : r.message;
       },
     }),
-    []
+    [],
   );
 
   const { errors, validateAll, clearFieldError, resetErrors } =
@@ -148,12 +130,8 @@ const NewDataset: FC<NewDatasetProps> = ({
       if (initialData) {
         const normalizedData = {
           ...initialData,
-          models: Array.isArray(initialData.models)
-            ? [...initialData.models]
-            : [],
-          projects: Array.isArray(initialData.projects)
-            ? [...initialData.projects]
-            : [],
+          models: Array.isArray(initialData.models) ? [...initialData.models] : [],
+          projects: Array.isArray(initialData.projects) ? [...initialData.projects] : [],
         };
         setValues(normalizedData);
       } else {
@@ -192,13 +170,12 @@ const NewDataset: FC<NewDatasetProps> = ({
   const isButtonDisabled = isSubmitting;
 
   const handleOnTextFieldChange = useCallback(
-    (prop: keyof NewDatasetFormValues) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
-        setValues((prev) => ({ ...prev, [prop]: value }));
-        clearFieldError(prop);
-      },
-    [clearFieldError]
+    (prop: keyof NewDatasetFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setValues((prev) => ({ ...prev, [prop]: value }));
+      clearFieldError(prop);
+    },
+    [clearFieldError],
   );
 
   const handleOnSelectChange = useCallback(
@@ -207,7 +184,7 @@ const NewDataset: FC<NewDatasetProps> = ({
       setValues((prev) => ({ ...prev, [prop]: value }));
       clearFieldError(prop);
     },
-    [clearFieldError]
+    [clearFieldError],
   );
 
   const handleSelectModelsChange = useCallback(
@@ -215,7 +192,7 @@ const NewDataset: FC<NewDatasetProps> = ({
       const modelIds = newValue.map((m) => m.id).filter((id): id is number => id !== undefined);
       setValues((prev) => ({ ...prev, models: modelIds }));
     },
-    []
+    [],
   );
 
   const handleSelectProjectsChange = useCallback(
@@ -225,29 +202,29 @@ const NewDataset: FC<NewDatasetProps> = ({
         .filter((id): id is number => id !== undefined);
       setValues((prev) => ({ ...prev, projects: projectIds }));
     },
-    [projectList]
+    [projectList],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prev) => ({
-        ...prev,
-        status_date: newDate ? newDate.format("YYYY-MM-DD") : "",
-      }));
-      clearFieldError("status_date");
-    }
-  }, [clearFieldError]);
-
-  const handleContainsPiiChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues((prev) => ({
-        ...prev,
-        contains_pii: event.target.checked,
-        pii_types: event.target.checked ? prev.pii_types : "",
-      }));
+  const handleDateChange = useCallback(
+    (newDate: Dayjs | null) => {
+      if (newDate?.isValid()) {
+        setValues((prev) => ({
+          ...prev,
+          status_date: newDate ? newDate.format("YYYY-MM-DD") : "",
+        }));
+        clearFieldError("status_date");
+      }
     },
-    []
+    [clearFieldError],
   );
+
+  const handleContainsPiiChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues((prev) => ({
+      ...prev,
+      contains_pii: event.target.checked,
+      pii_types: event.target.checked ? prev.pii_types : "",
+    }));
+  }, []);
 
   const handleClose = () => {
     setActiveTab("details");
@@ -284,7 +261,7 @@ const NewDataset: FC<NewDatasetProps> = ({
         padding: "0 14px",
       },
     }),
-    [theme.palette.background.main]
+    [theme.palette.background.main],
   );
 
   const formContent = (
@@ -391,9 +368,7 @@ const NewDataset: FC<NewDatasetProps> = ({
         <Suspense fallback={<div>Loading...</div>}>
           <DatePicker
             label="Status date"
-            date={
-              values.status_date ? dayjs(values.status_date) : dayjs(new Date())
-            }
+            date={values.status_date ? dayjs(values.status_date) : dayjs(new Date())}
             handleDateChange={handleDateChange}
             sx={{
               width: "33%",
@@ -462,12 +437,7 @@ const NewDataset: FC<NewDatasetProps> = ({
       {/* PII Section */}
       <Stack>
         <FormControlLabel
-          control={
-            <Toggle
-              checked={values.contains_pii}
-              onChange={handleContainsPiiChange}
-            />
-          }
+          control={<Toggle checked={values.contains_pii} onChange={handleContainsPiiChange} />}
           label={
             <Typography
               sx={{
@@ -564,17 +534,13 @@ const NewDataset: FC<NewDatasetProps> = ({
         getOptionLabel={(option) => option.name}
         isOptionEqualToValue={(option, value) => option.id === value.id}
         noOptionsText={
-          values.models.length === modelsList.length
-            ? "All models selected"
-            : "No options"
+          values.models.length === modelsList.length ? "All models selected" : "No options"
         }
         renderOption={(props, option) => {
           const { key, ...otherProps } = props;
           return (
             <Box component="li" key={key} {...otherProps}>
-              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
-                {option.name}
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>{option.name}</Typography>
             </Box>
           );
         }}
@@ -605,9 +571,7 @@ const NewDataset: FC<NewDatasetProps> = ({
           const { key, ...otherProps } = props;
           return (
             <Box component="li" key={key} {...otherProps}>
-              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>
-                {option}
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 400 }}>{option}</Typography>
             </Box>
           );
         }}
@@ -646,12 +610,7 @@ const NewDataset: FC<NewDatasetProps> = ({
           </Box>
           {activeTab === "details" && formContent}
           {activeTab === "activity" && (
-            <HistorySidebar
-              inline
-              isOpen={true}
-              entityType="dataset"
-              entityId={entityId}
-            />
+            <HistorySidebar inline isOpen={true} entityType="dataset" entityId={entityId} />
           )}
         </TabContext>
       ) : (

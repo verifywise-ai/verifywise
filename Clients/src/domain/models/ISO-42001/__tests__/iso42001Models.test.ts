@@ -77,7 +77,12 @@ describe("AnnexCategoryStructISO42001Model", () => {
 });
 
 describe("AnnexStructISO42001Model", () => {
-  const data = { id: 1, title: "Annex A", annex_no: 1, framework_id: 3 } as AnnexStructISO42001Model;
+  const data = {
+    id: 1,
+    title: "Annex A",
+    annex_no: 1,
+    framework_id: 3,
+  } as AnnexStructISO42001Model;
 
   it("constructor copies all fields", () => {
     const model = new AnnexStructISO42001Model(data);
@@ -92,7 +97,12 @@ describe("AnnexStructISO42001Model", () => {
 });
 
 describe("ClauseStructISO42001Model", () => {
-  const data = { id: 1, title: "Context", clause_no: 4, framework_id: 3 } as ClauseStructISO42001Model;
+  const data = {
+    id: 1,
+    title: "Context",
+    clause_no: 4,
+    framework_id: 3,
+  } as ClauseStructISO42001Model;
 
   it("constructor copies all fields", () => {
     const model = new ClauseStructISO42001Model(data);

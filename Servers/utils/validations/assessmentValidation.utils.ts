@@ -4,23 +4,20 @@
  * Note: Focus on GET route parameter validation
  */
 
-import {
-  validateForeignKey,
-  ValidationResult
-} from './validation.utils';
+import { validateForeignKey, ValidationResult } from "./validation.utils";
 
 /**
  * Validates assessment ID for existing records
  */
 export const validateAssessmentId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Assessment ID', true);
+  return validateForeignKey(value, "Assessment ID", true);
 };
 
 /**
  * Validates project ID for queries
  */
 export const validateProjectId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Project ID', true);
+  return validateForeignKey(value, "Project ID", true);
 };
 
 /**

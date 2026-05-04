@@ -13,14 +13,10 @@ test.describe("Tasks", () => {
     await expect(page).toHaveURL(/\/tasks/);
 
     // Page should show task-related content or empty state
-    await expect(
-      page.getByText(/task/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no accessibility violations", async ({
-    authedPage: page,
-  }) => {
+  test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     await page.waitForLoadState("domcontentloaded");
 
@@ -44,9 +40,7 @@ test.describe("Tasks", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("task list or empty state is visible", async ({
-    authedPage: page,
-  }) => {
+  test("task list or empty state is visible", async ({ authedPage: page }) => {
     await page.goto("/tasks");
 
     const content = page
@@ -59,24 +53,30 @@ test.describe("Tasks", () => {
 
   // --- Tier 1: Tab switching ---
 
-  test("switching between Deadline view and List view", async ({
-    authedPage: page,
-  }) => {
+  test("switching between Deadline view and List view", async ({ authedPage: page }) => {
     await page.goto("/tasks");
 
     const deadlineTab = page
       .getByRole("tab", { name: /deadline/i })
       .or(page.getByText(/deadline view/i));
-    const listTab = page
-      .getByRole("tab", { name: /list/i })
-      .or(page.getByText(/list view/i));
+    const listTab = page.getByRole("tab", { name: /list/i }).or(page.getByText(/list view/i));
 
-    if (await deadlineTab.first().isVisible().catch(() => false)) {
+    if (
+      await deadlineTab
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await deadlineTab.first().click();
       await page.waitForTimeout(500);
 
       // Switch back to list view
-      if (await listTab.first().isVisible().catch(() => false)) {
+      if (
+        await listTab
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await listTab.first().click();
         await page.waitForTimeout(500);
       }
@@ -85,29 +85,33 @@ test.describe("Tasks", () => {
 
   // --- Tier 2: Search, Filter & UI Controls ---
 
-  test("My tasks only toggle is visible and clickable", async ({
-    authedPage: page,
-  }) => {
+  test("My tasks only toggle is visible and clickable", async ({ authedPage: page }) => {
     await page.goto("/tasks");
 
     const toggle = page
       .getByText(/my tasks only/i)
       .or(page.getByRole("checkbox", { name: /my tasks/i }));
-    if (await toggle.first().isVisible().catch(() => false)) {
+    if (
+      await toggle
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await toggle.first().click();
       await page.waitForTimeout(300);
     }
   });
 
-  test("searching for nonexistent task filters results", async ({
-    authedPage: page,
-  }) => {
+  test("searching for nonexistent task filters results", async ({ authedPage: page }) => {
     await page.goto("/tasks");
-    const searchInput = page
-      .getByPlaceholder(/search tasks/i)
-      .or(page.getByPlaceholder(/search/i));
+    const searchInput = page.getByPlaceholder(/search tasks/i).or(page.getByPlaceholder(/search/i));
 
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill("nonexistent-xyz-task");
       await page.waitForTimeout(500);
       await searchInput.first().clear();
@@ -130,9 +134,7 @@ test.describe("Tasks", () => {
 
   // --- Tier 3: Modal open/close ---
 
-  test("Add new task button opens create task modal", async ({
-    authedPage: page,
-  }) => {
+  test("Add new task button opens create task modal", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     const addBtn = page.getByRole("button", { name: /add new task/i });
 
@@ -143,7 +145,7 @@ test.describe("Tasks", () => {
         page
           .getByText(/create new task/i)
           .or(page.getByText(/add new task/i))
-          .first()
+          .first(),
       ).toBeVisible({ timeout: 10_000 });
       await page.keyboard.press("Escape");
     }
@@ -151,9 +153,7 @@ test.describe("Tasks", () => {
 
   // --- Tier 3: Validation ---
 
-  test("submitting empty task form shows validation error", async ({
-    authedPage: page,
-  }) => {
+  test("submitting empty task form shows validation error", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     const addBtn = page.getByRole("button", { name: /add new task/i });
 
@@ -165,9 +165,7 @@ test.describe("Tasks", () => {
     await page.waitForTimeout(500);
 
     // Click submit without filling any fields
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     if (await submitBtn.isVisible().catch(() => false)) {
       await submitBtn.click();
       await page.waitForTimeout(500);
@@ -178,7 +176,12 @@ test.describe("Tasks", () => {
         .or(page.getByText(/please/i))
         .or(page.getByText(/error/i))
         .or(page.locator(".Mui-error"));
-      if (await error.first().isVisible().catch(() => false)) {
+      if (
+        await error
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(error.first()).toBeVisible();
       }
     }
@@ -208,17 +211,18 @@ test.describe("Tasks", () => {
     await titleInput.first().fill(taskTitle);
 
     // Submit the form
-    const submitBtn = page
-      .getByRole("button", { name: /create|save|submit|add/i })
-      .last();
+    const submitBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
     // Verify: Search for the created task
-    const searchInput = page
-      .getByPlaceholder(/search tasks/i)
-      .or(page.getByPlaceholder(/search/i));
-    if (await searchInput.first().isVisible().catch(() => false)) {
+    const searchInput = page.getByPlaceholder(/search tasks/i).or(page.getByPlaceholder(/search/i));
+    if (
+      await searchInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await searchInput.first().fill(taskTitle);
       await page.waitForTimeout(500);
     }
@@ -228,17 +232,31 @@ test.describe("Tasks", () => {
       .getByRole("button", { name: /more/i })
       .or(page.locator('[aria-label="more"]'))
       .or(page.locator('[data-testid="MoreVertIcon"]'));
-    if (await moreBtn.first().isVisible().catch(() => false)) {
+    if (
+      await moreBtn
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await moreBtn.first().click();
-      const deleteBtn = page
-        .getByRole("menuitem", { name: /delete|archive|remove/i });
-      if (await deleteBtn.first().isVisible().catch(() => false)) {
+      const deleteBtn = page.getByRole("menuitem", { name: /delete|archive|remove/i });
+      if (
+        await deleteBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await deleteBtn.first().click();
         // Confirm deletion if dialog appears
         const confirmBtn = page.getByRole("button", {
           name: /confirm|yes|delete/i,
         });
-        if (await confirmBtn.first().isVisible().catch(() => false)) {
+        if (
+          await confirmBtn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await confirmBtn.first().click();
         }
         await page.waitForTimeout(500);
@@ -250,9 +268,7 @@ test.describe("Tasks", () => {
 
   // --- Tier 4: Entity linking ---
 
-  test("task creation form has entity linking option", async ({
-    authedPage: page,
-  }) => {
+  test("task creation form has entity linking option", async ({ authedPage: page }) => {
     await page.goto("/tasks");
 
     const addBtn = page.getByRole("button", { name: /add new task/i });
@@ -272,12 +288,22 @@ test.describe("Tasks", () => {
       .or(page.getByText(/related/i))
       .or(page.getByRole("combobox", { name: /assign/i }));
 
-    if (await entityField.first().isVisible().catch(() => false)) {
+    if (
+      await entityField
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await entityField.first().click();
       await page.waitForTimeout(300);
       // Check that options appear
       const option = page.getByRole("option");
-      if (await option.first().isVisible().catch(() => false)) {
+      if (
+        await option
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(option.first()).toBeVisible();
       }
       await page.keyboard.press("Escape");
@@ -287,9 +313,7 @@ test.describe("Tasks", () => {
 
   // --- Tier 5: Pagination & table sorting ---
 
-  test("pagination controls show row count and page navigation", async ({
-    authedPage: page,
-  }) => {
+  test("pagination controls show row count and page navigation", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     await page.waitForTimeout(2000);
 
@@ -301,7 +325,12 @@ test.describe("Tasks", () => {
       .or(page.getByText(/of \d+/i))
       .or(page.locator('[class*="pagination" i]'));
 
-    if (await pagination.first().isVisible().catch(() => false)) {
+    if (
+      await pagination
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await expect(pagination.first()).toBeVisible();
 
       // Verify page navigation buttons exist
@@ -309,15 +338,18 @@ test.describe("Tasks", () => {
         .locator(".MuiTablePagination-actions button")
         .or(page.getByRole("button", { name: /next|previous/i }));
 
-      if (await navBtns.first().isVisible().catch(() => false)) {
+      if (
+        await navBtns
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(navBtns.first()).toBeVisible();
       }
     }
   });
 
-  test("changing rows per page updates table", async ({
-    authedPage: page,
-  }) => {
+  test("changing rows per page updates table", async ({ authedPage: page }) => {
     await page.goto("/tasks");
     await page.waitForTimeout(2000);
 
@@ -326,7 +358,12 @@ test.describe("Tasks", () => {
       .locator(".MuiTablePagination-select")
       .or(page.getByRole("combobox", { name: /rows per page/i }));
 
-    if (!(await rowsPerPage.first().isVisible().catch(() => false))) {
+    if (
+      !(await rowsPerPage
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       test.skip();
       return;
     }
@@ -338,9 +375,7 @@ test.describe("Tasks", () => {
     await page.waitForTimeout(500);
 
     // Select a different value
-    const option = page
-      .getByRole("option", { name: /10|15|20|25/i })
-      .first();
+    const option = page.getByRole("option", { name: /10|15|20|25/i }).first();
     if (await option.isVisible().catch(() => false)) {
       await option.click();
       await page.waitForTimeout(1000);

@@ -4,10 +4,10 @@
  * Manages DeepEval projects (CRUD operations).
  */
 
-import CustomAxios from './customAxios';
-import type { DeepEvalProject } from '../../presentation/pages/EvalsDashboard/types';
+import CustomAxios from "./customAxios";
+import type { DeepEvalProject } from "../../presentation/pages/EvalsDashboard/types";
 
-const BASE_URL = '/deepeval';
+const BASE_URL = "/deepeval";
 
 class DeepEvalProjectsService {
   /**
@@ -42,7 +42,7 @@ class DeepEvalProjectsService {
    */
   async updateProject(
     projectId: string,
-    projectData: Partial<DeepEvalProject>
+    projectData: Partial<DeepEvalProject>,
   ): Promise<{
     project: DeepEvalProject;
     message: string;

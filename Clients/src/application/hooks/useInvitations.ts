@@ -1,8 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getInvitations,
-  Invitation,
-} from "../repository/invitation.repository";
+import { getInvitations, Invitation } from "../repository/invitation.repository";
 import { useAuth } from "./useAuth";
 
 const INVITATIONS_QUERY_KEY = ["invitations"] as const;

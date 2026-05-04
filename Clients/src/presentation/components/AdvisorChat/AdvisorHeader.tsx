@@ -1,18 +1,11 @@
-import { memo, useCallback, useState, useMemo } from 'react';
-import {
-  Box,
-  IconButton,
-  Popover,
-  Stack,
-  Typography,
-  Divider,
-} from '@mui/material';
-import { MessageSquarePlus, History, Trash2 } from 'lucide-react';
-import { AdvisorDomain } from './advisorConfig';
-import { useAdvisorConversationSafe } from '../../../application/contexts/AdvisorConversation.context';
-import { formatRelativeDate } from '../../../application/utils/dateFormatter';
-import VWTooltip from '../VWTooltip';
-import ConfirmationModal from '../Dialogs/ConfirmationModal';
+import { memo, useCallback, useState, useMemo } from "react";
+import { Box, IconButton, Popover, Stack, Typography, Divider } from "@mui/material";
+import { MessageSquarePlus, History, Trash2 } from "lucide-react";
+import { AdvisorDomain } from "./advisorConfig";
+import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
+import { formatRelativeDate } from "../../../application/utils/dateFormatter";
+import VWTooltip from "../VWTooltip";
+import ConfirmationModal from "../Dialogs/ConfirmationModal";
 
 interface AdvisorHeaderProps {
   pageContext?: AdvisorDomain;
@@ -61,13 +54,10 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
     [context, pageContext],
   );
 
-  const handleRequestDelete = useCallback(
-    (event: React.MouseEvent, id: number) => {
-      event.stopPropagation();
-      setPendingDeleteId(id);
-    },
-    [],
-  );
+  const handleRequestDelete = useCallback((event: React.MouseEvent, id: number) => {
+    event.stopPropagation();
+    setPendingDeleteId(id);
+  }, []);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!context || !pageContext || pendingDeleteId == null) return;
@@ -91,8 +81,8 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
       <Box
         sx={{
           height: 40,
-          borderBottom: '1px solid',
-          borderColor: 'background.hover',
+          borderBottom: "1px solid",
+          borderColor: "background.hover",
           flexShrink: 0,
         }}
       />
@@ -101,15 +91,15 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
 
   const pendingDeleteSummary = conversations.find((c) => c.id === pendingDeleteId);
   const iconButtonStyles = {
-    width: '28px',
-    height: '28px',
-    color: 'text.secondary',
-    '&:hover': {
-      backgroundColor: 'rgba(19, 113, 91, 0.08)',
-      color: 'brand.primary',
+    width: "28px",
+    height: "28px",
+    color: "text.secondary",
+    "&:hover": {
+      backgroundColor: "rgba(19, 113, 91, 0.08)",
+      color: "brand.primary",
     },
-    '&.Mui-disabled': {
-      color: 'text.disabled',
+    "&.Mui-disabled": {
+      color: "text.disabled",
     },
   };
 
@@ -117,19 +107,24 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
     <>
       <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
           gap: 0.5,
           px: 1,
           py: 0.5,
-          borderBottom: '1px solid',
-          borderColor: 'background.hover',
+          borderBottom: "1px solid",
+          borderColor: "background.hover",
           flexShrink: 0,
-          bgcolor: 'background.main',
+          bgcolor: "background.main",
         }}
       >
-        <VWTooltip header="New chat" content="Start a fresh conversation" placement="bottom" maxWidth={200}>
+        <VWTooltip
+          header="New chat"
+          content="Start a fresh conversation"
+          placement="bottom"
+          maxWidth={200}
+        >
           <IconButton
             size="small"
             onClick={handleNewChat}
@@ -142,7 +137,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
 
         <VWTooltip
           header="Past chats"
-          content={hasHistory ? 'Browse previous conversations' : 'No past chats yet'}
+          content={hasHistory ? "Browse previous conversations" : "No past chats yet"}
           placement="bottom"
           maxWidth={200}
         >
@@ -154,7 +149,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
               disabled={!hasHistory}
               aria-label="Open chat history"
               aria-haspopup="menu"
-              aria-expanded={popoverAnchor ? 'true' : undefined}
+              aria-expanded={popoverAnchor ? "true" : undefined}
               sx={iconButtonStyles}
             >
               <History size={16} />
@@ -167,46 +162,45 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
         open={Boolean(popoverAnchor)}
         anchorEl={popoverAnchor}
         onClose={handleCloseHistory}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
         sx={{
-          '& .MuiPopover-paper': {
+          "& .MuiPopover-paper": {
             width: 320,
             maxHeight: 480,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
-            borderRadius: '8px',
-            border: '1px solid',
-            borderColor: 'background.hover',
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
+            borderRadius: "8px",
+            border: "1px solid",
+            borderColor: "background.hover",
             mt: 1,
-            overflow: 'hidden',
+            overflow: "hidden",
           },
         }}
       >
         <Box
           sx={{
             maxHeight: 480,
-            overflowY: 'auto',
-            '&::-webkit-scrollbar': { width: '6px' },
-            '&::-webkit-scrollbar-track': { background: 'transparent' },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#e0e0e0',
-              borderRadius: '3px',
+            overflowY: "auto",
+            "&::-webkit-scrollbar": { width: "6px" },
+            "&::-webkit-scrollbar-track": { background: "transparent" },
+            "&::-webkit-scrollbar-thumb": {
+              background: "#e0e0e0",
+              borderRadius: "3px",
             },
-            '&::-webkit-scrollbar-thumb:hover': {
-              backgroundColor: 'border.dark',
+            "&::-webkit-scrollbar-thumb:hover": {
+              backgroundColor: "border.dark",
             },
           }}
         >
-          <Stack divider={<Divider sx={{ borderColor: 'background.hover' }} />}>
+          <Stack divider={<Divider sx={{ borderColor: "background.hover" }} />}>
             {conversations.map((conv) => {
               const isActive = conv.id === activeId;
-              const label =
-                conv.title && conv.title.length > 0 ? conv.title : 'Untitled chat';
+              const label = conv.title && conv.title.length > 0 ? conv.title : "Untitled chat";
               // Prefer last_message_at; fall back to updated_at. Both are
               // TIMESTAMPTZ after the 20260409010003 migration and
               // formatRelativeDate normalizes them either way.
               const tsSource = conv.last_message_at ?? conv.updated_at;
-              const timestamp = tsSource ? formatRelativeDate(tsSource) : 'Just now';
+              const timestamp = tsSource ? formatRelativeDate(tsSource) : "Just now";
 
               return (
                 <Box
@@ -215,36 +209,30 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                   tabIndex={0}
                   onClick={() => handleSelectConversation(conv.id)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
+                    if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       handleSelectConversation(conv.id);
                     }
                   }}
                   sx={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'flex-start',
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "flex-start",
                     gap: 1.5,
-                    pl: '21px', // 24 - 3px accent border
-                    pr: '24px',
-                    py: '10px',
-                    cursor: 'pointer',
-                    borderLeft: isActive
-                      ? '3px solid'
-                      : '3px solid transparent',
-                    borderLeftColor: isActive ? 'brand.primary' : 'transparent',
-                    backgroundColor: isActive
-                      ? 'rgba(19, 113, 91, 0.04)'
-                      : 'transparent',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      backgroundColor: isActive
-                        ? 'rgba(19, 113, 91, 0.04)'
-                        : 'rgba(0, 0, 0, 0.02)',
+                    pl: "21px", // 24 - 3px accent border
+                    pr: "24px",
+                    py: "10px",
+                    cursor: "pointer",
+                    borderLeft: isActive ? "3px solid" : "3px solid transparent",
+                    borderLeftColor: isActive ? "brand.primary" : "transparent",
+                    backgroundColor: isActive ? "rgba(19, 113, 91, 0.04)" : "transparent",
+                    transition: "all 0.15s ease",
+                    "&:hover": {
+                      backgroundColor: isActive ? "rgba(19, 113, 91, 0.04)" : "rgba(0, 0, 0, 0.02)",
                     },
                     // Reveal the delete button on hover/focus only, so the
                     // resting state stays clean.
-                    '&:hover .advisor-history-delete, &:focus-within .advisor-history-delete': {
+                    "&:hover .advisor-history-delete, &:focus-within .advisor-history-delete": {
                       opacity: 1,
                     },
                   }}
@@ -252,22 +240,22 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
                       sx={{
-                        fontSize: '13px',
+                        fontSize: "13px",
                         fontWeight: isActive ? 600 : 500,
-                        color: 'text.primary',
+                        color: "text.primary",
                         lineHeight: 1.4,
                         mb: 0.25,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
                       {label}
                     </Typography>
                     <Typography
                       sx={{
-                        fontSize: '11px',
-                        color: 'text.disabled',
+                        fontSize: "11px",
+                        color: "text.disabled",
                         mt: 0.5,
                       }}
                     >
@@ -275,24 +263,30 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                     </Typography>
                   </Box>
 
-                  <VWTooltip header="Delete chat" content="Remove this conversation" placement="left" maxWidth={180}>
+                  <VWTooltip
+                    header="Delete chat"
+                    content="Remove this conversation"
+                    placement="left"
+                    maxWidth={180}
+                  >
                     <IconButton
                       className="advisor-history-delete"
                       size="small"
                       aria-label={`Delete chat: ${label}`}
                       onClick={(event) => handleRequestDelete(event, conv.id)}
                       sx={{
-                        width: '24px',
-                        height: '24px',
+                        width: "24px",
+                        height: "24px",
                         flexShrink: 0,
                         opacity: 0,
-                        transition: 'opacity 120ms ease, color 120ms ease, background-color 120ms ease',
-                        color: 'text.disabled',
-                        '&:hover': {
-                          color: '#EF4444',
-                          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                        transition:
+                          "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+                        color: "text.disabled",
+                        "&:hover": {
+                          color: "#EF4444",
+                          backgroundColor: "rgba(239, 68, 68, 0.08)",
                         },
-                        '&:focus-visible': {
+                        "&:focus-visible": {
                           opacity: 1,
                         },
                       }}
@@ -312,10 +306,10 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
           isOpen
           title="Delete chat"
           body={
-            <Typography sx={{ fontSize: '13px', color: 'text.secondary', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: "13px", color: "text.secondary", lineHeight: 1.5 }}>
               {pendingDeleteSummary?.title
                 ? `"${pendingDeleteSummary.title}" will be permanently removed.`
-                : 'This chat will be permanently removed.'}{' '}
+                : "This chat will be permanently removed."}{" "}
               This action cannot be undone.
             </Typography>
           }

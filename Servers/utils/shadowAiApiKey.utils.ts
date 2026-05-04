@@ -65,7 +65,7 @@ export async function createApiKeyQuery(
   keyPrefix: string,
   label: string | null,
   createdBy: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<IShadowAiApiKey> {
   const [result] = await sequelize.query(
     `INSERT INTO shadow_ai_api_keys
@@ -76,7 +76,7 @@ export async function createApiKeyQuery(
     {
       replacements: { organizationId, keyHash, keyPrefix, label, createdBy },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (result as IShadowAiApiKey[])[0];
@@ -85,15 +85,13 @@ export async function createApiKeyQuery(
 /**
  * List all API keys for the organization (without key_hash for security).
  */
-export async function listApiKeysQuery(
-  organizationId: number
-): Promise<IShadowAiApiKey[]> {
+export async function listApiKeysQuery(organizationId: number): Promise<IShadowAiApiKey[]> {
   const [rows] = await sequelize.query(
     `SELECT id, key_prefix, label, created_by, last_used_at, is_active, created_at
      FROM shadow_ai_api_keys
      WHERE organization_id = :organizationId
      ORDER BY created_at DESC`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   return rows as IShadowAiApiKey[];
@@ -105,7 +103,7 @@ export async function listApiKeysQuery(
 export async function revokeApiKeyQuery(
   organizationId: number,
   keyId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
     `UPDATE shadow_ai_api_keys
@@ -115,7 +113,7 @@ export async function revokeApiKeyQuery(
     {
       replacements: { organizationId, keyId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (rows as any[]).length > 0;
@@ -128,7 +126,7 @@ export async function revokeApiKeyQuery(
 export async function deleteApiKeyQuery(
   organizationId: number,
   keyId: number,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<boolean> {
   const [rows] = await sequelize.query(
     `DELETE FROM shadow_ai_api_keys
@@ -137,7 +135,7 @@ export async function deleteApiKeyQuery(
     {
       replacements: { organizationId, keyId },
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (rows as any[]).length > 0;
@@ -149,7 +147,7 @@ export async function deleteApiKeyQuery(
  */
 export async function validateApiKeyQuery(
   organizationId: number,
-  keyHash: string
+  keyHash: string,
 ): Promise<IShadowAiApiKey | null> {
   const [rows] = await sequelize.query(
     `UPDATE shadow_ai_api_keys
@@ -158,7 +156,7 @@ export async function validateApiKeyQuery(
      RETURNING id, key_prefix, label, created_by, last_used_at, is_active, created_at`,
     {
       replacements: { organizationId, keyHash },
-    }
+    },
   );
 
   const results = rows as IShadowAiApiKey[];
@@ -181,9 +179,7 @@ const KEY_CACHE_MAX_SIZE = 10000;
  * Validate an API key with caching.
  * Returns the organization ID if valid, null otherwise.
  */
-export async function validateApiKeyWithCache(
-  key: string
-): Promise<number | null> {
+export async function validateApiKeyWithCache(key: string): Promise<number | null> {
   // Validate full key format: vw_sk_{orgId}_{48-char-hex}
   if (!/^vw_sk_\d+_[a-f0-9]{48}$/.test(key)) return null;
 

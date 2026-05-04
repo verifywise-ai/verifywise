@@ -50,9 +50,7 @@ const MonitoringForm: React.FC = () => {
   const [cycle, setCycle] = useState<PMMCycleWithDetails | null>(null);
   const [questions, setQuestions] = useState<PMMQuestion[]>([]);
   const [responses, setResponses] = useState<Record<number, boolean | string | string[]>>({});
-  const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(
-    new Set()
-  );
+  const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
   const [alert, setAlert] = useState<LocalAlertState | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
@@ -108,7 +106,7 @@ const MonitoringForm: React.FC = () => {
       setAlert({ variant, body, title, isToast: true, visible: true });
       setTimeout(() => setAlert(null), 3000);
     },
-    []
+    [],
   );
 
   // Update response for a question
@@ -119,7 +117,7 @@ const MonitoringForm: React.FC = () => {
         [questionId]: value,
       }));
     },
-    []
+    [],
   );
 
   // Toggle flag for a question
@@ -168,16 +166,13 @@ const MonitoringForm: React.FC = () => {
     // Validate required questions
     const requiredQuestions = questions.filter((q) => q.is_required);
     const missingRequired = requiredQuestions.filter(
-      (q) =>
-        responses[q.id!] === undefined ||
-        responses[q.id!] === null ||
-        responses[q.id!] === ""
+      (q) => responses[q.id!] === undefined || responses[q.id!] === null || responses[q.id!] === "",
     );
 
     if (missingRequired.length > 0) {
       showAlert(
         "error",
-        `Please answer all required questions (${missingRequired.length} remaining)`
+        `Please answer all required questions (${missingRequired.length} remaining)`,
       );
       return;
     }
@@ -189,7 +184,7 @@ const MonitoringForm: React.FC = () => {
           question_id: parseInt(questionId, 10),
           response_value: value,
           is_flagged: flaggedQuestions.has(parseInt(questionId, 10)),
-        })
+        }),
       );
 
       await pmmService.submitCycle(parseInt(cycleId, 10), {
@@ -205,8 +200,8 @@ const MonitoringForm: React.FC = () => {
     } catch (error) {
       console.error("Error submitting form:", error);
       const errorMessage =
-        (error as { response?: { data?: { message?: string } } }).response?.data
-          ?.message || "Failed to submit monitoring form";
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+        "Failed to submit monitoring form";
       showAlert("error", errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -219,10 +214,7 @@ const MonitoringForm: React.FC = () => {
     if (requiredQuestions.length === 0) return 100;
 
     const answeredRequired = requiredQuestions.filter(
-      (q) =>
-        responses[q.id!] !== undefined &&
-        responses[q.id!] !== null &&
-        responses[q.id!] !== ""
+      (q) => responses[q.id!] !== undefined && responses[q.id!] !== null && responses[q.id!] !== "",
     );
     return Math.round((answeredRequired.length / requiredQuestions.length) * 100);
   }, [questions, responses]);
@@ -295,11 +287,7 @@ const MonitoringForm: React.FC = () => {
                 <Clock size={16} color={theme.palette.other.icon} />
               )}
               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                {isCompleted
-                  ? "Completed"
-                  : isOverdue
-                  ? "Overdue"
-                  : "In progress"}
+                {isCompleted ? "Completed" : isOverdue ? "Overdue" : "In progress"}
               </Typography>
             </Stack>
 
@@ -318,9 +306,7 @@ const MonitoringForm: React.FC = () => {
               <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
                 Completion
               </Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                {completionPercent}%
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{completionPercent}%</Typography>
             </Stack>
           </Stack>
 
@@ -427,10 +413,7 @@ const MonitoringForm: React.FC = () => {
                     <RadioGroup
                       value={responses[question.id!] ?? ""}
                       onChange={(e) =>
-                        handleResponseChange(
-                          question.id!,
-                          e.target.value === "true"
-                        )
+                        handleResponseChange(question.id!, e.target.value === "true")
                       }
                       row
                     >
@@ -461,21 +444,20 @@ const MonitoringForm: React.FC = () => {
                     </RadioGroup>
 
                     {/* Show suggestion when "No" is selected */}
-                    {responses[question.id!] === false &&
-                      question.suggestion_text && (
-                        <Box
-                          sx={{
-                            backgroundColor: theme.palette.status.warning.bg,
-                            border: `1px solid ${theme.palette.status.warning.border}`,
-                            borderRadius: "4px",
-                            padding: "12px",
-                          }}
-                        >
-                          <Typography sx={{ fontSize: 12, color: theme.palette.status.warning.text }}>
-                            {question.suggestion_text}
-                          </Typography>
-                        </Box>
-                      )}
+                    {responses[question.id!] === false && question.suggestion_text && (
+                      <Box
+                        sx={{
+                          backgroundColor: theme.palette.status.warning.bg,
+                          border: `1px solid ${theme.palette.status.warning.border}`,
+                          borderRadius: "4px",
+                          padding: "12px",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 12, color: theme.palette.status.warning.text }}>
+                          {question.suggestion_text}
+                        </Typography>
+                      </Box>
+                    )}
                   </Stack>
                 )}
 
@@ -493,20 +475,15 @@ const MonitoringForm: React.FC = () => {
                                 : false
                             }
                             onChange={(e) => {
-                              const currentValue = Array.isArray(
-                                responses[question.id!]
-                              )
+                              const currentValue = Array.isArray(responses[question.id!])
                                 ? (responses[question.id!] as string[])
                                 : [];
                               if (e.target.checked) {
-                                handleResponseChange(question.id!, [
-                                  ...currentValue,
-                                  option,
-                                ]);
+                                handleResponseChange(question.id!, [...currentValue, option]);
                               } else {
                                 handleResponseChange(
                                   question.id!,
-                                  currentValue.filter((v: string) => v !== option)
+                                  currentValue.filter((v: string) => v !== option),
                                 );
                               }
                             }}
@@ -527,9 +504,7 @@ const MonitoringForm: React.FC = () => {
                     label=""
                     type="description"
                     value={(responses[question.id!] as string) ?? ""}
-                    onChange={(e) =>
-                      handleResponseChange(question.id!, e.target.value)
-                    }
+                    onChange={(e) => handleResponseChange(question.id!, e.target.value)}
                     sx={{
                       backgroundColor: theme.palette.background.main,
                     }}
@@ -543,13 +518,7 @@ const MonitoringForm: React.FC = () => {
 
       {/* Action buttons */}
       {!isCompleted && (
-        <Stack
-          direction="row"
-          justifyContent="flex-end"
-          spacing={2}
-          mt={4}
-          mb={4}
-        >
+        <Stack direction="row" justifyContent="flex-end" spacing={2} mt={4} mb={4}>
           <CustomizableButton
             variant="outlined"
             text={isSaving ? "Saving..." : "Save draft"}

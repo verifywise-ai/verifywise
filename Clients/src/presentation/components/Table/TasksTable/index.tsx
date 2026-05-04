@@ -75,13 +75,9 @@ const statusOrder: Record<string, number> = {
 function taskSortComparator(a: TaskModel, b: TaskModel, key: string): number {
   switch (key) {
     case "title":
-      return (a.title?.toLowerCase() || "").localeCompare(
-        b.title?.toLowerCase() || ""
-      );
+      return (a.title?.toLowerCase() || "").localeCompare(b.title?.toLowerCase() || "");
     case "priority":
-      return (
-        (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0)
-      );
+      return (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0);
     case "status":
       return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
     case "due_date": {
@@ -139,16 +135,16 @@ const TasksTable: React.FC<ITasksTableProps> = ({
       if (!visibleColumns) return true;
       return visibleColumns.has(key);
     },
-    [visibleColumns]
+    [visibleColumns],
   );
 
   // Filtered column list for the header
   const visibleTableColumns = useMemo(
     () =>
       titleOfTableColumns.filter(
-        (col) => col.id === "title" || col.id === "actions" || isVisible(col.id)
+        (col) => col.id === "title" || col.id === "actions" || isVisible(col.id),
       ),
-    [isVisible]
+    [isVisible],
   );
 
   const tableBody = useMemo(
@@ -160,7 +156,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
               hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
                 ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage
+                : validPage * rowsPerPage + rowsPerPage,
             )
             .map((task: TaskModel) => {
               const isArchived = task.status === TaskStatus.DELETED;
@@ -173,7 +169,9 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                     backgroundColor: isArchived ? "rgba(0, 0, 0, 0.02)" : "transparent",
                     opacity: isArchived ? 0.7 : 1,
                     "&:hover": {
-                      backgroundColor: isArchived ? "rgba(0, 0, 0, 0.04)" : singleTheme.tableColors.rowHover,
+                      backgroundColor: isArchived
+                        ? "rgba(0, 0, 0, 0.04)"
+                        : singleTheme.tableColors.rowHover,
                     },
                     ...(flashRowId === task.id && {
                       backgroundColor: singleTheme.flashColors.background,
@@ -191,7 +189,10 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                   <TableCell
                     sx={{
                       ...singleTheme.tableStyles.primary.body.cell,
-                      backgroundColor: sortConfig.key === "title" ? singleTheme.tableColors.sortedColumnFirst : undefined,
+                      backgroundColor:
+                        sortConfig.key === "title"
+                          ? singleTheme.tableColors.sortedColumnFirst
+                          : undefined,
                     }}
                   >
                     <Box>
@@ -210,171 +211,171 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                   </TableCell>
 
                   {/* Priority */}
-                  {isVisible("priority") && <TableCell
-                    sx={{
-                      ...cellStyle,
-                      backgroundColor: sortConfig.key === "priority" ? singleTheme.tableColors.sortedColumn : undefined,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isArchived ? (
-                      <Typography sx={taskTableStyles(theme).archivedText}>
-                        Archived
-                      </Typography>
-                    ) : (
-                      <CustomSelect
-                        currentValue={
-                          PRIORITY_DISPLAY_MAP[task.priority] || task.priority
-                        }
-                        onValueChange={async (displayValue: string) => {
-                          const apiValue =
-                            DISPLAY_TO_PRIORITY_MAP[displayValue] || displayValue;
-                          return await onPriorityChange(task.id!)(apiValue);
-                        }}
-                        options={priorityOptions}
-                        disabled={isUpdateDisabled}
-                        size="small"
-                      />
-                    )}
-                  </TableCell>}
+                  {isVisible("priority") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        backgroundColor:
+                          sortConfig.key === "priority"
+                            ? singleTheme.tableColors.sortedColumn
+                            : undefined,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isArchived ? (
+                        <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
+                      ) : (
+                        <CustomSelect
+                          currentValue={PRIORITY_DISPLAY_MAP[task.priority] || task.priority}
+                          onValueChange={async (displayValue: string) => {
+                            const apiValue = DISPLAY_TO_PRIORITY_MAP[displayValue] || displayValue;
+                            return await onPriorityChange(task.id!)(apiValue);
+                          }}
+                          options={priorityOptions}
+                          disabled={isUpdateDisabled}
+                          size="small"
+                        />
+                      )}
+                    </TableCell>
+                  )}
 
                   {/* Status */}
-                  {isVisible("status") && <TableCell
-                    sx={{
-                      ...cellStyle,
-                      backgroundColor: sortConfig.key === "status" ? singleTheme.tableColors.sortedColumn : undefined,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isArchived ? (
-                      <Typography sx={taskTableStyles(theme).archivedText}>
-                        Archived
-                      </Typography>
-                    ) : (
-                      <CustomSelect
-                        currentValue={
-                          STATUS_DISPLAY_MAP[task.status] || task.status
-                        }
-                        onValueChange={async (displayValue: string) => {
-                          const apiValue =
-                            DISPLAY_TO_STATUS_MAP[displayValue] || displayValue;
-                          return await onStatusChange(task.id!)(apiValue);
-                        }}
-                        options={statusOptions}
-                        disabled={isUpdateDisabled}
-                        size="small"
-                      />
-                    )}
-                  </TableCell>}
+                  {isVisible("status") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        backgroundColor:
+                          sortConfig.key === "status"
+                            ? singleTheme.tableColors.sortedColumn
+                            : undefined,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isArchived ? (
+                        <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
+                      ) : (
+                        <CustomSelect
+                          currentValue={STATUS_DISPLAY_MAP[task.status] || task.status}
+                          onValueChange={async (displayValue: string) => {
+                            const apiValue = DISPLAY_TO_STATUS_MAP[displayValue] || displayValue;
+                            return await onStatusChange(task.id!)(apiValue);
+                          }}
+                          options={statusOptions}
+                          disabled={isUpdateDisabled}
+                          size="small"
+                        />
+                      )}
+                    </TableCell>
+                  )}
 
                   {/* Due Date */}
-                  {isVisible("due_date") && <TableCell
-                    sx={{
-                      ...cellStyle,
-                      backgroundColor: sortConfig.key === "due_date" ? singleTheme.tableColors.sortedColumn : undefined,
-                    }}
-                  >
-                    {task.due_date ? (
-                      <Stack direction="row" spacing="8px" alignItems="center">
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: 13,
-                            color: task.isOverdue && task.status !== TaskStatus.COMPLETED
-                              ? "error.main"
-                              : "text.secondary",
-                            fontWeight: task.isOverdue && task.status !== TaskStatus.COMPLETED ? 500 : 400,
-                          }}
-                        >
-                          {displayFormattedDate(task.due_date)}
+                  {isVisible("due_date") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        backgroundColor:
+                          sortConfig.key === "due_date"
+                            ? singleTheme.tableColors.sortedColumn
+                            : undefined,
+                      }}
+                    >
+                      {task.due_date ? (
+                        <Stack direction="row" spacing="8px" alignItems="center">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: 13,
+                              color:
+                                task.isOverdue && task.status !== TaskStatus.COMPLETED
+                                  ? "error.main"
+                                  : "text.secondary",
+                              fontWeight:
+                                task.isOverdue && task.status !== TaskStatus.COMPLETED ? 500 : 400,
+                            }}
+                          >
+                            {displayFormattedDate(task.due_date)}
+                          </Typography>
+                          {task.status === TaskStatus.COMPLETED ? null : task.isOverdue ? (
+                            <Chip label="Overdue" variant="error" />
+                          ) : (
+                            <DaysChip dueDate={task.due_date} />
+                          )}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                          No due date
                         </Typography>
-                        {task.status === TaskStatus.COMPLETED ? null : task.isOverdue ? (
-                          <Chip label="Overdue" variant="error" />
-                        ) : (
-                          <DaysChip dueDate={task.due_date} />
-                        )}
-                      </Stack>
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        color="text.disabled"
-                        sx={{ fontSize: 13 }}
-                      >
-                        No due date
-                      </Typography>
-                    )}
-                  </TableCell>}
+                      )}
+                    </TableCell>
+                  )}
 
                   {/* Assignees */}
-                  {isVisible("assignees") && <TableCell
-                    sx={{
-                      ...cellStyle,
-                      backgroundColor: sortConfig.key === "assignees" ? singleTheme.tableColors.sortedColumn : undefined,
-                    }}
-                  >
-                    {task.assignees && task.assignees.length > 0 ? (
-                      <Stack direction="row" spacing={0.5}>
-                        {task.assignees.slice(0, 3).map((assigneeId, idx) => {
-                          const user = users.find(
-                            (u) => u.id === Number(assigneeId)
-                          );
-                          const initials = user
-                            ? `${user.name.charAt(0)}${user.surname.charAt(
-                              0
-                            )}`.toUpperCase()
-                            : "?";
+                  {isVisible("assignees") && (
+                    <TableCell
+                      sx={{
+                        ...cellStyle,
+                        backgroundColor:
+                          sortConfig.key === "assignees"
+                            ? singleTheme.tableColors.sortedColumn
+                            : undefined,
+                      }}
+                    >
+                      {task.assignees && task.assignees.length > 0 ? (
+                        <Stack direction="row" spacing={0.5}>
+                          {task.assignees.slice(0, 3).map((assigneeId, idx) => {
+                            const user = users.find((u) => u.id === Number(assigneeId));
+                            const initials = user
+                              ? `${user.name.charAt(0)}${user.surname.charAt(0)}`.toUpperCase()
+                              : "?";
 
-                          return (
+                            return (
+                              <Box
+                                key={idx}
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: "50%",
+                                  backgroundColor: "background.hover",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  color: "#374151",
+                                  border: "2px solid background.main",
+                                }}
+                              >
+                                {initials}
+                              </Box>
+                            );
+                          })}
+                          {task.assignees.length > 3 && (
                             <Box
-                              key={idx}
                               sx={{
                                 width: 28,
                                 height: 28,
                                 borderRadius: "50%",
-                                backgroundColor: "background.hover",
+                                backgroundColor: "status.default.border",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: 500,
-                                color: "#374151",
+                                color: "status.default.text",
                                 border: "2px solid background.main",
                               }}
                             >
-                              {initials}
+                              +{task.assignees.length - 3}
                             </Box>
-                          );
-                        })}
-                        {task.assignees.length > 3 && (
-                          <Box
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              backgroundColor: "status.default.border",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 10,
-                              fontWeight: 500,
-                              color: "status.default.text",
-                              border: "2px solid background.main",
-                            }}
-                          >
-                            +{task.assignees.length - 3}
-                          </Box>
-                        )}
-                      </Stack>
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        color="text.disabled"
-                        sx={{ fontSize: 13 }}
-                      >
-                        Unassigned
-                      </Typography>
-                    )}
-                  </TableCell>}
+                          )}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                          Unassigned
+                        </Typography>
+                      )}
+                    </TableCell>
+                  )}
 
                   {/* Actions */}
                   <TableCell
@@ -385,17 +386,13 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                       id={task.id!}
                       onDelete={() => onArchive(task.id!)}
                       onEdit={() => onEdit(task)}
-                      onMouseEvent={() => { }}
+                      onMouseEvent={() => {}}
                       warningTitle="Archive task?"
                       warningMessage={`This task will be hidden from your active task list. You can restore "${task.title}" anytime from the archived view.`}
                       type="Task"
                       isArchived={task.status === TaskStatus.DELETED}
-                      onRestore={
-                        onRestore ? () => onRestore(task.id!) : undefined
-                      }
-                      onHardDelete={
-                        onHardDelete ? () => onHardDelete(task.id!) : undefined
-                      }
+                      onRestore={onRestore ? () => onRestore(task.id!) : undefined}
+                      onHardDelete={onHardDelete ? () => onHardDelete(task.id!) : undefined}
                       hardDeleteWarningTitle="Permanently delete this task?"
                       hardDeleteWarningMessage="This action cannot be undone. The task will be permanently removed from the system."
                     />
@@ -426,7 +423,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
       onPriorityChange,
       theme,
       isVisible,
-    ]
+    ],
   );
 
   return (

@@ -24,12 +24,10 @@ interface FeatureSettingsUpdates {
 /**
  * Get feature settings for an organization (always returns a row — created by migration).
  */
-export async function getFeatureSettingsQuery(
-  organizationId: number
-): Promise<FeatureSettingsRow> {
+export async function getFeatureSettingsQuery(organizationId: number): Promise<FeatureSettingsRow> {
   const [rows] = await sequelize.query(
     `SELECT * FROM feature_settings WHERE organization_id = :organizationId LIMIT 1`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   );
 
   // Return defaults if no row exists yet
@@ -52,7 +50,7 @@ export async function getFeatureSettingsQuery(
 export async function updateFeatureSettingsQuery(
   organizationId: number,
   updates: FeatureSettingsUpdates,
-  transaction?: Transaction
+  transaction?: Transaction,
 ): Promise<FeatureSettingsRow> {
   const setClauses = ["updated_at = NOW()"];
   const replacements: Record<string, any> = { organizationId };
@@ -80,7 +78,7 @@ export async function updateFeatureSettingsQuery(
     {
       replacements,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
 
   return (result as any[])[0];

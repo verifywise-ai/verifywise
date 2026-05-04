@@ -1,10 +1,10 @@
-import { createLogger, format, transports } from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
-import path from 'path';
-import { getTenantIdForLogging, ensureTenantLogDirectory } from '../tenant/tenantContext';
+import { createLogger, format, transports } from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import path from "path";
+import { getTenantIdForLogging, ensureTenantLogDirectory } from "../tenant/tenantContext";
 
 const { combine, timestamp, printf, colorize } = format;
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev = process.env.NODE_ENV !== "production";
 
 const logFormat = printf(({ level, message, timestamp }) => {
   return `${timestamp} [${level}]: ${message}`;
@@ -18,23 +18,23 @@ function createTenantRotatingFileTransport(tenantId: string): DailyRotateFile {
   const tenantLogDir = ensureTenantLogDirectory(tenantId);
 
   return new DailyRotateFile({
-    filename: path.join(tenantLogDir, 'app-%DATE%.log'),
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '10m',
-    maxFiles: '14d',
-    level: 'info',
+    filename: path.join(tenantLogDir, "app-%DATE%.log"),
+    datePattern: "YYYY-MM-DD",
+    maxSize: "10m",
+    maxFiles: "14d",
+    level: "info",
     utc: true, // Force UTC timezone to prevent date inconsistencies
   });
 }
 
 const consoleTransport = new transports.Console({
-  level: 'debug',
+  level: "debug",
   format: combine(colorize(), timestamp(), logFormat),
 });
 
 // Create default logger with console transport
 const logger = createLogger({
-  level: isDev ? 'debug' : 'info',
+  level: isDev ? "debug" : "info",
   format: combine(timestamp(), logFormat),
   transports: isDev ? [consoleTransport] : [],
 });
@@ -49,14 +49,14 @@ const tenantLoggerCache = new Map<string, ReturnType<typeof createLogger>>();
 /**
  * Get or create a tenant-specific logger
  */
-function getTenantLogger(tenantId: string = 'default') {
+function getTenantLogger(tenantId: string = "default") {
   const cached = tenantLoggerCache.get(tenantId);
   if (cached) return cached;
 
   const fileTransport = createTenantRotatingFileTransport(tenantId);
 
   const tenantLogger = createLogger({
-    level: isDev ? 'debug' : 'info',
+    level: isDev ? "debug" : "info",
     format: combine(timestamp({ format: () => new Date().toISOString() }), logFormat),
     transports: isDev ? [consoleTransport, fileTransport] : [fileTransport],
   });
@@ -69,11 +69,11 @@ export default logger;
 
 let logId = 1;
 
-export function   logStructured(
-  state: 'processing' | 'successful' | 'error',
+export function logStructured(
+  state: "processing" | "successful" | "error",
   description: string,
   functionName: string,
-  fileName: string
+  fileName: string,
 ) {
   // Use UTC timestamp to ensure consistency across timezones
   const timestamp = new Date().toISOString();

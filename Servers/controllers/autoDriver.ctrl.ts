@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-import {
-  deleteMockData,
-  insertMockData,
-} from "../infrastructure.layer/driver/autoDriver.driver";
+import { deleteMockData, insertMockData } from "../infrastructure.layer/driver/autoDriver.driver";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
@@ -13,7 +10,7 @@ export async function postAutoDriver(req: Request, res: Response) {
     "processing",
     "inserting mock data via auto driver",
     "postAutoDriver",
-    "autoDriver.ctrl.ts"
+    "autoDriver.ctrl.ts",
   );
   logger.debug("🤖 Inserting mock data via auto driver");
 
@@ -23,16 +20,21 @@ export async function postAutoDriver(req: Request, res: Response) {
     // Mark onboarding as completed so the setup modal doesn't show again
     await sequelize.query(
       `UPDATE organizations SET onboarding_status = 'completed' WHERE id = :organizationId`,
-      { replacements: { organizationId: req.organizationId! } }
+      { replacements: { organizationId: req.organizationId! } },
     );
 
     logStructured(
       "successful",
       "mock data inserted successfully via auto driver",
       "postAutoDriver",
-      "autoDriver.ctrl.ts"
+      "autoDriver.ctrl.ts",
     );
-    await logEvent("Create", "Mock data inserted via auto driver", req.userId!, req.organizationId!);
+    await logEvent(
+      "Create",
+      "Mock data inserted via auto driver",
+      req.userId!,
+      req.organizationId!,
+    );
 
     return res.status(201).json(STATUS_CODE[201]("Mock data inserted"));
   } catch (error) {
@@ -40,13 +42,13 @@ export async function postAutoDriver(req: Request, res: Response) {
       "error",
       "failed to insert mock data via auto driver",
       "postAutoDriver",
-      "autoDriver.ctrl.ts"
+      "autoDriver.ctrl.ts",
     );
     await logEvent(
       "Error",
       `Failed to insert mock data via auto driver: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in postAutoDriver:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -58,7 +60,7 @@ export async function deleteAutoDriver(req: Request, res: Response) {
     "processing",
     "deleting mock data via auto driver",
     "deleteAutoDriver",
-    "autoDriver.ctrl.ts"
+    "autoDriver.ctrl.ts",
   );
   logger.debug("🗑️ Deleting mock data via auto driver");
 
@@ -69,7 +71,7 @@ export async function deleteAutoDriver(req: Request, res: Response) {
       "successful",
       "mock data deleted successfully via auto driver",
       "deleteAutoDriver",
-      "autoDriver.ctrl.ts"
+      "autoDriver.ctrl.ts",
     );
     await logEvent("Delete", "Mock data deleted via auto driver", req.userId!, req.organizationId!);
 
@@ -79,13 +81,13 @@ export async function deleteAutoDriver(req: Request, res: Response) {
       "error",
       "failed to delete mock data via auto driver",
       "deleteAutoDriver",
-      "autoDriver.ctrl.ts"
+      "autoDriver.ctrl.ts",
     );
     await logEvent(
       "Error",
       `Failed to delete mock data via auto driver: ${(error as Error).message}`,
       req.userId!,
-      req.organizationId!
+      req.organizationId!,
     );
     logger.error("❌ Error in deleteAutoDriver:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

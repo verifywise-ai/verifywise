@@ -36,11 +36,7 @@ export async function getSlackIntegrationById({
   return response.data;
 }
 
-export async function createSlackIntegration({
-  body,
-}: {
-  body: any;
-}): Promise<any> {
+export async function createSlackIntegration({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/slackWebhooks", body);
   return response.data;
 }
@@ -61,16 +57,11 @@ export async function sendSlackMessage({ id }: { id: number }): Promise<any> {
     title: "Welcome to Verifywise",
     message: "This is a test message from VerifyWise.",
   };
-  const response = await apiServices.post(
-    `/slackWebhooks/${id}/send`,
-    messageBody,
-  );
+  const response = await apiServices.post(`/slackWebhooks/${id}/send`, messageBody);
   return response.data;
 }
 
-export async function deleteSlackIntegration({id,}: {
-  id: number;
-}): Promise<any> {
+export async function deleteSlackIntegration({ id }: { id: number }): Promise<any> {
   try {
     const response = await apiServices.delete(`/slackWebhooks/${id}`);
     return response.data;

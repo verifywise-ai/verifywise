@@ -17,7 +17,7 @@ describe("useGeneratedReports", () => {
     mockGetEntity.mockResolvedValue({ data: [{ id: 1, name: "Q1 Report" }] });
 
     const { result } = renderHook(() =>
-      useGeneratedReports({ projectId: "1", projects: [{ id: 1 }] as any, refreshKey: 0 })
+      useGeneratedReports({ projectId: "1", projects: [{ id: 1 }] as any, refreshKey: 0 }),
     );
 
     await waitFor(() => expect(result.current.loadingReports).toBe(false));
@@ -27,7 +27,7 @@ describe("useGeneratedReports", () => {
 
   it("does not fetch when projects is empty", async () => {
     const { result } = renderHook(() =>
-      useGeneratedReports({ projectId: "1", projects: [], refreshKey: 0 })
+      useGeneratedReports({ projectId: "1", projects: [], refreshKey: 0 }),
     );
 
     await waitFor(() => expect(result.current.loadingReports).toBe(false));
@@ -38,7 +38,7 @@ describe("useGeneratedReports", () => {
     mockGetEntity.mockRejectedValue(new Error("Server error"));
 
     const { result } = renderHook(() =>
-      useGeneratedReports({ projectId: "1", projects: [{ id: 1 }] as any, refreshKey: 0 })
+      useGeneratedReports({ projectId: "1", projects: [{ id: 1 }] as any, refreshKey: 0 }),
     );
 
     await waitFor(() => expect(result.current.loadingReports).toBe(false));

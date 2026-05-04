@@ -7,6 +7,7 @@ http://localhost:3000/api
 ```
 
 All endpoints require authentication via JWT token in Authorization header:
+
 ```
 Authorization: Bearer <token>
 ```
@@ -23,12 +24,14 @@ List all approval workflows.
 **Route**: `routes/approvalWorkflow.route.ts:36-41`
 
 **Request**:
+
 ```http
 GET /api/approval-workflows
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Approval workflows retrieved successfully",
@@ -69,12 +72,14 @@ Get a single approval workflow by ID.
 **Route**: `routes/approvalWorkflow.route.ts:48-53`
 
 **Request**:
+
 ```http
 GET /api/approval-workflows/1
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Approval workflow retrieved successfully",
@@ -89,6 +94,7 @@ Authorization: Bearer <token>
 ```
 
 **Error** (`404 Not Found`):
+
 ```json
 {
   "error": "Workflow not found"
@@ -106,6 +112,7 @@ Create a new approval workflow.
 **Controller**: `controllers/approvalWorkflow.ctrl.ts:createApprovalWorkflow`
 
 **Request**:
+
 ```http
 POST /api/approval-workflows
 Authorization: Bearer <token>
@@ -138,6 +145,7 @@ Content-Type: application/json
 ```
 
 **Response** (`201 Created`):
+
 ```json
 {
   "message": "Approval workflow created successfully",
@@ -151,6 +159,7 @@ Content-Type: application/json
 ```
 
 **Validation Errors** (`400 Bad Request`):
+
 ```json
 {
   "error": "Validation failed",
@@ -175,6 +184,7 @@ Update an existing approval workflow.
 **Route**: `routes/approvalWorkflow.route.ts:72-77`
 
 **Request**:
+
 ```http
 PUT /api/approval-workflows/5
 Authorization: Bearer <token>
@@ -187,6 +197,7 @@ Content-Type: application/json
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Approval workflow updated successfully",
@@ -204,12 +215,14 @@ Delete an approval workflow.
 **Route**: `routes/approvalWorkflow.route.ts:84-89`
 
 **Request**:
+
 ```http
 DELETE /api/approval-workflows/5
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Approval workflow deleted successfully"
@@ -217,6 +230,7 @@ Authorization: Bearer <token>
 ```
 
 **Error** (`409 Conflict`):
+
 ```json
 {
   "error": "Cannot delete workflow with active approval requests"
@@ -236,12 +250,14 @@ Get all pending requests where the current user is an approver.
 **Controller**: `controllers/approvalRequest.ctrl.ts:getPendingApprovals`
 
 **Request**:
+
 ```http
 GET /api/approval-requests/pending
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Pending approvals retrieved successfully",
@@ -273,12 +289,14 @@ Get all approval requests created by the current user.
 **Controller**: `controllers/approvalRequest.ctrl.ts:getMyApprovalRequests`
 
 **Request**:
+
 ```http
 GET /api/approval-requests/my-requests
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "My approval requests retrieved successfully",
@@ -305,12 +323,14 @@ Get detailed information about a specific approval request.
 **Controller**: `controllers/approvalRequest.ctrl.ts:getApprovalRequestById`
 
 **Request**:
+
 ```http
 GET /api/approval-requests/14
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Approval request retrieved successfully",
@@ -370,6 +390,7 @@ Approve a request at the current step.
 **Controller**: `controllers/approvalRequest.ctrl.ts:approveRequest`
 
 **Request**:
+
 ```http
 POST /api/approval-requests/14/approve
 Authorization: Bearer <token>
@@ -381,6 +402,7 @@ Content-Type: application/json
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Request approved successfully"
@@ -388,6 +410,7 @@ Content-Type: application/json
 ```
 
 **Workflow**:
+
 1. Validate user is an approver for current step
 2. Update approval record to APPROVED
 3. Check if step is complete
@@ -402,6 +425,7 @@ Content-Type: application/json
 **Errors**:
 
 `403 Forbidden` - Not an approver:
+
 ```json
 {
   "error": "You are not an approver for this step"
@@ -409,6 +433,7 @@ Content-Type: application/json
 ```
 
 `400 Bad Request` - Already responded:
+
 ```json
 {
   "error": "You have already responded to this request"
@@ -426,6 +451,7 @@ Reject a request.
 **Controller**: `controllers/approvalRequest.ctrl.ts:rejectRequest`
 
 **Request**:
+
 ```http
 POST /api/approval-requests/14/reject
 Authorization: Bearer <token>
@@ -437,6 +463,7 @@ Content-Type: application/json
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Request rejected successfully"
@@ -444,6 +471,7 @@ Content-Type: application/json
 ```
 
 **Workflow**:
+
 1. Validate user is an approver
 2. Update approval record to REJECTED
 3. Mark step as REJECTED
@@ -461,12 +489,14 @@ Withdraw (cancel) a request.
 **Controller**: `controllers/approvalRequest.ctrl.ts:withdrawRequest`
 
 **Request**:
+
 ```http
 POST /api/approval-requests/14/withdraw
 Authorization: Bearer <token>
 ```
 
 **Response** (`200 OK`):
+
 ```json
 {
   "message": "Request withdrawn successfully"
@@ -476,6 +506,7 @@ Authorization: Bearer <token>
 **Errors**:
 
 `403 Forbidden` - Not the requester:
+
 ```json
 {
   "error": "Only the requester can withdraw this request"
@@ -483,6 +514,7 @@ Authorization: Bearer <token>
 ```
 
 `400 Bad Request` - Already completed:
+
 ```json
 {
   "error": "Cannot withdraw a completed request"
@@ -502,6 +534,7 @@ Establish Server-Sent Events connection for real-time notifications.
 **Controller**: `controllers/notification.ctrl.ts:streamNotifications`
 
 **Request**:
+
 ```http
 GET /api/notifications/stream
 Authorization: Bearer <token>
@@ -509,6 +542,7 @@ Accept: text/event-stream
 ```
 
 **Response** (SSE Stream):
+
 ```
 Content-Type: text/event-stream
 Cache-Control: no-cache
@@ -526,6 +560,7 @@ data: {"title":"Request Approved","message":"Your request \"Use Case: Q1 Campaig
 ```
 
 **Connection Lifecycle**:
+
 1. Client connects with JWT token
 2. Server validates token, extracts `userId` and `tenantId`
 3. Connection stored in map: `${tenantId}:${userId}`
@@ -535,6 +570,7 @@ data: {"title":"Request Approved","message":"Your request \"Use Case: Q1 Campaig
 7. On disconnect, connection removed from map
 
 **Error** (`401 Unauthorized`):
+
 ```json
 {
   "error": "Unauthorized"
@@ -554,6 +590,7 @@ Create a use-case with optional approval workflow.
 **Controller**: `controllers/project.ctrl.ts:createProject`
 
 **Request** (with workflow):
+
 ```http
 POST /api/projects
 Authorization: Bearer <token>
@@ -572,6 +609,7 @@ Content-Type: application/json
 ```
 
 **Response** (`201 Created`):
+
 ```json
 {
   "message": "Project created successfully",
@@ -586,6 +624,7 @@ Content-Type: application/json
 ```
 
 **Workflow**:
+
 1. Create project record
 2. If `approval_workflow_id` provided:
    - Store `framework` in `pending_frameworks`
@@ -598,6 +637,7 @@ Content-Type: application/json
    - No approval required
 
 **Request** (without workflow):
+
 ```json
 {
   "project_title": "Internal Tool",
@@ -618,15 +658,17 @@ All endpoints extract authentication context from JWT:
 **Middleware**: `middleware/auth.middleware.ts:authenticateJWT`
 
 **Extracted Values**:
+
 - `req.userId` - Current user's ID
 - `req.tenantId` - Organization's tenant ID (schema name)
 - `req.userRoleName` - User's role name
 
 **Example Middleware Usage**:
+
 ```typescript
 export const approveRequest = async (req: Request, res: Response) => {
-  const { userId, tenantId } = req;  // From JWT
-  const { id } = req.params;         // Request ID
+  const { userId, tenantId } = req; // From JWT
+  const { id } = req.params; // Request ID
 
   // userId and tenantId are guaranteed to exist
   // All queries use tenantId for multi-tenant isolation
@@ -655,6 +697,7 @@ Not currently implemented, but recommended:
 All errors follow consistent format:
 
 **Validation Error** (`400`):
+
 ```json
 {
   "error": "Validation failed",
@@ -665,6 +708,7 @@ All errors follow consistent format:
 ```
 
 **Authentication Error** (`401`):
+
 ```json
 {
   "error": "Unauthorized"
@@ -672,6 +716,7 @@ All errors follow consistent format:
 ```
 
 **Authorization Error** (`403`):
+
 ```json
 {
   "error": "You do not have permission to perform this action"
@@ -679,6 +724,7 @@ All errors follow consistent format:
 ```
 
 **Not Found** (`404`):
+
 ```json
 {
   "error": "Resource not found"
@@ -686,6 +732,7 @@ All errors follow consistent format:
 ```
 
 **Server Error** (`500`):
+
 ```json
 {
   "error": "Internal server error",
@@ -700,6 +747,7 @@ All errors follow consistent format:
 ### Using curl
 
 **Create Workflow**:
+
 ```bash
 curl -X POST http://localhost:3000/api/approval-workflows \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -719,6 +767,7 @@ curl -X POST http://localhost:3000/api/approval-workflows \
 ```
 
 **Approve Request**:
+
 ```bash
 curl -X POST http://localhost:3000/api/approval-requests/14/approve \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -727,6 +776,7 @@ curl -X POST http://localhost:3000/api/approval-requests/14/approve \
 ```
 
 **SSE Connection**:
+
 ```bash
 curl -N -H "Authorization: Bearer YOUR_TOKEN" \
   http://localhost:3000/api/notifications/stream
@@ -745,6 +795,7 @@ curl -N -H "Authorization: Bearer YOUR_TOKEN" \
 Not currently implemented for approval workflows/requests.
 
 **Future Enhancement**:
+
 ```json
 {
   "data": [...],

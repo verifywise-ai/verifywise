@@ -51,7 +51,7 @@ export const pluginsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Framework plugins', text: 'Add compliance frameworks like SOC 2, GDPR, HIPAA, PCI DSS, NYC Local Law 144 or Saudi PDPL. Once installed, these appear as framework options when configuring projects.' },
+        { bold: 'Framework plugins', text: 'Add compliance frameworks like SOC 2, GDPR, HIPAA, PCI DSS, NYC Local Law 144 or Saudi PDPL. Browse them on the dedicated **Frameworks** tab on the Plugins page (organized by region). Once installed, these appear as framework options when configuring projects.' },
         { bold: 'Integration plugins', text: 'Connect VerifyWise to external tools and services (e.g., Azure AI Foundry).' },
         { bold: 'Utility plugins', text: 'Add features like risk import tools or specialized reporting.' },
       ],
@@ -85,7 +85,7 @@ export const pluginsContent: ArticleContent = {
         { key: 'roles', label: 'Required role', width: '50%' },
       ],
       rows: [
-        { action: 'Browse marketplace', roles: 'Any authenticated user' },
+        { action: 'Open the Plugins page (browse marketplace)', roles: 'Admin' },
         { action: 'Install or uninstall plugins', roles: 'Admin' },
         { action: 'Manage plugin settings', roles: 'Admin' },
       ],

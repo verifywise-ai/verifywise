@@ -14,7 +14,7 @@ export async function getFeatureSettings(): Promise<FeatureSettings> {
 }
 
 export async function updateFeatureSettings(
-  settings: Partial<Pick<FeatureSettings, "lifecycle_enabled" | "audit_ledger_enabled">>
+  settings: Partial<Pick<FeatureSettings, "lifecycle_enabled" | "audit_ledger_enabled">>,
 ): Promise<FeatureSettings> {
   const response = await CustomAxios.patch("/feature-settings", settings);
   return response.data.data;

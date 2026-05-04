@@ -17,7 +17,13 @@ import { closeIconStyles, iconButtonStyles } from "./style";
 import { CloseIconProps } from "../../../domain/interfaces/i.widget";
 import AlertBody from "./AlertBody";
 
-import { Info as BlueInfoIcon, CheckCircle as GreenSuccessIcon, AlertTriangle as OrangeWarningIcon, XCircle as RedErrorIcon, X as CloseGreyIcon } from "lucide-react";
+import {
+  Info as BlueInfoIcon,
+  CheckCircle as GreenSuccessIcon,
+  AlertTriangle as OrangeWarningIcon,
+  XCircle as RedErrorIcon,
+  X as CloseGreyIcon,
+} from "lucide-react";
 
 /**
  * Mapping of alert variants to their respective icons.
@@ -38,9 +44,7 @@ const icons: { [s: string]: JSX.Element } = {
  * @param {CloseIconProps} props - The props for the CloseButton component.
  * @returns {JSX.Element} The rendered CloseButton component.
  */
-const CloseButton: React.FC<CloseIconProps> = ({
-  text,
-}: CloseIconProps): JSX.Element => (
+const CloseButton: React.FC<CloseIconProps> = ({ text }: CloseIconProps): JSX.Element => (
   <CloseGreyIcon size={16} style={closeIconStyles(text)} />
 );
 
@@ -78,9 +82,7 @@ const Alert: React.FC<AlertProps> = ({
         top: theme.spacing(5),
         right: theme.spacing(5),
         zIndex: 9999,
-        padding: hasIcon
-          ? theme.spacing(8)
-          : `${theme.spacing(4)} ${theme.spacing(8)}`,
+        padding: hasIcon ? theme.spacing(8) : `${theme.spacing(4)} ${theme.spacing(8)}`,
         backgroundColor: bg,
         border: `1px solid ${text}`,
         borderRadius: theme.shape.borderRadius,
@@ -88,12 +90,13 @@ const Alert: React.FC<AlertProps> = ({
       }}
     >
       {hasIcon && (
-        <Box sx={{ color: text, maxHeight: "22.28px" }} aria-hidden="true"> {icon} </Box>
+        <Box sx={{ color: text, maxHeight: "22.28px" }} aria-hidden="true">
+          {" "}
+          {icon}{" "}
+        </Box>
       )}
       <Stack direction={"column"} gap={"2px"} sx={{ flex: 1 }}>
-        {title && (
-          <Typography sx={{ fontWeight: 700, color: text }}>{title}</Typography>
-        )}
+        {title && <Typography sx={{ fontWeight: 700, color: text }}>{title}</Typography>}
         {body && <AlertBody body={body} textColor={text} />}
       </Stack>
       {isToast && (

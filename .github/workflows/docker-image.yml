@@ -47,7 +47,7 @@ jobs:
             VITE_APP_VERSION=${{ env.TAG }}
 
       - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-frontend:scan'
           format: 'sarif'
@@ -89,7 +89,7 @@ jobs:
           tags: verifywise-backend:scan
 
       - name: Scan Backend image with Trivy
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-backend:scan'
           format: 'sarif'
@@ -138,7 +138,7 @@ jobs:
           tags: verifywise-eval-server:scan
 
       - name: Scan EvalServer image with Trivy
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-eval-server:scan'
           format: 'sarif'
@@ -179,7 +179,7 @@ jobs:
           tags: verifywise-ai-gateway:scan
 
       - name: Scan AIGateway image with Trivy
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-ai-gateway:scan'
           format: 'sarif'

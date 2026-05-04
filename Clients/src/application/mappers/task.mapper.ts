@@ -1,18 +1,13 @@
 /**
  * Task Mapper
- * 
+ *
  * Maps between Task DTOs (API layer) and Task domain models.
  * Handles data transformation, type conversion, and validation.
  */
 
 import { TaskModel, TaskAssigneeModel } from "../../domain/models/Common/task/task.model";
 import { ITask, ITaskAssignee } from "../../domain/interfaces/i.task";
-import {
-  TaskResponseDTO,
-  TaskAssigneeDTO,
-  CreateTaskDTO,
-  UpdateTaskDTO,
-} from "../dtos/task.dto";
+import { TaskResponseDTO, TaskAssigneeDTO, CreateTaskDTO, UpdateTaskDTO } from "../dtos/task.dto";
 import { TaskPriority, TaskStatus } from "../../domain/enums/task.enum";
 
 /**
@@ -20,9 +15,9 @@ import { TaskPriority, TaskStatus } from "../../domain/enums/task.enum";
  */
 export function mapPriority(priority: string): TaskPriority {
   const mapping: Record<string, TaskPriority> = {
-    "low": TaskPriority.LOW,
-    "medium": TaskPriority.MEDIUM,
-    "high": TaskPriority.HIGH,
+    low: TaskPriority.LOW,
+    medium: TaskPriority.MEDIUM,
+    high: TaskPriority.HIGH,
   };
   return mapping[priority] || TaskPriority.MEDIUM;
 }
@@ -32,18 +27,18 @@ export function mapPriority(priority: string): TaskPriority {
  */
 export function mapStatus(status: string): TaskStatus {
   const mapping: Record<string, TaskStatus> = {
-    "open": TaskStatus.OPEN,
+    open: TaskStatus.OPEN,
     "in progress": TaskStatus.IN_PROGRESS,
-    "completed": TaskStatus.COMPLETED,
-    "overdue": TaskStatus.OVERDUE,
-    "deleted": TaskStatus.DELETED,
+    completed: TaskStatus.COMPLETED,
+    overdue: TaskStatus.OVERDUE,
+    deleted: TaskStatus.DELETED,
   };
   return mapping[status] || TaskStatus.OPEN;
 }
 
 /**
  * Maps a TaskAssigneeDTO to ITaskAssignee
- * 
+ *
  * @param dto - Task assignee DTO from API
  * @returns ITaskAssignee
  */
@@ -58,7 +53,7 @@ export function mapTaskAssigneeDTOToInterface(dto: TaskAssigneeDTO): ITaskAssign
 
 /**
  * Maps a TaskAssigneeDTO to TaskAssigneeModel
- * 
+ *
  * @param dto - Task assignee DTO from API
  * @returns TaskAssigneeModel instance
  */
@@ -73,7 +68,7 @@ export function mapTaskAssigneeDTOToModel(dto: TaskAssigneeDTO): TaskAssigneeMod
 
 /**
  * Maps a TaskResponseDTO to ITask
- * 
+ *
  * @param dto - Task response DTO from API
  * @returns ITask
  */
@@ -98,7 +93,7 @@ export function mapTaskResponseDTOToInterface(dto: TaskResponseDTO): ITask {
 
 /**
  * Maps a TaskResponseDTO to TaskModel
- * 
+ *
  * @param dto - Task response DTO from API
  * @returns TaskModel instance
  */
@@ -119,13 +114,13 @@ export function mapTaskResponseDTOToModel(dto: TaskResponseDTO): TaskModel {
     assignees: dto.assignees?.map(mapTaskAssigneeDTOToInterface),
     isOverdue: dto.isOverdue,
   };
-  
+
   return new TaskModel(taskData);
 }
 
 /**
  * Maps an array of TaskResponseDTOs to ITask interfaces
- * 
+ *
  * @param dtos - Array of task response DTOs
  * @returns Array of ITask interfaces
  */
@@ -135,7 +130,7 @@ export function mapTaskResponseDTOsToInterfaces(dtos: TaskResponseDTO[]): ITask[
 
 /**
  * Maps an array of TaskResponseDTOs to TaskModel instances
- * 
+ *
  * @param dtos - Array of task response DTOs
  * @returns Array of TaskModel instances
  */
@@ -145,7 +140,7 @@ export function mapTaskResponseDTOsToModels(dtos: TaskResponseDTO[]): TaskModel[
 
 /**
  * Maps ITask to CreateTaskDTO
- * 
+ *
  * @param task - Task interface
  * @returns CreateTaskDTO
  */
@@ -159,13 +154,13 @@ export function mapTaskToCreateDTO(task: Partial<ITask>): CreateTaskDTO {
     priority: task.priority || TaskPriority.MEDIUM,
     status: task.status || TaskStatus.OPEN,
     categories: task.categories,
-    assignees: task.assignees?.map(a => a.user_id),
+    assignees: task.assignees?.map((a) => a.user_id),
   };
 }
 
 /**
  * Maps ITask to UpdateTaskDTO
- * 
+ *
  * @param task - Task interface with fields to update
  * @returns UpdateTaskDTO
  */
@@ -177,7 +172,6 @@ export function mapTaskToUpdateDTO(task: Partial<ITask>): UpdateTaskDTO {
     priority: task.priority,
     status: task.status,
     categories: task.categories,
-    assignees: task.assignees?.map(a => a.user_id),
+    assignees: task.assignees?.map((a) => a.user_id),
   };
 }
-

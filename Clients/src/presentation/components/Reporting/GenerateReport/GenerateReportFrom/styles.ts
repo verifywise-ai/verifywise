@@ -3,7 +3,7 @@ import { brand, text, background } from "../../../../themes/palette";
 
 export const styles = {
   btnWrap: {
-    marginTop: 'auto',
+    marginTop: "auto",
     paddingTop: 12,
     display: "flex",
     alignItems: "flex-end",

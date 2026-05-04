@@ -15,22 +15,13 @@ interface SelectorVerticalProps {
   [key: string]: unknown;
 }
 
-const SelectorVertical = (props: SelectorVerticalProps) => (
-  <ChevronsUpDown size={16} {...props} />
-);
-import {
-  paginationStyle,
-  paginationDropdown,
-  paginationSelect,
-} from "../styles";
+const SelectorVertical = (props: SelectorVerticalProps) => <ChevronsUpDown size={16} {...props} />;
+import { paginationStyle, paginationDropdown, paginationSelect } from "../styles";
 import TablePaginationActions from "../../TablePagination";
 import Chip from "../../Chip";
 import { useSearchParams } from "react-router-dom";
 import { CustomizableButton } from "../../button/customizable-button";
-import {
-  IAuditRiskTableBodyProps,
-  ITypeRisk,
-} from "../../../types/interfaces/i.table";
+import { IAuditRiskTableBodyProps, ITypeRisk } from "../../../types/interfaces/i.table";
 
 const navigateToNewTab = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
@@ -53,7 +44,7 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
     (_: unknown, newPage: number) => {
       setCurrentPagingation(newPage);
     },
-    [setCurrentPagingation]
+    [setCurrentPagingation],
   );
 
   const handleChangeRowsPerPage = useCallback(
@@ -61,13 +52,10 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
       setRowsPerPage(parseInt(event.target.value, 10));
       setCurrentPagingation(0);
     },
-    [setRowsPerPage, setCurrentPagingation]
+    [setRowsPerPage, setCurrentPagingation],
   );
 
-  const handleChange = (
-    riskData: ITypeRisk,
-    event: React.ChangeEvent | React.MouseEvent
-  ) => {
+  const handleChange = (riskData: ITypeRisk, event: React.ChangeEvent | React.MouseEvent) => {
     event.stopPropagation();
     const riskId = riskData.id;
     if (deletedRisks.includes(riskId)) {
@@ -86,8 +74,8 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
     if (riskId) {
       navigateToNewTab(
         `/project-view?projectId=${searchParams.get(
-          "projectId"
-        )}&tab=project-risks&riskId=${riskId}`
+          "projectId",
+        )}&tab=project-risks&riskId=${riskId}`,
       );
     }
   };
@@ -99,18 +87,12 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
           rows
             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
             .map((row: ITypeRisk, index: number) => (
-              <TableRow
-                key={index}
-                sx={singleTheme.tableStyles.primary.body.row}
-              >
+              <TableRow key={index} sx={singleTheme.tableStyles.primary.body.row}>
                 <TableCell sx={cellStyle}>
                   <Checkbox
                     size="small"
                     id={`audit-risk-${row.id}`}
-                    isChecked={
-                      deletedRisks.includes(row.id) ||
-                      checkedRows.includes(row.id)
-                    }
+                    isChecked={deletedRisks.includes(row.id) || checkedRows.includes(row.id)}
                     value={row.id.toString()}
                     onChange={(e) => handleChange(row, e)}
                     onClick={(e) => e.stopPropagation()}
@@ -126,9 +108,7 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
                       : row.title
                     : "-"}
                 </TableCell>
-                <TableCell sx={{ maxWidth: "300px" }}>
-                  {row.status ? row.status : "-"}
-                </TableCell>
+                <TableCell sx={{ maxWidth: "300px" }}>{row.status ? row.status : "-"}</TableCell>
                 <TableCell sx={cellStyle}>
                   {row.severity ? <Chip label={row.severity} /> : "-"}
                 </TableCell>
@@ -168,10 +148,7 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
             ActionsComponent={(props) => <TablePaginationActions {...props} />}
             labelRowsPerPage="Risks per page"
             labelDisplayedRows={({ page, count }) =>
-              `Page ${page + 1} of ${Math.max(
-                0,
-                Math.ceil(count / rowsPerPage)
-              )}`
+              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
             }
             sx={paginationStyle}
             slotProps={{

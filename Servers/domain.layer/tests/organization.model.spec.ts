@@ -49,7 +49,7 @@ class TestOrganizationModel {
     logo?: string,
     members?: number[],
     projects?: number[],
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestOrganizationModel> {
     // Validate name
     if (!name || name.trim().length === 0) {
@@ -57,29 +57,17 @@ class TestOrganizationModel {
     }
 
     if (name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", name);
     }
 
     if (name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", name);
     }
 
     // Validate logo URL if provided
     if (logo !== undefined && logo !== null) {
       if (logo.trim().length === 0) {
-        throw new ValidationException(
-          "Logo URL cannot be empty if provided",
-          "logo",
-          logo
-        );
+        throw new ValidationException("Logo URL cannot be empty if provided", "logo", logo);
       }
 
       try {
@@ -92,11 +80,7 @@ class TestOrganizationModel {
     // Validate members array if provided
     if (members !== undefined && members !== null) {
       if (!Array.isArray(members)) {
-        throw new ValidationException(
-          "Members must be an array",
-          "members",
-          members
-        );
+        throw new ValidationException("Members must be an array", "members", members);
       }
 
       for (const memberId of members) {
@@ -104,7 +88,7 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All member IDs must be positive integers",
             "members",
-            members
+            members,
           );
         }
       }
@@ -113,11 +97,7 @@ class TestOrganizationModel {
     // Validate projects array if provided
     if (projects !== undefined && projects !== null) {
       if (!Array.isArray(projects)) {
-        throw new ValidationException(
-          "Projects must be an array",
-          "projects",
-          projects
-        );
+        throw new ValidationException("Projects must be an array", "projects", projects);
       }
 
       for (const projectId of projects) {
@@ -125,7 +105,7 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All project IDs must be positive integers",
             "projects",
-            projects
+            projects,
           );
         }
       }
@@ -151,18 +131,14 @@ class TestOrganizationModel {
   }): Promise<void> {
     if (updateData.name !== undefined) {
       if (!updateData.name || updateData.name.trim().length === 0) {
-        throw new ValidationException(
-          "Name is required",
-          "name",
-          updateData.name
-        );
+        throw new ValidationException("Name is required", "name", updateData.name);
       }
 
       if (updateData.name.trim().length < 2) {
         throw new ValidationException(
           "Name must be at least 2 characters long",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -170,7 +146,7 @@ class TestOrganizationModel {
         throw new ValidationException(
           "Name must not exceed 255 characters",
           "name",
-          updateData.name
+          updateData.name,
         );
       }
 
@@ -182,7 +158,7 @@ class TestOrganizationModel {
         throw new ValidationException(
           "Logo URL cannot be empty if provided",
           "logo",
-          updateData.logo
+          updateData.logo,
         );
       }
 
@@ -190,11 +166,7 @@ class TestOrganizationModel {
         try {
           new URL(updateData.logo);
         } catch {
-          throw new ValidationException(
-            "Logo must be a valid URL",
-            "logo",
-            updateData.logo
-          );
+          throw new ValidationException("Logo must be a valid URL", "logo", updateData.logo);
         }
       }
 
@@ -203,11 +175,7 @@ class TestOrganizationModel {
 
     if (updateData.members !== undefined) {
       if (!Array.isArray(updateData.members)) {
-        throw new ValidationException(
-          "Members must be an array",
-          "members",
-          updateData.members
-        );
+        throw new ValidationException("Members must be an array", "members", updateData.members);
       }
 
       for (const memberId of updateData.members) {
@@ -215,7 +183,7 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All member IDs must be positive integers",
             "members",
-            updateData.members
+            updateData.members,
           );
         }
       }
@@ -225,11 +193,7 @@ class TestOrganizationModel {
 
     if (updateData.projects !== undefined) {
       if (!Array.isArray(updateData.projects)) {
-        throw new ValidationException(
-          "Projects must be an array",
-          "projects",
-          updateData.projects
-        );
+        throw new ValidationException("Projects must be an array", "projects", updateData.projects);
       }
 
       for (const projectId of updateData.projects) {
@@ -237,7 +201,7 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All project IDs must be positive integers",
             "projects",
-            updateData.projects
+            updateData.projects,
           );
         }
       }
@@ -252,39 +216,23 @@ class TestOrganizationModel {
     }
 
     if (this.name.trim().length < 2) {
-      throw new ValidationException(
-        "Name must be at least 2 characters long",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must be at least 2 characters long", "name", this.name);
     }
 
     if (this.name.trim().length > 255) {
-      throw new ValidationException(
-        "Name must not exceed 255 characters",
-        "name",
-        this.name
-      );
+      throw new ValidationException("Name must not exceed 255 characters", "name", this.name);
     }
 
     if (this.logo && this.logo.trim().length > 0) {
       try {
         new URL(this.logo);
       } catch {
-        throw new ValidationException(
-          "Logo must be a valid URL",
-          "logo",
-          this.logo
-        );
+        throw new ValidationException("Logo must be a valid URL", "logo", this.logo);
       }
     }
 
     if (this.members && !Array.isArray(this.members)) {
-      throw new ValidationException(
-        "Members must be an array",
-        "members",
-        this.members
-      );
+      throw new ValidationException("Members must be an array", "members", this.members);
     }
 
     if (this.members) {
@@ -293,18 +241,14 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All member IDs must be positive integers",
             "members",
-            this.members
+            this.members,
           );
         }
       }
     }
 
     if (this.projects && !Array.isArray(this.projects)) {
-      throw new ValidationException(
-        "Projects must be an array",
-        "projects",
-        this.projects
-      );
+      throw new ValidationException("Projects must be an array", "projects", this.projects);
     }
 
     if (this.projects) {
@@ -313,7 +257,7 @@ class TestOrganizationModel {
           throw new ValidationException(
             "All project IDs must be positive integers",
             "projects",
-            this.projects
+            this.projects,
           );
         }
       }
@@ -329,7 +273,7 @@ class TestOrganizationModel {
       throw new BusinessLogicException(
         "Demo organizations cannot be modified",
         "DEMO_ORGANIZATION_RESTRICTION",
-        { organizationId: this.id, organizationName: this.name }
+        { organizationId: this.id, organizationName: this.name },
       );
     }
     return true;
@@ -349,11 +293,7 @@ class TestOrganizationModel {
 
   addMember(userId: number): void {
     if (!userId || userId < 1) {
-      throw new ValidationException(
-        "User ID must be a positive integer",
-        "userId",
-        userId
-      );
+      throw new ValidationException("User ID must be a positive integer", "userId", userId);
     }
 
     if (!this.members) {
@@ -367,11 +307,7 @@ class TestOrganizationModel {
 
   removeMember(userId: number): void {
     if (!userId || userId < 1) {
-      throw new ValidationException(
-        "User ID must be a positive integer",
-        "userId",
-        userId
-      );
+      throw new ValidationException("User ID must be a positive integer", "userId", userId);
     }
 
     if (this.members) {
@@ -392,7 +328,7 @@ class TestOrganizationModel {
       throw new ValidationException(
         "Project ID must be a positive integer",
         "projectId",
-        projectId
+        projectId,
       );
     }
 
@@ -410,7 +346,7 @@ class TestOrganizationModel {
       throw new ValidationException(
         "Project ID must be a positive integer",
         "projectId",
-        projectId
+        projectId,
       );
     }
 
@@ -492,15 +428,9 @@ class TestOrganizationModel {
   }
 
   // Static methods for database operations
-  static async findByIdWithValidation(
-    id: number
-  ): Promise<TestOrganizationModel> {
+  static async findByIdWithValidation(id: number): Promise<TestOrganizationModel> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     if (id === 999) {
@@ -518,14 +448,12 @@ class TestOrganizationModel {
     });
   }
 
-  static async findByMemberId(
-    memberId: number
-  ): Promise<TestOrganizationModel[]> {
+  static async findByMemberId(memberId: number): Promise<TestOrganizationModel[]> {
     if (!memberId || memberId < 1) {
       throw new ValidationException(
         "Valid member ID is required (must be >= 1)",
         "memberId",
-        memberId
+        memberId,
       );
     }
 
@@ -539,14 +467,12 @@ class TestOrganizationModel {
     ];
   }
 
-  static async findByProjectId(
-    projectId: number
-  ): Promise<TestOrganizationModel[]> {
+  static async findByProjectId(projectId: number): Promise<TestOrganizationModel[]> {
     if (!projectId || projectId < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "projectId",
-        projectId
+        projectId,
       );
     }
 
@@ -562,14 +488,10 @@ class TestOrganizationModel {
 
   static async updateOrganizationById(
     id: number,
-    updateData: any
+    updateData: any,
   ): Promise<[number, TestOrganizationModel[]]> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return [1, [new TestOrganizationModel({ id, ...updateData })]];
@@ -577,11 +499,7 @@ class TestOrganizationModel {
 
   static async deleteOrganizationById(id: number): Promise<number> {
     if (!id || id < 1) {
-      throw new ValidationException(
-        "Valid ID is required (must be >= 1)",
-        "id",
-        id
-      );
+      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
     }
 
     return 1;
@@ -626,7 +544,7 @@ describe("OrganizationModel", () => {
         validOrganizationData.logo,
         validOrganizationData.members,
         validOrganizationData.projects,
-        validOrganizationData.is_demo
+        validOrganizationData.is_demo,
       );
 
       expect(organization).toBeInstanceOf(TestOrganizationModel);
@@ -640,46 +558,31 @@ describe("OrganizationModel", () => {
 
     it("should throw ValidationException for empty name", async () => {
       await expect(
-        TestOrganizationModel.createNewOrganization(
-          "",
-          "https://example.com/logo.png"
-        )
+        TestOrganizationModel.createNewOrganization("", "https://example.com/logo.png"),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for short name", async () => {
       await expect(
-        TestOrganizationModel.createNewOrganization(
-          "A",
-          "https://example.com/logo.png"
-        )
+        TestOrganizationModel.createNewOrganization("A", "https://example.com/logo.png"),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid logo URL", async () => {
       await expect(
-        TestOrganizationModel.createNewOrganization("Test Org", "invalid-url")
+        TestOrganizationModel.createNewOrganization("Test Org", "invalid-url"),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid member IDs", async () => {
       await expect(
-        TestOrganizationModel.createNewOrganization(
-          "Test Org",
-          undefined,
-          [0, -1]
-        )
+        TestOrganizationModel.createNewOrganization("Test Org", undefined, [0, -1]),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project IDs", async () => {
       await expect(
-        TestOrganizationModel.createNewOrganization(
-          "Test Org",
-          undefined,
-          undefined,
-          [0, -1]
-        )
+        TestOrganizationModel.createNewOrganization("Test Org", undefined, undefined, [0, -1]),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -693,18 +596,16 @@ describe("OrganizationModel", () => {
 
     it("should throw ValidationException for invalid name update", async () => {
       const organization = new TestOrganizationModel(validOrganizationData);
-      await expect(
-        organization.updateOrganization({ name: "A" })
-      ).rejects.toThrow(ValidationException);
+      await expect(organization.updateOrganization({ name: "A" })).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
   describe("validateOrganizationData", () => {
     it("should pass validation with valid data", async () => {
       const organization = new TestOrganizationModel(validOrganizationData);
-      await expect(
-        organization.validateOrganizationData()
-      ).resolves.not.toThrow();
+      await expect(organization.validateOrganizationData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid name", async () => {
@@ -712,9 +613,7 @@ describe("OrganizationModel", () => {
         ...validOrganizationData,
         name: "A",
       });
-      await expect(organization.validateOrganizationData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(organization.validateOrganizationData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -744,9 +643,7 @@ describe("OrganizationModel", () => {
         ...validOrganizationData,
         is_demo: true,
       });
-      expect(() => organization.canBeModified()).toThrow(
-        BusinessLogicException
-      );
+      expect(() => organization.canBeModified()).toThrow(BusinessLogicException);
     });
   });
 
@@ -1098,23 +995,21 @@ describe("OrganizationModel", () => {
 
   describe("findByIdWithValidation", () => {
     it("should find organization by valid ID", async () => {
-      const organization = await TestOrganizationModel.findByIdWithValidation(
-        1
-      );
+      const organization = await TestOrganizationModel.findByIdWithValidation(1);
       expect(organization).toBeInstanceOf(TestOrganizationModel);
       expect(organization.id).toBe(1);
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestOrganizationModel.findByIdWithValidation(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestOrganizationModel.findByIdWithValidation(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent ID", async () => {
-      await expect(
-        TestOrganizationModel.findByIdWithValidation(999)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestOrganizationModel.findByIdWithValidation(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -1126,9 +1021,7 @@ describe("OrganizationModel", () => {
     });
 
     it("should throw ValidationException for invalid member ID", async () => {
-      await expect(TestOrganizationModel.findByMemberId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestOrganizationModel.findByMemberId(0)).rejects.toThrow(ValidationException);
     });
   });
 
@@ -1140,25 +1033,22 @@ describe("OrganizationModel", () => {
     });
 
     it("should throw ValidationException for invalid project ID", async () => {
-      await expect(TestOrganizationModel.findByProjectId(0)).rejects.toThrow(
-        ValidationException
-      );
+      await expect(TestOrganizationModel.findByProjectId(0)).rejects.toThrow(ValidationException);
     });
   });
 
   describe("updateOrganizationById", () => {
     it("should update organization by ID", async () => {
-      const [affected, updated] =
-        await TestOrganizationModel.updateOrganizationById(1, {
-          name: "Updated Name",
-        });
+      const [affected, updated] = await TestOrganizationModel.updateOrganizationById(1, {
+        name: "Updated Name",
+      });
       expect(affected).toBe(1);
       expect(updated[0].name).toBe("Updated Name");
     });
 
     it("should throw ValidationException for invalid ID", async () => {
       await expect(
-        TestOrganizationModel.updateOrganizationById(0, { name: "Updated" })
+        TestOrganizationModel.updateOrganizationById(0, { name: "Updated" }),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -1170,9 +1060,9 @@ describe("OrganizationModel", () => {
     });
 
     it("should throw ValidationException for invalid ID", async () => {
-      await expect(
-        TestOrganizationModel.deleteOrganizationById(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestOrganizationModel.deleteOrganizationById(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 

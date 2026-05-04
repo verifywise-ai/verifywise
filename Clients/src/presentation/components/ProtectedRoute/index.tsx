@@ -2,10 +2,7 @@ import { useSelector } from "react-redux";
 import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
-import {
-  setUserExists,
-  clearAuthState,
-} from "../../../application/redux/auth/authSlice";
+import { setUserExists, clearAuthState } from "../../../application/redux/auth/authSlice";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import CustomizableToast from "../Toast";
 import { extractUserToken } from "../../../application/tools/extractToken";
@@ -13,7 +10,7 @@ import { IProtectedRouteProps } from "../../types/widget.types";
 
 const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
   const authState = useSelector(
-    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth
+    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
   );
   const location = useLocation();
   const dispatch = useDispatch();
@@ -52,10 +49,7 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
               routeUrl: `/users/${user?.id}`,
             });
           } catch (tokenError) {
-            console.warn(
-              "Token validation failed, clearing auth state:",
-              tokenError
-            );
+            console.warn("Token validation failed, clearing auth state:", tokenError);
             dispatch(clearAuthState());
             hasValidatedRef.current = false;
             return; // Exit early since token is invalid

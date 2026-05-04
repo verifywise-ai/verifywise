@@ -33,7 +33,7 @@ export const aiTrustCenterTabPanelStyle = {
 export const aiTrustCenterTabListStyle = {
   minHeight: "20px",
   "& .MuiTabs-flexContainer": { columnGap: "34px" },
-}; 
+};
 
 export const aiTrustCenterPreviewButtonStyle = {
   backgroundColor: `${brand.primary}`,

@@ -1,10 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
-import {
-  IChipProps,
-  ChipVariant,
-  ChipColorConfig,
-} from "../types/interfaces/i.chip";
+import { IChipProps, ChipVariant, ChipColorConfig } from "../types/interfaces/i.chip";
 import { background, status, risk } from "../themes/palette";
 
 /**
@@ -173,8 +169,7 @@ const darkenColor = (hex: string, percent: number): string => {
   const b = parseInt(color.substring(4, 6), 16);
 
   // Darken each channel
-  const darkenChannel = (channel: number) =>
-    Math.max(0, Math.floor(channel * (1 - percent / 100)));
+  const darkenChannel = (channel: number) => Math.max(0, Math.floor(channel * (1 - percent / 100)));
 
   const newR = darkenChannel(r);
   const newG = darkenChannel(g);
@@ -191,7 +186,7 @@ const getChipColors = (
   label: string,
   variant?: ChipVariant,
   backgroundColor?: string,
-  textColor?: string
+  textColor?: string,
 ): ChipColorConfig => {
   // Custom colors take priority
   if (backgroundColor && textColor) {
@@ -281,7 +276,11 @@ const Chip: React.FC<IChipProps> = ({
         lineHeight: 1,
       }}
     >
-      {icon && <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 0.5 }}>{icon}</Box>}
+      {icon && (
+        <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 0.5 }}>
+          {icon}
+        </Box>
+      )}
       {label}
     </Box>
   );

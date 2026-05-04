@@ -25,11 +25,7 @@ interface CheckProps {
   isOutlined?: boolean;
 }
 
-export function Check({
-  text,
-  variant = "info",
-  isOutlined = false,
-}: CheckProps) {
+export function Check({ text, variant = "info", isOutlined = false }: CheckProps) {
   const theme = useTheme();
   const colors = {
     success: theme.palette.success.main,
@@ -64,14 +60,11 @@ export function Check({
       gap={isOutlined ? theme.spacing(6) : theme.spacing(4)}
       alignItems={"center"}
     >
-      <Box lineHeight={0}>
-        {renderIcon()}
-      </Box>
+      <Box lineHeight={0}>{renderIcon()}</Box>
       <Typography
         component="span"
         sx={{
-          color:
-            variant === "info" ? theme.palette.text.tertiary : colors[variant],
+          color: variant === "info" ? theme.palette.text.tertiary : colors[variant],
           opacity: 0.8,
           fontSize: 11,
         }}

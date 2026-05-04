@@ -25,14 +25,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import Chip from "../../components/Chip";
-import {
-  ArrowLeft,
-  Bot,
-  Radar,
-  Wifi,
-  ShieldAlert,
-  Tags,
-} from "lucide-react";
+import { ArrowLeft, Bot, Radar, Wifi, ShieldAlert, Tags } from "lucide-react";
 import { PROVIDER_ICONS, VENDOR_ICON_MAP } from "../../components/ProviderIcons";
 import {
   getTools,
@@ -40,10 +33,7 @@ import {
   updateToolStatus,
   GetToolsParams,
 } from "../../../application/repository/shadowAi.repository";
-import {
-  IShadowAiTool,
-  ShadowAiToolStatus,
-} from "../../../domain/interfaces/i.shadowAi";
+import { IShadowAiTool, ShadowAiToolStatus } from "../../../domain/interfaces/i.shadowAi";
 import singleTheme from "../../themes/v1SingleTheme";
 import { palette } from "../../themes/palette";
 import { EmptyState } from "../../components/EmptyState";
@@ -74,16 +64,29 @@ const STATUS_OPTIONS = [
   { _id: "dismissed", name: "Dismissed" },
 ];
 
-const STATUS_CONFIG: Record<
-  ShadowAiToolStatus,
-  { label: string; color: string; bg: string }
-> = {
+const STATUS_CONFIG: Record<ShadowAiToolStatus, { label: string; color: string; bg: string }> = {
   detected: { label: "Detected", color: palette.status.info.text, bg: palette.status.info.bg },
-  under_review: { label: "Under review", color: palette.status.warning.text, bg: palette.status.warning.bg },
-  approved: { label: "Approved", color: palette.status.success.text, bg: palette.status.success.bg },
-  restricted: { label: "Restricted", color: palette.accent.orange.text, bg: palette.accent.orange.bg },
+  under_review: {
+    label: "Under review",
+    color: palette.status.warning.text,
+    bg: palette.status.warning.bg,
+  },
+  approved: {
+    label: "Approved",
+    color: palette.status.success.text,
+    bg: palette.status.success.bg,
+  },
+  restricted: {
+    label: "Restricted",
+    color: palette.accent.orange.text,
+    bg: palette.accent.orange.bg,
+  },
   blocked: { label: "Blocked", color: palette.status.error.text, bg: palette.status.error.bg },
-  dismissed: { label: "Dismissed", color: palette.status.default.text, bg: palette.status.default.bg },
+  dismissed: {
+    label: "Dismissed",
+    color: palette.status.default.text,
+    bg: palette.status.default.bg,
+  },
 };
 
 function ToolIcon({ vendor, size = 18 }: { vendor?: string; size?: number }) {
@@ -103,39 +106,55 @@ export default function AIToolsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ShadowAiToolStatus | "all">("all");
-  const [selectedTool, setSelectedTool] = useState<(IShadowAiTool & {
-    departments?: { department: string; user_count: number }[];
-    top_users?: { user_email: string; event_count: number }[];
-  }) | null>(null);
+  const [selectedTool, setSelectedTool] = useState<
+    | (IShadowAiTool & {
+        departments?: { department: string; user_count: number }[];
+        top_users?: { user_email: string; event_count: number }[];
+      })
+    | null
+  >(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [governanceModalOpen, setGovernanceModalOpen] = useState(false);
 
   // ─── Sorting ───
-  const TOOLS_COLUMNS: SortableColumn[] = useMemo(() => [
-    { id: "name", label: "Tool" },
-    { id: "status", label: "Status" },
-    { id: "total_users", label: "Users" },
-    { id: "total_events", label: "Events" },
-    { id: "risk_score", label: "Risk score", tooltip: "Calculated nightly (0–100). Weighted formula: approval status (40%), data & compliance policies (25%), usage volume (15%), department sensitivity (20%)." },
-    { id: "last_seen_at", label: "Last seen" },
-  ], []);
+  const TOOLS_COLUMNS: SortableColumn[] = useMemo(
+    () => [
+      { id: "name", label: "Tool" },
+      { id: "status", label: "Status" },
+      { id: "total_users", label: "Users" },
+      { id: "total_events", label: "Events" },
+      {
+        id: "risk_score",
+        label: "Risk score",
+        tooltip:
+          "Calculated nightly (0–100). Weighted formula: approval status (40%), data & compliance policies (25%), usage volume (15%), department sensitivity (20%).",
+      },
+      { id: "last_seen_at", label: "Last seen" },
+    ],
+    [],
+  );
 
   const { sortConfig: toolsSortConfig, handleSort: handleToolsSort } =
     useTableSort("vw_shadow_ai_tools_sort");
 
-  const getToolValue = useCallback(
-    (row: IShadowAiTool, key: string): string | number => {
-      switch (key) {
-        case "name": return row.name;
-        case "status": return row.status;
-        case "total_users": return row.total_users;
-        case "total_events": return row.total_events;
-        case "risk_score": return row.risk_score ?? 0;
-        case "last_seen_at": return row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
-        default: return "";
-      }
-    }, []
-  );
+  const getToolValue = useCallback((row: IShadowAiTool, key: string): string | number => {
+    switch (key) {
+      case "name":
+        return row.name;
+      case "status":
+        return row.status;
+      case "total_users":
+        return row.total_users;
+      case "total_events":
+        return row.total_events;
+      case "risk_score":
+        return row.risk_score ?? 0;
+      case "last_seen_at":
+        return row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
+      default:
+        return "";
+    }
+  }, []);
 
   const sortedTools = useSortedRows(tools, toolsSortConfig, getToolValue);
 
@@ -163,7 +182,9 @@ export default function AIToolsPage() {
       }
     };
     fetchData();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [page, statusFilter]);
 
   // Simple refetch for mutation handlers
@@ -208,10 +229,7 @@ export default function AIToolsPage() {
     navigate(`/shadow-ai/tools/${tool.id}`);
   };
 
-  const handleStatusChange = async (
-    id: number,
-    newStatus: ShadowAiToolStatus
-  ) => {
+  const handleStatusChange = async (id: number, newStatus: ShadowAiToolStatus) => {
     try {
       await updateToolStatus(id, newStatus);
       fetchTools();
@@ -232,18 +250,13 @@ export default function AIToolsPage() {
   if (selectedTool) {
     const cfg = STATUS_CONFIG[selectedTool.status];
     return (
-      <PageHeaderExtended
-        title={selectedTool.name}
-        description="AI tool details"
-      >
+      <PageHeaderExtended title={selectedTool.name} description="AI tool details">
         <Stack direction="row" alignItems="center" gap="8px">
           <IconButton onClick={handleBack} size="small">
             <ArrowLeft size={16} strokeWidth={1.5} />
           </IconButton>
           <ToolIcon vendor={selectedTool.vendor} size={22} />
-          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
-            {selectedTool.name}
-          </Typography>
+          <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{selectedTool.name}</Typography>
           <Chip
             label={cfg.label}
             size="small"
@@ -327,10 +340,7 @@ export default function AIToolsPage() {
                 id="tool-status-select"
                 value={selectedTool.status}
                 onChange={(e: SelectChangeEvent<string | number>) =>
-                  handleStatusChange(
-                    selectedTool.id,
-                    e.target.value as ShadowAiToolStatus
-                  )
+                  handleStatusChange(selectedTool.id, e.target.value as ShadowAiToolStatus)
                 }
                 items={Object.entries(STATUS_CONFIG).map(([key, val]) => ({
                   _id: key,
@@ -352,12 +362,7 @@ export default function AIToolsPage() {
                   onClick={() => setGovernanceModalOpen(true)}
                 />
               )}
-              {selectedTool.model_inventory_id && (
-                <Chip
-                  label="Governed"
-                  size="small"
-                />
-              )}
+              {selectedTool.model_inventory_id && <Chip label="Governed" size="small" />}
             </Stack>
 
             {/* Governance wizard modal */}
@@ -375,22 +380,35 @@ export default function AIToolsPage() {
             <Stack direction="row" gap="16px">
               {selectedTool.departments && selectedTool.departments.length > 0 && (
                 <Stack sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>
-                    Departments
-                  </Typography>
+                  <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>Departments</Typography>
                   <TableContainer sx={singleTheme.tableStyles.primary.frame}>
                     <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                          <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "70%" }}>Department</TableCell>
-                          <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "30%" }}>Users</TableCell>
+                          <TableCell
+                            sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "70%" }}
+                          >
+                            Department
+                          </TableCell>
+                          <TableCell
+                            sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "30%" }}
+                          >
+                            Users
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {selectedTool.departments.map((d) => (
-                          <TableRow key={d.department} sx={singleTheme.tableStyles.primary.body.row}>
-                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.department}</TableCell>
-                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{d.user_count}</TableCell>
+                          <TableRow
+                            key={d.department}
+                            sx={singleTheme.tableStyles.primary.body.row}
+                          >
+                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                              {d.department}
+                            </TableCell>
+                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                              {d.user_count}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -401,22 +419,35 @@ export default function AIToolsPage() {
 
               {selectedTool.top_users && selectedTool.top_users.length > 0 && (
                 <Stack sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>
-                    Top users
-                  </Typography>
+                  <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>Top users</Typography>
                   <TableContainer sx={singleTheme.tableStyles.primary.frame}>
                     <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                          <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "70%" }}>User</TableCell>
-                          <TableCell sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "30%" }}>Events</TableCell>
+                          <TableCell
+                            sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "70%" }}
+                          >
+                            User
+                          </TableCell>
+                          <TableCell
+                            sx={{ ...singleTheme.tableStyles.primary.header.cell, width: "30%" }}
+                          >
+                            Events
+                          </TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {selectedTool.top_users.map((u) => (
-                          <TableRow key={u.user_email} sx={singleTheme.tableStyles.primary.body.row}>
-                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{u.user_email}</TableCell>
-                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{u.event_count}</TableCell>
+                          <TableRow
+                            key={u.user_email}
+                            sx={singleTheme.tableStyles.primary.body.row}
+                          >
+                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                              {u.user_email}
+                            </TableCell>
+                            <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                              {u.event_count}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -439,7 +470,6 @@ export default function AIToolsPage() {
       helpArticlePath="shadow-ai/ai-tools"
       tipBoxEntity="shadow-ai-tools"
     >
-
       <Stack direction="row" justifyContent="flex-end">
         <Select
           id="tools-status-filter"
@@ -489,7 +519,12 @@ export default function AIToolsPage() {
               {sortedTools.map((t) => {
                 const cfg = STATUS_CONFIG[t.status];
                 return (
-                  <TableRow key={t.id} hover sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }} onClick={() => handleToolClick(t)}>
+                  <TableRow
+                    key={t.id}
+                    hover
+                    sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
+                    onClick={() => handleToolClick(t)}
+                  >
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                       <Stack direction="row" alignItems="center" gap="6px">
                         <ToolIcon vendor={t.vendor} />
@@ -505,9 +540,15 @@ export default function AIToolsPage() {
                         uppercase={false}
                       />
                     </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{t.total_users}</TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{t.total_events}</TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>{t.risk_score ?? 0}</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {t.total_users}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {t.total_events}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      {t.risk_score ?? 0}
+                    </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                       {t.last_seen_at ? new Date(t.last_seen_at).toLocaleDateString() : "—"}
                     </TableCell>
@@ -531,8 +572,8 @@ export default function AIToolsPage() {
                     opacity: 0.7,
                   }}
                 >
-                  Showing {(page - 1) * ROWS_PER_PAGE + 1} -{" "}
-                  {Math.min(page * ROWS_PER_PAGE, total)} of {total} tool(s)
+                  Showing {(page - 1) * ROWS_PER_PAGE + 1} - {Math.min(page * ROWS_PER_PAGE, total)}{" "}
+                  of {total} tool(s)
                 </TableCell>
                 <TablePagination
                   count={total}
@@ -540,9 +581,7 @@ export default function AIToolsPage() {
                   onPageChange={(_e, newPage) => setPage(newPage + 1)}
                   rowsPerPage={ROWS_PER_PAGE}
                   rowsPerPageOptions={[ROWS_PER_PAGE]}
-                  ActionsComponent={(props) => (
-                    <TablePaginationActions {...props} />
-                  )}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage=""
                   labelDisplayedRows={({ page: p, count }) =>
                     `Page ${p + 1} of ${Math.max(0, Math.ceil(count / ROWS_PER_PAGE))}`
@@ -592,5 +631,3 @@ export default function AIToolsPage() {
     </PageHeaderExtended>
   );
 }
-
-

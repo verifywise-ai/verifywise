@@ -8,11 +8,11 @@ export const EUdatabaseForHighRiskAI = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We engage with notified bodies or conduct internal conformity assessments.",
+        title: "We engage with notified bodies or conduct internal conformity assessments.",
         description:
           "Collaboration with notified bodies or conducting internal reviews ensures rigorous evaluation of AI system compliance.",
-        implementation_details: "Initiated internal assessments and began collaboration with notified bodies",
+        implementation_details:
+          "Initiated internal assessments and began collaboration with notified bodies",
         evidence_description: "Internal audit reports and notified body assessment results",
         feedback_description: "Ongoing collaboration with external bodies",
       },
@@ -27,12 +27,13 @@ export const EUdatabaseForHighRiskAI = [
     subControls: [
       {
         order_no: 1,
-        title:
-          "We establish processes to respond to national authority requests.",
+        title: "We establish processes to respond to national authority requests.",
         description:
           "Well-defined processes enable efficient and accurate responses to regulatory inquiries or audits.",
-        implementation_details: "Documenting and setting up internal processes for regulatory inquiries",
-        evidence_description: "Standard operating procedures (SOP) for responding to authority requests",
+        implementation_details:
+          "Documenting and setting up internal processes for regulatory inquiries",
+        evidence_description:
+          "Standard operating procedures (SOP) for responding to authority requests",
         feedback_description: "Need further alignment on procedures",
       },
     ],

@@ -10,7 +10,9 @@ import { generateUserTokens } from "../auth.utils";
 import { generateToken, generateRefreshToken } from "../jwt.utils";
 
 const mockGenerateToken = generateToken as jest.MockedFunction<typeof generateToken>;
-const mockGenerateRefreshToken = generateRefreshToken as jest.MockedFunction<typeof generateRefreshToken>;
+const mockGenerateRefreshToken = generateRefreshToken as jest.MockedFunction<
+  typeof generateRefreshToken
+>;
 
 describe("auth.utils", () => {
   beforeAll(() => {
@@ -55,7 +57,7 @@ describe("auth.utils", () => {
           email: "user@test.com",
           roleName: "Admin",
           organizationId: 10,
-        })
+        }),
       );
     });
 
@@ -69,7 +71,7 @@ describe("auth.utils", () => {
         expect.objectContaining({
           httpOnly: true,
           path: "/api/users",
-        })
+        }),
       );
     });
 
@@ -84,7 +86,7 @@ describe("auth.utils", () => {
         expect.objectContaining({
           sameSite: "lax",
           secure: false,
-        })
+        }),
       );
     });
 
@@ -97,9 +99,7 @@ describe("auth.utils", () => {
       const cookieOptions = cookieCall[2];
       const thirtyDaysMs = 30 * 24 * 3600 * 1000;
 
-      expect(cookieOptions.expires.getTime()).toBeGreaterThanOrEqual(
-        before + thirtyDaysMs - 1000
-      );
+      expect(cookieOptions.expires.getTime()).toBeGreaterThanOrEqual(before + thirtyDaysMs - 1000);
     });
   });
 });

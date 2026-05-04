@@ -68,11 +68,7 @@ const TOOLS: ToolDefinition[] = [
     sso_support: true,
     encryption_at_rest: true,
     data_residency: "US",
-    uri_paths: [
-      "/backend-api/conversation",
-      "/backend-api/models",
-      "/api/auth/session",
-    ],
+    uri_paths: ["/backend-api/conversation", "/backend-api/models", "/api/auth/session"],
   },
   {
     name: "Claude AI",
@@ -88,11 +84,7 @@ const TOOLS: ToolDefinition[] = [
     sso_support: true,
     encryption_at_rest: true,
     data_residency: "US",
-    uri_paths: [
-      "/api/messages",
-      "/api/organizations",
-      "/api/chat_conversations",
-    ],
+    uri_paths: ["/api/messages", "/api/organizations", "/api/chat_conversations"],
   },
   {
     name: "Cursor",
@@ -108,11 +100,7 @@ const TOOLS: ToolDefinition[] = [
     sso_support: false,
     encryption_at_rest: true,
     data_residency: null,
-    uri_paths: [
-      "/aiserver.v1.AiService/StreamChat",
-      "/api/usage",
-      "/api/auth/me",
-    ],
+    uri_paths: ["/aiserver.v1.AiService/StreamChat", "/api/usage", "/api/auth/me"],
   },
   {
     name: "GitHub Copilot",
@@ -128,11 +116,7 @@ const TOOLS: ToolDefinition[] = [
     sso_support: true,
     encryption_at_rest: true,
     data_residency: "US",
-    uri_paths: [
-      "/v1/engines/copilot-codex/completions",
-      "/v1/completions",
-      "/telemetry",
-    ],
+    uri_paths: ["/v1/engines/copilot-codex/completions", "/v1/completions", "/telemetry"],
   },
   {
     name: "Midjourney",
@@ -282,21 +266,11 @@ const DEPARTMENTS: Record<string, { titles: string[]; manager: string }> = {
     manager: "emily.wright@acmecorp.com",
   },
   Finance: {
-    titles: [
-      "Financial Analyst",
-      "Senior Accountant",
-      "Finance Manager",
-      "Revenue Analyst",
-    ],
+    titles: ["Financial Analyst", "Senior Accountant", "Finance Manager", "Revenue Analyst"],
     manager: "robert.james@acmecorp.com",
   },
   Legal: {
-    titles: [
-      "Legal Counsel",
-      "Compliance Officer",
-      "Privacy Analyst",
-      "Paralegal",
-    ],
+    titles: ["Legal Counsel", "Compliance Officer", "Privacy Analyst", "Paralegal"],
     manager: "maria.rodriguez@acmecorp.com",
   },
   HR: {
@@ -311,21 +285,88 @@ const DEPARTMENTS: Record<string, { titles: string[]; manager: string }> = {
 };
 
 const FIRST_NAMES = [
-  "James", "Olivia", "Liam", "Emma", "Noah", "Ava", "Ethan", "Sophia",
-  "Mason", "Isabella", "Lucas", "Mia", "Alexander", "Charlotte", "Daniel",
-  "Amelia", "Henry", "Harper", "Sebastian", "Evelyn", "Jack", "Abigail",
-  "Owen", "Ella", "Ryan", "Lily", "Nathan", "Grace", "Caleb", "Chloe",
-  "Adrian", "Zoe", "Leo", "Hannah", "Isaac", "Nora", "Aaron", "Riley",
-  "Connor", "Aria",
+  "James",
+  "Olivia",
+  "Liam",
+  "Emma",
+  "Noah",
+  "Ava",
+  "Ethan",
+  "Sophia",
+  "Mason",
+  "Isabella",
+  "Lucas",
+  "Mia",
+  "Alexander",
+  "Charlotte",
+  "Daniel",
+  "Amelia",
+  "Henry",
+  "Harper",
+  "Sebastian",
+  "Evelyn",
+  "Jack",
+  "Abigail",
+  "Owen",
+  "Ella",
+  "Ryan",
+  "Lily",
+  "Nathan",
+  "Grace",
+  "Caleb",
+  "Chloe",
+  "Adrian",
+  "Zoe",
+  "Leo",
+  "Hannah",
+  "Isaac",
+  "Nora",
+  "Aaron",
+  "Riley",
+  "Connor",
+  "Aria",
 ];
 
 const LAST_NAMES = [
-  "Anderson", "Martinez", "Thompson", "Garcia", "Robinson", "Clark",
-  "Lewis", "Lee", "Walker", "Hall", "Young", "Hernandez", "King",
-  "Wright", "Lopez", "Hill", "Scott", "Green", "Adams", "Baker",
-  "Nelson", "Carter", "Mitchell", "Perez", "Roberts", "Turner",
-  "Phillips", "Campbell", "Parker", "Evans", "Edwards", "Collins",
-  "Stewart", "Morris", "Murphy", "Rivera", "Cook", "Rogers", "Morgan",
+  "Anderson",
+  "Martinez",
+  "Thompson",
+  "Garcia",
+  "Robinson",
+  "Clark",
+  "Lewis",
+  "Lee",
+  "Walker",
+  "Hall",
+  "Young",
+  "Hernandez",
+  "King",
+  "Wright",
+  "Lopez",
+  "Hill",
+  "Scott",
+  "Green",
+  "Adams",
+  "Baker",
+  "Nelson",
+  "Carter",
+  "Mitchell",
+  "Perez",
+  "Roberts",
+  "Turner",
+  "Phillips",
+  "Campbell",
+  "Parker",
+  "Evans",
+  "Edwards",
+  "Collins",
+  "Stewart",
+  "Morris",
+  "Murphy",
+  "Rivera",
+  "Cook",
+  "Rogers",
+  "Morgan",
   "Cooper",
 ];
 
@@ -408,13 +449,11 @@ function weightedPick(rng: SeededRandom, weights: number[]): number {
 // Check whether shadow AI tables exist in the public schema
 // ---------------------------------------------------------------------------
 
-async function shadowAiTablesExist(
-  transaction: Transaction
-): Promise<boolean> {
-  const result = await sequelize.query(
-    `SELECT to_regclass('shadow_ai_tools') AS tbl`,
-    { type: QueryTypes.SELECT, transaction }
-  );
+async function shadowAiTablesExist(transaction: Transaction): Promise<boolean> {
+  const result = await sequelize.query(`SELECT to_regclass('shadow_ai_tools') AS tbl`, {
+    type: QueryTypes.SELECT,
+    transaction,
+  });
   return !!(result[0] as any)?.tbl;
 }
 
@@ -427,7 +466,7 @@ const BATCH_SIZE = 100;
 export async function insertShadowAiDemoData(
   organizationId: number,
   userId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> {
   // Gracefully skip if shadow AI tables don't exist
   if (!(await shadowAiTablesExist(transaction))) {
@@ -437,7 +476,7 @@ export async function insertShadowAiDemoData(
   // Idempotent: skip if tools already seeded for this organization
   const existing = await sequelize.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM shadow_ai_tools WHERE organization_id = :organizationId`,
-    { type: QueryTypes.SELECT, transaction, replacements: { organizationId } }
+    { type: QueryTypes.SELECT, transaction, replacements: { organizationId } },
   );
   if (parseInt(existing[0].count) > 0) {
     return;
@@ -451,12 +490,8 @@ export async function insertShadowAiDemoData(
   const toolIdMap = new Map<string, number>();
 
   for (const tool of TOOLS) {
-    const firstDetected = new Date(
-      now.getTime() - rng.int(7, 30) * 24 * 60 * 60 * 1000
-    );
-    const lastSeen = new Date(
-      now.getTime() - rng.int(0, 3) * 24 * 60 * 60 * 1000
-    );
+    const firstDetected = new Date(now.getTime() - rng.int(7, 30) * 24 * 60 * 60 * 1000);
+    const lastSeen = new Date(now.getTime() - rng.int(0, 3) * 24 * 60 * 60 * 1000);
 
     const [inserted] = await sequelize.query<{ id: number }>(
       `INSERT INTO shadow_ai_tools
@@ -489,7 +524,7 @@ export async function insertShadowAiDemoData(
           sso_support: tool.sso_support,
           encryption_at_rest: tool.encryption_at_rest,
         },
-      }
+      },
     );
 
     toolIdMap.set(tool.name, inserted.id);
@@ -558,7 +593,7 @@ export async function insertShadowAiDemoData(
     batch.forEach((evt, idx) => {
       const prefix = `e${insertedEvents + idx}`;
       valuePlaceholders.push(
-        `(:organizationId, :${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me)`
+        `(:organizationId, :${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me)`,
       );
       flatReplacements[`${prefix}_ue`] = evt.user_email;
       flatReplacements[`${prefix}_dest`] = evt.destination;
@@ -577,7 +612,7 @@ export async function insertShadowAiDemoData(
         (organization_id, user_email, destination, uri_path, http_method, action, detected_tool_id,
          event_timestamp, ingested_at, department, job_title, manager_email)
        VALUES ${valuePlaceholders.join(", ")}`,
-      { replacements: flatReplacements, transaction }
+      { replacements: flatReplacements, transaction },
     );
 
     insertedEvents += batch.length;
@@ -585,8 +620,7 @@ export async function insertShadowAiDemoData(
 
   // ---- 3. Build and insert daily rollups ----
 
-  const rollupKey = (date: string, email: string, toolId: number) =>
-    `${date}|${email}|${toolId}`;
+  const rollupKey = (date: string, email: string, toolId: number) => `${date}|${email}|${toolId}`;
 
   interface RollupAccum {
     rollup_date: string;
@@ -633,7 +667,7 @@ export async function insertShadowAiDemoData(
     batch.forEach((r, idx) => {
       const prefix = `r${insertedRollups + idx}`;
       valuePlaceholders.push(
-        `(:organizationId, :${prefix}_rd, :${prefix}_ue, :${prefix}_tid, :${prefix}_dept, :${prefix}_te, :${prefix}_pe, :${prefix}_be, NOW())`
+        `(:organizationId, :${prefix}_rd, :${prefix}_ue, :${prefix}_tid, :${prefix}_dept, :${prefix}_te, :${prefix}_pe, :${prefix}_be, NOW())`,
       );
       flatReplacements[`${prefix}_rd`] = r.rollup_date;
       flatReplacements[`${prefix}_ue`] = r.user_email;
@@ -648,7 +682,7 @@ export async function insertShadowAiDemoData(
       `INSERT INTO shadow_ai_daily_rollups
         (organization_id, rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events, created_at)
        VALUES ${valuePlaceholders.join(", ")}`,
-      { replacements: flatReplacements, transaction }
+      { replacements: flatReplacements, transaction },
     );
 
     insertedRollups += batch.length;
@@ -656,8 +690,7 @@ export async function insertShadowAiDemoData(
 
   // ---- 4. Build and insert monthly rollups ----
 
-  const monthlyKey = (month: string, toolId: number, dept: string) =>
-    `${month}|${toolId}|${dept}`;
+  const monthlyKey = (month: string, toolId: number, dept: string) => `${month}|${toolId}|${dept}`;
 
   interface MonthlyAccum {
     rollup_month: string;
@@ -711,7 +744,7 @@ export async function insertShadowAiDemoData(
           blocked_events: acc.blocked_events,
         },
         transaction,
-      }
+      },
     );
   }
 
@@ -722,24 +755,21 @@ export async function insertShadowAiDemoData(
   const rules = [
     {
       name: "New AI tool alert",
-      description:
-        "Fires when a previously unseen AI tool is detected in network traffic.",
+      description: "Fires when a previously unseen AI tool is detected in network traffic.",
       trigger_type: "new_tool_detected",
       trigger_config: {},
       actions: { notify: true, create_alert: true },
     },
     {
       name: "High risk tool alert",
-      description:
-        "Fires when a detected tool has a risk score above the configured threshold.",
+      description: "Fires when a detected tool has a risk score above the configured threshold.",
       trigger_type: "risk_score_exceeded",
       trigger_config: { risk_score_min: 70 },
       actions: { notify: true, create_alert: true, auto_block: false },
     },
     {
       name: "Sensitive department usage",
-      description:
-        "Fires when employees in sensitive departments use shadow AI tools.",
+      description: "Fires when employees in sensitive departments use shadow AI tools.",
       trigger_type: "sensitive_department",
       trigger_config: { departments: ["Finance", "Legal", "HR"] },
       actions: { notify: true, create_alert: true },
@@ -765,7 +795,7 @@ export async function insertShadowAiDemoData(
           actions: JSON.stringify(rule.actions),
           created_by: userId,
         },
-      }
+      },
     );
 
     ruleIdMap.set(rule.trigger_type, inserted.id);
@@ -866,9 +896,7 @@ export async function insertShadowAiDemoData(
 
   for (const alert of alerts) {
     const ruleId = ruleIdMap.get(alert.trigger_type);
-    const firedAt = new Date(
-      now.getTime() - alert.days_ago * 24 * 60 * 60 * 1000
-    );
+    const firedAt = new Date(now.getTime() - alert.days_ago * 24 * 60 * 60 * 1000);
 
     await sequelize.query(
       `INSERT INTO shadow_ai_alert_history
@@ -886,7 +914,7 @@ export async function insertShadowAiDemoData(
           actions_taken: JSON.stringify(alert.actions_taken),
           fired_at: firedAt.toISOString(),
         },
-      }
+      },
     );
   }
 }
@@ -897,7 +925,7 @@ export async function insertShadowAiDemoData(
 
 export async function deleteShadowAiDemoData(
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> {
   // Gracefully skip if shadow AI tables don't exist
   if (!(await shadowAiTablesExist(transaction))) {
@@ -922,10 +950,10 @@ export async function deleteShadowAiDemoData(
 
   for (const table of tables) {
     try {
-      await sequelize.query(
-        `DELETE FROM ${table} WHERE organization_id = :organizationId`,
-        { replacements: { organizationId }, transaction }
-      );
+      await sequelize.query(`DELETE FROM ${table} WHERE organization_id = :organizationId`, {
+        replacements: { organizationId },
+        transaction,
+      });
     } catch {
       // Table may not exist — safe to skip
     }

@@ -57,7 +57,10 @@ const CreateOrgModal = ({
   return (
     <StandardModal
       isOpen={isOpen}
-      onClose={() => { setName(""); onClose(); }}
+      onClose={() => {
+        setName("");
+        onClose();
+      }}
       title="Create Organization"
       description="Enter a name for the new organization"
       submitButtonText="Create"
@@ -118,8 +121,8 @@ const DeleteOrgModal = ({
       maxWidth="480px"
     >
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
-        This will permanently delete the organization and all its users, projects,
-        and data. This action cannot be undone.
+        This will permanently delete the organization and all its users, projects, and data. This
+        action cannot be undone.
       </Typography>
     </StandardModal>
   );
@@ -214,9 +217,7 @@ const Organizations = () => {
           onChange={setSearchTerm}
           sx={{ maxWidth: 320 }}
         />
-        <Typography
-          sx={{ fontSize: "13px", color: "text.secondary", whiteSpace: "nowrap" }}
-        >
+        <Typography sx={{ fontSize: "13px", color: "text.secondary", whiteSpace: "nowrap" }}>
           {filteredOrganizations.length} organization{filteredOrganizations.length !== 1 ? "s" : ""}
         </Typography>
       </Stack>
@@ -243,11 +244,11 @@ const Organizations = () => {
           <Table>
             <TableHead>
               <TableRow sx={tableStyles.header.row}>
-                {([
+                {[
                   { field: "name" as const, label: "Organization" },
                   { field: "user_count" as const, label: "Users" },
                   { field: "created_at" as const, label: "Created" },
-                ]).map(({ field, label }) => {
+                ].map(({ field, label }) => {
                   const isActive = sortField === field;
                   const SortIcon = isActive && sortDirection === "desc" ? ArrowDown : ArrowUp;
                   return (
@@ -263,10 +264,7 @@ const Organizations = () => {
                     >
                       <Stack direction="row" alignItems="center" gap={0.5}>
                         {label}
-                        <SortIcon
-                          size={12}
-                          style={{ opacity: isActive ? 1 : 0.3 }}
-                        />
+                        <SortIcon size={12} style={{ opacity: isActive ? 1 : 0.3 }} />
                       </Stack>
                     </TableCell>
                   );
@@ -285,9 +283,7 @@ const Organizations = () => {
                     </Typography>
                   </TableCell>
                   <TableCell sx={tableStyles.body.cell}>
-                    <Typography sx={{ fontSize: 13 }}>
-                      {org.user_count ?? 0}
-                    </Typography>
+                    <Typography sx={{ fontSize: 13 }}>{org.user_count ?? 0}</Typography>
                   </TableCell>
                   <TableCell sx={tableStyles.body.cell}>
                     {new Date(org.created_at).toLocaleDateString("en-US", {
@@ -301,9 +297,7 @@ const Organizations = () => {
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() =>
-                          navigate(`/super-admin/organizations/${org.id}/users`)
-                        }
+                        onClick={() => navigate(`/super-admin/organizations/${org.id}/users`)}
                         sx={tableStyles.body.button}
                       >
                         View users

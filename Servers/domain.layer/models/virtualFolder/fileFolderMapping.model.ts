@@ -19,13 +19,7 @@
  * @module domain.layer/models/virtualFolder
  */
 
-import {
-  Table,
-  Column,
-  DataType,
-  Model,
-  ForeignKey,
-} from "sequelize-typescript";
+import { Table, Column, DataType, Model, ForeignKey } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { FileManagerModel } from "../fileManager/fileManager.model";
 import { VirtualFolderModel } from "./virtualFolder.model";
@@ -36,7 +30,10 @@ import { IFileFolderMapping } from "../../interfaces/i.virtualFolder";
   timestamps: false,
   underscored: true,
 })
-export class FileFolderMappingModel extends Model<FileFolderMappingModel> implements IFileFolderMapping {
+export class FileFolderMappingModel
+  extends Model<FileFolderMappingModel>
+  implements IFileFolderMapping
+{
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

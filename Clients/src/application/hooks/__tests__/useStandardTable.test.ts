@@ -33,7 +33,7 @@ describe("useStandardTable", () => {
         defaultSortColumn: "name",
         defaultSortDirection: "asc",
         sortComparator,
-      })
+      }),
     );
 
     expect(result.current.sortedRows[0].name).toBe("Alice");
@@ -48,7 +48,7 @@ describe("useStandardTable", () => {
         defaultSortColumn: "name",
         defaultSortDirection: "asc",
         sortComparator,
-      })
+      }),
     );
 
     act(() => {
@@ -68,7 +68,7 @@ describe("useStandardTable", () => {
         defaultSortColumn: "name",
         defaultSortDirection: "asc",
         sortComparator,
-      })
+      }),
     );
 
     // asc → desc → clear
@@ -88,7 +88,7 @@ describe("useStandardTable", () => {
         defaultSortColumn: "id",
         defaultRowsPerPage: 10,
         sortComparator,
-      })
+      }),
     );
 
     expect(result.current.totalCount).toBe(25);
@@ -108,7 +108,7 @@ describe("useStandardTable", () => {
         storageKey: "persist-test",
         defaultSortColumn: "id",
         sortComparator,
-      })
+      }),
     );
 
     const stored = JSON.parse(localStorage.getItem("verifywise_persist-test_sorting")!);

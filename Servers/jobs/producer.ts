@@ -2,7 +2,18 @@ export * from "../services/slack/slackProducer";
 
 import { scheduleDailyNotification } from "../services/slack/slackProducer";
 import logger from "../utils/logger/fileLogger";
-import { scheduleReportNotification, scheduleVendorReviewDateNotification, schedulePMMHourlyCheck, scheduleShadowAiJobs, schedulePolicyDueSoonNotification, scheduleAgentDiscoverySync, scheduleAiDetectionScanCheck, scheduleAiGatewayRiskDetection, scheduleAiGatewayCacheCleanup, scheduleMcpGatewayCleanup } from "../services/automations/automationProducer";
+import {
+  scheduleReportNotification,
+  scheduleVendorReviewDateNotification,
+  schedulePMMHourlyCheck,
+  scheduleShadowAiJobs,
+  schedulePolicyDueSoonNotification,
+  scheduleAgentDiscoverySync,
+  scheduleAiDetectionScanCheck,
+  scheduleAiGatewayRiskDetection,
+  scheduleAiGatewayCacheCleanup,
+  scheduleMcpGatewayCleanup,
+} from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
   await scheduleDailyNotification();

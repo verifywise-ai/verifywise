@@ -49,11 +49,7 @@ export async function fileDeleteRisk(
     };
   }
 
-  const currentRisk = await getRiskByIdQuery(
-    parsed.data.risk_id,
-    organizationId,
-    false,
-  );
+  const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);
 
   if (!currentRisk) {
     return {
@@ -64,22 +60,12 @@ export async function fileDeleteRisk(
 
   const transaction = await sequelize.transaction();
   try {
-    const workflow = await ensureAiActionWorkflow(
-      organizationId,
-      userId,
-      transaction,
-    );
+    const workflow = await ensureAiActionWorkflow(organizationId, userId, transaction);
 
-    const workflowSteps = await getWorkflowStepsQuery(
-      workflow.id!,
-      organizationId,
-      transaction,
-    );
+    const workflowSteps = await getWorkflowStepsQuery(workflow.id!, organizationId, transaction);
 
     if (!workflowSteps || workflowSteps.length === 0) {
-      throw new Error(
-        "AI Action workflow has no steps — cannot file approval request",
-      );
+      throw new Error("AI Action workflow has no steps — cannot file approval request");
     }
 
     const preview = renderDeleteRiskDetailedPreview(parsed.data, {
@@ -117,10 +103,7 @@ export async function fileDeleteRisk(
     };
   } catch (error) {
     await transaction.rollback();
-    logger.error(
-      `[${DELETE_RISK_TOOL_NAME}] failed to file approval request`,
-      error,
-    );
+    logger.error(`[${DELETE_RISK_TOOL_NAME}] failed to file approval request`, error);
     return {
       status: "error",
       message: `Failed to file approval request: ${error instanceof Error ? error.message : "unknown error"}`,

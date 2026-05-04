@@ -20,10 +20,7 @@ import type {
 import CustomizableToast from "../../../components/Toast";
 import Alert from "../../../components/Alert";
 import { useDispatch } from "react-redux";
-import {
-  setUserExists,
-  setAuthToken,
-} from "../../../../application/redux/auth/authSlice";
+import { setUserExists, setAuthToken } from "../../../../application/redux/auth/authSlice";
 import { createNewUser } from "../../../../application/repository/user.repository";
 import useUsers from "../../../../application/hooks/useUsers";
 
@@ -42,9 +39,7 @@ const initialOrganizationState: OrganizationFormValues = {
   organizationName: "",
 };
 
-const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
-  multiTenant = false,
-}) => {
+const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({ multiTenant = false }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { users } = useUsers();
@@ -58,8 +53,7 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
   const [organizationValues, setOrganizationValues] =
     useState<OrganizationFormValues>(initialOrganizationState);
   // State for organization form errors
-  const [organizationErrors, setOrganizationErrors] =
-    useState<OrganizationFormErrors>({});
+  const [organizationErrors, setOrganizationErrors] = useState<OrganizationFormErrors>({});
 
   // State to track which form to show (for multi-tenant)
   const [showOrganizationForm, setShowOrganizationForm] = useState(multiTenant);
@@ -81,17 +75,14 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
   }, []);
 
   // Handle input field changes for user form
-  const handleChange =
-    (prop: keyof FormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValues({ ...values, [prop]: event.target.value });
-      setErrors({ ...errors, [prop]: "" }); // Clear error for the specific field
-    };
+  const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [prop]: event.target.value });
+    setErrors({ ...errors, [prop]: "" }); // Clear error for the specific field
+  };
 
   // Handle input field changes for organization form
   const handleOrganizationChange =
-    (prop: keyof OrganizationFormValues) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (prop: keyof OrganizationFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setOrganizationValues({
         ...organizationValues,
         [prop]: event.target.value,
@@ -100,13 +91,10 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
     };
 
   // Handle organization form submission (Next button)
-  const handleOrganizationSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleOrganizationSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const { isFormValid, errors } =
-      validateOrganizationForm(organizationValues);
+    const { isFormValid, errors } = validateOrganizationForm(organizationValues);
     if (!isFormValid) {
       setOrganizationErrors(errors);
       return;
@@ -129,9 +117,7 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
     }
 
     // If multi-tenant, include organization data in the request
-    const requestBody = multiTenant
-      ? { ...values, organization: organizationValues }
-      : values;
+    const requestBody = multiTenant ? { ...values, organization: organizationValues } : values;
 
     await createNewUser({
       userData: requestBody,
@@ -242,9 +228,7 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
           />
         </Suspense>
       )}
-      {isSubmitting && (
-        <CustomizableToast title="Processing your request. Please wait..." />
-      )}
+      {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <Background
         style={{
           position: "absolute",
@@ -331,9 +315,7 @@ const RegisterAdmin: React.FC<{ multiTenant: boolean }> = ({
               <span style={{ color: singleTheme.textColors.theme }}>Wise</span>
             </Typography>
             <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
-              {multiTenant
-                ? "Create admin account"
-                : "Create VerifyWise admin account"}
+              {multiTenant ? "Create admin account" : "Create VerifyWise admin account"}
             </Typography>
             <Stack sx={{ gap: theme.spacing(7.5) }}>
               <Field

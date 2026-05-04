@@ -4,7 +4,7 @@ import { getNumberOfApiTokensQuery } from "../utils/tokens.utils";
 export const validateTokenCreation = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void | Response> => {
   if (req.role !== "Admin") {
     return res.status(403).json({
@@ -19,12 +19,12 @@ export const validateTokenCreation = async (
     });
   }
   next();
-}
+};
 
 export const validateTokenDeletion = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void | Response> => {
   if (req.role !== "Admin") {
     return res.status(403).json({
@@ -32,4 +32,4 @@ export const validateTokenDeletion = async (
     });
   }
   next();
-}
+};

@@ -8,11 +8,7 @@
  */
 
 import { Column, DataType, Model, Table } from "sequelize-typescript";
-import {
-  IScan,
-  ScanStatus,
-  IUpdateScanProgressInput,
-} from "../../interfaces/i.aiDetection";
+import { IScan, ScanStatus, IUpdateScanProgressInput } from "../../interfaces/i.aiDetection";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -135,7 +131,7 @@ export class ScanModel extends Model<ScanModel> implements IScan {
     repositoryUrl: string,
     repositoryOwner: string,
     repositoryName: string,
-    triggeredBy: number
+    triggeredBy: number,
   ): ScanModel {
     const scan = new ScanModel();
     scan.repository_url = repositoryUrl;
@@ -159,24 +155,15 @@ export class ScanModel extends Model<ScanModel> implements IScan {
    */
   validateScanData(): void {
     if (!this.repository_url) {
-      throw new ValidationException(
-        "Repository URL is required",
-        "repository_url"
-      );
+      throw new ValidationException("Repository URL is required", "repository_url");
     }
 
     if (!this.repository_owner) {
-      throw new ValidationException(
-        "Repository owner is required",
-        "repository_owner"
-      );
+      throw new ValidationException("Repository owner is required", "repository_owner");
     }
 
     if (!this.repository_name) {
-      throw new ValidationException(
-        "Repository name is required",
-        "repository_name"
-      );
+      throw new ValidationException("Repository name is required", "repository_name");
     }
 
     if (!this.triggered_by) {
@@ -187,7 +174,7 @@ export class ScanModel extends Model<ScanModel> implements IScan {
     if (this.repository_url.length > 500) {
       throw new ValidationException(
         "Repository URL exceeds maximum length of 500 characters",
-        "repository_url"
+        "repository_url",
       );
     }
   }

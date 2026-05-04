@@ -72,10 +72,7 @@ const formatRelativeTime = (date: string | Date): string => {
   return `${targetDate.format("MMMM D, YYYY")} at ${targetDate.format("h:mm A")}`;
 };
 
-const HistorySidebar: React.FC<HistorySidebarProps> = ({
-  isOpen,
-  modelInventoryId,
-}) => {
+const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryId }) => {
   const theme = useTheme();
   const { userId: currentUserId } = useAuth();
   const { data, isLoading } = useModelInventoryChangeHistory(modelInventoryId);
@@ -92,9 +89,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
   // Fetch avatars for all users in the history
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(
-        new Set(history.map((entry) => entry.changed_by_user_id))
-      );
+      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
 
       // Batch fetch all avatars to avoid multiple re-renders
       const newAvatarUrls: { [userId: number]: string | null } = {};
@@ -135,10 +130,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
     return Object.values(groups).sort((a, b) => {
       // Sort by timestamp descending (newest first)
-      return (
-        new Date(b[0].changed_at).getTime() -
-        new Date(a[0].changed_at).getTime()
-      );
+      return new Date(b[0].changed_at).getTime() - new Date(a[0].changed_at).getTime();
     });
   }, [history]);
 
@@ -154,8 +146,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
     const creatorName = isCurrentUser
       ? "you"
       : creationEntry.user_name && creationEntry.user_surname
-      ? `${creationEntry.user_name} ${creationEntry.user_surname}`
-      : creationEntry.user_email || "Unknown User";
+        ? `${creationEntry.user_name} ${creationEntry.user_surname}`
+        : creationEntry.user_email || "Unknown User";
 
     const creationDate = dayjs(creationEntry.changed_at).format("MMMM D, YYYY");
     const creationTime = dayjs(creationEntry.changed_at).format("h:mm A");
@@ -169,7 +161,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
     // Sort history by timestamp and get the most recent
     const sortedHistory = [...history].sort(
-      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
+      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime(),
     );
     const lastEntry = sortedHistory[0];
 
@@ -185,8 +177,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
     const userName = isCurrentUser
       ? "You"
       : firstEntry.user_name && firstEntry.user_surname
-      ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-      : firstEntry.user_email || "Unknown User";
+        ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+        : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -224,14 +216,10 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 textDecoration: firstEntry.action === "updated" ? "underline" : "none",
               }}
             >
-              {firstEntry.action === "created" &&
-                `${userName} created this model`}
+              {firstEntry.action === "created" && `${userName} created this model`}
               {firstEntry.action === "updated" &&
-                `${userName} updated ${group.length} field${
-                  group.length > 1 ? "s" : ""
-                }`}
-              {firstEntry.action === "deleted" &&
-                `${userName} deleted this model`}
+                `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
+              {firstEntry.action === "deleted" && `${userName} deleted this model`}
             </Typography>
             <Stack direction="row" gap="8px" alignItems="center">
               <Clock size={10} color={theme.palette.text.secondary} />
@@ -274,9 +262,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
               </Typography>
 
               {/* Show change based on action type */}
-              {entry.action === "created" &&
-              entry.new_value &&
-              entry.new_value !== "-" ? (
+              {entry.action === "created" && entry.new_value && entry.new_value !== "-" ? (
                 <Box
                   sx={{
                     padding: "4px 8px",
@@ -413,10 +399,18 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   color: theme.palette.text.secondary,
                 }}
               >
-                <Box component="span" sx={{ fontWeight: 400 }}>Created by</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creatorName}</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 400 }}>on</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{creationInfo.creationDate} at {creationInfo.creationTime}</Box>
+                <Box component="span" sx={{ fontWeight: 400 }}>
+                  Created by
+                </Box>{" "}
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {creationInfo.creatorName}
+                </Box>{" "}
+                <Box component="span" sx={{ fontWeight: 400 }}>
+                  on
+                </Box>{" "}
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {creationInfo.creationDate} at {creationInfo.creationTime}
+                </Box>
               </Typography>
             ) : lastUpdateInfo ? (
               <Typography
@@ -425,8 +419,12 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   color: theme.palette.text.secondary,
                 }}
               >
-                <Box component="span" sx={{ fontWeight: 400 }}>Last updated on</Box>{" "}
-                <Box component="span" sx={{ fontWeight: 600 }}>{lastUpdateInfo.updateDate} at {lastUpdateInfo.updateTime}</Box>
+                <Box component="span" sx={{ fontWeight: 400 }}>
+                  Last updated on
+                </Box>{" "}
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {lastUpdateInfo.updateDate} at {lastUpdateInfo.updateTime}
+                </Box>
               </Typography>
             ) : (
               <Typography
@@ -440,118 +438,119 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
             )}
           </Box>
 
-        {/* Content */}
-        <Box
-          sx={{
-            flex: 1,
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
+          {/* Content */}
           <Box
             sx={{
-              height: "100%",
-              overflow: "auto",
-              padding: "16px",
-              // Custom scrollbar styling - invisible by default, visible on hover
-              "&::-webkit-scrollbar": {
-                width: "8px",
-              },
-              "&::-webkit-scrollbar-track": {
-                background: "transparent",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "transparent",
-                borderRadius: "4px",
-              },
-              "&:hover::-webkit-scrollbar-thumb": {
-                background: "#C1C7CD",
-              },
-              "&::-webkit-scrollbar-thumb:hover": {
-                background: "text.muted",
-              },
-              // Firefox scrollbar styling
-              scrollbarWidth: "thin",
-              scrollbarColor: "transparent transparent",
-              "&:hover": {
-                scrollbarColor: "#C1C7CD transparent",
-              },
+              flex: 1,
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-          {isLoading ? (
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: 200,
+                height: "100%",
+                overflow: "auto",
+                padding: "16px",
+                // Custom scrollbar styling - invisible by default, visible on hover
+                "&::-webkit-scrollbar": {
+                  width: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "transparent",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "transparent",
+                  borderRadius: "4px",
+                },
+                "&:hover::-webkit-scrollbar-thumb": {
+                  background: "#C1C7CD",
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  background: "text.muted",
+                },
+                // Firefox scrollbar styling
+                scrollbarWidth: "thin",
+                scrollbarColor: "transparent transparent",
+                "&:hover": {
+                  scrollbarColor: "#C1C7CD transparent",
+                },
               }}
             >
-              <CircularProgress size={28} />
+              {isLoading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: 200,
+                  }}
+                >
+                  <CircularProgress size={28} />
+                </Box>
+              ) : groupedHistory.length === 0 ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 200,
+                    textAlign: "center",
+                    padding: "0 24px",
+                  }}
+                >
+                  <Clock size={32} strokeWidth={1.5} color={brand.primary} opacity={0.6} />
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      marginTop: "16px",
+                    }}
+                  >
+                    Activity History
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: theme.palette.text.secondary,
+                      marginTop: "8px",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Automatically tracks every change to this model.
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: theme.palette.text.secondary,
+                      marginTop: "4px",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    See what your team is working on and what updates they've made, in real time.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>{groupedHistory.map(renderHistoryEntry)}</Box>
+              )}
             </Box>
-          ) : groupedHistory.length === 0 ? (
+            {/* Bottom fade overlay */}
             <Box
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 200,
-                textAlign: "center",
-                padding: "0 24px",
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "60px",
+                background:
+                  "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
+                pointerEvents: "none",
+                borderRadius: "0 0 8px 8px",
               }}
-            >
-              <Clock size={32} strokeWidth={1.5} color={brand.primary} opacity={0.6} />
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  marginTop: "16px",
-                }}
-              >
-                Activity History
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                  marginTop: "8px",
-                  lineHeight: 1.6,
-                }}
-              >
-                Automatically tracks every change to this model.
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: theme.palette.text.secondary,
-                  marginTop: "4px",
-                  lineHeight: 1.6,
-                }}
-              >
-                See what your team is working on and what updates they've made, in real time.
-              </Typography>
-            </Box>
-          ) : (
-            <Box>{groupedHistory.map(renderHistoryEntry)}</Box>
-          )}
+            />
           </Box>
-          {/* Bottom fade overlay */}
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: "60px",
-              background: "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
-              pointerEvents: "none",
-              borderRadius: "0 0 8px 8px",
-            }}
-          />
         </Box>
-      </Box>
       </Box>
     </Collapse>
   );

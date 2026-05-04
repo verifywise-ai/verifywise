@@ -8,12 +8,7 @@
  */
 
 import { Column, DataType, Model, Table } from "sequelize-typescript";
-import {
-  IFinding,
-  FindingType,
-  ConfidenceLevel,
-  IFilePath,
-} from "../../interfaces/i.aiDetection";
+import { IFinding, FindingType, ConfidenceLevel, IFilePath } from "../../interfaces/i.aiDetection";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -110,7 +105,7 @@ export class FindingModel extends Model<FindingModel> implements IFinding {
     confidence: ConfidenceLevel,
     filePaths: IFilePath[],
     description?: string,
-    documentationUrl?: string
+    documentationUrl?: string,
   ): FindingModel {
     const finding = new FindingModel();
     finding.scan_id = scanId;
@@ -147,7 +142,7 @@ export class FindingModel extends Model<FindingModel> implements IFinding {
     if (!["library", "dependency"].includes(this.finding_type)) {
       throw new ValidationException(
         "Finding type must be 'library' or 'dependency'",
-        "finding_type"
+        "finding_type",
       );
     }
 
@@ -164,10 +159,7 @@ export class FindingModel extends Model<FindingModel> implements IFinding {
     }
 
     if (!["high", "medium", "low"].includes(this.confidence)) {
-      throw new ValidationException(
-        "Confidence must be 'high', 'medium', or 'low'",
-        "confidence"
-      );
+      throw new ValidationException("Confidence must be 'high', 'medium', or 'low'", "confidence");
     }
   }
 

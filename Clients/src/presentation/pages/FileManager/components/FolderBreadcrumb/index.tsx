@@ -15,10 +15,7 @@ import {
   Files as FilesIcon,
   FileQuestion as UncategorizedIcon,
 } from "lucide-react";
-import {
-  IVirtualFolder,
-  SelectedFolder,
-} from "../../../../../domain/interfaces/i.virtualFolder";
+import { IVirtualFolder, SelectedFolder } from "../../../../../domain/interfaces/i.virtualFolder";
 import { text, background, border as borderPalette } from "../../../../themes/palette";
 
 interface FolderBreadcrumbProps {
@@ -92,9 +89,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
               backgroundColor: `${background.hover}`,
             }}
           >
-            <Box sx={{ display: "flex", color: `${text.icon}` }}>
-              {getIcon(selectedFolder)}
-            </Box>
+            <Box sx={{ display: "flex", color: `${text.icon}` }}>{getIcon(selectedFolder)}</Box>
             <Typography
               sx={{
                 fontSize: 13,
@@ -123,9 +118,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
                   minWidth: "80px",
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: `${text.muted}` }}>
-                  Loading...
-                </Typography>
+                <Typography sx={{ fontSize: 13, color: `${text.muted}` }}>Loading...</Typography>
               </Box>
             </>
           ) : (

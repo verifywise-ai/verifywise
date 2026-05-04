@@ -1,6 +1,9 @@
 import { generateReport } from "../repository/entity.repository";
 import { downloadFileFromManager } from "../repository/file.repository";
-import { triggerBrowserDownload, extractFilenameFromHeaders } from "../../presentation/utils/browserDownload.utils";
+import {
+  triggerBrowserDownload,
+  extractFilenameFromHeaders,
+} from "../../presentation/utils/browserDownload.utils";
 
 interface GenerateReportProps {
   projectId: number | null;
@@ -29,8 +32,8 @@ export const handleDownload = async (fileId: string, fileName: string): Promise<
   }
 
   try {
-   const response = await downloadFileFromManager({
-      id: typeof fileId === 'string' ? fileId : String(fileId),
+    const response = await downloadFileFromManager({
+      id: typeof fileId === "string" ? fileId : String(fileId),
     });
     const blob = new Blob([response], { type: response.type });
     const url = window.URL.createObjectURL(blob);
@@ -57,21 +60,20 @@ export const handleAutoDownload = async (requestBody: GenerateReportProps): Prom
   try {
     const response = await generateReport({
       routeUrl: `/reporting/generate-report`,
-      body: requestBody
+      body: requestBody,
     });
 
     if (response.status === 200) {
       // Extract filename from Content-Disposition header (DRY: using shared utility)
-      const fileName = extractFilenameFromHeaders(response.headers, 'report');
+      const fileName = extractFilenameFromHeaders(response.headers, "report");
 
       // Get blob content and content type
       const blobFileContent = response.data;
-      const responseType = response.headers.get('Content-Type');
+      const responseType = response.headers.get("Content-Type");
 
       // Create blob and trigger download
       const blob = new Blob([blobFileContent], { type: responseType || undefined });
       triggerBrowserDownload(blob, fileName);
-
 
       return response.status;
     } else {

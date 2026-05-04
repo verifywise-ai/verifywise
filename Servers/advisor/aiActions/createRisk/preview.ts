@@ -20,9 +20,7 @@ export function renderCreateRiskPreview(input: AgentCreateRiskInput): string {
   tail.push(`mitigation: ${input.mitigation_status}`);
   tail.push(`deadline ${input.deadline}`);
   if (input.project_ids && input.project_ids.length > 0) {
-    tail.push(
-      `project${input.project_ids.length > 1 ? "s" : ""} ${input.project_ids.join(", ")}`,
-    );
+    tail.push(`project${input.project_ids.length > 1 ? "s" : ""} ${input.project_ids.join(", ")}`);
   }
 
   return `Create a ${qualifier}risk "${input.risk_name}" (${tail.join("; ")})`;

@@ -19,7 +19,7 @@ const TEST_AUTH_TOKEN = [
       tenantId: "abc123",
       roleName: "Admin",
       expire: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    })
+    }),
   ),
   "test-signature",
 ].join(".");
@@ -29,16 +29,10 @@ const Dashboard = () => <div data-testid="dashboard">Dashboard</div>;
 const LoginPage = () => <div data-testid="login-page">Login</div>;
 
 /** Helper that renders ProtectedRoute within a <Routes> so redirects work. */
-function renderProtected(options: {
-  route?: string;
-  authToken?: string;
-}) {
+function renderProtected(options: { route?: string; authToken?: string }) {
   return renderWithProviders(
     <Routes>
-      <Route
-        path="/"
-        element={<ProtectedRoute Component={Dashboard} />}
-      />
+      <Route path="/" element={<ProtectedRoute Component={Dashboard} />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/vendors"
@@ -51,7 +45,7 @@ function renderProtected(options: {
         authToken: options.authToken ?? "",
         userExists: true,
       },
-    }
+    },
   );
 }
 

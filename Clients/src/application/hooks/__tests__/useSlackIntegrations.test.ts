@@ -15,19 +15,21 @@ describe("useSlackIntegrations", () => {
 
   it("fetches and transforms slack integrations", async () => {
     mockGetIntegrations.mockResolvedValue({
-      data: [{
-        id: 1,
-        scope: "incoming-webhook",
-        team_name: "My Team",
-        team_id: "T123",
-        channel: "#general",
-        channel_id: "C123",
-        access_token: "tok",
-        configuration_url: "https://slack.com",
-        url: "https://hooks.slack.com",
-        is_active: true,
-        routing_type: ["Membership and roles"],
-      }],
+      data: [
+        {
+          id: 1,
+          scope: "incoming-webhook",
+          team_name: "My Team",
+          team_id: "T123",
+          channel: "#general",
+          channel_id: "C123",
+          access_token: "tok",
+          configuration_url: "https://slack.com",
+          url: "https://hooks.slack.com",
+          is_active: true,
+          routing_type: ["Membership and roles"],
+        },
+      ],
     });
 
     const { result } = renderHook(() => useSlackIntegrations(1));

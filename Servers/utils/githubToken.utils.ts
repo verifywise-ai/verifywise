@@ -52,9 +52,7 @@ async function ensureGitHubTokensTableExists(): Promise<void> {
  * @param organizationId - The organization ID
  * @returns The token record or null if not found
  */
-export async function getGitHubTokenQuery(
-  organizationId: number
-): Promise<IGitHubToken | null> {
+export async function getGitHubTokenQuery(organizationId: number): Promise<IGitHubToken | null> {
   validateOrganizationId(organizationId);
   // Ensure table exists before querying
   await ensureGitHubTokensTableExists();
@@ -65,7 +63,7 @@ export async function getGitHubTokenQuery(
      WHERE organization_id = :organizationId
      ORDER BY created_at DESC
      LIMIT 1`,
-    { type: QueryTypes.SELECT, replacements: { organizationId } }
+    { type: QueryTypes.SELECT, replacements: { organizationId } },
   );
 
   return token || null;
@@ -78,7 +76,7 @@ export async function getGitHubTokenQuery(
  * @returns Status info about whether token is configured
  */
 export async function getGitHubTokenStatusQuery(
-  organizationId: number
+  organizationId: number,
 ): Promise<IGitHubTokenStatus> {
   const token = await getGitHubTokenQuery(organizationId);
 
@@ -107,7 +105,7 @@ export async function saveGitHubTokenQuery(
   plainToken: string,
   userId: number,
   organizationId: number,
-  tokenName?: string
+  tokenName?: string,
 ): Promise<IGitHubToken> {
   validateOrganizationId(organizationId);
   // Ensure table exists before saving
@@ -135,7 +133,7 @@ export async function saveGitHubTokenQuery(
           id: existing.id,
           organizationId,
         },
-      }
+      },
     );
 
     return {
@@ -159,7 +157,7 @@ export async function saveGitHubTokenQuery(
         tokenName: tokenName || "GitHub Personal Access Token",
         userId,
       },
-    }
+    },
   );
 
   const insertedId = result.length > 0 ? result[0].id : 0;
@@ -180,9 +178,7 @@ export async function saveGitHubTokenQuery(
  * @param organizationId - The organization ID
  * @returns True if token was deleted, false if no token existed
  */
-export async function deleteGitHubTokenQuery(
-  organizationId: number
-): Promise<boolean> {
+export async function deleteGitHubTokenQuery(organizationId: number): Promise<boolean> {
   validateOrganizationId(organizationId);
   // Check if token exists first
   const existingToken = await getGitHubTokenQuery(organizationId);
@@ -190,10 +186,10 @@ export async function deleteGitHubTokenQuery(
     return false;
   }
 
-  await sequelize.query(
-    `DELETE FROM github_tokens WHERE organization_id = :organizationId`,
-    { type: QueryTypes.DELETE, replacements: { organizationId } }
-  );
+  await sequelize.query(`DELETE FROM github_tokens WHERE organization_id = :organizationId`, {
+    type: QueryTypes.DELETE,
+    replacements: { organizationId },
+  });
 
   return true;
 }
@@ -204,9 +200,7 @@ export async function deleteGitHubTokenQuery(
  * @param organizationId - The organization ID
  * @returns The decrypted token or null if not found
  */
-export async function getDecryptedGitHubToken(
-  organizationId: number
-): Promise<string | null> {
+export async function getDecryptedGitHubToken(organizationId: number): Promise<string | null> {
   const token = await getGitHubTokenQuery(organizationId);
 
   if (!token) {
@@ -226,15 +220,13 @@ export async function getDecryptedGitHubToken(
  *
  * @param organizationId - The organization ID
  */
-export async function updateGitHubTokenLastUsed(
-  organizationId: number
-): Promise<void> {
+export async function updateGitHubTokenLastUsed(organizationId: number): Promise<void> {
   validateOrganizationId(organizationId);
   await sequelize.query(
     `UPDATE github_tokens
      SET last_used_at = NOW(), updated_at = NOW()
      WHERE organization_id = :organizationId`,
-    { type: QueryTypes.UPDATE, replacements: { organizationId } }
+    { type: QueryTypes.UPDATE, replacements: { organizationId } },
   );
 }
 
@@ -248,9 +240,7 @@ export async function updateGitHubTokenLastUsed(
  * @param token - The plain text token to test
  * @returns Test result with validity and rate limit info
  */
-export async function testGitHubToken(
-  token: string
-): Promise<IGitHubTokenTestResponse> {
+export async function testGitHubToken(token: string): Promise<IGitHubTokenTestResponse> {
   try {
     const response = await fetch("https://api.github.com/user", {
       headers: {
@@ -288,9 +278,7 @@ export async function testGitHubToken(
 
     // Parse scopes from header
     const scopesHeader = response.headers.get("X-OAuth-Scopes");
-    const scopes = scopesHeader
-      ? scopesHeader.split(",").map((s) => s.trim())
-      : [];
+    const scopes = scopesHeader ? scopesHeader.split(",").map((s) => s.trim()) : [];
 
     return {
       valid: true,

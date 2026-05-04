@@ -43,9 +43,7 @@ export interface DocxImportResult {
  * @param buffer - Raw DOCX file bytes.
  * @returns Sanitized HTML string and any conversion warnings.
  */
-export async function convertDocxToHtml(
-  buffer: Buffer
-): Promise<DocxImportResult> {
+export async function convertDocxToHtml(buffer: Buffer): Promise<DocxImportResult> {
   const result = await mammoth.convertToHtml(
     { buffer },
     {
@@ -57,7 +55,7 @@ export async function convertDocxToHtml(
         "p[style-name='Heading 5'] => h3:fresh",
         "p[style-name='Heading 6'] => h3:fresh",
       ],
-    }
+    },
   );
 
   // Collapse any remaining h4/h5/h6 elements and strip class attributes
@@ -86,9 +84,7 @@ export async function convertDocxToHtml(
     allowedSchemes: ["http", "https", "blob"],
   });
 
-  const warnings = result.messages
-    .filter((m) => m.type === "warning")
-    .map((m) => m.message);
+  const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
 
   return { html, warnings };
 }

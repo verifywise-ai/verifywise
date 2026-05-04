@@ -479,18 +479,16 @@ function runTests() {
     const detectedTypes = new Set(result.matches.map((m) => m.findingType));
 
     // Check if expected patterns were found
-    const missingPatterns = testCase.expectedPatterns.filter(
-      (p) => !detectedPatterns.has(p)
-    );
-    const missingTypes = testCase.expectedTypes.filter(
-      (t) => !detectedTypes.has(t)
-    );
+    const missingPatterns = testCase.expectedPatterns.filter((p) => !detectedPatterns.has(p));
+    const missingTypes = testCase.expectedTypes.filter((t) => !detectedTypes.has(t));
 
     const success = missingPatterns.length === 0 && missingTypes.length === 0;
 
     if (success) {
       console.log(`✅ ${testCase.name}`);
-      console.log(`   Detected: ${[...detectedPatterns].join(", ")} (${[...detectedTypes].join(", ")})`);
+      console.log(
+        `   Detected: ${[...detectedPatterns].join(", ")} (${[...detectedTypes].join(", ")})`,
+      );
       passed++;
     } else {
       console.log(`❌ ${testCase.name}`);

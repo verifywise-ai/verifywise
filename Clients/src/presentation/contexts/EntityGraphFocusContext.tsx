@@ -4,7 +4,7 @@
  * Used by EntityGraphModal to tell the Entity Graph which entity to center on.
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
 
 interface FocusEntity {
   id: string;
@@ -28,7 +28,7 @@ export const EntityGraphFocusProvider: React.FC<{ children: ReactNode }> = ({ ch
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(
     () => ({ focusEntity, setFocusEntity, clearFocus }),
-    [focusEntity, clearFocus]
+    [focusEntity, clearFocus],
   );
 
   return (

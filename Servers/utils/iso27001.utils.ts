@@ -15,7 +15,11 @@ import { ISO27001SubClauseRisksModel } from "../domain.layer/frameworks/ISO-2700
 import { IISO27001AnnexControl } from "../domain.layer/interfaces/i.iso27001AnnexControl";
 import { ISO27001AnnexControlRisksModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexControlRisks.model";
 import { validateRiskArray } from "./utility.utils";
-import { getEvidenceFilesForEntity, getEvidenceFilesForEntities, deleteAllFileEntityLinksForEntities } from "./files/evidenceFiles.utils";
+import {
+  getEvidenceFilesForEntity,
+  getEvidenceFilesForEntities,
+  deleteAllFileEntityLinksForEntities,
+} from "./files/evidenceFiles.utils";
 
 const getDemoSubClauses = (): Object[] => {
   const subClauses = [];
@@ -24,9 +28,7 @@ const getDemoSubClauses = (): Object[] => {
       subClauses.push({
         implementation_description: subClause.implementation_description || "",
         auditor_feedback:
-          "auditor_feedback" in subClause
-            ? (subClause as any).auditor_feedback || ""
-            : "",
+          "auditor_feedback" in subClause ? (subClause as any).auditor_feedback || "" : "",
       });
     }
   }
@@ -38,12 +40,9 @@ const getDemoAnnexControls = (): Object[] => {
   for (let annex of ISO27001Annex) {
     for (let annexControl of annex.controls) {
       annexControls.push({
-        implementation_description:
-          annexControl.implementation_description || "",
+        implementation_description: annexControl.implementation_description || "",
         auditor_feedback:
-          "auditor_feedback" in annexControl
-            ? (annexControl as any).auditor_feedback || ""
-            : "",
+          "auditor_feedback" in annexControl ? (annexControl as any).auditor_feedback || "" : "",
       });
     }
   }
@@ -52,7 +51,7 @@ const getDemoAnnexControls = (): Object[] => {
 
 export const countSubClausesISOByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubclauses: string;
   doneSubclauses: string;
@@ -61,14 +60,14 @@ export const countSubClausesISOByProjectId = async (
     `SELECT COUNT(*) AS "totalSubclauses", SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneSubclauses" FROM subclauses_iso27001 WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ totalSubclauses: string; doneSubclauses: string }[], number];
   return result[0][0];
 };
 
 export const countAnnexControlsISOByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalAnnexControls: string;
   doneAnnexControls: string;
@@ -77,7 +76,7 @@ export const countAnnexControlsISOByProjectId = async (
     `SELECT COUNT(*) AS "totalAnnexControls", SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneAnnexControls" FROM annexcontrols_iso27001 WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ totalAnnexControls: string; doneAnnexControls: string }[], number];
   return result[0][0];
 };
@@ -96,7 +95,7 @@ export const countAnnexControlsISOByProjectId = async (
  */
 export const countSubClauseAssignmentsISOByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalSubclauses: string;
   assignedSubclauses: string;
@@ -109,7 +108,7 @@ export const countSubClauseAssignmentsISOByProjectId = async (
      WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ totalSubclauses: string; assignedSubclauses: string }[], number];
 
   return result[0][0];
@@ -129,7 +128,7 @@ export const countSubClauseAssignmentsISOByProjectId = async (
  */
 export const countAnnexControlAssignmentsISOByProjectId = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<{
   totalAnnexControls: string;
   assignedAnnexControls: string;
@@ -142,43 +141,34 @@ export const countAnnexControlAssignmentsISOByProjectId = async (
      WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
-  )) as [
-    { totalAnnexControls: string; assignedAnnexControls: string }[],
-    number,
-  ];
+    },
+  )) as [{ totalAnnexControls: string; assignedAnnexControls: string }[], number];
 
   return result[0][0];
 };
 
 export const getAllClausesQuery = async (
   _organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   // Clauses are in public schema (shared framework structure)
-  const clauses = await sequelize.query(
-    `SELECT * FROM clauses_struct_iso27001 ORDER BY id;`,
-    {
-      mapToModel: true,
-      model: ISO27001ClauseStructModel,
-      ...(transaction ? { transaction } : {}),
-    }
-  );
+  const clauses = await sequelize.query(`SELECT * FROM clauses_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    model: ISO27001ClauseStructModel,
+    ...(transaction ? { transaction } : {}),
+  });
   return clauses;
 };
 
 export const getAllClausesWithSubClauseQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const clauses = (await sequelize.query(
-    `SELECT * FROM clauses_struct_iso27001 ORDER BY id;`,
-    {
-      mapToModel: true,
-      ...(transaction ? { transaction } : {}),
-    }
-  )) as [ISO27001ClauseStructModel[], number];
+  const clauses = (await sequelize.query(`SELECT * FROM clauses_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001ClauseStructModel[], number];
 
   for (let clause of clauses[0]) {
     const subClauses = (await sequelize.query(
@@ -191,17 +181,12 @@ export const getAllClausesWithSubClauseQuery = async (
         },
         mapToModel: true,
         ...(transaction ? { transaction } : {}),
-      }
-    )) as [
-      Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[],
-      number,
-    ];
+      },
+    )) as [Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[], number];
 
     (
       clause as ISO27001ClauseStructModel & {
-        subClauses: Partial<
-          ISO27001SubClauseStructModel & ISO27001SubClauseModel
-        >[];
+        subClauses: Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[];
       }
     ).subClauses = subClauses[0];
   }
@@ -211,15 +196,12 @@ export const getAllClausesWithSubClauseQuery = async (
 export const getAllAnnexesWithSubAnnexQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const annexes = (await sequelize.query(
-    `SELECT * FROM annex_struct_iso27001 ORDER BY id;`,
-    {
-      mapToModel: true,
-      ...(transaction ? { transaction } : {}),
-    }
-  )) as [ISO27001AnnexStructModel[], number];
+  const annexes = (await sequelize.query(`SELECT * FROM annex_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001AnnexStructModel[], number];
 
   // Collect all annex control IDs for batch file fetch
   const allAnnexControlIds: number[] = [];
@@ -245,7 +227,7 @@ export const getAllAnnexesWithSubAnnexQuery = async (
         },
         mapToModel: false, // This is a mixed result, not a single model
         ...(transaction ? { transaction } : {}),
-      }
+      },
     )) as [any[], number];
 
     (annex as any).annexcontrols = annexControls[0];
@@ -265,7 +247,7 @@ export const getAllAnnexesWithSubAnnexQuery = async (
       "iso_27001",
       "annex_control",
       allAnnexControlIds,
-      "evidence"
+      "evidence",
     );
 
     // Attach files to annex controls
@@ -281,19 +263,13 @@ export const getAllAnnexesWithSubAnnexQuery = async (
   return annexes[0];
 };
 
-export const getClauseById = async (
-  clauseId: number,
-  transaction: Transaction | null = null
-) => {
-  const clause = await sequelize.query(
-    `SELECT * FROM clauses_struct_iso27001 WHERE id = :id;`,
-    {
-      replacements: { id: clauseId },
-      mapToModel: true,
-      model: ISO27001ClauseStructModel,
-      ...(transaction ? { transaction } : {}),
-    }
-  );
+export const getClauseById = async (clauseId: number, transaction: Transaction | null = null) => {
+  const clause = await sequelize.query(`SELECT * FROM clauses_struct_iso27001 WHERE id = :id;`, {
+    replacements: { id: clauseId },
+    mapToModel: true,
+    model: ISO27001ClauseStructModel,
+    ...(transaction ? { transaction } : {}),
+  });
   return clause[0];
 };
 
@@ -301,7 +277,7 @@ export const getSubClausesByClauseIdQuery = async (
   clauseId: number,
   organizationId: number,
   projectFrameworkId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const subClauses = await sequelize.query(
     `SELECT sc.id, scs.title, scs.order_no, scs.subclause_id, scs.clause_id, scs.requirement_summary, scs.key_questions, scs.evidence_examples,
@@ -316,7 +292,7 @@ export const getSubClausesByClauseIdQuery = async (
       replacements: { organizationId, id: clauseId, projectFrameworkId },
       mapToModel: true,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
   return subClauses[0];
 };
@@ -324,7 +300,7 @@ export const getSubClausesByClauseIdQuery = async (
 export const getSubClauseByIdForProjectQuery = async (
   subClauseId: number,
   _projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ) => {
   const subClause = await getSubClauseByIdQuery(subClauseId, organizationId);
   return subClause;
@@ -333,7 +309,7 @@ export const getSubClauseByIdForProjectQuery = async (
 export const getSubClauseByIdQuery = async (
   subClauseId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const subClauses = (await sequelize.query(
     `SELECT
@@ -357,11 +333,8 @@ export const getSubClauseByIdQuery = async (
     {
       replacements: { organizationId, id: subClauseId },
       ...(transaction ? { transaction } : {}),
-    }
-  )) as [
-    Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[],
-    number,
-  ];
+    },
+  )) as [Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[], number];
   const subClause = subClauses[0][0];
   if (!subClause) {
     return null;
@@ -372,7 +345,7 @@ export const getSubClauseByIdQuery = async (
     {
       replacements: { organizationId, id: subClauseId },
       transaction,
-    }
+    },
   )) as [{ projects_risks_id: number }[], number];
   for (let risk of risks[0]) {
     (subClause as any).risks.push(risk.projects_risks_id);
@@ -384,7 +357,7 @@ export const getSubClauseByIdQuery = async (
     "iso_27001",
     "subclause",
     subClauseId,
-    "evidence"
+    "evidence",
   );
 
   return subClause;
@@ -392,17 +365,17 @@ export const getSubClauseByIdQuery = async (
 
 export const getClausesByProjectIdQuery = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ) => {
   const subClauseIds = (await sequelize.query(
     `SELECT id FROM subclauses_iso27001 WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id ORDER BY id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ id: number }[], number];
   const msc = await getMainClausesQuery(
     subClauseIds[0].map((subClause) => subClause.id),
-    organizationId
+    organizationId,
   );
   return msc;
 };
@@ -410,11 +383,11 @@ export const getClausesByProjectIdQuery = async (
 export const getMainClausesQuery = async (
   subClauseIds: number[],
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const clausesStruct = (await getAllClausesQuery(
     organizationId,
-    transaction
+    transaction,
   )) as (ISO27001ClauseStructModel &
     Partial<ISO27001SubClauseStructModel & ISO27001SubClauseModel>[])[]; // wrong type
 
@@ -430,11 +403,7 @@ export const getMainClausesQuery = async (
   }
 
   for (let subClauseId of subClauseIds) {
-    const subClause = await getSubClauseByIdQuery(
-      subClauseId,
-      organizationId,
-      transaction
-    );
+    const subClause = await getSubClauseByIdQuery(subClauseId, organizationId, transaction);
     if (subClause) {
       const clauseIndex = clausesStructMap.get(subClause.clause_id!);
       if (clauseIndex !== undefined) {
@@ -448,32 +417,26 @@ export const getMainClausesQuery = async (
 
 export const getAllAnnexesQuery = async (
   _organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   // Annexes are in public schema (shared framework structure)
-  const annexes = await sequelize.query(
-    `SELECT * FROM annex_struct_iso27001 ORDER BY id;`,
-    {
-      mapToModel: true,
-      model: ISO27001AnnexStructModel,
-      ...(transaction ? { transaction } : {}),
-    }
-  );
+  const annexes = await sequelize.query(`SELECT * FROM annex_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    model: ISO27001AnnexStructModel,
+    ...(transaction ? { transaction } : {}),
+  });
   return annexes;
 };
 
 export const getAllAnnexesWithControlsQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const annexes = (await sequelize.query(
-    `SELECT * FROM annex_struct_iso27001 ORDER BY id;`,
-    {
-      mapToModel: true,
-      ...(transaction ? { transaction } : {}),
-    }
-  )) as [ISO27001AnnexStructModel[], number];
+  const annexes = (await sequelize.query(`SELECT * FROM annex_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001AnnexStructModel[], number];
 
   for (let annex of annexes[0]) {
     const annexControls = (await sequelize.query(
@@ -489,17 +452,12 @@ export const getAllAnnexesWithControlsQuery = async (
         },
         mapToModel: true,
         ...(transaction ? { transaction } : {}),
-      }
-    )) as [
-      Partial<ISO27001AnnexControlStructModel & ISO27001AnnexControlModel>[],
-      number,
-    ];
+      },
+    )) as [Partial<ISO27001AnnexControlStructModel & ISO27001AnnexControlModel>[], number];
 
     (
       annex as ISO27001AnnexStructModel & {
-        annexControls: Partial<
-          ISO27001AnnexControlStructModel & ISO27001AnnexControlModel
-        >[];
+        annexControls: Partial<ISO27001AnnexControlStructModel & ISO27001AnnexControlModel>[];
       }
     ).annexControls = annexControls[0];
   }
@@ -508,24 +466,21 @@ export const getAllAnnexesWithControlsQuery = async (
 
 export const getAnnexByIdQuery = async (
   annexId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
-  const annex = await sequelize.query(
-    `SELECT * FROM annex_struct_iso27001 WHERE id = :id;`,
-    {
-      replacements: { id: annexId },
-      mapToModel: true,
-      model: ISO27001AnnexStructModel,
-      ...(transaction ? { transaction } : {}),
-    }
-  );
+  const annex = await sequelize.query(`SELECT * FROM annex_struct_iso27001 WHERE id = :id;`, {
+    replacements: { id: annexId },
+    mapToModel: true,
+    model: ISO27001AnnexStructModel,
+    ...(transaction ? { transaction } : {}),
+  });
   return annex[0];
 };
 
 export const getAnnexControlsByAnnexIdQuery = async (
   annexId: number,
   _organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   // Annex control structure is in public schema (shared framework structure)
   const annexControls = await sequelize.query(
@@ -535,7 +490,7 @@ export const getAnnexControlsByAnnexIdQuery = async (
       mapToModel: true,
       model: ISO27001AnnexControlStructModel,
       ...(transaction ? { transaction } : {}),
-    }
+    },
   );
   return annexControls;
 };
@@ -543,7 +498,7 @@ export const getAnnexControlsByAnnexIdQuery = async (
 export const getAnnexControlByIdForProjectQuery = async (
   annexControlId: number,
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ) => {
   const _annexControlId = (await sequelize.query(
     `SELECT id FROM annexcontrols_iso27001 WHERE organization_id = :organizationId AND annexcontrol_meta_id = :id AND projects_frameworks_id = :projects_frameworks_id;`,
@@ -553,19 +508,16 @@ export const getAnnexControlByIdForProjectQuery = async (
         id: annexControlId,
         projects_frameworks_id: projectFrameworkId,
       },
-    }
+    },
   )) as [{ id: number }[], number];
-  const annexControls = await getAnnexControlsByIdQuery(
-    _annexControlId[0][0].id,
-    organizationId
-  );
+  const annexControls = await getAnnexControlsByIdQuery(_annexControlId[0][0].id, organizationId);
   return annexControls;
 };
 
 export const getAnnexControlsByIdQuery = async (
   annexControlId: number,
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const annexControls = (await sequelize.query(
     `SELECT
@@ -589,11 +541,8 @@ export const getAnnexControlsByIdQuery = async (
     {
       replacements: { organizationId, id: annexControlId },
       ...(transaction ? { transaction } : {}),
-    }
-  )) as [
-    Partial<ISO27001AnnexControlStructModel & ISO27001AnnexControlModel>[],
-    number,
-  ];
+    },
+  )) as [Partial<ISO27001AnnexControlStructModel & ISO27001AnnexControlModel>[], number];
   const annexControl = annexControls[0][0];
   if (!annexControl) {
     return null;
@@ -604,7 +553,7 @@ export const getAnnexControlsByIdQuery = async (
     {
       replacements: { organizationId, id: annexControlId },
       transaction,
-    }
+    },
   )) as [{ projects_risks_id: number }[], number];
   for (let risk of risks[0]) {
     (annexControl as any).risks.push(risk.projects_risks_id);
@@ -616,7 +565,7 @@ export const getAnnexControlsByIdQuery = async (
     "iso_27001",
     "annex_control",
     annexControlId,
-    "evidence"
+    "evidence",
   );
 
   return annexControl;
@@ -624,17 +573,17 @@ export const getAnnexControlsByIdQuery = async (
 
 export const getAnnexesByProjectIdQuery = async (
   projectFrameworkId: number,
-  organizationId: number
+  organizationId: number,
 ) => {
   const annexControlIds = (await sequelize.query(
     `SELECT id FROM annexcontrols_iso27001 WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id ORDER BY id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
-    }
+    },
   )) as [{ id: number }[], number];
   const rc = await getAnnexControlsQuery(
     annexControlIds[0].map((annexControl) => annexControl.id),
-    organizationId
+    organizationId,
   );
   return rc;
 };
@@ -642,11 +591,11 @@ export const getAnnexesByProjectIdQuery = async (
 export const getAnnexControlsQuery = async (
   annexControlIds: number[],
   organizationId: number,
-  transaction: Transaction | null = null
+  transaction: Transaction | null = null,
 ) => {
   const annexesStruct = (await getAllAnnexesQuery(
     organizationId,
-    transaction
+    transaction,
   )) as (ISO27001AnnexStructModel &
     Partial<ISO27001AnnexControlModel & ISO27001AnnexControlStructModel>[])[]; // wrong type
   let annexStructMap = new Map();
@@ -655,15 +604,9 @@ export const getAnnexControlsQuery = async (
     annexStructMap.set(annexStruct.id, i);
   }
   for (let annexControlId of annexControlIds) {
-    const annex = await getAnnexControlsByIdQuery(
-      annexControlId,
-      organizationId,
-      transaction
-    );
+    const annex = await getAnnexControlsByIdQuery(annexControlId, organizationId, transaction);
     if (annex) {
-      (annexesStruct as any)[
-        annexStructMap.get(annex.annex_id!)
-      ].dataValues.subClauses.push(annex);
+      (annexesStruct as any)[annexStructMap.get(annex.annex_id!)].dataValues.subClauses.push(annex);
     }
   }
   return annexesStruct;
@@ -674,18 +617,18 @@ export const createNewClausesQuery = async (
   enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean
+  is_mock_data: boolean,
 ) => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
-    }
+    },
   )) as [{ id: number }[], number];
   const subClauses = (await sequelize.query(
     `SELECT id FROM subclauses_struct_iso27001 ORDER BY id;`,
-    { transaction }
+    { transaction },
   )) as [{ id: number }[], number];
   const demoSubClauses = getDemoSubClauses() as {
     implementation_description: string;
@@ -698,7 +641,7 @@ export const createNewClausesQuery = async (
     demoSubClauses,
     organizationId,
     transaction,
-    is_mock_data
+    is_mock_data,
   );
   const clauses = await getMainClausesQuery(subClauseIds, organizationId, transaction);
   return clauses;
@@ -714,7 +657,7 @@ export const createNewSubClausesQuery = async (
   }[],
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean
+  is_mock_data: boolean,
 ) => {
   const subClauseIds = [];
   let ctr = 0;
@@ -733,15 +676,13 @@ export const createNewSubClausesQuery = async (
           implementation_description: enable_ai_data_insertion
             ? demoSubClauses[ctr].implementation_description
             : null,
-          auditor_feedback: enable_ai_data_insertion
-            ? demoSubClauses[ctr].auditor_feedback
-            : null,
+          auditor_feedback: enable_ai_data_insertion ? demoSubClauses[ctr].auditor_feedback : null,
           status: is_mock_data
             ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
             : "Not started",
         },
         transaction,
-      }
+      },
     )) as [{ id: number }[], number];
     subClauseIds.push(subClauseId[0][0].id);
     ctr++;
@@ -754,18 +695,18 @@ export const createNewAnnexesQUery = async (
   enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean
+  is_mock_data: boolean,
 ) => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
-    }
+    },
   )) as [{ id: number }[], number];
   const annexControls = (await sequelize.query(
     `SELECT id FROM annexcontrols_struct_iso27001 ORDER BY id;`,
-    { transaction }
+    { transaction },
   )) as [{ id: number }[], number];
   const demoAnnexControls = getDemoAnnexControls() as {
     implementation_description: string;
@@ -778,13 +719,9 @@ export const createNewAnnexesQUery = async (
     enable_ai_data_insertion,
     organizationId,
     transaction,
-    is_mock_data
+    is_mock_data,
   );
-  const annexes = await getAnnexControlsQuery(
-    annexControlIds,
-    organizationId,
-    transaction
-  );
+  const annexes = await getAnnexControlsQuery(annexControlIds, organizationId, transaction);
   return annexes;
 };
 
@@ -798,7 +735,7 @@ export const createNewAnnexControlsQuery = async (
   enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean
+  is_mock_data: boolean,
 ) => {
   const annexControlIds = [];
   let ctr = 0;
@@ -825,7 +762,7 @@ export const createNewAnnexControlsQuery = async (
             : "Not started",
         },
         transaction,
-      }
+      },
     )) as [{ id: number }[], number];
     annexControlIds.push(annexControlId[0][0].id);
     ctr++;
@@ -838,21 +775,21 @@ export const createISO27001FrameworkQuery = async (
   enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-  is_mock_data: boolean = false
+  is_mock_data: boolean = false,
 ) => {
   const main_clauses = await createNewClausesQuery(
     projectId,
     enable_ai_data_insertion,
     organizationId,
     transaction,
-    is_mock_data
+    is_mock_data,
   );
   const annex_controls = await createNewAnnexesQUery(
     projectId,
     enable_ai_data_insertion,
     organizationId,
     transaction,
-    is_mock_data
+    is_mock_data,
   );
   return {
     main_clauses,
@@ -862,9 +799,7 @@ export const createISO27001FrameworkQuery = async (
 
 export const updateSubClauseQuery = async (
   id: number,
-  subClause: Partial<
-    ISO27001SubClauseModel & { risksDelete: string; risksMitigated: string }
-  >,
+  subClause: Partial<ISO27001SubClauseModel & { risksDelete: string; risksMitigated: string }>,
   uploadedFiles: {
     id: string;
     fileName: string;
@@ -874,9 +809,11 @@ export const updateSubClauseQuery = async (
   }[] = [],
   deletedFiles: number[] = [],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
-  const updateSubClause: Partial<Record<keyof IISO27001SubClause, any>> & { organizationId?: number } = {
+  const updateSubClause: Partial<Record<keyof IISO27001SubClause, any>> & {
+    organizationId?: number;
+  } = {
     id,
     organizationId,
   };
@@ -890,19 +827,19 @@ export const updateSubClauseQuery = async (
     "auditor_feedback",
   ]
     .reduce((acc: string[], field) => {
-      if (subClause[field as keyof IISO27001SubClause] != undefined) {
-        let value = subClause[field as keyof IISO27001SubClause];
+      if (subClause[field as keyof IISO27001SubClause] !== undefined) {
+        let value = subClause[field as keyof IISO27001SubClause] as any;
 
-        // Handle empty strings for integer fields
         if (["owner", "reviewer", "approver"].includes(field)) {
-          if (value === "" || value === null || value === undefined) {
-            return acc; // Skip this field if it's empty
+          if (value === "" || value === null) {
+            value = null;
+          } else {
+            const numValue = parseInt(value as string);
+            if (isNaN(numValue)) return acc;
+            value = numValue;
           }
-          const numValue = parseInt(value as string);
-          if (isNaN(numValue)) {
-            return acc; // Skip this field if it's not a valid number
-          }
-          value = numValue;
+        } else if (value === "") {
+          return acc;
         }
 
         updateSubClause[field as keyof IISO27001SubClause] = value;
@@ -929,7 +866,7 @@ export const updateSubClauseQuery = async (
       {
         replacements: { organizationId, id },
         transaction,
-      }
+      },
     )) as [ISO27001SubClauseModel[], number];
     subClauseResult = result[0][0];
   }
@@ -946,7 +883,7 @@ export const updateSubClauseQuery = async (
       {
         replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -962,7 +899,7 @@ export const updateSubClauseQuery = async (
       {
         replacements: { organizationId, fileId, entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -979,7 +916,7 @@ export const updateSubClauseQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   )) as [ISO27001SubClauseRisksModel[], number];
   let currentRisks = risks[0].map((r) => r.projects_risks_id!);
   currentRisks = currentRisks.filter((r) => !risksDeleted.includes(r));
@@ -990,7 +927,7 @@ export const updateSubClauseQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   );
   if (currentRisks.length > 0) {
     // Create parameterized placeholders for safe insertion
@@ -1009,7 +946,7 @@ export const updateSubClauseQuery = async (
       {
         replacements,
         transaction,
-      }
+      },
     )) as [{ projects_risks_id: number }[], number];
     for (let risk of subClauseRisksInsertResult[0]) {
       (subClauseResult as any).risks.push(risk.projects_risks_id);
@@ -1020,9 +957,7 @@ export const updateSubClauseQuery = async (
 
 export const updateAnnexControlQuery = async (
   id: number,
-  annexControl: Partial<
-    IISO27001AnnexControl & { risksDelete: string; risksMitigated: string }
-  >,
+  annexControl: Partial<IISO27001AnnexControl & { risksDelete: string; risksMitigated: string }>,
   uploadedFiles: {
     id: string;
     fileName: string;
@@ -1032,10 +967,11 @@ export const updateAnnexControlQuery = async (
   }[] = [],
   deletedFiles: number[] = [],
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
-  const updateAnnexControl: Partial<Record<keyof IISO27001AnnexControl, any>> & { organizationId?: number } =
-    { organizationId };
+  const updateAnnexControl: Partial<Record<keyof IISO27001AnnexControl, any>> & {
+    organizationId?: number;
+  } = { organizationId };
   const setClause = [
     "implementation_description",
     "status",
@@ -1046,19 +982,19 @@ export const updateAnnexControlQuery = async (
     "auditor_feedback",
   ]
     .reduce((acc: string[], field) => {
-      if (annexControl[field as keyof IISO27001AnnexControl] != undefined) {
-        let value = annexControl[field as keyof IISO27001AnnexControl];
+      if (annexControl[field as keyof IISO27001AnnexControl] !== undefined) {
+        let value = annexControl[field as keyof IISO27001AnnexControl] as any;
 
-        // Handle empty strings for integer fields
         if (["owner", "reviewer", "approver"].includes(field)) {
-          if (value === "" || value === null || value === undefined) {
-            return acc; // Skip this field if it's empty
+          if (value === "" || value === null) {
+            value = null;
+          } else {
+            const numValue = parseInt(value as string);
+            if (isNaN(numValue)) return acc;
+            value = numValue;
           }
-          const numValue = parseInt(value as string);
-          if (isNaN(numValue)) {
-            return acc; // Skip this field if it's not a valid number
-          }
-          value = numValue;
+        } else if (value === "") {
+          return acc;
         }
 
         updateAnnexControl[field as keyof IISO27001AnnexControl] = value;
@@ -1091,14 +1027,19 @@ export const updateAnnexControlQuery = async (
     if (!annexControlResult) {
       throw new Error(`Annex control with ID ${id} not found`);
     }
-  } else if (risksDeleted.length > 0 || risksMitigated.length > 0 || uploadedFiles.length > 0 || deletedFiles.length > 0) {
+  } else if (
+    risksDeleted.length > 0 ||
+    risksMitigated.length > 0 ||
+    uploadedFiles.length > 0 ||
+    deletedFiles.length > 0
+  ) {
     // No fields to update but we have risk or file changes, fetch current record
     const result = (await sequelize.query(
       `SELECT * FROM annexcontrols_iso27001 WHERE organization_id = :organizationId AND id = :id`,
       {
         replacements: { organizationId, id },
         transaction,
-      }
+      },
     )) as [ISO27001AnnexControlModel[], number];
     annexControlResult = result[0][0];
 
@@ -1121,7 +1062,7 @@ export const updateAnnexControlQuery = async (
       {
         replacements: { organizationId, fileId: parseInt(file.id), entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -1137,7 +1078,7 @@ export const updateAnnexControlQuery = async (
       {
         replacements: { organizationId, fileId, entityId: id },
         transaction,
-      }
+      },
     );
   }
 
@@ -1146,7 +1087,7 @@ export const updateAnnexControlQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   )) as [ISO27001AnnexControlRisksModel[], number];
   let currentRisks = risks[0].map((r) => r.projects_risks_id!);
   currentRisks = currentRisks.filter((r) => !risksDeleted.includes(r));
@@ -1157,7 +1098,7 @@ export const updateAnnexControlQuery = async (
     {
       replacements: { organizationId, id },
       transaction,
-    }
+    },
   );
   if (currentRisks.length > 0) {
     // Create parameterized placeholders for safe insertion
@@ -1177,7 +1118,7 @@ export const updateAnnexControlQuery = async (
       {
         replacements,
         transaction,
-      }
+      },
     )) as [{ projects_risks_id: number }[], number];
     for (let risk of annexControlRisksInsertResult[0]) {
       (annexControlResult as any).risks.push(risk.projects_risks_id);
@@ -1190,7 +1131,7 @@ export const updateAnnexControlQuery = async (
 export const deleteSubClausesISO27001ByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Get all subclause IDs first to clean up file_entity_links
   const subclauseIds = (await sequelize.query(
@@ -1199,7 +1140,7 @@ export const deleteSubClausesISO27001ByProjectIdQuery = async (
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   )) as { id: number }[];
 
   // Clean up file_entity_links for subclauses (evidence files)
@@ -1209,7 +1150,7 @@ export const deleteSubClausesISO27001ByProjectIdQuery = async (
       "iso_27001",
       "subclause",
       subclauseIds.map((s) => s.id),
-      transaction
+      transaction,
     );
   }
 
@@ -1221,7 +1162,7 @@ export const deleteSubClausesISO27001ByProjectIdQuery = async (
       model: ISO27001SubClauseModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -1229,7 +1170,7 @@ export const deleteSubClausesISO27001ByProjectIdQuery = async (
 export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   // Get all annexcontrol IDs first to clean up file_entity_links
   const annexControlIds = (await sequelize.query(
@@ -1238,7 +1179,7 @@ export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
       transaction,
-    }
+    },
   )) as { id: number }[];
 
   // Clean up file_entity_links for annexcontrols (evidence files)
@@ -1248,7 +1189,7 @@ export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
       "iso_27001",
       "annexcontrol",
       annexControlIds.map((a) => a.id),
-      transaction
+      transaction,
     );
   }
 
@@ -1258,7 +1199,7 @@ export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       transaction,
-    }
+    },
   );
   const result = await sequelize.query(
     `DELETE FROM annexcontrols_iso27001 WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id RETURNING *`,
@@ -1268,7 +1209,7 @@ export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
       model: ISO27001AnnexControlModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
@@ -1276,26 +1217,25 @@ export const deleteAnnexControlsISO27001ByProjectIdQuery = async (
 export const deleteProjectFrameworkISO27001Query = async (
   projectId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
-    }
+    },
   )) as [{ id: number }[], number];
   const subClausesDeleted = await deleteSubClausesISO27001ByProjectIdQuery(
     projectFrameworkId[0][0].id,
     organizationId,
-    transaction
+    transaction,
   );
-  const annexControlsDeleted =
-    await deleteAnnexControlsISO27001ByProjectIdQuery(
-      projectFrameworkId[0][0].id,
-      organizationId,
-      transaction
-    );
+  const annexControlsDeleted = await deleteAnnexControlsISO27001ByProjectIdQuery(
+    projectFrameworkId[0][0].id,
+    organizationId,
+    transaction,
+  );
   const result = await sequelize.query(
     `DELETE FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3 RETURNING *`,
     {
@@ -1304,7 +1244,7 @@ export const deleteProjectFrameworkISO27001Query = async (
       model: ProjectFrameworksModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0 && subClausesDeleted && annexControlsDeleted;
 };

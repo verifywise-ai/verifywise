@@ -36,10 +36,10 @@ function createWrapper() {
   });
 
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      Provider,
-      { store, children: React.createElement(MemoryRouter, null, children) },
-    );
+    React.createElement(Provider, {
+      store,
+      children: React.createElement(MemoryRouter, null, children),
+    });
 
   return { Wrapper, store };
 }

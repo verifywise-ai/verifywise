@@ -15,11 +15,15 @@ export async function getModelInventoryTimeseries(
   timeframe?: string,
   startDate?: string,
   endDate?: string,
-  intervalHours?: number
+  intervalHours?: number,
 ): Promise<any> {
   try {
     const response = await apiServices.get("/modelInventoryHistory/timeseries", {
-      parameter, startDate, endDate, intervalHours, timeframe
+      parameter,
+      startDate,
+      endDate,
+      intervalHours,
+      timeframe,
     });
     return response;
   } catch (error: any) {
@@ -53,10 +57,7 @@ export async function getCurrentParameterCounts(parameter: string): Promise<any>
  * @param {string} [description] - Optional description of the snapshot
  * @returns {Promise<any>} The created snapshot
  */
-export async function createHistorySnapshot(
-  parameter: string,
-  description?: string
-): Promise<any> {
+export async function createHistorySnapshot(parameter: string, description?: string): Promise<any> {
   try {
     const response = await apiServices.post("/api/modelInventoryHistory/snapshot", {
       parameter,

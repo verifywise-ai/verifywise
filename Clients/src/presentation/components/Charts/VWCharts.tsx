@@ -145,71 +145,71 @@ export const VWBarChart: React.FC<VWBarChartProps> = ({
   const isVertical = layout === "vertical";
   return (
     <ChartOutlineWrapper>
-    <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
-      <BarChart data={data} layout={layout} margin={margin} barCategoryGap={barCategoryGap}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke={gridStroke}
-          horizontal={!hideHorizontalGrid}
-        />
-        {isVertical ? (
-          <>
-            <XAxis
-              type="number"
-              tick={axisTickDisabled}
-              axisLine={axisLine}
-              tickLine={false}
-              tickFormatter={xTickFormatter}
-            />
-            <YAxis
-              type="category"
-              dataKey={categoryKey}
-              tick={{ fontSize: 12, fill: palette.text.secondary }}
-              width={yAxisWidth || 90}
-              axisLine={false}
-              tickLine={false}
-            />
-          </>
-        ) : (
-          <>
-            <XAxis
-              dataKey={categoryKey}
-              tick={axisTick}
-              tickLine={false}
-              axisLine={axisLine}
-              tickFormatter={xTickFormatter}
-            />
-            <YAxis
-              tick={axisTick}
-              tickLine={false}
-              axisLine={axisLine}
-              tickFormatter={yTickFormatter}
-              width={yAxisWidth}
-            />
-          </>
-        )}
-        {tooltipContent ? (
-          <Tooltip content={tooltipContent} />
-        ) : (
-          <Tooltip
-            contentStyle={vwTooltipStyle}
-            formatter={tooltipFormatter}
-            cursor={isVertical ? { fill: "rgba(19, 113, 91, 0.04)" } : undefined}
+      <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
+        <BarChart data={data} layout={layout} margin={margin} barCategoryGap={barCategoryGap}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={gridStroke}
+            horizontal={!hideHorizontalGrid}
           />
-        )}
-        {series.map((s, _i) => (
-          <Bar
-            key={s.dataKey}
-            dataKey={s.dataKey}
-            fill={s.color || palette.brand.primary}
-            radius={s.radius || (isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0])}
-            maxBarSize={s.maxBarSize || 28}
-            stackId={s.stackId}
-            name={s.name}
-          />
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+          {isVertical ? (
+            <>
+              <XAxis
+                type="number"
+                tick={axisTickDisabled}
+                axisLine={axisLine}
+                tickLine={false}
+                tickFormatter={xTickFormatter}
+              />
+              <YAxis
+                type="category"
+                dataKey={categoryKey}
+                tick={{ fontSize: 12, fill: palette.text.secondary }}
+                width={yAxisWidth || 90}
+                axisLine={false}
+                tickLine={false}
+              />
+            </>
+          ) : (
+            <>
+              <XAxis
+                dataKey={categoryKey}
+                tick={axisTick}
+                tickLine={false}
+                axisLine={axisLine}
+                tickFormatter={xTickFormatter}
+              />
+              <YAxis
+                tick={axisTick}
+                tickLine={false}
+                axisLine={axisLine}
+                tickFormatter={yTickFormatter}
+                width={yAxisWidth}
+              />
+            </>
+          )}
+          {tooltipContent ? (
+            <Tooltip content={tooltipContent} />
+          ) : (
+            <Tooltip
+              contentStyle={vwTooltipStyle}
+              formatter={tooltipFormatter}
+              cursor={isVertical ? { fill: "rgba(19, 113, 91, 0.04)" } : undefined}
+            />
+          )}
+          {series.map((s, _i) => (
+            <Bar
+              key={s.dataKey}
+              dataKey={s.dataKey}
+              fill={s.color || palette.brand.primary}
+              radius={s.radius || (isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0])}
+              maxBarSize={s.maxBarSize || 28}
+              stackId={s.stackId}
+              name={s.name}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
     </ChartOutlineWrapper>
   );
 };
@@ -254,52 +254,52 @@ export const VWAreaChart: React.FC<VWAreaChartProps> = ({
   gradientOpacity = 0.12,
 }) => (
   <ChartOutlineWrapper>
-  <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
-    <AreaChart data={data} margin={margin}>
-      <defs>
+    <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
+      <AreaChart data={data} margin={margin}>
+        <defs>
+          {series.map((s) => (
+            <VWGradient
+              key={s.gradientId || `${s.dataKey}Gradient`}
+              id={s.gradientId || `${s.dataKey}Gradient`}
+              color={s.color}
+              opacity={gradientOpacity}
+            />
+          ))}
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+        <XAxis
+          dataKey={categoryKey}
+          tick={axisTick}
+          tickLine={false}
+          axisLine={axisLine}
+          tickFormatter={xTickFormatter}
+        />
+        <YAxis
+          tick={axisTick}
+          tickLine={false}
+          axisLine={axisLine}
+          tickFormatter={yTickFormatter}
+          width={yAxisWidth}
+        />
+        {tooltipContent ? (
+          <Tooltip content={tooltipContent} />
+        ) : (
+          <Tooltip contentStyle={vwTooltipStyle} formatter={tooltipFormatter} />
+        )}
         {series.map((s) => (
-          <VWGradient
-            key={s.gradientId || `${s.dataKey}Gradient`}
-            id={s.gradientId || `${s.dataKey}Gradient`}
-            color={s.color}
-            opacity={gradientOpacity}
+          <Area
+            key={s.dataKey}
+            type="monotone"
+            dataKey={s.dataKey}
+            stroke={s.color}
+            fill={`url(#${s.gradientId || `${s.dataKey}Gradient`})`}
+            strokeWidth={s.strokeWidth || 2}
+            stackId={s.stackId}
+            name={s.name}
           />
         ))}
-      </defs>
-      <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-      <XAxis
-        dataKey={categoryKey}
-        tick={axisTick}
-        tickLine={false}
-        axisLine={axisLine}
-        tickFormatter={xTickFormatter}
-      />
-      <YAxis
-        tick={axisTick}
-        tickLine={false}
-        axisLine={axisLine}
-        tickFormatter={yTickFormatter}
-        width={yAxisWidth}
-      />
-      {tooltipContent ? (
-        <Tooltip content={tooltipContent} />
-      ) : (
-        <Tooltip contentStyle={vwTooltipStyle} formatter={tooltipFormatter} />
-      )}
-      {series.map((s) => (
-        <Area
-          key={s.dataKey}
-          type="monotone"
-          dataKey={s.dataKey}
-          stroke={s.color}
-          fill={`url(#${s.gradientId || `${s.dataKey}Gradient`})`}
-          strokeWidth={s.strokeWidth || 2}
-          stackId={s.stackId}
-          name={s.name}
-        />
-      ))}
-    </AreaChart>
-  </ResponsiveContainer>
+      </AreaChart>
+    </ResponsiveContainer>
   </ChartOutlineWrapper>
 );
 
@@ -335,7 +335,16 @@ export const VWDonutChart: React.FC<VWDonutChartProps> = ({
 }) => {
   const computedOuter = outerRadius || Math.floor(size / 2) - 5;
   return (
-    <Box sx={{ position: "relative", width: size, height: size, "& .recharts-tooltip-wrapper": { zIndex: "10 !important" }, "& *:focus": { outline: "none !important" }, "& svg *:focus": { outline: "none !important" } }}>
+    <Box
+      sx={{
+        position: "relative",
+        width: size,
+        height: size,
+        "& .recharts-tooltip-wrapper": { zIndex: "10 !important" },
+        "& *:focus": { outline: "none !important" },
+        "& svg *:focus": { outline: "none !important" },
+      }}
+    >
       <ResponsiveContainer width={size} height={size} minWidth={0} style={noOutlineStyle}>
         <PieChart>
           <Pie
@@ -365,10 +374,19 @@ export const VWDonutChart: React.FC<VWDonutChartProps> = ({
             pointerEvents: "none",
           }}
         >
-          <Typography sx={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2, color: palette.text.primary }}>
+          <Typography
+            sx={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2, color: palette.text.primary }}
+          >
             {centerValue}
           </Typography>
-          <Typography sx={{ fontSize: 10, color: palette.text.tertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <Typography
+            sx={{
+              fontSize: 10,
+              color: palette.text.tertiary,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+            }}
+          >
             {centerLabel}
           </Typography>
         </Box>
@@ -421,50 +439,47 @@ export const VWLineChart: React.FC<VWLineChartProps> = ({
 }) => {
   return (
     <ChartOutlineWrapper>
-    <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
-      <LineChart data={data} margin={margin}>
-        <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-        <XAxis
-          dataKey={categoryKey}
-          tick={axisTick}
-          tickLine={false}
-          axisLine={axisLine}
-          tickFormatter={xTickFormatter}
-          {...xAxisProps}
-        />
-        <YAxis
-          tick={axisTick}
-          tickLine={false}
-          axisLine={axisLine}
-          tickFormatter={yTickFormatter}
-          {...yAxisProps}
-        />
-        {tooltipContent ? (
-          <Tooltip content={tooltipContent} />
-        ) : (
-          <Tooltip contentStyle={vwTooltipStyle} formatter={tooltipFormatter} />
-        )}
-        {showLegend && (
-          <Legend
-            wrapperStyle={{ paddingTop: 12, fontSize: 13 }}
-            formatter={legendFormatter}
+      <ResponsiveContainer width="100%" height={height} minWidth={0} style={noOutlineStyle}>
+        <LineChart data={data} margin={margin}>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+          <XAxis
+            dataKey={categoryKey}
+            tick={axisTick}
+            tickLine={false}
+            axisLine={axisLine}
+            tickFormatter={xTickFormatter}
+            {...xAxisProps}
           />
-        )}
-        {series.map((s) => (
-          <Line
-            key={s.dataKey}
-            type="monotone"
-            dataKey={s.dataKey}
-            stroke={s.color}
-            strokeWidth={s.strokeWidth || 1.5}
-            dot={s.dot ?? { r: 3, fill: s.color }}
-            name={s.name || s.dataKey}
-            isAnimationActive={false}
-            connectNulls={s.connectNulls ?? false}
+          <YAxis
+            tick={axisTick}
+            tickLine={false}
+            axisLine={axisLine}
+            tickFormatter={yTickFormatter}
+            {...yAxisProps}
           />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
+          {tooltipContent ? (
+            <Tooltip content={tooltipContent} />
+          ) : (
+            <Tooltip contentStyle={vwTooltipStyle} formatter={tooltipFormatter} />
+          )}
+          {showLegend && (
+            <Legend wrapperStyle={{ paddingTop: 12, fontSize: 13 }} formatter={legendFormatter} />
+          )}
+          {series.map((s) => (
+            <Line
+              key={s.dataKey}
+              type="monotone"
+              dataKey={s.dataKey}
+              stroke={s.color}
+              strokeWidth={s.strokeWidth || 1.5}
+              dot={s.dot ?? { r: 3, fill: s.color }}
+              name={s.name || s.dataKey}
+              isAnimationActive={false}
+              connectNulls={s.connectNulls ?? false}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </ChartOutlineWrapper>
   );
 };

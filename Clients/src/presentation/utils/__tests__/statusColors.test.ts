@@ -89,11 +89,7 @@ describe("getDefaultStatusDistribution", () => {
   it("returns 3 statuses for trainings", () => {
     const result = getDefaultStatusDistribution("trainings", 20);
     expect(result).toHaveLength(3);
-    expect(result.map((r) => r.label)).toEqual([
-      "Completed",
-      "In Progress",
-      "Planned",
-    ]);
+    expect(result.map((r) => r.label)).toEqual(["Completed", "In Progress", "Planned"]);
   });
 
   it("returns 4 statuses for policies", () => {

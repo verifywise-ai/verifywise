@@ -12,35 +12,35 @@ export const SectionPaper = styled(Box)(({ theme }) => ({
 export const CardActive = styled(Card)(() => ({
   padding: 0,
   borderRadius: 0,
-  background: 'transparent',
+  background: "transparent",
   minHeight: 140,
-  border: 'none',
+  border: "none",
   flex: 1,
-  boxShadow: 'none',
+  boxShadow: "none",
 }));
 
 export const CardDisabled = styled(Card)(() => ({
   padding: 0,
   borderRadius: 0,
-  background: 'transparent',
-  border: 'none',
+  background: "transparent",
+  border: "none",
   opacity: 0.6,
   minHeight: 140,
   flex: 1,
-  boxShadow: 'none',
+  boxShadow: "none",
 }));
 
 export const PrivacyFields = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
+  display: "flex",
+  alignItems: "center",
   gap: theme.spacing(2),
   marginTop: theme.spacing(2),
-  flexWrap: 'wrap',
+  flexWrap: "wrap",
 }));
 
 export const styles = {
   description: {
-    color: 'text.secondary',
+    color: "text.secondary",
     mb: 4,
     fontSize: 13,
   },
@@ -51,37 +51,37 @@ export const styles = {
   },
 
   sectionDescription: {
-    color: 'text.secondary',
+    color: "text.secondary",
     my: 2,
     fontSize: 13,
   },
 
   cardText: {
-    color: 'text.secondary',
+    color: "text.secondary",
     fontSize: 13,
     mt: 2,
   },
 
   checkbox: {
     "& .MuiCheckbox-root": {
-      color: 'brand.primary',
-      '&.Mui-checked': {
-        color: 'brand.primary',
+      color: "brand.primary",
+      "&.Mui-checked": {
+        color: "brand.primary",
       },
-      '&:hover': {
-        backgroundColor: 'rgba(19, 113, 91, 0.04)',
+      "&:hover": {
+        backgroundColor: "rgba(19, 113, 91, 0.04)",
       },
     },
   },
 
   badge: {
-    background: 'background.accent',
+    background: "background.accent",
     borderRadius: 2,
     p: 0,
     m: 0,
     mr: 0,
     minWidth: 160,
-    flex: '0 0 160px',
+    flex: "0 0 160px",
     fontWeight: 500,
     "& .MuiFormControlLabel-label": {
       fontSize: 13,
@@ -94,50 +94,50 @@ export const styles = {
 
   // TextField styles moved from inline
   textField: {
-    width: '100%',
-    height: '100%',
-    '& .MuiOutlinedInput-root': {
-      border: 'none',
-      backgroundColor: 'transparent',
-      height: '100%',
-      '& fieldset': {
-        border: 'none',
+    width: "100%",
+    height: "100%",
+    "& .MuiOutlinedInput-root": {
+      border: "none",
+      backgroundColor: "transparent",
+      height: "100%",
+      "& fieldset": {
+        border: "none",
       },
-      '&:hover fieldset': {
-        border: 'none',
+      "&:hover fieldset": {
+        border: "none",
       },
-      '&.Mui-focused fieldset': {
-        border: 'none',
+      "&.Mui-focused fieldset": {
+        border: "none",
       },
     },
-    '& .MuiInputBase-input': {
+    "& .MuiInputBase-input": {
       padding: 0,
-      height: '100% !important',
-      resize: 'none',
+      height: "100% !important",
+      resize: "none",
       fontSize: 13,
-      overflowY: 'auto',
-      '&::-webkit-scrollbar': {
-        width: '8px',
+      overflowY: "auto",
+      "&::-webkit-scrollbar": {
+        width: "8px",
       },
-      '&::-webkit-scrollbar-track': {
-        background: '#f1f1f1',
-        borderRadius: '4px',
+      "&::-webkit-scrollbar-track": {
+        background: "#f1f1f1",
+        borderRadius: "4px",
       },
-      '&::-webkit-scrollbar-thumb': {
-        background: '#c1c1c1',
-        borderRadius: '4px',
-        '&:hover': {
-          background: '#a8a8a8',
+      "&::-webkit-scrollbar-thumb": {
+        background: "#c1c1c1",
+        borderRadius: "4px",
+        "&:hover": {
+          background: "#a8a8a8",
         },
       },
     },
-    '& .MuiInputBase-root.Mui-disabled': {
-      backgroundColor: 'background.surface',
-      '& .MuiInputBase-input': {
-        color: '#666',
-        cursor: 'not-allowed',
+    "& .MuiInputBase-root.Mui-disabled": {
+      backgroundColor: "background.surface",
+      "& .MuiInputBase-input": {
+        color: "#666",
+        cursor: "not-allowed",
       },
-    }
+    },
   },
 
   // Save button styles
@@ -149,16 +149,16 @@ export const styles = {
 
   // Field styles for privacy section
   privacyField: {
-    backgroundColor: 'background.main',
+    backgroundColor: "background.main",
     "& input": {
       padding: "0 14px",
     },
   },
-}; 
+};
 
 export const getFormControlLabelStyles = (theme: Theme) => ({
   margin: 0,
-  '& .MuiFormControlLabel-label': {
+  "& .MuiFormControlLabel-label": {
     marginLeft: 8,
     marginRight: 0,
     color: theme.palette.text.secondary,
@@ -166,4 +166,4 @@ export const getFormControlLabelStyles = (theme: Theme) => ({
     fontWeight: 600,
     lineHeight: 1.5,
   },
-}); 
+});

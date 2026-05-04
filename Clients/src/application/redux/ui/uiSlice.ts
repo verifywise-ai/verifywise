@@ -1,6 +1,12 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export type AppModule = "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "super-admin";
+export type AppModule =
+  | "main"
+  | "evals"
+  | "ai-detection"
+  | "shadow-ai"
+  | "ai-gateway"
+  | "super-admin";
 
 const initialState = {
   sidebar: {
@@ -41,9 +47,5 @@ const uiSlice = createSlice({
 });
 
 export default uiSlice.reducer;
-export const {
-  setRowsPerPage,
-  toggleSidebar,
-  setModelInventoryStatusFilter,
-  setActiveModule,
-} = uiSlice.actions;
+export const { setRowsPerPage, toggleSidebar, setModelInventoryStatusFilter, setActiveModule } =
+  uiSlice.actions;

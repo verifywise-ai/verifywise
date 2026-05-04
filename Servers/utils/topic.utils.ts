@@ -12,14 +12,14 @@ export const getAllTopicsQuery = async (organizationId: number): Promise<ITopic[
       replacements: { organizationId },
       mapToModel: true,
       model: TopicModel,
-    }
+    },
   );
   return topics;
 };
 
 export const getTopicByIdQuery = async (
   id: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ITopic | null> => {
   const result = await sequelize.query(
     `SELECT * FROM topics WHERE organization_id = :organizationId AND id = :id`,
@@ -27,7 +27,7 @@ export const getTopicByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: TopicModel,
-    }
+    },
   );
   return result[0];
 };
@@ -35,7 +35,7 @@ export const getTopicByIdQuery = async (
 export const createNewTopicQuery = async (
   topic: TopicModel,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<TopicModel> => {
   const result = await sequelize.query(
     `INSERT INTO topics (organization_id, assessment_id, title) VALUES (:organizationId, :assessment_id, :title) RETURNING *`,
@@ -49,7 +49,7 @@ export const createNewTopicQuery = async (
       model: TopicModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
   return result[0];
 };
@@ -58,15 +58,12 @@ export const updateTopicByIdQuery = async (
   id: number,
   topic: Partial<TopicModel>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<TopicModel | null> => {
   const updateTopic: Partial<Record<keyof TopicModel, any>> & { organizationId?: number } = {};
   const setClause = ["title"]
     .filter((f) => {
-      if (
-        topic[f as keyof TopicModel] !== undefined &&
-        topic[f as keyof TopicModel]
-      ) {
+      if (topic[f as keyof TopicModel] !== undefined && topic[f as keyof TopicModel]) {
         updateTopic[f as keyof TopicModel] = topic[f as keyof TopicModel];
         return true;
       }
@@ -94,7 +91,7 @@ export const updateTopicByIdQuery = async (
 export const deleteTopicByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = await sequelize.query(
     `DELETE FROM topics WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -104,14 +101,14 @@ export const deleteTopicByIdQuery = async (
       model: TopicModel,
       type: QueryTypes.DELETE,
       transaction,
-    }
+    },
   );
   return result.length > 0;
 };
 
 export const getTopicByAssessmentIdQuery = async (
   assessmentId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<ITopic[]> => {
   const result = await sequelize.query(
     `SELECT * FROM topics WHERE organization_id = :organizationId AND assessment_id = :assessment_id ORDER BY created_at DESC, id ASC`,
@@ -119,7 +116,7 @@ export const getTopicByAssessmentIdQuery = async (
       replacements: { organizationId, assessment_id: assessmentId },
       mapToModel: true,
       model: TopicModel,
-    }
+    },
   );
   return result;
 };
@@ -128,7 +125,7 @@ export const createNewTopicsQuery = async (
   assessmentId: number,
   enable_ai_data_insertion: boolean,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ) => {
   const createdTopics = [];
   let query = `INSERT INTO topics(organization_id, assessment_id, title, order_no) VALUES (:organizationId, :assessment_id, :title, :order_no) RETURNING *;`;
@@ -151,7 +148,7 @@ export const createNewTopicsQuery = async (
       topicStruct.subtopics,
       enable_ai_data_insertion,
       organizationId,
-      transaction
+      transaction,
     );
     createdTopics.push({ ...result[0].dataValues, subTopics });
   }

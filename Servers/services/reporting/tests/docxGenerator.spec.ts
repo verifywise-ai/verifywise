@@ -36,7 +36,7 @@ describe("DOCX Generator", () => {
 
       expect(result.success).toBe(true);
       expect(result.mimeType).toBe(
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
       expect(result.content).toBeInstanceOf(Buffer);
     });

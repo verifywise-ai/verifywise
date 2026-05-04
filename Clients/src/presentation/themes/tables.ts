@@ -73,7 +73,7 @@ export const tableStyles = {
           border: "1px solid #13715B",
           cursor: "pointer",
         },
-      }
+      },
     },
     footer: {
       cell: {

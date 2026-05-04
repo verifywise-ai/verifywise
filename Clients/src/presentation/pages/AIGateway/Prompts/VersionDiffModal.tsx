@@ -3,7 +3,10 @@ import { Box, Typography, Stack } from "@mui/material";
 import StandardModal from "../../../components/Modals/StandardModal";
 import palette from "../../../themes/palette";
 
-interface Message { role: string; content: string }
+interface Message {
+  role: string;
+  content: string;
+}
 interface Version {
   version: number;
   content: Message[];
@@ -69,7 +72,13 @@ function MessageCell({ msg, placeholder }: { msg: Message | null; placeholder?: 
   }
   return (
     <Box sx={{ flex: 1, p: "12px" }}>
-      <Typography fontSize={11} fontWeight={600} color="text.secondary" textTransform="uppercase" mb={0.5}>
+      <Typography
+        fontSize={11}
+        fontWeight={600}
+        color="text.secondary"
+        textTransform="uppercase"
+        mb={0.5}
+      >
         {msg.role}
       </Typography>
       <Typography fontSize={12} sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
@@ -100,13 +109,21 @@ function ConfigDiff({ a, b }: { a: Version; b: Version }) {
   if (changes.length === 0) return null;
 
   return (
-    <Box sx={{ mt: "16px", p: "16px", border: `1px solid ${palette.border.light}`, borderRadius: "4px" }}>
-      <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">Configuration changes</Typography>
+    <Box
+      sx={{
+        mt: "16px",
+        p: "16px",
+        border: `1px solid ${palette.border.light}`,
+        borderRadius: "4px",
+      }}
+    >
+      <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
+        Configuration changes
+      </Typography>
       <Stack spacing="4px">
         {changes.map((c) => (
           <Typography key={c.field} fontSize={12}>
-            <strong>{c.field}:</strong>{" "}
-            <span style={{ color: "#B42318" }}>{c.from}</span>
+            <strong>{c.field}:</strong> <span style={{ color: "#B42318" }}>{c.from}</span>
             {" → "}
             <span style={{ color: "#027A48" }}>{c.to}</span>
           </Typography>
@@ -116,7 +133,12 @@ function ConfigDiff({ a, b }: { a: Version; b: Version }) {
   );
 }
 
-export default function VersionDiffModal({ isOpen, onClose, versionA, versionB }: VersionDiffModalProps) {
+export default function VersionDiffModal({
+  isOpen,
+  onClose,
+  versionA,
+  versionB,
+}: VersionDiffModalProps) {
   const rows = useMemo(() => {
     if (!versionA || !versionB) return [];
     return diffMessages(versionA.content || [], versionB.content || []);
@@ -136,10 +158,14 @@ export default function VersionDiffModal({ isOpen, onClose, versionA, versionB }
       {/* Column headers */}
       <Box sx={{ display: "flex", gap: "8px", mb: "8px" }}>
         <Box sx={{ flex: 1 }}>
-          <Typography fontSize={12} fontWeight={600} color="text.secondary">v{versionA.version}</Typography>
+          <Typography fontSize={12} fontWeight={600} color="text.secondary">
+            v{versionA.version}
+          </Typography>
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography fontSize={12} fontWeight={600} color="text.secondary">v{versionB.version}</Typography>
+          <Typography fontSize={12} fontWeight={600} color="text.secondary">
+            v{versionB.version}
+          </Typography>
         </Box>
       </Box>
 
@@ -157,16 +183,24 @@ export default function VersionDiffModal({ isOpen, onClose, versionA, versionB }
               bgcolor: STATUS_COLORS[row.status],
             }}
           >
-            <MessageCell msg={row.left} placeholder={row.status === "added" ? "(not present)" : undefined} />
+            <MessageCell
+              msg={row.left}
+              placeholder={row.status === "added" ? "(not present)" : undefined}
+            />
             <Box sx={{ width: 1, bgcolor: STATUS_BORDERS[row.status], flexShrink: 0 }} />
-            <MessageCell msg={row.right} placeholder={row.status === "removed" ? "(removed)" : undefined} />
+            <MessageCell
+              msg={row.right}
+              placeholder={row.status === "removed" ? "(removed)" : undefined}
+            />
           </Box>
         ))}
       </Stack>
 
       {rows.length === 0 && (
         <Box sx={{ textAlign: "center", py: "32px" }}>
-          <Typography fontSize={13} color="text.secondary">No differences found</Typography>
+          <Typography fontSize={13} color="text.secondary">
+            No differences found
+          </Typography>
         </Box>
       )}
 

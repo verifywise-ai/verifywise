@@ -1,5 +1,5 @@
-import { asyncLocalStorage } from '../utils/context/context';
-import { Request, Response, NextFunction } from 'express';
+import { asyncLocalStorage } from "../utils/context/context";
+import { Request, Response, NextFunction } from "express";
 
 interface AuthenticatedRequest extends Request {
   userId?: number;
@@ -10,15 +10,18 @@ interface AuthenticatedRequest extends Request {
 export default function contextMiddleware(
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const { userId, tenantId, organizationId } = req;
 
-  asyncLocalStorage.run({
-    userId: typeof userId === 'number' ? userId : undefined,
-    tenantId,
-    organizationId
-  }, () => {
-    next();
-  });
+  asyncLocalStorage.run(
+    {
+      userId: typeof userId === "number" ? userId : undefined,
+      tenantId,
+      organizationId,
+    },
+    () => {
+      next();
+    },
+  );
 }

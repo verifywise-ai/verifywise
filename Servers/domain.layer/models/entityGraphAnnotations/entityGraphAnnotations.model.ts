@@ -23,14 +23,7 @@
  * @module domain.layer/models/entityGraphAnnotations
  */
 
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-  BelongsTo,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table, BelongsTo } from "sequelize-typescript";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 import { ValidationException } from "../../exceptions/custom.exception";
@@ -119,50 +112,34 @@ export class EntityGraphAnnotationsModel extends Model<EntityGraphAnnotationsMod
     user_id: number,
     entity_type: string,
     entity_id: string,
-    organization_id: number
+    organization_id: number,
   ): Promise<EntityGraphAnnotationsModel> {
     // Validate content
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Annotation content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Annotation content is required", "content", content);
     }
 
     if (content.trim().length > 2000) {
       throw new ValidationException(
         "Annotation content cannot exceed 2000 characters",
         "content",
-        content
+        content,
       );
     }
 
     // Validate user_id
     if (!user_id || user_id < 1) {
-      throw new ValidationException(
-        "Valid user_id is required",
-        "user_id",
-        user_id
-      );
+      throw new ValidationException("Valid user_id is required", "user_id", user_id);
     }
 
     // Validate entity_type
     if (!entity_type || entity_type.trim().length === 0) {
-      throw new ValidationException(
-        "entity_type is required",
-        "entity_type",
-        entity_type
-      );
+      throw new ValidationException("entity_type is required", "entity_type", entity_type);
     }
 
     // Validate entity_id
     if (!entity_id || entity_id.trim().length === 0) {
-      throw new ValidationException(
-        "entity_id is required",
-        "entity_id",
-        entity_id
-      );
+      throw new ValidationException("entity_id is required", "entity_id", entity_id);
     }
 
     // Validate organization_id
@@ -170,7 +147,7 @@ export class EntityGraphAnnotationsModel extends Model<EntityGraphAnnotationsMod
       throw new ValidationException(
         "Valid organization_id is required",
         "organization_id",
-        organization_id
+        organization_id,
       );
     }
 
@@ -191,18 +168,14 @@ export class EntityGraphAnnotationsModel extends Model<EntityGraphAnnotationsMod
    */
   async updateContent(content: string): Promise<void> {
     if (!content || content.trim().length === 0) {
-      throw new ValidationException(
-        "Annotation content is required",
-        "content",
-        content
-      );
+      throw new ValidationException("Annotation content is required", "content", content);
     }
 
     if (content.trim().length > 2000) {
       throw new ValidationException(
         "Annotation content cannot exceed 2000 characters",
         "content",
-        content
+        content,
       );
     }
 

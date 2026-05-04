@@ -15,10 +15,7 @@ import {
   DEFAULT_MODEL_SECURITY_CONFIG,
   SecuritySeverity,
 } from "../../domain.layer/interfaces/i.modelSecurity";
-import {
-  isModelFileExtension,
-  getRiskLevelForExtension,
-} from "../../config/modelSecurityPatterns";
+import { isModelFileExtension, getRiskLevelForExtension } from "../../config/modelSecurityPatterns";
 import { scanSerializedFile, isSerializedFile } from "./serializedScanner";
 import { scanSafeTensorsFile, isSafeTensorsFile } from "./safetensorsScanner";
 import { scanH5File, isH5File } from "./h5Scanner";
@@ -38,7 +35,7 @@ export * from "./complianceMapping";
  */
 export async function scanModelFile(
   filePath: string,
-  _config: Partial<IModelSecurityConfig> = {}
+  _config: Partial<IModelSecurityConfig> = {},
 ): Promise<IModelScanResult> {
   const extension = path.extname(filePath).toLowerCase();
 
@@ -91,19 +88,17 @@ export async function scanModelFile(
  */
 export async function scanModelFiles(
   filePaths: string[],
-  config: Partial<IModelSecurityConfig> = {}
+  config: Partial<IModelSecurityConfig> = {},
 ): Promise<IModelSecurityScanSummary> {
   const startTime = Date.now();
   const mergedConfig = { ...DEFAULT_MODEL_SECURITY_CONFIG, ...config };
 
   // Filter to only model files
-  const modelFiles = filePaths.filter((fp) =>
-    isModelFileExtension(path.extname(fp).toLowerCase())
-  );
+  const modelFiles = filePaths.filter((fp) => isModelFileExtension(path.extname(fp).toLowerCase()));
 
   // Filter by enabled extensions
   const enabledFiles = modelFiles.filter((fp) =>
-    mergedConfig.enabledExtensions.includes(path.extname(fp).toLowerCase())
+    mergedConfig.enabledExtensions.includes(path.extname(fp).toLowerCase()),
   );
 
   // Scan all files
@@ -167,9 +162,7 @@ function aggregateResults(results: IModelScanResult[]): IModelSecurityScanSummar
  * @returns Only the model files
  */
 export function filterModelFiles(filePaths: string[]): string[] {
-  return filePaths.filter((fp) =>
-    isModelFileExtension(path.extname(fp).toLowerCase())
-  );
+  return filePaths.filter((fp) => isModelFileExtension(path.extname(fp).toLowerCase()));
 }
 
 /**
@@ -192,10 +185,10 @@ export function getModelFileRisk(filePath: string): SecuritySeverity | null {
  */
 export function shouldScanFile(
   filePath: string,
-  config: Partial<IModelSecurityConfig> = {}
+  config: Partial<IModelSecurityConfig> = {},
 ): boolean {
   const mergedConfig = { ...DEFAULT_MODEL_SECURITY_CONFIG, ...config };
-  
+
   if (!mergedConfig.enabled) {
     return false;
   }

@@ -19,38 +19,33 @@ const BASE_URL = "/ai-detection/repositories";
 
 export async function getRepositories(
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<RepositoriesResponse> {
   const response = await apiServices.get<{ data: RepositoriesResponse }>(
-    `${BASE_URL}?page=${page}&limit=${limit}`
+    `${BASE_URL}?page=${page}&limit=${limit}`,
   );
   return response.data.data;
 }
 
 export async function getRepository(id: number): Promise<AIDetectionRepository> {
-  const response = await apiServices.get<{ data: AIDetectionRepository }>(
-    `${BASE_URL}/${id}`
-  );
+  const response = await apiServices.get<{ data: AIDetectionRepository }>(`${BASE_URL}/${id}`);
   return response.data.data;
 }
 
 export async function createRepository(
-  input: CreateRepositoryInput
+  input: CreateRepositoryInput,
 ): Promise<AIDetectionRepository> {
-  const response = await apiServices.post<{ data: AIDetectionRepository }>(
-    BASE_URL,
-    input
-  );
+  const response = await apiServices.post<{ data: AIDetectionRepository }>(BASE_URL, input);
   return response.data.data;
 }
 
 export async function updateRepository(
   id: number,
-  input: UpdateRepositoryInput
+  input: UpdateRepositoryInput,
 ): Promise<AIDetectionRepository> {
   const response = await apiServices.patch<{ data: AIDetectionRepository }>(
     `${BASE_URL}/${id}`,
-    input
+    input,
   );
   return response.data.data;
 }
@@ -60,35 +55,31 @@ export async function deleteRepository(id: number): Promise<void> {
 }
 
 export async function triggerRepositoryScan(id: number): Promise<Scan> {
-  const response = await apiServices.post<{ data: Scan }>(
-    `${BASE_URL}/${id}/scan`
-  );
+  const response = await apiServices.post<{ data: Scan }>(`${BASE_URL}/${id}/scan`);
   return response.data.data;
 }
 
 export async function getRepositoryScans(
   id: number,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<ScansResponse> {
   const response = await apiServices.get<{ data: ScansResponse }>(
-    `${BASE_URL}/${id}/scans?page=${page}&limit=${limit}`
+    `${BASE_URL}/${id}/scans?page=${page}&limit=${limit}`,
   );
   return response.data.data;
 }
 
-export async function generateWebhookSecret(
-  id: number
-): Promise<{ webhook_secret: string }> {
+export async function generateWebhookSecret(id: number): Promise<{ webhook_secret: string }> {
   const response = await apiServices.post<{ data: { webhook_secret: string } }>(
-    `${BASE_URL}/${id}/webhook-secret`
+    `${BASE_URL}/${id}/webhook-secret`,
   );
   return response.data.data;
 }
 
 export async function getRepositoryCount(): Promise<number> {
   const response = await apiServices.get<{ data: RepositoriesResponse }>(
-    `${BASE_URL}?page=1&limit=1`
+    `${BASE_URL}?page=1&limit=1`,
   );
   return response.data.data.pagination.total;
 }

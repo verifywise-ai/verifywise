@@ -15,19 +15,14 @@ import type {
 } from "../../domain/types/ceMarking";
 
 // Re-export types for presentation layer
-export type {
-  CEMarkingData,
-  ConformityStepsUpdatePayload,
-  LinkedResourcesUpdatePayload,
-};
+export type { CEMarkingData, ConformityStepsUpdatePayload, LinkedResourcesUpdatePayload };
 
 // ==================== CE Marking Data ====================
 
 /**
  * Get CE Marking data for a project
  */
-export const getCEMarking = (projectId: string) =>
-  ceMarkingService.getCEMarking(projectId);
+export const getCEMarking = (projectId: string) => ceMarkingService.getCEMarking(projectId);
 
 /**
  * Update CE Marking data for a project
@@ -49,7 +44,7 @@ export const updateConformityStep = (
     owner?: string;
     dueDate?: string | null;
     completedDate?: string | null;
-  }
+  },
 ) => ceMarkingService.updateConformityStep(projectId, stepId, stepData);
 
 // ==================== Classification & Scope ====================
@@ -63,7 +58,7 @@ export const updateClassificationAndScope = (
     isHighRiskAISystem?: boolean;
     roleInProduct?: string;
     annexIIICategory?: string;
-  }
+  },
 ) => ceMarkingService.updateClassificationAndScope(projectId, data);
 
 // ==================== Declaration ====================
@@ -78,7 +73,7 @@ export const updateDeclaration = (
     signedOn?: string | null;
     signatory?: string | null;
     declarationDocument?: string | null;
-  }
+  },
 ) => ceMarkingService.updateDeclaration(projectId, data);
 
 // ==================== Registration ====================
@@ -93,7 +88,7 @@ export const updateRegistration = (
     euRegistrationId?: string | null;
     registrationDate?: string | null;
     euRecordUrl?: string | null;
-  }
+  },
 ) => ceMarkingService.updateRegistration(projectId, data);
 
 // ==================== Linked Resources ====================

@@ -2,7 +2,21 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Typography, Stack, IconButton, Collapse } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
-import { CirclePlus, Key, Wallet, Trash2, Pencil, Lock, Router, AlertTriangle, ChevronDown, ChevronRight, Check, X, Play } from "lucide-react";
+import {
+  CirclePlus,
+  Key,
+  Wallet,
+  Trash2,
+  Pencil,
+  Lock,
+  Router,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  X,
+  Play,
+} from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -36,13 +50,18 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 /** Metadata for each risk condition — description + human-readable threshold labels */
-const CONDITION_META: Record<string, { description: string; thresholdLabels: Record<string, string> }> = {
+const CONDITION_META: Record<
+  string,
+  { description: string; thresholdLabels: Record<string, string> }
+> = {
   pii_exposure: {
-    description: "Flags when users send personal data (names, emails, SSNs) to LLM providers above a threshold.",
+    description:
+      "Flags when users send personal data (names, emails, SSNs) to LLM providers above a threshold.",
     thresholdLabels: { count: "Detections", period_days: "Window (days)" },
   },
   no_guardrails: {
-    description: "Flags when active endpoints have zero guardrail rules configured — all traffic flows unchecked.",
+    description:
+      "Flags when active endpoints have zero guardrail rules configured — all traffic flows unchecked.",
     thresholdLabels: {},
   },
   budget_exhaustion: {
@@ -50,23 +69,28 @@ const CONDITION_META: Record<string, { description: string; thresholdLabels: Rec
     thresholdLabels: { pct: "Alert at (%)" },
   },
   provider_concentration: {
-    description: "Flags when most of the spend is concentrated on a single LLM provider, increasing vendor risk.",
+    description:
+      "Flags when most of the spend is concentrated on a single LLM provider, increasing vendor risk.",
     thresholdLabels: { pct: "Concentration (%)" },
   },
   error_rate_spike: {
-    description: "Flags when the 24-hour error rate exceeds a multiple of the 7-day average, indicating provider issues.",
+    description:
+      "Flags when the 24-hour error rate exceeds a multiple of the 7-day average, indicating provider issues.",
     thresholdLabels: { multiplier: "Spike factor (x)" },
   },
   cost_anomaly: {
-    description: "Flags when today's spend exceeds a multiple of the 7-day daily average, catching unexpected surges.",
+    description:
+      "Flags when today's spend exceeds a multiple of the 7-day daily average, catching unexpected surges.",
     thresholdLabels: { multiplier: "Spike factor (x)" },
   },
   stale_virtual_key: {
-    description: "Flags virtual keys that are old but still actively used — rotating keys reduces exposure.",
+    description:
+      "Flags virtual keys that are old but still actively used — rotating keys reduces exposure.",
     thresholdLabels: { age_days: "Key age (days)", min_spend_usd: "Min spend ($)" },
   },
   unused_endpoint: {
-    description: "Flags active endpoints with zero requests, which increase the attack surface unnecessarily.",
+    description:
+      "Flags active endpoints with zero requests, which increase the attack surface unnecessarily.",
     thresholdLabels: { inactive_days: "Inactive (days)" },
   },
 };
@@ -159,7 +183,12 @@ export default function AIGatewaySettingsPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [acceptTarget, setAcceptTarget] = useState<RiskSuggestion | null>(null);
-  const [acceptForm, setAcceptForm] = useState({ risk_name: "", risk_description: "", severity: "", mitigation_plan: "" });
+  const [acceptForm, setAcceptForm] = useState({
+    risk_name: "",
+    risk_description: "",
+    severity: "",
+    mitigation_plan: "",
+  });
   const [acceptSubmitting, setAcceptSubmitting] = useState(false);
   const [dismissTarget, setDismissTarget] = useState<RiskSuggestion | null>(null);
   const [dismissModalOpen, setDismissModalOpen] = useState(false);
@@ -171,7 +200,9 @@ export default function AIGatewaySettingsPage() {
       const [keysRes, budgetRes, providersRes, gsRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/keys"),
         apiServices.get<Record<string, any>>("/ai-gateway/budget"),
-        apiServices.get<{ data: any; providers?: string[] }>("/ai-gateway/providers").catch(() => null),
+        apiServices
+          .get<{ data: any; providers?: string[] }>("/ai-gateway/providers")
+          .catch(() => null),
         apiServices.get<Record<string, any>>("/ai-gateway/guardrails/settings").catch(() => null),
       ]);
       setApiKeys(keysRes?.data?.data || []);
@@ -185,7 +216,6 @@ export default function AIGatewaySettingsPage() {
 
       if (otherProviders.length > 0) {
         setProviderItems([...TOP_PROVIDERS, ...otherProviders]);
-        
       }
 
       const gs = gsRes?.data?.settings;
@@ -234,8 +264,12 @@ export default function AIGatewaySettingsPage() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { if (activeTab === "risks") loadRiskData(); }, [activeTab, loadRiskData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+  useEffect(() => {
+    if (activeTab === "risks") loadRiskData();
+  }, [activeTab, loadRiskData]);
 
   const handleCreateKey = async () => {
     if (!keyForm.key_name || !keyForm.provider || !keyForm.api_key) {
@@ -270,7 +304,9 @@ export default function AIGatewaySettingsPage() {
       setKeyForm({ key_name: "", provider: "", api_key: "" });
       await loadData();
     } catch (err: any) {
-      setKeyError(err?.response?.data?.detail || err?.response?.data?.message || "Failed to create API key");
+      setKeyError(
+        err?.response?.data?.detail || err?.response?.data?.message || "Failed to create API key",
+      );
     } finally {
       setKeySubmitting(false);
     }
@@ -355,7 +391,7 @@ export default function AIGatewaySettingsPage() {
 
   const handleToggleCondition = (conditionId: string, enabled: boolean) => {
     setRiskSettings((prev) =>
-      prev.map((s) => (s.condition_id === conditionId ? { ...s, is_enabled: enabled } : s))
+      prev.map((s) => (s.condition_id === conditionId ? { ...s, is_enabled: enabled } : s)),
     );
     setRiskSettingsDirty(true);
   };
@@ -365,8 +401,8 @@ export default function AIGatewaySettingsPage() {
       prev.map((s) =>
         s.condition_id === conditionId
           ? { ...s, threshold: { ...s.threshold, [key]: Number(value) || 0 } }
-          : s
-      )
+          : s,
+      ),
     );
     setRiskSettingsDirty(true);
   };
@@ -380,8 +416,8 @@ export default function AIGatewaySettingsPage() {
             is_enabled: s.is_enabled,
             threshold: s.threshold,
             severity_override: s.severity_override,
-          })
-        )
+          }),
+        ),
       );
       setRiskSettingsDirty(false);
     } catch {
@@ -395,9 +431,15 @@ export default function AIGatewaySettingsPage() {
     setDetecting(true);
     setDetectResult("");
     try {
-      const res = await apiServices.post<Record<string, any>>("/ai-gateway/risk-suggestions/detect");
+      const res = await apiServices.post<Record<string, any>>(
+        "/ai-gateway/risk-suggestions/detect",
+      );
       const count = res?.data?.new_suggestions_count ?? res?.data?.data?.new_suggestions ?? 0;
-      setDetectResult(count > 0 ? `${count} new suggestion${count > 1 ? "s" : ""} found` : "No new risks detected");
+      setDetectResult(
+        count > 0
+          ? `${count} new suggestion${count > 1 ? "s" : ""} found`
+          : "No new risks detected",
+      );
       await loadRiskData();
       setTimeout(() => setDetectResult(""), 5000);
     } catch {
@@ -491,7 +533,8 @@ export default function AIGatewaySettingsPage() {
                   <Box>
                     <Typography sx={sectionTitleSx}>API keys</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when proxying a request.
+                      Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when
+                      proxying a request.
                     </Typography>
                   </Box>
                   <CustomizableButton
@@ -551,13 +594,19 @@ export default function AIGatewaySettingsPage() {
                           <Typography
                             sx={{
                               fontSize: 12,
-                              color: key.is_active ? palette.status.success.text : palette.text.disabled,
+                              color: key.is_active
+                                ? palette.status.success.text
+                                : palette.text.disabled,
                               fontWeight: 500,
                             }}
                           >
                             {key.is_active ? "Active" : "Inactive"}
                           </Typography>
-                          <IconButton size="small" onClick={() => setKeyDeleteTarget(key)} sx={{ p: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => setKeyDeleteTarget(key)}
+                            sx={{ p: 0.5 }}
+                          >
                             <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                           </IconButton>
                         </Stack>
@@ -577,7 +626,8 @@ export default function AIGatewaySettingsPage() {
                   <Box>
                     <Typography sx={sectionTitleSx}>Budget</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Set a monthly spending limit. When hard limit is enabled, requests are rejected once exceeded.
+                      Set a monthly spending limit. When hard limit is enabled, requests are
+                      rejected once exceeded.
                     </Typography>
                   </Box>
                   <CustomizableButton
@@ -590,13 +640,17 @@ export default function AIGatewaySettingsPage() {
                 {loading ? null : budget ? (
                   <Stack gap="12px">
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Monthly limit</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                        Monthly limit
+                      </Typography>
                       <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                         ${Number(budget.monthly_limit_usd).toFixed(2)}
                       </Typography>
                     </Stack>
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Current spend</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                        Current spend
+                      </Typography>
                       <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                         ${Number(budget.current_spend_usd).toFixed(4)}
                       </Typography>
@@ -615,7 +669,10 @@ export default function AIGatewaySettingsPage() {
                             height: "100%",
                             width: `${Math.min(100, (Number(budget.current_spend_usd) / Number(budget.monthly_limit_usd)) * 100)}%`,
                             backgroundColor:
-                              (Number(budget.current_spend_usd) / Number(budget.monthly_limit_usd)) * 100 >= budget.alert_threshold_pct
+                              (Number(budget.current_spend_usd) /
+                                Number(budget.monthly_limit_usd)) *
+                                100 >=
+                              budget.alert_threshold_pct
                                 ? palette.status.error.text
                                 : palette.brand.primary,
                             borderRadius: 3,
@@ -625,13 +682,17 @@ export default function AIGatewaySettingsPage() {
                       </Box>
                     )}
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Alert threshold</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                        Alert threshold
+                      </Typography>
                       <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                         {budget.alert_threshold_pct}%
                       </Typography>
                     </Stack>
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Hard limit</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                        Hard limit
+                      </Typography>
                       <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                         {budget.is_hard_limit ? "Yes (requests rejected)" : "No (alert only)"}
                       </Typography>
@@ -649,9 +710,7 @@ export default function AIGatewaySettingsPage() {
           )}
 
           {/* ─── Virtual keys tab ─────────────────────────────────────── */}
-          {activeTab === "virtual-keys" && (
-            <VirtualKeysTab embedded />
-          )}
+          {activeTab === "virtual-keys" && <VirtualKeysTab embedded />}
 
           {/* ─── Guardrail settings tab ───────────────────────────────── */}
           {activeTab === "guardrails" && (
@@ -670,7 +729,8 @@ export default function AIGatewaySettingsPage() {
                 <Stack gap="8px">
                   <Typography sx={sectionTitleSx}>Error behavior</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    What happens when the guardrail scanner itself fails. "Fail-closed" blocks all requests for safety. "Fail-open" allows requests through.
+                    What happens when the guardrail scanner itself fails. "Fail-closed" blocks all
+                    requests for safety. "Fail-open" allows requests through.
                   </Typography>
                   <Stack direction="row" gap="16px" mt="8px">
                     <Box flex={1}>
@@ -682,7 +742,9 @@ export default function AIGatewaySettingsPage() {
                           { _id: "block", name: "Block request (fail-closed)" },
                           { _id: "allow", name: "Allow request (fail-open)" },
                         ]}
-                        onChange={(e) => setGsForm((p) => ({ ...p, pii_on_error: e.target.value as string }))}
+                        onChange={(e) =>
+                          setGsForm((p) => ({ ...p, pii_on_error: e.target.value as string }))
+                        }
                         getOptionValue={(item) => item._id}
                       />
                     </Box>
@@ -695,7 +757,12 @@ export default function AIGatewaySettingsPage() {
                           { _id: "allow", name: "Allow request (fail-open)" },
                           { _id: "block", name: "Block request (fail-closed)" },
                         ]}
-                        onChange={(e) => setGsForm((p) => ({ ...p, content_filter_on_error: e.target.value as string }))}
+                        onChange={(e) =>
+                          setGsForm((p) => ({
+                            ...p,
+                            content_filter_on_error: e.target.value as string,
+                          }))
+                        }
                         getOptionValue={(item) => item._id}
                       />
                     </Box>
@@ -708,7 +775,9 @@ export default function AIGatewaySettingsPage() {
                 <Stack gap="8px">
                   <Typography sx={sectionTitleSx}>Replacement text</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    When a guardrail masks content, this text replaces the detected value. Use ENTITY_TYPE in the PII format to include the detected type (e.g., &lt;EMAIL_ADDRESS&gt;).
+                    When a guardrail masks content, this text replaces the detected value. Use
+                    ENTITY_TYPE in the PII format to include the detected type (e.g.,
+                    &lt;EMAIL_ADDRESS&gt;).
                   </Typography>
                   <Stack direction="row" gap="16px" mt="8px">
                     <Box flex={1}>
@@ -716,7 +785,9 @@ export default function AIGatewaySettingsPage() {
                         label="PII replacement format"
                         placeholder="<ENTITY_TYPE>"
                         value={gsForm.pii_replacement_format}
-                        onChange={(e) => setGsForm((p) => ({ ...p, pii_replacement_format: e.target.value }))}
+                        onChange={(e) =>
+                          setGsForm((p) => ({ ...p, pii_replacement_format: e.target.value }))
+                        }
                       />
                     </Box>
                     <Box flex={1}>
@@ -724,7 +795,9 @@ export default function AIGatewaySettingsPage() {
                         label="Content filter replacement"
                         placeholder="[REDACTED]"
                         value={gsForm.content_filter_replacement}
-                        onChange={(e) => setGsForm((p) => ({ ...p, content_filter_replacement: e.target.value }))}
+                        onChange={(e) =>
+                          setGsForm((p) => ({ ...p, content_filter_replacement: e.target.value }))
+                        }
                       />
                     </Box>
                   </Stack>
@@ -736,14 +809,17 @@ export default function AIGatewaySettingsPage() {
                 <Stack gap="8px">
                   <Typography sx={sectionTitleSx}>Audit log retention</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    How long to keep guardrail detection logs. These logs record every blocked or masked request for compliance auditing (EU AI Act Art. 12).
+                    How long to keep guardrail detection logs. These logs record every blocked or
+                    masked request for compliance auditing (EU AI Act Art. 12).
                   </Typography>
                   <Box sx={{ maxWidth: 200, mt: "8px" }}>
                     <Field
                       label="Retention period (days)"
                       placeholder="90"
                       value={gsForm.log_retention_days}
-                      onChange={(e) => setGsForm((p) => ({ ...p, log_retention_days: e.target.value }))}
+                      onChange={(e) =>
+                        setGsForm((p) => ({ ...p, log_retention_days: e.target.value }))
+                      }
                     />
                   </Box>
                   <Box sx={{ mt: "8px" }}>
@@ -767,21 +843,26 @@ export default function AIGatewaySettingsPage() {
                 <Stack gap="8px">
                   <Typography sx={sectionTitleSx}>Request body logging</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    When enabled, full request prompts and LLM responses are stored in the spend logs. Disabled by default for privacy. Bodies are truncated to 2,048 characters.
+                    When enabled, full request prompts and LLM responses are stored in the spend
+                    logs. Disabled by default for privacy. Bodies are truncated to 2,048 characters.
                   </Typography>
                   <Stack gap="12px" mt="8px">
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography sx={{ fontSize: 13 }}>Log request body (prompts)</Typography>
                       <Toggle
                         checked={gsForm.log_request_body}
-                        onChange={() => setGsForm((p) => ({ ...p, log_request_body: !p.log_request_body }))}
+                        onChange={() =>
+                          setGsForm((p) => ({ ...p, log_request_body: !p.log_request_body }))
+                        }
                       />
                     </Stack>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography sx={{ fontSize: 13 }}>Log response body (LLM output)</Typography>
                       <Toggle
                         checked={gsForm.log_response_body}
-                        onChange={() => setGsForm((p) => ({ ...p, log_response_body: !p.log_response_body }))}
+                        onChange={() =>
+                          setGsForm((p) => ({ ...p, log_response_body: !p.log_response_body }))
+                        }
                       />
                     </Stack>
                   </Stack>
@@ -802,9 +883,13 @@ export default function AIGatewaySettingsPage() {
                       onClick={async () => {
                         setSpendPurgeResult("Purging...");
                         try {
-                          const res = await apiServices.post<Record<string, any>>("/ai-gateway/spend/logs/purge");
+                          const res = await apiServices.post<Record<string, any>>(
+                            "/ai-gateway/spend/logs/purge",
+                          );
                           const count = res?.data?.deleted ?? res?.data?.data?.deleted_count ?? 0;
-                          setSpendPurgeResult(count > 0 ? `Deleted ${count} logs` : "No old logs to purge");
+                          setSpendPurgeResult(
+                            count > 0 ? `Deleted ${count} logs` : "No old logs to purge",
+                          );
                           if (count > 0) await loadData();
                           setTimeout(() => setSpendPurgeResult(""), 3000);
                         } catch {
@@ -821,14 +906,20 @@ export default function AIGatewaySettingsPage() {
                 <Stack gap="12px">
                   <Typography sx={sectionTitleSx}>Response caching</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    Cache identical LLM requests to reduce cost and latency. Enable caching globally here, then toggle it per-endpoint in the Endpoints tab.
+                    Cache identical LLM requests to reduce cost and latency. Enable caching globally
+                    here, then toggle it per-endpoint in the Endpoints tab.
                   </Typography>
 
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography sx={{ fontSize: 13 }}>Enable caching globally</Typography>
                     <Toggle
                       checked={cacheSettings.cache_global_enabled}
-                      onChange={() => setCacheSettings((p) => ({ ...p, cache_global_enabled: !p.cache_global_enabled }))}
+                      onChange={() =>
+                        setCacheSettings((p) => ({
+                          ...p,
+                          cache_global_enabled: !p.cache_global_enabled,
+                        }))
+                      }
                     />
                   </Stack>
 
@@ -838,7 +929,12 @@ export default function AIGatewaySettingsPage() {
                         label="Default TTL (seconds)"
                         placeholder="14400"
                         value={cacheSettings.cache_default_ttl_seconds}
-                        onChange={(e) => setCacheSettings((p) => ({ ...p, cache_default_ttl_seconds: e.target.value }))}
+                        onChange={(e) =>
+                          setCacheSettings((p) => ({
+                            ...p,
+                            cache_default_ttl_seconds: e.target.value,
+                          }))
+                        }
                       />
                     </Box>
                     <Box sx={{ flex: 1 }}>
@@ -846,7 +942,12 @@ export default function AIGatewaySettingsPage() {
                         label="Max entries per org"
                         placeholder="50000"
                         value={cacheSettings.cache_max_entries_per_org}
-                        onChange={(e) => setCacheSettings((p) => ({ ...p, cache_max_entries_per_org: e.target.value }))}
+                        onChange={(e) =>
+                          setCacheSettings((p) => ({
+                            ...p,
+                            cache_max_entries_per_org: e.target.value,
+                          }))
+                        }
                       />
                     </Box>
                   </Stack>
@@ -863,9 +964,12 @@ export default function AIGatewaySettingsPage() {
                       onClick={async () => {
                         setCachePurgeResult("Purging...");
                         try {
-                          const res = await apiServices.post<Record<string, any>>("/ai-gateway/cache/purge");
+                          const res =
+                            await apiServices.post<Record<string, any>>("/ai-gateway/cache/purge");
                           const count = res?.data?.deleted ?? 0;
-                          setCachePurgeResult(count > 0 ? `Deleted ${count} entries` : "No expired entries");
+                          setCachePurgeResult(
+                            count > 0 ? `Deleted ${count} entries` : "No expired entries",
+                          );
                           setTimeout(() => setCachePurgeResult(""), 3000);
                         } catch {
                           setCachePurgeResult("Failed");
@@ -889,12 +993,21 @@ export default function AIGatewaySettingsPage() {
                     <Box>
                       <Typography sx={sectionTitleSx}>Risk detection settings</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                        Configure which risk conditions to monitor. Detection runs daily at 6 AM or manually below.
+                        Configure which risk conditions to monitor. Detection runs daily at 6 AM or
+                        manually below.
                       </Typography>
                     </Box>
                     <Stack direction="row" gap="8px" alignItems="center">
                       {detectResult && (
-                        <Typography sx={{ fontSize: 12, color: detectResult.includes("found") ? palette.status.success.text : palette.text.tertiary, mr: "4px" }}>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: detectResult.includes("found")
+                              ? palette.status.success.text
+                              : palette.text.tertiary,
+                            mr: "4px",
+                          }}
+                        >
                           {detectResult}
                         </Typography>
                       )}
@@ -940,18 +1053,32 @@ export default function AIGatewaySettingsPage() {
                               {s.label}
                             </Typography>
                             {meta?.description && (
-                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "2px", lineHeight: 1.4 }}>
+                              <Typography
+                                sx={{
+                                  fontSize: 12,
+                                  color: palette.text.tertiary,
+                                  mt: "2px",
+                                  lineHeight: 1.4,
+                                }}
+                              >
                                 {meta.description}
                               </Typography>
                             )}
                             {thresholdKeys.length > 0 && (
                               <Box sx={{ display: "flex", flexDirection: "row", mt: "8px" }}>
                                 {thresholdKeys.map((key, ki) => (
-                                  <Box key={key} sx={{ width: "110px", ml: ki > 0 ? "8px" : "0px" }}>
+                                  <Box
+                                    key={key}
+                                    sx={{ width: "110px", ml: ki > 0 ? "8px" : "0px" }}
+                                  >
                                     <Field
                                       label={meta?.thresholdLabels[key] || key.replace(/_/g, " ")}
-                                      value={String(s.threshold[key] ?? s.default_threshold[key] ?? "")}
-                                      onChange={(e) => handleThresholdChange(s.condition_id, key, e.target.value)}
+                                      value={String(
+                                        s.threshold[key] ?? s.default_threshold[key] ?? "",
+                                      )}
+                                      onChange={(e) =>
+                                        handleThresholdChange(s.condition_id, key, e.target.value)
+                                      }
                                       sx={{ minWidth: "unset", width: "100%" }}
                                     />
                                   </Box>
@@ -1014,10 +1141,14 @@ export default function AIGatewaySettingsPage() {
 
                           {s.evidence && Object.keys(s.evidence).length > 0 && (
                             <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              Evidence: {Object.entries(s.evidence)
+                              Evidence:{" "}
+                              {Object.entries(s.evidence)
                                 .filter(([k]) => !k.startsWith("threshold"))
                                 .slice(0, 4)
-                                .map(([k, v]) => `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`)
+                                .map(
+                                  ([k, v]) =>
+                                    `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`,
+                                )
                                 .join(" \u00b7 ")}
                             </Typography>
                           )}
@@ -1058,8 +1189,14 @@ export default function AIGatewaySettingsPage() {
                     sx={{ cursor: "pointer", mb: "8px" }}
                     onClick={() => setShowHistory(!showHistory)}
                   >
-                    {showHistory ? <ChevronDown size={16} strokeWidth={1.5} /> : <ChevronRight size={16} strokeWidth={1.5} />}
-                    <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
+                    {showHistory ? (
+                      <ChevronDown size={16} strokeWidth={1.5} />
+                    ) : (
+                      <ChevronRight size={16} strokeWidth={1.5} />
+                    )}
+                    <Typography
+                      sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}
+                    >
                       History ({historySuggestions.length})
                     </Typography>
                   </Stack>
@@ -1083,7 +1220,10 @@ export default function AIGatewaySettingsPage() {
                               sx={{
                                 fontSize: 11,
                                 fontWeight: 600,
-                                color: s.status === "accepted" ? palette.status.success.text : palette.text.tertiary,
+                                color:
+                                  s.status === "accepted"
+                                    ? palette.status.success.text
+                                    : palette.text.tertiary,
                                 textTransform: "uppercase",
                               }}
                             >
@@ -1175,7 +1315,8 @@ export default function AIGatewaySettingsPage() {
       >
         <Stack gap="8px">
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            This action takes effect immediately. Any endpoints using this key will lose their provider authentication and stop working.
+            This action takes effect immediately. Any endpoints using this key will lose their
+            provider authentication and stop working.
           </Typography>
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             Provider: <strong>{keyDeleteTarget?.provider}</strong>
@@ -1210,9 +1351,7 @@ export default function AIGatewaySettingsPage() {
           />
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                Hard limit
-              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Hard limit</Typography>
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                 Reject requests when budget is exceeded
               </Typography>
@@ -1228,7 +1367,10 @@ export default function AIGatewaySettingsPage() {
       {/* Accept as risk Modal */}
       <StandardModal
         isOpen={acceptModalOpen}
-        onClose={() => { setAcceptModalOpen(false); setAcceptTarget(null); }}
+        onClose={() => {
+          setAcceptModalOpen(false);
+          setAcceptTarget(null);
+        }}
         title="Accept as risk"
         description="This will create a new risk in Risk Management pre-filled with the suggestion data."
         onSubmit={handleAccept}
@@ -1276,7 +1418,10 @@ export default function AIGatewaySettingsPage() {
       {/* Dismiss Modal */}
       <StandardModal
         isOpen={dismissModalOpen}
-        onClose={() => { setDismissModalOpen(false); setDismissTarget(null); }}
+        onClose={() => {
+          setDismissModalOpen(false);
+          setDismissTarget(null);
+        }}
         title="Dismiss suggestion"
         description={`Dismiss "${dismissTarget?.title || ""}" — optionally provide a reason.`}
         onSubmit={handleDismiss}

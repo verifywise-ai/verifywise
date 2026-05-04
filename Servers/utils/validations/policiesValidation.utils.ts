@@ -10,10 +10,10 @@ import {
   validateForeignKey,
   validateSchema,
   ValidationResult,
-  ValidationError
-} from './validation.utils';
-import { POLICY_TAGS, PolicyTag } from '../../domain.layer/interfaces/i.policy';
-import striptags from 'striptags';
+  ValidationError,
+} from "./validation.utils";
+import { POLICY_TAGS, PolicyTag } from "../../domain.layer/interfaces/i.policy";
+import striptags from "striptags";
 /**
  * Validation constants for policies
  */
@@ -22,19 +22,19 @@ export const POLICIES_VALIDATION_LIMITS = {
   CONTENT_HTML: { MIN: 50, MAX: 50000 },
   STATUS: { MIN: 3, MAX: 50 },
   TAGS: { MIN_ITEMS: 0, MAX_ITEMS: 10 },
-  REVIEWER_IDS: { MIN_ITEMS: 0, MAX_ITEMS: 20 }
+  REVIEWER_IDS: { MIN_ITEMS: 0, MAX_ITEMS: 20 },
 } as const;
 
 /**
  * Policy status enum values
  */
 export const POLICY_STATUS_ENUM = [
-  'Draft',
-  'Under Review',
-  'Approved',
-  'Published',
-  'Archived',
-  'Deprecated'
+  "Draft",
+  "Under Review",
+  "Approved",
+  "Published",
+  "Archived",
+  "Deprecated",
 ] as const;
 
 /**
@@ -46,11 +46,11 @@ export const POLICY_TAGS_ENUM = POLICY_TAGS;
  * Validates policy title field
  */
 export const validatePolicyTitle = (value: any): ValidationResult => {
-  return validateString(value, 'Policy title', {
+  return validateString(value, "Policy title", {
     required: true,
     minLength: POLICIES_VALIDATION_LIMITS.TITLE.MIN,
     maxLength: POLICIES_VALIDATION_LIMITS.TITLE.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 };
 
@@ -58,11 +58,11 @@ export const validatePolicyTitle = (value: any): ValidationResult => {
  * Validates policy content HTML field
  */
 export const validatePolicyContentHtml = (value: any): ValidationResult => {
-  const stringValidation = validateString(value, 'Policy content', {
+  const stringValidation = validateString(value, "Policy content", {
     required: true,
     minLength: POLICIES_VALIDATION_LIMITS.CONTENT_HTML.MIN,
     maxLength: POLICIES_VALIDATION_LIMITS.CONTENT_HTML.MAX,
-    trimWhitespace: true
+    trimWhitespace: true,
   });
 
   if (!stringValidation.isValid) {
@@ -70,7 +70,7 @@ export const validatePolicyContentHtml = (value: any): ValidationResult => {
   }
 
   // Additional HTML validation
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     // Check for basic HTML structure
     const hasOpeningTag = /<[^>]+>/i.test(value);
     const hasClosingTag = /<\/[^>]+>/i.test(value);
@@ -87,15 +87,15 @@ export const validatePolicyContentHtml = (value: any): ValidationResult => {
       /on\w+\s*=/i,
       /<iframe[^>]*>/i,
       /<object[^>]*>/i,
-      /<embed[^>]*>/i
+      /<embed[^>]*>/i,
     ];
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(value)) {
         return {
           isValid: false,
-          message: 'Policy content contains potentially unsafe HTML elements',
-          code: 'UNSAFE_HTML_CONTENT'
+          message: "Policy content contains potentially unsafe HTML elements",
+          code: "UNSAFE_HTML_CONTENT",
         };
       }
     }
@@ -108,7 +108,7 @@ export const validatePolicyContentHtml = (value: any): ValidationResult => {
  * Validates policy status field
  */
 export const validatePolicyStatus = (value: any): ValidationResult => {
-  return validateEnum(value, 'Policy status', POLICY_STATUS_ENUM, true);
+  return validateEnum(value, "Policy status", POLICY_STATUS_ENUM, true);
 };
 
 /**
@@ -122,8 +122,8 @@ export const validatePolicyTags = (value: any): ValidationResult => {
   if (!Array.isArray(value)) {
     return {
       isValid: false,
-      message: 'Policy tags must be an array',
-      code: 'INVALID_TAGS_TYPE'
+      message: "Policy tags must be an array",
+      code: "INVALID_TAGS_TYPE",
     };
   }
 
@@ -131,7 +131,7 @@ export const validatePolicyTags = (value: any): ValidationResult => {
     return {
       isValid: false,
       message: `Policy tags cannot exceed ${POLICIES_VALIDATION_LIMITS.TAGS.MAX_ITEMS} items`,
-      code: 'TOO_MANY_TAGS'
+      code: "TOO_MANY_TAGS",
     };
   }
 
@@ -141,8 +141,8 @@ export const validatePolicyTags = (value: any): ValidationResult => {
     if (!POLICY_TAGS_ENUM.includes(tag as PolicyTag)) {
       return {
         isValid: false,
-        message: `Invalid policy tag: "${tag}". Must be one of: ${POLICY_TAGS_ENUM.join(', ')}`,
-        code: 'INVALID_POLICY_TAG'
+        message: `Invalid policy tag: "${tag}". Must be one of: ${POLICY_TAGS_ENUM.join(", ")}`,
+        code: "INVALID_POLICY_TAG",
       };
     }
   }
@@ -152,8 +152,8 @@ export const validatePolicyTags = (value: any): ValidationResult => {
   if (uniqueTags.length !== value.length) {
     return {
       isValid: false,
-      message: 'Policy tags cannot contain duplicates',
-      code: 'DUPLICATE_TAGS'
+      message: "Policy tags cannot contain duplicates",
+      code: "DUPLICATE_TAGS",
     };
   }
 
@@ -164,18 +164,18 @@ export const validatePolicyTags = (value: any): ValidationResult => {
  * Validates next review date field (optional)
  */
 export const validateNextReviewDate = (value: any): ValidationResult => {
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === null || value === "") {
     return { isValid: true }; // Next review date is optional
   }
 
-  return validateDate(value, 'Next review date', { required: false });
+  return validateDate(value, "Next review date", { required: false });
 };
 
 /**
  * Validates author ID field
  */
 export const validateAuthorId = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Author ID', true);
+  return validateForeignKey(value, "Author ID", true);
 };
 
 /**
@@ -189,8 +189,8 @@ export const validateAssignedReviewerIds = (value: any): ValidationResult => {
   if (!Array.isArray(value)) {
     return {
       isValid: false,
-      message: 'Assigned reviewer IDs must be an array',
-      code: 'INVALID_REVIEWER_IDS_TYPE'
+      message: "Assigned reviewer IDs must be an array",
+      code: "INVALID_REVIEWER_IDS_TYPE",
     };
   }
 
@@ -198,7 +198,7 @@ export const validateAssignedReviewerIds = (value: any): ValidationResult => {
     return {
       isValid: false,
       message: `Assigned reviewer IDs cannot exceed ${POLICIES_VALIDATION_LIMITS.REVIEWER_IDS.MAX_ITEMS} reviewers`,
-      code: 'TOO_MANY_REVIEWERS'
+      code: "TOO_MANY_REVIEWERS",
     };
   }
 
@@ -216,8 +216,8 @@ export const validateAssignedReviewerIds = (value: any): ValidationResult => {
   if (uniqueReviewers.length !== value.length) {
     return {
       isValid: false,
-      message: 'Assigned reviewer IDs cannot contain duplicates',
-      code: 'DUPLICATE_REVIEWERS'
+      message: "Assigned reviewer IDs cannot contain duplicates",
+      code: "DUPLICATE_REVIEWERS",
     };
   }
 
@@ -228,14 +228,14 @@ export const validateAssignedReviewerIds = (value: any): ValidationResult => {
  * Validates last updated by field
  */
 export const validateLastUpdatedBy = (value: any): ValidationResult => {
-  return validateForeignKey(value, 'Last updated by', true);
+  return validateForeignKey(value, "Last updated by", true);
 };
 
 /**
  * Validates policy ID parameter
  */
 export const validatePolicyIdParam = (id: any): ValidationResult => {
-  return validateForeignKey(id, 'Policy ID', true);
+  return validateForeignKey(id, "Policy ID", true);
 };
 
 /**
@@ -249,20 +249,24 @@ export const createPolicySchema = {
   next_review_date: validateNextReviewDate,
   author_id: validateAuthorId,
   assigned_reviewer_ids: validateAssignedReviewerIds,
-  last_updated_by: validateLastUpdatedBy
+  last_updated_by: validateLastUpdatedBy,
 };
 
 /**
  * Validation schema for updating a policy
  */
 export const updatePolicySchema = {
-  title: (value: any) => value !== undefined ? validatePolicyTitle(value) : { isValid: true },
-  content_html: (value: any) => value !== undefined ? validatePolicyContentHtml(value) : { isValid: true },
-  status: (value: any) => value !== undefined ? validatePolicyStatus(value) : { isValid: true },
-  tags: (value: any) => value !== undefined ? validatePolicyTags(value) : { isValid: true },
-  next_review_date: (value: any) => value !== undefined ? validateNextReviewDate(value) : { isValid: true },
-  assigned_reviewer_ids: (value: any) => value !== undefined ? validateAssignedReviewerIds(value) : { isValid: true },
-  last_updated_by: (value: any) => value !== undefined ? validateLastUpdatedBy(value) : { isValid: true }
+  title: (value: any) => (value !== undefined ? validatePolicyTitle(value) : { isValid: true }),
+  content_html: (value: any) =>
+    value !== undefined ? validatePolicyContentHtml(value) : { isValid: true },
+  status: (value: any) => (value !== undefined ? validatePolicyStatus(value) : { isValid: true }),
+  tags: (value: any) => (value !== undefined ? validatePolicyTags(value) : { isValid: true }),
+  next_review_date: (value: any) =>
+    value !== undefined ? validateNextReviewDate(value) : { isValid: true },
+  assigned_reviewer_ids: (value: any) =>
+    value !== undefined ? validateAssignedReviewerIds(value) : { isValid: true },
+  last_updated_by: (value: any) =>
+    value !== undefined ? validateLastUpdatedBy(value) : { isValid: true },
 };
 
 /**
@@ -277,15 +281,24 @@ export const validateCompletePolicy = (data: any): ValidationError[] => {
  */
 export const validateUpdatePolicy = (data: any): ValidationError[] => {
   // Check if at least one field is provided for update
-  const updateFields = ['title', 'content_html', 'status', 'tags', 'next_review_date', 'assigned_reviewer_ids'];
-  const hasUpdateField = updateFields.some(field => data[field] !== undefined);
+  const updateFields = [
+    "title",
+    "content_html",
+    "status",
+    "tags",
+    "next_review_date",
+    "assigned_reviewer_ids",
+  ];
+  const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
 
   if (!hasUpdateField) {
-    return [{
-      field: 'body',
-      message: 'At least one field must be provided for update',
-      code: 'NO_UPDATE_FIELDS'
-    }];
+    return [
+      {
+        field: "body",
+        message: "At least one field must be provided for update",
+        code: "NO_UPDATE_FIELDS",
+      },
+    ];
   }
 
   return validateSchema(data, updatePolicySchema);
@@ -305,9 +318,9 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
 
     if (reviewDate <= today) {
       errors.push({
-        field: 'next_review_date',
-        message: 'Next review date must be in the future',
-        code: 'INVALID_REVIEW_DATE'
+        field: "next_review_date",
+        message: "Next review date must be in the future",
+        code: "INVALID_REVIEW_DATE",
       });
     }
 
@@ -317,21 +330,22 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
 
     if (reviewDate > twoYearsFromNow) {
       errors.push({
-        field: 'next_review_date',
-        message: 'Review date more than two years in the future may indicate infrequent policy review',
-        code: 'DISTANT_REVIEW_DATE'
+        field: "next_review_date",
+        message:
+          "Review date more than two years in the future may indicate infrequent policy review",
+        code: "DISTANT_REVIEW_DATE",
       });
     }
   }
 
   // Validate status for new policies
   if (data.status) {
-    const validInitialStatuses = ['Draft', 'Under Review'];
+    const validInitialStatuses = ["Draft", "Under Review"];
     if (!validInitialStatuses.includes(data.status)) {
       errors.push({
-        field: 'status',
+        field: "status",
         message: 'New policies should start with "Draft" or "Under Review" status',
-        code: 'INVALID_INITIAL_STATUS'
+        code: "INVALID_INITIAL_STATUS",
       });
     }
   }
@@ -357,9 +371,10 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
     const textContent = striptags(data.content_html).trim();
     if (textContent.length < 100) {
       errors.push({
-        field: 'content_html',
-        message: 'Policy content should contain substantial text content (minimum 100 characters of actual text)',
-        code: 'INSUFFICIENT_CONTENT'
+        field: "content_html",
+        message:
+          "Policy content should contain substantial text content (minimum 100 characters of actual text)",
+        code: "INSUFFICIENT_CONTENT",
       });
     }
 
@@ -370,18 +385,16 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
       /todo/i,
       /fill in/i,
       /tbd/i,
-      /to be determined/i
+      /to be determined/i,
     ];
 
-    const hasPlaceholder = placeholderPatterns.some(pattern =>
-      pattern.test(data.content_html)
-    );
+    const hasPlaceholder = placeholderPatterns.some((pattern) => pattern.test(data.content_html));
 
     if (hasPlaceholder) {
       errors.push({
-        field: 'content_html',
-        message: 'Policy content should not contain placeholder text',
-        code: 'PLACEHOLDER_CONTENT'
+        field: "content_html",
+        message: "Policy content should not contain placeholder text",
+        code: "PLACEHOLDER_CONTENT",
       });
     }
   }
@@ -391,14 +404,14 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
     const contentLower = data.content_html.toLowerCase();
     const relevantTags = data.tags.filter((tag: string) => {
       const tagWords = tag.toLowerCase().split(/\s+/);
-      return tagWords.some(word => contentLower.includes(word));
+      return tagWords.some((word) => contentLower.includes(word));
     });
 
     if (relevantTags.length === 0 && data.tags.length > 0) {
       errors.push({
-        field: 'tags',
-        message: 'Policy tags should be relevant to the content',
-        code: 'IRRELEVANT_TAGS'
+        field: "tags",
+        message: "Policy tags should be relevant to the content",
+        code: "IRRELEVANT_TAGS",
       });
     }
   }
@@ -409,46 +422,59 @@ export const validatePolicyCreationBusinessRules = (data: any): ValidationError[
 /**
  * Business rule validation for policy updates
  */
-export const validatePolicyUpdateBusinessRules = (data: any, existingData?: any): ValidationError[] => {
+export const validatePolicyUpdateBusinessRules = (
+  data: any,
+  existingData?: any,
+): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Validate status transitions
   if (data.status && existingData?.status) {
     const invalidTransitions = [
-      { from: 'Published', to: 'Draft', message: 'Cannot move published policy back to draft' },
-      { from: 'Published', to: 'Under Review', message: 'Published policies require formal revision process' },
-      { from: 'Archived', to: 'Draft', message: 'Cannot restore archived policy to draft' },
-      { from: 'Archived', to: 'Under Review', message: 'Cannot restore archived policy to under review' },
-      { from: 'Archived', to: 'Approved', message: 'Cannot restore archived policy to approved' },
-      { from: 'Deprecated', to: 'Published', message: 'Cannot republish deprecated policy' }
+      { from: "Published", to: "Draft", message: "Cannot move published policy back to draft" },
+      {
+        from: "Published",
+        to: "Under Review",
+        message: "Published policies require formal revision process",
+      },
+      { from: "Archived", to: "Draft", message: "Cannot restore archived policy to draft" },
+      {
+        from: "Archived",
+        to: "Under Review",
+        message: "Cannot restore archived policy to under review",
+      },
+      { from: "Archived", to: "Approved", message: "Cannot restore archived policy to approved" },
+      { from: "Deprecated", to: "Published", message: "Cannot republish deprecated policy" },
     ];
 
     const invalidTransition = invalidTransitions.find(
-      t => t.from === existingData.status && t.to === data.status
+      (t) => t.from === existingData.status && t.to === data.status,
     );
 
     if (invalidTransition) {
       errors.push({
-        field: 'status',
+        field: "status",
         message: invalidTransition.message,
-        code: 'INVALID_STATUS_TRANSITION'
+        code: "INVALID_STATUS_TRANSITION",
       });
     }
   }
 
   // Validate major content changes for published policies
-  if (data.content_html && existingData?.status === 'Published' && existingData?.content_html) {
+  if (data.content_html && existingData?.status === "Published" && existingData?.content_html) {
     const oldContent = striptags(existingData.content_html).trim();
     const newContent = striptags(data.content_html).trim();
 
     // Simple check for significant content changes (more than 30% difference)
-    const similarity = Math.min(oldContent.length, newContent.length) / Math.max(oldContent.length, newContent.length);
+    const similarity =
+      Math.min(oldContent.length, newContent.length) /
+      Math.max(oldContent.length, newContent.length);
 
     if (similarity < 0.7) {
       errors.push({
-        field: 'content_html',
-        message: 'Major content changes to published policies may require formal revision process',
-        code: 'MAJOR_CONTENT_CHANGE'
+        field: "content_html",
+        message: "Major content changes to published policies may require formal revision process",
+        code: "MAJOR_CONTENT_CHANGE",
       });
     }
   }
@@ -461,9 +487,9 @@ export const validatePolicyUpdateBusinessRules = (data: any, existingData?: any)
 
     if (reviewDate <= today) {
       errors.push({
-        field: 'next_review_date',
-        message: 'Next review date must be in the future',
-        code: 'INVALID_REVIEW_DATE'
+        field: "next_review_date",
+        message: "Next review date must be in the future",
+        code: "INVALID_REVIEW_DATE",
       });
     }
   }

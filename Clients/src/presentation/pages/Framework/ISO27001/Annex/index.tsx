@@ -85,60 +85,56 @@ const ISO27001Annex = ({
   const [lastProcessedLink, setLastProcessedLink] = useState<string | null>(null);
 
   // Shared function to filter controls based on all active filters
-  const filterControls = useCallback((controls: any[]) => {
-    let filtered = controls;
+  const filterControls = useCallback(
+    (controls: any[]) => {
+      let filtered = controls;
 
-    // Apply status filter
-    if (statusFilter && statusFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) =>
-          control.status?.toLowerCase() === statusFilter.toLowerCase(),
-      );
-    }
+      // Apply status filter
+      if (statusFilter && statusFilter !== "") {
+        filtered = filtered.filter(
+          (control: any) => control.status?.toLowerCase() === statusFilter.toLowerCase(),
+        );
+      }
 
-    // Apply owner filter
-    if (ownerFilter && ownerFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) => control.owner?.toString() === ownerFilter,
-      );
-    }
+      // Apply owner filter
+      if (ownerFilter && ownerFilter !== "") {
+        filtered = filtered.filter((control: any) => control.owner?.toString() === ownerFilter);
+      }
 
-    // Apply reviewer filter
-    if (reviewerFilter && reviewerFilter !== "") {
-      filtered = filtered.filter(
-        (control: any) => control.reviewer?.toString() === reviewerFilter,
-      );
-    }
+      // Apply reviewer filter
+      if (reviewerFilter && reviewerFilter !== "") {
+        filtered = filtered.filter(
+          (control: any) => control.reviewer?.toString() === reviewerFilter,
+        );
+      }
 
-    // Apply due date filter
-    if (dueDateFilter && dueDateFilter !== "") {
-      filtered = filtered.filter((control: any) => {
-        if (control.due_date) {
-          const dueDate = new Date(control.due_date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const filterDays = parseInt(dueDateFilter);
-          return daysUntilDue >= 0 && daysUntilDue <= filterDays;
-        }
-        return false;
-      });
-    }
+      // Apply due date filter
+      if (dueDateFilter && dueDateFilter !== "") {
+        filtered = filtered.filter((control: any) => {
+          if (control.due_date) {
+            const dueDate = new Date(control.due_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const daysUntilDue = Math.ceil(
+              (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            const filterDays = parseInt(dueDateFilter);
+            return daysUntilDue >= 0 && daysUntilDue <= filterDays;
+          }
+          return false;
+        });
+      }
 
-    // Apply applicability filter
-    if (
-      applicabilityFilter &&
-      applicabilityFilter !== "all" &&
-      applicabilityFilter !== ""
-    ) {
-      const isApplicable = applicabilityFilter === "true";
-      filtered = filtered.filter(
-        (control: any) => Boolean(control.applicable) === isApplicable,
-      );
-    }
+      // Apply applicability filter
+      if (applicabilityFilter && applicabilityFilter !== "all" && applicabilityFilter !== "") {
+        const isApplicable = applicabilityFilter === "true";
+        filtered = filtered.filter((control: any) => Boolean(control.applicable) === isApplicable);
+      }
 
-    return filtered;
-  }, [statusFilter, ownerFilter, reviewerFilter, dueDateFilter, applicabilityFilter]);
+      return filtered;
+    },
+    [statusFilter, ownerFilter, reviewerFilter, dueDateFilter, applicabilityFilter],
+  );
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
@@ -207,13 +203,12 @@ const ISO27001Annex = ({
     }
   }, [annexId, annexes, annexControlId, initialAnnexId, initialAnnexControlId, lastProcessedLink]);
 
-
   const filteredAnnexes = useMemo(() => {
     if (!searchTerm.trim()) {
       return annexes;
     }
     return annexes.filter((annex: any) =>
-      annex.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      annex.title?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [annexes, searchTerm]);
 
@@ -227,9 +222,7 @@ const ISO27001Annex = ({
     };
 
   const handleControlClick = (annex: any, control: any) => {
-    setAnnexTitle(
-      `${annex.arrangement}.${annex.order_no}.${control.order_no} ${control.title}`,
-    );
+    setAnnexTitle(`${annex.arrangement}.${annex.order_no}.${control.order_no} ${control.title}`);
     setSelectedAnnex(annex);
     setSelectedControl(control);
     setDrawerOpen(true);
@@ -247,17 +240,11 @@ const ISO27001Annex = ({
     }
   }, []);
 
-  const handleSaveSuccess = async (
-    success: boolean,
-    message?: string,
-    savedControlId?: number,
-  ) => {
+  const handleSaveSuccess = async (success: boolean, message?: string, savedControlId?: number) => {
     // Show appropriate toast message
     handleAlert({
       variant: success ? "success" : "error",
-      body:
-        message ||
-        (success ? "Changes saved successfully" : "Failed to save changes"),
+      body: message || (success ? "Changes saved successfully" : "Failed to save changes"),
       setAlert,
     });
 
@@ -279,10 +266,7 @@ const ISO27001Annex = ({
     }
   };
 
-  const handleStatusChange = async (
-    control: any,
-    newStatus: string,
-  ): Promise<boolean> => {
+  const handleStatusChange = async (control: any, newStatus: string): Promise<boolean> => {
     try {
       const success = await updateISO27001AnnexStatus({
         id: control.id,
@@ -338,9 +322,7 @@ const ISO27001Annex = ({
 
   return (
     <Stack className="iso-27001-annex">
-      {alert && (
-        <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />
-      )}
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       {
         <>
           <Typography sx={{ ...styles.title, mt: 4 }}>
@@ -372,9 +354,10 @@ const ISO27001Annex = ({
           {filteredAnnexes &&
             filteredAnnexes.map((annex: any) => {
               const count = filteredControlsCountMemo[annex.id ?? 0];
-              const chipColor = count !== undefined && count > 0
-                ? { bg: "#E6F4EA", color: "status.success.text" }
-                : { bg: "#FFF8E1", color: "#795548" };
+              const chipColor =
+                count !== undefined && count > 0
+                  ? { bg: "#E6F4EA", color: "status.success.text" }
+                  : { bg: "#FFF8E1", color: "#795548" };
               return (
                 <Stack key={annex.id} sx={styles.container}>
                   <Accordion
@@ -384,71 +367,75 @@ const ISO27001Annex = ({
                     sx={styles.accordion}
                   >
                     <AccordionSummary sx={styles.accordionSummary}>
-                      <RightArrowBlack size={16}
+                      <RightArrowBlack
+                        size={16}
                         style={styles.expandIcon(expanded === annex.id) as React.CSSProperties}
                       />
                       <Typography sx={{ paddingLeft: "2.5px", fontSize: 13 }}>
                         {annex.arrangement}.{annex.order_no} {annex.title}
                       </Typography>
                       {hasActiveFilters && count !== undefined && (
-                        <Box component="span" sx={{
-                          backgroundColor: chipColor.bg,
-                          color: chipColor.color,
-                          padding: "4px 8px",
-                          borderRadius: "2px",
-                          fontSize: 13,
-                          fontWeight: 500,
-                          ml: 4,
-                        }}>
+                        <Box
+                          component="span"
+                          sx={{
+                            backgroundColor: chipColor.bg,
+                            color: chipColor.color,
+                            padding: "4px 8px",
+                            borderRadius: "2px",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            ml: 4,
+                          }}
+                        >
                           {count} filtered
                         </Box>
                       )}
                     </AccordionSummary>
-                  <AccordionDetails sx={{ padding: 0 }}>
-                    {(() => {
-                      const controls = annex.annexControls || [];
+                    <AccordionDetails sx={{ padding: 0 }}>
+                      {(() => {
+                        const controls = annex.annexControls || [];
 
-                      // Use shared filtering function
-                      const filteredControls = filterControls(controls);
+                        // Use shared filtering function
+                        const filteredControls = filterControls(controls);
 
-                      return filteredControls.length > 0 ? (
-                        filteredControls.map((control: any, index: number) => (
-                          <Stack
-                            key={control.id}
-                            onClick={() => handleControlClick(annex, control)}
-                            sx={styles.controlRow(
-                              filteredControls.length - 1 === index,
-                              flashingRowId === control.id,
-                            )}
-                          >
-                            <Stack>
-                              <Typography sx={styles.controlTitle}>
-                                {annex.arrangement}.{annex.order_no}.
-                                {control.order_no} {control.title}
-                              </Typography>
+                        return filteredControls.length > 0 ? (
+                          filteredControls.map((control: any, index: number) => (
+                            <Stack
+                              key={control.id}
+                              onClick={() => handleControlClick(annex, control)}
+                              sx={styles.controlRow(
+                                filteredControls.length - 1 === index,
+                                flashingRowId === control.id,
+                              )}
+                            >
+                              <Stack>
+                                <Typography sx={styles.controlTitle}>
+                                  {annex.arrangement}.{annex.order_no}.{control.order_no}{" "}
+                                  {control.title}
+                                </Typography>
+                              </Stack>
+                              <StatusDropdown
+                                currentStatus={control.status || "Not started"}
+                                onStatusChange={(newStatus) =>
+                                  handleStatusChange(control, newStatus)
+                                }
+                                size="small"
+                                allowedRoles={allowedRoles.frameworks.edit}
+                                userRole={userRoleName}
+                              />
                             </Stack>
-                            <StatusDropdown
-                              currentStatus={control.status || "Not started"}
-                              onStatusChange={(newStatus) =>
-                                handleStatusChange(control, newStatus)
-                              }
-                              size="small"
-                              allowedRoles={allowedRoles.frameworks.edit}
-                              userRole={userRoleName}
-                            />
+                          ))
+                        ) : (
+                          <Stack sx={{ p: 2, textAlign: "center" }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No matching controls
+                            </Typography>
                           </Stack>
-                        ))
-                      ) : (
-                        <Stack sx={{ p: 2, textAlign: "center" }}>
-                          <Typography variant="body2" color="text.secondary">
-                            No matching controls
-                          </Typography>
-                        </Stack>
-                      );
-                    })()}
-                  </AccordionDetails>
-                </Accordion>
-              </Stack>
+                        );
+                      })()}
+                    </AccordionDetails>
+                  </Accordion>
+                </Stack>
               );
             })}
           {drawerOpen && (

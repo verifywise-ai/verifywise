@@ -36,11 +36,15 @@ async function getModelFromKey(llmKeyId: number, organizationId: number) {
     return anthropic((llmKey as any).model || "claude-sonnet-4-20250514");
   }
 
+  const customBaseURL = (llmKey as any).url || undefined;
   const openai = createOpenAI({
     apiKey: (llmKey as any).key,
-    baseURL: (llmKey as any).url || undefined,
+    baseURL: customBaseURL,
   });
-  return openai((llmKey as any).model || "gpt-4o-mini");
+  const modelId = (llmKey as any).model || "gpt-4o-mini";
+  // Only native OpenAI implements the Responses API. Any custom baseURL
+  // (OpenRouter, vLLM, Together, etc.) must use Chat Completions.
+  return customBaseURL ? openai.chat(modelId) : openai(modelId);
 }
 
 // ============================================================================
@@ -51,7 +55,7 @@ export async function generateSuggestedQuestions(
   entityType: string,
   context: string,
   llmKeyId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<SuggestedQuestion[] | null> {
   try {
     const model = await getModelFromKey(llmKeyId, organizationId);
@@ -97,7 +101,7 @@ export async function generateFieldGuidance(
   fieldLabel: string,
   entityType: string,
   llmKeyId: number,
-  organizationId: number
+  organizationId: number,
 ): Promise<string | null> {
   try {
     const model = await getModelFromKey(llmKeyId, organizationId);

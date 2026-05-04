@@ -1,7 +1,4 @@
-import {
-  ValidationException,
-  NotFoundException,
-} from "../exceptions/custom.exception";
+import { ValidationException, NotFoundException } from "../exceptions/custom.exception";
 
 // Mock sequelize-typescript
 jest.mock("sequelize-typescript", () => ({
@@ -42,14 +39,14 @@ class TestProjectFrameworksModel {
   static async createProjectFramework(
     framework_id: number,
     project_id: number,
-    is_demo: boolean = false
+    is_demo: boolean = false,
   ): Promise<TestProjectFrameworksModel> {
     // Validate framework_id
     if (!framework_id || framework_id < 1) {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 
@@ -58,7 +55,7 @@ class TestProjectFrameworksModel {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -72,9 +69,7 @@ class TestProjectFrameworksModel {
   }
 
   // Instance method to update project-framework association
-  async updateProjectFramework(updateData: {
-    is_demo?: boolean;
-  }): Promise<void> {
+  async updateProjectFramework(updateData: { is_demo?: boolean }): Promise<void> {
     if (updateData.is_demo !== undefined) {
       this.is_demo = updateData.is_demo;
     }
@@ -86,7 +81,7 @@ class TestProjectFrameworksModel {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        this.framework_id
+        this.framework_id,
       );
     }
 
@@ -94,7 +89,7 @@ class TestProjectFrameworksModel {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        this.project_id
+        this.project_id,
       );
     }
   }
@@ -116,13 +111,13 @@ class TestProjectFrameworksModel {
   // Static method to find project-framework by IDs with validation
   static async findByProjectAndFramework(
     project_id: number,
-    framework_id: number
+    framework_id: number,
   ): Promise<TestProjectFrameworksModel> {
     if (!project_id || project_id < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -130,17 +125,16 @@ class TestProjectFrameworksModel {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 
     // Mock database lookup
     if (project_id === 999 || framework_id === 999) {
-      throw new NotFoundException(
-        "Project-framework association not found",
-        "ProjectFramework",
-        { project_id, framework_id }
-      );
+      throw new NotFoundException("Project-framework association not found", "ProjectFramework", {
+        project_id,
+        framework_id,
+      });
     }
 
     return new TestProjectFrameworksModel({
@@ -151,14 +145,12 @@ class TestProjectFrameworksModel {
   }
 
   // Static method to find all frameworks for a project
-  static async findByProjectId(
-    project_id: number
-  ): Promise<TestProjectFrameworksModel[]> {
+  static async findByProjectId(project_id: number): Promise<TestProjectFrameworksModel[]> {
     if (!project_id || project_id < 1) {
       throw new ValidationException(
         "Valid project ID is required (must be >= 1)",
         "project_id",
-        project_id
+        project_id,
       );
     }
 
@@ -177,14 +169,12 @@ class TestProjectFrameworksModel {
   }
 
   // Static method to find all projects for a framework
-  static async findByFrameworkId(
-    framework_id: number
-  ): Promise<TestProjectFrameworksModel[]> {
+  static async findByFrameworkId(framework_id: number): Promise<TestProjectFrameworksModel[]> {
     if (!framework_id || framework_id < 1) {
       throw new ValidationException(
         "Valid framework ID is required (must be >= 1)",
         "framework_id",
-        framework_id
+        framework_id,
       );
     }
 
@@ -215,11 +205,10 @@ describe("ProjectFrameworksModel", () => {
 
   describe("createProjectFramework", () => {
     it("should create project-framework association with valid data", async () => {
-      const association =
-        await TestProjectFrameworksModel.createProjectFramework(
-          validData.framework_id,
-          validData.project_id
-        );
+      const association = await TestProjectFrameworksModel.createProjectFramework(
+        validData.framework_id,
+        validData.project_id,
+      );
 
       expect(association).toBeInstanceOf(TestProjectFrameworksModel);
       expect(association.framework_id).toBe(1);
@@ -228,31 +217,24 @@ describe("ProjectFrameworksModel", () => {
     });
 
     it("should create with custom is_demo value", async () => {
-      const association =
-        await TestProjectFrameworksModel.createProjectFramework(
-          validData.framework_id,
-          validData.project_id,
-          true
-        );
+      const association = await TestProjectFrameworksModel.createProjectFramework(
+        validData.framework_id,
+        validData.project_id,
+        true,
+      );
 
       expect(association.is_demo).toBe(true);
     });
 
     it("should throw ValidationException for invalid framework_id", async () => {
       await expect(
-        TestProjectFrameworksModel.createProjectFramework(
-          0,
-          validData.project_id
-        )
+        TestProjectFrameworksModel.createProjectFramework(0, validData.project_id),
       ).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
       await expect(
-        TestProjectFrameworksModel.createProjectFramework(
-          validData.framework_id,
-          0
-        )
+        TestProjectFrameworksModel.createProjectFramework(validData.framework_id, 0),
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -282,9 +264,7 @@ describe("ProjectFrameworksModel", () => {
     it("should pass validation with valid data", async () => {
       const association = new TestProjectFrameworksModel(validData);
 
-      await expect(
-        association.validateProjectFrameworkData()
-      ).resolves.not.toThrow();
+      await expect(association.validateProjectFrameworkData()).resolves.not.toThrow();
     });
 
     it("should throw ValidationException for invalid framework_id", async () => {
@@ -293,9 +273,7 @@ describe("ProjectFrameworksModel", () => {
         framework_id: 0,
       });
 
-      await expect(association.validateProjectFrameworkData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(association.validateProjectFrameworkData()).rejects.toThrow(ValidationException);
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
@@ -304,9 +282,7 @@ describe("ProjectFrameworksModel", () => {
         project_id: 0,
       });
 
-      await expect(association.validateProjectFrameworkData()).rejects.toThrow(
-        ValidationException
-      );
+      await expect(association.validateProjectFrameworkData()).rejects.toThrow(ValidationException);
     });
   });
 
@@ -355,8 +331,7 @@ describe("ProjectFrameworksModel", () => {
 
   describe("findByProjectAndFramework", () => {
     it("should find association by valid IDs", async () => {
-      const association =
-        await TestProjectFrameworksModel.findByProjectAndFramework(1, 1);
+      const association = await TestProjectFrameworksModel.findByProjectAndFramework(1, 1);
 
       expect(association).toBeInstanceOf(TestProjectFrameworksModel);
       expect(association.project_id).toBe(1);
@@ -364,21 +339,21 @@ describe("ProjectFrameworksModel", () => {
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestProjectFrameworksModel.findByProjectAndFramework(0, 1)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectFrameworksModel.findByProjectAndFramework(0, 1)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw ValidationException for invalid framework_id", async () => {
-      await expect(
-        TestProjectFrameworksModel.findByProjectAndFramework(1, 0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectFrameworksModel.findByProjectAndFramework(1, 0)).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it("should throw NotFoundException for non-existent association", async () => {
-      await expect(
-        TestProjectFrameworksModel.findByProjectAndFramework(999, 1)
-      ).rejects.toThrow(NotFoundException);
+      await expect(TestProjectFrameworksModel.findByProjectAndFramework(999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -392,16 +367,15 @@ describe("ProjectFrameworksModel", () => {
     });
 
     it("should throw ValidationException for invalid project_id", async () => {
-      await expect(
-        TestProjectFrameworksModel.findByProjectId(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectFrameworksModel.findByProjectId(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 
   describe("findByFrameworkId", () => {
     it("should find all projects for framework", async () => {
-      const associations =
-        await TestProjectFrameworksModel.findByFrameworkId(1);
+      const associations = await TestProjectFrameworksModel.findByFrameworkId(1);
 
       expect(associations).toHaveLength(2);
       expect(associations[0].framework_id).toBe(1);
@@ -409,9 +383,9 @@ describe("ProjectFrameworksModel", () => {
     });
 
     it("should throw ValidationException for invalid framework_id", async () => {
-      await expect(
-        TestProjectFrameworksModel.findByFrameworkId(0)
-      ).rejects.toThrow(ValidationException);
+      await expect(TestProjectFrameworksModel.findByFrameworkId(0)).rejects.toThrow(
+        ValidationException,
+      );
     });
   });
 });

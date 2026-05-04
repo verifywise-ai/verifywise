@@ -25,7 +25,7 @@ export interface IAITrustCenterTableProps<T> {
   emptyStateText?: string;
   renderRow: (
     item: T,
-    sortConfig?: { key: string; direction: "asc" | "desc" | null }
+    sortConfig?: { key: string; direction: "asc" | "desc" | null },
   ) => React.ReactNode;
   onRowClick?: (item: T) => void;
   tableId?: string;
@@ -66,13 +66,7 @@ export interface IEvaluationRow {
   prompts?: number;
   linkedModel?: number | null;
   date?: string;
-  status:
-  | "In Progress"
-  | "Completed"
-  | "Failed"
-  | "Pending"
-  | "Running"
-  | "Available";
+  status: "In Progress" | "Completed" | "Failed" | "Pending" | "Running" | "Available";
 }
 
 export interface IEvaluationTableBodyProps {
@@ -193,7 +187,7 @@ export interface ITableProps {
   setAnchorEl: (element: HTMLElement | null) => void;
   renderRow?: (
     row: any,
-    sortConfig?: { key: string; direction: "asc" | "desc" | null }
+    sortConfig?: { key: string; direction: "asc" | "desc" | null },
   ) => React.ReactNode;
   hidePagination?: boolean;
   flashRowId?: number | string | null;

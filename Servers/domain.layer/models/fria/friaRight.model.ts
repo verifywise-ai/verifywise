@@ -1,9 +1,4 @@
-import {
-  Column,
-  DataType,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IFriaRight } from "../../interfaces/i.fria";
 
 @Table({
@@ -11,10 +6,7 @@ import { IFriaRight } from "../../interfaces/i.fria";
   timestamps: false,
   underscored: true,
 })
-export class FriaRightModel
-  extends Model<FriaRightModel>
-  implements IFriaRight
-{
+export class FriaRightModel extends Model<FriaRightModel> implements IFriaRight {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

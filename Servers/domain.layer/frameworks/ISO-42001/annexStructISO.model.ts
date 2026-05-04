@@ -1,10 +1,4 @@
-import {
-  Column,
-  DataType,
-  ForeignKey,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { FrameworkModel } from "../../models/frameworks/frameworks.model";
 import { AnnexCategoryISO } from "./annexCategoryISO.model";
 import { AnnexCategoryStructISO } from "./annexCategoryStructISO.model";

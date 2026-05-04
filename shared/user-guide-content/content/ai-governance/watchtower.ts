@@ -39,10 +39,11 @@ export const watchtowerContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
+        { bold: 'ID', text: 'Internal event identifier' },
         { bold: 'Event type', text: 'The category of action that occurred' },
-        { bold: 'User', text: 'Who performed the action' },
+        { bold: 'Description', text: 'A short description of the event' },
+        { bold: 'User', text: 'Who performed the action (user ID)' },
         { bold: 'Timestamp', text: 'When the event happened' },
-        { bold: 'Details', text: 'Additional context about the event' },
       ],
     },
     {

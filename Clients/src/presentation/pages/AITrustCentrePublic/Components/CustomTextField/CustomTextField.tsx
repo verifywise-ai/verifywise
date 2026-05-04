@@ -28,7 +28,7 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
         <Skeleton variant="rectangular" width="100%" height={40} />
       ) : (
         <TextField
-          value={value || ''}
+          value={value || ""}
           InputProps={{ readOnly: true, disableUnderline: true }}
           variant="standard"
           multiline
@@ -39,7 +39,7 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
             background: `${background.main}`,
             border: "none",
             p: 0,
-            '& .MuiInputBase-input': {
+            "& .MuiInputBase-input": {
               fontSize: 13,
               lineHeight: 1.5,
             },

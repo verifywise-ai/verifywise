@@ -1,9 +1,4 @@
-import {
-  Column,
-  DataType,
-  Model,
-  Table,
-} from "sequelize-typescript";
+import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { FriaLikelihood, FriaSeverity } from "../../enums/fria-status.enum";
 import { IFriaRiskItem } from "../../interfaces/i.fria";
 
@@ -12,10 +7,7 @@ import { IFriaRiskItem } from "../../interfaces/i.fria";
   timestamps: true,
   underscored: true,
 })
-export class FriaRiskItemModel
-  extends Model<FriaRiskItemModel>
-  implements IFriaRiskItem
-{
+export class FriaRiskItemModel extends Model<FriaRiskItemModel> implements IFriaRiskItem {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

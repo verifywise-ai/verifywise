@@ -172,6 +172,8 @@ export const modelLifecycleContent: ArticleContent = {
         { icon: 'Shield', title: 'High risk', description: 'Systems requiring conformity assessment and ongoing monitoring' },
         { icon: 'Info', title: 'Limited risk', description: 'Systems with transparency obligations (chatbots, emotion recognition)' },
         { icon: 'CheckCircle', title: 'Minimal risk', description: 'Low-risk applications with voluntary code of conduct' },
+        { icon: 'Brain', title: 'GPAI', description: 'General-purpose AI models with broad applicability across many tasks (foundation models)' },
+        { icon: 'AlertCircle', title: 'General Risk', description: 'Catch-all classification for systems that do not fit the other categories' },
       ],
     },
     {

@@ -36,7 +36,7 @@ export interface ExperimentRun {
   projectId: string;
   status: "pending" | "running" | "completed" | "failed";
   progress?: string;
-  
+
   // Model configuration for this run
   model: {
     name: string;
@@ -47,7 +47,7 @@ export interface ExperimentRun {
       topP: number;
     };
   };
-  
+
   // Dataset configuration for this run
   dataset: {
     useBuiltin: boolean;
@@ -55,7 +55,7 @@ export interface ExperimentRun {
     difficulties?: string[];
     limit?: number;
   };
-  
+
   // Enabled metrics for this run
   enabledMetrics: {
     answerRelevancy: boolean;
@@ -65,7 +65,7 @@ export interface ExperimentRun {
     hallucination: boolean;
     contextualRelevancy: boolean;
   };
-  
+
   // Metric thresholds for this run
   metricThresholds: {
     answerRelevancy: number;
@@ -75,7 +75,7 @@ export interface ExperimentRun {
     hallucination: number;
     contextualRelevancy: number;
   };
-  
+
   // Results
   metrics: {
     answerRelevancy?: number;
@@ -128,12 +128,15 @@ export interface SampleResult {
   expectedOutput: string;
   responseLength: number;
   wordCount: number;
-  metricScores: Record<string, {
-    score: number;
-    passed: boolean;
-    threshold: number;
-    reason?: string;
-  }>;
+  metricScores: Record<
+    string,
+    {
+      score: number;
+      passed: boolean;
+      threshold: number;
+      reason?: string;
+    }
+  >;
   timestamp: string;
 }
 
@@ -201,14 +204,58 @@ export interface ReportArenaData {
 }
 
 export const DEFAULT_REPORT_SECTIONS: ReportSection[] = [
-  { id: "executive-summary", label: "Executive Summary", description: "Overall scores, pass/fail verdict, key findings", enabled: true },
-  { id: "evaluation-context", label: "Evaluation Context", description: "Project, organization, evaluator, and date information", enabled: true },
-  { id: "model-under-test", label: "Model Under Test", description: "Provider, model ID, and generation parameters", enabled: true },
-  { id: "evaluation-setup", label: "Evaluation Setup", description: "Dataset, judge model, enabled metrics, and thresholds", enabled: true },
-  { id: "metric-results", label: "Metric Results", description: "Per-metric scores grouped by Quality and Safety", enabled: true },
-  { id: "safety-compliance", label: "Safety & Compliance", description: "Bias, Toxicity, Hallucination analysis with governance notes", enabled: true },
-  { id: "sample-details", label: "Sample-Level Details", description: "Per-sample scores table (can increase report size)", enabled: false },
-  { id: "arena-comparison", label: "Arena Comparison", description: "Head-to-head model comparison results", enabled: false },
-  { id: "recommendations", label: "Limitations & Recommendations", description: "Auto-generated suggestions based on failing metrics", enabled: true },
+  {
+    id: "executive-summary",
+    label: "Executive Summary",
+    description: "Overall scores, pass/fail verdict, key findings",
+    enabled: true,
+  },
+  {
+    id: "evaluation-context",
+    label: "Evaluation Context",
+    description: "Project, organization, evaluator, and date information",
+    enabled: true,
+  },
+  {
+    id: "model-under-test",
+    label: "Model Under Test",
+    description: "Provider, model ID, and generation parameters",
+    enabled: true,
+  },
+  {
+    id: "evaluation-setup",
+    label: "Evaluation Setup",
+    description: "Dataset, judge model, enabled metrics, and thresholds",
+    enabled: true,
+  },
+  {
+    id: "metric-results",
+    label: "Metric Results",
+    description: "Per-metric scores grouped by Quality and Safety",
+    enabled: true,
+  },
+  {
+    id: "safety-compliance",
+    label: "Safety & Compliance",
+    description: "Bias, Toxicity, Hallucination analysis with governance notes",
+    enabled: true,
+  },
+  {
+    id: "sample-details",
+    label: "Sample-Level Details",
+    description: "Per-sample scores table (can increase report size)",
+    enabled: false,
+  },
+  {
+    id: "arena-comparison",
+    label: "Arena Comparison",
+    description: "Head-to-head model comparison results",
+    enabled: false,
+  },
+  {
+    id: "recommendations",
+    label: "Limitations & Recommendations",
+    description: "Auto-generated suggestions based on failing metrics",
+    enabled: true,
+  },
 ];
-

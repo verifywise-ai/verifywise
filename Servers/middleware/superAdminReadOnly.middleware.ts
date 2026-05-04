@@ -15,15 +15,15 @@ const superAdminReadOnly = (req: Request, res: Response, next: NextFunction): vo
   }
 
   // Allow super-admin management routes
-  if (req.path.startsWith('/api/super-admin') || req.baseUrl?.startsWith('/api/super-admin')) {
+  if (req.path.startsWith("/api/super-admin") || req.baseUrl?.startsWith("/api/super-admin")) {
     return next();
   }
 
-  const readOnlyMethods = ['GET', 'HEAD', 'OPTIONS'];
+  const readOnlyMethods = ["GET", "HEAD", "OPTIONS"];
   if (!readOnlyMethods.includes(req.method.toUpperCase())) {
-    return res.status(403).json(
-      STATUS_CODE[403]("Super-admin has read-only access when viewing an organization")
-    );
+    return res
+      .status(403)
+      .json(STATUS_CODE[403]("Super-admin has read-only access when viewing an organization"));
   }
 
   next();

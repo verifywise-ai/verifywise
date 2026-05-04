@@ -75,7 +75,9 @@ const AppSwitcher: FC<AppSwitcherProps> = ({
             key={module.id}
             title={
               <Box sx={{ p: 0.5 }}>
-                <Typography sx={{ fontSize: theme.typography.caption.fontSize, fontWeight: 600, mb: 0.5 }}>
+                <Typography
+                  sx={{ fontSize: theme.typography.caption.fontSize, fontWeight: 600, mb: 0.5 }}
+                >
                   {module.label}
                   {module.disabled && " (Coming soon)"}
                 </Typography>

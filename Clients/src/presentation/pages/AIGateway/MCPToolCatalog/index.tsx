@@ -1,10 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  IconButton,
-} from "@mui/material";
+import { Box, Typography, Stack, IconButton } from "@mui/material";
 import { Wrench, Pencil, ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
@@ -110,15 +105,12 @@ export default function MCPToolCatalogPage() {
         name: s.name || s.server_name || `Server #${s.id}`,
       })),
     ],
-    [servers]
+    [servers],
   );
 
   const riskFilterItems = useMemo(
-    () => [
-      { _id: "", name: "All risk levels" },
-      ...RISK_LEVEL_ITEMS,
-    ],
-    []
+    () => [{ _id: "", name: "All risk levels" }, ...RISK_LEVEL_ITEMS],
+    [],
   );
 
   const filteredTools = useMemo(() => {
@@ -136,7 +128,8 @@ export default function MCPToolCatalogPage() {
   const groupedTools = useMemo(() => {
     const groups: Record<string, MCPTool[]> = {};
     for (const tool of filteredTools) {
-      const serverName = tool.server_name || serverMap[tool.server_id] || `Server #${tool.server_id}`;
+      const serverName =
+        tool.server_name || serverMap[tool.server_id] || `Server #${tool.server_id}`;
       if (!groups[serverName]) groups[serverName] = [];
       groups[serverName].push(tool);
     }
@@ -170,9 +163,7 @@ export default function MCPToolCatalogPage() {
       await loadData();
     } catch (err: any) {
       setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          "Failed to update tool"
+        err?.response?.data?.detail || err?.response?.data?.message || "Failed to update tool",
       );
     } finally {
       setIsSubmitting(false);
@@ -236,9 +227,7 @@ export default function MCPToolCatalogPage() {
       <Stack gap="4px" flex={1} minWidth={0}>
         <Stack direction="row" alignItems="center" gap="8px">
           <Wrench size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-            {tool.tool_name}
-          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{tool.tool_name}</Typography>
           {renderRiskBadge(tool.risk_level)}
           {tool.requires_approval && (
             <Chip label="Approval required" size="small" variant="warning" />
@@ -251,19 +240,13 @@ export default function MCPToolCatalogPage() {
         )}
       </Stack>
       <Stack direction="row" alignItems="center" gap="8px" onClick={(e) => e.stopPropagation()}>
-        <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-          Approval
-        </Typography>
+        <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>Approval</Typography>
         <Toggle
           checked={tool.requires_approval}
           onChange={() => handleToggleApproval(tool)}
           size="small"
         />
-        <IconButton
-          size="small"
-          onClick={() => openEditModal(tool)}
-          sx={{ p: 0.5 }}
-        >
+        <IconButton size="small" onClick={() => openEditModal(tool)} sx={{ p: 0.5 }}>
           <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
         </IconButton>
       </Stack>
@@ -330,7 +313,9 @@ export default function MCPToolCatalogPage() {
         </EmptyState>
       ) : filteredTools.length === 0 ? (
         <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary, textAlign: "center", py: "16px" }}>
+          <Typography
+            sx={{ fontSize: 13, color: palette.text.tertiary, textAlign: "center", py: "16px" }}
+          >
             No tools match the selected filters.
           </Typography>
         </Box>
@@ -340,13 +325,14 @@ export default function MCPToolCatalogPage() {
             <Box key={serverName} sx={cardSx}>
               <Typography sx={{ fontSize: 14, fontWeight: 600, mb: "12px" }}>
                 {serverName}
-                <Typography component="span" sx={{ fontSize: 12, color: palette.text.tertiary, ml: "8px" }}>
+                <Typography
+                  component="span"
+                  sx={{ fontSize: 12, color: palette.text.tertiary, ml: "8px" }}
+                >
                   ({serverTools.length} tool{serverTools.length !== 1 ? "s" : ""})
                 </Typography>
               </Typography>
-              <Stack gap="8px">
-                {serverTools.map(renderToolRow)}
-              </Stack>
+              <Stack gap="8px">{serverTools.map(renderToolRow)}</Stack>
             </Box>
           ))}
         </Stack>
@@ -357,7 +343,9 @@ export default function MCPToolCatalogPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Edit tool settings"
-        description={editingTool ? `Configure risk level and approval for "${editingTool.tool_name}"` : ""}
+        description={
+          editingTool ? `Configure risk level and approval for "${editingTool.tool_name}"` : ""
+        }
         onSubmit={handleSubmit}
         submitButtonText="Save changes"
         isSubmitting={isSubmitting}
@@ -382,7 +370,10 @@ export default function MCPToolCatalogPage() {
                 </Typography>
               )}
               <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "4px" }}>
-                Server: {editingTool.server_name || serverMap[editingTool.server_id] || `#${editingTool.server_id}`}
+                Server:{" "}
+                {editingTool.server_name ||
+                  serverMap[editingTool.server_id] ||
+                  `#${editingTool.server_id}`}
               </Typography>
             </Box>
           )}
@@ -422,9 +413,15 @@ export default function MCPToolCatalogPage() {
                 border: "1px solid #FEDF89",
               }}
             >
-              <ShieldAlert size={14} strokeWidth={1.5} color="#B54708" style={{ flexShrink: 0, marginTop: 2 }} />
+              <ShieldAlert
+                size={14}
+                strokeWidth={1.5}
+                color="#B54708"
+                style={{ flexShrink: 0, marginTop: 2 }}
+              />
               <Typography sx={{ fontSize: 12, color: "#93370D", lineHeight: 1.5 }}>
-                This tool is marked as high risk. Consider enabling approval to ensure human review before execution.
+                This tool is marked as high risk. Consider enabling approval to ensure human review
+                before execution.
               </Typography>
             </Stack>
           )}

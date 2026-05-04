@@ -48,17 +48,17 @@ export default function ReportConfigModal({
   const [format, setFormat] = useState<ReportFormat>("pdf");
   const [selectedExperimentIds, setSelectedExperimentIds] = useState<string[]>([]);
   const [sections, setSections] = useState<ReportSection[]>(() =>
-    DEFAULT_REPORT_SECTIONS.map(s => ({ ...s })),
+    DEFAULT_REPORT_SECTIONS.map((s) => ({ ...s })),
   );
 
   const completedExperiments = useMemo(
-    () => experiments.filter(e => e.status === "completed"),
+    () => experiments.filter((e) => e.status === "completed"),
     [experiments],
   );
 
   const toggleExperiment = (id: string) => {
-    setSelectedExperimentIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
+    setSelectedExperimentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -66,13 +66,13 @@ export default function ReportConfigModal({
     if (selectedExperimentIds.length === completedExperiments.length) {
       setSelectedExperimentIds([]);
     } else {
-      setSelectedExperimentIds(completedExperiments.map(e => e.id));
+      setSelectedExperimentIds(completedExperiments.map((e) => e.id));
     }
   };
 
   const toggleSection = (sectionId: string) => {
-    setSections(prev =>
-      prev.map(s => (s.id === sectionId ? { ...s, enabled: !s.enabled } : s)),
+    setSections((prev) =>
+      prev.map((s) => (s.id === sectionId ? { ...s, enabled: !s.enabled } : s)),
     );
   };
 
@@ -85,8 +85,8 @@ export default function ReportConfigModal({
       format,
       experimentIds: selectedExperimentIds,
       sections,
-      includeDetailedSamples: sections.find(s => s.id === "sample-details")?.enabled ?? false,
-      includeArena: sections.find(s => s.id === "arena-comparison")?.enabled ?? false,
+      includeDetailedSamples: sections.find((s) => s.id === "sample-details")?.enabled ?? false,
+      includeArena: sections.find((s) => s.id === "arena-comparison")?.enabled ?? false,
     });
   };
 
@@ -175,7 +175,7 @@ export default function ReportConfigModal({
                 borderRadius: "6px",
               }}
             >
-              {completedExperiments.map(exp => (
+              {completedExperiments.map((exp) => (
                 <Box
                   key={exp.id}
                   onClick={() => toggleExperiment(exp.id)}
@@ -244,7 +244,7 @@ export default function ReportConfigModal({
                 borderRadius: "6px",
               }}
             >
-              {sections.map(section => (
+              {sections.map((section) => (
                 <Box
                   key={section.id}
                   onClick={() => toggleSection(section.id)}
@@ -260,11 +260,7 @@ export default function ReportConfigModal({
                     "&:last-child": { borderBottom: "none" },
                   }}
                 >
-                  <Checkbox
-                    size="small"
-                    checked={section.enabled}
-                    sx={{ p: 0.5, mt: -0.25 }}
-                  />
+                  <Checkbox size="small" checked={section.enabled} sx={{ p: 0.5, mt: -0.25 }} />
                   <Box>
                     <Typography sx={{ fontSize: 12, fontWeight: 500, color: "#111827" }}>
                       {section.label}

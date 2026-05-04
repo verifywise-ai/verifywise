@@ -150,9 +150,7 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getAllIntakeForms()).rejects.toThrow("Network timeout");
     });
@@ -219,9 +217,7 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Connection refused"));
 
       await expect(getIntakeForm(1)).rejects.toThrow("Connection refused");
     });
@@ -250,11 +246,9 @@ describe("Test Intake Form Repository", () => {
       await createIntakeForm(createData);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/forms`,
-        createData,
-        { signal: undefined },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(`${BASE_URL}/forms`, createData, {
+        signal: undefined,
+      });
     });
 
     it("should return response data on successful API call", async () => {
@@ -281,11 +275,9 @@ describe("Test Intake Form Repository", () => {
 
       await createIntakeForm(createData, controller.signal);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/forms`,
-        createData,
-        { signal: controller.signal },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(`${BASE_URL}/forms`, createData, {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -298,13 +290,9 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(createIntakeForm(createData)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(createIntakeForm(createData)).rejects.toThrow("Network timeout");
     });
   });
 
@@ -330,11 +318,9 @@ describe("Test Intake Form Repository", () => {
       await updateIntakeForm(1, updateData);
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        `${BASE_URL}/forms/1`,
-        updateData,
-        { signal: undefined },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith(`${BASE_URL}/forms/1`, updateData, {
+        signal: undefined,
+      });
     });
 
     it("should return response data on successful API call", async () => {
@@ -361,11 +347,9 @@ describe("Test Intake Form Repository", () => {
 
       await updateIntakeForm(1, updateData, controller.signal);
 
-      expect(apiServices.patch).toHaveBeenCalledWith(
-        `${BASE_URL}/forms/1`,
-        updateData,
-        { signal: controller.signal },
-      );
+      expect(apiServices.patch).toHaveBeenCalledWith(`${BASE_URL}/forms/1`, updateData, {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -378,13 +362,9 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.patch).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.patch).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(updateIntakeForm(1, updateData)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(updateIntakeForm(1, updateData)).rejects.toThrow("Network timeout");
     });
   });
 
@@ -449,9 +429,7 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.delete).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.delete).mockRejectedValue(new Error("Connection refused"));
 
       await expect(deleteIntakeForm(1)).rejects.toThrow("Connection refused");
     });
@@ -474,11 +452,9 @@ describe("Test Intake Form Repository", () => {
       await archiveIntakeForm(1);
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/forms/1/archive`,
-        undefined,
-        { signal: undefined },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(`${BASE_URL}/forms/1/archive`, undefined, {
+        signal: undefined,
+      });
     });
 
     it("should return response data on successful API call", async () => {
@@ -505,11 +481,9 @@ describe("Test Intake Form Repository", () => {
 
       await archiveIntakeForm(1, controller.signal);
 
-      expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/forms/1/archive`,
-        undefined,
-        { signal: controller.signal },
-      );
+      expect(apiServices.post).toHaveBeenCalledWith(`${BASE_URL}/forms/1/archive`, undefined, {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -604,9 +578,7 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
       await expect(getPendingSubmissions()).rejects.toThrow("Network timeout");
     });
@@ -641,10 +613,9 @@ describe("Test Intake Form Repository", () => {
       await getSubmissionPreview(10);
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/10/preview`,
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/10/preview`, {
+        signal: undefined,
+      });
     });
 
     it("should return response data on successful API call", async () => {
@@ -671,10 +642,9 @@ describe("Test Intake Form Repository", () => {
 
       await getSubmissionPreview(10, controller.signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/10/preview`,
-        { signal: controller.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/10/preview`, {
+        signal: controller.signal,
+      });
     });
 
     it("should throw an error if the API call fails", async () => {
@@ -838,13 +808,9 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(rejectSubmission(10, "Reason")).rejects.toThrow(
-        "Connection refused",
-      );
+      await expect(rejectSubmission(10, "Reason")).rejects.toThrow("Connection refused");
     });
   });
 
@@ -876,10 +842,9 @@ describe("Test Intake Form Repository", () => {
       await getEntityIntakeSubmission("model", 5);
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/by-entity/model/5`,
-        { signal: undefined },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/by-entity/model/5`, {
+        signal: undefined,
+      });
     });
 
     it("should return the submission data on successful API call", async () => {
@@ -917,10 +882,9 @@ describe("Test Intake Form Repository", () => {
 
       await getEntityIntakeSubmission("model", 5, controller.signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/by-entity/model/5`,
-        { signal: controller.signal },
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/by-entity/model/5`, {
+        signal: controller.signal,
+      });
     });
 
     it("should rethrow non-404 errors", async () => {
@@ -929,19 +893,13 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(serverError);
 
-      await expect(getEntityIntakeSubmission("model", 5)).rejects.toEqual(
-        serverError,
-      );
+      await expect(getEntityIntakeSubmission("model", 5)).rejects.toEqual(serverError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getEntityIntakeSubmission("model", 5)).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getEntityIntakeSubmission("model", 5)).rejects.toThrow("Network timeout");
     });
   });
 
@@ -970,9 +928,7 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should return response data on successful API call", async () => {
-      const mockSuggestions = [
-        { label: "Risk level?", fieldType: "select", category: "risk" },
-      ];
+      const mockSuggestions = [{ label: "Risk level?", fieldType: "select", category: "risk" }];
       const mockResponse = {
         data: { data: mockSuggestions },
         status: 200,
@@ -1009,9 +965,7 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        getLLMSuggestedQuestions("model", "context", 42),
-      ).rejects.toEqual(mockError);
+      await expect(getLLMSuggestedQuestions("model", "context", 42)).rejects.toEqual(mockError);
     });
   });
 
@@ -1076,9 +1030,7 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        getLLMFieldGuidance("Risk Level", "model", 42),
-      ).rejects.toEqual(mockError);
+      await expect(getLLMFieldGuidance("Risk Level", "model", 42)).rejects.toEqual(mockError);
     });
   });
 
@@ -1099,9 +1051,7 @@ describe("Test Intake Form Repository", () => {
       await getCaptcha();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/public/captcha`,
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/public/captcha`);
     });
 
     it("should return response data on successful API call", async () => {
@@ -1156,9 +1106,7 @@ describe("Test Intake Form Repository", () => {
       await getPublicForm("my-org", "test-form");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/public/my-org/test-form`,
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/public/my-org/test-form`);
     });
 
     it("should append the resubmission token as a query param when provided", async () => {
@@ -1195,19 +1143,13 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getPublicForm("my-org", "unknown-form")).rejects.toEqual(
-        mockError,
-      );
+      await expect(getPublicForm("my-org", "unknown-form")).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getPublicForm("my-org", "test-form")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getPublicForm("my-org", "test-form")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -1272,19 +1214,15 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        submitPublicForm("my-org", "test-form", submitData),
-      ).rejects.toEqual(mockError);
+      await expect(submitPublicForm("my-org", "test-form", submitData)).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(
-        submitPublicForm("my-org", "test-form", submitData),
-      ).rejects.toThrow("Connection refused");
+      await expect(submitPublicForm("my-org", "test-form", submitData)).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 
@@ -1317,9 +1255,7 @@ describe("Test Intake Form Repository", () => {
       await getPublicFormById("public-id-abc");
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(
-        `${BASE_URL}/public/by-id/public-id-abc`,
-      );
+      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/public/by-id/public-id-abc`);
     });
 
     it("should append the resubmission token as a query param when provided", async () => {
@@ -1360,13 +1296,9 @@ describe("Test Intake Form Repository", () => {
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.get).mockRejectedValue(
-        new Error("Network timeout"),
-      );
+      vi.mocked(apiServices.get).mockRejectedValue(new Error("Network timeout"));
 
-      await expect(getPublicFormById("public-id-abc")).rejects.toThrow(
-        "Network timeout",
-      );
+      await expect(getPublicFormById("public-id-abc")).rejects.toThrow("Network timeout");
     });
   });
 
@@ -1431,19 +1363,15 @@ describe("Test Intake Form Repository", () => {
       };
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(
-        submitPublicFormById("public-id-abc", submitData),
-      ).rejects.toEqual(mockError);
+      await expect(submitPublicFormById("public-id-abc", submitData)).rejects.toEqual(mockError);
     });
 
     it("should throw error without response property for network errors", async () => {
-      vi.mocked(apiServices.post).mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      vi.mocked(apiServices.post).mockRejectedValue(new Error("Connection refused"));
 
-      await expect(
-        submitPublicFormById("public-id-abc", submitData),
-      ).rejects.toThrow("Connection refused");
+      await expect(submitPublicFormById("public-id-abc", submitData)).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 });

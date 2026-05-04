@@ -17,10 +17,7 @@
 
 import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
 import { calculateRiskLevel } from "../../../utils/validations/riskValidation.utils";
-import type {
-  AiActionExecuteContext,
-  AiActionExecuteResult,
-} from "../types";
+import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentUpdateRiskInput } from "./schema";
 
 export async function executeUpdateRisk(
@@ -31,16 +28,10 @@ export async function executeUpdateRisk(
   // Load current row so we can merge severity/likelihood for the
   // risk-level recompute and so the mutation fails fast if the row
   // disappeared between file-time and approve-time.
-  const current = await getRiskByIdQuery(
-    input.risk_id,
-    ctx.organizationId,
-    false,
-  );
+  const current = await getRiskByIdQuery(input.risk_id, ctx.organizationId, false);
 
   if (!current) {
-    throw new Error(
-      `Risk #${input.risk_id} no longer exists — cannot apply update.`,
-    );
+    throw new Error(`Risk #${input.risk_id} no longer exists — cannot apply update.`);
   }
 
   // Merge severity + likelihood (input takes priority) so the recompute
@@ -48,8 +39,7 @@ export async function executeUpdateRisk(
   const effectiveSeverity = input.severity ?? current.severity ?? "Negligible";
   const effectiveLikelihood = input.likelihood ?? current.likelihood ?? "Rare";
 
-  const severityChanged =
-    input.severity !== undefined && input.severity !== current.severity;
+  const severityChanged = input.severity !== undefined && input.severity !== current.severity;
   const likelihoodChanged =
     input.likelihood !== undefined && input.likelihood !== current.likelihood;
 
@@ -73,31 +63,22 @@ export async function executeUpdateRisk(
   const partial: Record<string, unknown> = {};
 
   if (input.risk_name !== undefined) partial.risk_name = input.risk_name;
-  if (input.risk_description !== undefined)
-    partial.risk_description = input.risk_description;
-  if (input.ai_lifecycle_phase !== undefined)
-    partial.ai_lifecycle_phase = input.ai_lifecycle_phase;
-  if (input.risk_category !== undefined)
-    partial.risk_category = input.risk_category;
+  if (input.risk_description !== undefined) partial.risk_description = input.risk_description;
+  if (input.ai_lifecycle_phase !== undefined) partial.ai_lifecycle_phase = input.ai_lifecycle_phase;
+  if (input.risk_category !== undefined) partial.risk_category = input.risk_category;
   if (input.impact !== undefined) partial.impact = input.impact;
   if (input.severity !== undefined) partial.severity = input.severity;
   if (input.likelihood !== undefined) partial.likelihood = input.likelihood;
-  if (input.review_notes !== undefined)
-    partial.review_notes = input.review_notes;
+  if (input.review_notes !== undefined) partial.review_notes = input.review_notes;
   if (input.risk_owner !== undefined) partial.risk_owner = input.risk_owner;
-  if (input.mitigation_status !== undefined)
-    partial.mitigation_status = input.mitigation_status;
-  if (input.mitigation_plan !== undefined)
-    partial.mitigation_plan = input.mitigation_plan;
-  if (input.current_risk_level !== undefined)
-    partial.current_risk_level = input.current_risk_level;
+  if (input.mitigation_status !== undefined) partial.mitigation_status = input.mitigation_status;
+  if (input.mitigation_plan !== undefined) partial.mitigation_plan = input.mitigation_plan;
+  if (input.current_risk_level !== undefined) partial.current_risk_level = input.current_risk_level;
   if (input.implementation_strategy !== undefined)
     partial.implementation_strategy = input.implementation_strategy;
-  if (input.deadline !== undefined)
-    partial.deadline = new Date(input.deadline);
+  if (input.deadline !== undefined) partial.deadline = new Date(input.deadline);
   if (input.approver !== undefined) partial.risk_approval = input.approver;
-  if (input.approval_status !== undefined)
-    partial.approval_status = input.approval_status;
+  if (input.approval_status !== undefined) partial.approval_status = input.approval_status;
   if (input.date_of_assessment !== undefined)
     partial.date_of_assessment = new Date(input.date_of_assessment);
 

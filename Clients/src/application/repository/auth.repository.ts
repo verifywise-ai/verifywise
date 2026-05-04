@@ -25,9 +25,7 @@ interface ApiResponse<T = unknown> {
 /**
  * Send password reset email
  */
-export async function sendPasswordResetEmail(
-  data: PasswordResetEmailData
-): Promise<ApiResponse> {
+export async function sendPasswordResetEmail(data: PasswordResetEmailData): Promise<ApiResponse> {
   const response = await apiServices.post("/mail/reset-password", data);
   return response;
 }
@@ -35,10 +33,7 @@ export async function sendPasswordResetEmail(
 /**
  * Reset password with token
  */
-export async function resetPassword(
-  data: ResetPasswordData,
-  token: string
-): Promise<ApiResponse> {
+export async function resetPassword(data: ResetPasswordData, token: string): Promise<ApiResponse> {
   const response = await apiServices.post("/users/reset-password", data, {
     headers: {
       Authorization: `Bearer ${token}`,

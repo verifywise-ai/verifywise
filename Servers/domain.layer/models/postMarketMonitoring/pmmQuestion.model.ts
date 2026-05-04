@@ -7,10 +7,7 @@ import {
   BelongsTo,
   HasMany,
 } from "sequelize-typescript";
-import {
-  IPMMQuestion,
-  QuestionType,
-} from "../../interfaces/i.postMarketMonitoring";
+import { IPMMQuestion, QuestionType } from "../../interfaces/i.postMarketMonitoring";
 import { PMMConfigModel } from "./pmmConfig.model";
 import { PMMResponseModel } from "./pmmResponse.model";
 
@@ -18,10 +15,7 @@ import { PMMResponseModel } from "./pmmResponse.model";
   tableName: "post_market_monitoring_questions",
   timestamps: false,
 })
-export class PMMQuestionModel
-  extends Model<PMMQuestionModel>
-  implements IPMMQuestion
-{
+export class PMMQuestionModel extends Model<PMMQuestionModel> implements IPMMQuestion {
   @Column({
     type: DataType.INTEGER,
     autoIncrement: true,

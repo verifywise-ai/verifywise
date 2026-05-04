@@ -77,9 +77,10 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
       setExpanded(isExpanded ? panel : false);
     };
 
-  const chipColor = filteredControlsCount !== null && filteredControlsCount > 0
-  ? { bg: "#E6F4EA", color: `${status.success.text}` }
-  : { bg: "#FFF8E1", color: "#795548" };
+  const chipColor =
+    filteredControlsCount !== null && filteredControlsCount > 0
+      ? { bg: "#E6F4EA", color: `${status.success.text}` }
+      : { bg: "#FFF8E1", color: "#795548" };
 
   return (
     <Stack className="control-category" ref={accordionRef}>
@@ -106,10 +107,7 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
             <ChevronRight
               size={16}
               style={{
-                transform:
-                  expanded === controlCategory.id
-                    ? "rotate(180deg)"
-                    : "rotate(270deg)",
+                transform: expanded === controlCategory.id ? "rotate(180deg)" : "rotate(270deg)",
                 transition: "transform 0.5s ease-in",
               }}
             />
@@ -122,23 +120,23 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
             {controlCategory.order_no} {controlCategory.title}
           </Typography>
           {filteredControlsCount !== null && (
-            <Box component="span" sx={{
-              backgroundColor: chipColor.bg,
-              color: chipColor.color,
-              padding: "4px 8px",
-              borderRadius: "2px",
-              fontSize: 13,
-              fontWeight: 500,
-              ml: 4,
-            }}>
+            <Box
+              component="span"
+              sx={{
+                backgroundColor: chipColor.bg,
+                color: chipColor.color,
+                padding: "4px 8px",
+                borderRadius: "2px",
+                fontSize: 13,
+                fontWeight: 500,
+                ml: 4,
+              }}
+            >
               {filteredControlsCount} filtered
             </Box>
           )}
         </AccordionSummary>
-        <AccordionDetails
-          className="control-category-accordion-details"
-          sx={{ padding: 0 }}
-        >
+        <AccordionDetails className="control-category-accordion-details" sx={{ padding: 0 }}>
           <ControlsTable
             controlCategoryId={controlCategory.id ?? 1}
             controlCategoryIndex={controlCategory.order_no ?? 1}

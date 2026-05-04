@@ -1,11 +1,5 @@
 import { createTheme } from "@mui/material/styles";
-import {
-  text,
-  background,
-  border,
-  status,
-  brand,
-} from "./palette";
+import { text, background, border, status, brand } from "./palette";
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
@@ -16,8 +10,7 @@ declare module "@mui/material/Button" {
 const fontFamilyDefault =
   "'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif";
 
-const shadow =
-  "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
+const shadow = "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
 
 const light = createTheme({
   typography: { fontFamily: fontFamilyDefault, fontSize: 13 },
@@ -115,15 +108,13 @@ const light = createTheme({
               },
             },
             {
-              props: (props) =>
-                props.variant === "group" && props.filled === "true",
+              props: (props) => props.variant === "group" && props.filled === "true",
               style: {
                 backgroundColor: theme.palette.secondary.main,
               },
             },
             {
-              props: (props) =>
-                props.variant === "contained" && props.color === "secondary",
+              props: (props) => props.variant === "contained" && props.color === "secondary",
               style: {
                 border: 1,
                 borderStyle: "solid",
@@ -202,10 +193,9 @@ const light = createTheme({
           margin: 2,
           marginBottom: 0,
           minWidth: 100,
-          "&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected.Mui-focusVisible":
-            {
-              backgroundColor: background.fill,
-            },
+          "&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected.Mui-focusVisible": {
+            backgroundColor: background.fill,
+          },
         },
       },
     },
@@ -330,10 +320,10 @@ const light = createTheme({
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          fontSize: '13px',
+          fontSize: "13px",
           backgroundColor: "#1F2937",
-          padding: '8px 12px',
-          borderRadius: '4px',
+          padding: "8px 12px",
+          borderRadius: "4px",
         },
         arrow: {
           color: "#1F2937",

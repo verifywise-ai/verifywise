@@ -69,8 +69,8 @@ const PaginationSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          Table pagination controls for navigating through data sets.
-          Uses lucide-react icons for navigation buttons.
+          Table pagination controls for navigating through data sets. Uses lucide-react icons for
+          navigation buttons.
         </Typography>
       </Box>
 
@@ -179,7 +179,16 @@ const PaginationSection: React.FC = () => {
           </Box>
 
           <Box sx={{ flex: "1 1 300px", minWidth: 280 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Component specifications
             </Typography>
             <SpecTable
@@ -194,7 +203,17 @@ const PaginationSection: React.FC = () => {
               ]}
             />
 
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary, mb: "16px", mt: "24px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "16px",
+                mt: "24px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
               Icons used
             </Typography>
             <SpecTable
@@ -244,9 +263,12 @@ const PaginationSection: React.FC = () => {
                   color: item === 1 ? theme.palette.text.primary : theme.palette.text.tertiary,
                   backgroundColor: item === 1 ? theme.palette.background.fill : "transparent",
                   cursor: typeof item === "number" ? "pointer" : "default",
-                  "&:hover": typeof item === "number" ? {
-                    backgroundColor: theme.palette.background.fill,
-                  } : {},
+                  "&:hover":
+                    typeof item === "number"
+                      ? {
+                          backgroundColor: theme.palette.background.fill,
+                        }
+                      : {},
                 }}
               >
                 {item}
@@ -379,9 +401,7 @@ const SpecTable: React.FC<{
             alignItems: "center",
             p: "10px 14px",
             borderBottom:
-              index < specs.length - 1
-                ? `1px solid ${theme.palette.border.light}`
-                : "none",
+              index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
             cursor: "pointer",
             transition: "background-color 150ms ease",
             "&:hover": {
@@ -403,9 +423,7 @@ const SpecTable: React.FC<{
             >
               {spec.value}
             </Typography>
-            {hoveredIndex === index && (
-              <Copy size={12} color={theme.palette.primary.main} />
-            )}
+            {hoveredIndex === index && <Copy size={12} color={theme.palette.primary.main} />}
           </Box>
         </Box>
       ))}
@@ -456,9 +474,7 @@ const ExampleWithCode: React.FC<{
         </Box>
       </Box>
 
-      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>
-        {children}
-      </Box>
+      <Box sx={{ p: "16px", backgroundColor: theme.palette.background.main }}>{children}</Box>
 
       {showCode && (
         <Box sx={{ borderTop: `1px solid ${theme.palette.border.light}` }}>

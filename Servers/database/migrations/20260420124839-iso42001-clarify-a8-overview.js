@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Clarifies VW A.8 sub_id 1.1 "AI system lifecycle management" as an

@@ -1,13 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Stack, Typography, IconButton, useTheme, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  IconButton,
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import { Home, FlaskConical, Settings, Trash2, Plus } from "lucide-react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
-import { getAllLlmApiKeys, addLlmApiKey, deleteLlmApiKey } from "../../../application/repository/deepEval.repository";
+import {
+  getAllLlmApiKeys,
+  addLlmApiKey,
+  deleteLlmApiKey,
+} from "../../../application/repository/deepEval.repository";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { palette } from "../../themes/palette";
 
@@ -30,43 +44,44 @@ const LLM_PROVIDERS = [
 /**
  * API key format patterns for validation
  */
-const API_KEY_PATTERNS: Record<string, { pattern: RegExp; example: string; description: string }> = {
-  openai: {
-    pattern: /^sk-(proj-)?[a-zA-Z0-9_-]{20,}$/,
-    example: 'sk-... or sk-proj-...',
-    description: 'OpenAI keys start with "sk-" or "sk-proj-"',
-  },
-  anthropic: {
-    pattern: /^sk-ant-(api\d+-)?[a-zA-Z0-9_-]{20,}$/,
-    example: 'sk-ant-api03-...',
-    description: 'Anthropic keys start with "sk-ant-" (typically "sk-ant-api03-")',
-  },
-  google: {
-    pattern: /^AIza[a-zA-Z0-9_-]{35,}$/,
-    example: 'AIza...',
-    description: 'Google API keys start with "AIza"',
-  },
-  xai: {
-    pattern: /^xai-[a-zA-Z0-9_-]{20,}$/,
-    example: 'xai-...',
-    description: 'xAI keys start with "xai-"',
-  },
-  mistral: {
-    pattern: /^[a-zA-Z0-9]{32,}$/,
-    example: '32+ character alphanumeric string',
-    description: 'Mistral keys are alphanumeric strings (32+ characters)',
-  },
-  huggingface: {
-    pattern: /^hf_[a-zA-Z0-9]{20,}$/,
-    example: 'hf_...',
-    description: 'Hugging Face keys start with "hf_"',
-  },
-  openrouter: {
-    pattern: /^sk-or-v1-[a-zA-Z0-9]{40,}$/,
-    example: 'sk-or-v1-...',
-    description: 'OpenRouter keys start with "sk-or-v1-"',
-  },
-};
+const API_KEY_PATTERNS: Record<string, { pattern: RegExp; example: string; description: string }> =
+  {
+    openai: {
+      pattern: /^sk-(proj-)?[a-zA-Z0-9_-]{20,}$/,
+      example: "sk-... or sk-proj-...",
+      description: 'OpenAI keys start with "sk-" or "sk-proj-"',
+    },
+    anthropic: {
+      pattern: /^sk-ant-(api\d+-)?[a-zA-Z0-9_-]{20,}$/,
+      example: "sk-ant-api03-...",
+      description: 'Anthropic keys start with "sk-ant-" (typically "sk-ant-api03-")',
+    },
+    google: {
+      pattern: /^AIza[a-zA-Z0-9_-]{35,}$/,
+      example: "AIza...",
+      description: 'Google API keys start with "AIza"',
+    },
+    xai: {
+      pattern: /^xai-[a-zA-Z0-9_-]{20,}$/,
+      example: "xai-...",
+      description: 'xAI keys start with "xai-"',
+    },
+    mistral: {
+      pattern: /^[a-zA-Z0-9]{32,}$/,
+      example: "32+ character alphanumeric string",
+      description: "Mistral keys are alphanumeric strings (32+ characters)",
+    },
+    huggingface: {
+      pattern: /^hf_[a-zA-Z0-9]{20,}$/,
+      example: "hf_...",
+      description: 'Hugging Face keys start with "hf_"',
+    },
+    openrouter: {
+      pattern: /^sk-or-v1-[a-zA-Z0-9]{40,}$/,
+      example: "sk-or-v1-...",
+      description: 'OpenRouter keys start with "sk-or-v1-"',
+    },
+  };
 
 /**
  * Validate API key format for a specific provider
@@ -79,7 +94,7 @@ function validateApiKeyFormat(provider: string, apiKey: string): string | null {
   }
 
   const trimmedKey = apiKey.trim();
-  
+
   if (!config.pattern.test(trimmedKey)) {
     return `Invalid format. ${config.description}`;
   }
@@ -106,8 +121,18 @@ export default function OrgSettings() {
   });
 
   const breadcrumbs = [
-    { label: "Dashboard", path: "/", icon: <Home size={14} strokeWidth={1.5} />, onClick: () => navigate("/") },
-    { label: "LLM Evals", path: "/evals", icon: <FlaskConical size={14} strokeWidth={1.5} />, onClick: () => navigate("/evals") },
+    {
+      label: "Dashboard",
+      path: "/",
+      icon: <Home size={14} strokeWidth={1.5} />,
+      onClick: () => navigate("/"),
+    },
+    {
+      label: "LLM Evals",
+      path: "/evals",
+      icon: <FlaskConical size={14} strokeWidth={1.5} />,
+      onClick: () => navigate("/evals"),
+    },
     { label: "Organization settings", icon: <Settings size={14} strokeWidth={1.5} /> },
   ];
 
@@ -126,11 +151,13 @@ export default function OrgSettings() {
   const fetchSavedKeys = async () => {
     try {
       const keys = await getAllLlmApiKeys();
-      setSavedKeys(keys.map((key: { provider: string; maskedKey: string }) => ({
-        provider: key.provider,
-        apiKey: '', // Never sent to frontend
-        maskedKey: key.maskedKey,
-      })));
+      setSavedKeys(
+        keys.map((key: { provider: string; maskedKey: string }) => ({
+          provider: key.provider,
+          apiKey: "", // Never sent to frontend
+          maskedKey: key.maskedKey,
+        })),
+      );
     } catch (err) {
       console.error("Failed to fetch keys:", err);
       setAlert({
@@ -144,13 +171,13 @@ export default function OrgSettings() {
   // Validate API key when it changes
   const handleApiKeyChange = (value: string) => {
     setNewApiKey(value);
-    
+
     // Clear error if field is empty
     if (!value.trim()) {
       setApiKeyError(null);
       return;
     }
-    
+
     // Validate if provider is selected
     if (selectedProvider) {
       const error = validateApiKeyFormat(selectedProvider, value);
@@ -161,7 +188,7 @@ export default function OrgSettings() {
   // Re-validate when provider changes
   const handleProviderChange = (value: string) => {
     setSelectedProvider(value);
-    
+
     // Re-validate existing API key with new provider
     if (newApiKey.trim() && value) {
       const error = validateApiKeyFormat(value, newApiKey);
@@ -194,7 +221,7 @@ export default function OrgSettings() {
     }
 
     // Check if provider already has a key
-    if (savedKeys.some(k => k.provider === selectedProvider)) {
+    if (savedKeys.some((k) => k.provider === selectedProvider)) {
       setAlert({
         variant: "error",
         body: "This provider already has a key configured. Remove it first to add a new one.",
@@ -268,11 +295,11 @@ export default function OrgSettings() {
   };
 
   const getProviderName = (providerId: string): string => {
-    return LLM_PROVIDERS.find(p => p._id === providerId)?.name || providerId;
+    return LLM_PROVIDERS.find((p) => p._id === providerId)?.name || providerId;
   };
 
   const availableProviders = LLM_PROVIDERS.filter(
-    p => !savedKeys.some(k => k.provider === p._id)
+    (p) => !savedKeys.some((k) => k.provider === p._id),
   );
 
   return (
@@ -369,7 +396,11 @@ export default function OrgSettings() {
                 label="API key"
                 value={newApiKey}
                 onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder={selectedProvider ? `Enter your ${LLM_PROVIDERS.find(p => p._id === selectedProvider)?.name || ''} API key...` : "Enter your API key..."}
+                placeholder={
+                  selectedProvider
+                    ? `Enter your ${LLM_PROVIDERS.find((p) => p._id === selectedProvider)?.name || ""} API key...`
+                    : "Enter your API key..."
+                }
                 type="password"
                 autoComplete="off"
                 disabled={!selectedProvider}
@@ -396,7 +427,7 @@ export default function OrgSettings() {
                     ml: 0.5,
                   }}
                 >
-                  Expected format: {API_KEY_PATTERNS[selectedProvider]?.example || 'API key'}
+                  Expected format: {API_KEY_PATTERNS[selectedProvider]?.example || "API key"}
                 </Typography>
               )}
             </Box>
@@ -438,20 +469,13 @@ export default function OrgSettings() {
       </Stack>
 
       {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmDelete.open}
-        onClose={handleCancelRemove}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>
-          Remove API key
-        </DialogTitle>
+      <Dialog open={confirmDelete.open} onClose={handleCancelRemove} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>Remove API key</DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 14, color: theme.palette.text.secondary }}>
             Are you sure you want to remove the API key for{" "}
-            <strong>{confirmDelete.provider ? getProviderName(confirmDelete.provider) : ""}</strong>?
-            This action cannot be undone.
+            <strong>{confirmDelete.provider ? getProviderName(confirmDelete.provider) : ""}</strong>
+            ? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -475,4 +499,3 @@ export default function OrgSettings() {
     </PageHeaderExtended>
   );
 }
-

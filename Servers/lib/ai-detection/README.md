@@ -56,29 +56,32 @@ const detector = new AIDetector(options?: ScannerOptions);
 
 **ScannerOptions:**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `useKeywordFiltering` | boolean | `true` | Enable keyword pre-filtering for performance |
-| `useEntropyChecking` | boolean | `true` | Enable entropy validation for secrets |
-| `minEntropyThreshold` | number | `3.0` | Minimum Shannon entropy for secrets |
-| `codeExtensions` | string[] | See below | File extensions to scan as code |
-| `dependencyFiles` | string[] | See below | Dependency file names to scan |
-| `ignorePaths` | string[] | See below | Glob patterns to ignore |
-| `maxFileSize` | number | `1048576` | Maximum file size in bytes (1MB) |
+| Option                | Type     | Default   | Description                                  |
+| --------------------- | -------- | --------- | -------------------------------------------- |
+| `useKeywordFiltering` | boolean  | `true`    | Enable keyword pre-filtering for performance |
+| `useEntropyChecking`  | boolean  | `true`    | Enable entropy validation for secrets        |
+| `minEntropyThreshold` | number   | `3.0`     | Minimum Shannon entropy for secrets          |
+| `codeExtensions`      | string[] | See below | File extensions to scan as code              |
+| `dependencyFiles`     | string[] | See below | Dependency file names to scan                |
+| `ignorePaths`         | string[] | See below | Glob patterns to ignore                      |
+| `maxFileSize`         | number   | `1048576` | Maximum file size in bytes (1MB)             |
 
 **Default Code Extensions:**
+
 ```
 .py, .js, .mjs, .cjs, .ts, .tsx, .jsx, .java, .go, .rb, .rs,
 .cpp, .cc, .c, .h, .hpp, .cs, .scala, .kt, .swift, .r, .R, .jl
 ```
 
 **Default Dependency Files:**
+
 ```
 package.json, requirements.txt, Pipfile, pyproject.toml, setup.py,
 environment.yml, conda.yaml, Gemfile, build.gradle, pom.xml, go.mod, Cargo.toml
 ```
 
 **Default Ignore Paths:**
+
 ```
 node_modules/**, .git/**, __pycache__/**, *.min.js, dist/**, build/**, vendor/**
 ```
@@ -152,11 +155,11 @@ const apiCalls = scanForApiCalls(content, "client.py");
 
 ```typescript
 interface PatternMatch {
-  pattern: DetectionPattern;      // The pattern that matched
-  findingType: FindingType;       // "library" | "dependency" | "api_call" | "secret"
-  lineNumber: number;             // Line number (1-based)
-  matchedText: string;            // The matched text (truncated)
-  riskLevel: RiskLevel;           // "high" | "medium" | "low"
+  pattern: DetectionPattern; // The pattern that matched
+  findingType: FindingType; // "library" | "dependency" | "api_call" | "secret"
+  lineNumber: number; // Line number (1-based)
+  matchedText: string; // The matched text (truncated)
+  riskLevel: RiskLevel; // "high" | "medium" | "low"
 }
 ```
 
@@ -164,11 +167,11 @@ interface PatternMatch {
 
 ```typescript
 interface Finding {
-  pattern: DetectionPattern;      // Pattern that was detected
-  findingType: FindingType;       // Type of finding
-  category: string;               // Category name
-  filePaths: FilePath[];          // All file paths where found
-  riskLevel: RiskLevel;           // Calculated risk level
+  pattern: DetectionPattern; // Pattern that was detected
+  findingType: FindingType; // Type of finding
+  category: string; // Category name
+  filePaths: FilePath[]; // All file paths where found
+  riskLevel: RiskLevel; // Calculated risk level
 }
 ```
 
@@ -176,7 +179,7 @@ interface Finding {
 
 ```typescript
 interface ScanSummary {
-  total: number;                           // Total findings
+  total: number; // Total findings
   byConfidence: Record<ConfidenceLevel, number>;
   byProvider: Record<string, number>;
   byFindingType: Record<FindingType, number>;
@@ -188,14 +191,14 @@ interface ScanSummary {
 
 ```typescript
 interface DetectionPattern {
-  name: string;                   // Pattern identifier
-  provider: string;               // Provider/company name
-  description: string;            // Human-readable description
-  documentationUrl: string;       // Link to official docs
-  confidence: ConfidenceLevel;    // "high" | "medium" | "low"
-  patterns: PatternConfig;        // Regex patterns
-  keywords?: string[];            // Keywords for pre-filtering
-  minEntropy?: number;            // Minimum entropy for secrets
+  name: string; // Pattern identifier
+  provider: string; // Provider/company name
+  description: string; // Human-readable description
+  documentationUrl: string; // Link to official docs
+  confidence: ConfidenceLevel; // "high" | "medium" | "low"
+  patterns: PatternConfig; // Regex patterns
+  keywords?: string[]; // Keywords for pre-filtering
+  minEntropy?: number; // Minimum entropy for secrets
 }
 ```
 
@@ -203,77 +206,77 @@ interface DetectionPattern {
 
 ### Cloud AI Providers (High Risk)
 
-| Provider | Pattern Name | Detection Types |
-|----------|--------------|-----------------|
-| OpenAI | `openai` | imports, dependencies, API calls, secrets |
-| Anthropic | `anthropic` | imports, dependencies, API calls, secrets |
-| Google AI | `google-generativeai` | imports, dependencies, API calls, secrets |
-| Azure OpenAI | `azure-openai` | imports, dependencies, API calls, secrets |
-| AWS Bedrock | `aws-bedrock` | imports, dependencies, API calls, secrets |
-| Cohere | `cohere` | imports, dependencies, API calls, secrets |
-| Mistral AI | `mistralai` | imports, dependencies, API calls, secrets |
-| Replicate | `replicate` | imports, dependencies, API calls, secrets |
+| Provider     | Pattern Name            | Detection Types                           |
+| ------------ | ----------------------- | ----------------------------------------- |
+| OpenAI       | `openai`                | imports, dependencies, API calls, secrets |
+| Anthropic    | `anthropic`             | imports, dependencies, API calls, secrets |
+| Google AI    | `google-generativeai`   | imports, dependencies, API calls, secrets |
+| Azure OpenAI | `azure-openai`          | imports, dependencies, API calls, secrets |
+| AWS Bedrock  | `aws-bedrock`           | imports, dependencies, API calls, secrets |
+| Cohere       | `cohere`                | imports, dependencies, API calls, secrets |
+| Mistral AI   | `mistralai`             | imports, dependencies, API calls, secrets |
+| Replicate    | `replicate`             | imports, dependencies, API calls, secrets |
 | Hugging Face | `huggingface-inference` | imports, dependencies, API calls, secrets |
-| Groq | `groq` | imports, dependencies, API calls, secrets |
-| Together AI | `together` | imports, dependencies, API calls, secrets |
-| Perplexity | `perplexity` | imports, dependencies, API calls, secrets |
-| Fireworks AI | `fireworks-ai` | imports, dependencies, API calls |
-| DeepSeek | `deepseek` | imports, dependencies, API calls, secrets |
-| AI21 Labs | `ai21` | imports, dependencies, API calls, secrets |
-| Cerebras | `cerebras` | imports, dependencies, API calls, secrets |
+| Groq         | `groq`                  | imports, dependencies, API calls, secrets |
+| Together AI  | `together`              | imports, dependencies, API calls, secrets |
+| Perplexity   | `perplexity`            | imports, dependencies, API calls, secrets |
+| Fireworks AI | `fireworks-ai`          | imports, dependencies, API calls          |
+| DeepSeek     | `deepseek`              | imports, dependencies, API calls, secrets |
+| AI21 Labs    | `ai21`                  | imports, dependencies, API calls, secrets |
+| Cerebras     | `cerebras`              | imports, dependencies, API calls, secrets |
 
 ### AI/ML Frameworks (Medium Risk)
 
-| Provider | Pattern Name | Detection Types |
-|----------|--------------|-----------------|
-| LangChain | `langchain` | imports, dependencies, API calls |
-| LlamaIndex | `llamaindex` | imports, dependencies, API calls |
-| Haystack | `haystack` | imports, dependencies, API calls |
-| CrewAI | `crewai` | imports, dependencies, API calls |
+| Provider        | Pattern Name      | Detection Types                  |
+| --------------- | ----------------- | -------------------------------- |
+| LangChain       | `langchain`       | imports, dependencies, API calls |
+| LlamaIndex      | `llamaindex`      | imports, dependencies, API calls |
+| Haystack        | `haystack`        | imports, dependencies, API calls |
+| CrewAI          | `crewai`          | imports, dependencies, API calls |
 | Semantic Kernel | `semantic-kernel` | imports, dependencies, API calls |
-| AutoGen | `autogen` | imports, dependencies, API calls |
-| Instructor | `instructor` | imports, dependencies, API calls |
-| Guidance | `guidance` | imports, dependencies, API calls |
-| DSPy | `dspy` | imports, dependencies, API calls |
-| LiteLLM | `litellm` | imports, dependencies, API calls |
+| AutoGen         | `autogen`         | imports, dependencies, API calls |
+| Instructor      | `instructor`      | imports, dependencies, API calls |
+| Guidance        | `guidance`        | imports, dependencies, API calls |
+| DSPy            | `dspy`            | imports, dependencies, API calls |
+| LiteLLM         | `litellm`         | imports, dependencies, API calls |
 
 ### Local ML Libraries (Low Risk)
 
-| Provider | Pattern Name | Detection Types |
-|----------|--------------|-----------------|
-| PyTorch | `pytorch` | imports, dependencies |
-| TensorFlow | `tensorflow` | imports, dependencies |
-| Keras | `keras` | imports, dependencies |
-| scikit-learn | `scikit-learn` | imports, dependencies |
-| Transformers | `transformers` | imports, dependencies, API calls |
-| Ollama | `ollama` | imports, dependencies, API calls |
-| llama.cpp | `llama-cpp` | imports, dependencies, API calls |
-| vLLM | `vllm` | imports, dependencies, API calls |
-| ONNX Runtime | `onnxruntime` | imports, dependencies |
-| JAX | `jax` | imports, dependencies |
-| XGBoost | `xgboost` | imports, dependencies |
-| LightGBM | `lightgbm` | imports, dependencies |
-| CatBoost | `catboost` | imports, dependencies |
-| spaCy | `spacy` | imports, dependencies |
-| NLTK | `nltk` | imports, dependencies |
-| NumPy | `numpy` | imports, dependencies |
-| Pandas | `pandas` | imports, dependencies |
-| Accelerate | `accelerate` | imports, dependencies |
-| PEFT | `peft` | imports, dependencies |
-| MLflow | `mlflow` | imports, dependencies |
-| Weights & Biases | `wandb` | imports, dependencies |
+| Provider         | Pattern Name   | Detection Types                  |
+| ---------------- | -------------- | -------------------------------- |
+| PyTorch          | `pytorch`      | imports, dependencies            |
+| TensorFlow       | `tensorflow`   | imports, dependencies            |
+| Keras            | `keras`        | imports, dependencies            |
+| scikit-learn     | `scikit-learn` | imports, dependencies            |
+| Transformers     | `transformers` | imports, dependencies, API calls |
+| Ollama           | `ollama`       | imports, dependencies, API calls |
+| llama.cpp        | `llama-cpp`    | imports, dependencies, API calls |
+| vLLM             | `vllm`         | imports, dependencies, API calls |
+| ONNX Runtime     | `onnxruntime`  | imports, dependencies            |
+| JAX              | `jax`          | imports, dependencies            |
+| XGBoost          | `xgboost`      | imports, dependencies            |
+| LightGBM         | `lightgbm`     | imports, dependencies            |
+| CatBoost         | `catboost`     | imports, dependencies            |
+| spaCy            | `spacy`        | imports, dependencies            |
+| NLTK             | `nltk`         | imports, dependencies            |
+| NumPy            | `numpy`        | imports, dependencies            |
+| Pandas           | `pandas`       | imports, dependencies            |
+| Accelerate       | `accelerate`   | imports, dependencies            |
+| PEFT             | `peft`         | imports, dependencies            |
+| MLflow           | `mlflow`       | imports, dependencies            |
+| Weights & Biases | `wandb`        | imports, dependencies            |
 
 ## Risk Levels
 
 Risk levels are calculated based on provider classification and finding type:
 
-| Finding Type | Risk Level | Reason |
-|--------------|------------|--------|
-| Secret | Always High | Exposed credentials = immediate risk |
-| API Call | Always High | Active data transmission to cloud |
-| Library (Cloud Provider) | High | Data sent to external APIs |
-| Library (Framework) | Medium | Can use cloud APIs but configurable |
-| Library (Local ML) | Low | Data stays on-premises |
+| Finding Type             | Risk Level  | Reason                               |
+| ------------------------ | ----------- | ------------------------------------ |
+| Secret                   | Always High | Exposed credentials = immediate risk |
+| API Call                 | Always High | Active data transmission to cloud    |
+| Library (Cloud Provider) | High        | Data sent to external APIs           |
+| Library (Framework)      | Medium      | Can use cloud APIs but configurable  |
+| Library (Local ML)       | Low         | Data stays on-premises               |
 
 ## Industry Best Practices
 
@@ -285,7 +288,7 @@ Lines are pre-filtered by keywords before running expensive regex operations. Th
 
 ```typescript
 // Only scan lines containing relevant keywords
-keywords: ["openai", "OPENAI_API_KEY", "sk-proj-", "T3BlbkFJ"]
+keywords: ["openai", "OPENAI_API_KEY", "sk-proj-", "T3BlbkFJ"];
 ```
 
 ### Entropy Validation (Gitleaks)
@@ -304,11 +307,13 @@ Shannon entropy is calculated to filter out low-entropy strings that are unlikel
 API calls are detected using a tiered approach by reliability:
 
 1. **Tier 1 (Most Reliable)**: API URLs
+
    ```regex
    /api\.openai\.com/
    ```
 
 2. **Tier 2**: SDK Client Instantiation
+
    ```regex
    /new\s+OpenAI\s*\(/
    ```
@@ -378,11 +383,11 @@ const masked = maskSecret("sk-proj-abc123xyz789def456");
 ```typescript
 import { isCodeFile, isDependencyFile, getFileType } from "./lib/ai-detection";
 
-isCodeFile("app.py");           // true
+isCodeFile("app.py"); // true
 isDependencyFile("package.json"); // true
-getFileType("main.ts");         // "code"
+getFileType("main.ts"); // "code"
 getFileType("requirements.txt"); // "dependency"
-getFileType("README.md");       // "unknown"
+getFileType("README.md"); // "unknown"
 ```
 
 ## Architecture

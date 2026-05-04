@@ -144,16 +144,15 @@ export const showingTextCellStyle = (theme: Theme) => ({
 });
 
 export const showingTextCellStyleForPolicyLinked = (theme: Theme) => ({
-    paddingX: theme.spacing(2),
-    fontSize: 11,
-    opacity: 0.7,
-    fontWeight: 400,
+  paddingX: theme.spacing(2),
+  fontSize: 11,
+  opacity: 0.7,
+  fontWeight: 400,
 
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 });
-
 
 export const paginationMenuProps = (theme: Theme) => ({
   keepMounted: true,

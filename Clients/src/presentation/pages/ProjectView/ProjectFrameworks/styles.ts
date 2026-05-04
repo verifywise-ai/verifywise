@@ -23,23 +23,25 @@ export const frameworkTabsContainerStyle: SxProps<Theme> = (theme) => ({
   backgroundColor: theme.palette.background.paper,
 });
 
-export const getFrameworkTabStyle = (isActive: boolean, isLast: boolean): SxProps<Theme> => (theme) => ({
-  cursor: "pointer",
-  px: 5,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  height: "100%",
-  backgroundColor: isActive ? theme.palette.background.paper : theme.palette.action.hover,
-  color: theme.palette.text.primary,
-  fontFamily: theme.typography.fontFamily,
-  fontSize: theme.typography.fontSize,
-  borderRight: isLast ? "none" : `1px solid ${theme.palette.divider}`,
-  fontWeight: theme.typography.body2?.fontWeight,
-  transition: "background 0.2s",
-  userSelect: "none",
-  width: "142px",
-});
+export const getFrameworkTabStyle =
+  (isActive: boolean, isLast: boolean): SxProps<Theme> =>
+  (theme) => ({
+    cursor: "pointer",
+    px: 5,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    backgroundColor: isActive ? theme.palette.background.paper : theme.palette.action.hover,
+    color: theme.palette.text.primary,
+    fontFamily: theme.typography.fontFamily,
+    fontSize: theme.typography.fontSize,
+    borderRight: isLast ? "none" : `1px solid ${theme.palette.divider}`,
+    fontWeight: theme.typography.body2?.fontWeight,
+    transition: "background 0.2s",
+    userSelect: "none",
+    width: "142px",
+  });
 
 export const addButtonStyle: SxProps<Theme> = (theme) => ({
   backgroundColor: theme.palette.primary.main,
@@ -95,9 +97,9 @@ export const modalHeaderStyle: SxProps<Theme> = (theme) => ({
 
 export const modalCloseButtonStyle: SxProps<Theme> = (theme) => ({
   color: theme.palette.text.tertiary,
-  "&:hover": { 
-    color: theme.palette.text.primary, 
-    backgroundColor: theme.palette.action?.hover || "#e3f5e6"
+  "&:hover": {
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.action?.hover || "#e3f5e6",
   },
   p: 1,
 });

@@ -34,7 +34,11 @@ import {
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.model";
-import { FieldPalette, SuggestedQuestionsPanel, SuggestedQuestionsPanelHandle } from "./FieldPalette";
+import {
+  FieldPalette,
+  SuggestedQuestionsPanel,
+  SuggestedQuestionsPanelHandle,
+} from "./FieldPalette";
 import { FormCanvas, FormCanvasHandle } from "./FormCanvas";
 import { FieldEditor } from "./FieldEditor";
 import { DesignPanel } from "./DesignPanel";
@@ -122,9 +126,10 @@ export function IntakeFormBuilder() {
         })
         .finally(() => setIsLoadingForm(false));
     } else if (formId === "new") {
-      const entityType = entityTypeParam === IntakeEntityType.MODEL
-        ? IntakeEntityType.MODEL
-        : IntakeEntityType.USE_CASE;
+      const entityType =
+        entityTypeParam === IntakeEntityType.MODEL
+          ? IntakeEntityType.MODEL
+          : IntakeEntityType.USE_CASE;
       setForm(createEmptyForm(entityType));
       setSelectedFieldId(null);
       setIsDirty(false);
@@ -161,9 +166,7 @@ export function IntakeFormBuilder() {
       ...prev,
       schema: {
         ...prev.schema,
-        fields: prev.schema.fields.map((f) =>
-          f.id === updatedField.id ? updatedField : f
-        ),
+        fields: prev.schema.fields.map((f) => (f.id === updatedField.id ? updatedField : f)),
       },
     }));
     setIsDirty(true);
@@ -209,7 +212,7 @@ export function IntakeFormBuilder() {
       };
       addField(newField);
     },
-    [form.schema.fields.length, addField]
+    [form.schema.fields.length, addField],
   );
 
   const moveFieldUp = useCallback((fId: string) => {
@@ -220,9 +223,10 @@ export function IntakeFormBuilder() {
         ...prev,
         schema: {
           ...prev.schema,
-          fields: arrayMove(prev.schema.fields, index, index - 1).map(
-            (f, i) => ({ ...f, order: i })
-          ),
+          fields: arrayMove(prev.schema.fields, index, index - 1).map((f, i) => ({
+            ...f,
+            order: i,
+          })),
         },
       };
     });
@@ -237,9 +241,10 @@ export function IntakeFormBuilder() {
         ...prev,
         schema: {
           ...prev.schema,
-          fields: arrayMove(prev.schema.fields, index, index + 1).map(
-            (f, i) => ({ ...f, order: i })
-          ),
+          fields: arrayMove(prev.schema.fields, index, index + 1).map((f, i) => ({
+            ...f,
+            order: i,
+          })),
         },
       };
     });
@@ -378,7 +383,7 @@ export function IntakeFormBuilder() {
       const details = mappingCoverage.typeMismatches
         .map(
           (m) =>
-            `"${m.formField.label}" is ${m.formField.type} but "${m.entityMapping.label}" requires ${m.entityMapping.requiredFieldType.join(" or ")}`
+            `"${m.formField.label}" is ${m.formField.type} but "${m.entityMapping.label}" requires ${m.entityMapping.requiredFieldType.join(" or ")}`,
         )
         .join("; ");
       setSnackbar({
@@ -452,15 +457,12 @@ export function IntakeFormBuilder() {
 
   const mappingCoverage = useMemo(
     () => analyzeMappingCoverage(form.schema.fields, form.entityType),
-    [form.schema.fields, form.entityType]
+    [form.schema.fields, form.entityType],
   );
 
-  const selectedField = form.schema.fields.find(
-    (f) => f.id === selectedFieldId
-  );
+  const selectedField = form.schema.fields.find((f) => f.id === selectedFieldId);
   const fieldToDeleteLabel = fieldToDelete
-    ? form.schema.fields.find((f) => f.id === fieldToDelete)?.label ||
-      "this field"
+    ? form.schema.fields.find((f) => f.id === fieldToDelete)?.label || "this field"
     : "this field";
 
   const llmKeyItems = [
@@ -485,11 +487,7 @@ export function IntakeFormBuilder() {
             icon: <ClipboardList size={14} strokeWidth={1.5} />,
           },
           {
-            label: isEditing
-              ? form.name || "Edit form"
-              : formId === "new"
-                ? "New form"
-                : "Builder",
+            label: isEditing ? form.name || "Edit form" : formId === "new" ? "New form" : "Builder",
             icon: <ClipboardList size={14} strokeWidth={1.5} />,
           },
         ]}
@@ -551,15 +549,17 @@ export function IntakeFormBuilder() {
                   >
                     <Chip label={`Status: ${form.status}`} uppercase={false} />
                     <Chip
-                      label={form.entityType === IntakeEntityType.USE_CASE ? "Type: AI use case" : "Type: Model inventory"}
+                      label={
+                        form.entityType === IntakeEntityType.USE_CASE
+                          ? "Type: AI use case"
+                          : "Type: Model inventory"
+                      }
                       uppercase={false}
                       backgroundColor="#E3F2FD"
                       textColor="#1565C0"
                     />
                     {isDirty && (
-                      <Typography
-                        sx={{ color: theme.palette.text.accent, fontSize: "11px" }}
-                      >
+                      <Typography sx={{ color: theme.palette.text.accent, fontSize: "11px" }}>
                         Unsaved
                       </Typography>
                     )}
@@ -591,11 +591,20 @@ export function IntakeFormBuilder() {
                       fontSize: "12px",
                       fontWeight: 600,
                       userSelect: "none",
-                      backgroundColor: builderMode === "edit" ? theme.palette.primary.main : theme.palette.background.main,
-                      color: builderMode === "edit" ? theme.palette.background.main : theme.palette.text.secondary,
+                      backgroundColor:
+                        builderMode === "edit"
+                          ? theme.palette.primary.main
+                          : theme.palette.background.main,
+                      color:
+                        builderMode === "edit"
+                          ? theme.palette.background.main
+                          : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "edit" ? "brand.primaryHover" : theme.palette.background.accent,
+                        backgroundColor:
+                          builderMode === "edit"
+                            ? "brand.primaryHover"
+                            : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -615,11 +624,20 @@ export function IntakeFormBuilder() {
                       fontWeight: 600,
                       userSelect: "none",
                       borderLeft: `1px solid ${theme.palette.border.dark}`,
-                      backgroundColor: builderMode === "design" ? theme.palette.primary.main : theme.palette.background.main,
-                      color: builderMode === "design" ? theme.palette.background.main : theme.palette.text.secondary,
+                      backgroundColor:
+                        builderMode === "design"
+                          ? theme.palette.primary.main
+                          : theme.palette.background.main,
+                      color:
+                        builderMode === "design"
+                          ? theme.palette.background.main
+                          : theme.palette.text.secondary,
                       transition: "all 0.15s ease",
                       "&:hover": {
-                        backgroundColor: builderMode === "design" ? "brand.primaryHover" : theme.palette.background.accent,
+                        backgroundColor:
+                          builderMode === "design"
+                            ? "brand.primaryHover"
+                            : theme.palette.background.accent,
                       },
                     }}
                   >
@@ -706,21 +724,22 @@ export function IntakeFormBuilder() {
                       },
                     }}
                   />
-                  {form.status !== IntakeFormStatus.ACTIVE && form.status !== IntakeFormStatus.ARCHIVED && (
-                    <CustomizableButton
-                      variant="contained"
-                      onClick={handlePublish}
-                      isDisabled={isSaving}
-                      icon={<Send size={14} />}
-                      text="Publish"
-                      sx={{
-                        height: 34,
-                        fontSize: "13px",
-                        backgroundColor: theme.palette.primary.main,
-                        "&:hover": { backgroundColor: "brand.primaryHover" },
-                      }}
-                    />
-                  )}
+                  {form.status !== IntakeFormStatus.ACTIVE &&
+                    form.status !== IntakeFormStatus.ARCHIVED && (
+                      <CustomizableButton
+                        variant="contained"
+                        onClick={handlePublish}
+                        isDisabled={isSaving}
+                        icon={<Send size={14} />}
+                        text="Publish"
+                        sx={{
+                          height: 34,
+                          fontSize: "13px",
+                          backgroundColor: theme.palette.primary.main,
+                          "&:hover": { backgroundColor: "brand.primaryHover" },
+                        }}
+                      />
+                    )}
                 </Box>
               </Box>
 
@@ -844,10 +863,15 @@ export function IntakeFormBuilder() {
                       >
                         {/* Entity field mapping coverage */}
                         {(() => {
-                          const { missingRequired, missingOptional, typeMismatches } = mappingCoverage;
-                          const allMapped = missingRequired.length === 0 && missingOptional.length === 0 && typeMismatches.length === 0;
-                          const entityLabel = form.entityType === IntakeEntityType.USE_CASE ? "use case" : "model";
-                          const handleAddField = (m: typeof missingRequired[0]) => {
+                          const { missingRequired, missingOptional, typeMismatches } =
+                            mappingCoverage;
+                          const allMapped =
+                            missingRequired.length === 0 &&
+                            missingOptional.length === 0 &&
+                            typeMismatches.length === 0;
+                          const entityLabel =
+                            form.entityType === IntakeEntityType.USE_CASE ? "use case" : "model";
+                          const handleAddField = (m: (typeof missingRequired)[0]) => {
                             const newField = createFieldFromMapping(m, form.schema.fields.length);
                             setForm((prev) => ({
                               ...prev,
@@ -858,21 +882,50 @@ export function IntakeFormBuilder() {
 
                           return (
                             <Box>
-                              <Typography sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.secondary, mb: allMapped ? 0 : "4px" }}>
+                              <Typography
+                                sx={{
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  color: theme.palette.text.secondary,
+                                  mb: allMapped ? 0 : "4px",
+                                }}
+                              >
                                 {allMapped
                                   ? `All ${entityLabel} fields mapped`
                                   : "Optional but not mapped fields"}
                               </Typography>
                               {missingRequired.length > 0 && (
                                 <Box sx={{ mb: "6px" }}>
-                                  <Typography sx={{ fontSize: 11, color: "#DC2626", fontWeight: 500, mb: "2px" }}>
+                                  <Typography
+                                    sx={{
+                                      fontSize: 11,
+                                      color: "#DC2626",
+                                      fontWeight: 500,
+                                      mb: "2px",
+                                    }}
+                                  >
                                     Required (blocks publishing):
                                   </Typography>
                                   {missingRequired.map((m) => (
-                                    <Stack key={m.field} direction="row" alignItems="center" justifyContent="space-between" sx={{ py: "2px" }}>
-                                      <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                                    <Stack
+                                      key={m.field}
+                                      direction="row"
+                                      alignItems="center"
+                                      justifyContent="space-between"
+                                      sx={{ py: "2px" }}
+                                    >
+                                      <Typography
+                                        sx={{ fontSize: 12, color: theme.palette.text.secondary }}
+                                      >
                                         {m.label}
-                                        <Typography component="span" sx={{ fontSize: 11, color: theme.palette.text.accent, ml: "4px" }}>
+                                        <Typography
+                                          component="span"
+                                          sx={{
+                                            fontSize: 11,
+                                            color: theme.palette.text.accent,
+                                            ml: "4px",
+                                          }}
+                                        >
                                           ({m.requiredFieldType.join(" or ")})
                                         </Typography>
                                       </Typography>
@@ -900,12 +953,27 @@ export function IntakeFormBuilder() {
                               )}
                               {typeMismatches.length > 0 && (
                                 <Box sx={{ mb: "6px" }}>
-                                  <Typography sx={{ fontSize: 11, color: "#DC2626", fontWeight: 500, mb: "2px" }}>
+                                  <Typography
+                                    sx={{
+                                      fontSize: 11,
+                                      color: "#DC2626",
+                                      fontWeight: 500,
+                                      mb: "2px",
+                                    }}
+                                  >
                                     Type mismatch (blocks publishing):
                                   </Typography>
                                   {typeMismatches.map((m) => (
-                                    <Typography key={m.formField.id} sx={{ fontSize: 12, color: theme.palette.text.secondary, py: "2px" }}>
-                                      &quot;{m.formField.label}&quot; is {m.formField.type}, needs {m.entityMapping.requiredFieldType.join(" or ")}
+                                    <Typography
+                                      key={m.formField.id}
+                                      sx={{
+                                        fontSize: 12,
+                                        color: theme.palette.text.secondary,
+                                        py: "2px",
+                                      }}
+                                    >
+                                      &quot;{m.formField.label}&quot; is {m.formField.type}, needs{" "}
+                                      {m.entityMapping.requiredFieldType.join(" or ")}
                                     </Typography>
                                   ))}
                                 </Box>
@@ -913,8 +981,16 @@ export function IntakeFormBuilder() {
                               {missingOptional.length > 0 && (
                                 <Box>
                                   {missingOptional.map((m) => (
-                                    <Stack key={m.field} direction="row" alignItems="center" justifyContent="space-between" sx={{ py: "2px" }}>
-                                      <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                                    <Stack
+                                      key={m.field}
+                                      direction="row"
+                                      alignItems="center"
+                                      justifyContent="space-between"
+                                      sx={{ py: "2px" }}
+                                    >
+                                      <Typography
+                                        sx={{ fontSize: 12, color: theme.palette.text.secondary }}
+                                      >
                                         {m.label}
                                       </Typography>
                                       <Typography
@@ -995,15 +1071,10 @@ export function IntakeFormBuilder() {
                           <Select
                             id="llm-key"
                             label=""
-                            value={
-                              form.llmKeyId ? String(form.llmKeyId) : ""
-                            }
+                            value={form.llmKeyId ? String(form.llmKeyId) : ""}
                             onChange={(e) =>
                               updateForm({
-                                llmKeyId:
-                                  e.target.value === ""
-                                    ? null
-                                    : Number(e.target.value),
+                                llmKeyId: e.target.value === "" ? null : Number(e.target.value),
                               })
                             }
                             items={llmKeyItems}
@@ -1029,55 +1100,50 @@ export function IntakeFormBuilder() {
                         </Box>
 
                         {form.llmKeyId && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "4px",
-                            cursor: "pointer",
-                          }}
-                          onClick={() =>
-                            updateForm({
-                              suggestedQuestionsEnabled:
-                                !form.suggestedQuestionsEnabled,
-                            })
-                          }
-                        >
-                          <Checkbox
-                            id="suggested-questions"
-                            isChecked={
-                              form.suggestedQuestionsEnabled ?? false
-                            }
-                            value="suggestedQuestionsEnabled"
-                            onChange={() =>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: "4px",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
                               updateForm({
-                                suggestedQuestionsEnabled:
-                                  !form.suggestedQuestionsEnabled,
+                                suggestedQuestionsEnabled: !form.suggestedQuestionsEnabled,
                               })
                             }
-                            size="small"
-                            label=""
-                            sx={{ p: 0, mt: "1px", flexShrink: 0 }}
-                          />
-                          <Box>
-                            <Typography
-                              sx={{
-                                fontSize: "12px",
-                                fontWeight: 600,
-                                color: theme.palette.text.secondary,
-                              }}
-                            >
-                              Suggested questions
-                            </Typography>
-                            <Typography
-                              sx={{ fontSize: "11px", color: theme.palette.text.accent }}
-                            >
-                              Show AI-suggested questions while building the form
-                            </Typography>
+                          >
+                            <Checkbox
+                              id="suggested-questions"
+                              isChecked={form.suggestedQuestionsEnabled ?? false}
+                              value="suggestedQuestionsEnabled"
+                              onChange={() =>
+                                updateForm({
+                                  suggestedQuestionsEnabled: !form.suggestedQuestionsEnabled,
+                                })
+                              }
+                              size="small"
+                              label=""
+                              sx={{ p: 0, mt: "1px", flexShrink: 0 }}
+                            />
+                            <Box>
+                              <Typography
+                                sx={{
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                  color: theme.palette.text.secondary,
+                                }}
+                              >
+                                Suggested questions
+                              </Typography>
+                              <Typography
+                                sx={{ fontSize: "11px", color: theme.palette.text.accent }}
+                              >
+                                Show AI-suggested questions while building the form
+                              </Typography>
+                            </Box>
                           </Box>
-                        </Box>
                         )}
-
                       </Box>
                     </Collapse>
                   </Box>
@@ -1119,7 +1185,8 @@ export function IntakeFormBuilder() {
         fitContent
       >
         <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "12px" }}>
-          The following optional fields are not mapped to any form field. These fields will be empty when the entity is created.
+          The following optional fields are not mapped to any form field. These fields will be empty
+          when the entity is created.
         </Typography>
         <Box component="ul" sx={{ pl: "20px", m: 0 }}>
           {mappingCoverage.missingOptional.map((m) => (
@@ -1146,7 +1213,8 @@ export function IntakeFormBuilder() {
         fitContent
       >
         <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: "12px" }}>
-          The following required fields are not mapped to any form field. Add form fields mapped to these before publishing.
+          The following required fields are not mapped to any form field. Add form fields mapped to
+          these before publishing.
         </Typography>
         <Box component="ul" sx={{ pl: "20px", m: 0 }}>
           {mappingCoverage.missingRequired.map((m) => (

@@ -14,7 +14,4 @@ export type {
   SearchParams,
 } from "../../infrastructure/api/searchService";
 
-export {
-  ENTITY_DISPLAY_NAMES,
-  getEntityDisplayName,
-} from "../../infrastructure/api/searchService";
+export { ENTITY_DISPLAY_NAMES, getEntityDisplayName } from "../../infrastructure/api/searchService";

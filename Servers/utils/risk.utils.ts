@@ -22,11 +22,9 @@ type Mitigation = {
   project_id: number;
 };
 
-export const validateRiskFrameworksQuery = async (
-  frameworks: number[]
-): Promise<boolean> => {
+export const validateRiskFrameworksQuery = async (frameworks: number[]): Promise<boolean> => {
   const result = (await sequelize.query(
-    `SELECT id FROM frameworks WHERE is_organizational = true;`
+    `SELECT id FROM frameworks WHERE is_organizational = true;`,
   )) as [{ id: number }[], number];
   const orgFrameworks = result[0].map((f) => f.id);
   for (let f of frameworks) {
@@ -39,11 +37,11 @@ export const validateRiskFrameworksQuery = async (
 
 export const validateRiskProjectsQuery = async (
   projects: number[],
-  organizationId: number
+  organizationId: number,
 ): Promise<boolean> => {
   const result = (await sequelize.query(
     `SELECT id FROM projects WHERE organization_id = :organizationId AND is_organizational = false;`,
-    { replacements: { organizationId } }
+    { replacements: { organizationId } },
   )) as [{ id: number }[], number];
   const nonOrgProjects = result[0].map((p) => p.id);
   for (let p of projects) {
@@ -56,7 +54,7 @@ export const validateRiskProjectsQuery = async (
 
 export const getAllRisksQuery = async (
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IRisk[]> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -93,15 +91,18 @@ export const getAllRisksQuery = async (
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
+  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [
+    any[],
+    number,
+  ];
   const risks = result[0];
 
   // Parse JSON strings if needed
   for (let risk of risks) {
-    if (typeof risk.projects === 'string') {
+    if (typeof risk.projects === "string") {
       risk.projects = JSON.parse(risk.projects);
     }
-    if (typeof risk.frameworks === 'string') {
+    if (typeof risk.frameworks === "string") {
       risk.frameworks = JSON.parse(risk.frameworks);
     }
     // Initialize empty arrays for relationships (fetched on demand via getRiskByIdQuery)
@@ -124,7 +125,7 @@ export const getAllRisksQuery = async (
  */
 export const getAllRisksQueryWithRelationships = async (
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IRisk[]> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -284,12 +285,15 @@ export const getAllRisksQueryWithRelationships = async (
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [any[], number];
+  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [
+    any[],
+    number,
+  ];
   const risks = result[0];
 
   // Helper function to transform arrays - hoisted outside loop for performance
   const transformArray = (arr: any[]) => {
-    if (typeof arr === 'string') {
+    if (typeof arr === "string") {
       arr = JSON.parse(arr);
     }
 
@@ -303,17 +307,17 @@ export const getAllRisksQueryWithRelationships = async (
       sup_id: item.sup_id,
       title: item.title,
       sub_id: item.sub_id,
-      project_id: item.project_id
+      project_id: item.project_id,
     }));
   };
 
   // Transform the aggregated JSON arrays back to the expected format
   for (let risk of risks) {
     // Parse JSON strings if needed
-    if (typeof risk.projects === 'string') {
+    if (typeof risk.projects === "string") {
       risk.projects = JSON.parse(risk.projects);
     }
-    if (typeof risk.frameworks === 'string') {
+    if (typeof risk.frameworks === "string") {
       risk.frameworks = JSON.parse(risk.frameworks);
     }
 
@@ -337,7 +341,7 @@ export const getAllRisksQueryWithRelationships = async (
 export const getRisksByProjectQuery = async (
   projectId: number,
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -372,7 +376,7 @@ export const getRisksByProjectQuery = async (
       ${whereClause}
       GROUP BY r.id
       ORDER BY r.created_at DESC, r.id ASC`,
-    { replacements: { projectId, organizationId } }
+    { replacements: { projectId, organizationId } },
   )) as [IRisk[], number];
   return result[0];
 };
@@ -380,7 +384,7 @@ export const getRisksByProjectQuery = async (
 export const getRisksByFrameworkQuery = async (
   frameworkId: number,
   organizationId: number,
-  filter: "active" | "deleted" | "all" = "active"
+  filter: "active" | "deleted" | "all" = "active",
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -416,7 +420,7 @@ export const getRisksByFrameworkQuery = async (
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC;
     `,
-    { replacements: { frameworkId, organizationId } }
+    { replacements: { frameworkId, organizationId } },
   )) as [IRisk[], number];
   return result[0];
 };
@@ -424,30 +428,29 @@ export const getRisksByFrameworkQuery = async (
 export const getRiskByIdQuery = async (
   id: number,
   organizationId: number,
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
 ): Promise<IRisk | null> => {
   const whereClause = includeDeleted
     ? "WHERE id = :id AND organization_id = :organizationId"
     : "WHERE id = :id AND organization_id = :organizationId AND is_deleted = false";
-  const result = (await sequelize.query(
-    `SELECT * FROM risks ${whereClause}`,
-    { replacements: { id, organizationId } }
-  )) as [IRisk[], number];
+  const result = (await sequelize.query(`SELECT * FROM risks ${whereClause}`, {
+    replacements: { id, organizationId },
+  })) as [IRisk[], number];
   const projectRisk = result[0][0];
   if (!projectRisk) return null;
 
-    let ownerFullName = "";
+  let ownerFullName = "";
 
   // Run query ONLY if risk_owner exists
   if (projectRisk.risk_owner) {
-    const ownerResult = await sequelize.query(
+    const ownerResult = (await sequelize.query(
       `SELECT name || ' ' || surname AS full_name
       FROM users
       WHERE id = :owner_id;`,
       {
-        replacements: { owner_id: projectRisk.risk_owner }
-      }
-    ) as [{ full_name: string }[], number];
+        replacements: { owner_id: projectRisk.risk_owner },
+      },
+    )) as [{ full_name: string }[], number];
 
     ownerFullName = ownerResult?.[0]?.[0]?.full_name ?? "";
   }
@@ -459,7 +462,7 @@ export const getRiskByIdQuery = async (
       `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
       {
         replacements: { approver_id: projectRisk.risk_approval },
-      }
+      },
     )) as [{ full_name: string }[], number];
     approverFullName = approver_name?.[0]?.[0]?.full_name ?? "";
   }
@@ -476,22 +479,18 @@ export const getRiskByIdQuery = async (
 
   const attachedProjects = (await sequelize.query(
     `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [{ project_id: number }[], number];
   if (attachedProjects[0].length > 0) {
-    (projectRisk as any).projects = attachedProjects[0].map(
-      (p) => p.project_id
-    );
+    (projectRisk as any).projects = attachedProjects[0].map((p) => p.project_id);
   }
 
   const attachedFrameworks = (await sequelize.query(
     `SELECT framework_id FROM frameworks_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [{ framework_id: number }[], number];
   if (attachedFrameworks[0].length > 0) {
-    (projectRisk as any).frameworks = attachedFrameworks[0].map(
-      (f) => f.framework_id
-    );
+    (projectRisk as any).frameworks = attachedFrameworks[0].map((f) => f.framework_id);
   }
 
   const attachedSubClauses = (await sequelize.query(
@@ -502,7 +501,7 @@ export const getRiskByIdQuery = async (
       JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
       WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedSubClauses[0].length > 0) {
     (projectRisk as any).subClauses = attachedSubClauses[0];
@@ -516,7 +515,7 @@ export const getRiskByIdQuery = async (
       JOIN annex_struct_iso asi ON asi.id = acs.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = asi.framework_id AND pf.organization_id = :organizationId
       WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedAnnexCategories[0].length > 0) {
     (projectRisk as any).annexCategories = attachedAnnexCategories[0];
@@ -529,7 +528,7 @@ export const getRiskByIdQuery = async (
       JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
       WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedControls[0].length > 0) {
     (projectRisk as any).controls = attachedControls[0];
@@ -545,7 +544,7 @@ export const getRiskByIdQuery = async (
       JOIN topics_struct_eu ts ON ts.id = sts.topic_id
       JOIN projects_frameworks pf ON pf.framework_id = ts.framework_id AND pf.organization_id = :organizationId
       WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedAssessments[0].length > 0) {
     (projectRisk as any).assessments = attachedAssessments[0];
@@ -558,7 +557,7 @@ export const getRiskByIdQuery = async (
       JOIN annex_struct_iso27001 ccs ON ccs.id = cse.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
       WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedAnnexControls_27001[0].length > 0) {
     (projectRisk as any).annexControls_27001 = attachedAnnexControls_27001[0];
@@ -572,7 +571,7 @@ export const getRiskByIdQuery = async (
       JOIN clauses_struct_iso27001 csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
       WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } }
+    { replacements: { riskId: projectRisk.id, organizationId } },
   )) as [Mitigation[], number];
   if (attachedSubClauses_27001[0].length > 0) {
     (projectRisk as any).subClauses_27001 = attachedSubClauses_27001[0];
@@ -585,7 +584,7 @@ const createProjectRiskLink = async (
   projects: number[],
   riskId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   const projectReplacements: { [key: string]: number }[] = [];
   const placeholders = projects
@@ -604,7 +603,7 @@ const createProjectRiskLink = async (
     {
       replacements,
       transaction,
-    }
+    },
   );
 };
 
@@ -612,7 +611,7 @@ const createFrameworkRiskLink = async (
   frameworks: number[],
   riskId: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<void> => {
   const frameworkReplacements: { [key: string]: number }[] = [];
   const placeholders = frameworks
@@ -633,16 +632,14 @@ const createFrameworkRiskLink = async (
     {
       replacements,
       transaction,
-    }
+    },
   );
 };
 
 export const createRiskQuery = async (
-  projectRisk: Partial<
-    RiskModel & { projects: number[]; frameworks: number[] }
-  >,
+  projectRisk: Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<RiskModel> => {
   const result = await sequelize.query(
     `INSERT INTO risks (
@@ -681,7 +678,7 @@ export const createRiskQuery = async (
         risk_owner: projectRisk.risk_owner,
         ai_lifecycle_phase: projectRisk.ai_lifecycle_phase,
         risk_description: projectRisk.risk_description,
-        risk_category: `{${(projectRisk.risk_category || []).join(',')}}`,
+        risk_category: `{${(projectRisk.risk_category || []).join(",")}}`,
         impact: projectRisk.impact,
         assessment_mapping: projectRisk.assessment_mapping,
         controls_mapping: projectRisk.controls_mapping,
@@ -724,22 +721,17 @@ export const createRiskQuery = async (
         mitigation_cost_annual: projectRisk.mitigation_cost_annual ?? null,
         roi_percentage: projectRisk.roi_percentage ?? null,
         benchmark_id: projectRisk.benchmark_id ?? null,
-        currency: projectRisk.currency ?? 'USD',
+        currency: projectRisk.currency ?? "USD",
       },
       mapToModel: true,
       model: RiskModel,
       // type: QueryTypes.INSERT
       transaction,
-    }
+    },
   );
 
   if (projectRisk.projects && projectRisk.projects.length > 0) {
-    await createProjectRiskLink(
-      projectRisk.projects,
-      result[0].id!,
-      organizationId,
-      transaction
-    );
+    await createProjectRiskLink(projectRisk.projects, result[0].id!, organizationId, transaction);
   }
 
   if (projectRisk.frameworks && projectRisk.frameworks.length > 0) {
@@ -747,7 +739,7 @@ export const createRiskQuery = async (
       projectRisk.frameworks,
       result[0].id!,
       organizationId,
-      transaction
+      transaction,
     );
   }
   const createdRisk = result[0];
@@ -759,7 +751,7 @@ export const createRiskQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -776,14 +768,14 @@ export const createRiskQuery = async (
         {
           replacements: { owner_id: createdRisk.dataValues.risk_owner },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
       const approver_name = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
         {
           replacements: { approver_id: createdRisk.dataValues.risk_approval },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
 
       const params = automation.params!;
@@ -809,9 +801,7 @@ export const createRiskQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -820,12 +810,7 @@ export const createRiskQuery = async (
     await Promise.all([
       recordSnapshotIfChanged("severity", organizationId, undefined, transaction),
       recordSnapshotIfChanged("likelihood", organizationId, undefined, transaction),
-      recordSnapshotIfChanged(
-        "mitigation_status",
-        organizationId,
-        undefined,
-        transaction
-      ),
+      recordSnapshotIfChanged("mitigation_status", organizationId, undefined, transaction),
       recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
     ]);
   } catch (historyError) {
@@ -847,7 +832,7 @@ export const updateRiskByIdQuery = async (
     }
   >,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
   const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
@@ -905,22 +890,36 @@ export const updateRiskByIdQuery = async (
       const value = projectRisk[f as keyof RiskModel];
       // For quantitative FAIR fields, allow null and 0 as valid update values
       const isQuantitativeField = [
-        "event_frequency_min", "event_frequency_likely", "event_frequency_max",
-        "loss_regulatory_min", "loss_regulatory_likely", "loss_regulatory_max",
-        "loss_operational_min", "loss_operational_likely", "loss_operational_max",
-        "loss_litigation_min", "loss_litigation_likely", "loss_litigation_max",
-        "loss_reputational_min", "loss_reputational_likely", "loss_reputational_max",
-        "total_loss_likely", "ale_estimate", "control_effectiveness", "residual_ale",
-        "mitigation_cost_annual", "roi_percentage", "benchmark_id", "currency",
+        "event_frequency_min",
+        "event_frequency_likely",
+        "event_frequency_max",
+        "loss_regulatory_min",
+        "loss_regulatory_likely",
+        "loss_regulatory_max",
+        "loss_operational_min",
+        "loss_operational_likely",
+        "loss_operational_max",
+        "loss_litigation_min",
+        "loss_litigation_likely",
+        "loss_litigation_max",
+        "loss_reputational_min",
+        "loss_reputational_likely",
+        "loss_reputational_max",
+        "total_loss_likely",
+        "ale_estimate",
+        "control_effectiveness",
+        "residual_ale",
+        "mitigation_cost_annual",
+        "roi_percentage",
+        "benchmark_id",
+        "currency",
       ].includes(f);
-      const hasValue = isQuantitativeField
-        ? value !== undefined
-        : value !== undefined && value;
+      const hasValue = isQuantitativeField ? value !== undefined : value !== undefined && value;
       if (hasValue) {
         if (f === "risk_category") {
           // Format array for PostgreSQL
           const arr = value as string[];
-          updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(',')}}` as any;
+          updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(",")}}` as any;
         } else {
           updateProjectRisk[f as keyof RiskModel] = value;
         }
@@ -962,17 +961,15 @@ export const updateRiskByIdQuery = async (
       {
         replacements: { riskId: id, organizationId },
         transaction,
-      }
+      },
     )) as [{ project_id: number }[], number];
 
-    const currentProjectIds = currentProjectsResult[0].map(
-      (row) => row.project_id
-    );
+    const currentProjectIds = currentProjectsResult[0].map((row) => row.project_id);
     const newProjectIds = projectRisk.projects || [];
 
     // Find projects that are being removed
     const deletedProjectIds = currentProjectIds.filter(
-      (projectId) => !newProjectIds.includes(projectId)
+      (projectId) => !newProjectIds.includes(projectId),
     );
 
     // Clean up mitigation mappings for deleted projects
@@ -982,7 +979,7 @@ export const updateRiskByIdQuery = async (
         {
           replacements: { deletedProjectIds, organizationId },
           transaction,
-        }
+        },
       )) as [(IProjectFrameworks & { id: number })[], number];
 
       for (let pf of projectFrameworks[0]) {
@@ -991,14 +988,14 @@ export const updateRiskByIdQuery = async (
             `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id IN (
               SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id = :pfId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
 
           await sequelize.query(
             `DELETE FROM controls_eu__risks WHERE organization_id = :organizationId AND control_id IN (
               SELECT sc.id FROM controls_eu c JOIN subcontrols_eu sc ON c.id = sc.control_id AND c.organization_id = :organizationId AND sc.organization_id = :organizationId WHERE c.projects_frameworks_id = :pfId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
         }
       }
@@ -1010,16 +1007,11 @@ export const updateRiskByIdQuery = async (
       {
         replacements: { riskId: id, organizationId },
         transaction,
-      }
+      },
     );
     // Only create new links if projects array is provided and not empty
     if (projectRisk.projects && projectRisk.projects.length > 0) {
-      await createProjectRiskLink(
-        projectRisk.projects,
-        id,
-        organizationId,
-        transaction
-      );
+      await createProjectRiskLink(projectRisk.projects, id, organizationId, transaction);
     }
   }
 
@@ -1034,17 +1026,15 @@ export const updateRiskByIdQuery = async (
       {
         replacements: { riskId: id, organizationId },
         transaction,
-      }
+      },
     )) as [{ framework_id: number }[], number];
 
-    const currentFrameworkIds = currentFrameworksResult[0].map(
-      (row) => row.framework_id
-    );
+    const currentFrameworkIds = currentFrameworksResult[0].map((row) => row.framework_id);
     const newFrameworkIds = projectRisk.frameworks || [];
 
     // Find frameworks that are being removed
     const deletedFrameworkIds = currentFrameworkIds.filter(
-      (frameworkId) => !newFrameworkIds.includes(frameworkId)
+      (frameworkId) => !newFrameworkIds.includes(frameworkId),
     );
 
     // Clean up mitigation mappings for deleted frameworks (if framework-specific cleanup is needed)
@@ -1054,7 +1044,7 @@ export const updateRiskByIdQuery = async (
         {
           replacements: { deletedFrameworkIds, organizationId },
           transaction,
-        }
+        },
       )) as [(IProjectFrameworks & { id: number })[], number];
       for (let pf of projectFrameworks[0]) {
         if (pf.framework_id === 2) {
@@ -1062,14 +1052,14 @@ export const updateRiskByIdQuery = async (
             `DELETE FROM subclauses_iso__risks WHERE organization_id = :organizationId AND subclause_id IN (
               SELECT sc.id FROM subclauses_iso sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
 
           await sequelize.query(
             `DELETE FROM annexcategories_iso__risks WHERE organization_id = :organizationId AND annexcategory_id IN (
               SELECT ac.id FROM annexcategories_iso ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
         }
 
@@ -1078,14 +1068,14 @@ export const updateRiskByIdQuery = async (
             `DELETE FROM subclauses_iso27001__risks WHERE organization_id = :organizationId AND subclause_id IN (
               SELECT sc.id FROM subclauses_iso27001 sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
 
           await sequelize.query(
             `DELETE FROM annexcontrols_iso27001__risks WHERE organization_id = :organizationId AND annexcontrol_id IN (
               SELECT ac.id FROM annexcontrols_iso27001 ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
             ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction }
+            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
           );
         }
       }
@@ -1097,16 +1087,11 @@ export const updateRiskByIdQuery = async (
       {
         replacements: { riskId: id, organizationId },
         transaction,
-      }
+      },
     );
     // Only create new links if frameworks array is provided and not empty
     if (projectRisk.frameworks && projectRisk.frameworks.length > 0) {
-      await createFrameworkRiskLink(
-        projectRisk.frameworks,
-        id,
-        organizationId,
-        transaction
-      );
+      await createFrameworkRiskLink(projectRisk.frameworks, id, organizationId, transaction);
     }
   }
   const updatedRisk = result[0];
@@ -1117,7 +1102,7 @@ export const updateRiskByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -1131,30 +1116,31 @@ export const updateRiskByIdQuery = async (
     if (automation["trigger_key"] === "risk_updated") {
       let ownerFullName = "";
 
-        if (updatedRisk.dataValues.risk_owner) {
-          const ownerResult = await sequelize.query(
-            `SELECT name || ' ' || surname AS full_name 
+      if (updatedRisk.dataValues.risk_owner) {
+        const ownerResult = (await sequelize.query(
+          `SELECT name || ' ' || surname AS full_name 
             FROM users 
             WHERE id = :owner_id;`,
-            {
-              replacements: { owner_id: updatedRisk.dataValues.risk_owner },
-              transaction
-            }
-          ) as [{ full_name: string }[], any];
+          {
+            replacements: { owner_id: updatedRisk.dataValues.risk_owner },
+            transaction,
+          },
+        )) as [{ full_name: string }[], any];
 
-          ownerFullName = ownerResult?.[0]?.[0]?.full_name ?? "";
-        }
+        ownerFullName = ownerResult?.[0]?.[0]?.full_name ?? "";
+      }
 
-        let approverFullName = "";
-        if (updatedRisk.dataValues.risk_approval) {
-          const approver_name = await sequelize.query(
-            `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-            {
-              replacements: { approver_id: updatedRisk.dataValues.risk_approval }, transaction
-            }
-          ) as [{ full_name: string }[], number];
-          approverFullName = approver_name?.[0]?.[0]?.full_name ?? "";
-        }
+      let approverFullName = "";
+      if (updatedRisk.dataValues.risk_approval) {
+        const approver_name = (await sequelize.query(
+          `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
+          {
+            replacements: { approver_id: updatedRisk.dataValues.risk_approval },
+            transaction,
+          },
+        )) as [{ full_name: string }[], number];
+        approverFullName = approver_name?.[0]?.[0]?.full_name ?? "";
+      }
 
       const params = automation.params!;
 
@@ -1162,7 +1148,7 @@ export const updateRiskByIdQuery = async (
       const replacements = buildRiskUpdateReplacements(existingRisk, {
         ...updatedRisk.dataValues,
         owner_name: ownerFullName,
-        approver_name: approverFullName
+        approver_name: approverFullName,
       });
 
       // Replace variables in subject and body
@@ -1179,9 +1165,7 @@ export const updateRiskByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -1197,13 +1181,8 @@ export const updateRiskByIdQuery = async (
     const snapshotPromises = [];
     for (const { key, param } of parametersToCheck) {
       // Cast to any to avoid TypeScript complaining about indexing RiskModel with IRisk keys
-      if (
-        existingRisk &&
-        (existingRisk as any)[param] !== (updatedRisk.dataValues as any)[param]
-      ) {
-        snapshotPromises.push(
-          recordSnapshotIfChanged(key, organizationId, undefined, transaction)
-        );
+      if (existingRisk && (existingRisk as any)[param] !== (updatedRisk.dataValues as any)[param]) {
+        snapshotPromises.push(recordSnapshotIfChanged(key, organizationId, undefined, transaction));
       }
     }
 
@@ -1221,7 +1200,7 @@ export const updateRiskByIdQuery = async (
 export const deleteRiskByIdQuery = async (
   id: number,
   organizationId: number,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<Boolean> => {
   const result = (await sequelize.query(
     `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
@@ -1231,7 +1210,7 @@ export const deleteRiskByIdQuery = async (
       // model: RiskModel,
       // type: QueryTypes.UPDATE,
       transaction,
-    }
+    },
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
   const automations = (await sequelize.query(
@@ -1241,7 +1220,7 @@ export const deleteRiskByIdQuery = async (
       a.id AS automation_id,
       aa.*
     FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction }
+    { replacements: { organizationId }, transaction },
   )) as [
     (TenantAutomationActionModel & {
       trigger_key: string;
@@ -1258,14 +1237,14 @@ export const deleteRiskByIdQuery = async (
         {
           replacements: { owner_id: deletedRisk.risk_owner },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
       const approver_name = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
         {
           replacements: { approver_id: deletedRisk.risk_approval },
           transaction,
-        }
+        },
       )) as [{ full_name: string }[], number];
 
       const params = automation.params!;
@@ -1291,9 +1270,7 @@ export const deleteRiskByIdQuery = async (
         organizationId,
       });
     } else {
-      console.warn(
-        `No matching trigger found for key: ${automation["trigger_key"]}`
-      );
+      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
@@ -1302,12 +1279,7 @@ export const deleteRiskByIdQuery = async (
     await Promise.all([
       recordSnapshotIfChanged("severity", organizationId, undefined, transaction),
       recordSnapshotIfChanged("likelihood", organizationId, undefined, transaction),
-      recordSnapshotIfChanged(
-        "mitigation_status",
-        organizationId,
-        undefined,
-        transaction
-      ),
+      recordSnapshotIfChanged("mitigation_status", organizationId, undefined, transaction),
       recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
     ]);
   } catch (historyError) {

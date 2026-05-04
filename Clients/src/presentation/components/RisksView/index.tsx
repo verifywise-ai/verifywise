@@ -50,23 +50,43 @@ const RisksView = ({
   // Compute risk summary from fetched data
   const risksSummary = useMemo(() => {
     const veryHighRisks = projectRisks.filter((risk) => {
-      const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+      const riskLevel = (
+        risk.current_risk_level ||
+        risk.risk_level_autocalculated ||
+        ""
+      ).toLowerCase();
       return riskLevel.includes("very high");
     }).length;
     const highRisks = projectRisks.filter((risk) => {
-      const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+      const riskLevel = (
+        risk.current_risk_level ||
+        risk.risk_level_autocalculated ||
+        ""
+      ).toLowerCase();
       return riskLevel.includes("high") && !riskLevel.includes("very high");
     }).length;
     const mediumRisks = projectRisks.filter((risk) => {
-      const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+      const riskLevel = (
+        risk.current_risk_level ||
+        risk.risk_level_autocalculated ||
+        ""
+      ).toLowerCase();
       return riskLevel.includes("medium");
     }).length;
     const lowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+      const riskLevel = (
+        risk.current_risk_level ||
+        risk.risk_level_autocalculated ||
+        ""
+      ).toLowerCase();
       return riskLevel.includes("low") && !riskLevel.includes("very low");
     }).length;
     const veryLowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (risk.current_risk_level || risk.risk_level_autocalculated || "").toLowerCase();
+      const riskLevel = (
+        risk.current_risk_level ||
+        risk.risk_level_autocalculated ||
+        ""
+      ).toLowerCase();
       return riskLevel.includes("very low") || riskLevel.includes("no risk");
     }).length;
 
@@ -96,7 +116,7 @@ const RisksView = ({
         setShowCustomizableSkeleton(false);
       }
     },
-    [fetchRisks]
+    [fetchRisks],
   );
 
   useEffect(() => {
@@ -144,7 +164,7 @@ const RisksView = ({
         const rowsPerPage = 5;
         const rowCount = projectRisks.slice(
           currentPage * rowsPerPage,
-          currentPage * rowsPerPage + rowsPerPage
+          currentPage * rowsPerPage + rowsPerPage,
         );
 
         if (currentPage !== 0 && rowCount.length === 1) {
@@ -214,14 +234,31 @@ const RisksView = ({
         {isLoading.loading && <CustomizableToast title={isLoading.message} />}
         <Stack className="risks-row" sx={rowStyle}>
           <StatusTileCards
-            items={[
-              { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
-              { key: "Very high", label: "Very high", count: risksSummary.veryHighRisks, color: "#C63622" },
-              { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
-              { key: "Medium", label: "Medium", count: risksSummary.mediumRisks, color: "#D6B971" },
-              { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
-              { key: "Very low", label: "Very low", count: risksSummary.veryLowRisks, color: "#B8D39C" },
-            ] satisfies StatusTileItem[]}
+            items={
+              [
+                { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+                {
+                  key: "Very high",
+                  label: "Very high",
+                  count: risksSummary.veryHighRisks,
+                  color: "#C63622",
+                },
+                { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
+                {
+                  key: "Medium",
+                  label: "Medium",
+                  count: risksSummary.mediumRisks,
+                  color: "#D6B971",
+                },
+                { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+                {
+                  key: "Very low",
+                  label: "Very low",
+                  count: risksSummary.veryLowRisks,
+                  color: "#B8D39C",
+                },
+              ] satisfies StatusTileItem[]
+            }
             entityName="risk"
             size="small"
           />
@@ -265,7 +302,11 @@ const RisksView = ({
                   component="a"
                   href="/risk-management"
                   variant="body2"
-                  sx={{ color: "primary.main", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+                  sx={{
+                    color: "primary.main",
+                    textDecoration: "none",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
                 >
                   Risk Management
                 </Typography>{" "}
@@ -282,7 +323,7 @@ const RisksView = ({
               setPage={setCurrentPagingation}
               page={currentPage}
               setSelectedRow={readOnly ? () => {} : (row: RiskModel) => setSelectedRow([row])}
-              setAnchor={readOnly ? (() => {}) as any : setAnchor}
+              setAnchor={readOnly ? ((() => {}) as any) : setAnchor}
               onDeleteRisk={readOnly ? () => {} : handleDelete}
               flashRow={null}
             />

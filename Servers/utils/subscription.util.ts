@@ -10,17 +10,12 @@ export async function getSubscription(): Promise<SubscriptionModel[]> {
   return subscription;
 }
 
-export async function getSubscriptionById(
-  id: number
-): Promise<SubscriptionModel> {
-  const subscription = await sequelize.query(
-    `SELECT * FROM subscriptions WHERE id = :id`,
-    {
-      replacements: { id },
-      mapToModel: true,
-      model: SubscriptionModel,
-    }
-  );
+export async function getSubscriptionById(id: number): Promise<SubscriptionModel> {
+  const subscription = await sequelize.query(`SELECT * FROM subscriptions WHERE id = :id`, {
+    replacements: { id },
+    mapToModel: true,
+    model: SubscriptionModel,
+  });
   if (!subscription || subscription.length === 0) {
     throw new Error(`Subscription with id ${id} not found`);
   }
@@ -29,16 +24,9 @@ export async function getSubscriptionById(
 
 export async function createSubscription(
   subscription: Omit<SubscriptionModel, "id">,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SubscriptionModel> {
-  const {
-    organization_id,
-    tier_id,
-    stripe_sub_id,
-    status,
-    start_date,
-    end_date,
-  } = subscription;
+  const { organization_id, tier_id, stripe_sub_id, status, start_date, end_date } = subscription;
   const created_at = new Date();
   const updated_at = new Date();
 
@@ -77,7 +65,7 @@ export async function createSubscription(
         mapToModel: true,
         model: SubscriptionModel,
         transaction,
-      }
+      },
     );
     return result[0];
   } catch (error) {
@@ -89,17 +77,10 @@ export async function createSubscription(
 export async function updateSubscription(
   id: number,
   subscription: Partial<SubscriptionModel>,
-  transaction: Transaction
+  transaction: Transaction,
 ): Promise<SubscriptionModel> {
   const updatedSubscription: Partial<Record<keyof SubscriptionModel, any>> = {};
-  const setClause = [
-    "tier_id",
-    "stripe_sub_id",
-    "status",
-    "start_date",
-    "end_date",
-    "updated_at",
-  ]
+  const setClause = ["tier_id", "stripe_sub_id", "status", "start_date", "end_date", "updated_at"]
     .filter((f) => {
       if (
         subscription[f as keyof SubscriptionModel] !== undefined &&

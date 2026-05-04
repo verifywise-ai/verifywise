@@ -66,11 +66,4 @@ export type PluginSlotId = (typeof PLUGIN_SLOTS)[keyof typeof PLUGIN_SLOTS];
 /**
  * Render types for plugin components
  */
-export type PluginRenderType =
-  | "menuitem"
-  | "modal"
-  | "tab"
-  | "card"
-  | "button"
-  | "widget"
-  | "raw";
+export type PluginRenderType = "menuitem" | "modal" | "tab" | "card" | "button" | "widget" | "raw";

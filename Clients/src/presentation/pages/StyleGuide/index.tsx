@@ -1,5 +1,13 @@
 import React, { useState, useMemo } from "react";
-import { Box, Stack, Typography, useTheme, TextField, InputAdornment, Divider } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  useTheme,
+  TextField,
+  InputAdornment,
+  Divider,
+} from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   TextCursorInput,
@@ -144,7 +152,16 @@ const StyleGuide: React.FC = () => {
       icon: <Bell size={18} />,
       component: <AlertsSection />,
       category: "components",
-      keywords: ["alert", "toast", "notification", "message", "snackbar", "error", "success", "warning"],
+      keywords: [
+        "alert",
+        "toast",
+        "notification",
+        "message",
+        "snackbar",
+        "error",
+        "success",
+        "warning",
+      ],
     },
     {
       id: "breadcrumbs",
@@ -311,7 +328,9 @@ const StyleGuide: React.FC = () => {
   ];
 
   // Determine active top tab based on the current section
-  const resourceIds = navItems.filter(item => item.category === "resources").map(item => item.id);
+  const resourceIds = navItems
+    .filter((item) => item.category === "resources")
+    .map((item) => item.id);
   const activeTopTab: TopTab = resourceIds.includes(activeSection) ? "resources" : "design-system";
 
   const handleNavClick = (id: string) => {
@@ -330,13 +349,13 @@ const StyleGuide: React.FC = () => {
 
   // Filter items based on search (only for design system tab)
   const filteredItems = useMemo(() => {
-    const designSystemItems = navItems.filter(item => item.category !== "resources");
+    const designSystemItems = navItems.filter((item) => item.category !== "resources");
     if (!searchQuery.trim()) return designSystemItems;
     const query = searchQuery.toLowerCase();
     return designSystemItems.filter(
       (item) =>
         item.label.toLowerCase().includes(query) ||
-        item.keywords.some((kw) => kw.toLowerCase().includes(query))
+        item.keywords.some((kw) => kw.toLowerCase().includes(query)),
     );
   }, [searchQuery, navItems]);
 
@@ -358,14 +377,9 @@ const StyleGuide: React.FC = () => {
         p: "5px 10px",
         borderRadius: "4px",
         cursor: "pointer",
-        backgroundColor:
-          activeSection === item.id
-            ? theme.palette.background.fill
-            : "transparent",
+        backgroundColor: activeSection === item.id ? theme.palette.background.fill : "transparent",
         color:
-          activeSection === item.id
-            ? theme.palette.primary.main
-            : theme.palette.text.secondary,
+          activeSection === item.id ? theme.palette.primary.main : theme.palette.text.secondary,
         fontWeight: activeSection === item.id ? 500 : 400,
         transition: "background-color 150ms ease",
         "&:hover": {
@@ -415,8 +429,14 @@ const StyleGuide: React.FC = () => {
                 px: "16px",
                 py: "12px",
                 cursor: "pointer",
-                borderBottom: activeTopTab === tab.id ? `2px solid ${theme.palette.primary.main}` : "2px solid transparent",
-                color: activeTopTab === tab.id ? theme.palette.primary.main : theme.palette.text.secondary,
+                borderBottom:
+                  activeTopTab === tab.id
+                    ? `2px solid ${theme.palette.primary.main}`
+                    : "2px solid transparent",
+                color:
+                  activeTopTab === tab.id
+                    ? theme.palette.primary.main
+                    : theme.palette.text.secondary,
                 fontWeight: activeTopTab === tab.id ? 500 : 400,
                 transition: "all 150ms ease",
                 "&:hover": {
