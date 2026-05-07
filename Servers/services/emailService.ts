@@ -42,7 +42,7 @@ export const sendEmail = async (
   await refreshCredentialsIfNeeded(provider);
 
   // Compile MJML template to HTML
-  const html = compileMjmlToHtml(template, data);
+  const html = await compileMjmlToHtml(template, data);
 
   if (!process.env.EMAIL_ID) {
     throw new Error("Email ID is not set in environment variables");

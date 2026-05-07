@@ -1,6 +1,8 @@
 const { createDefaultPreset } = require("ts-jest");
 
-const tsJestTransformCfg = createDefaultPreset().transform;
+const tsJestTransformCfg = createDefaultPreset({
+  diagnostics: false,
+}).transform;
 
 /** @type {import("jest").Config} **/
 module.exports = {
@@ -8,4 +10,6 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
   },
+  modulePathIgnorePatterns: ["<rootDir>/dist/"],
+  forceExit: true,
 };

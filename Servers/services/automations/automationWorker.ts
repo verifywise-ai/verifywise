@@ -571,7 +571,7 @@ export const createAutomationWorker = () => {
                 templateData[key] = String(value ?? "");
               });
 
-              const htmlBody = compileMjmlToHtml(mjmlTemplate, templateData);
+              const htmlBody = await compileMjmlToHtml(mjmlTemplate, templateData);
 
               await handler({
                 to: [recipientEmail],

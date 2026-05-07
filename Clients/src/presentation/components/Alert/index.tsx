@@ -25,17 +25,13 @@ import {
   X as CloseGreyIcon,
 } from "lucide-react";
 
-/**
- * Mapping of alert variants to their respective icons.
- *
- * @constant
- * @type {object}
- */
-const icons: { [s: string]: JSX.Element } = {
-  success: <GreenSuccessIcon size={20} />, // #079455
-  info: <BlueInfoIcon size={20} />, // #0288d1
-  error: <RedErrorIcon size={20} />, // #f04438
-  warning: <OrangeWarningIcon size={20} />, // #DC6803
+type IconComponent = React.ComponentType<{ size?: number }>;
+
+const iconComponents: { [s: string]: IconComponent } = {
+  success: GreenSuccessIcon,
+  info: BlueInfoIcon,
+  error: RedErrorIcon,
+  warning: OrangeWarningIcon,
 };
 
 /**
@@ -65,7 +61,8 @@ const Alert: React.FC<AlertProps> = ({
 }: AlertProps): JSX.Element => {
   const theme = useTheme();
   const { text, bg } = singleTheme.alertStyles[variant];
-  const icon = icons[variant];
+  const IconComponent = iconComponents[variant];
+  const icon = IconComponent ? <IconComponent size={20} /> : null;
 
   return (
     <Stack

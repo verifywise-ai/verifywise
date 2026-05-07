@@ -55,7 +55,7 @@ async function testProvider(providerType: "resend" | "smtp", testEmail: string) 
       test_time: new Date().toISOString(),
     };
 
-    const html = compileMjmlToHtml(testTemplate, templateData);
+    const html = await compileMjmlToHtml(testTemplate, templateData);
 
     const emailOptions: EmailOptions = {
       to: testEmail,
