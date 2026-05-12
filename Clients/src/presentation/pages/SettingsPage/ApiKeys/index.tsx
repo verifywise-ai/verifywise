@@ -250,8 +250,8 @@ const ApiKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: "brand.primary",
-                color: "background.main",
+                "backgroundColor": "brand.primary",
+                "color": "background.main",
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -300,8 +300,8 @@ const ApiKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: "brand.primary",
-                color: "background.main",
+                "backgroundColor": "brand.primary",
+                "color": "background.main",
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -345,12 +345,12 @@ const ApiKeys = () => {
                       <Chip
                         label={token.getStatus()}
                         sx={{
-                          backgroundColor: token.getStatusColor(),
-                          color: token.getStatusTextColor(),
-                          fontWeight: 500,
-                          fontSize: "11px",
-                          height: "20px",
-                          borderRadius: "4px",
+                          "backgroundColor": token.getStatusColor(),
+                          "color": token.getStatusTextColor(),
+                          "fontWeight": 500,
+                          "fontSize": "11px",
+                          "height": "20px",
+                          "borderRadius": "4px",
                           "& .MuiChip-label": {
                             padding: "0 8px",
                             textTransform: "uppercase",
@@ -397,9 +397,9 @@ const ApiKeys = () => {
                       disableRipple
                       disabled={isDisabled}
                       sx={{
-                        color: "#DC2626",
-                        opacity: hoveredTokenId === token.id ? 1 : 0.6,
-                        transition: "opacity 0.2s ease-in-out",
+                        "color": "#DC2626",
+                        "opacity": hoveredTokenId === token.id ? 1 : 0.6,
+                        "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
                           backgroundColor: "#FEF2F2",
                         },
@@ -475,10 +475,10 @@ const ApiKeys = () => {
           proceedButtonVariant="contained"
           TitleFontSize={0}
           confirmBtnSx={{
-            backgroundColor: isCreateButtonDisabled ? "#ccc" : "brand.primary",
-            color: isCreateButtonDisabled ? "#666" : "background.main",
-            cursor: isCreateButtonDisabled ? "not-allowed" : "pointer",
-            opacity: isCreateButtonDisabled ? 0.6 : 1,
+            "backgroundColor": isCreateButtonDisabled ? "#ccc" : "brand.primary",
+            "color": isCreateButtonDisabled ? "#666" : "background.main",
+            "cursor": isCreateButtonDisabled ? "not-allowed" : "pointer",
+            "opacity": isCreateButtonDisabled ? 0.6 : 1,
             "&:hover": {
               backgroundColor: isCreateButtonDisabled ? "#ccc" : "#0e5c47",
             },
@@ -551,9 +551,9 @@ const ApiKeys = () => {
                     onClick={() => handleCopyToken(newlyCreatedToken, -1)}
                     disableRipple
                     sx={{
-                      color: copiedTokenId === -1 ? "brand.primary" : "#666666",
-                      backgroundColor: copiedTokenId === -1 ? "#f0fdf4" : "transparent",
-                      transition: "all 0.2s ease-in-out",
+                      "color": copiedTokenId === -1 ? "brand.primary" : "#666666",
+                      "backgroundColor": copiedTokenId === -1 ? "#f0fdf4" : "transparent",
+                      "transition": "all 0.2s ease-in-out",
                       "&:hover": {
                         backgroundColor: "#f0fdf4",
                         color: "brand.primary",
@@ -597,9 +597,9 @@ const ApiKeys = () => {
                 text="I copied the key"
                 variant="contained"
                 sx={{
-                  backgroundColor: "brand.primary",
-                  color: "background.main",
-                  px: "32px",
+                  "backgroundColor": "brand.primary",
+                  "color": "background.main",
+                  "px": "32px",
                   "&:hover": { backgroundColor: "#0e5c47" },
                 }}
                 onClick={handleCloseCreateModal}

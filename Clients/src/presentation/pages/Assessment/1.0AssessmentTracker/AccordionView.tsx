@@ -161,7 +161,7 @@ const AccordionView = ({
           const statusMessages: { [key: string]: string } = {
             "Not started": "Status updated to 'Not started'",
             "In progress": "Status updated to 'In progress'",
-            Done: "Status updated to 'Done'",
+            "Done": "Status updated to 'Done'",
           };
           handleAlert({
             variant: "success",
@@ -220,15 +220,15 @@ const AccordionView = ({
         label={priority || "Unknown"}
         size="small"
         sx={{
-          backgroundColor: colors.bg,
-          color: colors.text,
-          fontSize: 12,
-          fontWeight: 500,
-          height: 24,
-          borderRadius: "4px",
-          textTransform: "capitalize",
+          "backgroundColor": colors.bg,
+          "color": colors.text,
+          "fontSize": 12,
+          "fontWeight": 500,
+          "height": 24,
+          "borderRadius": "4px",
+          "textTransform": "capitalize",
           "& .MuiChip-label": { px: "8px" },
-          marginRight: "8px",
+          "marginRight": "8px",
         }}
       />
     );

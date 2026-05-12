@@ -68,20 +68,20 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
         sx={{
           minWidth,
           width,
-          height: height || 32, // Default to medium size
-          minHeight: height || 32,
-          backgroundColor: colors.secondary, // Consistent secondary color
-          color: `${background.main}`,
-          borderRadius: "4px",
-          border: "none",
-          display: "flex",
-          alignItems: "center",
-          padding: height === 28 ? "6px 12px" : "8px 16px", // Consistent padding based on size
-          cursor: "pointer",
-          userSelect: "none",
-          transition: "all 0.2s ease",
-          fontSize: height === 28 ? "12px" : "13px", // Consistent font size based on size
-          fontWeight: 500,
+          "height": height || 32, // Default to medium size
+          "minHeight": height || 32,
+          "backgroundColor": colors.secondary, // Consistent secondary color
+          "color": `${background.main}`,
+          "borderRadius": "4px",
+          "border": "none",
+          "display": "flex",
+          "alignItems": "center",
+          "padding": height === 28 ? "6px 12px" : "8px 16px", // Consistent padding based on size
+          "cursor": "pointer",
+          "userSelect": "none",
+          "transition": "all 0.2s ease",
+          "fontSize": height === 28 ? "12px" : "13px", // Consistent font size based on size
+          "fontWeight": 500,
           "&:hover": {
             backgroundColor: colors.secondaryHover,
             boxShadow: "0px 2px 4px rgba(107, 114, 128, 0.2)",
@@ -144,11 +144,11 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
             key={option.value}
             onClick={() => handleOptionToggle(option.value)}
             sx={{
-              py: 1,
-              px: 2,
-              minHeight: "auto",
-              fontSize: "13px",
-              transition: "all 0.15s ease",
+              "py": 1,
+              "px": 2,
+              "minHeight": "auto",
+              "fontSize": "13px",
+              "transition": "all 0.15s ease",
               "&:hover": {
                 backgroundColor: colors.background, // Standardized hover color
               },

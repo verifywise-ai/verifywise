@@ -5,6 +5,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { verifyChain } from "../utils/auditLedger.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getAuditLedger(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAuditLedger",
@@ -86,7 +87,7 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
       organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -124,6 +125,6 @@ export async function verifyAuditLedger(req: Request, res: Response): Promise<an
       organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

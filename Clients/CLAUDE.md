@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-05-05
 
 ---
 
@@ -70,5 +70,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Frontend styling                    | `docs/technical/frontend/styling.md`          |
 | Frontend components                 | `docs/technical/frontend/components.md`       |
 | Redux, Axios, frontend architecture | `docs/technical/frontend/overview.md`         |
+| TypeScript standards & naming       | `CodeRules/02-typescript/`                    |
+| React component & hook conventions  | `CodeRules/03-react/`                         |
 
 > All `docs/` paths are relative to the repository root.

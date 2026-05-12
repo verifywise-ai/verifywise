@@ -21,7 +21,7 @@ function FriaSectionCard({ title, subtitle, euActContent, children }: FriaSectio
         boxShadow: "none",
       }}
     >
-      <CardContent sx={{ padding: "16px", "&:last-child": { paddingBottom: "16px" } }}>
+      <CardContent sx={{ "padding": "16px", "&:last-child": { paddingBottom: "16px" } }}>
         <Stack spacing={0} gap="8px">
           <Box>
             <Typography

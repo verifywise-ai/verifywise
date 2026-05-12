@@ -9,15 +9,20 @@ import {
   deleteRiskById,
   getRisksByProject,
   getRisksByFramework,
+  bulkUpdateProjectRisks,
 } from "../controllers/risks.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllRisks);
 router.get("/by-projid/:id", authenticateJWT, getRisksByProject);
 router.get("/by-frameworkid/:id", authenticateJWT, getRisksByFramework);
 router.get("/:id", authenticateJWT, getRiskById);
+
+// PATCH bulk update (Admin/Editor). Must come before generic /:id routes.
+router.patch("/bulk", authenticateJWT, authorize(["Admin", "Editor"]), bulkUpdateProjectRisks);
 
 // POST, PUT, DELETE requests
 router.post("/", authenticateJWT, createRisk);

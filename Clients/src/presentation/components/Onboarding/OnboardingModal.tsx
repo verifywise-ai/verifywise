@@ -173,19 +173,19 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       <Box
         className="confirmation-backdrop"
         sx={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
-          backdropFilter: "blur(2px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: 2,
-          animation: isClosing ? "fadeOut 0.4s ease-out" : "fadeIn 0.3s ease-in",
+          "position": "fixed",
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 0,
+          "backgroundColor": "rgba(0, 0, 0, 0.4)",
+          "backdropFilter": "blur(2px)",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "zIndex": 9999,
+          "padding": 2,
+          "animation": isClosing ? "fadeOut 0.4s ease-out" : "fadeIn 0.3s ease-in",
           "@keyframes fadeOut": {
             from: {
               opacity: 1,
@@ -230,7 +230,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <Box
               key={currentStepIndex}
               sx={{
-                animation: "fadeIn 0.4s ease-in-out",
+                "animation": "fadeIn 0.4s ease-in-out",
                 "@keyframes fadeIn": {
                   from: {
                     opacity: 0,
@@ -262,7 +262,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     text="Skip onboarding"
                     onClick={handleSkipStep}
                     sx={{
-                      color: `${status.default.text}`,
+                      "color": `${status.default.text}`,
                       "&:hover": {
                         backgroundColor: "transparent",
                         color: "#374151",
@@ -278,8 +278,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={handleBack}
                         startIcon={<ArrowLeft size={16} />}
                         sx={{
-                          borderColor: `${borderPalette.dark}`,
-                          color: `${text.secondary}`,
+                          "borderColor": `${borderPalette.dark}`,
+                          "color": `${text.secondary}`,
                           "&:hover": {
                             borderColor: `${text.muted}`,
                           },
@@ -292,7 +292,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       onClick={handleNext}
                       endIcon={<ArrowRight size={16} />}
                       sx={{
-                        backgroundColor: `${brand.primary}`,
+                        "backgroundColor": `${brand.primary}`,
                         "&:hover": {
                           backgroundColor: `${brand.primaryHover}`,
                         },

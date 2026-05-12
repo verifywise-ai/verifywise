@@ -7,7 +7,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
  */
 const superAdminOnly = (req: Request, res: Response, next: NextFunction): void | Response => {
   if (!req.isSuperAdmin) {
-    return res.status(403).json(STATUS_CODE[403]("Access restricted to super-admin only"));
+    return res.status(403).json(STATUS_CODE[403](req.t!("Access restricted to super-admin only")));
   }
   next();
 };

@@ -643,3 +643,21 @@ export async function getEntityFiles(
     link_type: f?.link_type,
   }));
 }
+
+export type BulkFileTagMode = "set" | "add" | "remove";
+
+export interface BulkUpdateFileTagsPayload {
+  ids: number[];
+  tags: string[];
+  mode: BulkFileTagMode;
+}
+
+export async function bulkUpdateFileTags(payload: BulkUpdateFileTagsPayload): Promise<any> {
+  try {
+    const response = await apiServices.patch("/files/bulk-tags", payload);
+    return response.data;
+  } catch (error) {
+    console.error("Error performing bulk file tag update:", error);
+    throw error;
+  }
+}

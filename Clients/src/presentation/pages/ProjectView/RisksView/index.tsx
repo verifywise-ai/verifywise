@@ -208,8 +208,8 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
             href={guidanceLink}
             variant="body2"
             sx={{
-              color: "primary.main",
-              textDecoration: "none",
+              "color": "primary.main",
+              "textDecoration": "none",
               "&:hover": { textDecoration: "underline" },
             }}
           >

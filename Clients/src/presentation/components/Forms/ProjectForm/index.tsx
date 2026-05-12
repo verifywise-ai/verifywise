@@ -672,7 +672,7 @@ export const ProjectForm = ({
               placeholder="Select users"
               error={errors.members}
               sx={{
-                cursor: "pointer",
+                "cursor": "pointer",
                 ...teamMembersSxStyle,
                 "& .MuiOutlinedInput-root fieldset": {
                   borderRadius: "3px",
@@ -734,8 +734,8 @@ export const ProjectForm = ({
                       component="li"
                       {...optionProps}
                       sx={{
-                        opacity: isComingSoon ? 0.5 : 1,
-                        cursor: isComingSoon ? "not-allowed" : "pointer",
+                        "opacity": isComingSoon ? 0.5 : 1,
+                        "cursor": isComingSoon ? "not-allowed" : "pointer",
                         "&:hover": {
                           backgroundColor: isComingSoon ? "transparent" : undefined,
                         },
@@ -811,8 +811,8 @@ export const ProjectForm = ({
                     component="li"
                     {...optionProps}
                     sx={{
-                      opacity: isComingSoon ? 0.5 : 1,
-                      cursor: isComingSoon ? "not-allowed" : "pointer",
+                      "opacity": isComingSoon ? 0.5 : 1,
+                      "cursor": isComingSoon ? "not-allowed" : "pointer",
                       "&:hover": {
                         backgroundColor: isComingSoon ? "transparent" : undefined,
                       },

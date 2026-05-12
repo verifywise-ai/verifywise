@@ -298,9 +298,9 @@ export default function TestDatasetPanel({
               variant="determinate"
               value={progress}
               sx={{
-                height: 4,
-                borderRadius: 2,
-                bgcolor: "#E4E7EC",
+                "height": 4,
+                "borderRadius": 2,
+                "bgcolor": "#E4E7EC",
                 "& .MuiLinearProgress-bar": { bgcolor: "#13715B" },
               }}
             />
@@ -388,13 +388,13 @@ export default function TestDatasetPanel({
         <Box
           onClick={addRow}
           sx={{
-            px: "16px",
-            py: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            cursor: "pointer",
-            color: "primary.main",
+            "px": "16px",
+            "py": "8px",
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "4px",
+            "cursor": "pointer",
+            "color": "primary.main",
             "&:hover": { textDecoration: "underline" },
           }}
         >

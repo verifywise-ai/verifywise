@@ -32,6 +32,7 @@ import { projectOverviewContent } from './ai-governance/project-overview';
 import { linkedModelsContent } from './ai-governance/linked-models';
 import { approvalWorkflowsContent } from './ai-governance/approval-workflows';
 import { shareLinksContent } from './ai-governance/share-links';
+import { governanceOsContent } from './ai-governance/governance-os';
 import { policyManagementContent } from './policies/policy-management';
 import { policyVersioningContent } from './policies/policy-versioning';
 import { policyApprovalContent } from './policies/policy-approval';
@@ -116,6 +117,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/linked-models': linkedModelsContent,
   'ai-governance/approval-workflows': approvalWorkflowsContent,
   'ai-governance/share-links': shareLinksContent,
+  'ai-governance/governance-os': governanceOsContent,
   // Risk Management
   'risk-management/risk-assessment': riskAssessmentContent,
   'risk-management/quantitative-risk-assessment': quantitativeRiskAssessmentContent,

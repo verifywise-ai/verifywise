@@ -7,7 +7,6 @@ import {
   FormControlLabel,
   useTheme,
   CircularProgress,
-  TextField,
 } from "@mui/material";
 import Alert from "../../../components/Alert";
 import Toggle from "../../../components/Inputs/Toggle";
@@ -235,11 +234,12 @@ const AITrustCenterOverview: React.FC = () => {
             onToggle={(_, checked) => handleFieldChange("intro", "purpose_visible", checked)}
             disabled={!localFormData.info?.intro_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               placeholder="Include a section to summarize the purpose of the Trust Center. Clearly communicate the company's commitment to responsible AI use, data privacy, and ethical AI practices."
               value={localFormData.intro?.purpose_text || ""}
               onChange={(e) =>
@@ -248,29 +248,6 @@ const AITrustCenterOverview: React.FC = () => {
                 handleFieldChange("intro", "purpose_text", e.target.value)
               }
               disabled={!localFormData.info?.intro_visible || !localFormData.intro?.purpose_visible}
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
           <ToggleCard
@@ -279,11 +256,12 @@ const AITrustCenterOverview: React.FC = () => {
             onToggle={(_, checked) => handleFieldChange("intro", "our_statement_visible", checked)}
             disabled={!localFormData.info?.intro_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               placeholder="Provide a brief statement about the company's AI applications and their significance. Mention the main objectives, like data security, ethical AI, and trust-building with customers."
               value={localFormData.intro?.our_statement_text || ""}
               onChange={(e) =>
@@ -294,29 +272,6 @@ const AITrustCenterOverview: React.FC = () => {
               disabled={
                 !localFormData.info?.intro_visible || !localFormData.intro?.our_statement_visible
               }
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
           <ToggleCard
@@ -325,11 +280,12 @@ const AITrustCenterOverview: React.FC = () => {
             onToggle={(_, checked) => handleFieldChange("intro", "our_mission_visible", checked)}
             disabled={!localFormData.info?.intro_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               placeholder="Input a mission statement reflecting your values related to AI governance and ethics."
               value={localFormData.intro?.our_mission_text || ""}
               onChange={(e) =>
@@ -340,29 +296,6 @@ const AITrustCenterOverview: React.FC = () => {
               disabled={
                 !localFormData.info?.intro_visible || !localFormData.intro?.our_mission_visible
               }
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
         </Box>
@@ -389,7 +322,7 @@ const AITrustCenterOverview: React.FC = () => {
           gap={12}
           mt={3}
           sx={{
-            maxWidth: "100%",
+            "maxWidth": "100%",
             "& > *": {
               flex: "0 0 auto",
               minWidth: "fit-content",
@@ -428,11 +361,12 @@ const AITrustCenterOverview: React.FC = () => {
             }
             disabled={!localFormData.info?.company_description_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               placeholder="Explain your company, what you do, and why trust in AI is essential to you."
               value={localFormData.company_description?.background_text || ""}
               onChange={(e) =>
@@ -444,29 +378,6 @@ const AITrustCenterOverview: React.FC = () => {
                 !localFormData.info?.company_description_visible ||
                 !localFormData.company_description?.background_visible
               }
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
           <ToggleCard
@@ -477,11 +388,12 @@ const AITrustCenterOverview: React.FC = () => {
             }
             disabled={!localFormData.info?.company_description_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               placeholder="Explain key benefits like efficiency, security, customer support, and ethical AI practices. You can also detail your AI offering functionality, use cases, and benefits to users."
               value={localFormData.company_description?.core_benefits_text || ""}
               onChange={(e) =>
@@ -493,29 +405,6 @@ const AITrustCenterOverview: React.FC = () => {
                 !localFormData.info?.company_description_visible ||
                 !localFormData.company_description?.core_benefits_visible
               }
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
           <ToggleCard
@@ -526,11 +415,12 @@ const AITrustCenterOverview: React.FC = () => {
             }
             disabled={!localFormData.info?.company_description_visible}
           >
-            <TextField
+            <Field
               multiline
               minRows={3}
               maxRows={8}
-              fullWidth
+              width="100%"
+              borderless
               value={localFormData.company_description?.compliance_doc_text || ""}
               onChange={(e) =>
                 localFormData.info?.company_description_visible &&
@@ -542,29 +432,6 @@ const AITrustCenterOverview: React.FC = () => {
                 !localFormData.info?.company_description_visible ||
                 !localFormData.company_description?.compliance_doc_visible
               }
-              variant="standard"
-              size="small"
-              sx={{
-                "& .MuiInput-underline:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: "13px",
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:focus": {
-                  outline: "none",
-                },
-                "& .MuiInputBase-input:disabled": {
-                  outline: "none",
-                },
-              }}
             />
           </ToggleCard>
         </Box>

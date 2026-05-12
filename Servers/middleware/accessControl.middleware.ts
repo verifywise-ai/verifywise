@@ -66,12 +66,12 @@ const authorize =
     // Check if role exists (populated by authenticateJWT middleware)
     if (!req.role) {
       console.error("Authorization failed: No role found in request");
-      return res.status(401).json({ message: "Authentication required" });
+      return res.status(401).json({ message: req.t!("Authentication required") });
     }
     const roleName = req.role; // Extract role from authenticated request
 
     if (!allowedRoles.includes(roleName)) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: req.t!("Access denied") });
     }
 
     return next(); // Proceed if role is authorized

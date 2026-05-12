@@ -8,7 +8,7 @@ export interface EntityTips {
 }
 
 export const ENTITY_TIPS: EntityTips = {
-  dashboard: [
+  "dashboard": [
     {
       header: "The Dashboard gives you a real-time snapshot of your AI governance health.",
       content:
@@ -25,7 +25,7 @@ export const ENTITY_TIPS: EntityTips = {
         "The dashboard displays the most critical metrics for AI governance. As you use the system, you'll see trends and patterns that help predict compliance gaps before they become issues.",
     },
   ],
-  tasks: [
+  "tasks": [
     {
       header: "Tasks automatically track your AI governance workload.",
       content:
@@ -37,7 +37,7 @@ export const ENTITY_TIPS: EntityTips = {
         "High-priority tasks require immediate attention and often tie to regulatory deadlines or critical risks. Use filters to view tasks by priority, assignee, or due date. Completing high-priority tasks first reduces compliance risk.",
     },
   ],
-  overview: [
+  "overview": [
     {
       header: "Use Cases define where and how AI is used in your organization.",
       content:
@@ -59,7 +59,7 @@ export const ENTITY_TIPS: EntityTips = {
         "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.",
     },
   ],
-  framework: [
+  "framework": [
     {
       header: "Frameworks map your compliance requirements to actions.",
       content:
@@ -76,7 +76,7 @@ export const ENTITY_TIPS: EntityTips = {
         "Each framework control contains sub-controls that define specific actions needed for compliance. Click into any control to see what's required, assign owners, and track completion. This granular approach prevents overwhelming teams with massive compliance initiatives.",
     },
   ],
-  vendors: [
+  "vendors": [
     {
       header: "Vendor risk assessments protect your organization from third-party AI risks.",
       content:
@@ -132,7 +132,7 @@ export const ENTITY_TIPS: EntityTips = {
         "Even with mitigations, some risk remains. This is residual risk. Tracking residual risk helps leadership make informed decisions about risk acceptance. If residual risk is too high, additional controls may be needed.",
     },
   ],
-  training: [
+  "training": [
     {
       header: "Training records prove your team understands AI governance.",
       content:
@@ -176,7 +176,7 @@ export const ENTITY_TIPS: EntityTips = {
         "Different regulations have different retention requirements. Some require 3 years, others 7 or more. Set retention policies for evidence based on regulatory requirements. Don't delete evidence prematurely, as you may need it for audits years later.",
     },
   ],
-  reporting: [
+  "reporting": [
     {
       header: "Reports communicate AI governance status to stakeholders.",
       content:
@@ -215,7 +215,7 @@ export const ENTITY_TIPS: EntityTips = {
         "Outdated Trust Center information damages credibility. Update published content when policies change, new AI systems deploy, or governance practices evolve. Regular updates show ongoing commitment to responsible AI.",
     },
   ],
-  policies: [
+  "policies": [
     {
       header: "Policies set clear expectations for responsible AI use.",
       content:
@@ -276,7 +276,7 @@ export const ENTITY_TIPS: EntityTips = {
         "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.",
     },
   ],
-  settings: [
+  "settings": [
     {
       header: "Settings customize VerifyWise to your organization's needs.",
       content:
@@ -286,6 +286,28 @@ export const ENTITY_TIPS: EntityTips = {
       header: "User roles control access to sensitive information.",
       content:
         "Not everyone needs access to all governance data. Use roles to grant appropriate access levels: viewers for stakeholders, editors for governance team members, and admins for system owners. Role-based access protects sensitive information.",
+    },
+  ],
+  "governance-os": [
+    {
+      header: "Cross-framework mappings reveal shared compliance effort.",
+      content:
+        "Many controls in different frameworks (EU AI Act, ISO 42001, NIST AI RMF) overlap. The Framework Mapper shows these overlaps so you can satisfy multiple requirements with a single implementation, saving time and reducing duplication.",
+    },
+    {
+      header: "Scenario recommendations match frameworks to your context.",
+      content:
+        "The Scenario Builder uses your industry, region, risk level, and use case type to recommend which frameworks to prioritize. Select a scenario to set your organization's governance strategy and guide compliance planning.",
+    },
+    {
+      header: "Coverage analysis identifies gaps and synergies per project.",
+      content:
+        "Unified Insights shows how well each project covers its assigned frameworks. Gaps highlight controls that still need implementation, while synergies show controls that satisfy multiple frameworks at once.",
+    },
+    {
+      header: "Governance domains group controls by topic area.",
+      content:
+        "Controls are tagged with domains like data governance, risk management, or transparency. Filter by domain to focus on a specific governance area across all frameworks simultaneously.",
     },
   ],
   "shadow-ai-insights": [

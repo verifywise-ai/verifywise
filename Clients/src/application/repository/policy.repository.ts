@@ -87,3 +87,26 @@ export async function importDocxToHtml(file: File): Promise<{ html: string; warn
     throw new APIError("Failed to import DOCX file", error?.response?.status, error);
   }
 }
+
+export type BulkPolicyAction = "archive" | "set_reviewer" | "set_tags";
+
+export interface BulkUpdatePoliciesPayload {
+  ids: number[];
+  action: BulkPolicyAction;
+  reviewerId?: number;
+  tags?: string[];
+}
+
+export async function bulkUpdatePolicies(
+  payload: BulkUpdatePoliciesPayload,
+): Promise<{ updated: number; action: BulkPolicyAction }> {
+  try {
+    const response = await apiServices.patch<{
+      message: string;
+      data: { updated: number; action: BulkPolicyAction };
+    }>("/policies/bulk", payload);
+    return extractData<{ updated: number; action: BulkPolicyAction }>(response);
+  } catch (error: any) {
+    throw new APIError("Failed to perform bulk policy update", error?.response?.status, error);
+  }
+}

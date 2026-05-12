@@ -518,6 +518,8 @@ export async function createFindingsBatchQuery(
       :license_risk_${index},
       :license_source_${index},
       :finding_status_${index},
+      :suppressed_${index},
+      :suppression_rule_id_${index},
       NOW()
     )`;
   });
@@ -540,6 +542,8 @@ export async function createFindingsBatchQuery(
     replacements[`license_risk_${index}`] = input.license_risk || null;
     replacements[`license_source_${index}`] = input.license_source || null;
     replacements[`finding_status_${index}`] = input.finding_status || "active";
+    replacements[`suppressed_${index}`] = input.suppressed === true;
+    replacements[`suppression_rule_id_${index}`] = input.suppression_rule_id ?? null;
   });
 
   const query = `
@@ -561,6 +565,8 @@ export async function createFindingsBatchQuery(
       license_risk,
       license_source,
       finding_status,
+      suppressed,
+      suppression_rule_id,
       created_at
     ) VALUES ${values.join(", ")}
     ON CONFLICT (scan_id, name, provider) DO UPDATE SET
@@ -573,7 +579,9 @@ export async function createFindingsBatchQuery(
       finding_status = CASE
         WHEN EXCLUDED.finding_status = 'active' THEN 'active'
         ELSE ai_detection_findings.finding_status
-      END
+      END,
+      suppressed = EXCLUDED.suppressed,
+      suppression_rule_id = EXCLUDED.suppression_rule_id
     RETURNING id, name, provider;
   `;
 
@@ -1193,6 +1201,8 @@ export async function getGovernanceSummaryQuery(
   reviewed: number;
   approved: number;
   flagged: number;
+  suppressed: number;
+  accepted_risk: number;
   unreviewed: number;
 }> {
   validateOrganizationId(organizationId);
@@ -1202,6 +1212,8 @@ export async function getGovernanceSummaryQuery(
       COUNT(*) FILTER (WHERE governance_status = 'reviewed') as reviewed,
       COUNT(*) FILTER (WHERE governance_status = 'approved') as approved,
       COUNT(*) FILTER (WHERE governance_status = 'flagged') as flagged,
+      COUNT(*) FILTER (WHERE governance_status = 'suppressed') as suppressed,
+      COUNT(*) FILTER (WHERE governance_status = 'accepted_risk') as accepted_risk,
       COUNT(*) FILTER (WHERE governance_status IS NULL) as unreviewed
     FROM ai_detection_findings
     WHERE scan_id = :scanId AND organization_id = :organizationId;
@@ -1217,6 +1229,8 @@ export async function getGovernanceSummaryQuery(
     reviewed: string;
     approved: string;
     flagged: string;
+    suppressed: string;
+    accepted_risk: string;
     unreviewed: string;
   };
 
@@ -1225,6 +1239,8 @@ export async function getGovernanceSummaryQuery(
     reviewed: parseInt(row.reviewed, 10),
     approved: parseInt(row.approved, 10),
     flagged: parseInt(row.flagged, 10),
+    suppressed: parseInt(row.suppressed, 10),
+    accepted_risk: parseInt(row.accepted_risk, 10),
     unreviewed: parseInt(row.unreviewed, 10),
   };
 }

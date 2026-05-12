@@ -94,8 +94,8 @@ const AppSwitcher: FC<AppSwitcherProps> = ({
             slotProps={{
               tooltip: {
                 sx: {
-                  bgcolor: "grey.900",
-                  maxWidth: 220,
+                  "bgcolor": "grey.900",
+                  "maxWidth": 220,
                   "& .MuiTooltip-arrow": {
                     color: theme.palette.grey[900],
                   },

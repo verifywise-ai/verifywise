@@ -96,14 +96,14 @@ const UseCasesStep: React.FC<OnboardingStepProps> = () => {
           <Box
             key={index}
             sx={{
-              padding: 12,
-              background: `linear-gradient(135deg, ${feature.color}08 0%, transparent 100%)`,
-              border: "1px solid status.default.border",
-              borderRadius: "4px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 1.5,
-              transition: "all 0.2s",
+              "padding": 12,
+              "background": `linear-gradient(135deg, ${feature.color}08 0%, transparent 100%)`,
+              "border": "1px solid status.default.border",
+              "borderRadius": "4px",
+              "display": "flex",
+              "flexDirection": "column",
+              "gap": 1.5,
+              "transition": "all 0.2s",
               "&:hover": {
                 borderColor: feature.color,
                 boxShadow: `0 0 0 3px ${feature.color}15`,

@@ -116,8 +116,8 @@ The component automatically adapts to your MUI theme:
 <VWAvatar
   user={user}
   sx={{
-    border: "3px solid #custom-color",
-    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+    "border": "3px solid #custom-color",
+    "boxShadow": "0 4px 8px rgba(0,0,0,0.1)",
     "&:hover": {
       transform: "scale(1.1)",
     },

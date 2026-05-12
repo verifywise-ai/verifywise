@@ -371,17 +371,18 @@ const StyleGuide: React.FC = () => {
       key={item.id}
       onClick={() => handleNavClick(item.id)}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        p: "5px 10px",
-        borderRadius: "4px",
-        cursor: "pointer",
-        backgroundColor: activeSection === item.id ? theme.palette.background.fill : "transparent",
-        color:
+        "display": "flex",
+        "alignItems": "center",
+        "gap": "6px",
+        "p": "5px 10px",
+        "borderRadius": "4px",
+        "cursor": "pointer",
+        "backgroundColor":
+          activeSection === item.id ? theme.palette.background.fill : "transparent",
+        "color":
           activeSection === item.id ? theme.palette.primary.main : theme.palette.text.secondary,
-        fontWeight: activeSection === item.id ? 500 : 400,
-        transition: "background-color 150ms ease",
+        "fontWeight": activeSection === item.id ? 500 : 400,
+        "transition": "background-color 150ms ease",
         "&:hover": {
           backgroundColor: theme.palette.background.fill,
         },
@@ -426,19 +427,19 @@ const StyleGuide: React.FC = () => {
               key={tab.id}
               onClick={() => handleTopTabClick(tab.id)}
               sx={{
-                px: "16px",
-                py: "12px",
-                cursor: "pointer",
-                borderBottom:
+                "px": "16px",
+                "py": "12px",
+                "cursor": "pointer",
+                "borderBottom":
                   activeTopTab === tab.id
                     ? `2px solid ${theme.palette.primary.main}`
                     : "2px solid transparent",
-                color:
+                "color":
                   activeTopTab === tab.id
                     ? theme.palette.primary.main
                     : theme.palette.text.secondary,
-                fontWeight: activeTopTab === tab.id ? 500 : 400,
-                transition: "all 150ms ease",
+                "fontWeight": activeTopTab === tab.id ? 500 : 400,
+                "transition": "all 150ms ease",
                 "&:hover": {
                   color: theme.palette.primary.main,
                 },
@@ -463,7 +464,7 @@ const StyleGuide: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             size="small"
             sx={{
-              width: 200,
+              "width": 200,
               "& .MuiOutlinedInput-root": {
                 borderRadius: "4px",
                 fontSize: 12,

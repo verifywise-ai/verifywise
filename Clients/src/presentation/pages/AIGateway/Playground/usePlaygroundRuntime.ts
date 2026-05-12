@@ -54,7 +54,7 @@ export function usePlaygroundRuntime(configRef: React.RefObject<PlaygroundConfig
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${tokenRef.current}`,
+          "Authorization": `Bearer ${tokenRef.current}`,
         },
         body: JSON.stringify({
           endpoint_slug: config.endpointSlug,

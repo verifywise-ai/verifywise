@@ -39,6 +39,9 @@ const mockIsValidTenantHash = isValidTenantHash as jest.MockedFunction<typeof is
 function createReq(authHeader?: string): Partial<Request> {
   return {
     headers: authHeader ? { authorization: authHeader } : {},
+    // The real i18nMiddleware runs before auth; simulate with an identity
+    // translator so assertions still match the English source string.
+    t: (key: string) => key,
   } as Partial<Request>;
 }
 

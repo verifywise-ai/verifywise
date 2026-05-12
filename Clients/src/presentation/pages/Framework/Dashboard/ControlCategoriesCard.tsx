@@ -360,11 +360,11 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                     <Box
                       onClick={handleCardClick}
                       sx={{
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        p: "4px",
-                        borderRadius: "4px",
+                        "cursor": "pointer",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "p": "4px",
+                        "borderRadius": "4px",
                         "&:hover": {
                           backgroundColor: "rgba(0, 0, 0, 0.04)",
                         },

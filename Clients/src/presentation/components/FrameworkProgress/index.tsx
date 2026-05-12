@@ -38,9 +38,9 @@ export const FrameworkProgress: FC<FrameworkProgressProps> = ({
         variant="determinate"
         value={progress}
         sx={{
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: theme.palette.border.light,
+          "height": 6,
+          "borderRadius": 3,
+          "backgroundColor": theme.palette.border.light,
           "& .MuiLinearProgress-bar": {
             backgroundColor:
               progress >= 80 ? "#10B981" : progress >= 50 ? "#F59E0B" : theme.palette.primary.main,

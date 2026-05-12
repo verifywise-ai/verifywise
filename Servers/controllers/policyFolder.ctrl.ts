@@ -19,6 +19,7 @@ import {
 } from "../utils/policyFolder.utils";
 import { sequelize } from "../database/db";
 
+import { translateError } from "../utils/i18n.utils";
 const ALLOWED_ROLES = ["Admin", "SuperAdmin", "Editor"];
 
 const hasManagePermission = (userRole: string | undefined): boolean => {
@@ -38,14 +39,14 @@ export const getPolicyFolders = async (req: Request, res: Response): Promise<Res
   try {
     const policyId = parseParamId(req.params.id);
     if (isNaN(policyId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
     }
 
     const folders = await getPolicyFoldersQuery(req.organizationId!, policyId);
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting policy folders:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -57,14 +58,14 @@ export const getPoliciesInFolder = async (req: Request, res: Response): Promise<
   try {
     const folderId = parseParamId(req.params.folderId);
     if (isNaN(folderId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     const policyIds = await getPolicyIdsInFolderQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](policyIds));
   } catch (error) {
     console.error("Error getting policies in folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -77,19 +78,19 @@ export const updatePolicyFolders = async (req: Request, res: Response): Promise<
   try {
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const policyId = parseParamId(req.params.id);
     if (isNaN(policyId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
     }
 
     const { folder_ids } = req.body as { folder_ids: number[] };
     if (!Array.isArray(folder_ids)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Folder IDs array is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
     }
 
     await bulkUpdatePolicyFoldersQuery(
@@ -107,6 +108,6 @@ export const updatePolicyFolders = async (req: Request, res: Response): Promise<
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating policy folders:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

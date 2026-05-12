@@ -1,6 +1,6 @@
 export const paginationStyle = (theme: any) => ({
-  mt: theme.spacing(6),
-  color: theme.palette.text.secondary,
+  "mt": theme.spacing(6),
+  "color": theme.palette.text.secondary,
   "& .MuiSelect-icon": {
     width: "24px",
     height: "fit-content",
@@ -14,10 +14,10 @@ export const paginationStyle = (theme: any) => ({
 });
 
 export const paginationSelect = (theme: any) => ({
-  ml: theme.spacing(4),
-  mr: theme.spacing(12),
-  minWidth: theme.spacing(20),
-  textAlign: "left",
+  "ml": theme.spacing(4),
+  "mr": theme.spacing(12),
+  "minWidth": theme.spacing(20),
+  "textAlign": "left",
   "&.Mui-focused > div": {
     backgroundColor: theme.palette.background.main,
   },
@@ -29,11 +29,11 @@ export const paginationDropdown = (theme: any) => ({
 });
 
 export const paginationWrapper = (theme: any) => ({
-  display: "flex",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingX: theme.spacing(4),
+  "display": "flex",
+  "flexDirection": "row",
+  "justifyContent": "space-between",
+  "alignItems": "center",
+  "paddingX": theme.spacing(4),
   "& p": {
     color: theme.palette.text.tertiary,
   },

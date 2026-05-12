@@ -266,9 +266,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 onClick={handleEditProjectClick}
                 isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
                 sx={{
-                  borderColor: "#D1D5DB",
-                  width: "170px",
-                  color: "#374151",
+                  "borderColor": "#D1D5DB",
+                  "width": "170px",
+                  "color": "#374151",
                   "&:hover": {
                     borderColor: "text.disabled",
                     backgroundColor: "background.accent",
@@ -283,9 +283,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 onClick={handleDeleteProjectClick}
                 isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
                 sx={{
-                  borderColor: "#F87171",
-                  width: "170px",
-                  color: "#DC2626",
+                  "borderColor": "#F87171",
+                  "width": "170px",
+                  "color": "#DC2626",
                   "&:hover": {
                     borderColor: "#EF4444",
                     backgroundColor: "#FEF2F2",
@@ -382,9 +382,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         setIsRemoveModalOpen(true);
                       }}
                       sx={{
-                        minWidth: 100,
-                        borderColor: "#F87171",
-                        color: "#DC2626",
+                        "minWidth": 100,
+                        "borderColor": "#F87171",
+                        "color": "#DC2626",
                         "&:hover": {
                           borderColor: "#EF4444",
                           backgroundColor: "#FEF2F2",
@@ -400,9 +400,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                       }
                       onClick={() => handleAddFramework(fw)}
                       sx={{
-                        minWidth: 100,
-                        backgroundColor: "brand.primary",
-                        color: "background.main",
+                        "minWidth": 100,
+                        "backgroundColor": "brand.primary",
+                        "color": "background.main",
                         "&:hover": { backgroundColor: "#0e5c47" },
                       }}
                     />

@@ -582,24 +582,24 @@ export function IntakeFormBuilder() {
                   <Box
                     onClick={() => setBuilderMode("edit")}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      px: "12px",
-                      py: "5px",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      userSelect: "none",
-                      backgroundColor:
+                      "display": "flex",
+                      "alignItems": "center",
+                      "gap": "5px",
+                      "px": "12px",
+                      "py": "5px",
+                      "cursor": "pointer",
+                      "fontSize": "12px",
+                      "fontWeight": 600,
+                      "userSelect": "none",
+                      "backgroundColor":
                         builderMode === "edit"
                           ? theme.palette.primary.main
                           : theme.palette.background.main,
-                      color:
+                      "color":
                         builderMode === "edit"
                           ? theme.palette.background.main
                           : theme.palette.text.secondary,
-                      transition: "all 0.15s ease",
+                      "transition": "all 0.15s ease",
                       "&:hover": {
                         backgroundColor:
                           builderMode === "edit"
@@ -614,25 +614,25 @@ export function IntakeFormBuilder() {
                   <Box
                     onClick={() => setBuilderMode("design")}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      px: "12px",
-                      py: "5px",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      userSelect: "none",
-                      borderLeft: `1px solid ${theme.palette.border.dark}`,
-                      backgroundColor:
+                      "display": "flex",
+                      "alignItems": "center",
+                      "gap": "5px",
+                      "px": "12px",
+                      "py": "5px",
+                      "cursor": "pointer",
+                      "fontSize": "12px",
+                      "fontWeight": 600,
+                      "userSelect": "none",
+                      "borderLeft": `1px solid ${theme.palette.border.dark}`,
+                      "backgroundColor":
                         builderMode === "design"
                           ? theme.palette.primary.main
                           : theme.palette.background.main,
-                      color:
+                      "color":
                         builderMode === "design"
                           ? theme.palette.background.main
                           : theme.palette.text.secondary,
-                      transition: "all 0.15s ease",
+                      "transition": "all 0.15s ease",
                       "&:hover": {
                         backgroundColor:
                           builderMode === "design"
@@ -660,11 +660,11 @@ export function IntakeFormBuilder() {
                         <Box
                           onClick={handleCopyBuilderLink}
                           sx={{
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            p: 0.5,
-                            borderRadius: "4px",
+                            "cursor": "pointer",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "p": 0.5,
+                            "borderRadius": "4px",
                             "&:hover": { backgroundColor: theme.palette.background.accent },
                           }}
                         >
@@ -675,11 +675,11 @@ export function IntakeFormBuilder() {
                         <Box
                           onClick={handlePreviewBuilder}
                           sx={{
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            p: 0.5,
-                            borderRadius: "4px",
+                            "cursor": "pointer",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "p": 0.5,
+                            "borderRadius": "4px",
                             "&:hover": { backgroundColor: theme.palette.background.accent },
                           }}
                         >
@@ -695,10 +695,10 @@ export function IntakeFormBuilder() {
                       icon={<Archive size={14} />}
                       text="Archive"
                       sx={{
-                        height: 34,
-                        fontSize: "13px",
-                        borderColor: theme.palette.border.dark,
-                        color: theme.palette.text.secondary,
+                        "height": 34,
+                        "fontSize": "13px",
+                        "borderColor": theme.palette.border.dark,
+                        "color": theme.palette.text.secondary,
                         "&:hover": {
                           borderColor: theme.palette.text.accent,
                           backgroundColor: theme.palette.background.accent,
@@ -714,10 +714,10 @@ export function IntakeFormBuilder() {
                     icon={<Save size={14} />}
                     text="Save"
                     sx={{
-                      height: 34,
-                      fontSize: "13px",
-                      borderColor: theme.palette.border.dark,
-                      color: theme.palette.text.secondary,
+                      "height": 34,
+                      "fontSize": "13px",
+                      "borderColor": theme.palette.border.dark,
+                      "color": theme.palette.text.secondary,
                       "&:hover": {
                         borderColor: theme.palette.text.accent,
                         backgroundColor: theme.palette.background.accent,
@@ -733,9 +733,9 @@ export function IntakeFormBuilder() {
                         icon={<Send size={14} />}
                         text="Publish"
                         sx={{
-                          height: 34,
-                          fontSize: "13px",
-                          backgroundColor: theme.palette.primary.main,
+                          "height": 34,
+                          "fontSize": "13px",
+                          "backgroundColor": theme.palette.primary.main,
                           "&:hover": { backgroundColor: "brand.primaryHover" },
                         }}
                       />
@@ -816,14 +816,14 @@ export function IntakeFormBuilder() {
                     <Box
                       onClick={() => setFormSettingsOpen((prev) => !prev)}
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        px: "8px",
-                        py: "8px",
-                        cursor: "pointer",
-                        borderBottom: `1px solid ${theme.palette.border.dark}`,
-                        userSelect: "none",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "justifyContent": "space-between",
+                        "px": "8px",
+                        "py": "8px",
+                        "cursor": "pointer",
+                        "borderBottom": `1px solid ${theme.palette.border.dark}`,
+                        "userSelect": "none",
                         "&:hover": { backgroundColor: theme.palette.background.accent },
                       }}
                     >
@@ -933,14 +933,14 @@ export function IntakeFormBuilder() {
                                         component="span"
                                         onClick={() => handleAddField(m)}
                                         sx={{
-                                          fontSize: 11,
-                                          fontWeight: 500,
-                                          color: "brand.primary",
-                                          cursor: "pointer",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: "2px",
-                                          whiteSpace: "nowrap",
+                                          "fontSize": 11,
+                                          "fontWeight": 500,
+                                          "color": "brand.primary",
+                                          "cursor": "pointer",
+                                          "display": "flex",
+                                          "alignItems": "center",
+                                          "gap": "2px",
+                                          "whiteSpace": "nowrap",
                                           "&:hover": { textDecoration: "underline" },
                                         }}
                                       >
@@ -997,14 +997,14 @@ export function IntakeFormBuilder() {
                                         component="span"
                                         onClick={() => handleAddField(m)}
                                         sx={{
-                                          fontSize: 11,
-                                          fontWeight: 500,
-                                          color: "brand.primary",
-                                          cursor: "pointer",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: "2px",
-                                          whiteSpace: "nowrap",
+                                          "fontSize": 11,
+                                          "fontWeight": 500,
+                                          "color": "brand.primary",
+                                          "cursor": "pointer",
+                                          "display": "flex",
+                                          "alignItems": "center",
+                                          "gap": "2px",
+                                          "whiteSpace": "nowrap",
                                           "&:hover": { textDecoration: "underline" },
                                         }}
                                       >
@@ -1036,10 +1036,10 @@ export function IntakeFormBuilder() {
                             }))}
                             placeholder="Select recipients"
                             sx={{
-                              fontSize: 13,
-                              minHeight: 34,
-                              backgroundColor: theme.palette.background.main,
-                              borderRadius: "4px",
+                              "fontSize": 13,
+                              "minHeight": 34,
+                              "backgroundColor": theme.palette.background.main,
+                              "borderRadius": "4px",
                               "& .MuiOutlinedInput-input": {
                                 paddingTop: "6px",
                                 paddingBottom: "6px",

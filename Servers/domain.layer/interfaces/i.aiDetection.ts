@@ -158,7 +158,7 @@ export type VulnerabilityFindingType = (typeof VULNERABILITY_FINDING_TYPES)[numb
 /**
  * Valid governance status values for findings
  */
-export type GovernanceStatus = "reviewed" | "approved" | "flagged";
+export type GovernanceStatus = "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk";
 
 /**
  * Valid confidence levels
@@ -209,6 +209,9 @@ export interface IFinding {
   governance_status?: GovernanceStatus | null;
   governance_updated_at?: Date;
   governance_updated_by?: number;
+  // Suppression flags
+  suppressed?: boolean;
+  suppression_rule_id?: number | null;
   // License information
   license_id?: string | null;
   license_name?: string | null;
@@ -249,6 +252,9 @@ export interface ICreateFindingInput {
   vulnerability_details?: Record<string, unknown> | null;
   // Incremental scan fields
   finding_status?: FindingStatus;
+  // Suppression flags (set by the matcher at scan completion)
+  suppressed?: boolean;
+  suppression_rule_id?: number | null;
 }
 
 // ============================================================================
@@ -366,6 +372,9 @@ export interface IFindingResponse {
   vulnerability_details?: Record<string, unknown> | null;
   // Incremental scan fields
   finding_status?: FindingStatus;
+  // Suppression flags
+  suppressed?: boolean;
+  suppression_rule_id?: number | null;
 }
 
 /**
@@ -564,4 +573,44 @@ export interface IGitHubTokenTestResponse {
     reset: string;
   };
   error?: string;
+}
+
+/**
+ * Match type for an AI detection suppression rule.
+ * - exact: literal equality on the chosen field
+ * - pattern: JS regex tested against the chosen field
+ */
+export type SuppressionMatchType = "exact" | "pattern";
+
+/**
+ * Finding fields a suppression rule can target.
+ */
+export type SuppressionField = "name" | "finding_type" | "category" | "provider";
+
+/**
+ * Org-scoped suppression rule. Matching findings are flagged with
+ * `suppressed=true` and `suppression_rule_id` at scan completion (forward-only).
+ */
+export interface ISuppression {
+  id?: number;
+  organization_id: number;
+  match_type: SuppressionMatchType;
+  field: SuppressionField;
+  value: string;
+  reason?: string | null;
+  expires_at?: Date | null;
+  created_by?: number | null;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+/**
+ * Input for creating a new suppression rule.
+ */
+export interface ICreateSuppressionInput {
+  match_type: SuppressionMatchType;
+  field: SuppressionField;
+  value: string;
+  reason?: string | null;
+  expires_at?: Date | string | null;
 }

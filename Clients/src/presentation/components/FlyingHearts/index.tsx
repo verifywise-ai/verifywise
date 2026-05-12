@@ -101,14 +101,14 @@ export const FlyingHearts: FC<FlyingHeartsProps> = ({ onComplete }) => {
         <Box
           key={heart.id}
           sx={{
-            position: "absolute",
-            left: `${heart.left}%`,
-            bottom: "-100px",
-            width: `${heart.size}px`,
-            height: `${heart.size}px`,
-            animation: `${flyUp} ${heart.duration}s ease-out forwards`,
-            animationDelay: `${heart.delay}s`,
-            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
+            "position": "absolute",
+            "left": `${heart.left}%`,
+            "bottom": "-100px",
+            "width": `${heart.size}px`,
+            "height": `${heart.size}px`,
+            "animation": `${flyUp} ${heart.duration}s ease-out forwards`,
+            "animationDelay": `${heart.delay}s`,
+            "filter": "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
             "& svg": {
               width: "100%",
               height: "100%",

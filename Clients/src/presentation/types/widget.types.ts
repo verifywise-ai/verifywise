@@ -82,8 +82,10 @@ export interface IconButtonProps {
 export interface CheckboxProps {
   id: string;
   label?: string;
+  ariaLabel?: string;
   size?: "small" | "medium" | "large";
   isChecked: boolean;
+  isIndeterminate?: boolean;
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onClick?: (event: React.MouseEvent) => void;

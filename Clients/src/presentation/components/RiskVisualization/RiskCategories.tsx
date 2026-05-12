@@ -185,8 +185,8 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
               >
                 <Box
                   sx={{
-                    p: 2,
-                    cursor: "pointer",
+                    "p": 2,
+                    "cursor": "pointer",
                     "&:hover": {
                       backgroundColor: "background.accent",
                     },
@@ -296,14 +296,14 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                         <Box
                           key={risk.id}
                           sx={{
-                            p: 2,
-                            backgroundColor: "background.accent",
-                            borderRadius: 1,
-                            border:
+                            "p": 2,
+                            "backgroundColor": "background.accent",
+                            "borderRadius": 1,
+                            "border":
                               selectedRisk?.id === risk.id
                                 ? `2px solid ${criticalLevel.color}`
                                 : "1px solid status.default.border",
-                            cursor: onRiskSelect ? "pointer" : "default",
+                            "cursor": onRiskSelect ? "pointer" : "default",
                             "&:hover": onRiskSelect
                               ? {
                                   backgroundColor: "background.hover",

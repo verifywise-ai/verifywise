@@ -23,6 +23,7 @@ import { PolicyManagerProps } from "../../types/interfaces/i.policy";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
+import { useAuth } from "../../../application/hooks/useAuth";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -76,6 +77,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const [policies, setPolicies] = useState<PolicyManagerModel[]>([]);
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
+  const { userRoleName } = useAuth();
+  const canRunBulkActions = !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -557,10 +560,10 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
                 onClick={() => setFolderSidebarOpen((prev) => !prev)}
                 size="small"
                 sx={{
-                  color: folderSidebarOpen ? "brand.primary" : "text.muted",
-                  padding: "4px",
-                  borderRadius: "4px",
-                  backgroundColor: folderSidebarOpen ? "#E6F4F1" : "transparent",
+                  "color": folderSidebarOpen ? "brand.primary" : "text.muted",
+                  "padding": "4px",
+                  "borderRadius": "4px",
+                  "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
                   "&:hover": {
                     backgroundColor: folderSidebarOpen ? "#D1EDE6" : "#F2F4F7",
                   },
@@ -597,13 +600,13 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
           {folderSidebarOpen && (
             <Stack
               sx={{
-                width: folderSidebarCollapsed ? 48 : 260,
-                minWidth: folderSidebarCollapsed ? 48 : 260,
-                backgroundColor: "#FAFBFC",
-                border: "1px solid #d0d5dd",
-                borderRadius: "4px",
-                overflow: "hidden",
-                transition: "width 200ms ease, min-width 200ms ease",
+                "width": folderSidebarCollapsed ? 48 : 260,
+                "minWidth": folderSidebarCollapsed ? 48 : 260,
+                "backgroundColor": "#FAFBFC",
+                "border": "1px solid #d0d5dd",
+                "borderRadius": "4px",
+                "overflow": "hidden",
+                "transition": "width 200ms ease, min-width 200ms ease",
                 // Override FolderTree's internal borderRight since this wrapper already has a full border
                 "& > .MuiStack-root": {
                   borderRight: "none",
@@ -676,6 +679,21 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
                     hidePagination={options?.hidePagination}
                     flashRowId={flashRowId}
                     visibleColumns={visibleColumns}
+                    canRunBulkActions={canRunBulkActions}
+                    onBulkActionSuccess={(action, count) => {
+                      fetchAll();
+                      handleAlert({
+                        variant: "success",
+                        title:
+                          action === "archive"
+                            ? `${count} polic${count === 1 ? "y" : "ies"} archived`
+                            : action === "set_reviewer"
+                              ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
+                              : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
+                        body: "",
+                        setAlert,
+                      });
+                    }}
                   />
                 )}
               />

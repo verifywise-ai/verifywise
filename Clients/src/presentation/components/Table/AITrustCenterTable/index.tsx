@@ -183,8 +183,8 @@ const AITrustCenterTable = <T extends { id: number }>({
                   maxWidth: (column as any).width || "auto",
                   ...(!isLastColumn && sortable
                     ? {
-                        cursor: "pointer",
-                        userSelect: "none",
+                        "cursor": "pointer",
+                        "userSelect": "none",
                         "&:hover": {
                           backgroundColor: "rgba(0, 0, 0, 0.04)",
                         },
@@ -265,13 +265,13 @@ const AITrustCenterTable = <T extends { id: number }>({
                 },
                 ...(onRowClick &&
                   !disabled && {
-                    cursor: "pointer",
+                    "cursor": "pointer",
                     "&:hover": {
                       backgroundColor: singleTheme.tableColors.rowHover,
                     },
                   }),
                 ...(flashRowId === item.id && {
-                  backgroundColor: singleTheme.flashColors.background,
+                  "backgroundColor": singleTheme.flashColors.background,
                   "& td": {
                     backgroundColor: "transparent !important",
                   },
@@ -403,10 +403,10 @@ const AITrustCenterTable = <T extends { id: number }>({
                     inputProps: { id: "pagination-dropdown" },
                     IconComponent: SelectorVertical,
                     sx: {
-                      ml: theme.spacing(4),
-                      mr: theme.spacing(12),
-                      minWidth: theme.spacing(20),
-                      textAlign: "left",
+                      "ml": theme.spacing(4),
+                      "mr": theme.spacing(12),
+                      "minWidth": theme.spacing(20),
+                      "textAlign": "left",
                       "&.Mui-focused > div": {
                         backgroundColor: theme.palette.background.main,
                       },
@@ -414,8 +414,8 @@ const AITrustCenterTable = <T extends { id: number }>({
                   },
                 }}
                 sx={{
-                  mt: theme.spacing(6),
-                  color: theme.palette.text.secondary,
+                  "mt": theme.spacing(6),
+                  "color": theme.palette.text.secondary,
                   "& .MuiSelect-icon": {
                     width: "24px",
                     height: "fit-content",

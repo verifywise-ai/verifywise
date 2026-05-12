@@ -10,6 +10,7 @@ import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { calculateComplianceScore } from "../utils/compliance.utils";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * GET /compliance/score
  *
@@ -27,7 +28,7 @@ export async function getComplianceScore(req: Request, res: Response) {
 
   try {
     if (!req.organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Organization ID is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization ID is required")));
     }
 
     const complianceScore = await calculateComplianceScore(req.organizationId!);
@@ -53,7 +54,7 @@ export async function getComplianceScore(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -80,7 +81,7 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
     );
 
     if (isNaN(organizationId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid organization ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
     }
 
     // Authorization check: ensure user can access this organization's data
@@ -89,7 +90,9 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
         .status(403)
         .json(
           STATUS_CODE[403](
-            "Access denied: User does not have permission to access this organization's compliance data",
+            req.t!(
+              "Access denied: User does not have permission to access this organization's compliance data",
+            ),
           ),
         );
     }
@@ -117,7 +120,7 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -144,7 +147,7 @@ export async function getComplianceDetails(req: Request, res: Response) {
     );
 
     if (isNaN(organizationId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid organization ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
     }
 
     // Authorization check: ensure user can access this organization's data
@@ -153,7 +156,9 @@ export async function getComplianceDetails(req: Request, res: Response) {
         .status(403)
         .json(
           STATUS_CODE[403](
-            "Access denied: User does not have permission to access this organization's compliance details",
+            req.t!(
+              "Access denied: User does not have permission to access this organization's compliance details",
+            ),
           ),
         );
     }
@@ -214,6 +219,6 @@ export async function getComplianceDetails(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

@@ -51,15 +51,15 @@ export function DashboardHeaderCard({
   return (
     <Stack
       sx={{
-        border: `1px solid ${borderPalette.dark}`,
-        borderRadius: 2,
-        background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-        width: "100%",
-        padding: "8px 36px 14px 14px",
-        cursor: isClickable ? "pointer" : "default",
-        position: "relative",
-        overflow: "visible",
-        transition: "all 0.2s ease",
+        "border": `1px solid ${borderPalette.dark}`,
+        "borderRadius": 2,
+        "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+        "width": "100%",
+        "padding": "8px 36px 14px 14px",
+        "cursor": isClickable ? "pointer" : "default",
+        "position": "relative",
+        "overflow": "visible",
+        "transition": "all 0.2s ease",
         "&:hover": isClickable
           ? {
               background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,

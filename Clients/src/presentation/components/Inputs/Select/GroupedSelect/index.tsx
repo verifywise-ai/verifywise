@@ -149,21 +149,21 @@ function GroupedSelect({
           disableScrollLock: true,
           PaperProps: {
             sx: {
-              maxHeight: 280,
-              overflowY: "auto",
-              borderRadius: theme.shape.borderRadius,
-              boxShadow: theme.boxShadow,
-              mt: 1,
+              "maxHeight": 280,
+              "overflowY": "auto",
+              "borderRadius": theme.shape.borderRadius,
+              "boxShadow": theme.boxShadow,
+              "mt": 1,
               "& .MuiMenuItem-root": {
-                fontSize: 13,
-                color: theme.palette.text.primary,
-                transition: "color 0.2s ease, background-color 0.2s ease",
+                "fontSize": 13,
+                "color": theme.palette.text.primary,
+                "transition": "color 0.2s ease, background-color 0.2s ease",
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                   color: theme.palette.primary.main,
                 },
                 "&.Mui-selected": {
-                  backgroundColor: theme.palette.background.accent,
+                  "backgroundColor": theme.palette.background.accent,
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,

@@ -76,7 +76,7 @@ const light = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        body: {},
+        "body": {},
         // Remove blue focus outline on mouse click; preserve for keyboard navigation
         "*, *::before, *::after": {
           "&:focus:not(:focus-visible)": {
@@ -96,7 +96,7 @@ const light = createTheme({
       },
       styleOverrides: {
         root: ({ theme }) => ({
-          variants: [
+          "variants": [
             {
               props: (props) => props.variant === "group",
               style: {
@@ -122,10 +122,10 @@ const light = createTheme({
               },
             },
           ],
-          fontWeight: 400,
-          borderRadius: 4,
-          boxShadow: "none",
-          textTransform: "none",
+          "fontWeight": 400,
+          "borderRadius": 4,
+          "boxShadow": "none",
+          "textTransform": "none",
           "&:focus": {
             outline: "none",
           },
@@ -141,8 +141,8 @@ const light = createTheme({
       },
       styleOverrides: {
         root: {
-          padding: 4,
-          transition: "none",
+          "padding": 4,
+          "transition": "none",
           "&:hover": {
             backgroundColor: background.fill,
           },
@@ -185,14 +185,14 @@ const light = createTheme({
       },
       styleOverrides: {
         root: {
-          borderRadius: 4,
-          backgroundColor: "inherit",
-          padding: "4px 6px",
-          color: text.secondary,
-          fontSize: 13,
-          margin: 2,
-          marginBottom: 0,
-          minWidth: 100,
+          "borderRadius": 4,
+          "backgroundColor": "inherit",
+          "padding": "4px 6px",
+          "color": text.secondary,
+          "fontSize": 13,
+          "margin": 2,
+          "marginBottom": 0,
+          "minWidth": 100,
           "&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected.Mui-focusVisible": {
             backgroundColor: background.fill,
           },
@@ -216,10 +216,10 @@ const light = createTheme({
     MuiPagination: {
       styleOverrides: {
         root: {
-          backgroundColor: background.main,
-          border: 1,
-          borderStyle: "solid",
-          borderColor: border.light,
+          "backgroundColor": background.main,
+          "border": 1,
+          "borderStyle": "solid",
+          "borderColor": border.light,
           "& button": {
             color: text.tertiary,
             borderRadius: 4,
@@ -265,10 +265,10 @@ const light = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          backgroundColor: background.main,
+          "backgroundColor": background.main,
           "& .MuiOutlinedInput-root": {
-            backgroundColor: background.main,
-            borderRadius: 2,
+            "backgroundColor": background.main,
+            "borderRadius": 2,
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: border.dark,
               borderWidth: "1px",
@@ -287,8 +287,8 @@ const light = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          backgroundColor: background.main,
-          borderRadius: 2,
+          "backgroundColor": background.main,
+          "borderRadius": 2,
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: border.dark,
             borderWidth: "1px",

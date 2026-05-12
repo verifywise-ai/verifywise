@@ -93,8 +93,8 @@ const ModalsSection: React.FC = () => {
           <Box
             onClick={() => setDemoModalOpen(false)}
             sx={{
-              cursor: "pointer",
-              color: theme.palette.text.tertiary,
+              "cursor": "pointer",
+              "color": theme.palette.text.tertiary,
               "&:hover": { color: theme.palette.text.primary },
             }}
           >
@@ -156,8 +156,8 @@ const ModalsSection: React.FC = () => {
           <Box
             onClick={() => setDemoDrawerOpen(false)}
             sx={{
-              cursor: "pointer",
-              color: theme.palette.text.tertiary,
+              "cursor": "pointer",
+              "color": theme.palette.text.tertiary,
               "&:hover": { color: theme.palette.text.primary },
             }}
           >
@@ -377,9 +377,9 @@ const ModalsSection: React.FC = () => {
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
+            "display": "grid",
+            "gridTemplateColumns": "repeat(3, 1fr)",
+            "gap": "16px",
             "@media (max-width: 900px)": {
               gridTemplateColumns: "repeat(1, 1fr)",
             },
@@ -497,9 +497,9 @@ const SpecGrid: React.FC<{ children: React.ReactNode; columns?: number }> = ({
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: "16px",
+        "display": "grid",
+        "gridTemplateColumns": `repeat(${columns}, 1fr)`,
+        "gap": "16px",
         "@media (max-width: 1200px)": {
           gridTemplateColumns: "repeat(3, 1fr)",
         },
@@ -528,13 +528,13 @@ const SpecCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },
@@ -612,14 +612,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -670,13 +670,13 @@ const ModalSizeCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },

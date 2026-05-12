@@ -119,7 +119,7 @@ describe("subClause_iso.repository", () => {
       expect(apiServices.patch).toHaveBeenCalledWith(routeUrl, body, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: "Bearer token",
+          "Authorization": "Bearer token",
         },
       });
       expect(response).toEqual(mockResponse);

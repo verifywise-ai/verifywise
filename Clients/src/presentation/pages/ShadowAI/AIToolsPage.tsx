@@ -273,9 +273,9 @@ export default function AIToolsPage() {
             {/* Summary cards */}
             <Box
               sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "16px",
+                "display": "flex",
+                "flexWrap": "wrap",
+                "gap": "16px",
                 "& > *": {
                   flex: "1 1 0",
                   minWidth: "120px",
@@ -354,10 +354,10 @@ export default function AIToolsPage() {
                   text="Start governance"
                   variant="contained"
                   sx={{
-                    backgroundColor: palette.brand.primary,
+                    "backgroundColor": palette.brand.primary,
                     "&:hover": { backgroundColor: palette.brand.primaryHover },
-                    height: 30,
-                    fontSize: 12,
+                    "height": 30,
+                    "fontSize": 12,
                   }}
                   onClick={() => setGovernanceModalOpen(true)}
                 />
@@ -601,10 +601,10 @@ export default function AIToolsPage() {
                       inputProps: { id: "pagination-dropdown" },
                       IconComponent: SelectorVertical,
                       sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
+                        "ml": theme.spacing(4),
+                        "mr": theme.spacing(12),
+                        "minWidth": theme.spacing(20),
+                        "textAlign": "left",
                         "&.Mui-focused > div": {
                           backgroundColor: theme.palette.background.main,
                         },
@@ -612,8 +612,8 @@ export default function AIToolsPage() {
                     },
                   }}
                   sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
+                    "mt": theme.spacing(6),
+                    "color": theme.palette.text.secondary,
                     "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
                     "& .MuiSelect-select": {
                       width: theme.spacing(10),

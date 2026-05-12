@@ -8,6 +8,7 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Get timeseries data for a specific parameter
  * Query params:
@@ -26,16 +27,20 @@ export async function getTimeseries(req: Request, res: Response) {
 
     if (!parameter) {
       logStructured("error", "parameter is required", "getTimeseries", "riskHistory.ctrl.ts");
-      return res.status(400).json(STATUS_CODE[400]("Parameter is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Parameter is required")));
     }
 
     // Validate parameter is one of the allowed values
     const validParameters = ["severity", "likelihood", "mitigation_status", "risk_level"];
     if (!validParameters.includes(parameter)) {
       logStructured("error", "invalid parameter", "getTimeseries", "riskHistory.ctrl.ts");
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](`Invalid parameter. Must be one of: ${validParameters.join(", ")}`));
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("Invalid parameter. Must be one of: {options}", {
+            options: validParameters.join(", "),
+          }),
+        ),
+      );
     }
 
     let timeseriesData;
@@ -47,11 +52,13 @@ export async function getTimeseries(req: Request, res: Response) {
 
       if (!validTimeframes.includes(timeframe)) {
         logStructured("error", "invalid timeframe", "getTimeseries", "riskHistory.ctrl.ts");
-        return res
-          .status(400)
-          .json(
-            STATUS_CODE[400](`Invalid timeframe. Must be one of: ${validTimeframes.join(", ")}`),
-          );
+        return res.status(400).json(
+          STATUS_CODE[400](
+            req.t!("Invalid timeframe. Must be one of: {options}", {
+              options: validTimeframes.join(", "),
+            }),
+          ),
+        );
       }
 
       timeseriesData = await getTimeseriesForTimeframe(
@@ -68,7 +75,9 @@ export async function getTimeseries(req: Request, res: Response) {
 
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         logStructured("error", "invalid date format", "getTimeseries", "riskHistory.ctrl.ts");
-        return res.status(400).json(STATUS_CODE[400]("Invalid date format. Use ISO date format."));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Invalid date format. Use ISO date format.")));
       }
 
       if (startDate >= endDate) {
@@ -78,7 +87,7 @@ export async function getTimeseries(req: Request, res: Response) {
           "getTimeseries",
           "riskHistory.ctrl.ts",
         );
-        return res.status(400).json(STATUS_CODE[400]("Start date must be before end date"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Start date must be before end date")));
       }
 
       timeseriesData = await getTimeseriesWithInterpolation(
@@ -115,7 +124,7 @@ export async function getTimeseries(req: Request, res: Response) {
       "riskHistory.ctrl.ts",
     );
     logger.error("❌ Error fetching timeseries data:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -138,16 +147,20 @@ export async function getCurrentCounts(req: Request, res: Response) {
 
     if (!parameter) {
       logStructured("error", "parameter is required", "getCurrentCounts", "riskHistory.ctrl.ts");
-      return res.status(400).json(STATUS_CODE[400]("Parameter is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Parameter is required")));
     }
 
     // Validate parameter is one of the allowed values
     const validParameters = ["severity", "likelihood", "mitigation_status", "risk_level"];
     if (!validParameters.includes(parameter)) {
       logStructured("error", "invalid parameter", "getCurrentCounts", "riskHistory.ctrl.ts");
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](`Invalid parameter. Must be one of: ${validParameters.join(", ")}`));
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("Invalid parameter. Must be one of: {options}", {
+            options: validParameters.join(", "),
+          }),
+        ),
+      );
     }
 
     const counts = await getCurrentParameterCounts(parameter, req.organizationId!);
@@ -173,7 +186,7 @@ export async function getCurrentCounts(req: Request, res: Response) {
       "riskHistory.ctrl.ts",
     );
     logger.error("❌ Error fetching current counts:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -192,16 +205,20 @@ export async function createSnapshot(req: Request, res: Response) {
 
     if (!parameter) {
       logStructured("error", "parameter is required", "createSnapshot", "riskHistory.ctrl.ts");
-      return res.status(400).json(STATUS_CODE[400]("Parameter is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Parameter is required")));
     }
 
     // Validate parameter is one of the allowed values
     const validParameters = ["severity", "likelihood", "mitigation_status", "risk_level"];
     if (!validParameters.includes(parameter)) {
       logStructured("error", "invalid parameter", "createSnapshot", "riskHistory.ctrl.ts");
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](`Invalid parameter. Must be one of: ${validParameters.join(", ")}`));
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("Invalid parameter. Must be one of: {options}", {
+            options: validParameters.join(", "),
+          }),
+        ),
+      );
     }
 
     const userId = req.userId!;
@@ -218,6 +235,6 @@ export async function createSnapshot(req: Request, res: Response) {
   } catch (error) {
     logStructured("error", "error creating snapshot", "createSnapshot", "riskHistory.ctrl.ts");
     logger.error("❌ Error creating snapshot:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

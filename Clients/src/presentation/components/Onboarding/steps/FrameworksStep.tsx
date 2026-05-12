@@ -94,14 +94,14 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
           <Box
             key={index}
             sx={{
-              padding: 12,
-              background: `linear-gradient(135deg, ${framework.color}08 0%, transparent 100%)`,
-              border: "1px solid status.default.border",
-              borderRadius: "4px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 1.5,
-              transition: "all 0.2s",
+              "padding": 12,
+              "background": `linear-gradient(135deg, ${framework.color}08 0%, transparent 100%)`,
+              "border": "1px solid status.default.border",
+              "borderRadius": "4px",
+              "display": "flex",
+              "flexDirection": "column",
+              "gap": 1.5,
+              "transition": "all 0.2s",
               "&:hover": {
                 borderColor: framework.color,
                 boxShadow: `0 0 0 3px ${framework.color}15`,

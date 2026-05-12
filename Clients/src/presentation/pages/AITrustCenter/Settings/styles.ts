@@ -99,11 +99,6 @@ export const useStyles = () => {
       border: `1.5px solid ${theme.palette.border.light}`,
       display: "inline-block",
     }),
-    trustTitleInput: {
-      width: 340,
-      fontSize: 13,
-      marginTop: 0,
-    },
     toggleRow: {
       display: "flex",
       alignItems: "center",
@@ -129,32 +124,28 @@ export const useStyles = () => {
       gap: 2,
     },
     removeButton: {
-      color: theme.palette.error.main,
-      border: `1px solid ${theme.palette.error.main}`,
-      fontSize: 13,
-      marginLeft: theme.spacing(1),
-      height: 34,
-      borderRadius: 2,
-      background: "transparent",
+      "color": theme.palette.error.main,
+      "border": `1px solid ${theme.palette.error.main}`,
+      "fontSize": 13,
+      "marginLeft": theme.spacing(1),
+      "height": 34,
+      "borderRadius": 2,
+      "background": "transparent",
       "&:hover": {
         background: "rgba(219, 80, 74, 0.08)",
         borderColor: theme.palette.error.dark,
       },
     },
     replaceButton: {
-      color: theme.palette.text.primary,
-      border: `1px solid ${theme.palette.border.light}`,
-      fontSize: 13,
-      height: 34,
-      borderRadius: 2,
-      background: "transparent",
+      "color": theme.palette.text.primary,
+      "border": `1px solid ${theme.palette.border.light}`,
+      "fontSize": 13,
+      "height": 34,
+      "borderRadius": 2,
+      "background": "transparent",
       "&:hover": {
         background: theme.palette.background.accent,
       },
-    },
-    disabledInput: {
-      background: theme.palette.background.default,
-      color: theme.palette.text.disabled,
     },
   };
 };

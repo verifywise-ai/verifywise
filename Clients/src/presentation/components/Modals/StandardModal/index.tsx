@@ -174,14 +174,14 @@ const StandardModal: React.FC<StandardModalProps> = ({
     >
       <Stack
         sx={{
-          width: maxWidth,
-          minWidth: `min(600px, ${maxWidth})`,
-          maxWidth: "calc(100vw - 48px)",
-          maxHeight: "calc(100vh - 48px)",
-          backgroundColor: "background.main",
-          borderRadius: "8px",
-          overflow: "hidden",
-          transition: "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+          "width": maxWidth,
+          "minWidth": `min(600px, ${maxWidth})`,
+          "maxWidth": "calc(100vw - 48px)",
+          "maxHeight": "calc(100vh - 48px)",
+          "backgroundColor": "background.main",
+          "borderRadius": "8px",
+          "overflow": "hidden",
+          "transition": "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
           "&:focus": {
             outline: "none",
           },
@@ -239,12 +239,12 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     }
                   }}
                   sx={{
-                    cursor: "pointer",
-                    color: "text.muted",
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "4px",
-                    borderRadius: "4px",
+                    "cursor": "pointer",
+                    "color": "text.muted",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "padding": "4px",
+                    "borderRadius": "4px",
                     "&:hover": {
                       backgroundColor: "#F2F4F7",
                     },
@@ -328,10 +328,10 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     text={cancelButtonText}
                     onClick={onClose}
                     sx={{
-                      minWidth: "80px",
-                      height: "34px",
-                      border: "1px solid #d0d5dd",
-                      color: "text.secondary",
+                      "minWidth": "80px",
+                      "height": "34px",
+                      "border": "1px solid #d0d5dd",
+                      "color": "text.secondary",
                       "&:hover": {
                         backgroundColor: "background.accent",
                         border: "1px solid #d0d5dd",
@@ -347,9 +347,9 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     onClick={onSubmit}
                     isDisabled={isSubmitting}
                     sx={{
-                      minWidth: "80px",
-                      height: "34px",
-                      backgroundColor: submitButtonColor,
+                      "minWidth": "80px",
+                      "height": "34px",
+                      "backgroundColor": submitButtonColor,
                       "&:hover:not(.Mui-disabled)": {
                         backgroundColor:
                           submitButtonColor === "brand.primary"

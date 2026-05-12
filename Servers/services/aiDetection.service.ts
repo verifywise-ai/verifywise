@@ -62,6 +62,8 @@ import {
   getLatestCompletedFullScanQuery,
   getBaselineFindingsQuery,
 } from "../utils/aiDetection.utils";
+import { getActiveSuppressionsQuery } from "../utils/aiDetectionSuppression.utils";
+import { applySuppressions } from "./aiDetection/suppressionMatcher";
 import {
   AI_DETECTION_PATTERNS,
   CODE_EXTENSIONS,
@@ -1529,6 +1531,8 @@ async function executeIncrementalScan(
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
     if (allFindings.length > 0) {
+      const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
+      applySuppressions(allFindings, suppressionRules);
       await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
     }
 
@@ -2014,6 +2018,12 @@ async function executeScan(
 
       const findingInputs = Array.from(deduplicatedFindingsMap.values());
 
+      // Fetch active suppression rules once for both insert paths below
+      const suppressionRules =
+        findingInputs.length > 0 || vulnerabilityFindings.length > 0
+          ? await getActiveSuppressionsQuery(ctx.organizationId)
+          : [];
+
       // Add license information to findings
       if (findingInputs.length > 0) {
         console.log(`[LICENSE] Processing ${findingInputs.length} findings for license info`);
@@ -2045,11 +2055,13 @@ async function executeScan(
         await Promise.all(licensePromises);
         console.log(`[LICENSE] Total licenses found: ${licensesFound}/${findingInputs.length}`);
 
+        applySuppressions(findingInputs, suppressionRules);
         await createFindingsBatchQuery(findingInputs, ctx.organizationId, transaction);
       }
 
       // Store vulnerability findings
       if (vulnerabilityFindings.length > 0) {
+        applySuppressions(vulnerabilityFindings, suppressionRules);
         await createFindingsBatchQuery(vulnerabilityFindings, ctx.organizationId, transaction);
       }
 
@@ -2329,6 +2341,9 @@ export async function getScanFindings(
       license_source: f.license_source,
       // Incremental scan fields
       finding_status: f.finding_status,
+      // Suppression flags
+      suppressed: f.suppressed === true,
+      suppression_rule_id: f.suppression_rule_id ?? null,
     })),
     pagination: {
       total,
@@ -2742,10 +2757,10 @@ export async function updateFindingGovernanceStatus(
   // Validate governance status if provided
   if (
     governanceStatus !== null &&
-    !["reviewed", "approved", "flagged"].includes(governanceStatus)
+    !["reviewed", "approved", "flagged", "suppressed", "accepted_risk"].includes(governanceStatus)
   ) {
     throw new ValidationException(
-      "governance_status must be 'reviewed', 'approved', 'flagged', or null",
+      "governance_status must be 'reviewed', 'approved', 'flagged', 'suppressed', 'accepted_risk', or null",
     );
   }
 
@@ -2785,6 +2800,8 @@ export async function getGovernanceSummary(
   reviewed: number;
   approved: number;
   flagged: number;
+  suppressed: number;
+  accepted_risk: number;
   unreviewed: number;
 }> {
   // Verify scan exists

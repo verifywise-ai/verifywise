@@ -38,6 +38,7 @@ import {
 import { sequelize } from "../database/db";
 import { RoleModel } from "../domain.layer/models/role/role.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 /**
@@ -100,7 +101,7 @@ export async function getAllRoles(_req: Request, res: Response): Promise<any> {
       tenantId: _req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
 }
 
@@ -167,7 +168,7 @@ export async function getRoleById(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -267,10 +268,10 @@ export async function createRole(req: Request, res: Response): Promise<any> {
     });
 
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -367,7 +368,7 @@ export async function updateRoleById(req: Request, res: Response): Promise<any> 
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -459,6 +460,6 @@ export async function deleteRoleById(req: Request, res: Response): Promise<any> 
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

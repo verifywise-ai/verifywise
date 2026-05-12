@@ -27,8 +27,8 @@ export const styles = {
 };
 
 export const fieldStyle = (theme: Theme) => ({
-  fontWeight: "bold",
-  backgroundColor: theme.palette.background.main,
+  "fontWeight": "bold",
+  "backgroundColor": theme.palette.background.main,
   "& input": {
     padding: "0 14px",
   },

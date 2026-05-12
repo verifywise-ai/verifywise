@@ -26,7 +26,7 @@ const AssessmentItem = ({
           key={index}
           disablePadding
           sx={{
-            display: "block",
+            "display": "block",
             "& .MuiListItemButton-root.Mui-selected": {
               backgroundColor: "#4C7DE7",
             },

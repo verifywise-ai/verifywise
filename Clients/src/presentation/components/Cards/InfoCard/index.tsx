@@ -45,13 +45,13 @@ export function InfoCard({
             onClick={onActionClick}
             size="small"
             sx={{
-              position: "absolute",
-              top: 4,
-              right: 4,
-              color: isActionActive ? `${brand.primary}` : `${text.muted}`,
-              padding: "4px",
-              borderRadius: "4px",
-              backgroundColor: isActionActive ? "#E6F4F1" : "transparent",
+              "position": "absolute",
+              "top": 4,
+              "right": 4,
+              "color": isActionActive ? `${brand.primary}` : `${text.muted}`,
+              "padding": "4px",
+              "borderRadius": "4px",
+              "backgroundColor": isActionActive ? "#E6F4F1" : "transparent",
               "&:hover": {
                 backgroundColor: isActionActive ? "#D1EDE6" : "#F2F4F7",
               },

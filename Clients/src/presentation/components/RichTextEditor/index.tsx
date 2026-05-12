@@ -337,9 +337,9 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
               }}
               disabled={!isEditable}
               sx={{
-                height: "28px",
-                fontSize: 12,
-                minWidth: 90,
+                "height": "28px",
+                "fontSize": 12,
+                "minWidth": 90,
                 "& .MuiSelect-select": { py: "4px" },
               }}
             >
@@ -376,11 +376,11 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                   size="small"
                   disabled={!isEditable}
                   sx={{
-                    padding: "6px",
-                    borderRadius: "3px",
-                    backgroundColor: isActive ? "#E0F7FA" : "transparent",
-                    border: "1px solid",
-                    borderColor: isActive ? theme.palette.primary.main : "transparent",
+                    "padding": "6px",
+                    "borderRadius": "3px",
+                    "backgroundColor": isActive ? "#E0F7FA" : "transparent",
+                    "border": "1px solid",
+                    "borderColor": isActive ? theme.palette.primary.main : "transparent",
                     "&:hover": {
                       backgroundColor: theme.palette.action.hover,
                     },
@@ -512,9 +512,9 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                       }}
                       size="small"
                       sx={{
-                        padding: "5px",
-                        borderRadius: "4px",
-                        color: danger ? "#dc2626" : "#374151",
+                        "padding": "5px",
+                        "borderRadius": "4px",
+                        "color": danger ? "#dc2626" : "#374151",
                         "&:hover": {
                           backgroundColor: danger ? "#fef2f2" : theme.palette.action.hover,
                         },

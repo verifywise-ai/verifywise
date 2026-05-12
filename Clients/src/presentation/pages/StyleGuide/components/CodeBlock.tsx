@@ -42,16 +42,16 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = "tsx", onCopy })
       <Box
         onClick={handleCopy}
         sx={{
-          position: "absolute",
-          top: "8px",
-          right: "8px",
-          cursor: "pointer",
-          color: copied ? "#4ade80" : `${text.disabled}`,
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          fontSize: 11,
-          zIndex: 1,
+          "position": "absolute",
+          "top": "8px",
+          "right": "8px",
+          "cursor": "pointer",
+          "color": copied ? "#4ade80" : `${text.disabled}`,
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "4px",
+          "fontSize": 11,
+          "zIndex": 1,
           "&:hover": {
             color: copied ? "#4ade80" : `${background.main}`,
           },
@@ -63,12 +63,12 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = "tsx", onCopy })
       <Box
         component="pre"
         sx={{
-          margin: 0,
-          padding: "12px",
-          overflow: "auto",
-          fontSize: "11px",
-          lineHeight: 1.4,
-          fontFamily: "'Fira Code', 'Consolas', monospace",
+          "margin": 0,
+          "padding": "12px",
+          "overflow": "auto",
+          "fontSize": "11px",
+          "lineHeight": 1.4,
+          "fontFamily": "'Fira Code', 'Consolas', monospace",
           "& code": {
             fontFamily: "inherit",
           },

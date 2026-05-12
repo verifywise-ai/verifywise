@@ -544,11 +544,11 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
         <Box
           onClick={onBack}
           sx={{
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            p: 0.5,
-            borderRadius: "4px",
+            "cursor": "pointer",
+            "display": "flex",
+            "alignItems": "center",
+            "p": 0.5,
+            "borderRadius": "4px",
             "&:hover": { backgroundColor: theme.palette.action.hover },
           }}
         >
@@ -611,10 +611,10 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
             onClick={() => setShowDeleteConfirm(true)}
             isDisabled={isDeleting}
             sx={{
-              height: 34,
-              fontSize: 13,
-              border: `1px solid ${theme.palette.border.dark}`,
-              color: palette.status.error.text,
+              "height": 34,
+              "fontSize": 13,
+              "border": `1px solid ${theme.palette.border.dark}`,
+              "color": palette.status.error.text,
               "&:hover": {
                 backgroundColor: palette.status.error.bg,
                 border: `1px solid ${palette.status.error.border}`,

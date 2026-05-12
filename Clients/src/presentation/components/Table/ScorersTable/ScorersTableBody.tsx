@@ -101,7 +101,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
           onClick={() => onRowClick?.(scorer)}
           sx={{
             ...singleTheme.tableStyles.primary.body.row,
-            cursor: onRowClick ? "pointer" : "default",
+            "cursor": onRowClick ? "pointer" : "default",
             "&:hover": {
               backgroundColor: `${background.accent}`,
             },
@@ -150,7 +150,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
             {scorer.config?.choiceScores?.length ?? "-"}
           </TableCell>
 
-          {/* DATE - center aligned */}
+          {/* LAST RUN - center aligned; shows updatedAt if available (reflects most recent experiment run) */}
           <TableCell
             sx={{
               ...singleTheme.tableStyles.primary.body.cell,
@@ -159,7 +159,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
             }}
           >
             <Typography sx={{ fontSize: "12px", color: `${status.default.text}` }}>
-              {formatDate(scorer.createdAt)}
+              {formatDate(scorer.updatedAt || scorer.createdAt)}
             </Typography>
           </TableCell>
 
@@ -177,8 +177,8 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
               size="small"
               onClick={(e) => handleMenuOpen(e, scorer)}
               sx={{
-                color: `${text.icon}`,
-                padding: "6px",
+                "color": `${text.icon}`,
+                "padding": "6px",
                 "&:hover": {
                   backgroundColor: `${background.hover}`,
                 },
@@ -217,13 +217,13 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
               onClick={handleEditClick}
               startIcon={<Pencil size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#374151",
-                borderColor: `${borderPalette.dark}`,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#374151",
+                "borderColor": `${borderPalette.dark}`,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
                   borderColor: `${brand.primary}`,
@@ -240,13 +240,13 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
               onClick={handleDeleteClick}
               startIcon={<Trash2 size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#DC2626",
-                borderColor: `${borderPalette.dark}`,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#DC2626",
+                "borderColor": `${borderPalette.dark}`,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#FEF2F2",
                   borderColor: "#DC2626",

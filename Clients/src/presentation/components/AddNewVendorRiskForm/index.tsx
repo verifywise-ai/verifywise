@@ -336,7 +336,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
   // Memoized styles for performance
   const fieldStyle = useMemo(
     () => ({
-      backgroundColor: theme.palette.background.main,
+      "backgroundColor": theme.palette.background.main,
       "& input": {
         padding: "0 14px",
       },
@@ -357,15 +357,15 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
 
   const submitButtonStyle = useMemo(
     () => ({
-      borderRadius: theme.spacing(1),
-      maxHeight: 34,
-      textTransform: "none" as const,
-      backgroundColor: theme.palette.primary.main,
-      boxShadow: "none",
-      ml: "auto",
-      mr: 0,
-      mt: FORM_CONFIG.SUBMIT_MARGIN_TOP,
-      minWidth: 100,
+      "borderRadius": theme.spacing(1),
+      "maxHeight": 34,
+      "textTransform": "none" as const,
+      "backgroundColor": theme.palette.primary.main,
+      "boxShadow": "none",
+      "ml": "auto",
+      "mr": 0,
+      "mt": FORM_CONFIG.SUBMIT_MARGIN_TOP,
+      "minWidth": 100,
       "&:hover": {
         boxShadow: "none",
         backgroundColor: theme.palette.primary.dark,
@@ -503,7 +503,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             date={values.reviewDate ? dayjs(values.reviewDate) : null}
             handleDateChange={handleDateChange}
             sx={{
-              width: { xs: "100%", md: FORM_CONFIG.DATE_PICKER_WIDTH },
+              "width": { xs: "100%", md: FORM_CONFIG.DATE_PICKER_WIDTH },
               "& input": {
                 width: { xs: "100%", md: FORM_CONFIG.DATE_INPUT_WIDTH },
               },
@@ -570,8 +570,8 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             )}
             onChange={handleFrameworkChange}
             sx={{
-              width: "100%",
-              backgroundColor: theme.palette.background.main,
+              "width": "100%",
+              "backgroundColor": theme.palette.background.main,
               "& .MuiChip-root": {
                 borderRadius: "4px",
               },

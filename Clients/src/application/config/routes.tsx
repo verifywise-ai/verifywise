@@ -130,6 +130,9 @@ const MCPGuardrailsPage = lazyRoute(
   () => import("../../presentation/pages/AIGateway/MCPGuardrails"),
 );
 
+// ── Governance OS routes ─────────────────────────────────────────────
+const GovernanceOS = lazyRoute(() => import("../../presentation/pages/GovernanceOS"));
+
 // ── Remaining routes ──────────────────────────────────────────────────
 const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
 const PluginManagement = lazyRoute(
@@ -334,6 +337,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <Framework />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance-os/:tab?"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GovernanceOS />
         </Suspense>
       }
     />

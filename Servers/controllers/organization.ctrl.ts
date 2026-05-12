@@ -48,6 +48,7 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Retrieves all organizations from the system
  *
@@ -113,7 +114,7 @@ export async function getAllOrganizations(_req: Request, res: Response): Promise
       _req.organizationId!,
     );
     logger.error("❌ Error in getAllOrganizations:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
 }
 
@@ -142,7 +143,7 @@ export async function getOrganizationsExists(_req: Request, res: Response): Prom
     const organizationsExists = await getOrganizationsExistsQuery();
     return res.status(200).json(STATUS_CODE[200](organizationsExists));
   } catch (error) {
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
 }
 
@@ -213,7 +214,7 @@ export async function getOrganizationById(req: Request, res: Response): Promise<
       req.organizationId!,
     );
     logger.error("❌ Error in getOrganizationById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -353,7 +354,7 @@ export async function createOrganization(req: Request, res: Response): Promise<a
     );
     await logEvent("Error", "Organization creation failed", req.userId!, req.organizationId!);
     await transaction.rollback();
-    return res.status(400).json(STATUS_CODE[400]("Unable to create organization"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Unable to create organization")));
   } catch (error) {
     await transaction.rollback();
 
@@ -371,7 +372,7 @@ export async function createOrganization(req: Request, res: Response): Promise<a
         req.userId!,
         req.organizationId!,
       );
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -387,7 +388,7 @@ export async function createOrganization(req: Request, res: Response): Promise<a
         req.userId!,
         req.organizationId!,
       );
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     logStructured(
@@ -403,7 +404,7 @@ export async function createOrganization(req: Request, res: Response): Promise<a
       req.organizationId!,
     );
     logger.error("❌ Error in createOrganization:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -506,7 +507,7 @@ export async function updateOrganizationById(req: Request, res: Response): Promi
       req.organizationId!,
     );
     await transaction.rollback();
-    return res.status(404).json(STATUS_CODE[404]("Organization not found"));
+    return res.status(404).json(STATUS_CODE[404](req.t!("Organization not found")));
   } catch (error) {
     await transaction.rollback();
 
@@ -524,7 +525,7 @@ export async function updateOrganizationById(req: Request, res: Response): Promi
         req.userId!,
         req.organizationId!,
       );
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -540,7 +541,7 @@ export async function updateOrganizationById(req: Request, res: Response): Promi
         req.userId!,
         req.organizationId!,
       );
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     logStructured(
@@ -558,7 +559,7 @@ export async function updateOrganizationById(req: Request, res: Response): Promi
       req.organizationId!,
     );
     logger.error("❌ Error in updateOrganizationById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -624,7 +625,7 @@ export async function deleteOrganizationById(req: Request, res: Response): Promi
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Organization not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Organization not found")));
     }
 
     const isDeleted = await deleteOrganizationByIdQuery(organizationId, transaction);
@@ -654,7 +655,7 @@ export async function deleteOrganizationById(req: Request, res: Response): Promi
     );
     await logEvent("Error", "Unable to delete organization", req.userId!, req.organizationId!);
     await transaction.rollback();
-    return res.status(400).json(STATUS_CODE[400]("Unable to delete organization"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Unable to delete organization")));
   } catch (error) {
     await transaction.rollback();
     logStructured(
@@ -672,7 +673,7 @@ export async function deleteOrganizationById(req: Request, res: Response): Promi
       req.organizationId!,
     );
     logger.error("❌ Error in deleteOrganizationById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -718,14 +719,14 @@ export async function updateOnboardingStatus(req: Request, res: Response): Promi
     // Verify user belongs to this organization
     if (req.organizationId !== organizationId) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Access denied"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Find the organization
     const organization = await getOrganizationByIdQuery(organizationId);
     if (!organization) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Organization not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Organization not found")));
     }
 
     // Update onboarding status to completed
@@ -756,6 +757,6 @@ export async function updateOnboardingStatus(req: Request, res: Response): Promi
       "organization.ctrl.ts",
     );
     logger.error("❌ Error in updateOnboardingStatus:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

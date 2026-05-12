@@ -34,23 +34,23 @@ const EVALUATION_SORTING_KEY = "verifywise_evaluation_sorting";
 // Map column labels to sortable field keys
 const columnSortKeys: Record<string, string> = {
   "EXPERIMENT NAME": "name",
-  MODEL: "model",
+  "MODEL": "model",
   "JUDGE/SCORER": "judge",
   "# PROMPTS": "prompts",
-  DATASET: "dataset",
-  DATE: "date",
+  "DATASET": "dataset",
+  "DATE": "date",
 };
 
 // Column width definitions for consistent spacing
 const columnWidths: Record<string, string> = {
   "EXPERIMENT NAME": "20%",
-  MODEL: "12%",
+  "MODEL": "12%",
   "JUDGE/SCORER": "16%",
   "# PROMPTS": "8%",
-  DATASET: "12%",
+  "DATASET": "12%",
   "LINKED MODEL": "10%",
-  DATE: "14%",
-  ACTION: "60px",
+  "DATE": "14%",
+  "ACTION": "60px",
 };
 
 const toStandardColumns = (labels: string[]): StandardColumn[] =>

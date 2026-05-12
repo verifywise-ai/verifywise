@@ -35,9 +35,9 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
   };
 
   const searchInputStyle: SxProps<Theme> = {
-    flex: 1,
-    fontSize: "13px",
-    fontFamily: "inherit",
+    "flex": 1,
+    "fontSize": "13px",
+    "fontFamily": "inherit",
     "& .MuiInputBase-input": {
       padding: 0,
     },

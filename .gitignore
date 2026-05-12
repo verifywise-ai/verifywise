@@ -3,11 +3,34 @@
 .db_initialized
 .history
 
+# Python
 **/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
+# Python virtual environments
 venv/
+.venv/
+**/venv/
+**/.venv/
+env/
+ENV/
 
 .vscode/settings.json
+
+# Test coverage
+coverage/
+**/coverage/
+.nyc_output/
+htmlcov/
+.coverage
+.coverage.*
 
 .DS_Store
 express.log
@@ -34,6 +57,20 @@ Gateway/data/config.json.bak
 
 # Node modules
 node_modules/
+**/node_modules/
+
+# Build artifacts
+dist/
+build/
+**/dist/
+**/build/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # EvalServer user uploads (keep directory structure, ignore uploaded files)
 EvaluationModule/data/uploads/*

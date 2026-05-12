@@ -24,9 +24,9 @@ function HelperIcon({ articlePath, size = "small" }: HelperIconProps) {
       aria-label="Open help information"
       size={size}
       sx={{
-        color: theme.palette.text.secondary,
-        backgroundColor: "transparent",
-        padding: 0.5,
+        "color": theme.palette.text.secondary,
+        "backgroundColor": "transparent",
+        "padding": 0.5,
         "&:hover": {
           backgroundColor: alpha(theme.palette.text.secondary, 0.1),
         },

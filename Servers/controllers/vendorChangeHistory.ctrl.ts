@@ -3,6 +3,7 @@ import { getVendorChangeHistory } from "../utils/vendorChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Get change history for a specific vendor with pagination support
  */
@@ -11,7 +12,7 @@ export async function getVendorChangeHistoryById(req: Request, res: Response): P
 
   // Validate vendor ID
   if (isNaN(vendorId) || vendorId <= 0) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid vendor ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
   }
 
   const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
@@ -46,6 +47,6 @@ export async function getVendorChangeHistoryById(req: Request, res: Response): P
       "vendorChangeHistory.ctrl.ts",
     );
     logger.error("Error in getVendorChangeHistoryById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

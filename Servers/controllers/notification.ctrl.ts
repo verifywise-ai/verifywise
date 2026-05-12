@@ -37,7 +37,7 @@ export const streamNotifications = async (req: Request, res: Response): Promise<
       "streamNotifications",
       "notification.ctrl.ts",
     );
-    res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: req.t!("Unauthorized") });
     return;
   }
 
@@ -114,7 +114,7 @@ export const streamNotifications = async (req: Request, res: Response): Promise<
       "streamNotifications",
       "notification.ctrl.ts",
     );
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: req.t!("Internal server error") });
   }
 };
 
@@ -173,7 +173,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<Res
   const { userId, tenantId } = req;
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
@@ -194,7 +194,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<Res
       "getNotifications",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to fetch notifications"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to fetch notifications")));
   }
 };
 
@@ -206,7 +206,7 @@ export const getNotificationSummary = async (req: Request, res: Response): Promi
   const { userId, tenantId } = req;
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
@@ -219,7 +219,7 @@ export const getNotificationSummary = async (req: Request, res: Response): Promi
       "getNotificationSummary",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to fetch notification summary"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to fetch notification summary")));
   }
 };
 
@@ -231,7 +231,7 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<Respo
   const { userId, tenantId } = req;
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
@@ -244,7 +244,7 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<Respo
       "getUnreadCount",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to fetch unread count"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to fetch unread count")));
   }
 };
 
@@ -258,18 +258,18 @@ export const markAsRead = async (req: Request, res: Response): Promise<Response>
   const notificationId = parseInt(Array.isArray(idParam) ? idParam[0] : idParam, 10);
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   if (isNaN(notificationId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid notification ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid notification ID")));
   }
 
   try {
     const notification = await markNotificationAsReadQuery(notificationId, userId, tenantId);
 
     if (!notification) {
-      return res.status(404).json(STATUS_CODE[404]("Notification not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Notification not found")));
     }
 
     return res.status(200).json(STATUS_CODE[200](notification));
@@ -280,7 +280,7 @@ export const markAsRead = async (req: Request, res: Response): Promise<Response>
       "markAsRead",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to mark notification as read"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to mark notification as read")));
   }
 };
 
@@ -292,7 +292,7 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<Respon
   const { userId, tenantId } = req;
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
@@ -305,7 +305,7 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<Respon
       "markAllAsRead",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to mark notifications as read"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to mark notifications as read")));
   }
 };
 
@@ -319,18 +319,18 @@ export const deleteNotification = async (req: Request, res: Response): Promise<R
   const notificationId = parseInt(Array.isArray(idParam) ? idParam[0] : idParam, 10);
 
   if (!userId || !tenantId) {
-    return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   if (isNaN(notificationId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid notification ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid notification ID")));
   }
 
   try {
     const deleted = await deleteNotificationQuery(notificationId, userId, tenantId);
 
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("Notification not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Notification not found")));
     }
 
     return res.status(200).json(STATUS_CODE[200]({ deleted: true }));
@@ -341,6 +341,6 @@ export const deleteNotification = async (req: Request, res: Response): Promise<R
       "deleteNotification",
       "notification.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]("Failed to delete notification"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to delete notification")));
   }
 };

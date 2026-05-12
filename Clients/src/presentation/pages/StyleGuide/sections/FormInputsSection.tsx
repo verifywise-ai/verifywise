@@ -776,9 +776,9 @@ const SpecGrid: React.FC<{ children: React.ReactNode; columns?: number }> = ({
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: "16px",
+        "display": "grid",
+        "gridTemplateColumns": `repeat(${columns}, 1fr)`,
+        "gap": "16px",
         "@media (max-width: 1200px)": {
           gridTemplateColumns: "repeat(3, 1fr)",
         },
@@ -807,13 +807,13 @@ const SpecCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },
@@ -890,14 +890,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -992,11 +992,11 @@ const StateCard: React.FC<{
       <Box
         onClick={() => onCopy(borderColor)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          mt: "4px",
-          cursor: "pointer",
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "6px",
+          "mt": "4px",
+          "cursor": "pointer",
           "&:hover": {
             "& .copy-icon": {
               opacity: 1,
@@ -1068,9 +1068,9 @@ const ExampleWithCode: React.FC<{
           <Box
             onClick={() => setShowCode(!showCode)}
             sx={{
-              fontSize: 11,
-              color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-              cursor: "pointer",
+              "fontSize": 11,
+              "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+              "cursor": "pointer",
               "&:hover": {
                 color: theme.palette.primary.main,
               },

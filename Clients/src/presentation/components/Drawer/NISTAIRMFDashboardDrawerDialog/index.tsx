@@ -533,8 +533,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
           }
         }}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             width: 850,
             margin: 0,
@@ -699,7 +699,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                         value={formData.auditor_feedback}
                         onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                         sx={{
-                          cursor: "text",
+                          "cursor": "text",
                           "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
                             {
                               height: "73px",
@@ -834,13 +834,13 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                           <Box
                             key={file.id}
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "10px 12px",
-                              border: `1px solid ${theme.palette.border.light}`,
-                              borderRadius: "4px",
-                              backgroundColor: "background.main",
+                              "display": "flex",
+                              "alignItems": "center",
+                              "justifyContent": "space-between",
+                              "padding": "10px 12px",
+                              "border": `1px solid ${theme.palette.border.light}`,
+                              "borderRadius": "4px",
+                              "backgroundColor": "background.main",
                               "&:hover": {
                                 backgroundColor: "background.accent",
                               },
@@ -889,7 +889,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                     handleEvidenceFileDownload(file.id, file.fileName);
                                   }}
                                   sx={{
-                                    color: "text.tertiary",
+                                    "color": "text.tertiary",
                                     "&:hover": {
                                       color: "primary.main",
                                       backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -905,7 +905,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                   onClick={() => handleDeleteEvidenceFile(file.id)}
                                   disabled={isEditingDisabled}
                                   sx={{
-                                    color: "text.tertiary",
+                                    "color": "text.tertiary",
                                     "&:hover": {
                                       color: "status.error.main",
                                       backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -989,7 +989,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                 size="small"
                                 onClick={() => handleDeleteUploadFile(file.id)}
                                 sx={{
-                                  color: "#92400E",
+                                  "color": "#92400E",
                                   "&:hover": {
                                     color: "status.error.main",
                                     backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1102,13 +1102,13 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                             <Box
                               key={risk.id}
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "10px 12px",
-                                border: `1px solid ${theme.palette.border.light}`,
-                                borderRadius: "4px",
-                                backgroundColor: "background.main",
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "space-between",
+                                "padding": "10px 12px",
+                                "border": `1px solid ${theme.palette.border.light}`,
+                                "borderRadius": "4px",
+                                "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
                                 },
@@ -1144,7 +1144,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                     size="small"
                                     onClick={() => handleViewRiskDetails(risk)}
                                     sx={{
-                                      color: "text.tertiary",
+                                      "color": "text.tertiary",
                                       "&:hover": {
                                         color: "primary.main",
                                         backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1167,7 +1167,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                                     }}
                                     disabled={isEditingDisabled}
                                     sx={{
-                                      color: "text.tertiary",
+                                      "color": "text.tertiary",
                                       "&:hover": {
                                         color: "status.error.main",
                                         backgroundColor: "rgba(211, 47, 47, 0.08)",

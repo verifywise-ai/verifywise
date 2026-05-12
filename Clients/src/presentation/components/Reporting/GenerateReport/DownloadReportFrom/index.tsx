@@ -68,10 +68,10 @@ const DownloadReportForm: React.FC<IStatusProps> = ({ statusCode, aiEnhanced = f
             variant="determinate"
             value={progress}
             sx={{
-              height: 6,
-              borderRadius: 3,
-              mb: 2,
-              backgroundColor: theme.palette.border.light,
+              "height": 6,
+              "borderRadius": 3,
+              "mb": 2,
+              "backgroundColor": theme.palette.border.light,
               "& .MuiLinearProgress-bar": {
                 backgroundColor: `${brand.primary}`,
                 borderRadius: 3,

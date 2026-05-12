@@ -339,7 +339,7 @@ describe("deploymentHelpers", () => {
       expect(result).toBe(true);
       expect(fetch).toHaveBeenCalledWith("/api/users/me", {
         headers: {
-          Authorization: "Bearer TOKEN123",
+          "Authorization": "Bearer TOKEN123",
           "Content-Type": "application/json",
         },
       });

@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
-import { IPolicy, POLICY_TAGS } from "../domain.layer/interfaces/i.policy";
+import {
+  IPolicy,
+  POLICY_TAGS,
+  PolicyTag,
+  PolicyTagsSet,
+} from "../domain.layer/interfaces/i.policy";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   createPolicyQuery,
@@ -8,7 +13,15 @@ import {
   getPolicyByIdQuery,
   updatePolicyByIdQuery,
   updatePolicyReviewStatusQuery,
+  bulkArchivePoliciesQuery,
+  bulkSetPoliciesReviewerQuery,
+  bulkSetPoliciesTagsQuery,
 } from "../utils/policyManager.utils";
+import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import {
@@ -29,6 +42,7 @@ import {
 } from "../services/inAppNotification.service";
 import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 import logger from "../utils/logger/fileLogger";
+import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 export class PolicyController {
@@ -39,7 +53,7 @@ export class PolicyController {
 
       return res.status(200).json(STATUS_CODE[200](policies));
     } catch (error) {
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -55,7 +69,7 @@ export class PolicyController {
 
       return res.status(404).json(STATUS_CODE[404](null));
     } catch (error) {
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -91,7 +105,7 @@ export class PolicyController {
       return res.status(503).json(STATUS_CODE[503]({}));
     } catch (error) {
       await transaction.rollback();
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -145,7 +159,7 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       logger.error("Error updating policy:", error);
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -154,7 +168,7 @@ export class PolicyController {
     try {
       return res.status(200).json(STATUS_CODE[200](POLICY_TAGS));
     } catch (error) {
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
     }
   }
 
@@ -175,7 +189,7 @@ export class PolicyController {
       return res.status(404).json(STATUS_CODE[404]({}));
     } catch (error) {
       await transaction.rollback();
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -184,7 +198,7 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       if (isNaN(policyId)) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
       }
 
       const policyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
@@ -209,7 +223,7 @@ export class PolicyController {
       return res.send(pdfBuffer);
     } catch (error) {
       logger.error("Error exporting policy as PDF:", error);
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -218,7 +232,7 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       if (isNaN(policyId)) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
       }
 
       const policyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
@@ -249,7 +263,7 @@ export class PolicyController {
       return res.send(docxBuffer);
     } catch (error) {
       logger.error("Error exporting policy as DOCX:", error as Error);
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -268,7 +282,7 @@ export class PolicyController {
 
     try {
       if (!req.file) {
-        return res.status(400).json(STATUS_CODE[400]("No file uploaded"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("No file uploaded")));
       }
 
       // Validate MIME type and file extension
@@ -277,7 +291,7 @@ export class PolicyController {
         !DOCX_ALLOWED_MIMES.includes(req.file.mimetype as (typeof DOCX_ALLOWED_MIMES)[number]) ||
         !hasDocxExtension
       ) {
-        return res.status(400).json(STATUS_CODE[400]("Only .docx files are supported"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Only .docx files are supported")));
       }
 
       const { html, warnings } = await convertDocxToHtml(req.file.buffer);
@@ -302,7 +316,7 @@ export class PolicyController {
         userId,
         organizationId,
       });
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -313,7 +327,7 @@ export class PolicyController {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       if (isNaN(policyId)) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
       }
 
       const userId = req.userId!;
@@ -321,7 +335,7 @@ export class PolicyController {
 
       if (!reviewer_ids || !Array.isArray(reviewer_ids) || reviewer_ids.length === 0) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("reviewer_ids is required"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("reviewer_ids is required")));
       }
 
       const policyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
@@ -380,7 +394,7 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       logger.error("Error requesting policy review:", error);
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -391,7 +405,7 @@ export class PolicyController {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       if (isNaN(policyId)) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
       }
 
       const reviewerId = req.userId!;
@@ -449,7 +463,7 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       logger.error("Error approving policy review:", error);
-      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
 
@@ -460,7 +474,7 @@ export class PolicyController {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       if (isNaN(policyId)) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("Invalid policy ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
       }
 
       const reviewerId = req.userId!;
@@ -470,7 +484,7 @@ export class PolicyController {
         await transaction.rollback();
         return res
           .status(400)
-          .json(STATUS_CODE[400]("comment is required when requesting changes"));
+          .json(STATUS_CODE[400](req.t!("comment is required when requesting changes")));
       }
 
       const policyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
@@ -525,6 +539,100 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       logger.error("Error rejecting policy review:", error);
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    }
+  }
+
+  /**
+   * PATCH /api/policies/bulk
+   *
+   * Body: { ids: number[], action: 'archive' | 'set_reviewer' | 'set_tags',
+   *         reviewerId?: number, tags?: string[] }
+   *
+   * Tenant-scoped bulk update. Authorized for Admin and Editor roles.
+   */
+  static async bulkUpdatePolicies(req: Request, res: Response): Promise<any> {
+    logProcessing({
+      description: "starting bulkUpdatePolicies",
+      functionName: "bulkUpdatePolicies",
+      fileName: "policy.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    try {
+      const ids = parseBulkIds(req.body?.ids);
+      const action = req.body?.action as "archive" | "set_reviewer" | "set_tags" | undefined;
+
+      if (action !== "archive" && action !== "set_reviewer" && action !== "set_tags") {
+        throw new ValidationException(
+          "action must be one of: archive, set_reviewer, set_tags",
+          "action",
+          req.body?.action,
+        );
+      }
+
+      let reviewerId: number | undefined;
+      if (action === "set_reviewer") {
+        const raw = req.body?.reviewerId;
+        const parsed = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          throw new ValidationException("reviewerId must be a positive integer", "reviewerId", raw);
+        }
+        reviewerId = parsed;
+      }
+
+      let tags: PolicyTag[] | undefined;
+      if (action === "set_tags") {
+        const raw = req.body?.tags;
+        if (!Array.isArray(raw)) {
+          throw new ValidationException("tags must be an array", "tags", raw);
+        }
+        for (const t of raw) {
+          if (typeof t !== "string" || !PolicyTagsSet.has(t as PolicyTag)) {
+            throw new ValidationException(`Invalid policy tag: ${String(t)}`, "tags", t);
+          }
+        }
+        tags = raw as PolicyTag[];
+      }
+
+      await withBulkTransaction(
+        {
+          audit: {
+            action,
+            ids,
+            fileName: "policy.ctrl.ts",
+            functionName: "bulkUpdatePolicies",
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          },
+        },
+        async (transaction) => {
+          await assertOrgOwnsIds({
+            table: "policy_manager",
+            ids,
+            organizationId: req.organizationId!,
+            transaction,
+          });
+
+          if (action === "archive") {
+            await bulkArchivePoliciesQuery(req.organizationId!, ids, req.userId!, transaction);
+          } else if (action === "set_reviewer") {
+            await bulkSetPoliciesReviewerQuery(req.organizationId!, ids, reviewerId!, transaction);
+          } else {
+            await bulkSetPoliciesTagsQuery(req.organizationId!, ids, tags!, transaction);
+          }
+        },
+      );
+
+      return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
+    } catch (error) {
+      if (error instanceof ValidationException) {
+        return res.status(400).json(STATUS_CODE[400](error.message));
+      }
+      if (error instanceof ForbiddenException) {
+        return res.status(403).json(STATUS_CODE[403](error.message));
+      }
       return res.status(500).json(STATUS_CODE[500]((error as Error).message));
     }
   }

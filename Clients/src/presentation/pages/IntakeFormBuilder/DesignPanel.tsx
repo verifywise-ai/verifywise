@@ -82,19 +82,19 @@ function IconToggleButton({
       <Box
         onClick={onClick}
         sx={{
-          width: 36,
-          height: 32,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "4px",
-          cursor: "pointer",
-          border: active
+          "width": 36,
+          "height": 32,
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "borderRadius": "4px",
+          "cursor": "pointer",
+          "border": active
             ? `1px solid ${theme.palette.primary.main}80`
             : `1px solid ${theme.palette.border.dark}`,
-          backgroundColor: active ? theme.palette.background.fill : theme.palette.background.main,
-          color: active ? theme.palette.primary.main : theme.palette.text.tertiary,
-          transition: "all 0.15s ease",
+          "backgroundColor": active ? theme.palette.background.fill : theme.palette.background.main,
+          "color": active ? theme.palette.primary.main : theme.palette.text.tertiary,
+          "transition": "all 0.15s ease",
           "&:hover": {
             borderColor: active ? `${theme.palette.primary.main}80` : theme.palette.text.accent,
             backgroundColor: active
@@ -128,13 +128,13 @@ function CustomizeRow({
     <Box
       onClick={onClick}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        py: "8px",
-        px: "4px",
-        borderRadius: "4px",
-        cursor: "pointer",
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "py": "8px",
+        "px": "4px",
+        "borderRadius": "4px",
+        "cursor": "pointer",
         "&:hover": { backgroundColor: theme.palette.background.accent },
       }}
     >
@@ -203,16 +203,16 @@ function ColorGrid({
             key={color}
             onClick={() => onSelect(color)}
             sx={{
-              width: 24,
-              height: 24,
-              borderRadius: "4px",
-              backgroundColor: color,
-              border:
+              "width": 24,
+              "height": 24,
+              "borderRadius": "4px",
+              "backgroundColor": color,
+              "border":
                 selected === color
                   ? `2px solid ${theme.palette.primary.main}`
                   : `1px solid ${theme.palette.border.dark}`,
-              cursor: "pointer",
-              transition: "all 0.1s ease",
+              "cursor": "pointer",
+              "transition": "all 0.1s ease",
               "&:hover": {
                 transform: "scale(1.15)",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
@@ -230,13 +230,13 @@ function ColorGrid({
             value={customValue || brand.primary}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onCustomChange?.(e.target.value)}
             sx={{
-              width: 28,
-              height: 22,
-              border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
-              cursor: "pointer",
-              padding: 0,
-              backgroundColor: "transparent",
+              "width": 28,
+              "height": 22,
+              "border": `1px solid ${theme.palette.border.dark}`,
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "padding": 0,
+              "backgroundColor": "transparent",
               "&::-webkit-color-swatch-wrapper": { padding: "2px" },
               "&::-webkit-color-swatch": {
                 borderRadius: "2px",

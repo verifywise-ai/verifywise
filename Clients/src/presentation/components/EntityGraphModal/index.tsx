@@ -164,7 +164,7 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
               size="small"
               aria-label="Close entity graph modal"
               sx={{
-                color: theme.palette.other.icon,
+                "color": theme.palette.other.icon,
                 "&:hover": {
                   backgroundColor: theme.palette.background.fill,
                 },

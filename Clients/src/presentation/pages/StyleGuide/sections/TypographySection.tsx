@@ -183,9 +183,9 @@ const TypographySection: React.FC = () => {
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "16px",
+            "display": "grid",
+            "gridTemplateColumns": "repeat(4, 1fr)",
+            "gap": "16px",
             "@media (max-width: 900px)": {
               gridTemplateColumns: "repeat(2, 1fr)",
             },
@@ -304,9 +304,9 @@ const TypographySection: React.FC = () => {
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "16px",
+            "display": "grid",
+            "gridTemplateColumns": "repeat(4, 1fr)",
+            "gap": "16px",
             "@media (max-width: 900px)": {
               gridTemplateColumns: "repeat(2, 1fr)",
             },
@@ -417,15 +417,15 @@ const SpecCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
-        flex: 1,
-        minWidth: 200,
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
+        "flex": 1,
+        "minWidth": 200,
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },
@@ -615,14 +615,14 @@ const WeightCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "20px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
-        textAlign: "center",
+        "p": "20px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
+        "textAlign": "center",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },

@@ -299,11 +299,11 @@ export default function ComparePanel({
           onClick={handleSend}
           disabled={isSending || !selectedEndpoint || !versionA || !versionB}
           sx={{
-            bgcolor: "primary.main",
-            color: "#fff",
-            width: 34,
-            height: 34,
-            alignSelf: "flex-end",
+            "bgcolor": "primary.main",
+            "color": "#fff",
+            "width": 34,
+            "height": 34,
+            "alignSelf": "flex-end",
             "&:hover": { bgcolor: "primary.dark" },
             "&:disabled": { bgcolor: "#E4E7EC", color: "#98A2B3" },
           }}

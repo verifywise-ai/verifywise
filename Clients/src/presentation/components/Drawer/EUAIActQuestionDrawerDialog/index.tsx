@@ -837,8 +837,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             margin: 0,
             borderRadius: 0,
@@ -873,8 +873,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             width: 850,
             margin: 0,
@@ -1042,8 +1042,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                       borderColor: "border.dark",
                     }}
                     bodySx={{
-                      borderColor: "border.dark",
-                      borderRadius: "0 0 4px 4px",
+                      "borderColor": "border.dark",
+                      "borderRadius": "0 0 4px 4px",
                       "& .ProseMirror > p": {
                         margin: 0,
                       },
@@ -1107,13 +1107,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                       htmlFor="evidence-file-input"
                       disabled={isEditingDisabled}
                       sx={{
-                        borderRadius: 2,
-                        width: 155,
-                        height: 25,
-                        fontSize: 11,
-                        border: `1px solid ${theme.palette.border.dark}`,
-                        backgroundColor: "background.main",
-                        color: "text.secondary",
+                        "borderRadius": 2,
+                        "width": 155,
+                        "height": 25,
+                        "fontSize": 11,
+                        "border": `1px solid ${theme.palette.border.dark}`,
+                        "backgroundColor": "background.main",
+                        "color": "text.secondary",
                         "&:hover": {
                           backgroundColor: "background.accent",
                           border: `1px solid ${theme.palette.border.dark}`,
@@ -1127,13 +1127,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                       onClick={() => setShowFilePicker(true)}
                       disabled={isEditingDisabled}
                       sx={{
-                        borderRadius: 2,
-                        width: 165,
-                        height: 25,
-                        fontSize: 11,
-                        border: "1px solid #4C7BF4",
-                        backgroundColor: "#4C7BF4",
-                        color: "white",
+                        "borderRadius": 2,
+                        "width": 165,
+                        "height": 25,
+                        "fontSize": 11,
+                        "border": "1px solid #4C7BF4",
+                        "backgroundColor": "#4C7BF4",
+                        "color": "white",
                         "&:hover": {
                           backgroundColor: "#3D62C3",
                           border: "1px solid #3D62C3",
@@ -1175,13 +1175,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                         <Box
                           key={file.id}
                           sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "10px 12px",
-                            border: `1px solid ${theme.palette.border.light}`,
-                            borderRadius: "4px",
-                            backgroundColor: "background.main",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "space-between",
+                            "padding": "10px 12px",
+                            "border": `1px solid ${theme.palette.border.light}`,
+                            "borderRadius": "4px",
+                            "backgroundColor": "background.main",
                             "&:hover": {
                               backgroundColor: "background.accent",
                             },
@@ -1237,7 +1237,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                                   handleDownloadFile(file.id.toString(), file.fileName)
                                 }
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "primary.main",
                                     backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1253,7 +1253,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                                 onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                                 disabled={isEditingDisabled}
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "status.error.main",
                                     backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1323,7 +1323,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                               size="small"
                               onClick={() => handleDeleteUploadFile(file.id.toString())}
                               sx={{
-                                color: "#92400E",
+                                "color": "#92400E",
                                 "&:hover": {
                                   color: "status.error.main",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1393,7 +1393,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                               size="small"
                               onClick={() => handleRemovePendingAttach(file.id)}
                               sx={{
-                                color: "#4C7BF4",
+                                "color": "#4C7BF4",
                                 "&:hover": {
                                   color: "status.error.text",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1455,13 +1455,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     onClick={() => setIsLinkedRisksModalOpen(true)}
                     disabled={isEditingDisabled}
                     sx={{
-                      borderRadius: 2,
-                      width: 155,
-                      height: 25,
-                      fontSize: 11,
-                      border: `1px solid ${theme.palette.border.dark}`,
-                      backgroundColor: "background.main",
-                      color: "text.secondary",
+                      "borderRadius": 2,
+                      "width": 155,
+                      "height": 25,
+                      "fontSize": 11,
+                      "border": `1px solid ${theme.palette.border.dark}`,
+                      "backgroundColor": "background.main",
+                      "color": "text.secondary",
                       "&:hover": {
                         backgroundColor: "background.accent",
                         border: `1px solid ${theme.palette.border.dark}`,
@@ -1497,13 +1497,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                         <Box
                           key={risk.id}
                           sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "10px 12px",
-                            border: `1px solid ${theme.palette.border.light}`,
-                            borderRadius: "4px",
-                            backgroundColor: "background.main",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "space-between",
+                            "padding": "10px 12px",
+                            "border": `1px solid ${theme.palette.border.light}`,
+                            "borderRadius": "4px",
+                            "backgroundColor": "background.main",
                             "&:hover": {
                               backgroundColor: "background.accent",
                             },
@@ -1535,7 +1535,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                                 size="small"
                                 onClick={() => handleViewRiskDetails(risk)}
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "primary.main",
                                     backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1558,7 +1558,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                                 }}
                                 disabled={isEditingDisabled}
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "status.error.main",
                                     backgroundColor: "rgba(211, 47, 47, 0.08)",

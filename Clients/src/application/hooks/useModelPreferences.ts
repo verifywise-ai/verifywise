@@ -22,8 +22,6 @@ export interface ModelPreferences {
     provider: string;
     model: string;
     endpointUrl?: string;
-    temperature: number;
-    maxTokens: number;
   };
   // Timestamp of when this was saved
   savedAt?: string;
@@ -88,14 +86,10 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
                 provider: latestJudge.config?.provider || "openai",
                 model: latestJudge.config?.model || "gpt-4o",
                 endpointUrl: latestJudge.config?.endpointUrl || undefined,
-                temperature: latestJudge.config?.temperature ?? 0.7,
-                maxTokens: latestJudge.config?.maxTokens ?? 2048,
               }
             : {
                 provider: "openai",
                 model: "gpt-4o",
-                temperature: 0.7,
-                maxTokens: 2048,
               },
           savedAt: latestModel?.updatedAt || latestJudge?.updatedAt || undefined,
         };
@@ -165,32 +159,45 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
           });
         }
 
-        // 2. Save the judge as a scorer (if not already exists)
+        // 2. Upsert the judge as a scorer — update if it exists (keeps table clean, refreshes updatedAt),
+        //    create if it doesn't. Dedup by provider + model so each unique judge appears only once.
         if (prefs.judgeLlm?.provider && prefs.judgeLlm?.model) {
           const scorersRes = await deepEvalScorersService.list({ org_id: currentOrgId });
           const judgeScorerName = `Judge: ${prefs.judgeLlm.model}`;
+          const judgeConfig = {
+            provider: prefs.judgeLlm.provider,
+            model: prefs.judgeLlm.model,
+            ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
+          };
+
+          // Match by model + provider (handle both flat config.model and nested config.judgeModel.name)
           const existingJudge = scorersRes.scorers.find(
             (s) =>
               s.type === "llm" &&
-              s.config?.model === prefs.judgeLlm.model &&
-              s.config?.provider === prefs.judgeLlm.provider,
+              (s.config?.model === prefs.judgeLlm.model ||
+                s.config?.judgeModel?.name === prefs.judgeLlm.model) &&
+              (s.config?.provider === prefs.judgeLlm.provider ||
+                s.config?.judgeModel?.provider === prefs.judgeLlm.provider),
           );
 
-          if (!existingJudge) {
+          if (existingJudge) {
+            // Update to refresh updatedAt and sync any changes (threshold, name)
+            await deepEvalScorersService.update(existingJudge.id, {
+              name: judgeScorerName,
+              description: `Auto-saved judge LLM: ${prefs.judgeLlm.provider}/${prefs.judgeLlm.model}`,
+              config: judgeConfig,
+              defaultThreshold: existingJudge.defaultThreshold ?? 0.5,
+            });
+          } else {
             await deepEvalScorersService.create({
               orgId: currentOrgId,
               name: judgeScorerName,
               description: `Auto-saved judge LLM: ${prefs.judgeLlm.provider}/${prefs.judgeLlm.model}`,
               type: "llm",
-              metricKey: "judge_llm",
-              config: {
-                provider: prefs.judgeLlm.provider,
-                model: prefs.judgeLlm.model,
-                ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
-                temperature: prefs.judgeLlm.temperature,
-                maxTokens: prefs.judgeLlm.maxTokens,
-              },
+              metricKey: `judge_${prefs.judgeLlm.model.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`,
+              config: judgeConfig,
               enabled: true,
+              defaultThreshold: 0.5,
             });
           }
         }

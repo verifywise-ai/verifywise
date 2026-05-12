@@ -495,19 +495,19 @@ const StartHere = () => {
                   }
                 }}
                 sx={{
-                  borderRadius: "8px",
-                  padding: "20px 16px",
-                  position: "relative",
-                  overflow: "hidden",
-                  minHeight: 165,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-end",
-                  cursor: "pointer",
-                  animation: `${fadeInUp} 0.4s ease-out ${0.15 + i * 0.08}s both`,
-                  transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  "borderRadius": "8px",
+                  "padding": "20px 16px",
+                  "position": "relative",
+                  "overflow": "hidden",
+                  "minHeight": 165,
+                  "display": "flex",
+                  "flexDirection": "column",
+                  "justifyContent": "flex-end",
+                  "cursor": "pointer",
+                  "animation": `${fadeInUp} 0.4s ease-out ${0.15 + i * 0.08}s both`,
+                  "transition": "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                   "&:hover": {
-                    transform: "translateY(-4px) scale(1.01)",
+                    "transform": "translateY(-4px) scale(1.01)",
                     "& .gs-arrow": {
                       opacity: 1,
                       transform: "translateX(0)",
@@ -665,16 +665,16 @@ const StartHere = () => {
             <IconButton
               onClick={() => scrollExplore(-1)}
               sx={{
-                position: "absolute",
-                left: -16,
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 2,
-                width: 32,
-                height: 32,
-                background: "background.main",
-                border: `1px solid ${theme.palette.border.dark}`,
-                transition: "all 0.2s ease",
+                "position": "absolute",
+                "left": -16,
+                "top": "50%",
+                "transform": "translateY(-50%)",
+                "zIndex": 2,
+                "width": 32,
+                "height": 32,
+                "background": "background.main",
+                "border": `1px solid ${theme.palette.border.dark}`,
+                "transition": "all 0.2s ease",
                 "&:hover": {
                   background: theme.palette.background.alt,
                   transform: "translateY(-50%) scale(1.1)",
@@ -686,13 +686,13 @@ const StartHere = () => {
             <Box
               ref={exploreScrollRef}
               sx={{
-                display: "flex",
-                gap: "12px",
-                overflowX: "auto",
-                pb: "8px",
-                scrollBehavior: "smooth",
+                "display": "flex",
+                "gap": "12px",
+                "overflowX": "auto",
+                "pb": "8px",
+                "scrollBehavior": "smooth",
                 "&::-webkit-scrollbar": { display: "none" },
-                scrollbarWidth: "none",
+                "scrollbarWidth": "none",
               }}
             >
               {EXPLORE_CARDS.map((card, i) => (
@@ -700,20 +700,20 @@ const StartHere = () => {
                   key={card.title}
                   onClick={() => setExploreVideoTitle(card.title)}
                   sx={{
-                    minWidth: 196,
-                    maxWidth: 196,
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    background: theme.palette.background.main,
-                    border: `1px solid ${theme.palette.border.light}`,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    animation: `${fadeInUp} 0.4s ease-out ${0.3 + i * 0.05}s both`,
-                    transition:
+                    "minWidth": 196,
+                    "maxWidth": 196,
+                    "borderRadius": "8px",
+                    "overflow": "hidden",
+                    "background": theme.palette.background.main,
+                    "border": `1px solid ${theme.palette.border.light}`,
+                    "cursor": "pointer",
+                    "flexShrink": 0,
+                    "animation": `${fadeInUp} 0.4s ease-out ${0.3 + i * 0.05}s both`,
+                    "transition":
                       "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease",
                     "&:hover": {
-                      transform: "translateY(-4px)",
-                      borderColor: `${card.color}55`,
+                      "transform": "translateY(-4px)",
+                      "borderColor": `${card.color}55`,
                       "& .explore-play": {
                         opacity: 1,
                         transform: "translate(-50%, -50%) scale(1)",
@@ -811,16 +811,16 @@ const StartHere = () => {
             <IconButton
               onClick={() => scrollExplore(1)}
               sx={{
-                position: "absolute",
-                right: -16,
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 2,
-                width: 32,
-                height: 32,
-                background: "background.main",
-                border: `1px solid ${theme.palette.border.dark}`,
-                transition: "all 0.2s ease",
+                "position": "absolute",
+                "right": -16,
+                "top": "50%",
+                "transform": "translateY(-50%)",
+                "zIndex": 2,
+                "width": 32,
+                "height": 32,
+                "background": "background.main",
+                "border": `1px solid ${theme.palette.border.dark}`,
+                "transition": "all 0.2s ease",
                 "&:hover": {
                   background: theme.palette.background.alt,
                   transform: "translateY(-50%) scale(1.1)",
@@ -857,16 +857,16 @@ const StartHere = () => {
                   <Box
                     onClick={() => navigate(s.path)}
                     sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: "8px",
-                      cursor: "pointer",
-                      width: 72,
-                      animation: `${fadeInUp} 0.3s ease-out ${0.4 + i * 0.04}s both`,
-                      transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      "display": "flex",
+                      "flexDirection": "column",
+                      "alignItems": "center",
+                      "gap": "8px",
+                      "cursor": "pointer",
+                      "width": 72,
+                      "animation": `${fadeInUp} 0.3s ease-out ${0.4 + i * 0.04}s both`,
+                      "transition": "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                       "&:hover": {
-                        transform: "translateY(-4px)",
+                        "transform": "translateY(-4px)",
                         "& .shortcut-icon-box": {
                           transform: "scale(1.08)",
                         },
@@ -929,13 +929,13 @@ const StartHere = () => {
                   }
                   alignItems="center"
                   sx={{
-                    gap: "8px",
-                    p: "16px",
-                    borderRadius: "8px",
-                    border: `1px solid ${theme.palette.border.light}`,
-                    minWidth: 160,
-                    cursor: "pointer",
-                    transition:
+                    "gap": "8px",
+                    "p": "16px",
+                    "borderRadius": "8px",
+                    "border": `1px solid ${theme.palette.border.light}`,
+                    "minWidth": 160,
+                    "cursor": "pointer",
+                    "transition":
                       "border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                     "&:hover": {
                       borderColor: theme.palette.border.dark,
@@ -977,12 +977,12 @@ const StartHere = () => {
                   localStorage.setItem("verifywise_start_here_experts_dismissed", "true");
                 }}
                 sx={{
-                  position: "absolute",
-                  top: -24,
-                  right: 0,
-                  fontSize: 11,
-                  color: theme.palette.text.accent,
-                  cursor: "pointer",
+                  "position": "absolute",
+                  "top": -24,
+                  "right": 0,
+                  "fontSize": 11,
+                  "color": theme.palette.text.accent,
+                  "cursor": "pointer",
                   "&:hover": { color: theme.palette.text.secondary },
                 }}
               >
@@ -999,12 +999,12 @@ const StartHere = () => {
         {!progressDismissed && (
           <Box
             sx={{
-              background: `linear-gradient(135deg, ${brand.primaryHover}, ${brand.primary})`,
-              borderRadius: "8px",
-              p: "16px",
-              color: "background.main",
-              position: "relative",
-              overflow: "hidden",
+              "background": `linear-gradient(135deg, ${brand.primaryHover}, ${brand.primary})`,
+              "borderRadius": "8px",
+              "p": "16px",
+              "color": "background.main",
+              "position": "relative",
+              "overflow": "hidden",
               "&::before": {
                 content: '""',
                 position: "absolute",
@@ -1098,13 +1098,13 @@ const StartHere = () => {
                         navigate(step.path, step.state ? { state: step.state } : undefined);
                     }}
                     sx={{
-                      gap: "8px",
-                      animation: `${fadeInUp} 0.3s ease-out ${0.6 + i * 0.08}s both`,
-                      cursor: !done && step.path ? "pointer" : "default",
-                      borderRadius: "4px",
-                      p: "2px 4px",
-                      mx: "-4px",
-                      transition: "background 0.2s",
+                      "gap": "8px",
+                      "animation": `${fadeInUp} 0.3s ease-out ${0.6 + i * 0.08}s both`,
+                      "cursor": !done && step.path ? "pointer" : "default",
+                      "borderRadius": "4px",
+                      "p": "2px 4px",
+                      "mx": "-4px",
+                      "transition": "background 0.2s",
                       "&:hover": !done && step.path ? { background: "rgba(255,255,255,0.08)" } : {},
                     }}
                   >
@@ -1161,15 +1161,15 @@ const StartHere = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
-                    gap: "8px",
-                    p: "8px",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    textDecoration: "none",
-                    color: "inherit",
+                    "gap": "8px",
+                    "p": "8px",
+                    "borderRadius": "6px",
+                    "cursor": "pointer",
+                    "transition": "all 0.2s ease",
+                    "textDecoration": "none",
+                    "color": "inherit",
                     "&:hover": {
-                      background: "#F9F9F9",
+                      "background": "#F9F9F9",
                       "& .resource-icon svg": {
                         stroke: brand.primary,
                       },
@@ -1221,13 +1221,13 @@ const StartHere = () => {
                 alignItems="center"
                 onClick={() => window.open(item.url, "_blank", "noopener,noreferrer")}
                 sx={{
-                  gap: "8px",
-                  p: "8px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
+                  "gap": "8px",
+                  "p": "8px",
+                  "borderRadius": "6px",
+                  "cursor": "pointer",
+                  "transition": "all 0.2s ease",
                   "&:hover": {
-                    background: "#F9F9F9",
+                    "background": "#F9F9F9",
                     "& .whatsnew-icon svg": {
                       stroke: brand.primary,
                     },

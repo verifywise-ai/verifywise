@@ -154,7 +154,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           onClick={() => onRowClick?.(row)}
           sx={{
             ...singleTheme.tableStyles.primary.body.row,
-            cursor: onRowClick ? "pointer" : "default",
+            "cursor": onRowClick ? "pointer" : "default",
             "&:hover": {
               backgroundColor: "background.accent",
             },
@@ -319,13 +319,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               onClick={handleViewResultsClick}
               startIcon={<Eye size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#374151",
-                borderColor: "border.dark",
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#374151",
+                "borderColor": "border.dark",
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
                   borderColor: "brand.primary",
@@ -342,13 +342,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               onClick={handleDownloadClick}
               startIcon={<Download size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#374151",
-                borderColor: "border.dark",
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#374151",
+                "borderColor": "border.dark",
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
                   borderColor: "brand.primary",
@@ -365,13 +365,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               onClick={handleCopyClick}
               startIcon={<Copy size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#374151",
-                borderColor: "border.dark",
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#374151",
+                "borderColor": "border.dark",
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#F0FDF4",
                   borderColor: "brand.primary",
@@ -388,13 +388,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               onClick={handleDeleteClick}
               startIcon={<Trash2 size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#DC2626",
-                borderColor: "border.dark",
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": "#DC2626",
+                "borderColor": "border.dark",
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#FEF2F2",
                   borderColor: "#DC2626",

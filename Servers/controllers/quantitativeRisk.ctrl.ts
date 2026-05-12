@@ -14,6 +14,7 @@ import { QueryTypes } from "sequelize";
 import { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * GET /api/quantitative-risks/portfolio/org
  * Returns aggregated ALE, residual ALE, mitigation cost, risk count for the org.
@@ -36,7 +37,7 @@ export async function getOrgPortfolio(req: Request, res: Response): Promise<any>
       "getOrgPortfolio",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -64,7 +65,7 @@ export async function getProjectPortfolio(req: Request, res: Response): Promise<
       "getProjectPortfolio",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -93,7 +94,7 @@ export async function getPortfolioTrendHandler(req: Request, res: Response): Pro
       "getPortfolioTrend",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -115,13 +116,13 @@ export async function applyBenchmark(req: Request, res: Response): Promise<any> 
   try {
     const benchmark = await getBenchmarkByIdQuery(benchmarkId);
     if (!benchmark) {
-      return res.status(404).json(STATUS_CODE[404]("Benchmark not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Benchmark not found")));
     }
 
     // Apply benchmark values to risk
     const applied = await applyBenchmarkToRiskQuery(riskId, benchmarkId, req.organizationId!);
     if (!applied) {
-      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
     }
 
     // Recompute derived fields with benchmark values
@@ -169,7 +170,7 @@ export async function applyBenchmark(req: Request, res: Response): Promise<any> 
       "applyBenchmark",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -181,7 +182,9 @@ export async function updateRiskAssessmentMode(req: Request, res: Response): Pro
   const { mode } = req.body;
 
   if (mode !== "qualitative" && mode !== "quantitative") {
-    return res.status(400).json(STATUS_CODE[400]("Mode must be 'qualitative' or 'quantitative'"));
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("Mode must be 'qualitative' or 'quantitative'")));
   }
 
   logStructured(
@@ -205,7 +208,9 @@ export async function updateRiskAssessmentMode(req: Request, res: Response): Pro
     );
 
     if (!userResult[0] || userResult[0].role_id !== 1) {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can change risk assessment mode"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can change risk assessment mode")));
     }
 
     await sequelize.query(
@@ -233,7 +238,7 @@ export async function updateRiskAssessmentMode(req: Request, res: Response): Pro
       "updateRiskAssessmentMode",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -260,6 +265,6 @@ export async function getRiskAssessmentMode(req: Request, res: Response): Promis
       "getRiskAssessmentMode",
       "quantitativeRisk.ctrl.ts",
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

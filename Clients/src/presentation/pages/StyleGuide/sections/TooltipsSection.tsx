@@ -96,13 +96,13 @@ const TooltipsSection: React.FC = () => {
                   <Tooltip title="This is helpful information" arrow>
                     <Box
                       sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        p: "8px",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        color: theme.palette.text.tertiary,
+                        "display": "inline-flex",
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                        "p": "8px",
+                        "borderRadius": "4px",
+                        "cursor": "pointer",
+                        "color": theme.palette.text.tertiary,
                         "&:hover": {
                           backgroundColor: theme.palette.background.fill,
                         },
@@ -132,12 +132,12 @@ const TooltipsSection: React.FC = () => {
                     >
                       <Box
                         sx={{
-                          px: "12px",
-                          py: "6px",
-                          border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "4px",
-                          fontSize: 12,
-                          cursor: "pointer",
+                          "px": "12px",
+                          "py": "6px",
+                          "border": `1px solid ${theme.palette.border.light}`,
+                          "borderRadius": "4px",
+                          "fontSize": 12,
+                          "cursor": "pointer",
                           "&:hover": {
                             borderColor: theme.palette.primary.main,
                           },
@@ -216,13 +216,13 @@ const TooltipsSection: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        p: "8px",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        color: theme.palette.text.tertiary,
+                        "display": "inline-flex",
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                        "p": "8px",
+                        "borderRadius": "4px",
+                        "cursor": "pointer",
+                        "color": theme.palette.text.tertiary,
                         "&:hover": {
                           backgroundColor: theme.palette.background.fill,
                           color: theme.palette.primary.main,
@@ -317,16 +317,16 @@ const TooltipsSection: React.FC = () => {
         >
           <Box
             sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "4px",
-              color: "rgba(255, 255, 255, 0.6)",
+              "position": "absolute",
+              "top": 8,
+              "right": 8,
+              "width": 24,
+              "height": 24,
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "borderRadius": "4px",
+              "color": "rgba(255, 255, 255, 0.6)",
               "&:hover": {
                 color: "background.main",
                 backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -485,14 +485,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -553,9 +553,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

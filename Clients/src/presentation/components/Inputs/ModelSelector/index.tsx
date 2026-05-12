@@ -114,14 +114,14 @@ function ModelSelector({
     return (
       <Box
         sx={{
-          width: size,
-          height: size,
-          minWidth: size,
-          minHeight: size,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          "width": size,
+          "height": size,
+          "minWidth": size,
+          "minHeight": size,
+          "flexShrink": 0,
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
           "& svg": {
             width: "100%",
             height: "100%",
@@ -146,17 +146,17 @@ function ModelSelector({
         ref={anchorRef}
         onClick={() => setOpen(!open)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: 1.5,
-          height: 34,
-          border: "1px solid",
-          borderColor: open ? theme.palette.primary.main : theme.palette.border.dark,
-          borderRadius: theme.shape.borderRadius,
-          backgroundColor: theme.palette.background.main,
-          cursor: "pointer",
-          transition: "border-color 150ms ease-in-out",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "space-between",
+          "px": 1.5,
+          "height": 34,
+          "border": "1px solid",
+          "borderColor": open ? theme.palette.primary.main : theme.palette.border.dark,
+          "borderRadius": theme.shape.borderRadius,
+          "backgroundColor": theme.palette.background.main,
+          "cursor": "pointer",
+          "transition": "border-color 150ms ease-in-out",
           "&:hover": {
             borderColor: theme.palette.primary.light,
           },
@@ -232,9 +232,9 @@ function ModelSelector({
                 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    fontSize: 13,
-                    borderRadius: theme.shape.borderRadius,
-                    backgroundColor: theme.palette.action.hover,
+                    "fontSize": 13,
+                    "borderRadius": theme.shape.borderRadius,
+                    "backgroundColor": theme.palette.action.hover,
                     "& fieldset": { borderColor: theme.palette.border.dark },
                     "&:hover fieldset": { borderColor: theme.palette.primary.light },
                     "&.Mui-focused fieldset": {
@@ -266,14 +266,14 @@ function ModelSelector({
                         key={p.provider}
                         onClick={() => handleProviderSelect(p.provider)}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          px: 1.5,
-                          height: 38,
-                          minHeight: 38,
-                          cursor: "pointer",
-                          backgroundColor: isSelected
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "px": 1.5,
+                          "height": 38,
+                          "minHeight": 38,
+                          "cursor": "pointer",
+                          "backgroundColor": isSelected
                             ? theme.palette.background.accent
                             : "transparent",
                           "&:hover": {
@@ -335,14 +335,14 @@ function ModelSelector({
                       onNavigateToSettings();
                     }}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
-                      px: 1.5,
-                      py: 1,
-                      borderRadius: theme.shape.borderRadius,
-                      cursor: "pointer",
-                      backgroundColor: theme.palette.background.accent,
+                      "display": "flex",
+                      "alignItems": "center",
+                      "gap": 1.5,
+                      "px": 1.5,
+                      "py": 1,
+                      "borderRadius": theme.shape.borderRadius,
+                      "cursor": "pointer",
+                      "backgroundColor": theme.palette.background.accent,
                       "&:hover": {
                         backgroundColor: theme.palette.primary.light,
                       },
@@ -420,17 +420,17 @@ function ModelSelector({
                           onNavigateToSettings();
                         }}
                         sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 1,
-                          px: 3,
-                          py: 1.5,
-                          borderRadius: theme.shape.borderRadius,
-                          cursor: "pointer",
-                          backgroundColor: theme.palette.primary.main,
-                          color: theme.palette.common.white,
-                          fontSize: 13,
-                          fontWeight: 500,
+                          "display": "inline-flex",
+                          "alignItems": "center",
+                          "gap": 1,
+                          "px": 3,
+                          "py": 1.5,
+                          "borderRadius": theme.shape.borderRadius,
+                          "cursor": "pointer",
+                          "backgroundColor": theme.palette.primary.main,
+                          "color": theme.palette.common.white,
+                          "fontSize": 13,
+                          "fontWeight": 500,
                           "&:hover": {
                             backgroundColor: theme.palette.primary.dark,
                           },
@@ -474,7 +474,7 @@ function ModelSelector({
                       onClick={(e) => e.stopPropagation()}
                       autoComplete="off"
                       sx={{
-                        mb: 1.5,
+                        "mb": 1.5,
                         "& .MuiOutlinedInput-root": {
                           fontSize: 13,
                           borderRadius: theme.shape.borderRadius,
@@ -489,21 +489,21 @@ function ModelSelector({
                         }
                       }}
                       sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 1,
-                        px: 2,
-                        py: 1,
-                        borderRadius: theme.shape.borderRadius,
-                        cursor: customModel.trim() ? "pointer" : "not-allowed",
-                        backgroundColor: customModel.trim()
+                        "display": "inline-flex",
+                        "alignItems": "center",
+                        "gap": 1,
+                        "px": 2,
+                        "py": 1,
+                        "borderRadius": theme.shape.borderRadius,
+                        "cursor": customModel.trim() ? "pointer" : "not-allowed",
+                        "backgroundColor": customModel.trim()
                           ? theme.palette.primary.main
                           : theme.palette.action.disabledBackground,
-                        color: customModel.trim()
+                        "color": customModel.trim()
                           ? theme.palette.common.white
                           : theme.palette.text.disabled,
-                        fontSize: 12,
-                        fontWeight: 500,
+                        "fontSize": 12,
+                        "fontWeight": 500,
                         "&:hover": {
                           backgroundColor: customModel.trim()
                             ? theme.palette.primary.dark
@@ -543,14 +543,14 @@ function ModelSelector({
                           setOpen(false);
                         }}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          px: 1.5,
-                          py: 0.75,
-                          borderRadius: theme.shape.borderRadius,
-                          cursor: "pointer",
-                          backgroundColor:
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "px": 1.5,
+                          "py": 0.75,
+                          "borderRadius": theme.shape.borderRadius,
+                          "cursor": "pointer",
+                          "backgroundColor":
                             model === m.id ? theme.palette.background.accent : "transparent",
                           "&:hover": {
                             backgroundColor:
@@ -592,14 +592,14 @@ function ModelSelector({
                         key={m.id}
                         onClick={() => handleModelSelect(m.id)}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          pl: 2.5,
-                          pr: 1.5,
-                          py: 1,
-                          cursor: "pointer",
-                          backgroundColor: isSelected
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "pl": 2.5,
+                          "pr": 1.5,
+                          "py": 1,
+                          "cursor": "pointer",
+                          "backgroundColor": isSelected
                             ? theme.palette.background.accent
                             : "transparent",
                           "&:hover": {

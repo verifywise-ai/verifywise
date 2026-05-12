@@ -23,7 +23,7 @@ async function getTiersFeatures(req: Request, res: Response) {
     }
 
     logStructured("error", "Tiers features not found", "getTiersFeatures", "tiers.ctrl.ts");
-    return res.status(404).json(STATUS_CODE[404]({ message: "Tiers features not found" }));
+    return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Tiers features not found") }));
   } catch (error) {
     logStructured(
       "error",
@@ -32,7 +32,7 @@ async function getTiersFeatures(req: Request, res: Response) {
       "tiers.ctrl.ts",
     );
     logger.error("❌ Error fetching tiers features:", error);
-    return res.status(500).json(STATUS_CODE[500]({ message: "Internal server error" }));
+    return res.status(500).json(STATUS_CODE[500]({ message: req.t!("Internal server error") }));
   }
 }
 

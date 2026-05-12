@@ -74,7 +74,7 @@ const ISO27001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "human resource security": { icon: Users },
   "asset management": { icon: Database },
   "access control": { icon: Lock },
-  cryptography: { icon: Shield },
+  "cryptography": { icon: Shield },
   "physical and environmental security": { icon: Building },
   "operations security": { icon: Settings },
   "communications security": { icon: Network },
@@ -82,7 +82,7 @@ const ISO27001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "supplier relationships": { icon: UserCheck },
   "information security incident management": { icon: AlertTriangle },
   "business continuity": { icon: Zap },
-  compliance: { icon: Eye },
+  "compliance": { icon: Eye },
 };
 
 // Icon mappings for ISO 42001 annex categories
@@ -92,7 +92,7 @@ const ISO42001_ANNEX_MAPPINGS: { [key: string]: { icon: LucideIcon } } = {
   "resources for ai systems": { icon: Database },
   "ai system lifecycle": { icon: Settings },
   "data for ai systems": { icon: Database },
-  ict: { icon: Network },
+  "ict": { icon: Network },
   "third-party relationships": { icon: UserCheck },
 };
 
@@ -346,11 +346,11 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                     <Box
                       onClick={handleCardClick}
                       sx={{
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        p: "4px",
-                        borderRadius: "4px",
+                        "cursor": "pointer",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "p": "4px",
+                        "borderRadius": "4px",
                         "&:hover": {
                           backgroundColor: "rgba(0, 0, 0, 0.04)",
                         },

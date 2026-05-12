@@ -127,17 +127,17 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
       >
         <Box
           sx={{
-            width: { xs: 60, sm: 80 },
-            height: { xs: 45, sm: 60 },
-            backgroundColor: cell.color,
-            border: `2px solid ${isSelected ? "#13715B" : "transparent"}`,
-            borderRadius: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: cell.risks.length > 0 ? "pointer" : "default",
-            transition: "all 0.2s ease-in-out",
+            "width": { xs: 60, sm: 80 },
+            "height": { xs: 45, sm: 60 },
+            "backgroundColor": cell.color,
+            "border": `2px solid ${isSelected ? "#13715B" : "transparent"}`,
+            "borderRadius": 1,
+            "display": "flex",
+            "flexDirection": "column",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "cursor": cell.risks.length > 0 ? "pointer" : "default",
+            "transition": "all 0.2s ease-in-out",
             "&:hover":
               cell.risks.length > 0
                 ? {

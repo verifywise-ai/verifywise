@@ -150,8 +150,8 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
             size="small"
             onClick={() => refetch()}
             sx={{
-              p: 0.5,
-              color: `${brand.primary}`,
+              "p": 0.5,
+              "color": `${brand.primary}`,
               "&:hover": {
                 backgroundColor: "rgba(19, 113, 91, 0.1)",
               },
@@ -229,8 +229,8 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                     onClick={() => handleCopyLink(shareLink.shareable_url, shareLink.id)}
                     disabled={!shareLink.is_enabled}
                     sx={{
-                      p: 0.5,
-                      color: `${brand.primary}`,
+                      "p": 0.5,
+                      "color": `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -245,8 +245,8 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                     onClick={() => handleOpenLink(shareLink.shareable_url)}
                     disabled={!shareLink.is_enabled}
                     sx={{
-                      p: 0.5,
-                      color: `${brand.primary}`,
+                      "p": 0.5,
+                      "color": `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -261,8 +261,8 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   size="small"
                   onClick={() => handleDeleteLink(shareLink.id)}
                   sx={{
-                    p: 0.5,
-                    color: "#dc2626",
+                    "p": 0.5,
+                    "color": "#dc2626",
                     "&:hover": {
                       backgroundColor: "rgba(220, 38, 38, 0.1)",
                     },

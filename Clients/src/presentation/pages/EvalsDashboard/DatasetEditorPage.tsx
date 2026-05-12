@@ -228,8 +228,8 @@ export default function DatasetEditorPage() {
             onClick={handleCopyJson}
             startIcon={copied ? <Check size={16} /> : <Copy size={16} />}
             sx={{
-              color: copied ? palette.status.success.text : palette.text.secondary,
-              borderColor: copied ? palette.status.success.text : palette.border.dark,
+              "color": copied ? palette.status.success.text : palette.text.secondary,
+              "borderColor": copied ? palette.status.success.text : palette.border.dark,
               "&:hover": {
                 borderColor: palette.text.disabled,
                 backgroundColor: palette.background.accent,
@@ -243,8 +243,8 @@ export default function DatasetEditorPage() {
             onClick={handleDownload}
             startIcon={<Download size={16} />}
             sx={{
-              color: palette.text.secondary,
-              borderColor: palette.border.dark,
+              "color": palette.text.secondary,
+              "borderColor": palette.border.dark,
               "&:hover": {
                 borderColor: palette.text.disabled,
                 backgroundColor: palette.background.accent,
@@ -257,7 +257,7 @@ export default function DatasetEditorPage() {
             variant="contained"
             disabled={!isValidToSave || saving || !datasetName.trim()}
             sx={{
-              bgcolor: palette.brand.primary,
+              "bgcolor": palette.brand.primary,
               "&:hover": { bgcolor: palette.brand.primaryHover },
             }}
             startIcon={<SaveIcon size={16} />}
@@ -304,8 +304,8 @@ export default function DatasetEditorPage() {
               startIcon={<Plus size={16} />}
               onClick={handleAddPrompt}
               sx={{
-                color: palette.brand.primary,
-                borderColor: palette.brand.primary,
+                "color": palette.brand.primary,
+                "borderColor": palette.brand.primary,
                 "&:hover": {
                   borderColor: palette.brand.primaryHover,
                   backgroundColor: palette.brand.primaryLight,
@@ -356,7 +356,7 @@ export default function DatasetEditorPage() {
                       handleDeletePrompt(idx);
                     }}
                     sx={{
-                      color: palette.text.disabled,
+                      "color": palette.text.disabled,
                       "&:hover": {
                         color: palette.status.error.text,
                         backgroundColor: palette.status.error.bg,
@@ -497,10 +497,10 @@ export default function DatasetEditorPage() {
             startIcon={<Plus size={16} />}
             onClick={handleAddPrompt}
             sx={{
-              color: palette.brand.primary,
-              borderColor: palette.border.dark,
-              borderStyle: "dashed",
-              py: 1.5,
+              "color": palette.brand.primary,
+              "borderColor": palette.border.dark,
+              "borderStyle": "dashed",
+              "py": 1.5,
               "&:hover": {
                 borderColor: palette.brand.primary,
                 backgroundColor: palette.brand.primaryLight,

@@ -25,6 +25,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Eye,
+  EyeOff,
   Unplug,
   Timer,
   Link2,
@@ -76,6 +77,8 @@ import {
 } from "../../../application/repository/aiDetection.repository";
 import VWTooltip from "../../components/VWTooltip";
 import { RiskScoreCard } from "./components/RiskScoreCard";
+import SuppressFindingDialog from "./components/SuppressFindingDialog";
+import Toggle from "../../components/Inputs/Toggle";
 import {
   ScanResponse,
   Finding,
@@ -222,7 +225,23 @@ const GOVERNANCE_STATUS_CONFIG: Record<
   reviewed: { label: "Reviewed", color: palette.status.info.text, icon: Eye },
   approved: { label: "Approved", color: palette.status.success.text, icon: ThumbsUp },
   flagged: { label: "Flagged", color: palette.status.error.text, icon: Flag },
+  suppressed: { label: "Suppressed", color: palette.text.tertiary, icon: EyeOff },
+  accepted_risk: {
+    label: "Accepted risk",
+    color: palette.status.warning.text,
+    icon: ShieldCheck,
+  },
 };
+
+/**
+ * A finding is treated as "suppressed" by the UI when EITHER:
+ *   - a scan-time rule matched (boolean `suppressed`), or
+ *   - a user manually set governance_status to "suppressed".
+ * Both signals are also excluded from the risk score by the backend.
+ * `accepted_risk` is acknowledged but not hidden — it still renders normally.
+ */
+const isFindingSuppressed = (f: Finding): boolean =>
+  f.suppressed === true || f.governance_status === "suppressed";
 
 const COMPLIANCE_CATEGORY_CONFIG: Record<
   ComplianceCategory,
@@ -339,62 +358,62 @@ const PROVIDER_ICON_COMPONENTS: Record<
 > = {
   // Cloud AI Providers
   "AI21 Labs": PROVIDER_ICONS.Ai21,
-  Anthropic: PROVIDER_ICONS.Anthropic,
-  Anyscale: PROVIDER_ICONS.Anyscale,
-  AssemblyAI: PROVIDER_ICONS.AssemblyAI,
-  AWS: PROVIDER_ICONS.Aws,
-  Baseten: PROVIDER_ICONS.Baseten,
-  Cerebras: PROVIDER_ICONS.Cerebras,
-  Cohere: PROVIDER_ICONS.Cohere,
-  DeepSeek: PROVIDER_ICONS.DeepSeek,
-  ElevenLabs: PROVIDER_ICONS.ElevenLabs,
+  "Anthropic": PROVIDER_ICONS.Anthropic,
+  "Anyscale": PROVIDER_ICONS.Anyscale,
+  "AssemblyAI": PROVIDER_ICONS.AssemblyAI,
+  "AWS": PROVIDER_ICONS.Aws,
+  "Baseten": PROVIDER_ICONS.Baseten,
+  "Cerebras": PROVIDER_ICONS.Cerebras,
+  "Cohere": PROVIDER_ICONS.Cohere,
+  "DeepSeek": PROVIDER_ICONS.DeepSeek,
+  "ElevenLabs": PROVIDER_ICONS.ElevenLabs,
   "Fireworks AI": PROVIDER_ICONS.Fireworks,
-  Google: PROVIDER_ICONS.Google,
-  Groq: PROVIDER_ICONS.Groq,
-  HuggingFace: PROVIDER_ICONS.HuggingFace,
+  "Google": PROVIDER_ICONS.Google,
+  "Groq": PROVIDER_ICONS.Groq,
+  "HuggingFace": PROVIDER_ICONS.HuggingFace,
   "Jina AI": PROVIDER_ICONS.Jina,
-  LangFuse: PROVIDER_ICONS.Langfuse,
-  LangSmith: PROVIDER_ICONS.LangSmith,
+  "LangFuse": PROVIDER_ICONS.Langfuse,
+  "LangSmith": PROVIDER_ICONS.LangSmith,
   "Lepton AI": PROVIDER_ICONS.LeptonAI,
-  Meta: PROVIDER_ICONS.Meta,
-  Microsoft: PROVIDER_ICONS.Microsoft,
-  Mistral: PROVIDER_ICONS.Mistral,
-  Nvidia: PROVIDER_ICONS.Nvidia,
-  Ollama: PROVIDER_ICONS.Ollama,
-  OpenAI: PROVIDER_ICONS.OpenAI,
-  OpenRouter: PROVIDER_ICONS.OpenRouter,
-  Perplexity: PROVIDER_ICONS.Perplexity,
-  Replicate: PROVIDER_ICONS.Replicate,
-  SambaNova: PROVIDER_ICONS.SambaNova,
+  "Meta": PROVIDER_ICONS.Meta,
+  "Microsoft": PROVIDER_ICONS.Microsoft,
+  "Mistral": PROVIDER_ICONS.Mistral,
+  "Nvidia": PROVIDER_ICONS.Nvidia,
+  "Ollama": PROVIDER_ICONS.Ollama,
+  "OpenAI": PROVIDER_ICONS.OpenAI,
+  "OpenRouter": PROVIDER_ICONS.OpenRouter,
+  "Perplexity": PROVIDER_ICONS.Perplexity,
+  "Replicate": PROVIDER_ICONS.Replicate,
+  "SambaNova": PROVIDER_ICONS.SambaNova,
   "Stability AI": PROVIDER_ICONS.Stability,
   "Together AI": PROVIDER_ICONS.Together,
-  Vercel: PROVIDER_ICONS.Vercel,
+  "Vercel": PROVIDER_ICONS.Vercel,
   "Voyage AI": PROVIDER_ICONS.Voyage,
   // AI/ML Frameworks
-  CrewAI: PROVIDER_ICONS.CrewAI,
-  LangChain: PROVIDER_ICONS.LangChain,
-  LlamaIndex: PROVIDER_ICONS.LlamaIndex,
-  Phidata: PROVIDER_ICONS.Phidata,
+  "CrewAI": PROVIDER_ICONS.CrewAI,
+  "LangChain": PROVIDER_ICONS.LangChain,
+  "LlamaIndex": PROVIDER_ICONS.LlamaIndex,
+  "Phidata": PROVIDER_ICONS.Phidata,
   "Pydantic AI": PROVIDER_ICONS.PydanticAI,
   // Local ML
-  vLLM: PROVIDER_ICONS.Vllm,
+  "vLLM": PROVIDER_ICONS.Vllm,
 };
 
 // SVG/PNG logo mappings for providers without lobehub icons
 const PROVIDER_SVG_LOGOS: Record<string, string> = {
   // Local ML libraries
   "scikit-learn": scikitLearnLogo,
-  NumPy: numpyLogo,
-  Pandas: pandasLogo,
-  Matplotlib: matplotlibLogo,
-  MXNet: mxnetLogo,
-  SciPy: scipyLogo,
-  Dask: daskLogo,
+  "NumPy": numpyLogo,
+  "Pandas": pandasLogo,
+  "Matplotlib": matplotlibLogo,
+  "MXNet": mxnetLogo,
+  "SciPy": scipyLogo,
+  "Dask": daskLogo,
   // Vector databases
-  Chroma: chromaLogo,
-  Pinecone: pineconeLogo,
-  Qdrant: qdrantLogo,
-  Weaviate: weaviateLogo,
+  "Chroma": chromaLogo,
+  "Pinecone": pineconeLogo,
+  "Qdrant": qdrantLogo,
+  "Weaviate": weaviateLogo,
 };
 
 function getProviderIcon(provider?: string, size: number = 16): React.ReactNode {
@@ -440,18 +459,18 @@ function FilePathItem({ path, lineNumber, matchedText, fileUrl }: FilePathItemPr
   const filePathRow = (
     <Box
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        py: 0.5,
-        px: 1,
-        fontFamily: "monospace",
-        fontSize: 13,
-        cursor: fileUrl ? "pointer" : "default",
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 1,
+        "py": 0.5,
+        "px": 1,
+        "fontFamily": "monospace",
+        "fontSize": 13,
+        "cursor": fileUrl ? "pointer" : "default",
         "&:hover": {
           backgroundColor: palette.background.hover,
         },
-        borderRadius: "4px",
+        "borderRadius": "4px",
       }}
     >
       {fileUrl ? (
@@ -525,6 +544,7 @@ function FindingRow({
     finding.governance_status || null,
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
 
   const getFileUrl = (filePath: string, lineNumber: number | null): string | null => {
     if (!repositoryOwner || !repositoryName) return null;
@@ -573,15 +593,16 @@ function FindingRow({
         borderRadius: "4px",
         mb: "8px",
         backgroundColor: palette.background.main,
+        opacity: isFindingSuppressed(finding) ? 0.6 : 1,
       }}
     >
       {/* Header */}
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          p: "8px",
-          cursor: "pointer",
+          "display": "flex",
+          "alignItems": "center",
+          "p": "8px",
+          "cursor": "pointer",
           "&:hover": {
             backgroundColor: palette.background.accent,
           },
@@ -607,6 +628,36 @@ function FindingRow({
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Suppressed Badge */}
+          {isFindingSuppressed(finding) && (
+            <Tooltip
+              title={
+                finding.suppressed ? "Matched a suppression rule" : "Manually marked as suppressed"
+              }
+              arrow
+              placement="top"
+            >
+              <Box
+                sx={{
+                  px: "8px",
+                  py: "2px",
+                  borderRadius: "4px",
+                  backgroundColor: palette.background.accent,
+                  border: `1px solid ${palette.border.light}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <EyeOff size={12} color={palette.text.tertiary} />
+                <Typography
+                  sx={{ fontSize: "12px", fontWeight: 500, color: palette.text.tertiary }}
+                >
+                  Suppressed
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
           {/* Risk Level Badge */}
           {finding.risk_level && (
             <Tooltip title={RISK_LEVEL_CONFIG[finding.risk_level].tooltip} arrow placement="top">
@@ -723,9 +774,9 @@ function FindingRow({
               onClick={handleGovernanceClick}
               disabled={isUpdating}
               sx={{
-                border: `1px solid ${palette.border.light}`,
-                borderRadius: "4px",
-                p: "4px",
+                "border": `1px solid ${palette.border.light}`,
+                "borderRadius": "4px",
+                "p": "4px",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
             >
@@ -764,13 +815,14 @@ function FindingRow({
               key={status}
               onClick={() => handleStatusChange(status)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                p: "6px 8px",
-                borderRadius: "4px",
-                cursor: "pointer",
-                backgroundColor: localStatus === status ? palette.background.hover : "transparent",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": 1,
+                "p": "6px 8px",
+                "borderRadius": "4px",
+                "cursor": "pointer",
+                "backgroundColor":
+                  localStatus === status ? palette.background.hover : "transparent",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
             >
@@ -784,12 +836,12 @@ function FindingRow({
               <Box
                 onClick={() => handleStatusChange(null)}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  p: "6px 8px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": 1,
+                  "p": "6px 8px",
+                  "borderRadius": "4px",
+                  "cursor": "pointer",
                   "&:hover": { backgroundColor: palette.background.hover },
                 }}
               >
@@ -800,8 +852,35 @@ function FindingRow({
               </Box>
             </>
           )}
+          <Box sx={{ borderTop: `1px solid ${palette.border.light}`, my: 0.5 }} />
+          <Box
+            onClick={() => {
+              handleGovernanceClose();
+              setSuppressDialogOpen(true);
+            }}
+            sx={{
+              "display": "flex",
+              "alignItems": "center",
+              "gap": 1,
+              "p": "6px 8px",
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "&:hover": { backgroundColor: palette.background.hover },
+            }}
+          >
+            <EyeOff size={14} color={palette.text.tertiary} />
+            <Typography sx={{ fontSize: "13px" }}>Create suppression rule…</Typography>
+          </Box>
         </Box>
       </Popover>
+
+      <SuppressFindingDialog
+        isOpen={suppressDialogOpen}
+        finding={finding}
+        onClose={() => setSuppressDialogOpen(false)}
+        onSuccess={(msg) => onStatusMessage?.("success", msg)}
+        onError={(msg) => onStatusMessage?.("error", msg)}
+      />
 
       {/* Expanded Content */}
       <Collapse in={expanded}>
@@ -877,10 +956,10 @@ function SecurityFindingRow({ finding, repositoryOwner, repositoryName }: Securi
       {/* Header */}
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          p: "8px",
-          cursor: "pointer",
+          "display": "flex",
+          "alignItems": "center",
+          "p": "8px",
+          "cursor": "pointer",
           "&:hover": {
             backgroundColor: palette.background.accent,
           },
@@ -1134,6 +1213,7 @@ function VulnerabilityFindingRow({
     finding.governance_status || null,
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
   const vulnMeta = VULN_TYPE_LABELS[finding.finding_type] || {
     label: finding.finding_type,
     owaspId: "",
@@ -1185,15 +1265,16 @@ function VulnerabilityFindingRow({
         borderRadius: "4px",
         mb: "8px",
         backgroundColor: palette.background.main,
+        opacity: isFindingSuppressed(finding) ? 0.6 : 1,
       }}
     >
       {/* Header */}
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          p: "8px",
-          cursor: "pointer",
+          "display": "flex",
+          "alignItems": "center",
+          "p": "8px",
+          "cursor": "pointer",
           "&:hover": {
             backgroundColor: palette.background.accent,
           },
@@ -1218,6 +1299,36 @@ function VulnerabilityFindingRow({
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Suppressed Badge */}
+          {isFindingSuppressed(finding) && (
+            <Tooltip
+              title={
+                finding.suppressed ? "Matched a suppression rule" : "Manually marked as suppressed"
+              }
+              arrow
+              placement="top"
+            >
+              <Box
+                sx={{
+                  px: "8px",
+                  py: "2px",
+                  borderRadius: "4px",
+                  backgroundColor: palette.background.accent,
+                  border: `1px solid ${palette.border.light}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <EyeOff size={12} color={palette.text.tertiary} />
+                <Typography
+                  sx={{ fontSize: "12px", fontWeight: 500, color: palette.text.tertiary }}
+                >
+                  Suppressed
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
           {/* Risk Level Badge */}
           {finding.risk_level && (
             <Tooltip
@@ -1346,9 +1457,9 @@ function VulnerabilityFindingRow({
               onClick={handleGovernanceClick}
               disabled={isUpdating}
               sx={{
-                border: `1px solid ${palette.border.light}`,
-                borderRadius: "4px",
-                p: "4px",
+                "border": `1px solid ${palette.border.light}`,
+                "borderRadius": "4px",
+                "p": "4px",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
             >
@@ -1387,13 +1498,14 @@ function VulnerabilityFindingRow({
               key={status}
               onClick={() => handleStatusChange(status)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                p: "6px 8px",
-                borderRadius: "4px",
-                cursor: "pointer",
-                backgroundColor: localStatus === status ? palette.background.hover : "transparent",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": 1,
+                "p": "6px 8px",
+                "borderRadius": "4px",
+                "cursor": "pointer",
+                "backgroundColor":
+                  localStatus === status ? palette.background.hover : "transparent",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
             >
@@ -1407,12 +1519,12 @@ function VulnerabilityFindingRow({
               <Box
                 onClick={() => handleStatusChange(null)}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  p: "6px 8px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": 1,
+                  "p": "6px 8px",
+                  "borderRadius": "4px",
+                  "cursor": "pointer",
                   "&:hover": { backgroundColor: palette.background.hover },
                 }}
               >
@@ -1423,8 +1535,35 @@ function VulnerabilityFindingRow({
               </Box>
             </>
           )}
+          <Box sx={{ borderTop: `1px solid ${palette.border.light}`, my: 0.5 }} />
+          <Box
+            onClick={() => {
+              handleGovernanceClose();
+              setSuppressDialogOpen(true);
+            }}
+            sx={{
+              "display": "flex",
+              "alignItems": "center",
+              "gap": 1,
+              "p": "6px 8px",
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "&:hover": { backgroundColor: palette.background.hover },
+            }}
+          >
+            <EyeOff size={14} color={palette.text.tertiary} />
+            <Typography sx={{ fontSize: "13px" }}>Create suppression rule…</Typography>
+          </Box>
         </Box>
       </Popover>
+
+      <SuppressFindingDialog
+        isOpen={suppressDialogOpen}
+        finding={finding}
+        onClose={() => setSuppressDialogOpen(false)}
+        onSuccess={(msg) => onStatusMessage?.("success", msg)}
+        onError={(msg) => onStatusMessage?.("error", msg)}
+      />
 
       {/* Expanded Content */}
       <Collapse in={expanded}>
@@ -1529,6 +1668,7 @@ export default function ScanDetailsPage() {
   }, [initialTab]);
   const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceLevel | null>(null);
   const [severityFilter, setSeverityFilter] = useState<SecuritySeverity | null>(null);
+  const [showSuppressed, setShowSuppressed] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showDepGraph, setShowDepGraph] = useState(false);
   const [complianceData, setComplianceData] = useState<ComplianceMappingResponse | null>(null);
@@ -2092,10 +2232,10 @@ export default function ScanDetailsPage() {
           >
             <Box
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": "8px",
+                "cursor": "pointer",
                 "&:hover": { opacity: 0.8 },
               }}
               onClick={() => setShowSuggestedRisks(!showSuggestedRisks)}
@@ -2125,16 +2265,16 @@ export default function ScanDetailsPage() {
                     <Box
                       key={index}
                       sx={{
-                        border: `1px solid ${palette.border.light}`,
-                        borderRadius: "4px",
-                        p: "8px",
-                        backgroundColor: palette.background.main,
+                        "border": `1px solid ${palette.border.light}`,
+                        "borderRadius": "4px",
+                        "p": "8px",
+                        "backgroundColor": palette.background.main,
                         "&:hover": { borderColor: palette.border.dark },
-                        transition:
+                        "transition":
                           "opacity 300ms ease, max-height 300ms ease, padding 300ms ease, margin 300ms ease",
-                        opacity: isRemoving ? 0 : 1,
-                        maxHeight: isRemoving ? 0 : 300,
-                        overflow: "hidden",
+                        "opacity": isRemoving ? 0 : 1,
+                        "maxHeight": isRemoving ? 0 : 300,
+                        "overflow": "hidden",
                         ...(isRemoving && { p: 0, border: "none", mb: 0 }),
                       }}
                     >
@@ -2260,12 +2400,12 @@ export default function ScanDetailsPage() {
                 <Box
                   onClick={() => handleIgnoreSuggestion("already_added")}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    p: "6px 8px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "8px",
+                    "p": "6px 8px",
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
                     "&:hover": { backgroundColor: palette.background.hover },
                   }}
                 >
@@ -2276,12 +2416,12 @@ export default function ScanDetailsPage() {
                 <Box
                   onClick={() => handleIgnoreSuggestion("not_real_risk")}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    p: "6px 8px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "8px",
+                    "p": "6px 8px",
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
                     "&:hover": { backgroundColor: palette.background.hover },
                   }}
                 >
@@ -2407,6 +2547,27 @@ export default function ScanDetailsPage() {
           onChange={handleTabChange}
         />
 
+        {/* Show suppressed toggle (applies to all tabs) */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 1,
+            mt: "8px",
+          }}
+        >
+          <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+            Show suppressed findings
+          </Typography>
+          <Toggle
+            size="small"
+            checked={showSuppressed}
+            onChange={(_, checked) => setShowSuppressed(checked)}
+            inputProps={{ "aria-label": "Show suppressed findings" }}
+          />
+        </Box>
+
         {/* Libraries Tab */}
         {activeTab === "libraries" && (
           <Box sx={{ mt: "8px" }}>
@@ -2480,16 +2641,18 @@ export default function ScanDetailsPage() {
                 </Box>
               ) : (
                 <Box>
-                  {libraryState.findings.map((finding) => (
-                    <FindingRow
-                      key={finding.id}
-                      finding={finding}
-                      repositoryOwner={scan.scan.repository_owner}
-                      repositoryName={scan.scan.repository_name}
-                      scanId={scanId}
-                      onStatusMessage={showAlert}
-                    />
-                  ))}
+                  {libraryState.findings
+                    .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                    .map((finding) => (
+                      <FindingRow
+                        key={finding.id}
+                        finding={finding}
+                        repositoryOwner={scan.scan.repository_owner}
+                        repositoryName={scan.scan.repository_name}
+                        scanId={scanId}
+                        onStatusMessage={showAlert}
+                      />
+                    ))}
 
                   {/* Pagination */}
                   {libraryState.totalPages > 1 && (
@@ -2568,15 +2731,17 @@ export default function ScanDetailsPage() {
 
             {/* Findings List */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {apiCallState.findings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  repositoryOwner={scan.scan.repository_owner}
-                  repositoryName={scan.scan.repository_name}
-                  scanId={scanId}
-                />
-              ))}
+              {apiCallState.findings
+                .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                .map((finding) => (
+                  <FindingRow
+                    key={finding.id}
+                    finding={finding}
+                    repositoryOwner={scan.scan.repository_owner}
+                    repositoryName={scan.scan.repository_name}
+                    scanId={scanId}
+                  />
+                ))}
             </Box>
 
             {/* Empty State */}
@@ -2668,15 +2833,17 @@ export default function ScanDetailsPage() {
 
             {/* Findings List */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {modelState.findings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  repositoryOwner={scan.scan.repository_owner}
-                  repositoryName={scan.scan.repository_name}
-                  scanId={scanId}
-                />
-              ))}
+              {modelState.findings
+                .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                .map((finding) => (
+                  <FindingRow
+                    key={finding.id}
+                    finding={finding}
+                    repositoryOwner={scan.scan.repository_owner}
+                    repositoryName={scan.scan.repository_name}
+                    scanId={scanId}
+                  />
+                ))}
             </Box>
 
             {/* Empty State */}
@@ -2767,15 +2934,17 @@ export default function ScanDetailsPage() {
 
             {/* Findings List */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {ragState.findings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  repositoryOwner={scan.scan.repository_owner}
-                  repositoryName={scan.scan.repository_name}
-                  scanId={scanId}
-                />
-              ))}
+              {ragState.findings
+                .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                .map((finding) => (
+                  <FindingRow
+                    key={finding.id}
+                    finding={finding}
+                    repositoryOwner={scan.scan.repository_owner}
+                    repositoryName={scan.scan.repository_name}
+                    scanId={scanId}
+                  />
+                ))}
             </Box>
 
             {/* Empty State */}
@@ -2904,15 +3073,17 @@ export default function ScanDetailsPage() {
 
             {/* Findings List */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {agentState.findings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  repositoryOwner={scan.scan.repository_owner}
-                  repositoryName={scan.scan.repository_name}
-                  scanId={scanId}
-                />
-              ))}
+              {agentState.findings
+                .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                .map((finding) => (
+                  <FindingRow
+                    key={finding.id}
+                    finding={finding}
+                    repositoryOwner={scan.scan.repository_owner}
+                    repositoryName={scan.scan.repository_name}
+                    scanId={scanId}
+                  />
+                ))}
             </Box>
 
             {/* Empty State */}
@@ -3018,15 +3189,17 @@ export default function ScanDetailsPage() {
 
             {/* Findings List */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {secretState.findings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  repositoryOwner={scan.scan.repository_owner}
-                  repositoryName={scan.scan.repository_name}
-                  scanId={scanId}
-                />
-              ))}
+              {secretState.findings
+                .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                .map((finding) => (
+                  <FindingRow
+                    key={finding.id}
+                    finding={finding}
+                    repositoryOwner={scan.scan.repository_owner}
+                    repositoryName={scan.scan.repository_name}
+                    scanId={scanId}
+                  />
+                ))}
             </Box>
 
             {/* Empty State - only show when no secrets found */}
@@ -3541,10 +3714,10 @@ export default function ScanDetailsPage() {
                             {/* Checklist item header */}
                             <Box
                               sx={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                p: "12px",
-                                cursor: "pointer",
+                                "display": "flex",
+                                "alignItems": "flex-start",
+                                "p": "12px",
+                                "cursor": "pointer",
                                 "&:hover": { backgroundColor: palette.background.accent },
                               }}
                               onClick={() => {
@@ -4021,16 +4194,18 @@ export default function ScanDetailsPage() {
               </Box>
             ) : (
               <Box>
-                {vulnerabilityFindings.map((finding) => (
-                  <VulnerabilityFindingRow
-                    key={finding.id}
-                    finding={finding}
-                    repositoryOwner={scan.scan.repository_owner}
-                    repositoryName={scan.scan.repository_name}
-                    scanId={scanId}
-                    onStatusMessage={showAlert}
-                  />
-                ))}
+                {vulnerabilityFindings
+                  .filter((f) => showSuppressed || !isFindingSuppressed(f))
+                  .map((finding) => (
+                    <VulnerabilityFindingRow
+                      key={finding.id}
+                      finding={finding}
+                      repositoryOwner={scan.scan.repository_owner}
+                      repositoryName={scan.scan.repository_name}
+                      scanId={scanId}
+                      onStatusMessage={showAlert}
+                    />
+                  ))}
               </Box>
             )}
           </Box>

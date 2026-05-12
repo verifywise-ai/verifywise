@@ -123,8 +123,8 @@ const SortableTableHead: React.FC<{
               ...singleTheme.tableStyles.primary.header.cell,
               ...(column.sortable
                 ? {
-                    cursor: "pointer",
-                    userSelect: "none",
+                    "cursor": "pointer",
+                    "userSelect": "none",
                     "&:hover": {
                       backgroundColor: palette.background.hover,
                     },
@@ -646,11 +646,11 @@ export default function HistoryPage() {
                 onClick={(e) => openDeleteModal(scan, e)}
                 disabled={deletingId === scan.id}
                 sx={{
-                  padding: "4px",
-                  border: "none !important",
-                  outline: "none !important",
-                  boxShadow: "none !important",
-                  backgroundColor: "transparent !important",
+                  "padding": "4px",
+                  "border": "none !important",
+                  "outline": "none !important",
+                  "boxShadow": "none !important",
+                  "backgroundColor": "transparent !important",
                   "&:focus": {
                     outline: "none !important",
                     border: "none !important",
@@ -859,10 +859,10 @@ export default function HistoryPage() {
                           inputProps: { id: "pagination-dropdown" },
                           IconComponent: SelectorVertical,
                           sx: {
-                            ml: theme.spacing(4),
-                            mr: theme.spacing(12),
-                            minWidth: theme.spacing(20),
-                            textAlign: "left",
+                            "ml": theme.spacing(4),
+                            "mr": theme.spacing(12),
+                            "minWidth": theme.spacing(20),
+                            "textAlign": "left",
                             "&.Mui-focused > div": {
                               backgroundColor: theme.palette.background.main,
                             },
@@ -870,8 +870,8 @@ export default function HistoryPage() {
                         },
                       }}
                       sx={{
-                        mt: theme.spacing(6),
-                        color: theme.palette.text.secondary,
+                        "mt": theme.spacing(6),
+                        "color": theme.palette.text.secondary,
                         "& .MuiSelect-icon": {
                           width: "24px",
                           height: "fit-content",

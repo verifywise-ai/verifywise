@@ -231,9 +231,9 @@ const SharedView: React.FC = () => {
     // Status - show with badge
     if (key === "status") {
       const statusColors: { [key: string]: { bg: string; text: string } } = {
-        Approved: { bg: "#E8F5E9", text: "#2E7D32" },
-        Pending: { bg: "#FFF3E0", text: "#E65100" },
-        Rejected: { bg: "#FFEBEE", text: "#C62828" },
+        "Approved": { bg: "#E8F5E9", text: "#2E7D32" },
+        "Pending": { bg: "#FFF3E0", text: "#E65100" },
+        "Rejected": { bg: "#FFEBEE", text: "#C62828" },
         "Under Review": { bg: "#E3F2FD", text: "#1565C0" },
       };
       const colorScheme = statusColors[value] || { bg: "background.surface", text: "#666" };
@@ -313,8 +313,8 @@ const SharedView: React.FC = () => {
                   <IconButton
                     onClick={handleExport}
                     sx={{
-                      color: "brand.primary",
-                      border: "1px solid brand.primary",
+                      "color": "brand.primary",
+                      "border": "1px solid brand.primary",
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },

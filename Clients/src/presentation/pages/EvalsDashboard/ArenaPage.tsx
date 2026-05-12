@@ -581,9 +581,9 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               icon={<Swords size={16} />}
               onClick={() => setCreateModalOpen(true)}
               sx={{
-                backgroundColor: palette.brand.primary,
-                border: `1px solid ${palette.brand.primary}`,
-                gap: 2,
+                "backgroundColor": palette.brand.primary,
+                "border": `1px solid ${palette.brand.primary}`,
+                "gap": 2,
                 "&:hover": {
                   backgroundColor: palette.brand.primaryHover,
                 },
@@ -688,11 +688,11 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                 ),
               }}
               sx={{
-                width: 220,
+                "width": 220,
                 "& .MuiOutlinedInput-root": {
-                  height: 34,
-                  borderRadius: "6px",
-                  fontSize: 13,
+                  "height": 34,
+                  "borderRadius": "6px",
+                  "fontSize": 13,
                   "& fieldset": {
                     borderColor: palette.border.dark,
                   },
@@ -709,10 +709,10 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               icon={<Swords size={16} />}
               onClick={() => setCreateModalOpen(true)}
               sx={{
-                backgroundColor: palette.brand.primary,
-                border: `1px solid ${palette.brand.primary}`,
-                gap: 2,
-                whiteSpace: "nowrap",
+                "backgroundColor": palette.brand.primary,
+                "border": `1px solid ${palette.brand.primary}`,
+                "gap": 2,
+                "whiteSpace": "nowrap",
                 "&:hover": {
                   backgroundColor: palette.brand.primaryHover,
                 },
@@ -955,14 +955,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                 }
                 onClick={addContestant}
                 sx={{
-                  background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-                  color: palette.background.main,
-                  fontSize: 12,
-                  py: 0.75,
-                  pl: 2,
-                  pr: 2.5,
-                  ml: 2,
-                  boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
+                  "background": "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                  "color": palette.background.main,
+                  "fontSize": 12,
+                  "py": 0.75,
+                  "pl": 2,
+                  "pr": 2.5,
+                  "ml": 2,
+                  "boxShadow": "0 2px 8px rgba(99,102,241,0.3)",
                   "& .MuiButton-startIcon": {
                     marginLeft: 0,
                     marginRight: "6px",
@@ -1057,10 +1057,10 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                           onClick={() => removeContestant(index)}
                           size="small"
                           sx={{
-                            width: 28,
-                            height: 28,
-                            backgroundColor: palette.status.error.bg,
-                            color: palette.status.error.text,
+                            "width": 28,
+                            "height": 28,
+                            "backgroundColor": palette.status.error.bg,
+                            "color": palette.status.error.text,
                             "&:hover": { backgroundColor: palette.status.error.bg },
                           }}
                         >

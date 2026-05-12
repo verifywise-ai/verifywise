@@ -422,9 +422,9 @@ const NISTAIRMFMeasure = ({
               <AccordionSummary
                 sx={{
                   ...styles.accordionSummary,
-                  minHeight: 64,
+                  "minHeight": 64,
                   "& .MuiAccordionSummary-content": {
-                    margin: "16px 0",
+                    "margin": "16px 0",
                     "&.Mui-expanded": {
                       margin: "20px 0",
                     },

@@ -5,6 +5,12 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../utils/logger/fileLogger";
 import { getUsersByIds } from "../utils/intakeForm.utils";
+import { translate } from "../utils/i18n.utils";
+
+// `lang?: string` on each helper below currently uses the *requester's* locale
+// (req.lang). For known recipients we should prefer their stored preference via
+// `getPreferencesByUserQuery(recipientUserId).language`. Deferred until the
+// recipient-language migration phase.
 
 /**
  * Get entity type display name
@@ -82,21 +88,18 @@ export async function sendSubmissionReceivedEmail(
   publicId?: string,
   tenantSlug?: string,
   formSlug?: string,
+  lang?: string,
 ): Promise<void> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
-    await sendEmail(
-      submitterEmail,
-      `Submission received: ${formName}`,
-      EMAIL_TEMPLATES.INTAKE_SUBMISSION_RECEIVED,
-      {
-        submitterName: submitterName || submitterEmail.split("@")[0],
-        formName,
-        submissionId: String(submissionId),
-        resubmitLink,
-      },
-    );
+    const subject = translate(lang, "Submission received: {formName}", { formName });
+    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_RECEIVED, {
+      submitterName: submitterName || submitterEmail.split("@")[0],
+      formName,
+      submissionId: String(submissionId),
+      resubmitLink,
+    });
 
     logger.info(
       `Submission received email sent to ${submitterEmail} for submission #${submissionId}`,
@@ -117,6 +120,7 @@ export async function sendNewSubmissionAdminNotification(
   submitterEmail: string,
   submissionId: number,
   entityType: IntakeEntityType,
+  lang?: string,
 ): Promise<void> {
   try {
     let recipients: Array<{ id: number; name: string; email: string }>;
@@ -137,22 +141,18 @@ export async function sendNewSubmissionAdminNotification(
     const reviewLink = buildFrontendUrl(`/intake-forms`);
     const entityTypeDisplay = getEntityTypeDisplayName(entityType);
 
+    const subject = translate(lang, "New submission pending review: {formName}", { formName });
     for (const recipient of recipients) {
       try {
-        await sendEmail(
-          recipient.email,
-          `New submission pending review: ${formName}`,
-          EMAIL_TEMPLATES.INTAKE_NEW_SUBMISSION_ADMIN,
-          {
-            adminName: recipient.name || recipient.email.split("@")[0],
-            formName,
-            submitterName: submitterName || submitterEmail.split("@")[0],
-            submitterEmail,
-            submissionId: String(submissionId),
-            entityType: entityTypeDisplay,
-            reviewLink,
-          },
-        );
+        await sendEmail(recipient.email, subject, EMAIL_TEMPLATES.INTAKE_NEW_SUBMISSION_ADMIN, {
+          adminName: recipient.name || recipient.email.split("@")[0],
+          formName,
+          submitterName: submitterName || submitterEmail.split("@")[0],
+          submitterEmail,
+          submissionId: String(submissionId),
+          entityType: entityTypeDisplay,
+          reviewLink,
+        });
       } catch (error) {
         logger.error(`Failed to send admin notification to ${recipient.email}:`, error);
       }
@@ -173,21 +173,18 @@ export async function sendSubmissionApprovedEmail(
   formName: string,
   submissionId: number,
   entityType: IntakeEntityType,
+  lang?: string,
 ): Promise<void> {
   try {
     const entityTypeDisplay = getEntityTypeDisplayName(entityType);
 
-    await sendEmail(
-      submitterEmail,
-      `Submission approved: ${formName}`,
-      EMAIL_TEMPLATES.INTAKE_SUBMISSION_APPROVED,
-      {
-        submitterName: submitterName || submitterEmail.split("@")[0],
-        formName,
-        submissionId: String(submissionId),
-        entityType: entityTypeDisplay,
-      },
-    );
+    const subject = translate(lang, "Submission approved: {formName}", { formName });
+    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_APPROVED, {
+      submitterName: submitterName || submitterEmail.split("@")[0],
+      formName,
+      submissionId: String(submissionId),
+      entityType: entityTypeDisplay,
+    });
 
     logger.info(
       `Submission approved email sent to ${submitterEmail} for submission #${submissionId}`,
@@ -210,22 +207,19 @@ export async function sendSubmissionRejectedEmail(
   publicId: string,
   tenantSlug?: string,
   formSlug?: string,
+  lang?: string,
 ): Promise<void> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
-    await sendEmail(
-      submitterEmail,
-      `Submission requires changes: ${formName}`,
-      EMAIL_TEMPLATES.INTAKE_SUBMISSION_REJECTED,
-      {
-        submitterName: submitterName || submitterEmail.split("@")[0],
-        formName,
-        submissionId: String(submissionId),
-        rejectionReason,
-        resubmitLink,
-      },
-    );
+    const subject = translate(lang, "Submission requires changes: {formName}", { formName });
+    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_REJECTED, {
+      submitterName: submitterName || submitterEmail.split("@")[0],
+      formName,
+      submissionId: String(submissionId),
+      rejectionReason,
+      resubmitLink,
+    });
 
     logger.info(
       `Submission rejected email sent to ${submitterEmail} for submission #${submissionId}`,

@@ -163,9 +163,9 @@ const AdvisorChat = ({
                     component="span"
                     onClick={() => navigate("/settings/apikeys")}
                     sx={{
-                      color: "primary.main",
-                      cursor: "pointer",
-                      textDecoration: "underline",
+                      "color": "primary.main",
+                      "cursor": "pointer",
+                      "textDecoration": "underline",
                       "&:hover": {
                         textDecoration: "none",
                       },

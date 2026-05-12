@@ -1138,8 +1138,8 @@ export default function SpendDashboardPage() {
                         justifyContent="space-between"
                         alignItems="center"
                         sx={{
-                          p: "4px 8px",
-                          borderRadius: "4px",
+                          "p": "4px 8px",
+                          "borderRadius": "4px",
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
@@ -1202,8 +1202,8 @@ export default function SpendDashboardPage() {
                         justifyContent="space-between"
                         alignItems="center"
                         sx={{
-                          p: "4px 8px",
-                          borderRadius: "4px",
+                          "p": "4px 8px",
+                          "borderRadius": "4px",
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
@@ -1247,11 +1247,11 @@ export default function SpendDashboardPage() {
                 component="a"
                 href="/ai-gateway/logs?tab=guardrails"
                 sx={{
-                  fontSize: 12,
-                  color: palette.brand.primary,
-                  textDecoration: "none",
+                  "fontSize": 12,
+                  "color": palette.brand.primary,
+                  "textDecoration": "none",
                   "&:hover": { textDecoration: "underline" },
-                  cursor: "pointer",
+                  "cursor": "pointer",
                 }}
               >
                 View all guardrail logs

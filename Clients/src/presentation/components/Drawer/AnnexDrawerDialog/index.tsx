@@ -604,8 +604,8 @@ const VWISO42001AnnexDrawerDialog = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             margin: 0,
             borderRadius: 0,
@@ -636,8 +636,8 @@ const VWISO42001AnnexDrawerDialog = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 850,
-        margin: 0,
+        "width": 850,
+        "margin": 0,
         "& .MuiDrawer-paper": {
           margin: 0,
           borderRadius: 0,
@@ -747,7 +747,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   onChange={(e) => handleFieldChange("justification_for_exclusion", e.target.value)}
                   disabled={formData.is_applicable || isEditingDisabled}
                   sx={{
-                    cursor: formData.is_applicable ? "not-allowed" : "text",
+                    "cursor": formData.is_applicable ? "not-allowed" : "text",
                     "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
                       height: "73px",
                     },
@@ -853,7 +853,7 @@ const VWISO42001AnnexDrawerDialog = ({
                     onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                     disabled={!formData.is_applicable || isAuditingDisabled}
                     sx={{
-                      cursor: !formData.is_applicable ? "not-allowed" : "text",
+                      "cursor": !formData.is_applicable ? "not-allowed" : "text",
                       "& .field field-decription field-input MuiInputBase-root MuiInputBase-input":
                         {
                           height: "73px",
@@ -900,13 +900,13 @@ const VWISO42001AnnexDrawerDialog = ({
                     htmlFor="evidence-file-input"
                     disabled={isEditingDisabled}
                     sx={{
-                      borderRadius: 2,
-                      minWidth: 155,
-                      height: 25,
-                      fontSize: 11,
-                      border: `1px solid ${theme.palette.border.dark}`,
-                      backgroundColor: "background.main",
-                      color: "text.secondary",
+                      "borderRadius": 2,
+                      "minWidth": 155,
+                      "height": 25,
+                      "fontSize": 11,
+                      "border": `1px solid ${theme.palette.border.dark}`,
+                      "backgroundColor": "background.main",
+                      "color": "text.secondary",
                       "&:hover": {
                         backgroundColor: "background.accent",
                         border: `1px solid ${theme.palette.border.dark}`,
@@ -921,13 +921,13 @@ const VWISO42001AnnexDrawerDialog = ({
                     onClick={() => setShowFilePicker(true)}
                     disabled={isEditingDisabled}
                     sx={{
-                      borderRadius: 2,
-                      minWidth: 165,
-                      height: 25,
-                      fontSize: 11,
-                      border: "1px solid #4C7BF4",
-                      backgroundColor: "#4C7BF4",
-                      color: "white",
+                      "borderRadius": 2,
+                      "minWidth": 165,
+                      "height": 25,
+                      "fontSize": 11,
+                      "border": "1px solid #4C7BF4",
+                      "backgroundColor": "#4C7BF4",
+                      "color": "white",
                       "&:hover": {
                         backgroundColor: "#3D62C3",
                         border: "1px solid #3D62C3",
@@ -1135,13 +1135,13 @@ const VWISO42001AnnexDrawerDialog = ({
                   onClick={() => setIsLinkedRisksModalOpen(true)}
                   disabled={isEditingDisabled}
                   sx={{
-                    borderRadius: 2,
-                    minWidth: 155,
-                    height: 25,
-                    fontSize: 11,
-                    border: `1px solid ${theme.palette.border.dark}`,
-                    backgroundColor: "background.main",
-                    color: "text.secondary",
+                    "borderRadius": 2,
+                    "minWidth": 155,
+                    "height": 25,
+                    "fontSize": 11,
+                    "border": `1px solid ${theme.palette.border.dark}`,
+                    "backgroundColor": "background.main",
+                    "color": "text.secondary",
                     "&:hover": {
                       backgroundColor: "background.accent",
                       border: `1px solid ${theme.palette.border.dark}`,

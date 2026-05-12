@@ -219,10 +219,10 @@ function FileManagementDialog({
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
             sx={{
-              borderRadius: 1,
-              border: `1px solid ${theme.palette.divider}`,
-              color: theme.palette.text.primary,
-              textTransform: "none",
+              "borderRadius": 1,
+              "border": `1px solid ${theme.palette.divider}`,
+              "color": theme.palette.text.primary,
+              "textTransform": "none",
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
                 border: `1px solid ${theme.palette.divider}`,

@@ -482,7 +482,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           filterSelectedOptions
           popupIcon={<ChevronDown size={16} />}
           sx={{
-            width: 454,
+            "width": 454,
             "& .MuiOutlinedInput-root": {
               overflowY: "auto",
               flexWrap: "wrap",
@@ -490,8 +490,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
               alignItems: "flex-start",
             },
             "& .MuiAutocomplete-tag": {
-              margin: "2px",
-              maxWidth: "calc(100% - 25px)",
+              "margin": "2px",
+              "maxWidth": "calc(100% - 25px)",
               "& .MuiChip-label": {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -606,14 +606,14 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       <Stack spacing={2} sx={{ width: 686 }}>
         <Box
           sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            cursor: "pointer",
-            padding: theme.spacing(2),
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: "4px",
-            backgroundColor: theme.palette.grey[50],
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "space-between",
+            "cursor": "pointer",
+            "padding": theme.spacing(2),
+            "border": `1px solid ${theme.palette.divider}`,
+            "borderRadius": "4px",
+            "backgroundColor": theme.palette.grey[50],
             "&:hover": {
               backgroundColor: theme.palette.grey[100],
             },
@@ -680,12 +680,12 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                 component="span"
                 onClick={(e) => e.stopPropagation()}
                 sx={{
-                  fontSize: "12px",
-                  color: theme.palette.primary.main,
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  ml: "auto",
-                  mr: 2,
+                  "fontSize": "12px",
+                  "color": theme.palette.primary.main,
+                  "cursor": "pointer",
+                  "textDecoration": "underline",
+                  "ml": "auto",
+                  "mr": 2,
                   "&:hover": {
                     color: theme.palette.primary.dark,
                   },

@@ -243,11 +243,11 @@ export function HistorySidebar({
               setExpandedValues(newSet);
             }}
             sx={{
-              fontSize: 10,
-              color: theme.palette.primary.main,
-              fontWeight: 500,
-              cursor: "pointer",
-              marginTop: "4px",
+              "fontSize": 10,
+              "color": theme.palette.primary.main,
+              "fontWeight": 500,
+              "cursor": "pointer",
+              "marginTop": "4px",
               "&:hover": {
                 textDecoration: "underline",
               },
@@ -279,7 +279,7 @@ export function HistorySidebar({
       <Box
         key={`${firstEntry.changed_at}_${firstEntry.id}`}
         sx={{
-          marginBottom: "32px",
+          "marginBottom": "32px",
           "&:last-child": {
             marginBottom: 0,
           },
@@ -336,8 +336,8 @@ export function HistorySidebar({
             <Box
               key={entry.id}
               sx={{
-                marginBottom: "8px",
-                paddingLeft: "36px",
+                "marginBottom": "8px",
+                "paddingLeft": "36px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -506,9 +506,9 @@ export function HistorySidebar({
           <Box
             ref={scrollContainerRef}
             sx={{
-              height: "100%",
-              overflow: "auto",
-              padding: "16px",
+              "height": "100%",
+              "overflow": "auto",
+              "padding": "16px",
               // Custom scrollbar styling - invisible by default, visible on hover
               "&::-webkit-scrollbar": {
                 width: "8px",
@@ -527,8 +527,8 @@ export function HistorySidebar({
                 background: theme.palette.text.secondary,
               },
               // Firefox scrollbar styling
-              scrollbarWidth: "thin",
-              scrollbarColor: "transparent transparent",
+              "scrollbarWidth": "thin",
+              "scrollbarColor": "transparent transparent",
               "&:hover": {
                 scrollbarColor: "#C1C7CD transparent",
               },
@@ -636,12 +636,12 @@ export function HistorySidebar({
                     <Typography
                       onClick={() => !isFetchingNextPage && fetchNextPage()}
                       sx={{
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: isFetchingNextPage
+                        "fontSize": 12,
+                        "fontWeight": 500,
+                        "color": isFetchingNextPage
                           ? theme.palette.text.disabled
                           : theme.palette.primary.main,
-                        cursor: isFetchingNextPage ? "default" : "pointer",
+                        "cursor": isFetchingNextPage ? "default" : "pointer",
                         "&:hover": {
                           textDecoration: isFetchingNextPage ? "none" : "underline",
                         },

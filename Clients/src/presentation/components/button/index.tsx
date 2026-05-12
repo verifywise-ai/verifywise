@@ -64,21 +64,21 @@ const Button = memo(
 
     // Define default styles using theme values
     const defaultStyles: SxProps<Theme> = {
-      mt: 2,
-      borderRadius: 2,
-      width: "fit-content",
-      minHeight: 25,
-      height: "auto", // More flexible height
-      fontSize: 11,
-      px: 2, // Horizontal padding for better spacing
-      py: 0.5, // Vertical padding for better text spacing
-      border: `1px solid ${theme.palette.primary.main || "#13715B"}`,
-      backgroundColor: theme.palette.primary.main || brand.primary,
-      color: theme.palette.primary.contrastText || "white",
-      textTransform: "none", // Prevent uppercase transformation
-      fontWeight: 500,
-      lineHeight: 1.2,
-      transition: theme.transitions.create(
+      "mt": 2,
+      "borderRadius": 2,
+      "width": "fit-content",
+      "minHeight": 25,
+      "height": "auto", // More flexible height
+      "fontSize": 11,
+      "px": 2, // Horizontal padding for better spacing
+      "py": 0.5, // Vertical padding for better text spacing
+      "border": `1px solid ${theme.palette.primary.main || "#13715B"}`,
+      "backgroundColor": theme.palette.primary.main || brand.primary,
+      "color": theme.palette.primary.contrastText || "white",
+      "textTransform": "none", // Prevent uppercase transformation
+      "fontWeight": 500,
+      "lineHeight": 1.2,
+      "transition": theme.transitions.create(
         ["background-color", "border-color", "box-shadow", "transform"],
         {
           duration: theme.transitions.duration.short,
@@ -113,9 +113,9 @@ const Button = memo(
       },
 
       // Ensure text doesn't wrap awkwardly
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
+      "whiteSpace": "nowrap",
+      "overflow": "hidden",
+      "textOverflow": "ellipsis",
     };
 
     return (

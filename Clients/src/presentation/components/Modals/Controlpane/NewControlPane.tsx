@@ -984,8 +984,8 @@ const NewControlPane = ({
         open={isOpen}
         onClose={handleClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             width: 850,
             margin: 0,
@@ -1141,9 +1141,9 @@ const NewControlPane = ({
             <Box
               ref={subcontrolTabsContainerRef}
               sx={{
-                overflowX: "auto",
-                overflowY: "hidden",
-                scrollBehavior: "smooth",
+                "overflowX": "auto",
+                "overflowY": "hidden",
+                "scrollBehavior": "smooth",
                 "&::-webkit-scrollbar": {
                   height: "6px",
                 },
@@ -1151,8 +1151,8 @@ const NewControlPane = ({
                   backgroundColor: "transparent",
                 },
                 "&::-webkit-scrollbar-thumb": {
-                  backgroundColor: "border.dark",
-                  borderRadius: "3px",
+                  "backgroundColor": "border.dark",
+                  "borderRadius": "3px",
                   "&:hover": {
                     backgroundColor: "text.muted",
                   },
@@ -1353,14 +1353,14 @@ const NewControlPane = ({
                           onClick={() => evidenceFileInputRef.current?.click()}
                           disabled={isEditingDisabled}
                           sx={{
-                            borderRadius: 2,
-                            width: 155,
-                            height: 25,
-                            fontSize: 11,
-                            border: "1px solid #d0d5dd",
-                            backgroundColor: "white",
-                            color: "text.secondary",
-                            textTransform: "none",
+                            "borderRadius": 2,
+                            "width": 155,
+                            "height": 25,
+                            "fontSize": 11,
+                            "border": "1px solid #d0d5dd",
+                            "backgroundColor": "white",
+                            "color": "text.secondary",
+                            "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
                               border: "1px solid #d0d5dd",
@@ -1374,14 +1374,14 @@ const NewControlPane = ({
                           onClick={() => setShowEvidenceFilePicker(true)}
                           disabled={isEditingDisabled}
                           sx={{
-                            borderRadius: 2,
-                            width: 155,
-                            height: 25,
-                            fontSize: 11,
-                            border: "1px solid #d0d5dd",
-                            backgroundColor: "white",
-                            color: "text.secondary",
-                            textTransform: "none",
+                            "borderRadius": 2,
+                            "width": 155,
+                            "height": 25,
+                            "fontSize": 11,
+                            "border": "1px solid #d0d5dd",
+                            "backgroundColor": "white",
+                            "color": "text.secondary",
+                            "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
                               border: "1px solid #d0d5dd",
@@ -1435,13 +1435,13 @@ const NewControlPane = ({
                             <Box
                               key={file.id}
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "10px 12px",
-                                border: "1px solid #eaecf0",
-                                borderRadius: "4px",
-                                backgroundColor: "background.main",
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "space-between",
+                                "padding": "10px 12px",
+                                "border": "1px solid #eaecf0",
+                                "borderRadius": "4px",
+                                "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
                                 },
@@ -1729,14 +1729,14 @@ const NewControlPane = ({
                           onClick={() => feedbackFileInputRef.current?.click()}
                           disabled={isAuditingDisabled}
                           sx={{
-                            borderRadius: 2,
-                            width: 155,
-                            height: 25,
-                            fontSize: 11,
-                            border: "1px solid #d0d5dd",
-                            backgroundColor: "white",
-                            color: "text.secondary",
-                            textTransform: "none",
+                            "borderRadius": 2,
+                            "width": 155,
+                            "height": 25,
+                            "fontSize": 11,
+                            "border": "1px solid #d0d5dd",
+                            "backgroundColor": "white",
+                            "color": "text.secondary",
+                            "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
                               border: "1px solid #d0d5dd",
@@ -1750,14 +1750,14 @@ const NewControlPane = ({
                           onClick={() => setShowFeedbackFilePicker(true)}
                           disabled={isAuditingDisabled}
                           sx={{
-                            borderRadius: 2,
-                            width: 155,
-                            height: 25,
-                            fontSize: 11,
-                            border: "1px solid #d0d5dd",
-                            backgroundColor: "white",
-                            color: "text.secondary",
-                            textTransform: "none",
+                            "borderRadius": 2,
+                            "width": 155,
+                            "height": 25,
+                            "fontSize": 11,
+                            "border": "1px solid #d0d5dd",
+                            "backgroundColor": "white",
+                            "color": "text.secondary",
+                            "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
                               border: "1px solid #d0d5dd",
@@ -1812,13 +1812,13 @@ const NewControlPane = ({
                             <Box
                               key={file.id}
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "10px 12px",
-                                border: "1px solid #eaecf0",
-                                borderRadius: "4px",
-                                backgroundColor: "background.main",
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "space-between",
+                                "padding": "10px 12px",
+                                "border": "1px solid #eaecf0",
+                                "borderRadius": "4px",
+                                "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
                                 },
@@ -2092,14 +2092,14 @@ const NewControlPane = ({
                       <Button
                         variant="contained"
                         sx={{
-                          borderRadius: 2,
-                          width: 155,
-                          height: 25,
-                          fontSize: 11,
-                          border: "1px solid #d0d5dd",
-                          backgroundColor: "white",
-                          color: "text.secondary",
-                          textTransform: "none",
+                          "borderRadius": 2,
+                          "width": 155,
+                          "height": 25,
+                          "fontSize": 11,
+                          "border": "1px solid #d0d5dd",
+                          "backgroundColor": "white",
+                          "color": "text.secondary",
+                          "textTransform": "none",
                           "&:hover": {
                             backgroundColor: "background.accent",
                             border: "1px solid #d0d5dd",
@@ -2143,13 +2143,13 @@ const NewControlPane = ({
                             <Box
                               key={risk.id}
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "10px 12px",
-                                border: "1px solid #eaecf0",
-                                borderRadius: "4px",
-                                backgroundColor: "background.main",
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "space-between",
+                                "padding": "10px 12px",
+                                "border": "1px solid #eaecf0",
+                                "borderRadius": "4px",
+                                "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
                                 },
@@ -2181,7 +2181,7 @@ const NewControlPane = ({
                                     size="small"
                                     onClick={() => handleViewRiskDetail(risk)}
                                     sx={{
-                                      color: "text.tertiary",
+                                      "color": "text.tertiary",
                                       "&:hover": {
                                         color: "brand.primary",
                                         backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -2198,7 +2198,7 @@ const NewControlPane = ({
                                     onClick={() => handleUnlinkRisk(risk.id)}
                                     disabled={isEditingDisabled}
                                     sx={{
-                                      color: "text.tertiary",
+                                      "color": "text.tertiary",
                                       "&:hover": {
                                         color: "status.error.text",
                                         backgroundColor: "rgba(211, 47, 47, 0.08)",

@@ -316,9 +316,9 @@ export default function UserActivityPage() {
           <Stack gap="16px">
             <Box
               sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "16px",
+                "display": "flex",
+                "flexWrap": "wrap",
+                "gap": "16px",
                 "& > *": { flex: "1 1 0", minWidth: "150px" },
               }}
             >
@@ -522,10 +522,10 @@ export default function UserActivityPage() {
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: SelectorVertical,
                         sx: {
-                          ml: theme.spacing(4),
-                          mr: theme.spacing(12),
-                          minWidth: theme.spacing(20),
-                          textAlign: "left",
+                          "ml": theme.spacing(4),
+                          "mr": theme.spacing(12),
+                          "minWidth": theme.spacing(20),
+                          "textAlign": "left",
                           "&.Mui-focused > div": {
                             backgroundColor: theme.palette.background.main,
                           },
@@ -533,8 +533,8 @@ export default function UserActivityPage() {
                       },
                     }}
                     sx={{
-                      mt: theme.spacing(6),
-                      color: theme.palette.text.secondary,
+                      "mt": theme.spacing(6),
+                      "color": theme.palette.text.secondary,
                       "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
                       "& .MuiSelect-select": {
                         width: theme.spacing(10),
@@ -631,10 +631,10 @@ export default function UserActivityPage() {
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: SelectorVertical,
                         sx: {
-                          ml: theme.spacing(4),
-                          mr: theme.spacing(12),
-                          minWidth: theme.spacing(20),
-                          textAlign: "left",
+                          "ml": theme.spacing(4),
+                          "mr": theme.spacing(12),
+                          "minWidth": theme.spacing(20),
+                          "textAlign": "left",
                           "&.Mui-focused > div": {
                             backgroundColor: theme.palette.background.main,
                           },
@@ -642,8 +642,8 @@ export default function UserActivityPage() {
                       },
                     }}
                     sx={{
-                      mt: theme.spacing(6),
-                      color: theme.palette.text.secondary,
+                      "mt": theme.spacing(6),
+                      "color": theme.palette.text.secondary,
                       "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
                       "& .MuiSelect-select": {
                         width: theme.spacing(10),

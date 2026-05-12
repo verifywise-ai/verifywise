@@ -23,20 +23,20 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  Rare: "#10B981",
-  Unlikely: "#84CC16",
-  Possible: "#F59E0B",
-  Likely: "#F97316",
+  "Rare": "#10B981",
+  "Unlikely": "#84CC16",
+  "Possible": "#F59E0B",
+  "Likely": "#F97316",
   "Almost Certain": "#DC2626",
 };
 
 const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "Not Started": "#94A3B8",
   "In Progress": "#3B82F6",
-  Completed: "#10B981",
+  "Completed": "#10B981",
   "On Hold": "#F59E0B",
-  Deferred: "#8B5CF6",
-  Canceled: "#EF4444",
+  "Deferred": "#8B5CF6",
+  "Canceled": "#EF4444",
   "Requires review": "#F97316",
 };
 

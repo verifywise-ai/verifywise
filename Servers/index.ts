@@ -78,6 +78,7 @@ import aiDetectionRepositoryRoutes from "./routes/aiDetectionRepository.route";
 import githubIntegrationRoutes from "./routes/githubIntegration.route";
 import notificationRoutes from "./routes/notification.route";
 import postMarketMonitoringRoutes from "./routes/postMarketMonitoring.route";
+import governanceOsRoutes from "./routes/governanceOs.route";
 import complianceRoutes from "./routes/compliance.route";
 import virtualFolderRoutes, { filesFolderRouter } from "./routes/virtualFolder.route";
 import shadowAiRoutes from "./routes/shadowAi.route";
@@ -96,6 +97,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 // superAdminReadOnly is now enforced inside authenticateJWT middleware
+import { i18nMiddleware } from "./middleware/i18n.middleware";
 import {
   setupNotificationSubscriber,
   closeNotificationSubscriber,
@@ -178,6 +180,9 @@ try {
   });
   app.use(cookieParser());
   // app.use(csrf());
+
+  // i18n: attach req.lang (from Accept-Language) and req.t (translator).
+  app.use(i18nMiddleware);
 
   // Health endpoint — must be registered before JWT middleware so it is publicly reachable
   app.get("/health", async (_req, res) => {
@@ -313,6 +318,7 @@ try {
   app.use("/api/audit-ledger", auditLedgerRoutes);
   app.use("/api/feature-settings", featureSettingsRoutes);
   app.use("/api/fria", friaRoutes);
+  app.use("/api/governance-os", governanceOsRoutes);
   app.use("/api/risk-benchmarks", riskBenchmarkRoutes);
   app.use("/api/quantitative-risks", quantitativeRiskRoutes);
   app.use("/api/ai-gateway", aiGatewayRoutes());

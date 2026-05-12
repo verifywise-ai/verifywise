@@ -106,14 +106,14 @@ function TagInput({
 
       <Box
         sx={{
-          border: `1px solid ${displayError ? theme.palette.status.error.text : theme.palette.border.dark}`,
-          borderRadius: "4px",
-          padding: "6px 12px",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "4px",
-          alignItems: "center",
-          minHeight: "34px",
+          "border": `1px solid ${displayError ? theme.palette.status.error.text : theme.palette.border.dark}`,
+          "borderRadius": "4px",
+          "padding": "6px 12px",
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": "4px",
+          "alignItems": "center",
+          "minHeight": "34px",
           "&:focus-within": {
             borderColor: theme.palette.primary.main,
           },
@@ -127,14 +127,14 @@ function TagInput({
             onDelete={() => removeTag(tag)}
             deleteIcon={<RemoveIcon size={12} />}
             sx={{
-              height: "22px",
-              fontSize: 12,
-              fontWeight: 500,
-              backgroundColor: theme.palette.status.success.bg,
-              color: theme.palette.status.success.text,
+              "height": "22px",
+              "fontSize": 12,
+              "fontWeight": 500,
+              "backgroundColor": theme.palette.status.success.bg,
+              "color": theme.palette.status.success.text,
               "& .MuiChip-deleteIcon": {
-                fontSize: 12,
-                color: theme.palette.status.success.text,
+                "fontSize": 12,
+                "color": theme.palette.status.success.text,
                 "&:hover": {
                   color: theme.palette.status.error.text,
                 },
@@ -179,11 +179,11 @@ function TagInput({
               size="small"
               onClick={() => addTag(suggestion)}
               sx={{
-                height: "22px",
-                fontSize: 11,
-                cursor: "pointer",
-                backgroundColor: theme.palette.background.accent,
-                color: theme.palette.text.tertiary,
+                "height": "22px",
+                "fontSize": 11,
+                "cursor": "pointer",
+                "backgroundColor": theme.palette.background.accent,
+                "color": theme.palette.text.tertiary,
                 "&:hover": {
                   backgroundColor: theme.palette.background.fill,
                 },

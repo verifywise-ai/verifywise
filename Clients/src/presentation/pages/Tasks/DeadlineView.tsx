@@ -262,14 +262,14 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
             <Box
               onClick={() => toggleSection(group.key)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "12px 16px",
-                backgroundColor: group.bgColor,
-                border: `1px solid ${DASHBOARD_COLORS.border}`,
-                borderRadius: isCollapsed ? "4px" : "4px 4px 0 0",
-                cursor: "pointer",
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "space-between",
+                "padding": "12px 16px",
+                "backgroundColor": group.bgColor,
+                "border": `1px solid ${DASHBOARD_COLORS.border}`,
+                "borderRadius": isCollapsed ? "4px" : "4px 4px 0 0",
+                "cursor": "pointer",
                 "&:hover": {
                   opacity: 0.9,
                 },
@@ -313,10 +313,10 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
             <Collapse in={!isCollapsed}>
               <Box
                 sx={{
-                  backgroundColor: DASHBOARD_COLORS.backgroundWhite,
-                  border: `1px solid ${DASHBOARD_COLORS.border}`,
-                  borderTop: "none",
-                  borderRadius: "0 0 4px 4px",
+                  "backgroundColor": DASHBOARD_COLORS.backgroundWhite,
+                  "border": `1px solid ${DASHBOARD_COLORS.border}`,
+                  "borderTop": "none",
+                  "borderRadius": "0 0 4px 4px",
                   // Override TasksTable's frame border to prevent double borders
                   "& table": {
                     border: "none",

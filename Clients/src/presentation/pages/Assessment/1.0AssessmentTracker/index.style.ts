@@ -17,7 +17,7 @@ export const topicsListStyle = {
 export const subHeadingStyle = { color: `${text.icon}`, fontSize: 11, marginY: 6 };
 
 export const listItemStyle = {
-  display: "block",
+  "display": "block",
   "& .MuiListItemButton-root.Mui-selected": {
     backgroundColor: `${brand.primary}`,
   },

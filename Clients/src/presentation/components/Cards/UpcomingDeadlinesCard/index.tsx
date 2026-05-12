@@ -51,12 +51,12 @@ export function UpcomingDeadlinesCard({ tasks }: UpcomingDeadlinesCardProps) {
             key={task.id}
             onClick={() => navigate(`/tasks?taskId=${task.id}`)}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 0",
-              borderBottom: isLast ? "none" : `1px solid ${DASHBOARD_COLORS.borderLight}`,
-              cursor: "pointer",
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "space-between",
+              "padding": "10px 0",
+              "borderBottom": isLast ? "none" : `1px solid ${DASHBOARD_COLORS.borderLight}`,
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: DASHBOARD_COLORS.backgroundSubtle,
                 marginX: "-12px",

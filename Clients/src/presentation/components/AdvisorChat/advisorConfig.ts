@@ -23,7 +23,7 @@ export interface AdvisorDomainConfig {
 }
 
 export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
-  dashboard: {
+  "dashboard": {
     path: "/",
     displayName: "Dashboard",
     welcomeMessage:
@@ -116,7 +116,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       },
     ],
   },
-  vendors: {
+  "vendors": {
     path: "/vendors",
     displayName: "Vendors",
     welcomeMessage:
@@ -160,7 +160,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "Show me serious or very serious incidents", label: "List critical incidents" },
     ],
   },
-  tasks: {
+  "tasks": {
     path: "/tasks",
     displayName: "Tasks",
     welcomeMessage:
@@ -182,7 +182,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "What are the top task categories by count?", label: "Top categories" },
     ],
   },
-  policies: {
+  "policies": {
     path: "/policies",
     displayName: "Policies",
     welcomeMessage:
@@ -231,7 +231,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "Show me the industry distribution of use cases", label: "Group by industry" },
     ],
   },
-  datasets: {
+  "datasets": {
     path: "/datasets",
     displayName: "Datasets",
     welcomeMessage:
@@ -252,7 +252,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "What is our PII exposure rate across all datasets?", label: "Check PII exposure" },
     ],
   },
-  frameworks: {
+  "frameworks": {
     path: "/framework",
     displayName: "Frameworks",
     welcomeMessage:
@@ -274,7 +274,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "Which frameworks have no projects assigned?", label: "Find unused frameworks" },
     ],
   },
-  training: {
+  "training": {
     path: "/training",
     displayName: "Training",
     welcomeMessage:
@@ -292,7 +292,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "How many people have been trained in total?", label: "Total people trained" },
     ],
   },
-  evidence: {
+  "evidence": {
     path: "/file-manager",
     displayName: "Evidence",
     welcomeMessage:
@@ -306,7 +306,7 @@ export const ADVISOR_DOMAINS: Record<string, AdvisorDomainConfig> = {
       { prompt: "How many models have evidence coverage?", label: "Check model coverage" },
     ],
   },
-  reporting: {
+  "reporting": {
     path: "/reporting",
     displayName: "Reporting",
     welcomeMessage:

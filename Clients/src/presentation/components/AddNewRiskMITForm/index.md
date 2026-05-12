@@ -29,11 +29,11 @@ The `AddNewRiskMITModal` component provides an interactive interface for users t
 
 ```typescript
 interface RiskData {
-  Id: number;
-  Summary: string;
-  Description: string;
+  "Id": number;
+  "Summary": string;
+  "Description": string;
   "Risk Severity": string;
-  Likelihood: string;
+  "Likelihood": string;
   "Risk Category": string;
 }
 ```

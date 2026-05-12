@@ -65,10 +65,10 @@ function Radio({ checked, value, id, size, onChange, title, desc }: RadioProps) 
       }
       labelPlacement="end"
       sx={{
-        alignItems: "flex-start",
-        p: theme.spacing(2.5),
-        m: theme.spacing(-2.5),
-        borderRadius: theme.shape.borderRadius,
+        "alignItems": "flex-start",
+        "p": theme.spacing(2.5),
+        "m": theme.spacing(-2.5),
+        "borderRadius": theme.shape.borderRadius,
         "&:hover": {
           backgroundColor: theme.palette.background.accent,
         },

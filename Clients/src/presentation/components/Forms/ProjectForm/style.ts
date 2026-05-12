@@ -1,6 +1,6 @@
 import { brand, text, background, border as borderPalette } from "../../../themes/palette";
 export const textfieldStyle = {
-  backgroundColor: `${background.main}`,
+  "backgroundColor": `${background.main}`,
   "& input": {
     padding: "0 14px",
   },
@@ -32,7 +32,7 @@ export const teamMembersRenderInputStyle = {
 };
 
 export const teamMembersSxStyle = {
-  width: "100%",
+  "width": "100%",
   "& .MuiChip-root": {
     borderRadius: "4px",
   },
@@ -67,13 +67,13 @@ export const radioGroupStyle = {
 };
 
 export const radioOptionStyle = {
-  width: "100%",
-  padding: "16px",
-  border: "1px solid #E4E7EC",
-  borderRadius: "4px",
-  backgroundColor: `${background.main}`,
-  cursor: "pointer",
-  transition: "all 0.2s ease-in-out",
+  "width": "100%",
+  "padding": "16px",
+  "border": "1px solid #E4E7EC",
+  "borderRadius": "4px",
+  "backgroundColor": `${background.main}`,
+  "cursor": "pointer",
+  "transition": "all 0.2s ease-in-out",
   "&:hover": {
     borderColor: `${brand.primary}`,
     backgroundColor: "#F9F9F9",
@@ -92,10 +92,10 @@ export const continueButtonStyle = {
 };
 
 export const backButtonStyle = {
-  backgroundColor: `${background.main}`,
-  border: `1px solid ${borderPalette.dark}`,
-  color: `${text.secondary}`,
-  gap: 2,
+  "backgroundColor": `${background.main}`,
+  "border": `1px solid ${borderPalette.dark}`,
+  "color": `${text.secondary}`,
+  "gap": 2,
   "&:hover": {
     backgroundColor: "#F9F9F9",
     border: `1px solid ${borderPalette.dark}`,

@@ -241,8 +241,8 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
               isDisabled={!isQuestionAnswered(currentQuestionId)}
               endIcon={finalQuestion ? <Save /> : <ArrowRight />}
               sx={{
-                fontWeight: 600,
-                height: "34px",
+                "fontWeight": 600,
+                "height": "34px",
                 "&:disabled": { borderColor: theme.palette.grey[200] },
               }}
             />

@@ -64,6 +64,7 @@ export interface FindingForScoring {
   provider: string | null;
   license_risk: string | null;
   governance_status: string | null;
+  suppressed: boolean;
   name: string;
   category: string;
   file_count: number;
@@ -344,6 +345,7 @@ export async function getAllFindingsForScoringQuery(
       provider,
       license_risk,
       governance_status,
+      COALESCE(suppressed, FALSE) as suppressed,
       name,
       category,
       file_count

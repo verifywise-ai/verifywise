@@ -108,10 +108,10 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
         {...attributes}
         {...(disabled ? {} : listeners)}
         sx={{
-          cursor: disabled ? "not-allowed" : "grab",
-          display: "flex",
-          alignItems: "center",
-          opacity: disabled ? 0.5 : 1,
+          "cursor": disabled ? "not-allowed" : "grab",
+          "display": "flex",
+          "alignItems": "center",
+          "opacity": disabled ? 0.5 : 1,
           "&:active": { cursor: disabled ? "not-allowed" : "grabbing" },
         }}
       >
@@ -149,11 +149,11 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
             }
           }}
           sx={{
-            cursor: disabled ? "not-allowed" : "pointer",
-            padding: "4px",
-            borderRadius: "4px",
-            display: "flex",
-            opacity: disabled ? 0.5 : 1,
+            "cursor": disabled ? "not-allowed" : "pointer",
+            "padding": "4px",
+            "borderRadius": "4px",
+            "display": "flex",
+            "opacity": disabled ? 0.5 : 1,
             "&:hover": { backgroundColor: disabled ? "transparent" : theme.palette.border.light },
             "&:focus": {
               outline: disabled ? "none" : `2px solid ${theme.palette.primary.main}`,
@@ -178,11 +178,11 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
               }
             }}
             sx={{
-              cursor: disabled ? "not-allowed" : "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              display: "flex",
-              opacity: disabled ? 0.5 : 1,
+              "cursor": disabled ? "not-allowed" : "pointer",
+              "padding": "4px",
+              "borderRadius": "4px",
+              "display": "flex",
+              "opacity": disabled ? 0.5 : 1,
               "&:hover": {
                 backgroundColor: disabled ? "transparent" : theme.palette.status.error.light,
               },
@@ -503,7 +503,7 @@ const PostMarketMonitoring: React.FC = () => {
   };
 
   const fieldStyle = {
-    backgroundColor: theme.palette.background.main,
+    "backgroundColor": theme.palette.background.main,
     "& input": {
       padding: "0 14px",
     },
@@ -717,8 +717,8 @@ const PostMarketMonitoring: React.FC = () => {
               onClick={handleSaveConfig}
               isDisabled={isSaving || !config?.id || !isActive || !canEdit}
               sx={{
-                height: "34px",
-                backgroundColor: theme.palette.primary.main,
+                "height": "34px",
+                "backgroundColor": theme.palette.primary.main,
                 "&:hover": {
                   backgroundColor: theme.palette.primary.dark || brand.primaryHover,
                 },
@@ -754,9 +754,9 @@ const PostMarketMonitoring: React.FC = () => {
               onClick={handleAddQuestion}
               isDisabled={!isActive || !canEdit}
               sx={{
-                height: "34px",
-                border: `1px solid ${theme.palette.border.dark}`,
-                color: theme.palette.text.secondary,
+                "height": "34px",
+                "border": `1px solid ${theme.palette.border.dark}`,
+                "color": theme.palette.text.secondary,
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                   border: `1px solid ${theme.palette.border.dark}`,

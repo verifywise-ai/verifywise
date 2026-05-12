@@ -684,7 +684,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
               style: { backgroundColor: theme.palette.primary.main },
             }}
             sx={{
-              minHeight: COMPONENT_CONSTANTS.MIN_TAB_HEIGHT,
+              "minHeight": COMPONENT_CONSTANTS.MIN_TAB_HEIGHT,
               "& .MuiTabs-flexContainer": {
                 columnGap: COMPONENT_CONSTANTS.TAB_GAP,
               },
@@ -774,18 +774,18 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = ({
           <Box sx={{ display: "flex" }}>
             <CustomizableButton
               sx={{
-                alignSelf: "flex-end",
-                width: "fit-content",
-                backgroundColor: theme.palette.primary.main,
-                border: `1px solid ${theme.palette.primary.main}`,
-                gap: 2,
-                borderRadius: COMPONENT_CONSTANTS.BORDER_RADIUS,
-                maxHeight: COMPONENT_CONSTANTS.BUTTON_HEIGHT,
-                textTransform: "inherit",
-                boxShadow: "none",
-                ml: "auto",
-                mr: 0,
-                mt: COMPONENT_CONSTANTS.TAB_MARGIN_TOP,
+                "alignSelf": "flex-end",
+                "width": "fit-content",
+                "backgroundColor": theme.palette.primary.main,
+                "border": `1px solid ${theme.palette.primary.main}`,
+                "gap": 2,
+                "borderRadius": COMPONENT_CONSTANTS.BORDER_RADIUS,
+                "maxHeight": COMPONENT_CONSTANTS.BUTTON_HEIGHT,
+                "textTransform": "inherit",
+                "boxShadow": "none",
+                "ml": "auto",
+                "mr": 0,
+                "mt": COMPONENT_CONSTANTS.TAB_MARGIN_TOP,
                 "&:hover": { boxShadow: "none" },
               }}
               icon={

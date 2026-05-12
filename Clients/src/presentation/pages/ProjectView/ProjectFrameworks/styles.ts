@@ -44,15 +44,15 @@ export const getFrameworkTabStyle =
   });
 
 export const addButtonStyle: SxProps<Theme> = (theme) => ({
-  backgroundColor: theme.palette.primary.main,
-  border: `1px solid ${theme.palette.primary.main}`,
-  color: "background.main",
-  fontFamily: theme.typography.fontFamily,
-  fontSize: theme.typography.fontSize,
-  fontWeight: 400,
-  textTransform: "none",
-  borderRadius: theme.spacing(1),
-  boxShadow: "none",
+  "backgroundColor": theme.palette.primary.main,
+  "border": `1px solid ${theme.palette.primary.main}`,
+  "color": "background.main",
+  "fontFamily": theme.typography.fontFamily,
+  "fontSize": theme.typography.fontSize,
+  "fontWeight": 400,
+  "textTransform": "none",
+  "borderRadius": theme.spacing(1),
+  "boxShadow": "none",
   "&:hover": {
     backgroundColor: theme.palette.primary.dark || brand.primaryDark,
     boxShadow: "none",
@@ -63,7 +63,7 @@ export const addButtonStyle: SxProps<Theme> = (theme) => ({
 });
 
 export const tabListStyle: SxProps<Theme> = {
-  minHeight: "20px",
+  "minHeight": "20px",
   "& .MuiTabs-flexContainer": {
     columnGap: "34px",
   },
@@ -96,12 +96,12 @@ export const modalHeaderStyle: SxProps<Theme> = (theme) => ({
 });
 
 export const modalCloseButtonStyle: SxProps<Theme> = (theme) => ({
-  color: theme.palette.text.tertiary,
+  "color": theme.palette.text.tertiary,
   "&:hover": {
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.action?.hover || "#e3f5e6",
   },
-  p: 1,
+  "p": 1,
 });
 
 export const modalDescriptionStyle: SxProps<Theme> = (theme) => ({
@@ -140,17 +140,17 @@ export const frameworkCardDescriptionStyle: SxProps<Theme> = {
 };
 
 export const modalDoneButtonStyle: SxProps<Theme> = (theme) => ({
-  backgroundColor: theme.palette.primary.main,
-  border: `1px solid ${theme.palette.primary.main}`,
-  color: "background.main",
-  fontFamily: theme.typography.fontFamily,
-  fontSize: 15,
-  fontWeight: 500,
-  textTransform: "none",
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: "none",
-  px: 4,
-  py: 1,
+  "backgroundColor": theme.palette.primary.main,
+  "border": `1px solid ${theme.palette.primary.main}`,
+  "color": "background.main",
+  "fontFamily": theme.typography.fontFamily,
+  "fontSize": 15,
+  "fontWeight": 500,
+  "textTransform": "none",
+  "borderRadius": theme.shape.borderRadius,
+  "boxShadow": "none",
+  "px": 4,
+  "py": 1,
   "&:hover": {
     backgroundColor: theme.palette.primary.dark || brand.primaryDark,
     boxShadow: "none",

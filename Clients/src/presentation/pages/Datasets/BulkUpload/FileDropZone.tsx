@@ -104,14 +104,14 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         sx={{
-          border: "1.5px dashed",
-          borderColor: dragOver ? "brand.primary" : "border.dark",
-          borderRadius: "8px",
-          p: "32px",
-          textAlign: "center",
-          cursor: "pointer",
-          backgroundColor: dragOver ? "#F2F4F7" : "#FCFCFD",
-          transition: "all 0.2s",
+          "border": "1.5px dashed",
+          "borderColor": dragOver ? "brand.primary" : "border.dark",
+          "borderRadius": "8px",
+          "p": "32px",
+          "textAlign": "center",
+          "cursor": "pointer",
+          "backgroundColor": dragOver ? "#F2F4F7" : "#FCFCFD",
+          "transition": "all 0.2s",
           "&:hover": { borderColor: "brand.primary", backgroundColor: "#F2F4F7" },
         }}
       >

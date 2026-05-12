@@ -740,7 +740,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   }
                   label="This incident has an interim report"
                   sx={{
-                    mt: 2,
+                    "mt": 2,
                     "& .MuiFormControlLabel-label": {
                       fontSize: 13,
                     },

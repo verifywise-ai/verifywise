@@ -158,7 +158,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
         horizontal: "right",
       }}
       sx={{
-        marginTop: "8px",
+        "marginTop": "8px",
         "& .MuiPopover-paper": {
           borderRadius: "8px",
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
@@ -244,9 +244,9 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                   value={shareableLink || "Generating link..."}
                   disabled={true}
                   sx={{
-                    flex: 1,
+                    "flex": 1,
                     "& .MuiInputBase-root": {
-                      fontSize: "13px",
+                      "fontSize": "13px",
                       "& input": {
                         cursor: "default",
                       },
@@ -271,8 +271,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     size="small"
                     onClick={handleCopyLink}
                     sx={{
-                      padding: "4px",
-                      color: `${brand.primary}`,
+                      "padding": "4px",
+                      "color": `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -299,8 +299,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     size="small"
                     onClick={handleRefreshLink}
                     sx={{
-                      padding: "4px",
-                      color: `${brand.primary}`,
+                      "padding": "4px",
+                      "color": `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },
@@ -328,8 +328,8 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                     onClick={handleOpenLink}
                     disabled={!shareableLink}
                     sx={{
-                      padding: "4px",
-                      color: `${brand.primary}`,
+                      "padding": "4px",
+                      "color": `${brand.primary}`,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.1)",
                       },

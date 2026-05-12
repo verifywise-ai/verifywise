@@ -2,11 +2,11 @@ import { Theme } from "@mui/material";
 import { text, background, border as borderPalette } from "../../../themes/palette";
 
 export const addNewStep = {
-  gap: "8px",
-  minWidth: "80px",
-  height: "34px",
-  border: `1px solid ${borderPalette.dark}`,
-  color: `${text.secondary}`,
+  "gap": "8px",
+  "minWidth": "80px",
+  "height": "34px",
+  "border": `1px solid ${borderPalette.dark}`,
+  "color": `${text.secondary}`,
   "&:hover": {
     backgroundColor: `${background.accent}`,
     border: `1px solid ${borderPalette.dark}`,
@@ -49,19 +49,19 @@ export const removeStepLinkContainer = {
 };
 
 export const removeStepButtonStyle = (isFirstStep: boolean) => ({
-  color: "#D92D20",
-  backgroundColor: "transparent",
-  border: "none",
-  textTransform: "none" as const,
-  fontSize: 13,
-  fontWeight: 400,
-  padding: "4px 8px",
-  minWidth: "auto",
+  "color": "#D92D20",
+  "backgroundColor": "transparent",
+  "border": "none",
+  "textTransform": "none" as const,
+  "fontSize": 13,
+  "fontWeight": 400,
+  "padding": "4px 8px",
+  "minWidth": "auto",
   "&:hover": {
     backgroundColor: "transparent",
     textDecoration: "underline",
   },
-  visibility: isFirstStep ? "hidden" : "visible",
+  "visibility": isFirstStep ? "hidden" : "visible",
 });
 
 export const verticalStepDividerStyle = {
@@ -78,7 +78,7 @@ export const stepFieldsContainer = {
 };
 
 export const approverAutocompleteStyle = (theme: Theme) => ({
-  backgroundColor: theme.palette.background.main,
+  "backgroundColor": theme.palette.background.main,
   "& .MuiOutlinedInput-root": {
     borderRadius: "3px",
     paddingTop: "3.8px !important",

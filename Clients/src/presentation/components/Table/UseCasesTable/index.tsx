@@ -76,7 +76,7 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
               key={useCase.id}
               sx={{
                 "&:hover": { backgroundColor: "background.accent" },
-                cursor: onRowClick ? "pointer" : "default",
+                "cursor": onRowClick ? "pointer" : "default",
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -92,10 +92,10 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                     variant="determinate"
                     value={useCase.progress}
                     sx={{
-                      width: 60,
-                      height: 4,
-                      borderRadius: 2,
-                      backgroundColor: "status.default.border",
+                      "width": 60,
+                      "height": 4,
+                      "borderRadius": 2,
+                      "backgroundColor": "status.default.border",
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: "brand.primary",
                         borderRadius: 2,

@@ -25,42 +25,42 @@ import defaultIcon from "../../assets/icons/file-types/default.svg";
 // Map file extensions to their corresponding icons
 const FILE_ICON_MAP: Record<string, string> = {
   // Documents
-  pdf: pdfIcon,
-  doc: docIcon,
-  docx: docxIcon,
+  "pdf": pdfIcon,
+  "doc": docIcon,
+  "docx": docxIcon,
 
   // Spreadsheets
-  xls: xlsIcon,
-  xlsx: xlsxIcon,
-  csv: csvIcon,
+  "xls": xlsIcon,
+  "xlsx": xlsxIcon,
+  "csv": csvIcon,
 
   // Presentations
-  ppt: pptIcon,
-  pptx: pptxIcon,
+  "ppt": pptIcon,
+  "pptx": pptxIcon,
 
   // Text
-  txt: txtIcon,
+  "txt": txtIcon,
 
   // Archives
-  zip: zipIcon,
-  rar: rarIcon,
+  "zip": zipIcon,
+  "rar": rarIcon,
   "7z": zipIcon, // Use zip icon for 7z
-  tar: zipIcon, // Use zip icon for tar
-  gz: zipIcon, // Use zip icon for gz
+  "tar": zipIcon, // Use zip icon for tar
+  "gz": zipIcon, // Use zip icon for gz
 
   // Images
-  jpg: jpgIcon,
-  jpeg: jpegIcon,
-  png: pngIcon,
-  gif: gifIcon,
+  "jpg": jpgIcon,
+  "jpeg": jpegIcon,
+  "png": pngIcon,
+  "gif": gifIcon,
 
   // Data & markup
-  json: jsonIcon,
-  xml: xmlIcon,
-  md: mdIcon,
-  markdown: mdIcon,
-  yaml: defaultIcon,
-  yml: defaultIcon,
+  "json": jsonIcon,
+  "xml": xmlIcon,
+  "md": mdIcon,
+  "markdown": mdIcon,
+  "yaml": defaultIcon,
+  "yml": defaultIcon,
 };
 
 /**

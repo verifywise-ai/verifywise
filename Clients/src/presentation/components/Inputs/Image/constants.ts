@@ -5,7 +5,7 @@ export const checkImage = (url: any) => {
 };
 
 export const TextFieldStyles = {
-  width: "100%",
+  "width": "100%",
   "& .MuiInputBase-input[type='file']": {
     opacity: 0,
     cursor: "pointer",

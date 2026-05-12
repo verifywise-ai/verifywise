@@ -172,7 +172,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
       anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       transformOrigin={{ vertical: "top", horizontal: "left" }}
       sx={{
-        mt: 1,
+        "mt": 1,
         "& .MuiPopover-paper": {
           width: 300,
           borderRadius: "4px",
@@ -207,11 +207,11 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
         <Box
           onClick={onClose}
           sx={{
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            p: 0.25,
-            borderRadius: "4px",
+            "cursor": "pointer",
+            "display": "flex",
+            "alignItems": "center",
+            "p": 0.25,
+            "borderRadius": "4px",
             "&:hover": { backgroundColor: theme.palette.background.accent },
           }}
         >
@@ -303,10 +303,10 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                   onClick={handleAccept}
                   icon={<CheckCircle size={14} strokeWidth={1.5} />}
                   sx={{
-                    height: 30,
-                    fontSize: 12,
-                    backgroundColor: theme.palette.primary.main,
-                    border: `1px solid ${theme.palette.primary.main}`,
+                    "height": 30,
+                    "fontSize": 12,
+                    "backgroundColor": theme.palette.primary.main,
+                    "border": `1px solid ${theme.palette.primary.main}`,
                     "&:hover": { backgroundColor: "brand.primaryHover" },
                   }}
                 />
@@ -316,11 +316,11 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                   onClick={handleDiscard}
                   icon={<X size={14} strokeWidth={1.5} />}
                   sx={{
-                    height: 30,
-                    fontSize: 12,
-                    backgroundColor: "background.main",
-                    border: `1px solid ${theme.palette.border.dark}`,
-                    color: theme.palette.text.tertiary,
+                    "height": 30,
+                    "fontSize": 12,
+                    "backgroundColor": "background.main",
+                    "border": `1px solid ${theme.palette.border.dark}`,
+                    "color": theme.palette.text.tertiary,
                     "&:hover": { backgroundColor: theme.palette.background.accent },
                   }}
                 />
@@ -333,11 +333,11 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
                 onClick={() => stop()}
                 icon={<Square size={12} strokeWidth={1.5} />}
                 sx={{
-                  height: 30,
-                  fontSize: 12,
-                  backgroundColor: "background.main",
-                  border: `1px solid ${theme.palette.border.dark}`,
-                  color: theme.palette.text.tertiary,
+                  "height": 30,
+                  "fontSize": 12,
+                  "backgroundColor": "background.main",
+                  "border": `1px solid ${theme.palette.border.dark}`,
+                  "color": theme.palette.text.tertiary,
                   "&:hover": { backgroundColor: theme.palette.background.accent },
                 }}
               />
@@ -369,13 +369,13 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
               key={action.label}
               onClick={() => handleAction(action)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: theme.spacing(1.5),
-                px: theme.spacing(2),
-                py: theme.spacing(1),
-                cursor: "pointer",
-                transition: "background-color 0.15s",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": theme.spacing(1.5),
+                "px": theme.spacing(2),
+                "py": theme.spacing(1),
+                "cursor": "pointer",
+                "transition": "background-color 0.15s",
                 "&:hover": { backgroundColor: theme.palette.background.accent },
               }}
             >

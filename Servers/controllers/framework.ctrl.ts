@@ -17,6 +17,7 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { hasPendingApprovalQuery } from "../utils/approvalRequest.utils";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getAllFrameworks(req: Request, res: Response): Promise<any> {
   logStructured("processing", "starting getAllFrameworks", "getAllFrameworks", "framework.ctrl.ts");
   logger.debug("🔍 Fetching all frameworks");
@@ -50,7 +51,7 @@ export async function getAllFrameworks(req: Request, res: Response): Promise<any
       req.organizationId!,
     );
     logger.error("❌ Error in getAllFrameworks:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -99,7 +100,7 @@ export async function getFrameworkById(req: Request, res: Response): Promise<any
       req.organizationId!,
     );
     logger.error("❌ Error in getFrameworkById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -135,7 +136,9 @@ export async function addFrameworkToProject(req: Request, res: Response): Promis
         .status(403)
         .json(
           STATUS_CODE[403](
-            "This use case has a pending approval request and cannot be modified until the approval process is complete.",
+            req.t!(
+              "This use case has a pending approval request and cannot be modified until the approval process is complete.",
+            ),
           ),
         );
     }
@@ -156,7 +159,7 @@ export async function addFrameworkToProject(req: Request, res: Response): Promis
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
 
     const result = await addFrameworkToProjectQuery(
@@ -198,7 +201,7 @@ export async function addFrameworkToProject(req: Request, res: Response): Promis
     );
     return res
       .status(404)
-      .json(STATUS_CODE[404]("Framework not found or could not be added to the project."));
+      .json(STATUS_CODE[404](req.t!("Framework not found or could not be added to the project.")));
   } catch (error) {
     await transaction.rollback();
     logStructured(
@@ -215,15 +218,15 @@ export async function addFrameworkToProject(req: Request, res: Response): Promis
     );
 
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404](error.message));
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
     }
 
     logger.error("❌ Error in addFrameworkToProject:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -263,7 +266,9 @@ export async function deleteFrameworkFromProject(req: Request, res: Response): P
         .status(403)
         .json(
           STATUS_CODE[403](
-            "This use case has a pending approval request and cannot be modified until the approval process is complete.",
+            req.t!(
+              "This use case has a pending approval request and cannot be modified until the approval process is complete.",
+            ),
           ),
         );
     }
@@ -284,7 +289,7 @@ export async function deleteFrameworkFromProject(req: Request, res: Response): P
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
 
     const result = await deleteFrameworkFromProjectQuery(
@@ -326,7 +331,9 @@ export async function deleteFrameworkFromProject(req: Request, res: Response): P
     );
     return res
       .status(404)
-      .json(STATUS_CODE[404]("Framework not found or could not be removed from the project."));
+      .json(
+        STATUS_CODE[404](req.t!("Framework not found or could not be removed from the project.")),
+      );
   } catch (error) {
     await transaction.rollback();
     logStructured(
@@ -343,14 +350,14 @@ export async function deleteFrameworkFromProject(req: Request, res: Response): P
     );
 
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404](error.message));
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
     }
 
     logger.error("❌ Error in deleteFrameworkFromProject:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

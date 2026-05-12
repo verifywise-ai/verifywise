@@ -5,11 +5,13 @@ import {
   TableCell,
   IconButton,
   Typography,
-  Menu,
-  MenuItem,
+  Popover,
+  Stack,
   CircularProgress,
 } from "@mui/material";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Eye, Edit3, Download, Trash2 } from "lucide-react";
+import { CustomizableButton } from "../../button/customizable-button";
+import palette from "../../../themes/palette";
 import Chip from "../../Chip";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
@@ -106,7 +108,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
             onClick={() => onRowClick?.(dataset)}
             sx={{
               ...singleTheme.tableStyles.primary.body.row,
-              cursor: onRowClick ? "pointer" : "default",
+              "cursor": onRowClick ? "pointer" : "default",
               "&:hover": {
                 backgroundColor: `${background.accent}`,
               },
@@ -285,8 +287,8 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                 size="small"
                 onClick={(e) => handleMenuOpen(e, dataset)}
                 sx={{
-                  color: `${text.icon}`,
-                  padding: "6px",
+                  "color": `${text.icon}`,
+                  "padding": "6px",
                   "&:hover": {
                     backgroundColor: `${background.hover}`,
                   },
@@ -300,26 +302,119 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
       })}
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={menuAnchorEl}
+      <Popover
         open={Boolean(menuAnchorEl)}
+        anchorEl={menuAnchorEl}
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
-        slotProps={{
-          paper: {
-            sx: singleTheme.dropDownStyles.primary,
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        sx={{
+          "& .MuiPopover-paper": {
+            minWidth: 140,
+            borderRadius: "4px",
+            border: `1px solid ${palette.border.dark}`,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            overflow: "hidden",
+            mt: 0.5,
+            p: 1,
           },
         }}
       >
-        {onView && <MenuItem onClick={handleViewClick}>View prompts</MenuItem>}
-        {onEdit && <MenuItem onClick={handleEditClick}>Open in editor</MenuItem>}
-        {onDownload && <MenuItem onClick={handleDownloadClick}>Download</MenuItem>}
-        {onDelete && (
-          <MenuItem onClick={handleDeleteClick} sx={{ color: `${status.error.text}` }}>
-            Delete
-          </MenuItem>
-        )}
-      </Menu>
+        <Stack spacing={1}>
+          {onView && (
+            <CustomizableButton
+              variant="outlined"
+              onClick={handleViewClick}
+              startIcon={<Eye size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
+            >
+              View prompts
+            </CustomizableButton>
+          )}
+          {onEdit && (
+            <CustomizableButton
+              variant="outlined"
+              onClick={handleEditClick}
+              startIcon={<Edit3 size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
+            >
+              Open in editor
+            </CustomizableButton>
+          )}
+          {onDownload && (
+            <CustomizableButton
+              variant="outlined"
+              onClick={handleDownloadClick}
+              startIcon={<Download size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
+            >
+              Download
+            </CustomizableButton>
+          )}
+          {onDelete && (
+            <CustomizableButton
+              variant="outlined"
+              onClick={handleDeleteClick}
+              startIcon={<Trash2 size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.status.error.text,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.error.bg,
+                  borderColor: palette.status.error.text,
+                },
+              }}
+            >
+              Delete
+            </CustomizableButton>
+          )}
+        </Stack>
+      </Popover>
     </TableBody>
   );
 };

@@ -27,9 +27,9 @@ export const modalHeaderStyle: SxProps<Theme> = {
 };
 
 export const modalCloseButtonStyle: SxProps<Theme> = {
-  color: `${status.default.text}`,
+  "color": `${status.default.text}`,
   "&:hover": { color: "#232B3A", background: "#e3f5e6" },
-  p: 1,
+  "p": 1,
 };
 
 export const modalDescriptionStyle: SxProps<Theme> = {
@@ -84,15 +84,15 @@ export const frameworkAddedBadgeStyle: SxProps<Theme> = {
 };
 
 export const modalDoneButtonStyle: SxProps<Theme> = {
-  px: 4,
-  py: 1,
-  fontWeight: 500,
-  borderRadius: 2,
-  boxShadow: "none",
-  fontSize: 15,
-  backgroundColor: `${brand.primary}`,
-  color: `${background.main}`,
-  border: `1px solid ${brand.primary}`,
+  "px": 4,
+  "py": 1,
+  "fontWeight": 500,
+  "borderRadius": 2,
+  "boxShadow": "none",
+  "fontSize": 15,
+  "backgroundColor": `${brand.primary}`,
+  "color": `${background.main}`,
+  "border": `1px solid ${brand.primary}`,
   "&:hover": {
     backgroundColor: `${brand.primaryDark}`,
   },

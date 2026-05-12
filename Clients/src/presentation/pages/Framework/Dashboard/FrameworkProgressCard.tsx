@@ -189,9 +189,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                             variant="determinate"
                             value={percent}
                             sx={{
-                              height: 6,
-                              borderRadius: 3,
-                              backgroundColor: `${background.hover}`,
+                              "height": 6,
+                              "borderRadius": 3,
+                              "backgroundColor": `${background.hover}`,
                               "& .MuiLinearProgress-bar": {
                                 backgroundColor: getProgressColor(percent),
                                 borderRadius: 3,
@@ -304,9 +304,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                     variant="determinate"
                     value={clausePercent}
                     sx={{
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: `${background.hover}`,
+                      "height": 6,
+                      "borderRadius": 3,
+                      "backgroundColor": `${background.hover}`,
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: getProgressColor(clausePercent),
                         borderRadius: 3,
@@ -368,9 +368,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                     variant="determinate"
                     value={annexPercent}
                     sx={{
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: `${background.hover}`,
+                      "height": 6,
+                      "borderRadius": 3,
+                      "backgroundColor": `${background.hover}`,
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: getProgressColor(annexPercent),
                         borderRadius: 3,

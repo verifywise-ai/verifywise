@@ -9,15 +9,19 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
-import { ListTodo, UserPlus, Tag, Link2 } from "lucide-react";
+import { ListTodo, UserPlus, Tag, Link2, CheckCheck } from "lucide-react";
 import { CustomSelect } from "../../CustomSelect";
 import IconButtonComponent from "../../IconButton";
 import Chip from "../../Chip";
 import { DaysChip } from "../../Chip/DaysChip";
+import Checkbox from "../../Inputs/Checkbox";
+import ChipInput from "../../Inputs/ChipInput";
+import ConfirmationModal from "../../Dialogs/ConfirmationModal";
+import BulkActionsToolbar, { type BulkAction } from "../BulkActionsToolbar";
 
 import { TaskPriority, TaskStatus } from "../../../../domain/enums/task.enum";
 import { ITasksTableProps } from "../../../types/interfaces/i.table";
@@ -27,6 +31,8 @@ import { DISPLAY_TO_PRIORITY_MAP, PRIORITY_DISPLAY_MAP } from "../../../constant
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import { taskTableStyles } from "./styles";
 import { useStandardTable } from "../../../../application/hooks/useStandardTable";
+import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
+import { useBulkUpdateTasks } from "../../../../application/hooks/useBulkUpdateTasks";
 import StandardTableHead from "../StandardTableHead";
 import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
@@ -42,11 +48,11 @@ const STATUS_DISPLAY_MAP: Record<string, string> = {
 
 // Reverse mapping for API calls
 const DISPLAY_TO_STATUS_MAP: Record<string, string> = {
-  Open: "Open",
+  "Open": "Open",
   "In progress": "In Progress",
-  Completed: "Completed",
-  Overdue: "Overdue",
-  Archived: "Deleted", // Map "Archived" display back to "Deleted" status
+  "Completed": "Completed",
+  "Overdue": "Overdue",
+  "Archived": "Deleted", // Map "Archived" display back to "Deleted" status
 };
 
 const titleOfTableColumns: StandardColumn[] = [
@@ -106,6 +112,8 @@ const TasksTable: React.FC<ITasksTableProps> = ({
   onPriorityChange,
   priorityOptions,
   visibleColumns,
+  canRunBulkActions = false,
+  onBulkActionSuccess,
 }) => {
   const theme = useTheme();
 
@@ -147,265 +155,378 @@ const TasksTable: React.FC<ITasksTableProps> = ({
     [isVisible],
   );
 
+  // Slice that's actually rendered — used for both the body and bulk-selection scope.
+  const pageRows = useMemo(() => {
+    if (!sortedRows) return [] as TaskModel[];
+    return sortedRows.slice(
+      hidePagination ? 0 : validPage * rowsPerPage,
+      hidePagination ? Math.min(sortedRows.length, 100) : validPage * rowsPerPage + rowsPerPage,
+    );
+  }, [sortedRows, hidePagination, validPage, rowsPerPage]);
+
+  // Bulk-action selection scope: only non-archived rows on the current page.
+  const selectableRows = useMemo(
+    () => pageRows.filter((task) => task.status !== TaskStatus.DELETED),
+    [pageRows],
+  );
+
+  const getRowId = useCallback((task: TaskModel) => task.id as number, []);
+  const {
+    selectedIds,
+    isSelected,
+    toggle: toggleSelection,
+    toggleAll,
+    setAll: setAllSelected,
+    clear: clearSelection,
+    allSelected,
+    someSelected,
+    count: selectionCount,
+  } = useBulkSelection<TaskModel>({ rows: selectableRows, getId: getRowId });
+
+  // Full filtered/sorted set across all pages (for the toolbar's "Select all N").
+  const allSelectableIds = useMemo(
+    () =>
+      (sortedRows ?? [])
+        .filter((task) => task.status !== TaskStatus.DELETED)
+        .map((task) => task.id as number),
+    [sortedRows],
+  );
+
+  const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false);
+  const [pendingCategories, setPendingCategories] = useState<string[]>([]);
+
+  const bulkMutation = useBulkUpdateTasks({
+    onSuccess: (payload) => {
+      clearSelection();
+      onBulkActionSuccess?.(payload.action, payload.ids.length);
+    },
+  });
+
+  const handleMarkComplete = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    bulkMutation.mutate({ ids: selectedIds, action: "mark_complete" });
+  }, [bulkMutation, selectedIds]);
+
+  const handleOpenCategoriesDialog = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    setPendingCategories([]);
+    setCategoriesDialogOpen(true);
+  }, [selectedIds.length]);
+
+  const handleConfirmCategories = useCallback(() => {
+    bulkMutation.mutate(
+      {
+        ids: selectedIds,
+        action: "set_categories",
+        categories: pendingCategories,
+      },
+      {
+        onSuccess: () => setCategoriesDialogOpen(false),
+      },
+    );
+  }, [bulkMutation, selectedIds, pendingCategories]);
+
+  const bulkActions = useMemo<BulkAction[]>(
+    () => [
+      {
+        id: "mark_complete",
+        label: "Mark complete",
+        icon: <CheckCheck size={16} />,
+        onClick: handleMarkComplete,
+        disabled: bulkMutation.isPending,
+      },
+      {
+        id: "set_categories",
+        label: "Set categories",
+        icon: <Tag size={16} />,
+        onClick: handleOpenCategoriesDialog,
+        disabled: bulkMutation.isPending,
+      },
+    ],
+    [handleMarkComplete, handleOpenCategoriesDialog, bulkMutation.isPending],
+  );
+
   const tableBody = useMemo(
     () => (
       <TableBody>
-        {sortedRows &&
-          sortedRows
-            .slice(
-              hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination
-                ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage,
-            )
-            .map((task: TaskModel) => {
-              const isArchived = task.status === TaskStatus.DELETED;
-              return (
-                <TableRow
-                  key={task.id}
+        {pageRows.map((task: TaskModel) => {
+          const isArchived = task.status === TaskStatus.DELETED;
+          return (
+            <TableRow
+              key={task.id}
+              sx={{
+                ...singleTheme.tableStyles.primary.body.row,
+                "cursor": isArchived ? "default" : "pointer",
+                "backgroundColor": isArchived ? "rgba(0, 0, 0, 0.02)" : "transparent",
+                "opacity": isArchived ? 0.7 : 1,
+                "&:hover": {
+                  backgroundColor: isArchived
+                    ? "rgba(0, 0, 0, 0.04)"
+                    : singleTheme.tableColors.rowHover,
+                },
+                ...(flashRowId === task.id && {
+                  "backgroundColor": singleTheme.flashColors.background,
+                  "& td": {
+                    backgroundColor: "transparent !important",
+                  },
+                  "&:hover": {
+                    backgroundColor: singleTheme.flashColors.backgroundHover,
+                  },
+                }),
+              }}
+              onClick={() => !isArchived && onRowClick?.(task)}
+            >
+              {canRunBulkActions && (
+                <TableCell
+                  padding="checkbox"
                   sx={{
-                    ...singleTheme.tableStyles.primary.body.row,
-                    cursor: isArchived ? "default" : "pointer",
-                    backgroundColor: isArchived ? "rgba(0, 0, 0, 0.02)" : "transparent",
-                    opacity: isArchived ? 0.7 : 1,
-                    "&:hover": {
-                      backgroundColor: isArchived
-                        ? "rgba(0, 0, 0, 0.04)"
-                        : singleTheme.tableColors.rowHover,
-                    },
-                    ...(flashRowId === task.id && {
-                      backgroundColor: singleTheme.flashColors.background,
-                      "& td": {
-                        backgroundColor: "transparent !important",
-                      },
-                      "&:hover": {
-                        backgroundColor: singleTheme.flashColors.backgroundHover,
-                      },
-                    }),
+                    width: 40,
+                    minWidth: 40,
+                    maxWidth: 40,
+                    padding: 0,
                   }}
-                  onClick={() => !isArchived && onRowClick?.(task)}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Task Name */}
-                  <TableCell
+                  <Box
                     sx={{
-                      ...singleTheme.tableStyles.primary.body.cell,
-                      backgroundColor:
-                        sortConfig.key === "title"
-                          ? singleTheme.tableColors.sortedColumnFirst
-                          : undefined,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
                     }}
                   >
-                    <Box>
+                    <Checkbox
+                      id={`task-row-checkbox-${task.id}`}
+                      value={String(task.id)}
+                      isChecked={isSelected(task.id as number)}
+                      onChange={() => toggleSelection(task.id as number)}
+                      isDisabled={isArchived}
+                      ariaLabel={`Select task ${task.title}`}
+                      size="small"
+                      sx={{ p: 0 }}
+                    />
+                  </Box>
+                </TableCell>
+              )}
+              {/* Task Name */}
+              <TableCell
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.cell,
+                  backgroundColor:
+                    sortConfig.key === "title"
+                      ? singleTheme.tableColors.sortedColumnFirst
+                      : undefined,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      textTransform: "capitalize",
+                      textDecoration: isArchived ? "line-through" : "none",
+                      color: isArchived ? "text.accent" : "inherit",
+                    }}
+                  >
+                    {task.title}
+                  </Typography>
+                  <CategoryChip categories={task.categories || []} />
+                </Box>
+              </TableCell>
+
+              {/* Priority */}
+              {isVisible("priority") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    backgroundColor:
+                      sortConfig.key === "priority"
+                        ? singleTheme.tableColors.sortedColumn
+                        : undefined,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {isArchived ? (
+                    <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
+                  ) : (
+                    <CustomSelect
+                      currentValue={PRIORITY_DISPLAY_MAP[task.priority] || task.priority}
+                      onValueChange={async (displayValue: string) => {
+                        const apiValue = DISPLAY_TO_PRIORITY_MAP[displayValue] || displayValue;
+                        return await onPriorityChange(task.id!)(apiValue);
+                      }}
+                      options={priorityOptions}
+                      disabled={isUpdateDisabled}
+                      size="small"
+                    />
+                  )}
+                </TableCell>
+              )}
+
+              {/* Status */}
+              {isVisible("status") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    backgroundColor:
+                      sortConfig.key === "status"
+                        ? singleTheme.tableColors.sortedColumn
+                        : undefined,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {isArchived ? (
+                    <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
+                  ) : (
+                    <CustomSelect
+                      currentValue={STATUS_DISPLAY_MAP[task.status] || task.status}
+                      onValueChange={async (displayValue: string) => {
+                        const apiValue = DISPLAY_TO_STATUS_MAP[displayValue] || displayValue;
+                        return await onStatusChange(task.id!)(apiValue);
+                      }}
+                      options={statusOptions}
+                      disabled={isUpdateDisabled}
+                      size="small"
+                    />
+                  )}
+                </TableCell>
+              )}
+
+              {/* Due Date */}
+              {isVisible("due_date") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    backgroundColor:
+                      sortConfig.key === "due_date"
+                        ? singleTheme.tableColors.sortedColumn
+                        : undefined,
+                  }}
+                >
+                  {task.due_date ? (
+                    <Stack direction="row" spacing="8px" alignItems="center">
                       <Typography
                         variant="body2"
                         sx={{
-                          textTransform: "capitalize",
-                          textDecoration: isArchived ? "line-through" : "none",
-                          color: isArchived ? "text.accent" : "inherit",
+                          fontSize: 13,
+                          color:
+                            task.isOverdue && task.status !== TaskStatus.COMPLETED
+                              ? "error.main"
+                              : "text.secondary",
+                          fontWeight:
+                            task.isOverdue && task.status !== TaskStatus.COMPLETED ? 500 : 400,
                         }}
                       >
-                        {task.title}
+                        {displayFormattedDate(task.due_date)}
                       </Typography>
-                      <CategoryChip categories={task.categories || []} />
-                    </Box>
-                  </TableCell>
-
-                  {/* Priority */}
-                  {isVisible("priority") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        backgroundColor:
-                          sortConfig.key === "priority"
-                            ? singleTheme.tableColors.sortedColumn
-                            : undefined,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {isArchived ? (
-                        <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
+                      {task.status === TaskStatus.COMPLETED ? null : task.isOverdue ? (
+                        <Chip label="Overdue" variant="error" />
                       ) : (
-                        <CustomSelect
-                          currentValue={PRIORITY_DISPLAY_MAP[task.priority] || task.priority}
-                          onValueChange={async (displayValue: string) => {
-                            const apiValue = DISPLAY_TO_PRIORITY_MAP[displayValue] || displayValue;
-                            return await onPriorityChange(task.id!)(apiValue);
-                          }}
-                          options={priorityOptions}
-                          disabled={isUpdateDisabled}
-                          size="small"
-                        />
+                        <DaysChip dueDate={task.due_date} />
                       )}
-                    </TableCell>
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                      No due date
+                    </Typography>
                   )}
+                </TableCell>
+              )}
 
-                  {/* Status */}
-                  {isVisible("status") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        backgroundColor:
-                          sortConfig.key === "status"
-                            ? singleTheme.tableColors.sortedColumn
-                            : undefined,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {isArchived ? (
-                        <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
-                      ) : (
-                        <CustomSelect
-                          currentValue={STATUS_DISPLAY_MAP[task.status] || task.status}
-                          onValueChange={async (displayValue: string) => {
-                            const apiValue = DISPLAY_TO_STATUS_MAP[displayValue] || displayValue;
-                            return await onStatusChange(task.id!)(apiValue);
-                          }}
-                          options={statusOptions}
-                          disabled={isUpdateDisabled}
-                          size="small"
-                        />
-                      )}
-                    </TableCell>
-                  )}
+              {/* Assignees */}
+              {isVisible("assignees") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    backgroundColor:
+                      sortConfig.key === "assignees"
+                        ? singleTheme.tableColors.sortedColumn
+                        : undefined,
+                  }}
+                >
+                  {task.assignees && task.assignees.length > 0 ? (
+                    <Stack direction="row" spacing={0.5}>
+                      {task.assignees.slice(0, 3).map((assigneeId, idx) => {
+                        const user = users.find((u) => u.id === Number(assigneeId));
+                        const initials = user
+                          ? `${user.name.charAt(0)}${user.surname.charAt(0)}`.toUpperCase()
+                          : "?";
 
-                  {/* Due Date */}
-                  {isVisible("due_date") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        backgroundColor:
-                          sortConfig.key === "due_date"
-                            ? singleTheme.tableColors.sortedColumn
-                            : undefined,
-                      }}
-                    >
-                      {task.due_date ? (
-                        <Stack direction="row" spacing="8px" alignItems="center">
-                          <Typography
-                            variant="body2"
+                        return (
+                          <Box
+                            key={idx}
                             sx={{
-                              fontSize: 13,
-                              color:
-                                task.isOverdue && task.status !== TaskStatus.COMPLETED
-                                  ? "error.main"
-                                  : "text.secondary",
-                              fontWeight:
-                                task.isOverdue && task.status !== TaskStatus.COMPLETED ? 500 : 400,
+                              width: 28,
+                              height: 28,
+                              borderRadius: "50%",
+                              backgroundColor: "background.hover",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 11,
+                              fontWeight: 500,
+                              color: "#374151",
+                              border: "2px solid background.main",
                             }}
                           >
-                            {displayFormattedDate(task.due_date)}
-                          </Typography>
-                          {task.status === TaskStatus.COMPLETED ? null : task.isOverdue ? (
-                            <Chip label="Overdue" variant="error" />
-                          ) : (
-                            <DaysChip dueDate={task.due_date} />
-                          )}
-                        </Stack>
-                      ) : (
-                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
-                          No due date
-                        </Typography>
+                            {initials}
+                          </Box>
+                        );
+                      })}
+                      {task.assignees.length > 3 && (
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            backgroundColor: "status.default.border",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 10,
+                            fontWeight: 500,
+                            color: "status.default.text",
+                            border: "2px solid background.main",
+                          }}
+                        >
+                          +{task.assignees.length - 3}
+                        </Box>
                       )}
-                    </TableCell>
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                      Unassigned
+                    </Typography>
                   )}
+                </TableCell>
+              )}
 
-                  {/* Assignees */}
-                  {isVisible("assignees") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        backgroundColor:
-                          sortConfig.key === "assignees"
-                            ? singleTheme.tableColors.sortedColumn
-                            : undefined,
-                      }}
-                    >
-                      {task.assignees && task.assignees.length > 0 ? (
-                        <Stack direction="row" spacing={0.5}>
-                          {task.assignees.slice(0, 3).map((assigneeId, idx) => {
-                            const user = users.find((u) => u.id === Number(assigneeId));
-                            const initials = user
-                              ? `${user.name.charAt(0)}${user.surname.charAt(0)}`.toUpperCase()
-                              : "?";
-
-                            return (
-                              <Box
-                                key={idx}
-                                sx={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: "50%",
-                                  backgroundColor: "background.hover",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  color: "#374151",
-                                  border: "2px solid background.main",
-                                }}
-                              >
-                                {initials}
-                              </Box>
-                            );
-                          })}
-                          {task.assignees.length > 3 && (
-                            <Box
-                              sx={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: "50%",
-                                backgroundColor: "status.default.border",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 10,
-                                fontWeight: 500,
-                                color: "status.default.text",
-                                border: "2px solid background.main",
-                              }}
-                            >
-                              +{task.assignees.length - 3}
-                            </Box>
-                          )}
-                        </Stack>
-                      ) : (
-                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
-                          Unassigned
-                        </Typography>
-                      )}
-                    </TableCell>
-                  )}
-
-                  {/* Actions */}
-                  <TableCell
-                    sx={singleTheme.tableStyles.primary.body.cell}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <IconButtonComponent
-                      id={task.id!}
-                      onDelete={() => onArchive(task.id!)}
-                      onEdit={() => onEdit(task)}
-                      onMouseEvent={() => {}}
-                      warningTitle="Archive task?"
-                      warningMessage={`This task will be hidden from your active task list. You can restore "${task.title}" anytime from the archived view.`}
-                      type="Task"
-                      isArchived={task.status === TaskStatus.DELETED}
-                      onRestore={onRestore ? () => onRestore(task.id!) : undefined}
-                      onHardDelete={onHardDelete ? () => onHardDelete(task.id!) : undefined}
-                      hardDeleteWarningTitle="Permanently delete this task?"
-                      hardDeleteWarningMessage="This action cannot be undone. The task will be permanently removed from the system."
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+              {/* Actions */}
+              <TableCell
+                sx={singleTheme.tableStyles.primary.body.cell}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <IconButtonComponent
+                  id={task.id!}
+                  onDelete={() => onArchive(task.id!)}
+                  onEdit={() => onEdit(task)}
+                  onMouseEvent={() => {}}
+                  warningTitle="Archive task?"
+                  warningMessage={`This task will be hidden from your active task list. You can restore "${task.title}" anytime from the archived view.`}
+                  type="Task"
+                  isArchived={task.status === TaskStatus.DELETED}
+                  onRestore={onRestore ? () => onRestore(task.id!) : undefined}
+                  onHardDelete={onHardDelete ? () => onHardDelete(task.id!) : undefined}
+                  hardDeleteWarningTitle="Permanently delete this task?"
+                  hardDeleteWarningMessage="This action cannot be undone. The task will be permanently removed from the system."
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     ),
     [
-      sortedRows,
-      validPage,
-      rowsPerPage,
+      pageRows,
       cellStyle,
       statusOptions,
       isUpdateDisabled,
@@ -414,7 +535,6 @@ const TasksTable: React.FC<ITasksTableProps> = ({
       users,
       onArchive,
       onEdit,
-      hidePagination,
       onRestore,
       onHardDelete,
       sortConfig,
@@ -423,6 +543,9 @@ const TasksTable: React.FC<ITasksTableProps> = ({
       onPriorityChange,
       theme,
       isVisible,
+      canRunBulkActions,
+      isSelected,
+      toggleSelection,
     ],
   );
 
@@ -451,28 +574,82 @@ const TasksTable: React.FC<ITasksTableProps> = ({
           />
         </EmptyState>
       ) : (
-        <TableContainer>
-          <Table sx={singleTheme.tableStyles.primary.frame}>
-            <StandardTableHead
-              columns={visibleTableColumns}
-              sortConfig={sortConfig}
-              onSort={handleSort}
+        <Stack sx={{ width: "100%" }}>
+          {canRunBulkActions && (
+            <BulkActionsToolbar
+              count={selectionCount}
+              onClear={clearSelection}
+              actions={bulkActions}
+              selectAll={{
+                totalCount: allSelectableIds.length,
+                onSelectAll: () => setAllSelected(allSelectableIds),
+              }}
             />
-            {tableBody}
-            {!hidePagination && (
-              <StandardTablePagination
-                totalCount={totalCount}
-                page={validPage}
-                rowsPerPage={rowsPerPage}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                getRange={getRange}
-                entityLabel="task"
-                colSpan={visibleTableColumns.length}
+          )}
+          <TableContainer>
+            <Table sx={singleTheme.tableStyles.primary.frame}>
+              <StandardTableHead
+                columns={visibleTableColumns}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+                selection={
+                  canRunBulkActions
+                    ? {
+                        allSelected: allSelected && selectableRows.length > 0,
+                        someSelected,
+                        onToggleAll: toggleAll,
+                        ariaLabel: "Select all tasks on this page",
+                      }
+                    : undefined
+                }
               />
-            )}
-          </Table>
-        </TableContainer>
+              {tableBody}
+              {!hidePagination && (
+                <StandardTablePagination
+                  totalCount={totalCount}
+                  page={validPage}
+                  rowsPerPage={rowsPerPage}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  getRange={getRange}
+                  entityLabel="task"
+                  colSpan={visibleTableColumns.length + (canRunBulkActions ? 1 : 0)}
+                />
+              )}
+            </Table>
+          </TableContainer>
+        </Stack>
+      )}
+
+      {canRunBulkActions && categoriesDialogOpen && (
+        <ConfirmationModal
+          isOpen
+          title={`Set categories for ${selectionCount} task${selectionCount === 1 ? "" : "s"}`}
+          body={
+            <Stack gap={2}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                These categories will replace the existing categories on every selected task. Leave
+                empty to clear them.
+              </Typography>
+              <ChipInput
+                id="bulk-task-categories-input"
+                label="Categories"
+                value={pendingCategories}
+                onChange={setPendingCategories}
+                placeholder="Type a category and press Enter"
+              />
+            </Stack>
+          }
+          cancelText="Cancel"
+          proceedText="Apply"
+          proceedButtonVariant="contained"
+          onCancel={() => {
+            if (bulkMutation.isPending) return;
+            setCategoriesDialogOpen(false);
+          }}
+          onProceed={handleConfirmCategories}
+          isLoading={bulkMutation.isPending}
+        />
       )}
     </>
   );

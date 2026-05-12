@@ -296,15 +296,15 @@ export function FieldCard({
     <Box
       onClick={handleClick}
       sx={{
-        position: "relative",
-        backgroundColor: theme.palette.background.main,
-        border: isSelected ? `1px solid ${theme.palette.border.dark}` : "1px solid transparent",
-        borderRadius: "4px",
-        cursor: "pointer",
-        transition: "border-color 0.15s ease",
-        p: "15px",
+        "position": "relative",
+        "backgroundColor": theme.palette.background.main,
+        "border": isSelected ? `1px solid ${theme.palette.border.dark}` : "1px solid transparent",
+        "borderRadius": "4px",
+        "cursor": "pointer",
+        "transition": "border-color 0.15s ease",
+        "p": "15px",
         "&:hover": {
-          borderColor: theme.palette.border.dark,
+          "borderColor": theme.palette.border.dark,
           "& .field-actions": { opacity: 1 },
         },
       }}
@@ -354,8 +354,8 @@ export function FieldCard({
               disabled={isFirst}
               onClick={handleMoveUp}
               sx={{
-                p: "3px",
-                color: isFirst ? theme.palette.border.dark : theme.palette.other.icon,
+                "p": "3px",
+                "color": isFirst ? theme.palette.border.dark : theme.palette.other.icon,
                 "&:hover": {
                   color: theme.palette.primary.main,
                   backgroundColor: theme.palette.background.fill,
@@ -373,8 +373,8 @@ export function FieldCard({
               disabled={isLast}
               onClick={handleMoveDown}
               sx={{
-                p: "3px",
-                color: isLast ? theme.palette.border.dark : theme.palette.other.icon,
+                "p": "3px",
+                "color": isLast ? theme.palette.border.dark : theme.palette.other.icon,
                 "&:hover": {
                   color: theme.palette.primary.main,
                   backgroundColor: theme.palette.background.fill,
@@ -393,8 +393,8 @@ export function FieldCard({
             size="small"
             onClick={handleDuplicate}
             sx={{
-              p: "3px",
-              color: theme.palette.other.icon,
+              "p": "3px",
+              "color": theme.palette.other.icon,
               "&:hover": {
                 color: theme.palette.primary.main,
                 backgroundColor: theme.palette.background.fill,
@@ -409,8 +409,8 @@ export function FieldCard({
             size="small"
             onClick={handleDelete}
             sx={{
-              p: "3px",
-              color: theme.palette.other.icon,
+              "p": "3px",
+              "color": theme.palette.other.icon,
               "&:hover": {
                 color: theme.palette.status.error.text,
                 backgroundColor: theme.palette.status.error.bg,

@@ -349,12 +349,12 @@ function ChecklistItem({ label, done, onClick }: ChecklistItemProps) {
       gap="8px"
       onClick={() => isClickable && onClick()}
       sx={{
-        cursor: isClickable ? "pointer" : "default",
-        borderRadius: "4px",
-        px: "2px",
-        py: "2px",
+        "cursor": isClickable ? "pointer" : "default",
+        "borderRadius": "4px",
+        "px": "2px",
+        "py": "2px",
         "&:hover": isClickable ? { "& .checklist-label": { textDecoration: "underline" } } : {},
-        transition: "background-color 0.15s",
+        "transition": "background-color 0.15s",
       }}
     >
       {done ? (

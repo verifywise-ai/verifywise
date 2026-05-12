@@ -29,7 +29,7 @@ export function PageHeaderExtended({
 
   return (
     <Stack className="vwhome" gap={0}>
-      <PageBreadcrumbs items={breadcrumbItems} sx={{ mb: 0, "& > hr": { mb: 0 } }} />
+      <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
 
       <Box sx={{ mt: "16px" }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">

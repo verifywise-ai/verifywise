@@ -133,7 +133,7 @@ export class SessionManager {
       if (authState?.authToken) {
         const response = await fetch("/api/users/me", {
           headers: {
-            Authorization: `Bearer ${authState.authToken}`,
+            "Authorization": `Bearer ${authState.authToken}`,
             "Content-Type": "application/json",
           },
         });

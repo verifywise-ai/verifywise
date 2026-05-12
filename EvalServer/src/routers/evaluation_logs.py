@@ -87,13 +87,28 @@ def check_openrouter_available() -> bool:
 
 
 async def check_db_api_key_available(organization_id: int, provider: str) -> bool:
-    """Check if the API key for a provider is stored in the database."""
+    """Check if the API key for a provider is stored in AI Gateway key storage."""
     try:
+        p = (provider or "").lower()
         async with get_db() as db:
-            result = await db.execute(
-                text('SELECT COUNT(*) FROM llm_evals_api_keys WHERE organization_id = :organization_id AND provider = :provider'),
-                {"organization_id": organization_id, "provider": provider}
-            )
+            if p == "google":
+                result = await db.execute(
+                    text(
+                        "SELECT COUNT(*) FROM ai_gateway_api_keys "
+                        "WHERE organization_id = :organization_id AND is_active = true "
+                        "AND LOWER(provider) IN ('google', 'gemini')"
+                    ),
+                    {"organization_id": organization_id},
+                )
+            else:
+                result = await db.execute(
+                    text(
+                        "SELECT COUNT(*) FROM ai_gateway_api_keys "
+                        "WHERE organization_id = :organization_id AND is_active = true "
+                        "AND LOWER(provider) = LOWER(:provider)"
+                    ),
+                    {"organization_id": organization_id, "provider": p},
+                )
             row = result.fetchone()
             return row[0] > 0 if row else False
     except Exception as e:
@@ -359,10 +374,10 @@ async def create_experiment(
             
             print(f"🚀 Starting background evaluation task...")
             
-            # Run evaluation in background
+            eval_config = {**experiment_data.config, "project_id": experiment_data.project_id}
             asyncio.create_task(run_evaluation_task(
                 experiment_id=experiment_id,
-                config=experiment_data.config,
+                config=eval_config,
                 organization_id=_get_organization_id(request),
             ))
         

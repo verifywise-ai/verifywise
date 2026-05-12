@@ -50,10 +50,23 @@ async function copyTemplates() {
   }
 }
 
+async function copyLocales() {
+  const sourceDir = path.join(__dirname, "..", "locales");
+  const destDir = path.join(__dirname, "..", "dist", "locales");
+
+  try {
+    await copyDir(sourceDir, destDir);
+    console.log("locales/ directory copied successfully!");
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+}
+
 async function copyFile() {
   try {
     await copySQLFile();
     await copyTemplates();
+    await copyLocales();
   } catch (error) {
     console.error("Error copying file: ", error);
     process.exit(1);

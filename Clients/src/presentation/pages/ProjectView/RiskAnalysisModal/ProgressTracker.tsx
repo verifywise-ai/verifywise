@@ -60,9 +60,9 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSte
           variant="determinate"
           value={percentage}
           sx={{
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: theme.palette.grey[200],
+            "height": 8,
+            "borderRadius": 4,
+            "backgroundColor": theme.palette.grey[200],
             "& .MuiLinearProgress-bar": {
               backgroundColor: theme.palette.primary.main,
               borderRadius: 4,

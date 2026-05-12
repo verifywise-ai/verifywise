@@ -68,7 +68,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
           }}
           error={errors.title}
           sx={{
-            backgroundColor: `${background.main}`,
+            "backgroundColor": `${background.main}`,
             "& input": {
               padding: "0 14px",
             },

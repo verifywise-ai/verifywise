@@ -23,7 +23,9 @@ const superAdminReadOnly = (req: Request, res: Response, next: NextFunction): vo
   if (!readOnlyMethods.includes(req.method.toUpperCase())) {
     return res
       .status(403)
-      .json(STATUS_CODE[403]("Super-admin has read-only access when viewing an organization"));
+      .json(
+        STATUS_CODE[403](req.t!("Super-admin has read-only access when viewing an organization")),
+      );
   }
 
   next();

@@ -209,13 +209,13 @@ export const sidebarValueSx: SxProps<Theme> = {
 };
 
 export const filePathSx: SxProps<Theme> = {
-  fontSize: (theme) => theme.typography.caption.fontSize,
-  color: "primary.main",
-  cursor: "pointer",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  display: "block",
+  "fontSize": (theme) => theme.typography.caption.fontSize,
+  "color": "primary.main",
+  "cursor": "pointer",
+  "overflow": "hidden",
+  "textOverflow": "ellipsis",
+  "whiteSpace": "nowrap",
+  "display": "block",
   "&:hover": {
     textDecoration: "underline",
   },

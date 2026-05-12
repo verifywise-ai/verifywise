@@ -9,18 +9,18 @@ export const categorySidebar: SxProps<Theme> = {
 };
 
 export const categoryMenuItem = (isSelected: boolean): SxProps<Theme> => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 1.5,
-  height: "32px",
-  padding: "0 12px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  background: isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "transparent",
-  border: isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
+  "display": "flex",
+  "alignItems": "center",
+  "gap": 1.5,
+  "height": "32px",
+  "padding": "0 12px",
+  "borderRadius": "4px",
+  "cursor": "pointer",
+  "background": isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "transparent",
+  "border": isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
   "&:hover": {
-    background: isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "#FAFAFA",
-    border: isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
+    "background": isSelected ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)" : "#FAFAFA",
+    "border": isSelected ? "1px solid #E8E8E8" : "1px solid transparent",
     "& svg": {
       color: `${brand.primary} !important`,
       stroke: `${brand.primary} !important`,
@@ -29,7 +29,7 @@ export const categoryMenuItem = (isSelected: boolean): SxProps<Theme> => ({
       stroke: `${brand.primary} !important`,
     },
   },
-  transition: "all 0.2s ease",
+  "transition": "all 0.2s ease",
 });
 
 export const categoryMenuText = (isSelected: boolean): SxProps<Theme> => ({
@@ -101,16 +101,16 @@ export const tabPanelStyle: SxProps<Theme> = {
 
 // Region collapsible section styles
 export const regionHeader = (theme: Theme): SxProps<Theme> => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(3),
-  py: theme.spacing(3),
-  px: theme.spacing(2),
-  mx: theme.spacing(-2),
-  borderBottom: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-  cursor: "pointer",
-  borderRadius: theme.shape.borderRadius,
-  transition: "all 0.2s ease",
+  "display": "flex",
+  "alignItems": "center",
+  "gap": theme.spacing(3),
+  "py": theme.spacing(3),
+  "px": theme.spacing(2),
+  "mx": theme.spacing(-2),
+  "borderBottom": `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+  "cursor": "pointer",
+  "borderRadius": theme.shape.borderRadius,
+  "transition": "all 0.2s ease",
   "&:hover": {
     backgroundColor: theme.palette.action?.hover || "rgba(19, 113, 91, 0.04)",
   },

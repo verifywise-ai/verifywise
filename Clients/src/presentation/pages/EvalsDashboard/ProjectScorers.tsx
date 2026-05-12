@@ -186,7 +186,10 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
           },
         ],
         useChainOfThought: scorerConfig.useChainOfThought ?? true,
-        choiceScores: scorerConfig.choiceScores || [{ label: "", score: 0 }],
+        choiceScores: scorerConfig.choiceScores || [
+          { label: "PASS", score: 1 },
+          { label: "FAIL", score: 0 },
+        ],
         passThreshold: scorer.defaultThreshold ?? 0.5,
         endpointUrl: endpointUrl || "",
         apiKey: apiKey || "",
@@ -280,8 +283,6 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             name: config.model,
             provider: config.provider,
             params: {
-              temperature: config.modelParams.temperature,
-              max_tokens: config.modelParams.maxTokens,
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl
@@ -335,8 +336,6 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             provider: config.provider,
             name: config.model,
             params: {
-              temperature: config.modelParams.temperature,
-              max_tokens: config.modelParams.maxTokens,
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl

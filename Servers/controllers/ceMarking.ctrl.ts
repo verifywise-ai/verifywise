@@ -332,7 +332,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
     if (!existingResult[0]) {
       await transaction.rollback();
-      return res.status(404).json({ error: "CE Marking record not found" });
+      return res.status(404).json({ error: req.t!("CE Marking record not found") });
     }
 
     const existing: any = existingResult[0];

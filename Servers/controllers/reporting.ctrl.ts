@@ -12,6 +12,7 @@ import { getUserByIdQuery } from "../utils/user.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
 
+import { translateError } from "../utils/i18n.utils";
 // Reporting system imports (v2 - HTML/EJS based)
 import { generateReport as generateReportV2, ReportFormat } from "../services/reporting";
 
@@ -116,7 +117,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const reports = await getGeneratedReportsQuery({ userId, role }, req.organizationId!);
@@ -147,7 +148,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -176,7 +177,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(404).json(STATUS_CODE[404]("Report not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Report not found")));
     }
 
     const deletedReport = await deleteReportByIdQuery(reportId, req.organizationId!, transaction);
@@ -214,7 +215,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -261,7 +262,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(404).json(STATUS_CODE[404]("User not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     const organization = await getOrganizationByIdQuery(user.organization_id!);
@@ -327,7 +328,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(500).json(STATUS_CODE[500]("Error uploading report file"));
+      return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
     }
 
     if (uploadedFile) {
@@ -354,7 +355,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(500).json(STATUS_CODE[500]("Error uploading report file"));
+      return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
     }
   } catch (error) {
     await logFailure({
@@ -366,6 +367,6 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

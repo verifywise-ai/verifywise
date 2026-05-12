@@ -141,18 +141,18 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
             type="button"
             onClick={() => setShowAdditional((prev) => !prev)}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              mt: "12px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              color: theme.palette.text.tertiary,
-              fontSize: "13px",
-              fontWeight: 500,
-              fontFamily: "inherit",
+              "display": "flex",
+              "alignItems": "center",
+              "gap": "6px",
+              "mt": "12px",
+              "background": "none",
+              "border": "none",
+              "cursor": "pointer",
+              "padding": 0,
+              "color": theme.palette.text.tertiary,
+              "fontSize": "13px",
+              "fontWeight": 500,
+              "fontFamily": "inherit",
               "&:hover": { color: theme.palette.text.primary },
             }}
           >

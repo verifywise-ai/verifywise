@@ -200,6 +200,9 @@ def get_judge_llm(provider: str, model_name: str):
     For OpenAI: Returns the model name string (DeepEval handles it natively)
     For other providers: Returns a CustomDeepEvalLLM wrapper
     
+    When AI Gateway LiteLLM mode is enabled, always use CustomDeepEvalLLM so all
+    judge traffic routes through the gateway (not DeepEval's direct OpenAI client).
+    
     Args:
         provider: The LLM provider (openai, anthropic, mistral, google, xai)
         model_name: The model identifier
@@ -207,13 +210,16 @@ def get_judge_llm(provider: str, model_name: str):
     Returns:
         Either a model name string (OpenAI) or CustomDeepEvalLLM instance
     """
+    from deepeval_engine.gateway_litellm_client import gateway_mode_enabled
+
     provider = provider.lower()
-    
-    # OpenAI is handled natively by DeepEval
+
+    if gateway_mode_enabled():
+        return CustomDeepEvalLLM(model_name=model_name, provider=provider)
+
     if provider == "openai":
         return model_name
-    
-    # For all other providers, use our custom wrapper
+
     return CustomDeepEvalLLM(model_name=model_name, provider=provider)
 
 

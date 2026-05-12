@@ -138,9 +138,9 @@ const FriaEvidenceButton = ({
                   component="span"
                   onClick={() => handleRemove(file.link_id)}
                   sx={{
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
+                    "cursor": "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
                     "&:hover": { opacity: 0.7 },
                   }}
                 >

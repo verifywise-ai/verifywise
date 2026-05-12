@@ -67,23 +67,8 @@
       "Bash(grep \"error TS\" /tmp/buildout.txt)",
       "Bash(npm install *)",
       "Bash(git -C /Users/harsh/Data/vw/verifywise remote -v)",
-      "Bash(__NEW_LINE_aa5d15258102bee9__ echo \"\")",
-      "Bash(__NEW_LINE_c37c99da917ca837__ echo \"\")",
-      "Bash(# Check untested presentation tools, utils, hooks echo \"\"=== PRESENTATION TOOLS \\(source\\) ===\"\" ls /c/Workspace/verifywise/Clients/src/presentation/tools/*.ts)",
-      "Bash(xargs:*)",
-      "Bash(sort echo \"=== REPO TEST FILES ===\" ls /c/Workspace/verifywise/Clients/src/application/repository/tests/*.test.ts)",
-      "Bash(# Check untested application layer items echo \"\"=== UNTESTED APP CONFIG ===\"\" ls /c/Workspace/verifywise/Clients/src/application/config/*.ts /c/Workspace/verifywise/Clients/src/application/config/*.tsx echo \"\"\"\" echo \"\"=== UNTESTED APP CONTEXTS ===\"\" ls /c/Workspace/verifywise/Clients/src/application/contexts/*.ts /c/Workspace/verifywise/Clients/src/application/contexts/*.tsx echo \"\"\"\" echo \"\"=== UNTESTED APP EVENTS ===\"\" ls /c/Workspace/verifywise/Clients/src/application/events/*.ts echo \"\"\"\" echo \"\"=== UNTESTED APP REGISTRY ===\"\" ls /c/Workspace/verifywise/Clients/src/application/registry/*.ts echo \"\"\"\" echo \"\"=== UNTESTED REDUX extras ===\"\" ls /c/Workspace/verifywise/Clients/src/application/redux/*.ts /c/Workspace/verifywise/Clients/src/application/redux/auth/*.ts)",
-      "Bash(git -C /c/Workspace/verifywise log --all --grep=\"3395\" --oneline)",
-      "Bash(git -C /c/Workspace/verifywise log --oneline --all)",
-      "Bash(npm --prefix Servers run build)",
-      "Bash(npx prettier:*)",
-      "Bash(git checkout:*)",
-      "Bash(git reset:*)",
-      "Bash(git -C .. add Servers/utils/virtualFolder.utils.ts Servers/version.json)",
-      "Bash(git -C:*)",
-      "Bash(head:*)",
-      "Bash(npx jest:*)",
-      "Bash(pkill -f \"vite preview\")"
+      "Bash(node scripts/i18n-audit.mjs --json)",
+      "Read(//tmp/**)"
     ]
   }
 }

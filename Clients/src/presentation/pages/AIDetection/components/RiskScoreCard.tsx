@@ -118,17 +118,17 @@ function RiskStatCard({
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
-        background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
-        border: `1px solid ${palette.border.light}`,
-        height: "100%",
-        minHeight: "80px",
-        position: "relative",
-        transition: "all 0.2s ease",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-        borderRadius: "8px",
-        overflow: "hidden",
+        "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+        "border": `1px solid ${palette.border.light}`,
+        "height": "100%",
+        "minHeight": "80px",
+        "position": "relative",
+        "transition": "all 0.2s ease",
+        "display": "flex",
+        "flexDirection": "column",
+        "boxSizing": "border-box",
+        "borderRadius": "8px",
+        "overflow": "hidden",
         "&:hover": {
           background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
           borderColor: palette.border.dark,
@@ -137,13 +137,13 @@ function RiskStatCard({
     >
       <CardContent
         sx={{
-          p: "14px 16px",
-          position: "relative",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflow: "hidden",
+          "p": "14px 16px",
+          "position": "relative",
+          "height": "100%",
+          "display": "flex",
+          "flexDirection": "column",
+          "flex": 1,
+          "overflow": "hidden",
           "&:last-child": { pb: "14px" },
         }}
       >
@@ -260,10 +260,10 @@ function LLMSection({ details }: { details: RiskScoreDetails }) {
     <Box>
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          cursor: "pointer",
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "8px",
+          "cursor": "pointer",
           "&:hover": { opacity: 0.8 },
         }}
         onClick={() => setShowLLMDetails(!showLLMDetails)}
@@ -353,7 +353,7 @@ export function RiskScoreCard({
             mb: 2,
           }}
         >
-          <CardContent sx={{ p: "14px 16px", "&:last-child": { pb: "14px" } }}>
+          <CardContent sx={{ "p": "14px 16px", "&:last-child": { pb: "14px" } }}>
             <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
               AI governance risk score
             </Typography>
@@ -417,16 +417,16 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
-            border: `1px solid ${palette.border.light}`,
-            height: "100%",
-            position: "relative",
-            transition: "all 0.2s ease",
-            display: "flex",
-            flexDirection: "column",
-            boxSizing: "border-box",
-            borderRadius: "8px",
-            overflow: "hidden",
+            "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            "border": `1px solid ${palette.border.light}`,
+            "height": "100%",
+            "position": "relative",
+            "transition": "all 0.2s ease",
+            "display": "flex",
+            "flexDirection": "column",
+            "boxSizing": "border-box",
+            "borderRadius": "8px",
+            "overflow": "hidden",
             "&:hover": {
               background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
               borderColor: palette.border.dark,
@@ -435,13 +435,13 @@ export function RiskScoreCard({
         >
           <CardContent
             sx={{
-              p: "14px 16px",
-              position: "relative",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-              overflow: "hidden",
+              "p": "14px 16px",
+              "position": "relative",
+              "height": "100%",
+              "display": "flex",
+              "flexDirection": "column",
+              "flex": 1,
+              "overflow": "hidden",
               "&:last-child": { pb: "14px" },
             }}
           >
@@ -521,9 +521,9 @@ export function RiskScoreCard({
                               variant="determinate"
                               value={dim.score}
                               sx={{
-                                height: 4,
-                                borderRadius: 2,
-                                backgroundColor: palette.border.light,
+                                "height": 4,
+                                "borderRadius": 2,
+                                "backgroundColor": palette.border.light,
                                 "& .MuiLinearProgress-bar": {
                                   backgroundColor: barColor,
                                   borderRadius: 2,
@@ -566,7 +566,7 @@ export function RiskScoreCard({
             mt: "16px",
           }}
         >
-          <CardContent sx={{ p: "14px 16px", "&:last-child": { pb: "14px" } }}>
+          <CardContent sx={{ "p": "14px 16px", "&:last-child": { pb: "14px" } }}>
             <LLMSection details={details} />
           </CardContent>
         </Card>

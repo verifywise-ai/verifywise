@@ -28,9 +28,9 @@ const WizardShowcase: React.FC = () => {
         text="Open onboarding wizard"
         onClick={() => setIsOpen(true)}
         sx={{
-          height: 40,
-          fontSize: 14,
-          bgcolor: `${brand.primary}`,
+          "height": 40,
+          "fontSize": 14,
+          "bgcolor": `${brand.primary}`,
           "&:hover": { bgcolor: `${brand.primaryHover}` },
         }}
       />

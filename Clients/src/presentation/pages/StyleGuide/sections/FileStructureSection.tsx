@@ -279,14 +279,14 @@ const FileStructureSection: React.FC = () => {
               key={item.component}
               onClick={() => handleCopy(`src/presentation/${item.path}`)}
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: "10px 14px",
-                backgroundColor: theme.palette.background.alt,
-                border: `1px solid ${theme.palette.border.light}`,
-                borderRadius: "4px",
-                cursor: "pointer",
+                "display": "flex",
+                "justifyContent": "space-between",
+                "alignItems": "center",
+                "p": "10px 14px",
+                "backgroundColor": theme.palette.background.alt,
+                "border": `1px solid ${theme.palette.border.light}`,
+                "borderRadius": "4px",
+                "cursor": "pointer",
                 "&:hover": {
                   backgroundColor: theme.palette.background.fill,
                   borderColor: theme.palette.primary.main,
@@ -505,13 +505,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       <Box
         onClick={() => (isFolder && hasChildren ? toggleFolder(path) : onCopy(path))}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          py: "4px",
-          pl: `${level * 16}px`,
-          cursor: "pointer",
-          borderRadius: "2px",
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "6px",
+          "py": "4px",
+          "pl": `${level * 16}px`,
+          "cursor": "pointer",
+          "borderRadius": "2px",
           "&:hover": {
             backgroundColor: theme.palette.background.fill,
           },

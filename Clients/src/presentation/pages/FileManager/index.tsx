@@ -616,6 +616,7 @@ const FileManager: React.FC = (): JSX.Element => {
         file.version = meta.version;
         file.reviewStatus = meta.review_status;
         file.fileGroupId = meta.file_group_id;
+        file.tags = meta.tags ?? [];
       }
       return file;
     };
@@ -642,6 +643,7 @@ const FileManager: React.FC = (): JSX.Element => {
         projectId: file.project_id?.toString(),
         projectTitle: file.project_title,
         source: file.source || "File Manager",
+        tags: (file as any).tags ?? [],
       });
       return enrichWithMetadata(fileModel);
     });
@@ -1008,6 +1010,10 @@ const FileManager: React.FC = (): JSX.Element => {
                       onEditMetadata={canManageFolders ? handleOpenMetadataEditor : undefined}
                       onViewHistory={handleOpenVersionHistory}
                       visibleColumnKeys={visibleColumnKeys}
+                      canRunBulkActions={canManageFolders}
+                      onBulkActionSuccess={() => {
+                        refetch();
+                      }}
                     />
                   )}
                 />

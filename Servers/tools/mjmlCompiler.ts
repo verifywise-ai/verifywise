@@ -12,8 +12,8 @@ export const compileMjmlToHtml = async (
   // mjml v5 returns a Promise at runtime even though the TypeScript types
   // still describe a sync return. Await through `unknown` so we tolerate
   // both shapes — older v4 sync results pass through Promise.resolve.
-  const result = (await Promise.resolve(
-    mjml2html(compiledTemplate) as unknown,
-  )) as { html: string };
+  const result = (await Promise.resolve(mjml2html(compiledTemplate) as unknown)) as {
+    html: string;
+  };
   return result.html;
 };

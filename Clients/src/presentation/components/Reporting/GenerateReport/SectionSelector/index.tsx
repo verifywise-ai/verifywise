@@ -122,13 +122,13 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
   }, []);
 
   const checkboxStyles = {
-    padding: "2px",
-    marginRight: "4px",
-    color: theme.palette.border.dark,
-    width: "20px",
-    height: "20px",
-    minWidth: "20px",
-    minHeight: "20px",
+    "padding": "2px",
+    "marginRight": "4px",
+    "color": theme.palette.border.dark,
+    "width": "20px",
+    "height": "20px",
+    "minWidth": "20px",
+    "minHeight": "20px",
     "&.Mui-checked": {
       color: `${brand.primary}`,
     },
@@ -142,24 +142,24 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
   };
 
   const rowStyles = {
-    display: "flex",
-    alignItems: "center",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    cursor: "pointer",
+    "display": "flex",
+    "alignItems": "center",
+    "padding": "4px 8px",
+    "borderRadius": "4px",
+    "cursor": "pointer",
     "&:hover": {
       backgroundColor: theme.palette.background.alt,
     },
   };
 
   const expandIconStyles = {
-    width: "20px",
-    height: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "4px",
-    flexShrink: 0,
+    "width": "20px",
+    "height": "20px",
+    "display": "flex",
+    "alignItems": "center",
+    "justifyContent": "center",
+    "borderRadius": "4px",
+    "flexShrink": 0,
     "&:hover": {
       backgroundColor: theme.palette.background.main,
     },

@@ -35,12 +35,12 @@ export const selfOnly = (req: Request, res: Response, next: NextFunction): void 
   const bodyId = req.body.id;
 
   if (!jwtUserId) {
-    return res.status(401).json({ message: "Authentication required" });
+    return res.status(401).json({ message: req.t!("Authentication required") });
   }
 
   // At least one target ID must be provided
   if (!paramsId && !bodyId) {
-    return res.status(400).json({ message: "Target user ID is required" });
+    return res.status(400).json({ message: req.t!("Target user ID is required") });
   }
 
   // Check all provided IDs match the JWT user ID
@@ -48,20 +48,20 @@ export const selfOnly = (req: Request, res: Response, next: NextFunction): void 
 
   if (paramsId && String(paramsId) !== jwtIdStr) {
     return res.status(403).json({
-      message: "You can only modify your own data",
+      message: req.t!("You can only modify your own data"),
     });
   }
 
   if (bodyId && String(bodyId) !== jwtIdStr) {
     return res.status(403).json({
-      message: "You can only modify your own data",
+      message: req.t!("You can only modify your own data"),
     });
   }
 
   // Also ensure params and body IDs match each other if both provided
   if (paramsId && bodyId && String(paramsId) !== String(bodyId)) {
     return res.status(400).json({
-      message: "Mismatched user IDs in request",
+      message: req.t!("Mismatched user IDs in request"),
     });
   }
 

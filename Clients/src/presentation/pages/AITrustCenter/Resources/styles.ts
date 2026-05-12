@@ -198,8 +198,8 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   closeButton: {
-    color: theme.palette.text.secondary,
-    padding: 0,
+    "color": theme.palette.text.secondary,
+    "padding": 0,
     "&:hover": {
       backgroundColor: "transparent",
       opacity: 0.8,
@@ -207,7 +207,7 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   fieldStyle: {
-    backgroundColor: theme.palette.background.paper,
+    "backgroundColor": theme.palette.background.paper,
     "& input": {
       padding: "0 14px",
     },
@@ -246,9 +246,9 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   modalActionButton: {
-    backgroundColor: "brand.primary",
-    border: `1px solid #13715B`,
-    gap: 1,
+    "backgroundColor": "brand.primary",
+    "border": `1px solid #13715B`,
+    "gap": 1,
     "&:hover": {
       backgroundColor: "brand.primary",
     },
@@ -260,9 +260,9 @@ export const useStyles = (theme: Theme): StylesType => ({
   },
 
   modalCancelButton: {
-    border: `1px solid ${theme.palette.divider}`,
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.background.paper,
+    "border": `1px solid ${theme.palette.divider}`,
+    "color": theme.palette.text.primary,
+    "backgroundColor": theme.palette.background.paper,
     "&:hover": {
       backgroundColor: theme.palette.grey[50],
       border: `1px solid ${theme.palette.text.secondary}`,

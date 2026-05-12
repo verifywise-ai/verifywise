@@ -25,32 +25,32 @@ export interface ProviderConfig {
 
 // Provider metadata with icons/colors
 const PROVIDER_META: Record<string, { displayName: string; iconColor: string; logo: string }> = {
-  openai: {
+  "openai": {
     displayName: "OpenAI",
     iconColor: "#10A37F",
     logo: "/src/presentation/assets/icons/openai_logo.svg",
   },
-  anthropic: {
+  "anthropic": {
     displayName: "Anthropic",
     iconColor: "#D97706",
     logo: "/src/presentation/assets/icons/anthropic_logo.svg",
   },
-  google: {
+  "google": {
     displayName: "Google",
     iconColor: "#4285F4",
     logo: "/src/presentation/assets/icons/gemini_logo.svg",
   },
-  mistral: {
+  "mistral": {
     displayName: "Mistral",
     iconColor: "#FF7000",
     logo: "/src/presentation/assets/icons/mistral_logo.svg",
   },
-  xai: {
+  "xai": {
     displayName: "xAI",
     iconColor: `${text.black}`,
     logo: "/src/presentation/assets/icons/xai_logo.svg",
   },
-  openrouter: {
+  "openrouter": {
     displayName: "OpenRouter",
     iconColor: "#6366F1",
     logo: "/src/presentation/assets/icons/openrouter_logo.svg",
@@ -63,27 +63,27 @@ const PROVIDER_META: Record<string, { displayName: string; iconColor: string; lo
 };
 
 export const PROVIDERS: Record<string, ProviderConfig> = {
-  openai: {
+  "openai": {
     ...(openaiModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.openai,
   },
-  anthropic: {
+  "anthropic": {
     ...(anthropicModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.anthropic,
   },
-  google: {
+  "google": {
     ...(googleModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.google,
   },
-  mistral: {
+  "mistral": {
     ...(mistralModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.mistral,
   },
-  xai: {
+  "xai": {
     ...(xaiModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.xai,
   },
-  openrouter: {
+  "openrouter": {
     ...(openrouterModels as { provider: string; displayName: string; models: ModelInfo[] }),
     ...PROVIDER_META.openrouter,
   },

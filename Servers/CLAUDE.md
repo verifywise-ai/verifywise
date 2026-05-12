@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-05-05
 
 ---
 
@@ -167,7 +167,9 @@ Read the relevant file BEFORE implementing changes in that area:
 | Adding a new feature (full guide)         | `docs/technical/guides/adding-new-feature.md`     |
 | Adding a new framework                    | `docs/technical/guides/adding-new-framework.md`   |
 | API conventions                           | `docs/technical/guides/api-conventions.md`        |
-| Code style                                | `docs/technical/guides/code-style.md`             |
+| Code style (short version)                | `docs/technical/guides/code-style.md`             |
+| Detailed backend coding standards         | `CodeRules/04-backend/`                           |
+| TypeScript standards & naming             | `CodeRules/02-typescript/`                        |
 | API routes & endpoints                    | `docs/technical/api/endpoints.md`                 |
 | Background jobs (BullMQ)                  | `docs/technical/infrastructure/automations.md`    |
 | Email templates (MJML)                    | `docs/technical/infrastructure/email-service.md`  |

@@ -597,7 +597,7 @@ export default function RepositoriesPage() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                     ActionsComponent={TablePaginationActions}
                     sx={{
-                      borderBottom: 0,
+                      "borderBottom": 0,
                       "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
                         fontSize: "13px",
                       },

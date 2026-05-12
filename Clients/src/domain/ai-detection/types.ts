@@ -22,7 +22,7 @@ export type LicenseRiskLevel = "high" | "medium" | "low" | "unknown";
 
 export type LicenseSource = "package" | "huggingface" | "pypi" | "npm" | "manual";
 
-export type GovernanceStatus = "reviewed" | "approved" | "flagged";
+export type GovernanceStatus = "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk";
 
 export type ScanMode = "full" | "incremental";
 
@@ -117,6 +117,38 @@ export interface Finding {
   vulnerability_details?: Record<string, unknown> | null;
   // Incremental scan fields
   finding_status?: FindingStatus;
+  // Suppression flags (set by the scan-time matcher)
+  suppressed?: boolean;
+  suppression_rule_id?: number | null;
+}
+
+// ============================================================================
+// Suppression Rule Types
+// ============================================================================
+
+export type SuppressionMatchType = "exact" | "pattern";
+
+export type SuppressionField = "name" | "finding_type" | "category" | "provider";
+
+export interface SuppressionRule {
+  id: number;
+  organization_id: number;
+  match_type: SuppressionMatchType;
+  field: SuppressionField;
+  value: string;
+  reason?: string | null;
+  expires_at?: string | null;
+  created_by?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSuppressionRequest {
+  match_type: SuppressionMatchType;
+  field: SuppressionField;
+  value: string;
+  reason?: string | null;
+  expires_at?: string | null;
 }
 
 // ============================================================================
@@ -346,6 +378,8 @@ export interface GovernanceSummary {
   reviewed: number;
   approved: number;
   flagged: number;
+  suppressed: number;
+  accepted_risk: number;
   unreviewed: number;
 }
 

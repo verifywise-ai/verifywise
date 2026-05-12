@@ -51,7 +51,7 @@ const ViewRelationshipsButton: React.FC<ViewRelationshipsButtonProps> = ({
           size={size}
           onClick={handleClick}
           sx={{
-            color: `${text.icon}`,
+            "color": `${text.icon}`,
             "&:hover": {
               color: `${brand.primary}`,
               backgroundColor: "rgba(19, 113, 91, 0.08)",

@@ -62,11 +62,11 @@ export function PlaygroundMessage() {
           </Box>
           <Box
             sx={{
-              flex: 1,
-              minWidth: 0,
-              pt: 0.25,
-              fontSize: 13,
-              lineHeight: 1.6,
+              "flex": 1,
+              "minWidth": 0,
+              "pt": 0.25,
+              "fontSize": 13,
+              "lineHeight": 1.6,
               "& p": { margin: 0, mb: 1 },
               "& p:last-child": { mb: 0 },
               "& code": {

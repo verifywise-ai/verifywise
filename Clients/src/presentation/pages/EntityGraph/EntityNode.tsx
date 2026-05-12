@@ -47,10 +47,10 @@ const entityIcons: Record<EntityType, LucideIcon> = {
 };
 
 export const riskLevelColors: Record<string, string> = {
-  Low: "#4caf50",
-  Medium: "#ff9800",
-  High: "#f44336",
-  Critical: "#9c27b0",
+  "Low": "#4caf50",
+  "Medium": "#ff9800",
+  "High": "#f44336",
+  "Critical": "#9c27b0",
   "Very low risk": "#4caf50",
   "Low risk": "#8bc34a",
   "Medium risk": "#ff9800",
@@ -83,19 +83,19 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
     <VWTooltip header={nodeData.label} content={tooltipContent} placement="top" maxWidth={400}>
       <Box
         sx={{
-          backgroundColor: nodeData.isHighlighted ? "#fffbeb" : "white",
-          border: nodeData.isHighlighted ? "3px solid #f59e0b" : `2px solid ${nodeData.color}`,
-          borderRadius: "4px",
-          padding: "8px 12px",
-          minWidth: minWidth,
-          maxWidth: maxWidth,
-          boxShadow: nodeData.isHighlighted
+          "backgroundColor": nodeData.isHighlighted ? "#fffbeb" : "white",
+          "border": nodeData.isHighlighted ? "3px solid #f59e0b" : `2px solid ${nodeData.color}`,
+          "borderRadius": "4px",
+          "padding": "8px 12px",
+          "minWidth": minWidth,
+          "maxWidth": maxWidth,
+          "boxShadow": nodeData.isHighlighted
             ? "0 0 0 4px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(0,0,0,0.15)"
             : "0 2px 4px rgba(0,0,0,0.1)",
-          cursor: "pointer",
-          transition: "all 0.3s ease-in-out",
-          transform: nodeData.isHighlighted ? "scale(1.05)" : "scale(1)",
-          position: "relative",
+          "cursor": "pointer",
+          "transition": "all 0.3s ease-in-out",
+          "transform": nodeData.isHighlighted ? "scale(1.05)" : "scale(1)",
+          "position": "relative",
           "&:hover": {
             boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
             transform: "translateY(-1px)",

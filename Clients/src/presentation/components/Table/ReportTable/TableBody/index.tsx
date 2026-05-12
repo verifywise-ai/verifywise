@@ -83,11 +83,11 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                             <Sparkles size={10} color={brand.primary} style={{ marginLeft: 6 }} />
                           }
                           sx={{
-                            fontSize: "10px",
-                            height: "20px",
-                            backgroundColor: `${brand.primaryLight}`,
-                            color: `${brand.primary}`,
-                            fontWeight: 600,
+                            "fontSize": "10px",
+                            "height": "20px",
+                            "backgroundColor": `${brand.primaryLight}`,
+                            "color": `${brand.primary}`,
+                            "fontWeight": 600,
                             "& .MuiChip-label": { px: 0.5 },
                             "& .MuiChip-icon": { marginRight: "-2px" },
                           }}

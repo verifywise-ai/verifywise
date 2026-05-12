@@ -372,9 +372,9 @@ const AlertPreview: React.FC<AlertPreviewProps> = ({
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >
@@ -457,12 +457,12 @@ const AlertColorCard: React.FC<AlertColorCardProps> = ({
           <Box
             onClick={() => onCopy(textColor)}
             sx={{
-              flex: 1,
-              p: "6px 8px",
-              backgroundColor: theme.palette.background.fill,
-              borderRadius: "4px",
-              cursor: "pointer",
-              textAlign: "center",
+              "flex": 1,
+              "p": "6px 8px",
+              "backgroundColor": theme.palette.background.fill,
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "textAlign": "center",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -478,12 +478,12 @@ const AlertColorCard: React.FC<AlertColorCardProps> = ({
           <Box
             onClick={() => onCopy(bgColor)}
             sx={{
-              flex: 1,
-              p: "6px 8px",
-              backgroundColor: theme.palette.background.fill,
-              borderRadius: "4px",
-              cursor: "pointer",
-              textAlign: "center",
+              "flex": 1,
+              "p": "6px 8px",
+              "backgroundColor": theme.palette.background.fill,
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "textAlign": "center",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -552,14 +552,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -620,9 +620,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

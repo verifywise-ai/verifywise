@@ -81,6 +81,8 @@ const MODEL_PROVIDERS = [
 
 export interface ModelsPageProps {
   orgId: string;
+  openAddModal?: boolean;
+  onAddModalConsumed?: () => void;
 }
 
 interface AlertState {
@@ -95,7 +97,7 @@ interface NewModelConfig {
   apiKey: string;
 }
 
-export default function ModelsPage({ orgId }: ModelsPageProps) {
+export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: ModelsPageProps) {
   const [models, setModels] = useState<SavedModel[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,6 +115,12 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
 
   // New model modal state
   const [addModalOpen, setAddModalOpen] = useState(false);
+  useEffect(() => {
+    if (openAddModal) {
+      setAddModalOpen(true);
+      onAddModalConsumed?.(); // reset the flag in the parent so returning later doesn't re-open
+    }
+  }, [openAddModal, onAddModalConsumed]);
   const [isSaving, setIsSaving] = useState(false);
   const [newModel, setNewModel] = useState<NewModelConfig>({
     accessMethod: "",
@@ -124,6 +132,10 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
   // API keys state
   const [configuredApiKeys, setConfiguredApiKeys] = useState<LLMApiKey[]>([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+
+  // Gateway models state
+  const [gatewayModels, setGatewayModels] = useState<{ id: string; name: string }[]>([]);
+  const [loadingGatewayModels, setLoadingGatewayModels] = useState(false);
 
   // Load configured API keys when modal opens
   useEffect(() => {
@@ -140,6 +152,32 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
       }
     })();
   }, [addModalOpen]);
+
+  // Fetch live gateway models whenever the selected provider changes
+  useEffect(() => {
+    const provider = newModel.accessMethod;
+    if (!provider || provider === "custom" || provider === "ollama" || provider === "openrouter") {
+      setGatewayModels([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoadingGatewayModels(true);
+      try {
+        const models = await evalModelsService.getGatewayModelsForProvider(provider);
+        if (!cancelled) {
+          setGatewayModels(models.map((m) => ({ id: m.id, name: m.name })));
+        }
+      } catch {
+        if (!cancelled) setGatewayModels([]);
+      } finally {
+        if (!cancelled) setLoadingGatewayModels(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [newModel.accessMethod]);
 
   // Check if a provider has a configured API key
   const hasApiKey = useCallback(
@@ -314,7 +352,7 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
     }
   };
 
-  // Get available models for selected provider
+  // Get available models for selected provider — prefer live gateway models, fall back to static
   const availableModels = useMemo(() => {
     if (
       !newModel.accessMethod ||
@@ -323,8 +361,9 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
     ) {
       return [];
     }
+    if (gatewayModels.length > 0) return gatewayModels;
     return PROVIDERS[newModel.accessMethod]?.models || [];
-  }, [newModel.accessMethod]);
+  }, [newModel.accessMethod, gatewayModels]);
 
   return (
     <Stack sx={{ width: "100%" }}>
@@ -443,14 +482,14 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
                           }))
                         }
                         sx={{
-                          cursor: "pointer",
-                          border: "1px solid",
-                          borderColor: isSelected ? palette.brand.primary : palette.border.dark,
-                          backgroundColor: palette.background.main,
-                          boxShadow: "none",
-                          transition: "all 0.2s ease",
-                          position: "relative",
-                          height: "100%",
+                          "cursor": "pointer",
+                          "border": "1px solid",
+                          "borderColor": isSelected ? palette.brand.primary : palette.border.dark,
+                          "backgroundColor": palette.background.main,
+                          "boxShadow": "none",
+                          "transition": "all 0.2s ease",
+                          "position": "relative",
+                          "height": "100%",
                           "&:hover": {
                             borderColor: palette.brand.primary,
                             boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -459,14 +498,14 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
                       >
                         <CardContent
                           sx={{
-                            textAlign: "center",
-                            py: 3,
-                            px: 2,
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            "textAlign": "center",
+                            "py": 3,
+                            "px": 2,
+                            "height": "100%",
+                            "display": "flex",
+                            "flexDirection": "column",
+                            "alignItems": "center",
+                            "justifyContent": "center",
                             "&:last-child": { pb: 3 },
                           }}
                         >
@@ -491,12 +530,12 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
 
                           <Box
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: 40,
-                              height: 40,
-                              mb: 1.5,
+                              "display": "flex",
+                              "alignItems": "center",
+                              "justifyContent": "center",
+                              "width": 40,
+                              "height": 40,
+                              "mb": 1.5,
                               "& svg": {
                                 width: 32,
                                 height: 32,
@@ -574,16 +613,16 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
                           variant={newModel.modelName === m.id ? "filled" : "outlined"}
                           onClick={() => setNewModel((prev) => ({ ...prev, modelName: m.id }))}
                           sx={{
-                            cursor: "pointer",
-                            backgroundColor:
+                            "cursor": "pointer",
+                            "backgroundColor":
                               newModel.modelName === m.id
                                 ? palette.brand.primaryLight
                                 : "transparent",
-                            borderColor:
+                            "borderColor":
                               newModel.modelName === m.id
                                 ? palette.brand.primary
                                 : palette.border.dark,
-                            color:
+                            "color":
                               newModel.modelName === m.id
                                 ? palette.brand.primary
                                 : palette.text.secondary,
@@ -642,8 +681,16 @@ export default function ModelsPage({ orgId }: ModelsPageProps) {
                       </Box>
                     )}
                   </Box>
+                ) : loadingGatewayModels ? (
+                  /* Loading models from gateway */
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ py: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+                      Loading models...
+                    </Typography>
+                  </Stack>
                 ) : availableModels.length > 0 ? (
-                  /* Standard providers - Dropdown */
+                  /* Standard providers - Dropdown populated from AI Gateway */
                   <FormControl fullWidth size="small">
                     <Select
                       value={newModel.modelName}

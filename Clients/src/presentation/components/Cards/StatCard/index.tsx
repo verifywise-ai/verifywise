@@ -37,21 +37,21 @@ export function StatCard({
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
-        background: active
+        "background": active
           ? `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`
           : "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
-        border: active
+        "border": active
           ? `1.5px solid ${palette.brand.primary}`
           : `1.5px solid ${palette.border.light}`,
-        height: "100%",
-        minHeight: "80px",
-        position: "relative",
-        transition: "all 0.2s ease",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-        borderRadius: "8px",
-        overflow: "hidden",
+        "height": "100%",
+        "minHeight": "80px",
+        "position": "relative",
+        "transition": "all 0.2s ease",
+        "display": "flex",
+        "flexDirection": "column",
+        "boxSizing": "border-box",
+        "borderRadius": "8px",
+        "overflow": "hidden",
         ...(onClick && { cursor: "pointer" }),
         "&:hover": {
           background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
@@ -61,13 +61,13 @@ export function StatCard({
     >
       <CardContent
         sx={{
-          p: "14px 16px",
-          position: "relative",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflow: "hidden",
+          "p": "14px 16px",
+          "position": "relative",
+          "height": "100%",
+          "display": "flex",
+          "flexDirection": "column",
+          "flex": 1,
+          "overflow": "hidden",
           "&:last-child": { pb: "14px" },
         }}
       >

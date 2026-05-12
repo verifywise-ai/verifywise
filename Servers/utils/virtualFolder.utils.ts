@@ -447,7 +447,7 @@ export const assignFilesToFolderQuery = async (
   const result = await sequelize.query<{ id: number }>(
     `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
      VALUES ${values}
-     ON CONFLICT (organization_id, file_id, folder_id) DO NOTHING
+     ON CONFLICT (file_id, folder_id) DO NOTHING
      RETURNING id`,
     {
       replacements,

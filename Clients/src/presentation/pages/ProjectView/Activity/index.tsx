@@ -4,7 +4,8 @@
  */
 
 import React from "react";
-import { Box, Typography, Stack, CircularProgress, useTheme, Avatar } from "@mui/material";
+import { Box, Typography, Stack, CircularProgress, useTheme } from "@mui/material";
+import VWAvatar from "../../../components/Avatar/VWAvatar";
 import { Clock } from "lucide-react";
 import {
   useEntityChangeHistory,
@@ -175,11 +176,11 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
               setExpandedValues(newSet);
             }}
             sx={{
-              fontSize: 12,
-              color: theme.palette.primary.main,
-              fontWeight: 500,
-              cursor: "pointer",
-              marginTop: "4px",
+              "fontSize": 12,
+              "color": theme.palette.primary.main,
+              "fontWeight": 500,
+              "cursor": "pointer",
+              "marginTop": "4px",
               "&:hover": {
                 textDecoration: "underline",
               },
@@ -210,30 +211,26 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
       <Box
         key={`${firstEntry.changed_at}_${firstEntry.id}`}
         sx={{
-          marginBottom: "32px",
-          padding: "16px",
-          backgroundColor: theme.palette.background.main,
-          borderRadius: "8px",
-          border: `1px solid #d0d5dd`,
+          "marginBottom": "32px",
+          "padding": "16px",
+          "backgroundColor": theme.palette.background.main,
+          "borderRadius": "8px",
+          "border": `1px solid #d0d5dd`,
           "&:last-child": {
             marginBottom: 0,
           },
         }}
       >
         <Stack direction="row" gap="12px" alignItems="center" marginBottom="16px">
-          <Avatar
-            src={avatarUrls[firstEntry.changed_by_user_id] || undefined}
-            alt={userName}
-            sx={{
-              width: 36,
-              height: 36,
-              backgroundColor: theme.palette.primary.main,
-              fontSize: 14,
-              fontWeight: 600,
+          <VWAvatar
+            user={{
+              firstname: firstEntry.user_name || userName,
+              lastname: firstEntry.user_surname || "",
+              pathToImage: avatarUrls[firstEntry.changed_by_user_id] || undefined,
             }}
-          >
-            {userName.charAt(0).toUpperCase()}
-          </Avatar>
+            size="small"
+            showBorder={false}
+          />
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
@@ -268,8 +265,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             <Box
               key={entry.id}
               sx={{
-                marginBottom: "12px",
-                paddingLeft: "48px",
+                "marginBottom": "12px",
+                "paddingLeft": "48px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -485,10 +482,12 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           <Typography
             onClick={() => !isFetchingNextPage && fetchNextPage()}
             sx={{
-              fontSize: 14,
-              fontWeight: 500,
-              color: isFetchingNextPage ? theme.palette.text.disabled : theme.palette.primary.main,
-              cursor: isFetchingNextPage ? "default" : "pointer",
+              "fontSize": 14,
+              "fontWeight": 500,
+              "color": isFetchingNextPage
+                ? theme.palette.text.disabled
+                : theme.palette.primary.main,
+              "cursor": isFetchingNextPage ? "default" : "pointer",
               "&:hover": {
                 textDecoration: isFetchingNextPage ? "none" : "underline",
               },

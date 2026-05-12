@@ -254,8 +254,8 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 ...singleTheme.tableStyles.primary.header.cell,
                 ...(sortable
                   ? {
-                      cursor: "pointer",
-                      userSelect: "none",
+                      "cursor": "pointer",
+                      "userSelect": "none",
                       "&:hover": {
                         backgroundColor: "rgba(0, 0, 0, 0.04)",
                       },

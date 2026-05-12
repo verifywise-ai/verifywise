@@ -1,6 +1,6 @@
 import { brand, text, background } from "../../themes/palette";
 export const textfieldStyle = {
-  backgroundColor: `${background.main}`,
+  "backgroundColor": `${background.main}`,
   "& input": {
     padding: "0 14px",
   },

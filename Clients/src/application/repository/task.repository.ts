@@ -252,3 +252,21 @@ export async function hardDeleteTask({ id }: { id: string | number }): Promise<a
     throw error;
   }
 }
+
+export type BulkTaskAction = "mark_complete" | "set_categories";
+
+export interface BulkUpdateTasksPayload {
+  ids: number[];
+  action: BulkTaskAction;
+  categories?: string[];
+}
+
+export async function bulkUpdateTasks(payload: BulkUpdateTasksPayload): Promise<any> {
+  try {
+    const response = await apiServices.patch("/tasks/bulk", payload);
+    return response.data;
+  } catch (error) {
+    console.error("Error performing bulk task update:", error);
+    throw error;
+  }
+}

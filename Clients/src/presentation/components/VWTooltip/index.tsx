@@ -87,13 +87,13 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
           )}
           <Box
             sx={{
-              fontSize: "13px",
-              lineHeight: 1.5,
-              color: `${background.main}`,
+              "fontSize": "13px",
+              "lineHeight": 1.5,
+              "color": `${background.main}`,
               "& p": {
-                margin: 0,
-                marginBottom: "8px",
-                fontSize: "13px",
+                "margin": 0,
+                "marginBottom": "8px",
+                "fontSize": "13px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -104,8 +104,8 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
                 fontSize: "13px",
               },
               "& li": {
-                marginBottom: "4px",
-                fontSize: "13px",
+                "marginBottom": "4px",
+                "fontSize": "13px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -124,10 +124,10 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
       slotProps={{
         tooltip: {
           sx: {
-            maxWidth: maxWidth,
-            backgroundColor: backgroundColor,
-            padding: "12px 16px",
-            borderRadius: "4px",
+            "maxWidth": maxWidth,
+            "backgroundColor": backgroundColor,
+            "padding": "12px 16px",
+            "borderRadius": "4px",
             "& *": {
               overflow: "visible !important",
               textOverflow: "clip !important",

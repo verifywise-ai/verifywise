@@ -248,9 +248,9 @@ const ReportsArchive: React.FC = () => {
               text="Reset filters"
               onClick={handleResetFilters}
               sx={{
-                height: "34px",
-                color: theme.palette.other.icon,
-                fontSize: 13,
+                "height": "34px",
+                "color": theme.palette.other.icon,
+                "fontSize": 13,
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                 },
@@ -325,9 +325,9 @@ const ReportsArchive: React.FC = () => {
                           icon={<Download size={14} />}
                           onClick={() => report.id && handleDownload(report.id)}
                           sx={{
-                            height: "30px",
-                            color: theme.palette.primary.main,
-                            fontSize: 13,
+                            "height": "30px",
+                            "color": theme.palette.primary.main,
+                            "fontSize": 13,
                             "&:hover": {
                               backgroundColor: theme.palette.status.success.bg,
                             },
@@ -349,7 +349,7 @@ const ReportsArchive: React.FC = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               rowsPerPageOptions={[5, 10, 25, 50]}
               sx={{
-                borderTop: `1px solid ${theme.palette.border.light}`,
+                "borderTop": `1px solid ${theme.palette.border.light}`,
                 "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
                   fontSize: 13,
                 },

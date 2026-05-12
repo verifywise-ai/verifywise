@@ -8,6 +8,7 @@ import {
   attachFilesToEntity,
   detachFileFromEntity,
   getEntityFiles,
+  bulkUpdateFileTags,
 } from "../controllers/file.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
@@ -24,6 +25,9 @@ router.get("/entity/:framework_type/:entity_type/:entity_id", authenticateJWT, g
 router.post("/attach", authenticateJWT, attachFileToEntity);
 router.post("/attach-bulk", authenticateJWT, attachFilesToEntity);
 router.delete("/detach", authenticateJWT, detachFileFromEntity);
+
+// Bulk file actions (Admin/Editor only). Must come before generic /:id routes.
+router.patch("/bulk-tags", authenticateJWT, authorize(["Admin", "Editor"]), bulkUpdateFileTags);
 
 // File download - Admin only
 router.get("/:id", authenticateJWT, authorize(["Admin"]), getFileContentById);

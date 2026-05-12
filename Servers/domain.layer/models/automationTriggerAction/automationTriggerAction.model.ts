@@ -177,6 +177,7 @@ export class AutomationTriggerActionModel
           `Action with ID ${action_id} not found`,
           "action_id",
           action_id,
+          { i18nKey: "Action with ID {id} not found", i18nVars: { id: action_id } },
         );
       }
 

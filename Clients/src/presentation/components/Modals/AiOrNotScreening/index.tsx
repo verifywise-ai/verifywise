@@ -125,9 +125,9 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
   }, [result, handleClose, onComplete]);
 
   const radioSx = {
-    color: theme.palette.border.dark,
+    "color": theme.palette.border.dark,
     "&.Mui-checked": { color: `${brand.primary}` },
-    padding: "4px 8px",
+    "padding": "4px 8px",
   };
 
   const labelSx = { fontSize: 13, color: theme.palette.text.primary };
@@ -194,9 +194,9 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
           text="Skip screening and create use case"
           onClick={handleSkip}
           sx={{
-            fontSize: 13,
-            color: theme.palette.text.accent,
-            textDecoration: "underline",
+            "fontSize": 13,
+            "color": theme.palette.text.accent,
+            "textDecoration": "underline",
             "&:hover": {
               backgroundColor: "transparent",
               color: theme.palette.text.secondary,

@@ -64,18 +64,18 @@ export const workflowPaginationMenu = (theme: Theme) => ({
 });
 
 export const workflowPaginationSelect = (theme: Theme) => ({
-  ml: theme.spacing(4),
-  mr: theme.spacing(12),
-  minWidth: theme.spacing(20),
-  textAlign: "left" as const,
+  "ml": theme.spacing(4),
+  "mr": theme.spacing(12),
+  "minWidth": theme.spacing(20),
+  "textAlign": "left" as const,
   "&.Mui-focused > div": {
     backgroundColor: theme.palette.background.main,
   },
 });
 
 export const workflowPagination = (theme: Theme) => ({
-  mt: theme.spacing(6),
-  color: theme.palette.text.secondary,
+  "mt": theme.spacing(6),
+  "color": theme.palette.text.secondary,
   "& .MuiSelect-icon": {
     width: "24px",
     height: "fit-content",
@@ -115,8 +115,8 @@ export const headerCellActionsStyle = (backgroundColor: string) => ({
 });
 
 export const sortableHeaderStyle = {
-  cursor: "pointer" as const,
-  userSelect: "none" as const,
+  "cursor": "pointer" as const,
+  "userSelect": "none" as const,
   "&:hover": {
     backgroundColor: "rgba(0, 0, 0, 0.04)",
   },

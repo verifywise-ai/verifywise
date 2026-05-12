@@ -31,6 +31,9 @@ async def chat_completion(
         "messages": messages,
         "api_key": api_key,
         "num_retries": num_retries,
+        # Silently drop any parameters the target model does not support
+        # (e.g. temperature for o1/o3 reasoning models, max_tokens for some providers).
+        "drop_params": True,
         **kwargs,
     }
 
@@ -97,6 +100,7 @@ async def stream_chat_completion(
         api_key=api_key,
         stream=True,
         stream_options={"include_usage": True},
+        drop_params=True,
         **kwargs,
     )
 

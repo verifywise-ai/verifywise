@@ -14,13 +14,13 @@ export const entityColors: Record<EntityType, string> = {
 
 // Risk level priority for coloring
 export const riskPriority: Record<string, number> = {
-  Critical: 4,
+  "Critical": 4,
   "Very high risk": 4,
-  High: 3,
+  "High": 3,
   "High risk": 3,
-  Medium: 2,
+  "Medium": 2,
   "Medium risk": 2,
-  Low: 1,
+  "Low": 1,
   "Low risk": 1,
   "Very low risk": 0,
 };

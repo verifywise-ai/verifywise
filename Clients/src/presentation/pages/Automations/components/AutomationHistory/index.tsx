@@ -804,10 +804,10 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: ChevronsUpDown,
                         sx: {
-                          ml: theme.spacing(4),
-                          mr: theme.spacing(12),
-                          minWidth: theme.spacing(20),
-                          textAlign: "left",
+                          "ml": theme.spacing(4),
+                          "mr": theme.spacing(12),
+                          "minWidth": theme.spacing(20),
+                          "textAlign": "left",
                           "&.Mui-focused > div": {
                             backgroundColor: theme.palette.background.main,
                           },
@@ -815,12 +815,12 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                       },
                     }}
                     sx={{
-                      backgroundColor: theme.palette.grey[50],
-                      border: `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
-                      borderRadius: `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
-                      color: theme.palette.text.secondary,
-                      height: "50px",
-                      minHeight: "50px",
+                      "backgroundColor": theme.palette.grey[50],
+                      "border": `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
+                      "borderRadius": `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
+                      "color": theme.palette.text.secondary,
+                      "height": "50px",
+                      "minHeight": "50px",
                       "& .MuiTablePagination-toolbar": {
                         minHeight: "50px",
                         paddingTop: "4px",

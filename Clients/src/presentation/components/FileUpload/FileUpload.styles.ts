@@ -4,8 +4,8 @@ import { Dialog, DialogContent } from "@mui/material";
 export const StyledDialog = styled(Dialog, {
   shouldForwardProp: (prop) => prop !== "modalHeight",
 })<{ modalHeight?: number }>(({ modalHeight = 338 }) => ({
-  backdropFilter: "blur(8px)", // Glass effect
-  background: "rgba(0, 0, 0, 0.5)", // Slightly dark and blue with opacity
+  "backdropFilter": "blur(8px)", // Glass effect
+  "background": "rgba(0, 0, 0, 0.5)", // Slightly dark and blue with opacity
   ".MuiDialog-paper": {
     width: "384px",
     height: `${modalHeight}px`,
@@ -41,22 +41,22 @@ export const Container = styled("div")({
 export const DragDropArea = styled("div", {
   shouldForwardProp: (prop) => prop !== "uploadedFilesCount",
 })<{ uploadedFilesCount?: number }>(({ uploadedFilesCount = 0 }) => ({
-  width: "320px",
-  minHeight: "200px",
-  maxHeight: "400px",
-  height: `${190 + Math.min(uploadedFilesCount * 40, 200)}px`,
-  border: "1px dashed #D1D5DB",
-  display: "flex",
-  alignItems: "center",
-  flexDirection: "column",
-  justifyContent: "center",
-  gap: 4,
-  borderRadius: "8px",
-  backgroundColor: "background.main",
-  transition: "height 0.3s ease",
-  overflowY: "auto",
-  margin: "0 auto",
-  boxSizing: "border-box",
+  "width": "320px",
+  "minHeight": "200px",
+  "maxHeight": "400px",
+  "height": `${190 + Math.min(uploadedFilesCount * 40, 200)}px`,
+  "border": "1px dashed #D1D5DB",
+  "display": "flex",
+  "alignItems": "center",
+  "flexDirection": "column",
+  "justifyContent": "center",
+  "gap": 4,
+  "borderRadius": "8px",
+  "backgroundColor": "background.main",
+  "transition": "height 0.3s ease",
+  "overflowY": "auto",
+  "margin": "0 auto",
+  "boxSizing": "border-box",
   "& .uppy-Container": {
     display: "none !important",
     //remove default uppy container while maintaining drag drop functionality

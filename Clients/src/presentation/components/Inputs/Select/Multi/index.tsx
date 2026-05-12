@@ -95,13 +95,13 @@ function CustomizableMultiSelect({
     return (
       <Box
         sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 0.5,
-          alignItems: "flex-start",
-          maxHeight: "90px",
-          overflowY: "auto",
-          width: "100%",
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": 0.5,
+          "alignItems": "flex-start",
+          "maxHeight": "90px",
+          "overflowY": "auto",
+          "width": "100%",
           "&::-webkit-scrollbar": {
             width: "6px",
           },
@@ -129,11 +129,11 @@ function CustomizableMultiSelect({
                 e.stopPropagation();
               }}
               sx={{
-                borderRadius: 4,
-                height: 24,
-                fontSize: 12,
-                backgroundColor: theme.palette.background.accent,
-                color: theme.palette.text.primary,
+                "borderRadius": 4,
+                "height": 24,
+                "fontSize": 12,
+                "backgroundColor": theme.palette.background.accent,
+                "color": theme.palette.text.primary,
                 "& .MuiChip-deleteIcon": {
                   color: theme.palette.action.focus,
                   fontSize: 20,
@@ -196,32 +196,37 @@ function CustomizableMultiSelect({
         multiple
         displayEmpty
         renderValue={renderValue}
-        IconComponent={() => <ChevronDown size={16} />}
+        IconComponent={(iconProps) => <ChevronDown size={16} {...iconProps} />}
         error={!!error}
         sx={{
           ...sx,
           "& .MuiOutlinedInput-input": {
             paddingTop: "16.5px",
             paddingBottom: "16.5px",
+            paddingRight: "36px",
+          },
+          "& .MuiSelect-icon": {
+            right: 12,
           },
         }}
         MenuProps={{
           disableScrollLock: true,
           PaperProps: {
             sx: {
-              borderRadius: theme.shape.borderRadius,
-              boxShadow: theme.boxShadow,
-              mt: 1,
+              "borderRadius": theme.shape.borderRadius,
+              "boxShadow": theme.boxShadow,
+              "mt": 1,
+              "maxHeight": 280,
               "& .MuiMenuItem-root": {
-                fontSize: 13,
-                color: theme.palette.text.primary,
-                transition: "color 0.2s ease, background-color 0.2s ease",
+                "fontSize": 13,
+                "color": theme.palette.text.primary,
+                "transition": "color 0.2s ease, background-color 0.2s ease",
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                   color: theme.palette.primary.main,
                 },
                 "&.Mui-selected": {
-                  backgroundColor: theme.palette.background.accent,
+                  "backgroundColor": theme.palette.background.accent,
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,

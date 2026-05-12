@@ -35,17 +35,17 @@ export async function githubWebhookController(req: Request, res: Response): Prom
     const deliveryId = req.headers["x-github-delivery"] as string | undefined;
 
     if (!signature) {
-      return res.status(401).json(STATUS_CODE[401]("Missing X-Hub-Signature-256 header"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Missing X-Hub-Signature-256 header")));
     }
 
     if (!event) {
-      return res.status(400).json(STATUS_CODE[400]("Missing X-GitHub-Event header"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Missing X-GitHub-Event header")));
     }
 
     // 2. Get raw body for signature verification
     const rawBody = req.body as Buffer;
     if (!Buffer.isBuffer(rawBody)) {
-      return res.status(400).json(STATUS_CODE[400]("Request body must be raw buffer"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Request body must be raw buffer")));
     }
 
     // 3. Parse payload
@@ -53,7 +53,7 @@ export async function githubWebhookController(req: Request, res: Response): Prom
     try {
       payload = JSON.parse(rawBody.toString("utf8"));
     } catch {
-      return res.status(400).json(STATUS_CODE[400]("Invalid JSON payload"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid JSON payload")));
     }
 
     // 4. Extract repository info from payload
@@ -64,7 +64,7 @@ export async function githubWebhookController(req: Request, res: Response): Prom
     const name = repoInfo?.name;
 
     if (!owner || !name) {
-      return res.status(400).json(STATUS_CODE[400]("Missing repository info in payload"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Missing repository info in payload")));
     }
 
     // 5. Look up registered repository (with CI enabled)
@@ -72,22 +72,24 @@ export async function githubWebhookController(req: Request, res: Response): Prom
 
     if (!repo) {
       // Return 200 to avoid GitHub retrying — repo not registered or CI disabled
-      return res.status(200).json({ message: "Repository not registered or CI not enabled" });
+      return res
+        .status(200)
+        .json({ message: req.t!("Repository not registered or CI not enabled") });
     }
 
     // 6. Verify HMAC signature
     if (!repo.webhook_secret) {
-      return res.status(200).json({ message: "Webhook secret not configured" });
+      return res.status(200).json({ message: req.t!("Webhook secret not configured") });
     }
 
     if (!verifyGitHubSignature(rawBody, signature, repo.webhook_secret)) {
-      return res.status(401).json(STATUS_CODE[401]("Invalid signature"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid signature")));
     }
 
     // 7. Handle ping event (sent when webhook is first configured)
     if (event === "ping") {
       logger.info(`Webhook ping received for ${owner}/${name} (delivery: ${deliveryId})`);
-      return res.status(200).json({ message: "pong" });
+      return res.status(200).json({ message: req.t!("pong") });
     }
 
     // 8. Route to appropriate handler

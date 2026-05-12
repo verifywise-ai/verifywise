@@ -1292,8 +1292,8 @@ export default function GuardrailsPage() {
                           justifyContent="space-between"
                           alignItems="flex-start"
                           sx={{
-                            p: "8px 0",
-                            borderBottom: `1px solid ${palette.border.light}`,
+                            "p": "8px 0",
+                            "borderBottom": `1px solid ${palette.border.light}`,
                             "&:last-child": { borderBottom: "none" },
                           }}
                         >

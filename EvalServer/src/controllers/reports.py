@@ -54,13 +54,17 @@ def _decrypt_api_key(encrypted_text: str) -> str:
 
 async def _get_best_api_key(db, organization_id: int) -> Optional[Tuple[str, str]]:
     """
-    Fetch the best available LLM API key from the database.
-    Returns (provider, decrypted_key) or None.
+    Fetch the best available LLM API key from AI Gateway key storage.
+    Returns (provider, decrypted_key) or None. Provider is normalized for report
+    summarizer (gemini → google).
     Prefers providers in PREFERRED_PROVIDERS order.
     """
     result = await db.execute(
-        text("SELECT provider, api_key_encrypted FROM llm_evals_api_keys "
-             "WHERE organization_id = :org_id"),
+        text(
+            "SELECT provider, encrypted_key FROM ai_gateway_api_keys "
+            "WHERE organization_id = :org_id AND is_active = true "
+            "ORDER BY updated_at DESC NULLS LAST, id DESC"
+        ),
         {"org_id": organization_id},
     )
     rows = result.fetchall()
@@ -69,12 +73,15 @@ async def _get_best_api_key(db, organization_id: int) -> Optional[Tuple[str, str
 
     keys_by_provider = {}
     for row in rows:
-        provider = row[0].lower()
+        raw_provider = row[0].lower()
+        norm = "google" if raw_provider in ("google", "gemini") else raw_provider
+        if norm in keys_by_provider:
+            continue
         try:
             decrypted = _decrypt_api_key(row[1])
-            keys_by_provider[provider] = decrypted
+            keys_by_provider[norm] = decrypted
         except Exception as e:
-            logger.warning(f"Failed to decrypt key for {provider}: {e}")
+            logger.warning(f"Failed to decrypt gateway key for {raw_provider}: {e}")
 
     for preferred in PREFERRED_PROVIDERS:
         if preferred in keys_by_provider:

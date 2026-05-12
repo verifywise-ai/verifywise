@@ -46,16 +46,16 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
         onClick={handleClick}
         startIcon={<Columns size={16} />}
         sx={{
-          height: 34,
-          minWidth: 100,
-          padding: "6px 12px",
-          borderRadius: "4px",
-          border: `1px solid ${borderPalette.dark}`,
-          backgroundColor: "white",
-          color: `${text.secondary}`,
-          fontSize: 13,
-          fontWeight: 500,
-          textTransform: "none",
+          "height": 34,
+          "minWidth": 100,
+          "padding": "6px 12px",
+          "borderRadius": "4px",
+          "border": `1px solid ${borderPalette.dark}`,
+          "backgroundColor": "white",
+          "color": `${text.secondary}`,
+          "fontSize": 13,
+          "fontWeight": 500,
+          "textTransform": "none",
           "&:hover": {
             backgroundColor: `${background.accent}`,
             borderColor: `${text.muted}`,
@@ -121,11 +121,11 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 }
               }}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 16px",
-                cursor: column.alwaysVisible ? "not-allowed" : "pointer",
-                opacity: column.alwaysVisible ? 0.6 : 1,
+                "display": "flex",
+                "alignItems": "center",
+                "padding": "6px 16px",
+                "cursor": column.alwaysVisible ? "not-allowed" : "pointer",
+                "opacity": column.alwaysVisible ? 0.6 : 1,
                 "&:hover": {
                   backgroundColor: column.alwaysVisible ? "transparent" : `${background.accent}`,
                 },
@@ -142,9 +142,9 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
                 }}
                 size="small"
                 sx={{
-                  padding: 0,
-                  marginRight: 1.5,
-                  color: `${borderPalette.dark}`,
+                  "padding": 0,
+                  "marginRight": 1.5,
+                  "color": `${borderPalette.dark}`,
                   "&.Mui-checked": {
                     color: `${brand.primary}`,
                   },
@@ -186,12 +186,12 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             }}
             fullWidth
             sx={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: `${text.icon}`,
-              textTransform: "none",
-              padding: "6px 12px",
-              borderRadius: "4px",
+              "fontSize": 13,
+              "fontWeight": 500,
+              "color": `${text.icon}`,
+              "textTransform": "none",
+              "padding": "6px 12px",
+              "borderRadius": "4px",
               "&:hover": {
                 backgroundColor: `${background.accent}`,
                 color: `${text.secondary}`,

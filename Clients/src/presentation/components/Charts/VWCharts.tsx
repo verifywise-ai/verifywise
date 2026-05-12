@@ -59,7 +59,7 @@ const noOutlineStyle: React.CSSProperties = { outline: "none" };
 export const ChartOutlineWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Box
     sx={{
-      width: "100%",
+      "width": "100%",
       "& *:focus": { outline: "none !important" },
       "& svg *:focus": { outline: "none !important" },
     }}
@@ -337,9 +337,9 @@ export const VWDonutChart: React.FC<VWDonutChartProps> = ({
   return (
     <Box
       sx={{
-        position: "relative",
-        width: size,
-        height: size,
+        "position": "relative",
+        "width": size,
+        "height": size,
         "& .recharts-tooltip-wrapper": { zIndex: "10 !important" },
         "& *:focus": { outline: "none !important" },
         "& svg *:focus": { outline: "none !important" },

@@ -422,13 +422,13 @@ export function IntakeFormsListPage() {
               variant="contained"
               onClick={() => setCreateDialogOpen(true)}
               sx={{
-                height: 34,
-                fontSize: "13px",
-                backgroundColor: theme.palette.primary.main,
+                "height": 34,
+                "fontSize": "13px",
+                "backgroundColor": theme.palette.primary.main,
                 "&:hover": { backgroundColor: "brand.primaryHover" },
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": "6px",
               }}
             >
               <Plus size={14} /> Create form
@@ -714,10 +714,10 @@ export function IntakeFormsListPage() {
                                 setPreviewOpen(true);
                               }}
                               sx={{
-                                height: 28,
-                                fontSize: "12px",
-                                borderColor: theme.palette.border.dark,
-                                color: theme.palette.text.secondary,
+                                "height": 28,
+                                "fontSize": "12px",
+                                "borderColor": theme.palette.border.dark,
+                                "color": theme.palette.text.secondary,
                                 "&:hover": {
                                   borderColor: theme.palette.primary.main,
                                   backgroundColor: theme.palette.background.fill,
@@ -844,21 +844,21 @@ export function IntakeFormsListPage() {
               key={option.type}
               onClick={() => setSelectedEntityType(option.type)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                p: "12px",
-                border:
+                "display": "flex",
+                "alignItems": "center",
+                "gap": "12px",
+                "p": "12px",
+                "border":
                   selectedEntityType === option.type
                     ? `1px solid ${theme.palette.primary.main}`
                     : `1px solid ${theme.palette.border.dark}`,
-                borderRadius: "4px",
-                cursor: "pointer",
-                backgroundColor:
+                "borderRadius": "4px",
+                "cursor": "pointer",
+                "backgroundColor":
                   selectedEntityType === option.type
                     ? theme.palette.background.fill
                     : theme.palette.background.main,
-                transition: "all 0.15s ease",
+                "transition": "all 0.15s ease",
                 "&:hover": {
                   borderColor:
                     selectedEntityType === option.type

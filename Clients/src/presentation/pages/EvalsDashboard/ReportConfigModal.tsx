@@ -150,9 +150,9 @@ export default function ReportConfigModal({
               component="span"
               onClick={selectAllExperiments}
               sx={{
-                fontSize: 12,
-                color: "#13715B",
-                cursor: "pointer",
+                "fontSize": 12,
+                "color": "#13715B",
+                "cursor": "pointer",
                 "&:hover": { textDecoration: "underline" },
               }}
             >
@@ -180,13 +180,13 @@ export default function ReportConfigModal({
                   key={exp.id}
                   onClick={() => toggleExperiment(exp.id)}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    px: 1.5,
-                    py: "8px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #F3F4F6",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": 1,
+                    "px": 1.5,
+                    "py": "8px",
+                    "cursor": "pointer",
+                    "borderBottom": "1px solid #F3F4F6",
                     "&:hover": { backgroundColor: "#F9FAFB" },
                     "&:last-child": { borderBottom: "none" },
                   }}
@@ -249,13 +249,13 @@ export default function ReportConfigModal({
                   key={section.id}
                   onClick={() => toggleSection(section.id)}
                   sx={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 1,
-                    px: 1.5,
-                    py: 1,
-                    cursor: "pointer",
-                    borderBottom: "1px solid #F3F4F6",
+                    "display": "flex",
+                    "alignItems": "flex-start",
+                    "gap": 1,
+                    "px": 1.5,
+                    "py": 1,
+                    "cursor": "pointer",
+                    "borderBottom": "1px solid #F3F4F6",
                     "&:hover": { backgroundColor: "#F9FAFB" },
                     "&:last-child": { borderBottom: "none" },
                   }}

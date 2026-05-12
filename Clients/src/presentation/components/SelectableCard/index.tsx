@@ -48,27 +48,27 @@ const SelectableCard = ({
   <Box
     onClick={disabled ? undefined : onClick}
     sx={{
-      p: "8px",
-      border: "1px solid",
-      borderColor: disabled
+      "p": "8px",
+      "border": "1px solid",
+      "borderColor": disabled
         ? `${status.default.border}`
         : isSelected
           ? accentColor
           : `${status.default.border}`,
-      borderRadius: "4px",
-      cursor: disabled ? "not-allowed" : "pointer",
-      backgroundColor: disabled
+      "borderRadius": "4px",
+      "cursor": disabled ? "not-allowed" : "pointer",
+      "backgroundColor": disabled
         ? `${background.accent}`
         : isSelected
           ? accentColor === "#6366F1"
             ? "#EEF2FF"
             : "#F0FDF4"
           : `${background.main}`,
-      opacity: disabled ? 0.6 : 1,
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      transition: "all 0.15s ease",
+      "opacity": disabled ? 0.6 : 1,
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "8px",
+      "transition": "all 0.15s ease",
       "&:hover": disabled
         ? {}
         : {

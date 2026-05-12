@@ -61,11 +61,11 @@ export function PlaygroundComposer({ disabled }: PlaygroundComposerProps) {
           <IconButton
             disabled={disabled}
             sx={{
-              backgroundColor: palette.brand.primary,
-              color: palette.background.main,
-              width: 36,
-              height: 36,
-              borderRadius: "4px",
+              "backgroundColor": palette.brand.primary,
+              "color": palette.background.main,
+              "width": 36,
+              "height": 36,
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: palette.brand.primaryHover },
               "&:disabled": {
                 backgroundColor: palette.border.light,

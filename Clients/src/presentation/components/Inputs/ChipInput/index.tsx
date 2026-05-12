@@ -94,8 +94,8 @@ function ChipInput({
         )}
         sx={{
           ...getAutocompleteStyles(theme, { hasError: !!error }),
-          width: "100%",
-          backgroundColor: theme.palette.background.main,
+          "width": "100%",
+          "backgroundColor": theme.palette.background.main,
           "& .MuiOutlinedInput-root": {
             ...getAutocompleteStyles(theme, { hasError: !!error })["& .MuiOutlinedInput-root"],
             borderRadius: theme.shape.borderRadius,

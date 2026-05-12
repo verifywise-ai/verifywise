@@ -106,10 +106,10 @@ const AutomationList: React.FC<AutomationListProps> = ({
               <Box
                 key={i}
                 sx={{
-                  height: 60,
-                  backgroundColor: theme.palette.action.hover,
-                  borderRadius: 1,
-                  animation: "pulse 1.5s ease-in-out infinite",
+                  "height": 60,
+                  "backgroundColor": theme.palette.action.hover,
+                  "borderRadius": 1,
+                  "animation": "pulse 1.5s ease-in-out infinite",
                   "@keyframes pulse": {
                     "0%, 100%": { opacity: 1 },
                     "50%": { opacity: 0.5 },
@@ -142,9 +142,9 @@ const AutomationList: React.FC<AutomationListProps> = ({
         ) : (
           <List
             sx={{
-              p: "16px",
-              overflow: "auto",
-              flex: 1,
+              "p": "16px",
+              "overflow": "auto",
+              "flex": 1,
               "&::-webkit-scrollbar": {
                 width: "8px",
               },
@@ -170,20 +170,20 @@ const AutomationList: React.FC<AutomationListProps> = ({
                 selected={selectedAutomationId === automation.id}
                 onClick={() => onSelectAutomation(automation.id)}
                 sx={{
-                  borderRadius: 1,
-                  mb: "8px",
-                  py: "8px", // Reduce vertical padding
-                  minHeight: "44px", // Reduced from default height
-                  border: `1px solid #d0d5dd`,
-                  background:
+                  "borderRadius": 1,
+                  "mb": "8px",
+                  "py": "8px", // Reduce vertical padding
+                  "minHeight": "44px", // Reduced from default height
+                  "border": `1px solid #d0d5dd`,
+                  "background":
                     "linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%)",
                   "&:hover": {
                     background:
                       "linear-gradient(135deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%)",
                   },
                   "&.Mui-selected": {
-                    border: `1px solid ${theme.palette.primary.main}`,
-                    background:
+                    "border": `1px solid ${theme.palette.primary.main}`,
+                    "background":
                       "linear-gradient(135deg, rgba(25, 118, 210, 0.06) 0%, rgba(25, 118, 210, 0.03) 100%)",
                     "&:hover": {
                       background:

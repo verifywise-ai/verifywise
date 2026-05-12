@@ -617,13 +617,13 @@ const FriaVersionHistory = ({
       <Box
         onClick={() => setPanelOpen((prev) => !prev)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 16px",
-          cursor: "pointer",
-          userSelect: "none",
-          backgroundColor: theme.palette.background.paper,
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "space-between",
+          "padding": "14px 16px",
+          "cursor": "pointer",
+          "userSelect": "none",
+          "backgroundColor": theme.palette.background.paper,
           "&:hover": {
             backgroundColor: theme.palette.action.hover,
           },
@@ -643,7 +643,7 @@ const FriaVersionHistory = ({
       </Box>
 
       <Collapse in={panelOpen} timeout="auto" unmountOnExit>
-        <CardContent sx={{ padding: 0, "&:last-child": { paddingBottom: 0 } }}>
+        <CardContent sx={{ "padding": 0, "&:last-child": { paddingBottom: 0 } }}>
           {renderContent()}
         </CardContent>
       </Collapse>

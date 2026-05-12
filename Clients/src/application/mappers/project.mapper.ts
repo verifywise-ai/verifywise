@@ -28,7 +28,7 @@ export function mapRiskClassification(value: number | string): AiRiskClassificat
   }
   // Map string values to enum
   const mapping: Record<string, AiRiskClassification> = {
-    prohibited: AiRiskClassification.PROHIBITED,
+    "prohibited": AiRiskClassification.PROHIBITED,
     "high risk": AiRiskClassification.HIGH_RISK,
     "limited risk": AiRiskClassification.LIMITED_RISK,
     "minimal risk": AiRiskClassification.MINIMAL_RISK,

@@ -305,8 +305,8 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 sx={{
                   ...singleTheme.tableStyles.primary.header.cell,
                   ...(column.sortable && {
-                    cursor: "pointer",
-                    userSelect: "none",
+                    "cursor": "pointer",
+                    "userSelect": "none",
                     "&:hover": {
                       backgroundColor: "rgba(0, 0, 0, 0.04)",
                     },
@@ -336,7 +336,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                   ...(isDeleting ? tableRowDeletingStyle : {}),
                   ...(isFlashing
                     ? {
-                        animation: "flashRow 1s ease-in-out",
+                        "animation": "flashRow 1s ease-in-out",
                         "@keyframes flashRow": {
                           "0%": { backgroundColor: "rgba(19, 113, 91, 0.3)" },
                           "100%": { backgroundColor: "transparent" },

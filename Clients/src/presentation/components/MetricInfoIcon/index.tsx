@@ -18,9 +18,9 @@ const MetricInfoIcon = React.forwardRef<HTMLDivElement, MetricInfoIconProps>(
           aria-label="Open help information"
           size={size}
           sx={{
-            color: `${text.disabled}`, // Lighter gray
-            backgroundColor: "transparent",
-            padding: "4px", // Smaller padding for smaller icon
+            "color": `${text.disabled}`, // Lighter gray
+            "backgroundColor": "transparent",
+            "padding": "4px", // Smaller padding for smaller icon
             "&:hover": {
               backgroundColor: "rgba(156, 163, 175, 0.1)",
             },

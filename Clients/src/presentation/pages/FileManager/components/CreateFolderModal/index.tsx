@@ -159,7 +159,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             autoFocus
             sx={{
               "& .MuiOutlinedInput-root": {
-                borderRadius: "4px",
+                "borderRadius": "4px",
                 "& fieldset": {
                   borderColor: error ? "#EF4444" : "border.dark",
                 },
@@ -199,7 +199,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             size="small"
             sx={{
               "& .MuiOutlinedInput-root": {
-                borderRadius: "4px",
+                "borderRadius": "4px",
                 "& fieldset": {
                   borderColor: "border.dark",
                 },
@@ -234,13 +234,13 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
                 key={c}
                 onClick={() => setColor(c)}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "4px",
-                  backgroundColor: c,
-                  cursor: "pointer",
-                  border: color === c ? "2px solid #101828" : "2px solid transparent",
-                  transition: "border-color 0.15s ease",
+                  "width": 28,
+                  "height": 28,
+                  "borderRadius": "4px",
+                  "backgroundColor": c,
+                  "cursor": "pointer",
+                  "border": color === c ? "2px solid #101828" : "2px solid transparent",
+                  "transition": "border-color 0.15s ease",
                   "&:hover": {
                     opacity: 0.8,
                   },

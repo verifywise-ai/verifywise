@@ -729,8 +729,8 @@ const TrustCenterResources: React.FC = () => {
                 onClick={() => setAddFileModalOpen(true)}
                 isDisabled={!formData?.info?.resources_visible}
                 sx={{
-                  border: `1px solid ${borderPalette.dark}`,
-                  color: `${text.secondary}`,
+                  "border": `1px solid ${borderPalette.dark}`,
+                  "color": `${text.secondary}`,
                   "&:hover": {
                     backgroundColor: `${background.accent}`,
                     border: `1px solid ${borderPalette.dark}`,
@@ -823,8 +823,8 @@ const TrustCenterResources: React.FC = () => {
                 onClick={() => setEditFileModalOpen(true)}
                 isDisabled={!formData?.info?.resources_visible}
                 sx={{
-                  border: `1px solid ${borderPalette.dark}`,
-                  color: `${text.secondary}`,
+                  "border": `1px solid ${borderPalette.dark}`,
+                  "color": `${text.secondary}`,
                   "&:hover": {
                     backgroundColor: `${background.accent}`,
                     border: `1px solid ${borderPalette.dark}`,

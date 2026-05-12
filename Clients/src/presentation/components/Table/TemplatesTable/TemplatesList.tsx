@@ -86,13 +86,13 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
       <Box
         onClick={() => onSelect?.(template)}
         sx={{
-          p: compact ? 1 : 1.5,
-          border: "1px solid",
-          borderColor: isSelected ? `${brand.primary}` : `${status.default.border}`,
-          borderRadius: "8px",
-          cursor: "pointer",
-          backgroundColor: isSelected ? "#F0FDF4" : `${background.main}`,
-          transition: "all 0.15s ease",
+          "p": compact ? 1 : 1.5,
+          "border": "1px solid",
+          "borderColor": isSelected ? `${brand.primary}` : `${status.default.border}`,
+          "borderRadius": "8px",
+          "cursor": "pointer",
+          "backgroundColor": isSelected ? "#F0FDF4" : `${background.main}`,
+          "transition": "all 0.15s ease",
           "&:hover": {
             borderColor: `${brand.primary}`,
             backgroundColor: isSelected ? "#F0FDF4" : `${background.accent}`,
@@ -172,10 +172,10 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               size="small"
               sx={{
                 ...getDifficultyStyles(difficultyLabel),
-                height: compact ? "18px" : "20px",
-                fontSize: compact ? "9px" : "10px",
-                fontWeight: 500,
-                borderRadius: "4px",
+                "height": compact ? "18px" : "20px",
+                "fontSize": compact ? "9px" : "10px",
+                "fontWeight": 500,
+                "borderRadius": "4px",
                 "& .MuiChip-label": { px: 0.75 },
               }}
             />
@@ -229,10 +229,10 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   label={multiTurn.length}
                   size="small"
                   sx={{
-                    height: "16px",
-                    fontSize: "10px",
-                    backgroundColor: "#E3F2FD",
-                    color: "#1565C0",
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": "#E3F2FD",
+                    "color": "#1565C0",
                     "& .MuiChip-label": { px: 0.75 },
                   }}
                 />
@@ -265,10 +265,10 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   label={singleTurn.length}
                   size="small"
                   sx={{
-                    height: "16px",
-                    fontSize: "10px",
-                    backgroundColor: "#FEF3C7",
-                    color: "#92400E",
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": "#FEF3C7",
+                    "color": "#92400E",
                     "& .MuiChip-label": { px: 0.75 },
                   }}
                 />
@@ -301,10 +301,10 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   label={simulated.length}
                   size="small"
                   sx={{
-                    height: "16px",
-                    fontSize: "10px",
-                    backgroundColor: "#EDE9FE",
-                    color: "#6D28D9",
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": "#EDE9FE",
+                    "color": "#6D28D9",
                     "& .MuiChip-label": { px: 0.75 },
                   }}
                 />

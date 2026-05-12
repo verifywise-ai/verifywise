@@ -133,15 +133,15 @@ const PluginCard: React.FC<PluginCardProps> = ({
   return (
     <Card
       sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        cursor: "pointer",
-        transition: "all 0.2s ease",
+        "height": "100%",
+        "display": "flex",
+        "flexDirection": "column",
+        "overflow": "hidden",
+        "cursor": "pointer",
+        "transition": "all 0.2s ease",
         ...(cardStyles.base(theme) as any),
-        margin: 0,
-        background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+        "margin": 0,
+        "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         "&:hover": {
           background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
           borderColor: "#D1D5DB",
@@ -154,13 +154,13 @@ const PluginCard: React.FC<PluginCardProps> = ({
     >
       <CardContent
         sx={{
-          p: 2,
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          position: "relative",
-          backgroundColor: "transparent",
+          "p": 2,
+          "height": "100%",
+          "display": "flex",
+          "flexDirection": "column",
+          "justifyContent": "space-between",
+          "position": "relative",
+          "backgroundColor": "transparent",
           "&:last-child": {
             paddingBottom: 2,
           },
@@ -268,14 +268,14 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 label={plugin.frameworkType === "organizational" ? "Organizational" : "Project"}
                 variant="outlined"
                 sx={{
-                  fontSize: "10px",
-                  height: 20,
-                  borderRadius: "10px",
-                  backgroundColor: "transparent",
-                  color: plugin.frameworkType === "organizational" ? "brand.primary" : "#6366f1",
-                  borderColor:
+                  "fontSize": "10px",
+                  "height": 20,
+                  "borderRadius": "10px",
+                  "backgroundColor": "transparent",
+                  "color": plugin.frameworkType === "organizational" ? "brand.primary" : "#6366f1",
+                  "borderColor":
                     plugin.frameworkType === "organizational" ? "brand.primary" : "#6366f1",
-                  fontWeight: 500,
+                  "fontWeight": 500,
                   "& .MuiChip-icon": {
                     color: "inherit",
                     marginLeft: "4px",
@@ -321,9 +321,9 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 size="small"
                 onClick={handleMenuOpen}
                 sx={{
-                  color: "brand.primary",
-                  opacity: isHovered ? 1 : 0.7,
-                  transition: "opacity 0.3s ease",
+                  "color": "brand.primary",
+                  "opacity": isHovered ? 1 : 0.7,
+                  "transition": "opacity 0.3s ease",
                   "&:hover": {
                     backgroundColor: "rgba(19, 113, 91, 0.1)",
                   },

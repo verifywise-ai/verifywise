@@ -45,8 +45,8 @@ export const COLORS = {
 
 // Common icon button styles for navigation arrows
 export const navIconButtonSx = {
-  padding: "4px",
-  color: COLORS.textSecondary,
+  "padding": "4px",
+  "color": COLORS.textSecondary,
   "&:hover": {
     backgroundColor: COLORS.backgroundHover,
     color: COLORS.textPrimary,

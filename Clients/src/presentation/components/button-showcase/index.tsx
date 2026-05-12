@@ -57,16 +57,16 @@ function ButtonShowcase() {
           />
           <Box
             sx={{
-              minWidth: 140,
-              height: 28,
-              fontSize: 13,
-              backgroundColor: theme.palette.primary.main,
-              color: theme.palette.primary.contrastText,
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              padding: "6px 12px",
-              cursor: "pointer",
+              "minWidth": 140,
+              "height": 28,
+              "fontSize": 13,
+              "backgroundColor": theme.palette.primary.main,
+              "color": theme.palette.primary.contrastText,
+              "borderRadius": "4px",
+              "display": "flex",
+              "alignItems": "center",
+              "padding": "6px 12px",
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark,
               },
@@ -113,24 +113,24 @@ function ButtonShowcase() {
             component="button"
             aria-label="Integrations"
             sx={{
-              background: "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)",
-              color: "white",
-              fontWeight: 500,
-              fontSize: "12px",
-              height: "30px",
-              minHeight: "30px",
-              maxHeight: "30px",
-              padding: "0 14px",
-              borderRadius: "4px",
-              border: "none",
-              textTransform: "none",
-              boxShadow: "0 2px 4px rgba(139, 92, 246, 0.2)",
-              cursor: "pointer",
+              "background": "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)",
+              "color": "white",
+              "fontWeight": 500,
+              "fontSize": "12px",
+              "height": "30px",
+              "minHeight": "30px",
+              "maxHeight": "30px",
+              "padding": "0 14px",
+              "borderRadius": "4px",
+              "border": "none",
+              "textTransform": "none",
+              "boxShadow": "0 2px 4px rgba(139, 92, 246, 0.2)",
+              "cursor": "pointer",
               "&:hover": {
                 background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
                 boxShadow: "0 4px 8px rgba(139, 92, 246, 0.3)",
               },
-              transition: "all 0.2s ease",
+              "transition": "all 0.2s ease",
             }}
           >
             Integrations
@@ -139,24 +139,24 @@ function ButtonShowcase() {
             component="button"
             aria-label="Automations"
             sx={{
-              background: "linear-gradient(135deg, #FB923C 0%, #F97316 100%)",
-              color: "white",
-              fontWeight: 500,
-              fontSize: "12px",
-              height: "30px",
-              minHeight: "30px",
-              maxHeight: "30px",
-              padding: "0 14px",
-              borderRadius: "4px",
-              border: "none",
-              textTransform: "none",
-              boxShadow: "0 2px 4px rgba(251, 146, 60, 0.2)",
-              cursor: "pointer",
+              "background": "linear-gradient(135deg, #FB923C 0%, #F97316 100%)",
+              "color": "white",
+              "fontWeight": 500,
+              "fontSize": "12px",
+              "height": "30px",
+              "minHeight": "30px",
+              "maxHeight": "30px",
+              "padding": "0 14px",
+              "borderRadius": "4px",
+              "border": "none",
+              "textTransform": "none",
+              "boxShadow": "0 2px 4px rgba(251, 146, 60, 0.2)",
+              "cursor": "pointer",
               "&:hover": {
                 background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
                 boxShadow: "0 4px 8px rgba(251, 146, 60, 0.3)",
               },
-              transition: "all 0.2s ease",
+              "transition": "all 0.2s ease",
             }}
           >
             Automations
@@ -182,15 +182,15 @@ function ButtonShowcase() {
             component="button"
             aria-label="Lock"
             sx={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: `1px solid ${theme.palette.divider}`,
-              backgroundColor: "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
+              "width": 32,
+              "height": 32,
+              "borderRadius": "50%",
+              "border": `1px solid ${theme.palette.divider}`,
+              "backgroundColor": "transparent",
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
               },
@@ -202,15 +202,15 @@ function ButtonShowcase() {
             component="button"
             aria-label="Unlock"
             sx={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: `1px solid ${theme.palette.divider}`,
-              backgroundColor: "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
+              "width": 32,
+              "height": 32,
+              "borderRadius": "50%",
+              "border": `1px solid ${theme.palette.divider}`,
+              "backgroundColor": "transparent",
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
               },
@@ -222,15 +222,15 @@ function ButtonShowcase() {
             component="button"
             aria-label="Edit"
             sx={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: `1px solid ${theme.palette.divider}`,
-              backgroundColor: "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
+              "width": 32,
+              "height": 32,
+              "borderRadius": "50%",
+              "border": `1px solid ${theme.palette.divider}`,
+              "backgroundColor": "transparent",
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
               },

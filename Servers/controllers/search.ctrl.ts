@@ -17,6 +17,7 @@ import {
 } from "../utils/search.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Search across all entities
  *
@@ -40,7 +41,7 @@ export async function search(req: Request, res: Response): Promise<any> {
     const { userId, tenantId, organizationId } = req;
 
     if (!userId || !tenantId || !organizationId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const query = (req.query.q as string) || "";
@@ -100,6 +101,6 @@ export async function search(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

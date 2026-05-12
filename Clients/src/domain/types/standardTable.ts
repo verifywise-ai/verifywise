@@ -13,3 +13,10 @@ export interface StandardColumn {
   width?: string;
   minWidth?: string;
 }
+
+export interface SelectionColumnConfig {
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggleAll: () => void;
+  ariaLabel?: string;
+}

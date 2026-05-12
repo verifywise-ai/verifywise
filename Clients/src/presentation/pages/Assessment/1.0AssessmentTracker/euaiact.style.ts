@@ -43,15 +43,15 @@ export const styles = {
    * Matches ISO accordion pattern with border, radius, and no shadow
    */
   accordion: {
-    marginTop: "9px",
-    border: "1px solid #d0d5dd",
-    width: "100%",
-    borderRadius: "4px",
-    overflow: "hidden",
-    position: "relative",
-    margin: 0,
-    padding: 0,
-    boxShadow: "none",
+    "marginTop": "9px",
+    "border": "1px solid #d0d5dd",
+    "width": "100%",
+    "borderRadius": "4px",
+    "overflow": "hidden",
+    "position": "relative",
+    "margin": 0,
+    "padding": 0,
+    "boxShadow": "none",
     ".MuiAccordionDetails-root": { padding: 0, margin: 0 },
   } as SxProps<Theme>,
 
@@ -60,11 +60,11 @@ export const styles = {
    * Light background (#fafafa) with reverse flex direction for icon on left
    */
   accordionSummary: {
-    backgroundColor: "#fafafa",
-    flexDirection: "row-reverse",
-    paddingLeft: "16px",
-    paddingRight: "16px",
-    paddingY: "12px",
+    "backgroundColor": "#fafafa",
+    "flexDirection": "row-reverse",
+    "paddingLeft": "16px",
+    "paddingRight": "16px",
+    "paddingY": "12px",
     "&:hover": { backgroundColor: "background.surface" },
   } as SxProps<Theme>,
 
@@ -86,15 +86,15 @@ export const styles = {
    */
   questionRow: (isLast: boolean, isFlashing: boolean) =>
     ({
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "16px",
-      borderBottom: isLast ? "none" : "1px solid #d0d5dd",
-      cursor: "pointer",
-      fontSize: 13,
-      animation: isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
+      "display": "flex",
+      "flexDirection": "row",
+      "justifyContent": "space-between",
+      "alignItems": "center",
+      "padding": "16px",
+      "borderBottom": isLast ? "none" : "1px solid #d0d5dd",
+      "cursor": "pointer",
+      "fontSize": 13,
+      "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
       },

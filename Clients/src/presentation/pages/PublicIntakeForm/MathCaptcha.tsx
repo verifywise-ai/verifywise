@@ -77,13 +77,13 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           title="Get new question"
           onClick={isLoading ? undefined : handleRefresh}
           sx={{
-            cursor: isLoading ? "default" : "pointer",
-            opacity: isLoading ? 0.5 : 1,
-            display: "flex",
-            alignItems: "center",
-            p: "4px",
-            borderRadius: "6px",
-            color: `${status.default.text}`,
+            "cursor": isLoading ? "default" : "pointer",
+            "opacity": isLoading ? 0.5 : 1,
+            "display": "flex",
+            "alignItems": "center",
+            "p": "4px",
+            "borderRadius": "6px",
+            "color": `${status.default.text}`,
             "&:hover": isLoading ? {} : { color: `${brand.primary}`, backgroundColor: "#f0fdf4" },
           }}
         >
@@ -119,7 +119,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           disabled={isLoading}
           error={error}
           sx={{
-            width: 80,
+            "width": 80,
             "& .MuiOutlinedInput-root": {
               fontSize: "16px",
               fontWeight: 600,

@@ -176,13 +176,13 @@ const VWAvatar = ({
   const avatarStyles = useMemo(
     (): SxProps<Theme> => ({
       ...dimensions,
-      backgroundColor: shouldShowImage ? "transparent" : avatarColors.backgroundColor,
-      color: avatarColors.color,
-      border: showBorder
+      "backgroundColor": shouldShowImage ? "transparent" : avatarColors.backgroundColor,
+      "color": avatarColors.color,
+      "border": showBorder
         ? `2px solid ${shouldShowImage ? theme.palette.primary.main : "transparent"}`
         : "none",
-      cursor: onClick ? "pointer" : "default",
-      transition: theme.transitions.create(["background-color", "border-color", "transform"], {
+      "cursor": onClick ? "pointer" : "default",
+      "transition": theme.transitions.create(["background-color", "border-color", "transform"], {
         duration: theme.transitions.duration.short,
       }),
       "&:hover": onClick
@@ -197,8 +197,8 @@ const VWAvatar = ({
             outlineOffset: 2,
           }
         : {},
-      fontSize: dimensions.fontSize,
-      fontWeight: 600,
+      "fontSize": dimensions.fontSize,
+      "fontWeight": 600,
       ...sx,
     }),
     [dimensions, shouldShowImage, showBorder, theme, onClick, sx, avatarColors],
@@ -212,9 +212,9 @@ const VWAvatar = ({
       sx: avatarStyles,
       slotProps: {
         img: {
-          onError: handleImageError,
-          onLoad: handleImageLoad,
-          loading: "lazy" as const,
+          "onError": handleImageError,
+          "onLoad": handleImageLoad,
+          "loading": "lazy" as const,
           "aria-hidden": true,
         },
       },
@@ -223,18 +223,18 @@ const VWAvatar = ({
     if (onClick) {
       return {
         ...baseProps,
-        component: "div" as const,
-        onClick: handleClick,
-        onKeyDown: handleKeyDown,
-        tabIndex: 0,
-        role: "button",
+        "component": "div" as const,
+        "onClick": handleClick,
+        "onKeyDown": handleKeyDown,
+        "tabIndex": 0,
+        "role": "button",
         "aria-label": `${fullName} avatar, click to view profile`,
       };
     }
 
     return {
       ...baseProps,
-      role: "img",
+      "role": "img",
       "aria-label": `${fullName} avatar`,
     };
   }, [

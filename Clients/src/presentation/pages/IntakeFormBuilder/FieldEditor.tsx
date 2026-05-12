@@ -99,12 +99,12 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               <Box
                 onClick={() => handleRemoveOption(index)}
                 sx={{
-                  cursor: options.length <= 1 ? "default" : "pointer",
-                  opacity: options.length <= 1 ? 0.3 : 1,
-                  display: "flex",
-                  alignItems: "center",
-                  p: "4px",
-                  borderRadius: "4px",
+                  "cursor": options.length <= 1 ? "default" : "pointer",
+                  "opacity": options.length <= 1 ? 0.3 : 1,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "p": "4px",
+                  "borderRadius": "4px",
                   "&:hover":
                     options.length > 1 ? { backgroundColor: theme.palette.status.error.bg } : {},
                 }}
@@ -126,10 +126,10 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
         variant="text"
         onClick={handleAddOption}
         sx={{
-          mt: "8px",
-          height: 30,
-          fontSize: "12px",
-          color: theme.palette.primary.main,
+          "mt": "8px",
+          "height": 30,
+          "fontSize": "12px",
+          "color": theme.palette.primary.main,
           "&:hover": { backgroundColor: theme.palette.background.fill },
         }}
       >
@@ -275,11 +275,11 @@ export function FieldEditor({
           <Box
             onClick={onClose}
             sx={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              p: "4px",
-              borderRadius: "4px",
+              "cursor": "pointer",
+              "display": "flex",
+              "alignItems": "center",
+              "p": "4px",
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: theme.palette.background.accent },
             }}
           >
@@ -349,15 +349,15 @@ export function FieldEditor({
                           !guidanceLoading && localField.label ? generateGuidance : undefined
                         }
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "3px",
-                          cursor: !guidanceLoading && localField.label ? "pointer" : "default",
-                          opacity: !localField.label ? 0.4 : 1,
-                          color: theme.palette.primary.main,
-                          borderRadius: "4px",
-                          px: "6px",
-                          py: "2px",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "gap": "3px",
+                          "cursor": !guidanceLoading && localField.label ? "pointer" : "default",
+                          "opacity": !localField.label ? 0.4 : 1,
+                          "color": theme.palette.primary.main,
+                          "borderRadius": "4px",
+                          "px": "6px",
+                          "py": "2px",
                           "&:hover": localField.label
                             ? { backgroundColor: theme.palette.background.fill }
                             : {},

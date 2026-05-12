@@ -77,10 +77,10 @@ export const CustomComposer: FC<CustomComposerProps> = ({ pageContext }) => {
             type="submit"
             aria-label="Send message"
             sx={{
-              width: 40,
-              height: 40,
-              backgroundColor: theme.palette.primary.main,
-              color: theme.palette.primary.contrastText,
+              "width": 40,
+              "height": 40,
+              "backgroundColor": theme.palette.primary.main,
+              "color": theme.palette.primary.contrastText,
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark,
               },

@@ -17,7 +17,7 @@ export const sidebarContainer = {
 };
 
 export const sidebarMenuStyle = (theme: Theme) => ({
-  backgroundColor: theme.palette.background.main,
+  "backgroundColor": theme.palette.background.main,
   "& .selected-path, & > .MuiListItemButton-root:hover": {
     backgroundColor: theme.palette.background.main,
   },
@@ -35,12 +35,12 @@ export const sidebarInnerStack = (theme: Theme) => ({
 });
 
 export const listStyle = (theme: Theme) => ({
-  px: theme.spacing(0),
-  flex: 1,
-  overflowY: "auto",
-  overflowX: "hidden",
-  maxWidth: "240px",
-  width: "100%",
+  "px": theme.spacing(0),
+  "flex": 1,
+  "overflowY": "auto",
+  "overflowX": "hidden",
+  "maxWidth": "240px",
+  "width": "100%",
   "&::-webkit-scrollbar": {
     width: "4px",
   },
@@ -57,9 +57,9 @@ export const listStyle = (theme: Theme) => ({
 });
 
 export const accordionStyle = (theme: Theme) => ({
-  backgroundColor: "transparent",
-  boxShadow: "none",
-  border: "none",
+  "backgroundColor": "transparent",
+  "boxShadow": "none",
+  "border": "none",
   "&::before": {
     display: "none",
   },
@@ -105,14 +105,14 @@ export const tooltipStyle = {
 };
 
 export const listItemButtonStyle = (theme: Theme, isSelected: boolean) => ({
-  height: "32px",
-  gap: theme.spacing(4),
-  borderRadius: theme.shape.borderRadius,
-  px: theme.spacing(4),
-  background: isSelected
+  "height": "32px",
+  "gap": theme.spacing(4),
+  "borderRadius": theme.shape.borderRadius,
+  "px": theme.spacing(4),
+  "background": isSelected
     ? `linear-gradient(135deg, ${theme.palette.action.selected} 0%, ${theme.palette.action.hover} 100%)`
     : "transparent",
-  border: isSelected ? `1px solid ${theme.palette.divider}` : "1px solid transparent",
+  "border": isSelected ? `1px solid ${theme.palette.divider}` : "1px solid transparent",
   "&:hover": {
     background: isSelected
       ? `linear-gradient(135deg, ${theme.palette.action.selected} 0%, ${theme.palette.action.hover} 100%)`
@@ -195,15 +195,15 @@ export const approverNameStyle = {
 };
 
 export const seeDetailsLinkStyle = (theme: Theme) => ({
-  color: theme.palette.primary.main,
-  fontSize: "13px",
-  fontWeight: 500,
-  textDecoration: "underline",
-  cursor: "pointer",
+  "color": theme.palette.primary.main,
+  "fontSize": "13px",
+  "fontWeight": 500,
+  "textDecoration": "underline",
+  "cursor": "pointer",
   "&:hover": {
     color: theme.palette.primary.dark,
   },
-  alignSelf: "flex-start",
+  "alignSelf": "flex-start",
 });
 
 export const commentLabelStyle = {
@@ -219,8 +219,8 @@ export const commentTextStyle = {
 
 export const commentFieldStyle = {
   "& .MuiOutlinedInput-root": {
-    fontSize: "14px",
-    backgroundColor: "background.main",
+    "fontSize": "14px",
+    "backgroundColor": "background.main",
     "&:hover fieldset": {
       borderColor: "border.dark",
     },

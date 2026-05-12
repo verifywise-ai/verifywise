@@ -475,8 +475,8 @@ export function PublicIntakeForm() {
                     onChange={(e) => setSubmitterName(e.target.value)}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "15px",
+                        "borderRadius": "8px",
+                        "fontSize": "15px",
                         "& fieldset": { borderColor: "#e2e8f0" },
                         "&:hover fieldset": { borderColor: "#cbd5e1" },
                         "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
@@ -499,8 +499,8 @@ export function PublicIntakeForm() {
                     helperText={emailError || "We'll send you updates about your submission"}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "15px",
+                        "borderRadius": "8px",
+                        "fontSize": "15px",
                         "& fieldset": { borderColor: "#e2e8f0" },
                         "&:hover fieldset": { borderColor: "#cbd5e1" },
                         "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
@@ -547,14 +547,14 @@ export function PublicIntakeForm() {
               }
               text={isSubmitting ? "Submitting..." : formData.submitButtonText}
               sx={{
-                width: "100%",
-                height: 48,
-                backgroundColor: ds.colorTheme,
-                fontSize: "15px",
-                fontWeight: 600,
-                borderRadius: "8px",
-                textTransform: "none",
-                boxShadow: "none",
+                "width": "100%",
+                "height": 48,
+                "backgroundColor": ds.colorTheme,
+                "fontSize": "15px",
+                "fontWeight": 600,
+                "borderRadius": "8px",
+                "textTransform": "none",
+                "boxShadow": "none",
                 "&:hover": {
                   backgroundColor: `${ds.colorTheme}dd`,
                   boxShadow: `0 2px 8px ${ds.colorTheme}40`,

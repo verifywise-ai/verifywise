@@ -391,14 +391,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -459,9 +459,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

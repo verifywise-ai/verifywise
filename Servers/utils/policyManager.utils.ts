@@ -456,3 +456,129 @@ export const deletePolicyByIdQuery = async (
 
   return true;
 };
+
+/**
+ * Validate every tag against the predefined PolicyTag enum.
+ * Throws on the first invalid tag so the caller can surface it as a 400.
+ */
+export const verifyPolicyTagList = (tags: PolicyTag[]): void => {
+  for (const tag of tags) {
+    if (!PolicyTagsSet.has(tag)) {
+      throw new Error(`Invalid policy tag: ${tag}`);
+    }
+  }
+};
+
+/**
+ * Bulk archive policies by setting status='Archived' on each row owned by the org.
+ * Caller must validate org ownership beforehand (e.g. via assertOrgOwnsIds).
+ */
+export const bulkArchivePoliciesQuery = async (
+  organizationId: number,
+  ids: number[],
+  userId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE policy_manager
+       SET status = :status,
+           last_updated_by = :userId,
+           last_updated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        userId,
+        status: "Archived",
+      },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Bulk-replace assigned reviewers for the given policies with a single reviewer.
+ * Existing assignments for these (policy_id) rows are removed and one row per
+ * policy is inserted, so every selected policy ends up with exactly one
+ * assigned reviewer (the supplied `reviewerId`).
+ */
+export const bulkSetPoliciesReviewerQuery = async (
+  organizationId: number,
+  ids: number[],
+  reviewerId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `DELETE FROM policy_manager__assigned_reviewer_ids
+     WHERE organization_id = :organizationId
+       AND policy_manager_id IN (:ids)`,
+    { replacements: { organizationId, ids }, transaction },
+  );
+
+  // Build a multi-row VALUES list, one per policy id, using indexed bindings.
+  const values = ids.map((_, i) => `(:organizationId, :pid_${i}, :reviewerId)`).join(", ");
+  const replacements: Record<string, unknown> = { organizationId, reviewerId };
+  ids.forEach((id, i) => {
+    replacements[`pid_${i}`] = id;
+  });
+
+  await sequelize.query(
+    `INSERT INTO policy_manager__assigned_reviewer_ids (organization_id, policy_manager_id, user_id)
+     VALUES ${values}
+     ON CONFLICT (policy_manager_id, user_id) DO NOTHING`,
+    { replacements, transaction },
+  );
+
+  // Move each policy into "pending_review" so the new reviewer sees it on their queue.
+  await sequelize.query(
+    `UPDATE policy_manager
+       SET review_status = :reviewStatus
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        reviewStatus: "pending_review",
+      },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Bulk replace the `tags` column for the given policies. Tag values must
+ * already be validated against PolicyTagsSet (e.g. via verifyPolicyTagList).
+ *
+ * Uses a JSONB → text[] conversion so empty arrays are handled cleanly
+ * without falling into `ARRAY[]` SQL syntax errors.
+ */
+export const bulkSetPoliciesTagsQuery = async (
+  organizationId: number,
+  ids: number[],
+  tags: PolicyTag[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE policy_manager
+       SET tags = ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb)))
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        tags: JSON.stringify(tags),
+      },
+      transaction,
+    },
+  );
+};

@@ -57,10 +57,10 @@ const SuggestionChipsComponent = ({ suggestions }: SuggestionChipsProps) => {
               clickable
               aria-label={`Ask: ${suggestion.label}`}
               sx={{
-                fontSize: theme.typography.caption.fontSize,
-                height: 28,
-                borderColor: theme.palette.border?.light ?? theme.palette.divider,
-                color: "text.primary",
+                "fontSize": theme.typography.caption.fontSize,
+                "height": 28,
+                "borderColor": theme.palette.border?.light ?? theme.palette.divider,
+                "color": "text.primary",
                 "&:hover": {
                   bgcolor: theme.palette.background.fill ?? theme.palette.action.hover,
                   borderColor: "primary.main",
@@ -103,9 +103,9 @@ const CustomThreadComponent = ({ pageContext }: CustomThreadProps) => {
       {/* Messages Area */}
       <Box
         sx={{
-          flex: 1,
-          overflowY: "auto",
-          bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
+          "flex": 1,
+          "overflowY": "auto",
+          "bgcolor": theme.palette.background.alt ?? theme.palette.background.paper,
           "&::-webkit-scrollbar": {
             width: 8,
           },
@@ -113,8 +113,8 @@ const CustomThreadComponent = ({ pageContext }: CustomThreadProps) => {
             bgcolor: theme.palette.background.fill ?? theme.palette.grey[100],
           },
           "&::-webkit-scrollbar-thumb": {
-            bgcolor: theme.palette.border?.dark ?? theme.palette.grey[400],
-            borderRadius: 1,
+            "bgcolor": theme.palette.border?.dark ?? theme.palette.grey[400],
+            "borderRadius": 1,
             "&:hover": {
               bgcolor: theme.palette.text.accent ?? theme.palette.grey[500],
             },

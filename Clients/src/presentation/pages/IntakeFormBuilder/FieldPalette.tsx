@@ -72,18 +72,18 @@ function ClickablePaletteItem({ item, onAdd }: ClickablePaletteItemProps) {
     <Box
       onClick={() => onAdd(item)}
       sx={{
-        p: "8px",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        backgroundColor: theme.palette.background.main,
-        transition: "all 0.15s ease",
+        "p": "8px",
+        "cursor": "pointer",
+        "display": "flex",
+        "alignItems": "center",
+        "gap": "8px",
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "backgroundColor": theme.palette.background.main,
+        "transition": "all 0.15s ease",
         "&:hover": {
-          borderColor: `${theme.palette.primary.main}80`,
-          backgroundColor: theme.palette.background.fill,
+          "borderColor": `${theme.palette.primary.main}80`,
+          "backgroundColor": theme.palette.background.fill,
           "& .palette-icon svg": {
             color: `${theme.palette.primary.main} !important`,
             stroke: `${theme.palette.primary.main} !important`,
@@ -161,13 +161,13 @@ function SuggestedCategory({
       <Box
         onClick={() => setOpen((prev) => !prev)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          px: "4px",
-          py: "6px",
-          cursor: "pointer",
-          borderRadius: "4px",
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "4px",
+          "px": "4px",
+          "py": "6px",
+          "cursor": "pointer",
+          "borderRadius": "4px",
           "&:hover": { backgroundColor: theme.palette.background.accent },
         }}
       >
@@ -199,15 +199,15 @@ function SuggestedCategory({
               key={index}
               onClick={() => handleAdd(question)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                py: "4px",
-                px: "4px",
-                borderRadius: "4px",
-                cursor: "pointer",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": "4px",
+                "py": "4px",
+                "px": "4px",
+                "borderRadius": "4px",
+                "cursor": "pointer",
                 "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
+                  "backgroundColor": theme.palette.background.accent,
                   "& .add-icon": { opacity: 1 },
                 },
               }}
@@ -273,15 +273,15 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
     <Box
       onClick={handleAdd}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        py: "6px",
-        px: "6px",
-        borderRadius: "4px",
-        cursor: "pointer",
+        "display": "flex",
+        "alignItems": "center",
+        "gap": "8px",
+        "py": "6px",
+        "px": "6px",
+        "borderRadius": "4px",
+        "cursor": "pointer",
         "&:hover": {
-          backgroundColor: theme.palette.background.fill,
+          "backgroundColor": theme.palette.background.fill,
           "& .add-icon": { opacity: 1 },
           "& .dismiss-icon": { opacity: 1 },
         },
@@ -305,14 +305,14 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
           onDismiss(question);
         }}
         sx={{
-          opacity: 0,
-          transition: "opacity 0.15s ease",
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          color: theme.palette.text.accent,
-          borderRadius: "4px",
-          p: "2px",
+          "opacity": 0,
+          "transition": "opacity 0.15s ease",
+          "flexShrink": 0,
+          "display": "flex",
+          "alignItems": "center",
+          "color": theme.palette.text.accent,
+          "borderRadius": "4px",
+          "p": "2px",
           "&:hover": {
             color: theme.palette.status.error.text,
             backgroundColor: theme.palette.background.main,
@@ -551,13 +551,13 @@ export const SuggestedQuestionsPanel = forwardRef<
         <Box
           onClick={() => setIsOpen((prev) => !prev)}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: "16px",
-            py: "10px",
-            cursor: "pointer",
-            userSelect: "none",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "space-between",
+            "px": "16px",
+            "py": "10px",
+            "cursor": "pointer",
+            "userSelect": "none",
             "&:hover": { backgroundColor: theme.palette.background.fill },
           }}
         >
@@ -609,13 +609,13 @@ export const SuggestedQuestionsPanel = forwardRef<
                   fetchLLMQuestions();
                 }}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  color: theme.palette.text.accent,
-                  borderRadius: "4px",
-                  px: "6px",
-                  py: "2px",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": "4px",
+                  "color": theme.palette.text.accent,
+                  "borderRadius": "4px",
+                  "px": "6px",
+                  "py": "2px",
                   "&:hover": {
                     backgroundColor: theme.palette.background.main,
                     color: theme.palette.primary.main,
@@ -718,13 +718,13 @@ export const SuggestedQuestionsPanel = forwardRef<
       <Box
         onClick={() => setIsOpen((prev) => !prev)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: "16px",
-          py: "10px",
-          cursor: "pointer",
-          userSelect: "none",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "space-between",
+          "px": "16px",
+          "py": "10px",
+          "cursor": "pointer",
+          "userSelect": "none",
           "&:hover": { backgroundColor: theme.palette.background.fill },
         }}
       >

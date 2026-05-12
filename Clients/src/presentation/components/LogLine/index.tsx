@@ -61,23 +61,23 @@ export function LogLine({ line, index }: LogLineProps) {
   return (
     <Box
       sx={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: theme.spacing(2),
-        py: theme.spacing(1),
-        px: theme.spacing(2),
-        borderBottom: `1px solid ${theme.palette.border.light}`,
+        "display": "flex",
+        "alignItems": "flex-start",
+        "gap": theme.spacing(2),
+        "py": theme.spacing(1),
+        "px": theme.spacing(2),
+        "borderBottom": `1px solid ${theme.palette.border.light}`,
         "&:last-child": {
           borderBottom: "none",
         },
         "&:hover": {
           backgroundColor: theme.palette.action.hover,
         },
-        fontFamily: "monospace",
-        fontSize: "13px",
-        lineHeight: 1.5,
-        wordBreak: "break-word",
-        whiteSpace: "pre-wrap",
+        "fontFamily": "monospace",
+        "fontSize": "13px",
+        "lineHeight": 1.5,
+        "wordBreak": "break-word",
+        "whiteSpace": "pre-wrap",
       }}
     >
       <Typography

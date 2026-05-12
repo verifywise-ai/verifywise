@@ -478,14 +478,14 @@ const AllUsers = () => {
           componentsProps={{
             paper: {
               sx: {
-                borderRadius: theme.shape.borderRadius,
-                boxShadow: theme.boxShadow,
+                "borderRadius": theme.shape.borderRadius,
+                "boxShadow": theme.boxShadow,
                 "& .MuiAutocomplete-option": {
-                  fontSize: 13,
-                  color: theme.palette.text.primary,
-                  borderRadius: theme.shape.borderRadius,
-                  margin: "4px 8px",
-                  transition: "color 0.2s ease, background-color 0.2s ease",
+                  "fontSize": 13,
+                  "color": theme.palette.text.primary,
+                  "borderRadius": theme.shape.borderRadius,
+                  "margin": "4px 8px",
+                  "transition": "color 0.2s ease, background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,
@@ -550,8 +550,8 @@ const AllUsers = () => {
                       key={field}
                       sx={{
                         ...tableStyles.header.cell,
-                        cursor: "pointer",
-                        userSelect: "none",
+                        "cursor": "pointer",
+                        "userSelect": "none",
                         "&:hover": { color: "#1d2939" },
                       }}
                       onClick={() => handleSort(field)}
@@ -645,8 +645,8 @@ const AllUsers = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          color: "#dc2626",
-                          borderColor: "#fecaca",
+                          "color": "#dc2626",
+                          "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: "#dc2626",
                             color: "#fff",

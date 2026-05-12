@@ -45,6 +45,7 @@ import {
 } from "../utils/shadowAiConfig.utils";
 import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
+import { translateError } from "../utils/i18n.utils";
 const FILE_NAME = "shadowAi.ctrl.ts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ export async function getInsightsSummary(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -146,7 +147,7 @@ export async function getToolsByEvents(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -187,7 +188,7 @@ export async function getToolsByUsers(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -227,7 +228,7 @@ export async function getUsersByDepartment(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -272,7 +273,7 @@ export async function getTrend(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -318,7 +319,7 @@ export async function getUsers(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -380,7 +381,7 @@ export async function getUserDetail(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -419,7 +420,7 @@ export async function getDepartmentActivity(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -465,7 +466,7 @@ export async function getTools(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -486,12 +487,12 @@ export async function getToolById(req: Request, res: Response) {
 
   try {
     if (isNaN(toolId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid tool ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid tool ID")));
     }
 
     const tool = await getToolByIdQuery(tenantId, toolId);
     if (!tool) {
-      return res.status(404).json(STATUS_CODE[404]("Tool not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
     const [departments, topUsers] = await Promise.all([
@@ -524,7 +525,7 @@ export async function getToolById(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -545,11 +546,11 @@ export async function updateToolStatus(req: Request, res: Response) {
 
   try {
     if (!isWriteRole(req.role!)) {
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     if (isNaN(toolId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid tool ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid tool ID")));
     }
 
     const { status } = req.body;
@@ -562,12 +563,12 @@ export async function updateToolStatus(req: Request, res: Response) {
       "dismissed",
     ];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid status value"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid status value")));
     }
 
     const updated = await updateToolStatusQuery(tenantId, toolId, status);
     if (!updated) {
-      return res.status(404).json(STATUS_CODE[404]("Tool not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
     await logSuccess({
@@ -589,7 +590,7 @@ export async function updateToolStatus(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -610,16 +611,16 @@ export async function startGovernance(req: Request, res: Response) {
 
   try {
     if (!isWriteRole(req.role!)) {
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     if (isNaN(toolId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid tool ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid tool ID")));
     }
 
     const tool = await getToolByIdQuery(tenantId, toolId);
     if (!tool) {
-      return res.status(404).json(STATUS_CODE[404]("Tool not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
     const { model_inventory, governance_owner_id } = req.body;
@@ -629,7 +630,9 @@ export async function startGovernance(req: Request, res: Response) {
         .status(400)
         .json(
           STATUS_CODE[400](
-            "Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id",
+            req.t!(
+              "Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id",
+            ),
           ),
         );
     }
@@ -638,7 +641,7 @@ export async function startGovernance(req: Request, res: Response) {
     if (isNaN(ownerId) || ownerId <= 0) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("governance_owner_id must be a positive integer"));
+        .json(STATUS_CODE[400](req.t!("governance_owner_id must be a positive integer")));
     }
 
     let transaction: Transaction | null = null;
@@ -797,7 +800,7 @@ export async function startGovernance(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -838,7 +841,7 @@ export async function getRules(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -858,7 +861,7 @@ export async function createRule(req: Request, res: Response) {
 
   try {
     if (!isWriteRole(req.role!)) {
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const {
@@ -875,7 +878,7 @@ export async function createRule(req: Request, res: Response) {
     if (!name || !trigger_type || !actions || !Array.isArray(actions)) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("Missing required fields: name, trigger_type, actions"));
+        .json(STATUS_CODE[400](req.t!("Missing required fields: name, trigger_type, actions")));
     }
 
     const rule = await createRuleQuery(tenantId, {
@@ -909,7 +912,7 @@ export async function createRule(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -930,16 +933,16 @@ export async function updateRule(req: Request, res: Response) {
 
   try {
     if (!isWriteRole(req.role!)) {
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     if (isNaN(ruleId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid rule ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid rule ID")));
     }
 
     const updated = await updateRuleQuery(tenantId, ruleId, req.body);
     if (!updated) {
-      return res.status(404).json(STATUS_CODE[404]("Rule not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
 
     await logSuccess({
@@ -961,7 +964,7 @@ export async function updateRule(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -982,16 +985,16 @@ export async function deleteRule(req: Request, res: Response) {
 
   try {
     if (!isWriteRole(req.role!)) {
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     if (isNaN(ruleId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid rule ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid rule ID")));
     }
 
     const deleted = await deleteRuleQuery(tenantId, ruleId);
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("Rule not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
 
     await logSuccess({
@@ -1002,7 +1005,7 @@ export async function deleteRule(req: Request, res: Response) {
       userId,
       organizationId,
     });
-    return res.status(200).json(STATUS_CODE[200]("Rule deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Rule deleted successfully")));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -1013,7 +1016,7 @@ export async function deleteRule(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1056,7 +1059,7 @@ export async function getAlertHistory(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1078,7 +1081,9 @@ export async function getSyslogConfigs(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
     const configs = await getSyslogConfigsQuery(tenantId);
@@ -1101,7 +1106,7 @@ export async function getSyslogConfigs(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1121,21 +1126,27 @@ export async function createSyslogConfig(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
     const { source_identifier, parser_type, is_active } = req.body;
     if (!source_identifier || !parser_type) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("Missing required fields: source_identifier, parser_type"));
+        .json(STATUS_CODE[400](req.t!("Missing required fields: source_identifier, parser_type")));
     }
 
     const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
     if (!validParsers.includes(parser_type)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`));
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("Invalid parser_type. Must be one of: {options}", {
+            options: validParsers.join(", "),
+          }),
+        ),
+      );
     }
 
     const config = await createSyslogConfigQuery(tenantId, {
@@ -1163,7 +1174,7 @@ export async function createSyslogConfig(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1184,11 +1195,13 @@ export async function updateSyslogConfig(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
     if (isNaN(configId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid config ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid config ID")));
     }
 
     const { source_identifier, parser_type, is_active } = req.body;
@@ -1196,11 +1209,13 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     if (parser_type) {
       const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
       if (!validParsers.includes(parser_type)) {
-        return res
-          .status(400)
-          .json(
-            STATUS_CODE[400](`Invalid parser_type. Must be one of: ${validParsers.join(", ")}`),
-          );
+        return res.status(400).json(
+          STATUS_CODE[400](
+            req.t!("Invalid parser_type. Must be one of: {options}", {
+              options: validParsers.join(", "),
+            }),
+          ),
+        );
       }
     }
 
@@ -1211,7 +1226,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     });
 
     if (!updated) {
-      return res.status(404).json(STATUS_CODE[404]("Syslog config not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
 
     await logSuccess({
@@ -1233,7 +1248,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1254,16 +1269,18 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage syslog configuration"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
     if (isNaN(configId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid config ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid config ID")));
     }
 
     const deleted = await deleteSyslogConfigQuery(tenantId, configId);
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("Syslog config not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
 
     await logSuccess({
@@ -1274,7 +1291,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
       userId,
       organizationId,
     });
-    return res.status(200).json(STATUS_CODE[200]("Syslog config deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Syslog config deleted successfully")));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -1285,7 +1302,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1326,7 +1343,7 @@ export async function getSettings(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1346,7 +1363,7 @@ export async function updateSettings(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage settings"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage settings")));
     }
 
     const {
@@ -1383,6 +1400,6 @@ export async function updateSettings(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

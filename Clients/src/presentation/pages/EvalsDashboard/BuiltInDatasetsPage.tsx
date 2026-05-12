@@ -391,15 +391,15 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 disableScrollLock: true,
                 PaperProps: {
                   sx: {
-                    borderRadius: theme.shape.borderRadius,
-                    boxShadow: theme.boxShadow,
-                    mt: 1,
+                    "borderRadius": theme.shape.borderRadius,
+                    "boxShadow": theme.boxShadow,
+                    "mt": 1,
                     "& .MuiMenuItem-root": {
-                      fontSize: 13,
-                      color: theme.palette.text.primary,
+                      "fontSize": 13,
+                      "color": theme.palette.text.primary,
                       "&:hover": { backgroundColor: theme.palette.background.accent },
                       "&.Mui-selected": {
-                        backgroundColor: theme.palette.background.accent,
+                        "backgroundColor": theme.palette.background.accent,
                         "&:hover": { backgroundColor: theme.palette.background.accent },
                       },
                       "& .MuiTouchRipple-root": { display: "none" },
@@ -408,12 +408,12 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 },
               }}
               sx={{
-                fontSize: 13,
-                minWidth: "160px",
-                maxWidth: "260px",
-                backgroundColor: theme.palette.background.main,
-                position: "relative",
-                cursor: "pointer",
+                "fontSize": 13,
+                "minWidth": "160px",
+                "maxWidth": "260px",
+                "backgroundColor": theme.palette.background.main,
+                "position": "relative",
+                "cursor": "pointer",
                 "& .MuiSelect-select": {
                   padding: "0 32px 0 10px !important",
                   height: "34px",
@@ -495,13 +495,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             label="Datasets"
             onClick={() => setActiveSection("datasets")}
             sx={{
-              cursor: "pointer",
-              backgroundColor:
+              "cursor": "pointer",
+              "backgroundColor":
                 activeSection === "datasets" ? palette.brand.primary : palette.background.hover,
-              color:
+              "color":
                 activeSection === "datasets" ? palette.background.main : palette.text.secondary,
-              fontWeight: 500,
-              fontSize: "13px",
+              "fontWeight": 500,
+              "fontSize": "13px",
               "&:hover": {
                 backgroundColor:
                   activeSection === "datasets" ? palette.brand.primaryHover : palette.border.dark,
@@ -512,13 +512,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             label="Benchmarks"
             onClick={() => setActiveSection("benchmarks")}
             sx={{
-              cursor: "pointer",
-              backgroundColor:
+              "cursor": "pointer",
+              "backgroundColor":
                 activeSection === "benchmarks" ? palette.brand.primary : palette.background.hover,
-              color:
+              "color":
                 activeSection === "benchmarks" ? palette.background.main : palette.text.secondary,
-              fontWeight: 500,
-              fontSize: "13px",
+              "fontWeight": 500,
+              "fontSize": "13px",
               "&:hover": {
                 backgroundColor:
                   activeSection === "benchmarks" ? palette.brand.primaryHover : palette.border.dark,
@@ -600,17 +600,17 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 key={benchmark.id}
                 variant="outlined"
                 sx={{
-                  p: 2.5,
-                  width: 380,
-                  borderRadius: 2,
-                  borderColor: palette.border.dark,
-                  boxShadow: "none",
-                  backgroundColor: palette.background.main,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
+                  "p": 2.5,
+                  "width": 380,
+                  "borderRadius": 2,
+                  "borderColor": palette.border.dark,
+                  "boxShadow": "none",
+                  "backgroundColor": palette.background.main,
+                  "display": "flex",
+                  "flexDirection": "column",
+                  "gap": 1.5,
+                  "cursor": "pointer",
+                  "transition": "all 0.2s",
                   "&:hover": {
                     borderColor: palette.brand.primary,
                     boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
@@ -749,9 +749,9 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                   size="small"
                   variant="contained"
                   sx={{
-                    mt: 1,
-                    textTransform: "none",
-                    bgcolor: palette.brand.primary,
+                    "mt": 1,
+                    "textTransform": "none",
+                    "bgcolor": palette.brand.primary,
                     "&:hover": { bgcolor: palette.brand.primaryHover },
                   }}
                   onClick={(e) => {
@@ -850,7 +850,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                         size="small"
                         variant="contained"
                         sx={{
-                          bgcolor: palette.brand.primary,
+                          "bgcolor": palette.brand.primary,
                           "&:hover": { bgcolor: palette.brand.primaryHover },
                         }}
                         onClick={() => openEditor(selected.path, selected.name)}
@@ -1117,8 +1117,8 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                                 size="small"
                                 variant="contained"
                                 sx={{
-                                  textTransform: "none",
-                                  bgcolor: palette.brand.primary,
+                                  "textTransform": "none",
+                                  "bgcolor": palette.brand.primary,
                                   "&:hover": { bgcolor: palette.brand.primaryHover },
                                 }}
                                 onClick={() => {
@@ -1137,8 +1137,8 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                                 size="small"
                                 variant="contained"
                                 sx={{
-                                  textTransform: "none",
-                                  bgcolor: palette.brand.primary,
+                                  "textTransform": "none",
+                                  "bgcolor": palette.brand.primary,
                                   "&:hover": { bgcolor: palette.brand.primaryHover },
                                 }}
                                 onClick={() => openEditor(ds.path, ds.name)}

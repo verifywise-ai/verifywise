@@ -93,8 +93,8 @@ const MitigationROI: FC<MitigationROIProps> = ({
           valueLabelDisplay="auto"
           valueLabelFormat={(v) => `${v}%`}
           sx={{
-            mx: "8px",
-            color: theme.palette.primary.main,
+            "mx": "8px",
+            "color": theme.palette.primary.main,
             "& .MuiSlider-thumb": {
               width: 16,
               height: 16,

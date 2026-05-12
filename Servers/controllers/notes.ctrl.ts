@@ -25,6 +25,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { logFailure, logProcessing } from "../utils/logger/logHelper";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Create a new note
  *
@@ -96,9 +97,9 @@ export async function createNote(req: Request, res: Response): Promise<any> {
     }
 
     if (statusCode === 400) {
-      return res.status(400).json(STATUS_CODE[400]((error as Error).message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -174,9 +175,9 @@ export async function getNotes(req: Request, res: Response): Promise<any> {
     });
 
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400]((error as Error).message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -245,11 +246,11 @@ export async function updateNote(req: Request, res: Response): Promise<any> {
     });
 
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400]((error as Error).message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     } else if (error instanceof BusinessLogicException) {
-      return res.status(400).json(STATUS_CODE[400]((error as Error).message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -288,7 +289,7 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
     // Use service for business logic (includes permission checks)
     await NotesService.deleteNote(noteId, userId, userRole, organization_id);
 
-    return res.status(200).json(STATUS_CODE[200]("Note deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Note deleted successfully")));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -301,8 +302,8 @@ export async function deleteNote(req: Request, res: Response): Promise<any> {
     });
 
     if (error instanceof BusinessLogicException) {
-      return res.status(400).json(STATUS_CODE[400]((error as Error).message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

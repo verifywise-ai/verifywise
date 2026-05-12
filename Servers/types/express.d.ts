@@ -1,9 +1,14 @@
 import "express";
+import type { SupportedLang, Translator } from "../utils/i18n.utils";
 
 declare module "express" {
   interface Request {
     userId?: number;
     role?: string;
+    /** Resolved request language from Accept-Language. Set by i18nMiddleware. */
+    lang?: SupportedLang;
+    /** Translator bound to req.lang. Set by i18nMiddleware. */
+    t?: Translator;
     /**
      * Organization ID for tenant isolation in shared-schema multi-tenancy.
      * Use this for database queries with WHERE organization_id = :organizationId

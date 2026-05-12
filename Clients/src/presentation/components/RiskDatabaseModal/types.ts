@@ -4,11 +4,11 @@ import { Likelihood, Severity } from "../RiskLevel/constants";
  * Raw risk data structure from JSON databases
  */
 export interface RiskData {
-  Id: number;
-  Summary: string;
-  Description: string;
+  "Id": number;
+  "Summary": string;
+  "Description": string;
   "Risk Severity": string;
-  Likelihood: string;
+  "Likelihood": string;
   "Risk Category": string;
 }
 

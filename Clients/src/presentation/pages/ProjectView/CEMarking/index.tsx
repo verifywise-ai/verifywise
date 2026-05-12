@@ -174,10 +174,10 @@ const getTableHeaderCellStyles = () => ({
 });
 
 const getTableBodyRowStyles = () => ({
-  textTransform: "capitalize",
-  borderBottom: "1px solid #d0d5dd",
-  backgroundColor: "white",
-  transition: "background-color 0.3s ease-in-out",
+  "textTransform": "capitalize",
+  "borderBottom": "1px solid #d0d5dd",
+  "backgroundColor": "white",
+  "transition": "background-color 0.3s ease-in-out",
   "&:hover td": {
     backgroundColor: "#fafafa",
   },
@@ -755,7 +755,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
       >
         {/* Classification and scope */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -858,7 +858,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
         {/* EU AI Act completion */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -908,9 +908,9 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     data.controlsTotal > 0 ? (data.controlsCompleted / data.controlsTotal) * 100 : 0
                   }
                   sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: "background.hover",
+                    "height": 8,
+                    "borderRadius": 4,
+                    "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: "#FBBF24",
                       borderRadius: 4,
@@ -948,9 +948,9 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       : 0
                   }
                   sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: "background.hover",
+                    "height": 8,
+                    "borderRadius": 4,
+                    "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: "#FBBF24",
                       borderRadius: 4,
@@ -969,7 +969,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
       {/* Conformity assessment steps */}
       <Card sx={cardStyles.base(theme)}>
-        <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+        <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
           <Stack
             direction="row"
             justifyContent="space-between"
@@ -1002,9 +1002,9 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               variant="determinate"
               value={(data.completedStepsCount / data.totalStepsCount) * 100}
               sx={{
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: "background.hover",
+                "height": 6,
+                "borderRadius": 3,
+                "backgroundColor": "background.hover",
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: "#FBBF24",
                   borderRadius: 3,
@@ -1100,7 +1100,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
       >
         {/* Declaration of conformity */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -1202,11 +1202,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   text="Edit declaration details"
                   onClick={handleDeclarationClick}
                   sx={{
-                    width: "100%",
-                    height: 34,
-                    fontSize: 13,
-                    borderColor: "#D1D5DB",
-                    color: "#374151",
+                    "width": "100%",
+                    "height": 34,
+                    "fontSize": 13,
+                    "borderColor": "#D1D5DB",
+                    "color": "#374151",
                     "&:hover": {
                       borderColor: "text.disabled",
                       backgroundColor: "background.accent",
@@ -1220,7 +1220,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
         {/* EU registration */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -1321,11 +1321,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   text="Edit EU registration details"
                   onClick={handleRegistrationClick}
                   sx={{
-                    width: "100%",
-                    height: 34,
-                    fontSize: 13,
-                    borderColor: "#D1D5DB",
-                    color: "#374151",
+                    "width": "100%",
+                    "height": 34,
+                    "fontSize": 13,
+                    "borderColor": "#D1D5DB",
+                    "color": "#374151",
                     "&:hover": {
                       borderColor: "text.disabled",
                       backgroundColor: "background.accent",
@@ -1339,7 +1339,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
         {/* Policies and evidence */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -1401,7 +1401,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
 
         {/* Incidents for this use case */}
         <Card sx={cardStyles.base(theme)}>
-          <CardContent sx={{ padding: 3, "&:last-child": { paddingBottom: 3 } }}>
+          <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
             <Typography
               sx={{
                 fontSize: 15,
@@ -1587,10 +1587,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   >
                     <Box
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        cursor: "pointer",
-                        color: "text.disabled",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "cursor": "pointer",
+                        "color": "text.disabled",
                         "&:hover": {
                           color: "status.default.text",
                         },
@@ -1764,17 +1764,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={policy.id}
                     sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "12px",
-                      borderBottom:
+                      "display": "flex",
+                      "alignItems": "flex-start",
+                      "padding": "12px",
+                      "borderBottom":
                         index < availablePolicies.length - 1
                           ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
                       },
-                      cursor: "pointer",
+                      "cursor": "pointer",
                     }}
                     onClick={() => togglePolicy(policy.id)}
                   >
@@ -1849,17 +1849,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={evidence.id}
                     sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "12px",
-                      borderBottom:
+                      "display": "flex",
+                      "alignItems": "flex-start",
+                      "padding": "12px",
+                      "borderBottom":
                         index < availableEvidences.length - 1
                           ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
                       },
-                      cursor: "pointer",
+                      "cursor": "pointer",
                     }}
                     onClick={() => toggleEvidence(evidence.id)}
                   >
@@ -1944,17 +1944,17 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   <Box
                     key={incident.id}
                     sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "12px",
-                      borderBottom:
+                      "display": "flex",
+                      "alignItems": "flex-start",
+                      "padding": "12px",
+                      "borderBottom":
                         index < availableIncidents.length - 1
                           ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
                       },
-                      cursor: "pointer",
+                      "cursor": "pointer",
                     }}
                     onClick={() => toggleIncident(incident.id)}
                   >

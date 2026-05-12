@@ -1,6 +1,6 @@
 # EvalServer — Python LLM Evaluation Service
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-04-09
 
 ---
 
@@ -52,7 +52,9 @@ Alembic runs ONCE before uvicorn spawns workers. Data migration (`run_data_migra
 
 `.env` is at `EvalServer/.env` (NOT `EvalServer/src/.env`). The `database/config.py` loads it via `Path(__file__).parent.parent.parent / ".env"`.
 
-Key variables: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `LLM_EVALS_PORT`
+Key variables: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `LLM_EVALS_PORT`, `ENCRYPTION_KEY`
+
+**AI Gateway (LiteLLM) — cloud LLM calls:** Set `AI_GATEWAY_URL` (default `http://127.0.0.1:8100`) and `AI_GATEWAY_INTERNAL_KEY` to match the Node backend. When the internal key is set, evaluations route provider calls through the gateway’s `/internal/v1/chat/completions` instead of direct vendor SDKs. Provider secrets are read from `verifywise.ai_gateway_api_keys` (same table as AI Gateway Settings).
 
 **Note:** EvalServer may use a different database/port than the main server (e.g., port `5433` vs `5432`).
 

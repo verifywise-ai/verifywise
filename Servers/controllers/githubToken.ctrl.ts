@@ -79,7 +79,7 @@ export async function saveGitHubTokenController(req: Request, res: Response): Pr
     const { token, token_name } = req.body;
 
     if (!token) {
-      return res.status(400).json(STATUS_CODE[400]("Token is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Token is required")));
     }
 
     // Validate token format
@@ -135,7 +135,7 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
     const deleted = await deleteGitHubTokenQuery(req.organizationId!);
 
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("No GitHub token found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("No GitHub token found")));
     }
 
     await logSuccess({
@@ -147,7 +147,9 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
       tenantId: req.organizationId!,
     });
 
-    return res.status(200).json(STATUS_CODE[200]({ message: "GitHub token deleted successfully" }));
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ message: req.t!("GitHub token deleted successfully") }));
   } catch (error) {
     await logError({
       error: error as Error,
@@ -182,7 +184,7 @@ export async function testGitHubTokenController(req: Request, res: Response): Pr
     const { token } = req.body;
 
     if (!token) {
-      return res.status(400).json(STATUS_CODE[400]("Token is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Token is required")));
     }
 
     // Validate token format first

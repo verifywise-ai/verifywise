@@ -65,12 +65,12 @@ const FolderCheckItem: React.FC<FolderCheckItemProps> = ({
       <Box
         onClick={handleToggleSelect}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          padding: "8px 12px",
-          paddingLeft: `${12 + level * 20}px`,
-          cursor: "pointer",
-          borderRadius: "4px",
+          "display": "flex",
+          "alignItems": "center",
+          "padding": "8px 12px",
+          "paddingLeft": `${12 + level * 20}px`,
+          "cursor": "pointer",
+          "borderRadius": "4px",
           "&:hover": {
             backgroundColor: "background.accent",
           },
@@ -104,8 +104,8 @@ const FolderCheckItem: React.FC<FolderCheckItemProps> = ({
           onChange={handleToggleSelect}
           onClick={(e) => e.stopPropagation()}
           sx={{
-            padding: "4px",
-            marginRight: "8px",
+            "padding": "4px",
+            "marginRight": "8px",
             "& .MuiSvgIcon-root": {
               fontSize: 18,
             },

@@ -6,6 +6,7 @@ import { UserDateFormat } from "../../domain/enums/userDateFormat.enum";
 
 const defaultUserPreferences: Omit<UserPreferencesModel, "id" | "user_id"> = {
   date_format: UserDateFormat.DD_MM_YYYY_DASH,
+  language: "en",
 };
 
 const USER_PREFERENCES_QUERY_KEY = ["userPreferences"] as const;

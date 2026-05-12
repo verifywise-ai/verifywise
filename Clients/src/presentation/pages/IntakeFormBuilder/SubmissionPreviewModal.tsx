@@ -130,9 +130,9 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
                   variant="determinate"
                   value={dim.score}
                   sx={{
-                    height: 6,
-                    borderRadius: "3px",
-                    backgroundColor: theme.palette.background.accent,
+                    "height": 6,
+                    "borderRadius": "3px",
+                    "backgroundColor": theme.palette.background.accent,
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: barColor,
                       borderRadius: "3px",
@@ -458,17 +458,17 @@ function SubmissionPreviewModal({
                   type="button"
                   onClick={() => setOverrideExpanded((prev) => !prev)}
                   sx={{
-                    mt: "16px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    color: theme.palette.text.tertiary,
-                    fontSize: "13px",
-                    fontWeight: 500,
+                    "mt": "16px",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "6px",
+                    "background": "none",
+                    "border": "none",
+                    "cursor": "pointer",
+                    "padding": 0,
+                    "color": theme.palette.text.tertiary,
+                    "fontSize": "13px",
+                    "fontWeight": 500,
                     "&:hover": { color: theme.palette.text.primary },
                   }}
                 >
@@ -549,16 +549,16 @@ function SubmissionPreviewModal({
                   type="button"
                   onClick={() => setShowRejectForm(true)}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    color: theme.palette.status.error.text,
-                    fontSize: "13px",
-                    fontWeight: 500,
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "6px",
+                    "background": "none",
+                    "border": "none",
+                    "cursor": "pointer",
+                    "padding": 0,
+                    "color": theme.palette.status.error.text,
+                    "fontSize": "13px",
+                    "fontWeight": 500,
                     "&:hover": { textDecoration: "underline" },
                   }}
                 >
@@ -593,11 +593,11 @@ function SubmissionPreviewModal({
                         setApproveError(null);
                       }}
                       sx={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: theme.palette.other.icon,
-                        fontSize: "12px",
+                        "background": "none",
+                        "border": "none",
+                        "cursor": "pointer",
+                        "color": theme.palette.other.icon,
+                        "fontSize": "12px",
                         "&:hover": { color: theme.palette.text.primary },
                       }}
                     >

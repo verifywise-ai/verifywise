@@ -124,8 +124,8 @@ export function SortableTableHead({
               ...singleTheme.tableStyles.primary.header.cell,
               ...(col.sortable !== false
                 ? {
-                    cursor: "pointer",
-                    userSelect: "none",
+                    "cursor": "pointer",
+                    "userSelect": "none",
                     "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
                   }
                 : {}),

@@ -88,21 +88,21 @@ const AIDepNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }
         aria-label={`${typeLabel}: ${nodeData.label}. Risk level: ${nodeData.riskLevel}. ${nodeData.fileCount} files. Press Enter to view details.`}
         onKeyDown={handleKeyDown}
         sx={{
-          bgcolor: nodeData.isHighlighted ? "warning.light" : "common.white",
-          border: nodeData.isHighlighted
+          "bgcolor": nodeData.isHighlighted ? "warning.light" : "common.white",
+          "border": nodeData.isHighlighted
             ? `3px solid ${theme.palette.warning.main}`
             : `2px solid ${color}`,
-          borderRadius: 1,
-          padding: "8px 12px",
-          minWidth: minWidth,
-          maxWidth: maxWidth,
-          boxShadow: nodeData.isHighlighted
+          "borderRadius": 1,
+          "padding": "8px 12px",
+          "minWidth": minWidth,
+          "maxWidth": maxWidth,
+          "boxShadow": nodeData.isHighlighted
             ? `0 0 0 4px ${theme.palette.warning.light}, 0 4px 12px rgba(0,0,0,0.15)`
             : 1,
-          cursor: "pointer",
-          transition: "all 0.3s ease-in-out",
-          transform: nodeData.isHighlighted ? "scale(1.05)" : "scale(1)",
-          position: "relative",
+          "cursor": "pointer",
+          "transition": "all 0.3s ease-in-out",
+          "transform": nodeData.isHighlighted ? "scale(1.05)" : "scale(1)",
+          "position": "relative",
           "&:hover": {
             boxShadow: 3,
             transform: "translateY(-1px)",

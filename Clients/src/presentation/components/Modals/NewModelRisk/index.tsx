@@ -20,6 +20,8 @@ import { getAllUsers } from "../../../../application/repository/user.repository"
 import { User } from "../../../../domain/types/User";
 import dayjs, { Dayjs } from "dayjs";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { checkStringValidation } from "../../../../application/validations/stringValidation";
 
 interface NewModelRiskProps {
   isOpen: boolean;
@@ -28,18 +30,6 @@ interface NewModelRiskProps {
   initialData?: IModelRiskFormData;
   isEdit?: boolean;
   entityId?: number;
-}
-
-interface NewModelRiskFormErrors {
-  risk_name?: string;
-  risk_category?: string;
-  risk_level?: string;
-  status?: string;
-  owner?: string;
-  target_date?: string;
-  description?: string;
-  mitigation_plan?: string;
-  impact?: string;
 }
 
 const initialState: IModelRiskFormData = {
@@ -86,7 +76,6 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 }) => {
   const theme = useTheme();
   const [values, setValues] = useState<IModelRiskFormData>(initialData || initialState);
-  const [errors, setErrors] = useState<NewModelRiskFormErrors>({});
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [models, setModels] = useState<any[]>([]);
@@ -102,14 +91,38 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     }
   }, [initialData, isEdit]);
 
+  const validators = useMemo(
+    () => ({
+      risk_name: (v: unknown) => {
+        const r = checkStringValidation("Risk name", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      risk_category: (v: unknown) => (!v ? "Risk category is required." : ""),
+      risk_level: (v: unknown) => (!v ? "Risk level is required." : ""),
+      status: (v: unknown) => (!v ? "Status is required." : ""),
+      owner: (v: unknown) => {
+        const r = checkStringValidation("Owner", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+      target_date: (v: unknown) => {
+        const r = checkStringValidation("Next review date", v as string, 1);
+        return r.accepted ? "" : r.message;
+      },
+    }),
+    [],
+  );
+
+  const { errors, validateAll, clearFieldError, resetErrors } =
+    useFormValidation<IModelRiskFormData>(validators);
+
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
-      setErrors({});
+      resetErrors();
     } else if (isOpen && initialData) {
       setValues(initialData);
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, resetErrors]);
 
   useEffect(() => {
     if (isOpen) {
@@ -187,9 +200,9 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     (prop: keyof IModelRiskFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setValues((prev) => ({ ...prev, [prop]: value }));
-      setErrors((prev) => ({ ...prev, [prop]: "" }));
+      clearFieldError(prop);
     },
-    [],
+    [clearFieldError],
   );
 
   const handleOnSelectChange = useCallback(
@@ -197,55 +210,27 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       const value = event.target.value;
       if (prop === "model_id" && value === "") {
         setValues((prev) => ({ ...prev, [prop]: null }));
-        setErrors((prev) => ({ ...prev, [prop]: "" }));
+        clearFieldError(prop);
         return;
       }
       setValues((prev) => ({ ...prev, [prop]: value }));
-      setErrors((prev) => ({ ...prev, [prop]: "" }));
+      clearFieldError(prop);
     },
-    [],
+    [clearFieldError],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prev) => ({
-        ...prev,
-        target_date: newDate ? newDate.format("YYYY-MM-DD") : "",
-      }));
-      setErrors((prev) => ({ ...prev, target_date: "" }));
-    }
-  }, []);
-
-  const validateForm = (): boolean => {
-    const newErrors: NewModelRiskFormErrors = {};
-
-    if (!values.risk_name || !String(values.risk_name).trim()) {
-      newErrors.risk_name = "Risk name is required.";
-    }
-
-    if (!values.risk_category) {
-      newErrors.risk_category = "Risk category is required.";
-    }
-
-    if (!values.risk_level) {
-      newErrors.risk_level = "Risk level is required.";
-    }
-
-    if (!values.status) {
-      newErrors.status = "Status is required.";
-    }
-
-    if (!values.owner || !String(values.owner).trim()) {
-      newErrors.owner = "Owner is required.";
-    }
-
-    if (!values.target_date) {
-      newErrors.target_date = "Next review date is required.";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const handleDateChange = useCallback(
+    (newDate: Dayjs | null) => {
+      if (newDate?.isValid()) {
+        setValues((prev) => ({
+          ...prev,
+          target_date: newDate ? newDate.format("YYYY-MM-DD") : "",
+        }));
+        clearFieldError("target_date");
+      }
+    },
+    [clearFieldError],
+  );
 
   const handleClose = () => {
     setIsOpen(false);
@@ -258,7 +243,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   });
 
   const handleSubmit = () => {
-    if (validateForm()) {
+    if (validateAll(values)) {
       setIsSubmitting(true);
       if (onSuccess) {
         onSuccess(values);
@@ -269,7 +254,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   };
 
   const fieldStyle = {
-    backgroundColor: theme.palette.background.main,
+    "backgroundColor": theme.palette.background.main,
     "& input": {
       padding: "0 14px",
     },

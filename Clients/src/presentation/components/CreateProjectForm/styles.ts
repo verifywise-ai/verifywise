@@ -15,7 +15,7 @@ export const createProjectFormStyles = {
   },
 
   fieldStyle: (theme: Theme) => ({
-    backgroundColor: theme.palette.background.main,
+    "backgroundColor": theme.palette.background.main,
     "& input": {
       padding: "0 14px",
     },
@@ -33,10 +33,10 @@ export const createProjectFormStyles = {
   }),
 
   autocompleteContainer: (theme: Theme) => ({
-    width: "350px",
-    backgroundColor: theme.palette.background.main,
+    "width": "350px",
+    "backgroundColor": theme.palette.background.main,
     "& .MuiOutlinedInput-root": {
-      borderRadius: "3px",
+      "borderRadius": "3px",
       "&:hover .MuiOutlinedInput-notchedOutline": {
         borderColor: "none",
       },
@@ -114,15 +114,15 @@ export const createProjectFormStyles = {
   }),
 
   submitButton: {
-    borderRadius: 2,
-    maxHeight: 34,
-    textTransform: "inherit",
-    backgroundColor: "#4C7DE7",
-    boxShadow: "none",
-    border: "1px solid #175CD3",
-    ml: "auto",
-    mr: 0,
-    mt: "30px",
+    "borderRadius": 2,
+    "maxHeight": 34,
+    "textTransform": "inherit",
+    "backgroundColor": "#4C7DE7",
+    "boxShadow": "none",
+    "border": "1px solid #175CD3",
+    "ml": "auto",
+    "mr": 0,
+    "mt": "30px",
     "&:hover": {
       boxShadow: "none",
       backgroundColor: "#175CD3",

@@ -87,7 +87,7 @@ function CustomSelectInner({
       getOptionValue={(item) => item._id}
       disabled={disabled || isUpdating}
       sx={{
-        minWidth: size === "small" ? 120 : 140,
+        "minWidth": size === "small" ? 120 : 140,
         "& .MuiOutlinedInput-root": {
           height: "34px",
         },

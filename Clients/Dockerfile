@@ -1,5 +1,5 @@
 # Step 1: Use a Node.js base image
-FROM node:25-alpine AS build
+FROM node:26-alpine AS build
 
 # Increase Node.js memory limit for the build
 # ENV NODE_OPTIONS="--max_old_space_size=4096"

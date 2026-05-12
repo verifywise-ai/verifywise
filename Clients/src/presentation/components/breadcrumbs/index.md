@@ -184,10 +184,10 @@ function MyPage() {
     <Breadcrumbs
       autoGenerate={true}
       sx={{
-        backgroundColor: theme.palette.grey[100],
-        borderRadius: 1,
-        px: 2,
-        py: 1,
+        "backgroundColor": theme.palette.grey[100],
+        "borderRadius": 1,
+        "px": 2,
+        "py": 1,
         "& .MuiBreadcrumbs-separator": {
           color: theme.palette.primary.main,
         },

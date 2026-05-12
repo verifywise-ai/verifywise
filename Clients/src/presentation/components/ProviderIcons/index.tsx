@@ -5,6 +5,8 @@
  * Icons are imported as React components using SVGR.
  */
 
+import React from "react";
+
 // AI Provider SVG icons
 import { ReactComponent as Ai21Icon } from "../../assets/icons/ai-providers/ai21.svg";
 import { ReactComponent as AnthropicIcon } from "../../assets/icons/ai-providers/anthropic.svg";
@@ -44,6 +46,9 @@ import { ReactComponent as TogetherIcon } from "../../assets/icons/ai-providers/
 import { ReactComponent as VercelIcon } from "../../assets/icons/ai-providers/vercel.svg";
 import { ReactComponent as VllmIcon } from "../../assets/icons/ai-providers/vllm.svg";
 import { ReactComponent as VoyageIcon } from "../../assets/icons/ai-providers/voyage.svg";
+import { ReactComponent as XAIIcon } from "../../assets/icons/ai-providers/xai.svg";
+import moonshotUrl from "../../assets/icons/ai-providers/moonshot.svg";
+import qwenUrl from "../../assets/icons/ai-providers/qwen.svg";
 
 // Export individual icons
 export const Ai21 = Ai21Icon;
@@ -84,6 +89,33 @@ export const Together = TogetherIcon;
 export const Vercel = VercelIcon;
 export const Vllm = VllmIcon;
 export const Voyage = VoyageIcon;
+export const XAI = XAIIcon;
+export const Moonshot: React.FC<{
+  width?: number;
+  height?: number;
+  style?: React.CSSProperties;
+}> = ({ width = 14, height = 14, style }) => (
+  <img
+    src={moonshotUrl}
+    width={width}
+    height={height}
+    style={{ objectFit: "contain", ...style }}
+    alt="Moonshot AI"
+  />
+);
+export const Qwen: React.FC<{ width?: number; height?: number; style?: React.CSSProperties }> = ({
+  width = 14,
+  height = 14,
+  style,
+}) => (
+  <img
+    src={qwenUrl}
+    width={width}
+    height={height}
+    style={{ objectFit: "contain", ...style }}
+    alt="Qwen"
+  />
+);
 
 // Provider icon mapping for easy lookup
 export const PROVIDER_ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
@@ -133,24 +165,24 @@ export const PROVIDER_ICONS: Record<string, React.ComponentType<React.SVGProps<S
  */
 export const VENDOR_ICON_MAP: Record<string, string> = {
   // Direct matches (vendor name === icon key)
-  OpenAI: "OpenAI",
-  Anthropic: "Anthropic",
-  Google: "Google",
-  Microsoft: "Microsoft",
-  DeepSeek: "DeepSeek",
-  Cohere: "Cohere",
-  Groq: "Groq",
-  OpenRouter: "OpenRouter",
-  Replicate: "Replicate",
-  ElevenLabs: "ElevenLabs",
-  Vercel: "Vercel",
-  Meta: "Meta",
-  Nvidia: "Nvidia",
-  Ollama: "Ollama",
-  Anyscale: "Anyscale",
-  Baseten: "Baseten",
-  Cerebras: "Cerebras",
-  SambaNova: "SambaNova",
+  "OpenAI": "OpenAI",
+  "Anthropic": "Anthropic",
+  "Google": "Google",
+  "Microsoft": "Microsoft",
+  "DeepSeek": "DeepSeek",
+  "Cohere": "Cohere",
+  "Groq": "Groq",
+  "OpenRouter": "OpenRouter",
+  "Replicate": "Replicate",
+  "ElevenLabs": "ElevenLabs",
+  "Vercel": "Vercel",
+  "Meta": "Meta",
+  "Nvidia": "Nvidia",
+  "Ollama": "Ollama",
+  "Anyscale": "Anyscale",
+  "Baseten": "Baseten",
+  "Cerebras": "Cerebras",
+  "SambaNova": "SambaNova",
   // Vendor name differs from icon key
   "Mistral AI": "Mistral",
   "Perplexity AI": "Perplexity",
@@ -159,10 +191,10 @@ export const VENDOR_ICON_MAP: Record<string, string> = {
   "Hugging Face": "HuggingFace",
   "Stability AI": "Stability",
   "AI21 Labs": "Ai21",
-  Amazon: "Aws",
+  "Amazon": "Aws",
   "GitHub/Microsoft": "Microsoft",
-  xAI: "Groq",
-  LeptonAI: "LeptonAI",
-  Jina: "Jina",
-  AssemblyAI: "AssemblyAI",
+  "xAI": "Groq",
+  "LeptonAI": "LeptonAI",
+  "Jina": "Jina",
+  "AssemblyAI": "AssemblyAI",
 };

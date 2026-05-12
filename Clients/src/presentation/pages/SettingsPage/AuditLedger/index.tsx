@@ -419,10 +419,10 @@ export default function AuditLedger() {
                           inputProps: { id: "pagination-dropdown" },
                           IconComponent: SelectorVertical,
                           sx: {
-                            ml: theme.spacing(4),
-                            mr: theme.spacing(12),
-                            minWidth: theme.spacing(20),
-                            textAlign: "left",
+                            "ml": theme.spacing(4),
+                            "mr": theme.spacing(12),
+                            "minWidth": theme.spacing(20),
+                            "textAlign": "left",
                             "&.Mui-focused > div": {
                               backgroundColor: theme.palette.background.main,
                             },
@@ -430,8 +430,8 @@ export default function AuditLedger() {
                         },
                       }}
                       sx={{
-                        mt: theme.spacing(6),
-                        color: theme.palette.text.secondary,
+                        "mt": theme.spacing(6),
+                        "color": theme.palette.text.secondary,
                         "& .MuiSelect-icon": {
                           width: "24px",
                           height: "fit-content",

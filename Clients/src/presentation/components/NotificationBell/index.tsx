@@ -126,17 +126,17 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     <Box
       onClick={handleClick}
       sx={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 1.5,
-        pl: "24px",
-        pr: "24px",
-        py: "8px",
-        cursor: notification.action_url ? "pointer" : "default",
-        backgroundColor: isRead ? "transparent" : "rgba(19, 113, 91, 0.04)",
-        borderLeft: isRead ? "3px solid transparent" : `3px solid ${color}`,
-        transition: "all 0.15s ease",
-        position: "relative",
+        "display": "flex",
+        "alignItems": "flex-start",
+        "gap": 1.5,
+        "pl": "24px",
+        "pr": "24px",
+        "py": "8px",
+        "cursor": notification.action_url ? "pointer" : "default",
+        "backgroundColor": isRead ? "transparent" : "rgba(19, 113, 91, 0.04)",
+        "borderLeft": isRead ? "3px solid transparent" : `3px solid ${color}`,
+        "transition": "all 0.15s ease",
+        "position": "relative",
         "&:hover": {
           backgroundColor: "rgba(0, 0, 0, 0.02)",
         },
@@ -196,12 +196,12 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           onClick={handleDelete}
           aria-label="Delete notification"
           sx={{
-            opacity: 0,
-            transition: "opacity 0.15s ease",
-            width: "24px",
-            height: "24px",
-            marginTop: "-2px",
-            color: text.disabled,
+            "opacity": 0,
+            "transition": "opacity 0.15s ease",
+            "width": "24px",
+            "height": "24px",
+            "marginTop": "-2px",
+            "color": text.disabled,
             "&:hover": {
               backgroundColor: "rgba(239, 68, 68, 0.08)",
               color: "#EF4444",
@@ -300,13 +300,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
   const open = Boolean(anchorEl);
 
   const baseStyles = {
-    width: "32px",
-    height: "32px",
-    borderRadius: "4px",
-    transition: "all 0.2s ease",
-    backgroundColor: "transparent",
-    color: "#666",
-    border: "1px solid #e5e5e5",
+    "width": "32px",
+    "height": "32px",
+    "borderRadius": "4px",
+    "transition": "all 0.2s ease",
+    "backgroundColor": "transparent",
+    "color": "#666",
+    "border": "1px solid #e5e5e5",
     "&:hover": {
       backgroundColor: "rgba(0, 0, 0, 0.04)",
       borderColor: "border.dark",
@@ -413,8 +413,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                   size="small"
                   onClick={handleMarkAllAsRead}
                   sx={{
-                    width: "28px",
-                    height: "28px",
+                    "width": "28px",
+                    "height": "28px",
                     "&:hover": {
                       backgroundColor: "rgba(19, 113, 91, 0.08)",
                       color: "brand.primary",
@@ -429,8 +429,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
               size="small"
               onClick={handleClose}
               sx={{
-                width: "28px",
-                height: "28px",
+                "width": "28px",
+                "height": "28px",
                 "&:hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.04)",
                 },
@@ -444,8 +444,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
         {/* Content */}
         <Box
           sx={{
-            maxHeight: 400,
-            overflowY: "auto",
+            "maxHeight": 400,
+            "overflowY": "auto",
             "&::-webkit-scrollbar": { width: "6px" },
             "&::-webkit-scrollbar-track": { background: "transparent" },
             "&::-webkit-scrollbar-thumb": {
@@ -531,21 +531,21 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                     onClick={handleLoadMore}
                     disabled={isLoadingMore}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 1,
-                      px: 3,
-                      py: 1,
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      color: "brand.primary",
-                      backgroundColor: "transparent",
-                      border: "1px solid #d0d5dd",
-                      borderRadius: "4px",
-                      cursor: isLoadingMore ? "not-allowed" : "pointer",
-                      transition: "all 0.15s ease",
-                      opacity: isLoadingMore ? 0.6 : 1,
+                      "display": "flex",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "gap": 1,
+                      "px": 3,
+                      "py": 1,
+                      "fontSize": "13px",
+                      "fontWeight": 500,
+                      "color": "brand.primary",
+                      "backgroundColor": "transparent",
+                      "border": "1px solid #d0d5dd",
+                      "borderRadius": "4px",
+                      "cursor": isLoadingMore ? "not-allowed" : "pointer",
+                      "transition": "all 0.15s ease",
+                      "opacity": isLoadingMore ? 0.6 : 1,
                       "&:hover": {
                         backgroundColor: "rgba(19, 113, 91, 0.04)",
                         borderColor: "brand.primary",

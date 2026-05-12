@@ -52,7 +52,7 @@ const CustomAxios = axios.create({
   timeout: 120000,
   headers: {
     "Content-Type": "application/json",
-    Accept: "application/json",
+    "Accept": "application/json",
   },
   // Don't send credentials by default
   withCredentials: false,
@@ -94,6 +94,15 @@ CustomAxios.interceptors.request.use(
     const activeOrgId = state.auth.activeOrganizationId;
     if (activeOrgId) {
       config.headers["X-Organization-Id"] = String(activeOrgId);
+    }
+
+    try {
+      const lang = localStorage.getItem("vw_lang_prototype");
+      if (lang) {
+        config.headers["Accept-Language"] = lang;
+      }
+    } catch {
+      // localStorage unavailable in sandboxed contexts.
     }
 
     // Enable credentials for auth-related endpoints

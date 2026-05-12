@@ -80,7 +80,7 @@ export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({ children, title, con
         }}
         disableRestoreFocus
         sx={{
-          pointerEvents: "auto",
+          "pointerEvents": "auto",
           "& .MuiPopover-paper": {
             borderRadius: "4px",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
@@ -108,10 +108,10 @@ export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({ children, title, con
             size="small"
             aria-label="Close tooltip"
             sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              color: "rgba(255, 255, 255, 0.6)",
+              "position": "absolute",
+              "top": 8,
+              "right": 8,
+              "color": "rgba(255, 255, 255, 0.6)",
               "&:hover": {
                 color: theme.palette.common.white,
                 backgroundColor: "rgba(255, 255, 255, 0.1)",

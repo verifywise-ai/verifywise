@@ -384,7 +384,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                         size="small"
                         aria-label="Remove file"
                         sx={{
-                          padding: "4px",
+                          "padding": "4px",
                           "&:hover": { bgcolor: theme.palette.background.fill },
                         }}
                       >
@@ -523,17 +523,17 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                       label={framework}
                       onClick={() => toggleFramework(framework)}
                       sx={{
-                        height: "30px",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        backgroundColor: isSelected
+                        "height": "30px",
+                        "fontSize": 13,
+                        "fontWeight": 500,
+                        "cursor": "pointer",
+                        "backgroundColor": isSelected
                           ? theme.palette.status.success.bg
                           : theme.palette.background.accent,
-                        color: isSelected
+                        "color": isSelected
                           ? theme.palette.status.success.text
                           : theme.palette.text.secondary,
-                        border: `1px solid ${
+                        "border": `1px solid ${
                           isSelected
                             ? theme.palette.status.success.border
                             : theme.palette.border.light

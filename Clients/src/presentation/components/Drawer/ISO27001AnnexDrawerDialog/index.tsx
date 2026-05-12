@@ -666,8 +666,8 @@ const VWISO27001AnnexDrawerDialog = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             margin: 0,
             borderRadius: 0,
@@ -698,8 +698,8 @@ const VWISO27001AnnexDrawerDialog = ({
       open={open}
       onClose={onClose}
       sx={{
-        width: 850,
-        margin: 0,
+        "width": 850,
+        "margin": 0,
         "& .MuiDrawer-paper": {
           margin: 0,
           borderRadius: 0,
@@ -894,7 +894,7 @@ const VWISO27001AnnexDrawerDialog = ({
                   onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
                   disabled={isAuditingDisabled}
                   sx={{
-                    cursor: "text",
+                    "cursor": "text",
                     "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
                       height: "73px",
                     },
@@ -938,13 +938,13 @@ const VWISO27001AnnexDrawerDialog = ({
                       onClick={() => document.getElementById("evidence-file-input")?.click()}
                       disabled={isEditingDisabled}
                       sx={{
-                        borderRadius: 2,
-                        minWidth: 155,
-                        height: 25,
-                        fontSize: 11,
-                        border: "1px solid #d0d5dd",
-                        backgroundColor: "white",
-                        color: "text.secondary",
+                        "borderRadius": 2,
+                        "minWidth": 155,
+                        "height": 25,
+                        "fontSize": 11,
+                        "border": "1px solid #d0d5dd",
+                        "backgroundColor": "white",
+                        "color": "text.secondary",
                         "&:hover": {
                           backgroundColor: "background.accent",
                           border: "1px solid #d0d5dd",
@@ -959,13 +959,13 @@ const VWISO27001AnnexDrawerDialog = ({
                       onClick={() => setShowFilePicker(true)}
                       disabled={isEditingDisabled}
                       sx={{
-                        borderRadius: 2,
-                        minWidth: 165,
-                        height: 25,
-                        fontSize: 11,
-                        border: "1px solid #4C7BF4",
-                        backgroundColor: "#4C7BF4",
-                        color: "white",
+                        "borderRadius": 2,
+                        "minWidth": 165,
+                        "height": 25,
+                        "fontSize": 11,
+                        "border": "1px solid #4C7BF4",
+                        "backgroundColor": "#4C7BF4",
+                        "color": "white",
                         "&:hover": {
                           backgroundColor: "#3D62C3",
                           border: "1px solid #3D62C3",
@@ -1014,13 +1014,13 @@ const VWISO27001AnnexDrawerDialog = ({
                       <Box
                         key={file.id}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "10px 12px",
-                          border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "4px",
-                          backgroundColor: "background.main",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "padding": "10px 12px",
+                          "border": `1px solid ${theme.palette.border.light}`,
+                          "borderRadius": "4px",
+                          "backgroundColor": "background.main",
                           "&:hover": {
                             backgroundColor: "background.accent",
                           },
@@ -1069,7 +1069,7 @@ const VWISO27001AnnexDrawerDialog = ({
                                 )
                               }
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "primary.main",
                                   backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1085,7 +1085,7 @@ const VWISO27001AnnexDrawerDialog = ({
                               onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                               disabled={isEditingDisabled}
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "status.error.main",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1154,7 +1154,7 @@ const VWISO27001AnnexDrawerDialog = ({
                           size="small"
                           onClick={() => handleDeleteUploadFile(file.id.toString())}
                           sx={{
-                            color: "#92400E",
+                            "color": "#92400E",
                             "&:hover": {
                               color: "status.warning.text",
                               backgroundColor: "rgba(217, 119, 6, 0.08)",
@@ -1217,7 +1217,7 @@ const VWISO27001AnnexDrawerDialog = ({
                           size="small"
                           onClick={() => handleRemovePendingAttach(file.id)}
                           sx={{
-                            color: "#4C7BF4",
+                            "color": "#4C7BF4",
                             "&:hover": {
                               color: "status.error.text",
                               backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1309,13 +1309,13 @@ const VWISO27001AnnexDrawerDialog = ({
                       <Box
                         key={risk.id}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "10px 12px",
-                          border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "4px",
-                          backgroundColor: "background.main",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "padding": "10px 12px",
+                          "border": `1px solid ${theme.palette.border.light}`,
+                          "borderRadius": "4px",
+                          "backgroundColor": "background.main",
                           "&:hover": {
                             backgroundColor: "background.accent",
                           },
@@ -1347,7 +1347,7 @@ const VWISO27001AnnexDrawerDialog = ({
                               size="small"
                               onClick={() => handleViewRiskDetails(risk)}
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "primary.main",
                                   backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1371,7 +1371,7 @@ const VWISO27001AnnexDrawerDialog = ({
                               }}
                               disabled={isEditingDisabled}
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "status.error.main",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",

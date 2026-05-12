@@ -119,21 +119,21 @@ const Plugins: React.FC = () => {
 
   // Region flags mapping
   const regionFlags: Record<string, string> = {
-    International: "🌐",
+    "International": "🌐",
     "United States": "🇺🇸",
     "European Union": "🇪🇺",
-    Canada: "🇨🇦",
+    "Canada": "🇨🇦",
     "United Kingdom": "🇬🇧",
-    Australia: "🇦🇺",
-    Singapore: "🇸🇬",
-    India: "🇮🇳",
-    Japan: "🇯🇵",
-    Brazil: "🇧🇷",
+    "Australia": "🇦🇺",
+    "Singapore": "🇸🇬",
+    "India": "🇮🇳",
+    "Japan": "🇯🇵",
+    "Brazil": "🇧🇷",
     "United Arab Emirates": "🇦🇪",
     "Saudi Arabia": "🇸🇦",
-    Qatar: "🇶🇦",
-    Bahrain: "🇧🇭",
-    Other: "📋",
+    "Qatar": "🇶🇦",
+    "Bahrain": "🇧🇭",
+    "Other": "📋",
   };
 
   // Group frameworks by region (from plugin metadata)
@@ -302,10 +302,10 @@ const Plugins: React.FC = () => {
                     >
                       <Box
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "16px",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "width": "16px",
                           "& svg": {
                             color: isSelected ? "brand.primary !important" : "text.icon !important",
                             stroke: isSelected

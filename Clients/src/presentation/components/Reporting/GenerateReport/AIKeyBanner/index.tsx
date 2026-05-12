@@ -50,13 +50,13 @@ const AIKeyBanner: React.FC<AIKeyBannerProps> = ({ onClose }) => {
           size="small"
           onClick={handleConfigureClick}
           sx={{
-            textTransform: "none",
-            fontSize: "12px",
-            fontWeight: 600,
-            color: theme.palette.primary.main,
-            padding: 0,
-            mt: 1,
-            minWidth: "auto",
+            "textTransform": "none",
+            "fontSize": "12px",
+            "fontWeight": 600,
+            "color": theme.palette.primary.main,
+            "padding": 0,
+            "mt": 1,
+            "minWidth": "auto",
             "&:hover": {
               backgroundColor: "transparent",
               textDecoration: "underline",

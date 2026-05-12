@@ -7,15 +7,15 @@ import { SxProps, Theme } from "@mui/material";
 // Button mixins
 export const buttonMixins = {
   primary: (theme: Theme): SxProps<Theme> => ({
-    backgroundColor: theme.palette.primary.main,
-    border: `1px solid ${theme.palette.primary.main}`,
-    color: "#fff",
-    fontFamily: theme.typography.fontFamily,
-    fontSize: theme.typography.fontSize,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
+    "backgroundColor": theme.palette.primary.main,
+    "border": `1px solid ${theme.palette.primary.main}`,
+    "color": "#fff",
+    "fontFamily": theme.typography.fontFamily,
+    "fontSize": theme.typography.fontSize,
+    "fontWeight": 400,
+    "textTransform": "none",
+    "borderRadius": theme.shape.borderRadius,
+    "boxShadow": "none",
     "&:hover": {
       backgroundColor: theme.palette.primary.dark || "#10614d",
       boxShadow: "none",
@@ -26,15 +26,15 @@ export const buttonMixins = {
   }),
 
   secondary: (theme: Theme): SxProps<Theme> => ({
-    backgroundColor: theme.palette.secondary.main,
-    border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-    color: theme.palette.secondary.contrastText,
-    fontFamily: theme.typography.fontFamily,
-    fontSize: theme.typography.fontSize,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
+    "backgroundColor": theme.palette.secondary.main,
+    "border": `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+    "color": theme.palette.secondary.contrastText,
+    "fontFamily": theme.typography.fontFamily,
+    "fontSize": theme.typography.fontSize,
+    "fontWeight": 400,
+    "textTransform": "none",
+    "borderRadius": theme.shape.borderRadius,
+    "boxShadow": "none",
     "&:hover": {
       backgroundColor: theme.palette.secondary.dark,
       boxShadow: "none",
@@ -45,15 +45,15 @@ export const buttonMixins = {
   }),
 
   outlined: (theme: Theme): SxProps<Theme> => ({
-    backgroundColor: "transparent",
-    border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-    color: theme.palette.text.secondary,
-    fontFamily: theme.typography.fontFamily,
-    fontSize: theme.typography.fontSize,
-    fontWeight: 400,
-    textTransform: "none",
-    borderRadius: theme.shape.borderRadius,
-    boxShadow: "none",
+    "backgroundColor": "transparent",
+    "border": `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+    "color": theme.palette.text.secondary,
+    "fontFamily": theme.typography.fontFamily,
+    "fontSize": theme.typography.fontSize,
+    "fontWeight": 400,
+    "textTransform": "none",
+    "borderRadius": theme.shape.borderRadius,
+    "boxShadow": "none",
     "&:hover": {
       backgroundColor: theme.palette.action?.hover || "#f5f5f5",
       boxShadow: "none",
@@ -86,8 +86,8 @@ export const cardMixins = {
 
   interactive: (theme: Theme): SxProps<Theme> => ({
     ...cardMixins.base(theme),
-    cursor: "pointer",
-    transition: "background-color 0.2s ease-in-out",
+    "cursor": "pointer",
+    "transition": "background-color 0.2s ease-in-out",
     "&:hover": {
       backgroundColor: theme.palette.action?.hover || "#fafafa",
     },
@@ -122,20 +122,20 @@ export const modalMixins = {
   }),
 
   closeButton: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.tertiary,
+    "color": theme.palette.text.tertiary,
     "&:hover": {
       color: theme.palette.text.primary,
       backgroundColor: theme.palette.action?.hover || "#e3f5e6",
     },
-    padding: theme.spacing(0.5),
+    "padding": theme.spacing(0.5),
   }),
 };
 
 // Table mixins
 export const tableMixins = {
   container: (theme: Theme): SxProps<Theme> => ({
-    border: `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
-    borderRadius: theme.shape.borderRadius,
+    "border": `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
+    "borderRadius": theme.shape.borderRadius,
     "& td, & th": {
       border: 0,
     },
@@ -158,8 +158,8 @@ export const tableMixins = {
   }),
 
   hoverableRow: (theme: Theme): SxProps<Theme> => ({
-    cursor: "pointer",
-    transition: "background-color 0.3s ease-in-out",
+    "cursor": "pointer",
+    "transition": "background-color 0.3s ease-in-out",
     "&:hover td": {
       backgroundColor: theme.palette.action?.hover || "#fafafa",
     },
@@ -183,7 +183,7 @@ export const formMixins = {
 
   inputField: (theme: Theme): SxProps<Theme> => ({
     "& .MuiOutlinedInput-root": {
-      borderRadius: theme.shape.borderRadius,
+      "borderRadius": theme.shape.borderRadius,
       "& fieldset": {
         borderColor: theme.palette.border?.light || "#eaecf0",
       },
@@ -230,8 +230,8 @@ export const layoutMixins = {
 // Icon mixins
 export const iconMixins = {
   button: (theme: Theme): SxProps<Theme> => ({
-    padding: theme.spacing(0.5),
-    transition: "none",
+    "padding": theme.spacing(0.5),
+    "transition": "none",
     "&:hover": {
       backgroundColor: theme.palette.background.fill,
     },

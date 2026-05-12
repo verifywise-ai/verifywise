@@ -26,9 +26,11 @@ import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { palette } from "../../themes/palette";
 
 interface SavedKey {
+  id?: number;
   provider: string;
   apiKey: string;
   maskedKey: string;
+  keyName?: string;
 }
 
 const LLM_PROVIDERS = [
@@ -107,6 +109,7 @@ export default function OrgSettings() {
   const theme = useTheme();
   const isAdmin = useIsAdmin();
   const [saving, setSaving] = useState(false);
+  const [gatewayDown, setGatewayDown] = useState(false);
   const [alert, setAlert] = useState<{
     variant: "success" | "error";
     body: string;
@@ -115,7 +118,11 @@ export default function OrgSettings() {
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [newApiKey, setNewApiKey] = useState<string>("");
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; provider: string | null }>({
+  const [confirmDelete, setConfirmDelete] = useState<{
+    open: boolean;
+    provider: string | null;
+    id?: number;
+  }>({
     open: false,
     provider: null,
   });
@@ -148,18 +155,39 @@ export default function OrgSettings() {
     fetchSavedKeys();
   }, []);
 
+  const getErrorMessage = (err: unknown): string => {
+    if (err && typeof err === "object" && "response" in err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 502 || status === 503) {
+        return "AI Gateway is not running. Start the AI Gateway service (port 8100) to manage API keys here.";
+      }
+    }
+    return err instanceof Error ? err.message : "An unexpected error occurred";
+  };
+
   const fetchSavedKeys = async () => {
     try {
       const keys = await getAllLlmApiKeys();
+      setGatewayDown(false);
       setSavedKeys(
-        keys.map((key: { provider: string; maskedKey: string }) => ({
+        keys.map((key) => ({
+          id: key.id,
           provider: key.provider,
-          apiKey: "", // Never sent to frontend
+          apiKey: "",
           maskedKey: key.maskedKey,
+          keyName: key.keyName,
         })),
       );
     } catch (err) {
       console.error("Failed to fetch keys:", err);
+      const status =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (status === 502 || status === 503) {
+        setGatewayDown(true);
+        return;
+      }
       setAlert({
         variant: "error",
         body: "Failed to load API keys",
@@ -251,7 +279,7 @@ export default function OrgSettings() {
     } catch (err) {
       setAlert({
         variant: "error",
-        body: err instanceof Error ? err.message : "Failed to add API key",
+        body: getErrorMessage(err),
       });
       setTimeout(() => setAlert(null), 8000);
     } finally {
@@ -259,8 +287,8 @@ export default function OrgSettings() {
     }
   };
 
-  const handleRemoveKeyClick = (provider: string) => {
-    setConfirmDelete({ open: true, provider });
+  const handleRemoveKeyClick = (provider: string, id?: number) => {
+    setConfirmDelete({ open: true, provider, id });
   };
 
   const handleConfirmRemove = async () => {
@@ -268,7 +296,10 @@ export default function OrgSettings() {
 
     setSaving(true);
     try {
-      await deleteLlmApiKey(confirmDelete.provider as Parameters<typeof deleteLlmApiKey>[0]);
+      await deleteLlmApiKey(
+        confirmDelete.provider as Parameters<typeof deleteLlmApiKey>[0],
+        confirmDelete.id,
+      );
 
       // Refresh the list
       await fetchSavedKeys();
@@ -281,17 +312,17 @@ export default function OrgSettings() {
     } catch (err) {
       setAlert({
         variant: "error",
-        body: err instanceof Error ? err.message : "Failed to remove API key",
+        body: getErrorMessage(err),
       });
       setTimeout(() => setAlert(null), 8000);
     } finally {
       setSaving(false);
-      setConfirmDelete({ open: false, provider: null });
+      setConfirmDelete({ open: false, provider: null, id: undefined });
     }
   };
 
   const handleCancelRemove = () => {
-    setConfirmDelete({ open: false, provider: null });
+    setConfirmDelete({ open: false, provider: null, id: undefined });
   };
 
   const getProviderName = (providerId: string): string => {
@@ -311,6 +342,31 @@ export default function OrgSettings() {
       alert={alert ? <Alert variant={alert.variant} body={alert.body} /> : undefined}
     >
       <Stack spacing={4} sx={{ maxWidth: 700 }}>
+        {/* AI Gateway unavailable warning */}
+        {gatewayDown && (
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: "6px",
+              backgroundColor: theme.palette.warning?.light ?? "#fff8e1",
+              border: `1px solid ${theme.palette.warning?.main ?? "#f9a825"}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0.5,
+            }}
+          >
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#7c4f00" }}>
+              AI Gateway is not running
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: "#7c4f00" }}>
+              API key management requires the AI Gateway service (port 8100). Start it with:{" "}
+              <code style={{ fontSize: 11 }}>
+                cd AIGateway/src && uvicorn app:app --host 0.0.0.0 --port 8100 --reload
+              </code>
+            </Typography>
+          </Box>
+        )}
+
         {/* Saved Keys List */}
         {savedKeys.length > 0 && (
           <Box>
@@ -362,10 +418,10 @@ export default function OrgSettings() {
                   </Box>
                   <IconButton
                     size="small"
-                    onClick={() => handleRemoveKeyClick(key.provider)}
+                    onClick={() => handleRemoveKeyClick(key.provider, key.id)}
                     disabled={saving}
                     sx={{
-                      color: theme.palette.error.main,
+                      "color": theme.palette.error.main,
                       "&:hover": {
                         backgroundColor: theme.palette.error.light + "20",
                       },
@@ -440,14 +496,14 @@ export default function OrgSettings() {
                 isDisabled={!selectedProvider || !newApiKey.trim() || !!apiKeyError}
                 startIcon={<Plus size={16} />}
                 sx={{
-                  backgroundColor: palette.brand.primary,
-                  border: `1px solid ${palette.brand.primary}`,
+                  "backgroundColor": palette.brand.primary,
+                  "border": `1px solid ${palette.brand.primary}`,
                   "&:hover": { backgroundColor: palette.brand.primaryHover },
                   "&:disabled": {
                     backgroundColor: theme.palette.action.disabledBackground,
                     color: theme.palette.action.disabled,
                   },
-                  textTransform: "none",
+                  "textTransform": "none",
                 }}
               />
             </Box>

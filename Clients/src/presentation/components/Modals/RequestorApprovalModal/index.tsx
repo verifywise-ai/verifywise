@@ -106,14 +106,14 @@ const getWorkflowChipProps = (value: string) => {
     label: value.charAt(0).toUpperCase() + value.slice(1),
     size: "small" as const,
     sx: {
-      backgroundColor: style.bg,
-      color: style.color,
-      fontWeight: 600,
-      fontSize: "11px",
-      textTransform: "uppercase",
-      letterSpacing: "0.5px",
-      borderRadius: "4px",
-      height: "22px",
+      "backgroundColor": style.bg,
+      "color": style.color,
+      "fontWeight": 600,
+      "fontSize": "11px",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.5px",
+      "borderRadius": "4px",
+      "height": "22px",
       "& .MuiChip-label": {
         padding: "0 8px",
       },
@@ -669,8 +669,8 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                                   {...(getWorkflowChipProps(item.status) || {})}
                                                   size="small"
                                                   sx={{
-                                                    height: "18px",
-                                                    fontSize: "9px",
+                                                    "height": "18px",
+                                                    "fontSize": "9px",
                                                     "& .MuiChip-label": {
                                                       padding: "0 6px",
                                                     },

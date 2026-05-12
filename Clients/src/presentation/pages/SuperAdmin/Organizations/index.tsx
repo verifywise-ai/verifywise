@@ -256,8 +256,8 @@ const Organizations = () => {
                       key={field}
                       sx={{
                         ...tableStyles.header.cell,
-                        cursor: "pointer",
-                        userSelect: "none",
+                        "cursor": "pointer",
+                        "userSelect": "none",
                         "&:hover": { color: "#1d2939" },
                       }}
                       onClick={() => handleSort(field)}
@@ -308,8 +308,8 @@ const Organizations = () => {
                         onClick={() => setDeleteTarget(org)}
                         sx={{
                           ...tableStyles.body.button,
-                          color: "#dc2626",
-                          borderColor: "#fecaca",
+                          "color": "#dc2626",
+                          "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: "#dc2626",
                             color: "#fff",

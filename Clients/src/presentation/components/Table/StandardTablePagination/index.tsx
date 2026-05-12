@@ -64,6 +64,7 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                   fontSize: 12,
                   opacity: 0.7,
                   color: theme.palette.text.secondary,
+                  whiteSpace: "nowrap",
                 }}
               >
                 Showing {getRange} of {totalCount} {totalCount !== 1 ? plural : entityLabel}
@@ -83,8 +84,8 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                     `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
                   }
                   sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
+                    "mt": theme.spacing(6),
+                    "color": theme.palette.text.secondary,
                     "& .MuiSelect-select": {
                       width: theme.spacing(10),
                       borderRadius: theme.shape.borderRadius,

@@ -511,11 +511,11 @@ const ExampleCard: React.FC<{
         <Box
           onClick={() => onCopy(code)}
           sx={{
-            position: "relative",
-            p: "10px",
-            backgroundColor: "#1e1e1e",
-            borderRadius: "4px",
-            cursor: "pointer",
+            "position": "relative",
+            "p": "10px",
+            "backgroundColor": "#1e1e1e",
+            "borderRadius": "4px",
+            "cursor": "pointer",
             "&:hover .copy-icon": {
               opacity: 1,
             },

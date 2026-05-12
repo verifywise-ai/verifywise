@@ -161,10 +161,10 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
   return (
     <Box
       sx={{
-        backgroundColor: theme.palette.background.paper,
-        border: `1px solid ${theme.palette.border.light}`,
-        borderRadius: "4px",
-        transition: "all 0.2s ease-in-out",
+        "backgroundColor": theme.palette.background.paper,
+        "border": `1px solid ${theme.palette.border.light}`,
+        "borderRadius": "4px",
+        "transition": "all 0.2s ease-in-out",
         "&:hover": {
           borderColor: theme.palette.primary.main,
           boxShadow: theme.boxShadow,
@@ -247,9 +247,9 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
                 size="small"
                 onClick={handleMenuOpen}
                 sx={{
-                  color: theme.palette.text.secondary,
-                  padding: theme.spacing(1),
-                  transition: `background-color ${0.2}s ease-in-out`,
+                  "color": theme.palette.text.secondary,
+                  "padding": theme.spacing(1),
+                  "transition": `background-color ${0.2}s ease-in-out`,
                   "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                   },
@@ -325,14 +325,14 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
                   aria-label={isExpanded ? "Show less content" : "Show more content"}
                   aria-expanded={isExpanded}
                   sx={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: theme.palette.primary.main,
-                    textTransform: "none",
-                    padding: 0,
-                    minWidth: "auto",
-                    marginTop: theme.spacing(1),
-                    transition: "color 0.2s ease-in-out",
+                    "fontSize": 13,
+                    "fontWeight": 600,
+                    "color": theme.palette.primary.main,
+                    "textTransform": "none",
+                    "padding": 0,
+                    "minWidth": "auto",
+                    "marginTop": theme.spacing(1),
+                    "transition": "color 0.2s ease-in-out",
                     "&:hover": {
                       backgroundColor: "transparent",
                       color: theme.palette.primary.dark,

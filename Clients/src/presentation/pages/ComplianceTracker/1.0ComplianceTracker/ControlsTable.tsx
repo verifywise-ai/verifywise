@@ -343,9 +343,9 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                             variant="determinate"
                             value={completionPercentage}
                             sx={{
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: "status.default.border",
+                              "height": 8,
+                              "borderRadius": 4,
+                              "backgroundColor": "status.default.border",
                               "& .MuiLinearProgress-bar": {
                                 backgroundColor: getProgressColor(completionPercentage),
                               },

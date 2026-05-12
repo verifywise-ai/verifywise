@@ -151,24 +151,24 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
     <Box
       key={action.id}
       sx={{
-        position: "relative",
-        width: 320,
-        height: 60,
-        border:
+        "position": "relative",
+        "width": 320,
+        "height": 60,
+        "border":
           selectedItemId === action.id
             ? `1px solid ${theme.palette.primary.main}`
             : `1px solid ${theme.palette.grey[300]}`,
-        borderRadius: 2,
-        backgroundColor: theme.palette.background.paper,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
+        "borderRadius": 2,
+        "backgroundColor": theme.palette.background.paper,
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "cursor": "pointer",
         "&:hover": {
           borderColor: theme.palette.primary.main,
           backgroundColor: theme.palette.action.hover,
         },
-        transition: "all 0.2s ease-in-out",
+        "transition": "all 0.2s ease-in-out",
       }}
       onClick={() => onSelectItem(action.id, "action")}
     >
@@ -183,12 +183,12 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
           onDeleteAction(action.id);
         }}
         sx={{
-          position: "absolute",
-          top: -8,
-          right: -8,
-          backgroundColor: theme.palette.background.paper,
-          color: theme.palette.error.main,
-          boxShadow: theme.shadows[2],
+          "position": "absolute",
+          "top": -8,
+          "right": -8,
+          "backgroundColor": theme.palette.background.paper,
+          "color": theme.palette.error.main,
+          "boxShadow": theme.shadows[2],
           "&:hover": {
             backgroundColor: theme.palette.error.light,
             color: "white",
@@ -364,12 +364,12 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
       {/* Content */}
       <Stack
         sx={{
-          flex: 1,
-          overflow: "auto",
-          p: 2,
-          alignItems: "center",
-          pt: "64px",
-          pb: "64px",
+          "flex": 1,
+          "overflow": "auto",
+          "p": 2,
+          "alignItems": "center",
+          "pt": "64px",
+          "pb": "64px",
           "&::-webkit-scrollbar": {
             width: "8px",
           },
@@ -395,21 +395,21 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
           {/* Trigger Button - shows "Add trigger" or trigger name */}
           <Box
             sx={{
-              position: "relative",
-              width: 320,
-              height: 60,
-              border: `1px dashed ${theme.palette.border.dark}`,
-              borderRadius: 2,
-              backgroundColor: theme.palette.background.paper,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
+              "position": "relative",
+              "width": 320,
+              "height": 60,
+              "border": `1px dashed ${theme.palette.border.dark}`,
+              "borderRadius": 2,
+              "backgroundColor": theme.palette.background.paper,
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "cursor": "pointer",
               "&:hover": {
                 borderColor: theme.palette.primary.main,
                 backgroundColor: theme.palette.action.hover,
               },
-              transition: "all 0.2s ease-in-out",
+              "transition": "all 0.2s ease-in-out",
             }}
             onClick={
               automation.trigger && automation.actions.length > 0
@@ -452,12 +452,12 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                   onDeleteTrigger();
                 }}
                 sx={{
-                  position: "absolute",
-                  top: -8,
-                  right: -8,
-                  backgroundColor: theme.palette.background.paper,
-                  color: theme.palette.error.main,
-                  boxShadow: theme.shadows[2],
+                  "position": "absolute",
+                  "top": -8,
+                  "right": -8,
+                  "backgroundColor": theme.palette.background.paper,
+                  "color": theme.palette.error.main,
+                  "boxShadow": theme.shadows[2],
                   "&:hover": {
                     backgroundColor: theme.palette.error.light,
                     color: "white",
@@ -501,10 +501,10 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                 key={template.type}
                 onClick={() => handleTriggerSelect(template)}
                 sx={{
-                  py: 1.5,
-                  px: 3,
-                  mx: 1,
-                  borderRadius: 1,
+                  "py": 1.5,
+                  "px": 3,
+                  "mx": 1,
+                  "borderRadius": 1,
                   "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                   },
@@ -586,20 +586,20 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                     startIcon={<Plus size={16} strokeWidth={1.5} />}
                     onClick={handleActionMenuOpen}
                     sx={{
-                      width: 320,
-                      height: 60,
-                      border: `1px dashed ${theme.palette.border.dark}`,
-                      borderRadius: 2,
-                      color: theme.palette.text.secondary,
-                      backgroundColor: theme.palette.background.paper,
+                      "width": 320,
+                      "height": 60,
+                      "border": `1px dashed ${theme.palette.border.dark}`,
+                      "borderRadius": 2,
+                      "color": theme.palette.text.secondary,
+                      "backgroundColor": theme.palette.background.paper,
                       "&:hover": {
                         borderColor: theme.palette.primary.main,
                         backgroundColor: theme.palette.action.hover,
                         border: `1px dashed ${theme.palette.primary.main}`,
                       },
-                      transition: "all 0.2s ease-in-out",
-                      fontSize: "13px",
-                      fontWeight: 500,
+                      "transition": "all 0.2s ease-in-out",
+                      "fontSize": "13px",
+                      "fontWeight": 500,
                     }}
                   >
                     Add action
@@ -651,10 +651,10 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                       key={template.type}
                       onClick={() => handleActionSelect(template)}
                       sx={{
-                        py: 1.5,
-                        px: 3,
-                        mx: 1,
-                        borderRadius: 1,
+                        "py": 1.5,
+                        "px": 3,
+                        "mx": 1,
+                        "borderRadius": 1,
                         "&:hover": {
                           backgroundColor: theme.palette.action.hover,
                         },

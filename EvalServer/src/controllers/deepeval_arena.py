@@ -134,13 +134,34 @@ async def call_llm_model(
     """
     import openai
     import anthropic
-    
-    # Get API key from provided keys
-    api_key = api_keys.get(provider.lower())
-    
+
+    from utils.gateway_litellm_client import (
+        gateway_chat_completion_async,
+        gateway_mode_enabled,
+        to_litellm_model,
+    )
+
+    provider_l = provider.lower()
+    api_key = api_keys.get(provider_l)
+
     if not api_key:
         raise ValueError(f"No API key provided for provider: {provider}")
-    
+
+    if gateway_mode_enabled():
+        try:
+            litellm_model = to_litellm_model(provider_l, model)
+            messages = [{"role": "user", "content": prompt}]
+            return await gateway_chat_completion_async(
+                litellm_model,
+                messages,
+                api_key,
+                max_tokens=1024,
+                temperature=0.0,
+            )
+        except Exception as e:
+            logger.error(f"Error calling {provider}/{model} via AI Gateway: {e}")
+            raise
+
     try:
         if provider == "openai":
             client = openai.OpenAI(api_key=api_key)

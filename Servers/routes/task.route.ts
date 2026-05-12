@@ -9,6 +9,7 @@ import {
   deleteTask,
   restoreTask,
   hardDeleteTask,
+  bulkUpdateTasks,
 } from "../controllers/task.ctrl";
 
 import {
@@ -18,6 +19,7 @@ import {
 } from "../controllers/taskEntityLink.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllTasks);
@@ -27,6 +29,10 @@ router.get("/:id/entities", authenticateJWT, getTaskEntityLinks);
 // POST requests
 router.post("/", authenticateJWT, createTask);
 router.post("/:id/entities", authenticateJWT, addTaskEntityLink);
+
+// PATCH requests
+// Note: More specific routes must come before generic /:id routes
+router.patch("/bulk", authenticateJWT, authorize(["Admin", "Editor"]), bulkUpdateTasks);
 
 // PUT requests
 // Note: More specific routes must come before generic /:id routes

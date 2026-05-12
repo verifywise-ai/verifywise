@@ -65,8 +65,8 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
 
       const data = { name: name, email, url };
 
-      // Send the email
-      await sendEmail(to, "Password reset request", template, data);
+      const subject = req.t!("Password reset request");
+      await sendEmail(to, subject, template, data);
 
       console.log("Password reset email sent");
 

@@ -297,9 +297,9 @@ const RiskSection: FC<RiskSectionProps> = ({
                 }
                 onChange={handleOnMultiselectChange("applicableProjects")}
                 sx={{
-                  width: "100%",
+                  "width": "100%",
                   "& .MuiChip-root": {
-                    borderRadius: "4px",
+                    "borderRadius": "4px",
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -379,9 +379,9 @@ const RiskSection: FC<RiskSectionProps> = ({
                 }
                 onChange={handleOnMultiselectChange("applicableFrameworks")}
                 sx={{
-                  width: "100%",
+                  "width": "100%",
                   "& .MuiChip-root": {
-                    borderRadius: "4px",
+                    "borderRadius": "4px",
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -512,9 +512,9 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Select risk categories"
                 onChange={handleOnMultiselectChange("riskCategory")}
                 sx={{
-                  width: fieldWidth,
+                  "width": fieldWidth,
                   "& .MuiChip-root": {
-                    borderRadius: "4px",
+                    "borderRadius": "4px",
                     "& .MuiChip-deleteIcon": {
                       display: riskValues.riskCategory.length === 1 ? "none" : "flex",
                     },
@@ -523,14 +523,14 @@ const RiskSection: FC<RiskSectionProps> = ({
                 slotProps={{
                   paper: {
                     sx: {
-                      borderRadius: 2,
-                      boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.1)",
-                      border: `1px solid ${theme.palette.border?.light}`,
+                      "borderRadius": 2,
+                      "boxShadow": "0px 4px 24px -4px rgba(16, 24, 40, 0.1)",
+                      "border": `1px solid ${theme.palette.border?.light}`,
                       "& .MuiAutocomplete-listbox": {
                         "& .MuiAutocomplete-option": {
-                          fontSize: FORM_STYLES.fontSize,
-                          color: theme.palette.text.primary,
-                          padding: `8px ${FORM_STYLES.padding}`,
+                          "fontSize": FORM_STYLES.fontSize,
+                          "color": theme.palette.text.primary,
+                          "padding": `8px ${FORM_STYLES.padding}`,
                           "&:hover": {
                             backgroundColor: theme.palette.background.accent,
                           },
@@ -606,7 +606,7 @@ const RiskSection: FC<RiskSectionProps> = ({
             value={riskValues.reviewNotes}
             onChange={handleOnTextFieldChange("reviewNotes")}
             sx={{
-              width: "100%",
+              "width": "100%",
               "& #review-notes-input": {
                 maxHeight: FORM_CONSTANTS.TEXT_AREA_MAX_HEIGHT,
               },

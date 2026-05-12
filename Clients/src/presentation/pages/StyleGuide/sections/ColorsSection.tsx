@@ -685,9 +685,9 @@ const ColorGrid: React.FC<{ children: React.ReactNode; columns?: number; sx?: ob
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: "16px",
+        "display": "grid",
+        "gridTemplateColumns": `repeat(${columns}, 1fr)`,
+        "gap": "16px",
         "@media (max-width: 1400px)": {
           gridTemplateColumns: "repeat(4, 1fr)",
         },
@@ -723,11 +723,11 @@ const ColorCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        cursor: "pointer",
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        overflow: "hidden",
-        transition: "border-color 150ms ease",
+        "cursor": "pointer",
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "overflow": "hidden",
+        "transition": "border-color 150ms ease",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },

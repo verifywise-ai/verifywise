@@ -619,14 +619,14 @@ const StatusSchemeCard: React.FC<StatusSchemeCardProps> = ({
             key={status.name}
             onClick={() => onCopy(status.color)}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              p: "10px 16px",
-              borderBottom:
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "space-between",
+              "p": "10px 16px",
+              "borderBottom":
                 index < statuses.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-              cursor: "pointer",
-              transition: "background-color 150ms ease",
+              "cursor": "pointer",
+              "transition": "background-color 150ms ease",
               "&:hover": {
                 backgroundColor: theme.palette.background.fill,
               },
@@ -683,12 +683,12 @@ const StatusChip: React.FC<StatusChipProps> = ({ label, status, icon }) => {
       label={label}
       size="small"
       sx={{
-        backgroundColor: variant.bg,
-        color: variant.text,
-        fontSize: 12,
-        fontWeight: 500,
-        height: 24,
-        borderRadius: "4px",
+        "backgroundColor": variant.bg,
+        "color": variant.text,
+        "fontSize": 12,
+        "fontWeight": 500,
+        "height": 24,
+        "borderRadius": "4px",
         "& .MuiChip-icon": {
           color: "inherit",
           ml: "6px",
@@ -762,12 +762,12 @@ const SemanticColorCard: React.FC<SemanticColorCardProps> = ({
           <Box
             onClick={() => onCopy(textColor)}
             sx={{
-              flex: 1,
-              p: "6px 8px",
-              backgroundColor: theme.palette.background.fill,
-              borderRadius: "4px",
-              cursor: "pointer",
-              textAlign: "center",
+              "flex": 1,
+              "p": "6px 8px",
+              "backgroundColor": theme.palette.background.fill,
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "textAlign": "center",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -783,12 +783,12 @@ const SemanticColorCard: React.FC<SemanticColorCardProps> = ({
           <Box
             onClick={() => onCopy(bgColor)}
             sx={{
-              flex: 1,
-              p: "6px 8px",
-              backgroundColor: theme.palette.background.fill,
-              borderRadius: "4px",
-              cursor: "pointer",
-              textAlign: "center",
+              "flex": 1,
+              "p": "6px 8px",
+              "backgroundColor": theme.palette.background.fill,
+              "borderRadius": "4px",
+              "cursor": "pointer",
+              "textAlign": "center",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -853,14 +853,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -932,9 +932,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": {
               color: theme.palette.primary.main,
             },

@@ -26,10 +26,10 @@ export interface ModelsTableProps {
 }
 
 const columns: StandardColumn[] = [
-  { id: "modelName", label: "NAME", sortable: true },
-  { id: "modelProvider", label: "PROVIDER", sortable: true },
-  { id: "updatedAt", label: "DATE", sortable: true },
-  { id: "actions", label: "ACTION", sortable: false },
+  { id: "modelName", label: "MODEL", sortable: true, align: "center", width: "18%" },
+  { id: "modelProvider", label: "PROVIDER", sortable: true, align: "center", width: "24%" },
+  { id: "updatedAt", label: "DATE ADDED", sortable: true, align: "center", width: "26%" },
+  { id: "actions", label: "ACTION", sortable: false, align: "center", width: "12%" },
 ];
 
 const ModelsTable: React.FC<ModelsTableProps> = ({
@@ -86,7 +86,7 @@ const ModelsTable: React.FC<ModelsTableProps> = ({
 
   return (
     <TableContainer>
-      <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
+      <Table sx={{ ...singleTheme.tableStyles.primary.frame, tableLayout: "fixed" }}>
         <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>

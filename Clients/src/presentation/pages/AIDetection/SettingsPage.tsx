@@ -28,6 +28,7 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
+import SuppressionRulesTab from "./components/SuppressionRulesTab";
 import {
   getGitHubTokenStatus,
   saveGitHubToken,
@@ -303,6 +304,12 @@ export default function SettingsPage() {
               icon: "Shield",
               tooltip: "Configure AI Governance Risk Score settings",
             },
+            {
+              label: "Suppression rules",
+              value: "suppressions",
+              icon: "EyeOff",
+              tooltip: "Manage rules that suppress matching findings on future scans",
+            },
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
@@ -323,13 +330,13 @@ export default function SettingsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  fontSize: 13,
-                  color: palette.brand.primary,
-                  textDecoration: "none",
-                  mt: 0.5,
+                  "display": "inline-flex",
+                  "alignItems": "center",
+                  "gap": 0.5,
+                  "fontSize": 13,
+                  "color": palette.brand.primary,
+                  "textDecoration": "none",
+                  "mt": 0.5,
                   "&:hover": { textDecoration: "underline" },
                 }}
               >
@@ -649,8 +656,8 @@ export default function SettingsPage() {
                         step={1}
                         size="small"
                         sx={{
-                          color: palette.brand.primary,
-                          height: 4,
+                          "color": palette.brand.primary,
+                          "height": 4,
                           "& .MuiSlider-thumb": {
                             width: 14,
                             height: 14,
@@ -699,6 +706,9 @@ export default function SettingsPage() {
               </Box>
             </Box>
           )}
+        </TabPanel>
+        <TabPanel value="suppressions" sx={{ p: 0, pt: "8px" }}>
+          <SuppressionRulesTab onMessage={(variant, body) => setAlert({ variant, body })} />
         </TabPanel>
       </TabContext>
     </PageHeaderExtended>

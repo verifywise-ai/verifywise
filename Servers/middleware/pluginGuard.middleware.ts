@@ -20,7 +20,7 @@ export function requirePlugin(pluginKey: string) {
     try {
       const organizationId = req.organizationId;
       if (!organizationId) {
-        return res.status(401).json({ message: "Authentication required" });
+        return res.status(401).json({ message: req.t!("Authentication required") });
       }
 
       const installation = await findByPlugin(pluginKey, organizationId);
@@ -33,7 +33,7 @@ export function requirePlugin(pluginKey: string) {
       return next();
     } catch (error) {
       console.error(`[pluginGuard] Error checking plugin '${pluginKey}':`, error);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: req.t!("Internal server error") });
     }
   };
 }

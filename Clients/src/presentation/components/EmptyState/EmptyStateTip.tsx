@@ -78,18 +78,18 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
         component="summary"
         onClick={handleToggle}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "10px 14px",
-          cursor: "pointer",
-          listStyle: "none",
-          userSelect: "none",
-          backgroundColor: theme.palette.background.main,
-          borderBottom: isOpen
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "10px",
+          "padding": "10px 14px",
+          "cursor": "pointer",
+          "listStyle": "none",
+          "userSelect": "none",
+          "backgroundColor": theme.palette.background.main,
+          "borderBottom": isOpen
             ? `1px solid ${theme.palette.border.light}`
             : "1px solid transparent",
-          transition: "background-color 150ms ease, border-color 200ms ease",
+          "transition": "background-color 150ms ease, border-color 200ms ease",
           "&:hover": {
             backgroundColor: theme.palette.background.fill,
           },

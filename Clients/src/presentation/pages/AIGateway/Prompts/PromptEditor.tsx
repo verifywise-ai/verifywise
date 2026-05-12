@@ -677,12 +677,12 @@ export default function PromptEditorPage() {
           <Box
             onClick={addMessage}
             sx={{
-              mt: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              color: "primary.main",
+              "mt": "16px",
+              "display": "flex",
+              "alignItems": "center",
+              "gap": "8px",
+              "cursor": "pointer",
+              "color": "primary.main",
               "&:hover": { textDecoration: "underline" },
             }}
           >
@@ -768,14 +768,14 @@ export default function PromptEditorPage() {
                 key={tab}
                 onClick={() => setTestTab(tab)}
                 sx={{
-                  flex: 1,
-                  py: "8px",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: testTab === tab ? 600 : 400,
-                  color: testTab === tab ? "#13715B" : "text.secondary",
-                  borderBottom: testTab === tab ? "2px solid #13715B" : "2px solid transparent",
+                  "flex": 1,
+                  "py": "8px",
+                  "textAlign": "center",
+                  "cursor": "pointer",
+                  "fontSize": 12,
+                  "fontWeight": testTab === tab ? 600 : 400,
+                  "color": testTab === tab ? "#13715B" : "text.secondary",
+                  "borderBottom": testTab === tab ? "2px solid #13715B" : "2px solid transparent",
                   "&:hover": { bgcolor: "action.hover" },
                 }}
               >
@@ -948,11 +948,11 @@ export default function PromptEditorPage() {
                   onClick={handleSendTest}
                   disabled={isSending || !selectedEndpoint}
                   sx={{
-                    bgcolor: "#13715B",
-                    color: "#fff",
-                    width: 34,
-                    height: 34,
-                    alignSelf: "flex-end",
+                    "bgcolor": "#13715B",
+                    "color": "#fff",
+                    "width": 34,
+                    "height": 34,
+                    "alignSelf": "flex-end",
                     "&:hover": { bgcolor: "#0F5A47" },
                     "&:disabled": { bgcolor: "#E4E7EC", color: "#98A2B3" },
                   }}
@@ -1157,18 +1157,18 @@ export default function PromptEditorPage() {
                     setIsHistoryOpen(false);
                   }}
                   sx={{
-                    p: "16px",
-                    cursor: "pointer",
-                    borderRadius: "4px",
-                    border:
+                    "p": "16px",
+                    "cursor": "pointer",
+                    "borderRadius": "4px",
+                    "border":
                       v.version === currentVersion
                         ? "1px solid #13715B"
                         : `1px solid ${palette.border.light}`,
-                    bgcolor: v.version === currentVersion ? "#F6FEF9" : "background.paper",
+                    "bgcolor": v.version === currentVersion ? "#F6FEF9" : "background.paper",
                     "&:hover": {
                       bgcolor: v.version === currentVersion ? "#ECFDF3" : "action.hover",
                     },
-                    transition: "background-color 150ms ease",
+                    "transition": "background-color 150ms ease",
                   }}
                 >
                   <Box

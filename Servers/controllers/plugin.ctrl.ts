@@ -8,6 +8,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { sanitizeForLog, PLUGIN_KEY_PATTERN } from "../utils/validations/validation.utils";
 
+import { translateError } from "../utils/i18n.utils";
 const fileName = "plugin.ctrl.ts";
 
 /**
@@ -28,7 +29,7 @@ export async function getAllPlugins(req: Request, res: Response): Promise<any> {
   } catch (error) {
     logStructured("error", "failed to retrieve plugins", functionName, fileName);
     logger.error("❌ Error in getAllPlugins:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -40,7 +41,7 @@ export async function getPluginByKey(req: Request, res: Response): Promise<any> 
   const functionName = "getPluginByKey";
 
   if (!PLUGIN_KEY_PATTERN.test(pluginKey)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid plugin key format"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid plugin key format")));
   }
 
   logStructured(
@@ -54,7 +55,7 @@ export async function getPluginByKey(req: Request, res: Response): Promise<any> 
     const plugin = await PluginService.getPluginByKey(pluginKey);
 
     if (!plugin) {
-      return res.status(404).json(STATUS_CODE[404]("Plugin not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Plugin not found")));
     }
 
     logStructured(
@@ -67,7 +68,7 @@ export async function getPluginByKey(req: Request, res: Response): Promise<any> 
   } catch (error) {
     logStructured("error", "failed to retrieve plugin", functionName, fileName);
     logger.error("❌ Error in getPluginByKey:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -85,7 +86,7 @@ export async function searchPlugins(req: Request, res: Response): Promise<any> {
   );
 
   if (!query) {
-    return res.status(400).json(STATUS_CODE[400]("Query parameter 'q' is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Query parameter 'q' is required")));
   }
 
   try {
@@ -102,7 +103,7 @@ export async function searchPlugins(req: Request, res: Response): Promise<any> {
   } catch (error) {
     logStructured("error", "failed to search plugins", functionName, fileName);
     logger.error("❌ Error in searchPlugins:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -117,11 +118,11 @@ export async function installPlugin(req: Request, res: Response): Promise<any> {
   const functionName = "installPlugin";
 
   if (!pluginKey) {
-    return res.status(400).json(STATUS_CODE[400]("pluginKey is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("pluginKey is required")));
   }
 
   if (!PLUGIN_KEY_PATTERN.test(pluginKey)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid plugin key format"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid plugin key format")));
   }
 
   logStructured(
@@ -132,7 +133,7 @@ export async function installPlugin(req: Request, res: Response): Promise<any> {
   );
 
   if (!userId || !organizationId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -148,12 +149,12 @@ export async function installPlugin(req: Request, res: Response): Promise<any> {
     return res.status(201).json(STATUS_CODE[201](installation));
   } catch (error) {
     if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     logStructured("error", "failed to install plugin", functionName, fileName);
     logger.error("❌ Error in installPlugin:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -174,7 +175,7 @@ export async function uninstallPlugin(req: Request, res: Response): Promise<any>
   );
 
   if (!userId || !organizationId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -187,15 +188,15 @@ export async function uninstallPlugin(req: Request, res: Response): Promise<any>
       fileName,
     );
 
-    return res.status(200).json(STATUS_CODE[200]("Plugin uninstalled successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Plugin uninstalled successfully")));
   } catch (error) {
     if (error instanceof ValidationException) {
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     logStructured("error", "failed to uninstall plugin", functionName, fileName);
     logger.error("❌ Error in uninstallPlugin:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -214,7 +215,7 @@ export async function getInstalledPlugins(req: Request, res: Response): Promise<
   );
 
   if (!organizationId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -231,7 +232,7 @@ export async function getInstalledPlugins(req: Request, res: Response): Promise<
   } catch (error) {
     logStructured("error", "failed to retrieve installed plugins", functionName, fileName);
     logger.error("❌ Error in getInstalledPlugins:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -251,7 +252,7 @@ export async function getCategories(_req: Request, res: Response): Promise<any> 
   } catch (error) {
     logStructured("error", "failed to retrieve categories", functionName, fileName);
     logger.error("❌ Error in getCategories:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
 }
 
@@ -273,11 +274,11 @@ export async function updatePluginConfiguration(req: Request, res: Response): Pr
   );
 
   if (!configuration || typeof configuration !== "object") {
-    return res.status(400).json(STATUS_CODE[400]("Configuration object is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Configuration object is required")));
   }
 
   if (!userId || !organizationId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -298,12 +299,12 @@ export async function updatePluginConfiguration(req: Request, res: Response): Pr
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
     if (error instanceof ValidationException) {
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     logStructured("error", "failed to update plugin configuration", functionName, fileName);
     logger.error("❌ Error in updatePluginConfiguration:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -319,7 +320,7 @@ export async function testPluginConnection(req: Request, res: Response): Promise
   const functionName = "testPluginConnection";
 
   if (!PLUGIN_KEY_PATTERN.test(pluginKey)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid plugin key format"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid plugin key format")));
   }
 
   logStructured(
@@ -330,11 +331,11 @@ export async function testPluginConnection(req: Request, res: Response): Promise
   );
 
   if (!configuration || typeof configuration !== "object") {
-    return res.status(400).json(STATUS_CODE[400]("Configuration object is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Configuration object is required")));
   }
 
   if (!userId || !organizationId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -354,7 +355,7 @@ export async function testPluginConnection(req: Request, res: Response): Promise
   } catch (error) {
     logStructured("error", "failed to test plugin connection", functionName, fileName);
     logger.error("❌ Error in testPluginConnection:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -379,11 +380,11 @@ export async function forwardToPlugin(req: Request, res: Response): Promise<any>
   const functionName = "forwardToPlugin";
 
   if (!pluginKey) {
-    return res.status(400).json(STATUS_CODE[400]("Plugin key is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Plugin key is required")));
   }
 
   if (!PLUGIN_KEY_PATTERN.test(pluginKey)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid plugin key format"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid plugin key format")));
   }
 
   // Extract the path after /api/plugins/:key/
@@ -404,7 +405,7 @@ export async function forwardToPlugin(req: Request, res: Response): Promise<any>
   );
 
   if (!organizationId || !userId) {
-    return res.status(401).json(STATUS_CODE[401]("User not authenticated"));
+    return res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
   }
 
   try {
@@ -474,7 +475,7 @@ export async function forwardToPlugin(req: Request, res: Response): Promise<any>
         functionName,
         fileName,
       );
-      return res.status(404).json(STATUS_CODE[404](error.message));
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
     }
 
     if (error instanceof ValidationException) {
@@ -484,17 +485,21 @@ export async function forwardToPlugin(req: Request, res: Response): Promise<any>
         functionName,
         fileName,
       );
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof Error) {
       if (error.message.includes("not installed")) {
         return res
           .status(400)
-          .json(STATUS_CODE[400](`Plugin '${sanitizeForLog(pluginKey)}' is not installed`));
+          .json(
+            STATUS_CODE[400](
+              req.t!("Plugin '{name}' is not installed", { name: sanitizeForLog(pluginKey) }),
+            ),
+          );
       }
       if (error.message.includes("not found")) {
-        return res.status(404).json(STATUS_CODE[404](error.message));
+        return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
       }
     }
 
@@ -506,6 +511,6 @@ export async function forwardToPlugin(req: Request, res: Response): Promise<any>
     );
     logger.error(`❌ Error in forwardToPlugin (${sanitizeForLog(pluginKey)}):`, error);
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

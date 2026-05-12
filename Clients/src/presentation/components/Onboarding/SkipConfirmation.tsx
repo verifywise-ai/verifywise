@@ -39,17 +39,17 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, on
           e.preventDefault();
         }}
         sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 450,
-          bgcolor: theme.palette.background.modal,
-          border: 1,
-          borderColor: theme.palette.border.dark,
-          borderRadius: theme.shape.borderRadius,
-          boxShadow: 24,
-          p: theme.spacing(15),
+          "position": "absolute",
+          "top": "50%",
+          "left": "50%",
+          "transform": "translate(-50%, -50%)",
+          "width": 450,
+          "bgcolor": theme.palette.background.modal,
+          "border": 1,
+          "borderColor": theme.palette.border.dark,
+          "borderRadius": theme.shape.borderRadius,
+          "boxShadow": 24,
+          "p": theme.spacing(15),
           "&:focus": {
             outline: "none",
           },
@@ -75,10 +75,10 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, on
             color="inherit"
             onClick={onCancel}
             sx={{
-              borderRadius: theme.shape.borderRadius,
-              fontSize: 13,
-              fontWeight: 500,
-              textTransform: "none",
+              "borderRadius": theme.shape.borderRadius,
+              "fontSize": 13,
+              "fontWeight": 500,
+              "textTransform": "none",
               "&:hover": {
                 backgroundColor: "transparent",
               },
@@ -94,11 +94,11 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, on
             startIcon={<SkipForward size={16} />}
             onClick={onConfirm}
             sx={{
-              borderRadius: theme.shape.borderRadius,
-              fontSize: 13,
-              fontWeight: 500,
-              textTransform: "none",
-              backgroundColor: `${brand.primary}`,
+              "borderRadius": theme.shape.borderRadius,
+              "fontSize": 13,
+              "fontWeight": 500,
+              "textTransform": "none",
+              "backgroundColor": `${brand.primary}`,
               "&:hover": {
                 backgroundColor: `${brand.primaryHover}`,
               },

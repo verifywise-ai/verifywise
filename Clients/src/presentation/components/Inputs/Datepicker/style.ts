@@ -1,7 +1,7 @@
 import { Theme } from "@mui/material";
 
 export const getDatePickerStyle = (theme: Theme) => ({
-  backgroundColor: theme.palette.background.paper,
+  "backgroundColor": theme.palette.background.paper,
   ".MuiIconButton-root:hover": { backgroundColor: "unset" },
   "& svg": { display: "none" },
   // Icon button positioning (MUI v8 uses MuiInputAdornment-root)
@@ -69,7 +69,7 @@ export const getDatePickerStyle = (theme: Theme) => ({
 
 // Keep backward-compatible static export for existing consumers
 export const DatePickerStyle = {
-  backgroundColor: "background.main",
+  "backgroundColor": "background.main",
   ".MuiIconButton-root:hover": { backgroundColor: "unset" },
   "& svg": { display: "none" },
   "& .MuiInputAdornment-root": {

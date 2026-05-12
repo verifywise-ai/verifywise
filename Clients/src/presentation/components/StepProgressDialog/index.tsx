@@ -92,9 +92,9 @@ export function StepProgressDialog({
         variant="determinate"
         value={step.progress}
         sx={{
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: borderPalette.light,
+          "height": 6,
+          "borderRadius": 3,
+          "backgroundColor": borderPalette.light,
           "& .MuiLinearProgress-bar": {
             borderRadius: 3,
             background: `linear-gradient(90deg, ${brand.primary} 0%, #1a9e7a 100%)`,

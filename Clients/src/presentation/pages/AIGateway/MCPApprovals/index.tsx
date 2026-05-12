@@ -205,7 +205,7 @@ export default function MCPApprovalsPage() {
                               variant="contained"
                               startIcon={<CheckCircle size={14} />}
                               sx={{
-                                backgroundColor: "#065F46",
+                                "backgroundColor": "#065F46",
                                 "&:hover": { backgroundColor: "#047857" },
                               }}
                             />
@@ -221,8 +221,8 @@ export default function MCPApprovalsPage() {
                               variant="outlined"
                               startIcon={<XCircle size={14} />}
                               sx={{
-                                color: "#991B1B",
-                                borderColor: "#FCA5A5",
+                                "color": "#991B1B",
+                                "borderColor": "#FCA5A5",
                                 "&:hover": {
                                   backgroundColor: "#FEF2F2",
                                   borderColor: "#991B1B",

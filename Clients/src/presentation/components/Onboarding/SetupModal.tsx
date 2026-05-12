@@ -123,19 +123,19 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
     <Box
       className="confirmation-backdrop"
       sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(2px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        padding: 2,
-        animation: isClosing ? "fadeOut 0.3s ease-out" : "fadeIn 0.3s ease-in",
+        "position": "fixed",
+        "top": 0,
+        "left": 0,
+        "right": 0,
+        "bottom": 0,
+        "backgroundColor": "rgba(0, 0, 0, 0.4)",
+        "backdropFilter": "blur(2px)",
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "zIndex": 9999,
+        "padding": 2,
+        "animation": isClosing ? "fadeOut 0.3s ease-out" : "fadeIn 0.3s ease-in",
         "@keyframes fadeOut": {
           from: { opacity: 1 },
           to: { opacity: 0 },
@@ -205,13 +205,13 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           <Box
             onClick={handleSelectDemo}
             sx={{
-              flex: 1,
-              padding: "24px 20px",
-              border: "1px solid #E0E4E9",
-              borderRadius: "4px",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading && loadingOption !== "demo" ? 0.5 : 1,
-              transition: "all 0.2s ease",
+              "flex": 1,
+              "padding": "24px 20px",
+              "border": "1px solid #E0E4E9",
+              "borderRadius": "4px",
+              "cursor": isLoading ? "not-allowed" : "pointer",
+              "opacity": isLoading && loadingOption !== "demo" ? 0.5 : 1,
+              "transition": "all 0.2s ease",
               "&:hover": {
                 borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
                 backgroundColor: isLoading ? "transparent" : "#F8FDFB",
@@ -264,13 +264,13 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           <Box
             onClick={handleSelectBlank}
             sx={{
-              flex: 1,
-              padding: "24px 20px",
-              border: "1px solid #E0E4E9",
-              borderRadius: "4px",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading && loadingOption !== "blank" ? 0.5 : 1,
-              transition: "all 0.2s ease",
+              "flex": 1,
+              "padding": "24px 20px",
+              "border": "1px solid #E0E4E9",
+              "borderRadius": "4px",
+              "cursor": isLoading ? "not-allowed" : "pointer",
+              "opacity": isLoading && loadingOption !== "blank" ? 0.5 : 1,
+              "transition": "all 0.2s ease",
               "&:hover": {
                 borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
                 backgroundColor: isLoading ? "transparent" : "#F8FDFB",
@@ -335,8 +335,8 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               onClick={handleClose}
               isDisabled={isLoading}
               sx={{
-                color: `${text.tertiary}`,
-                fontSize: 13,
+                "color": `${text.tertiary}`,
+                "fontSize": 13,
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: "#101828",

@@ -101,10 +101,10 @@ function RiskRow({
           disabled={isSaving}
           aria-label="Delete risk item"
           sx={{
-            color: "text.secondary",
+            "color": "text.secondary",
             "&:hover": { color: "error.main" },
-            mt: "2px",
-            flexShrink: 0,
+            "mt": "2px",
+            "flexShrink": 0,
           }}
         >
           <Trash2 size={14} strokeWidth={1.5} />

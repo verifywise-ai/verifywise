@@ -389,13 +389,13 @@ const AvatarsSection: React.FC = () => {
                   </Typography>
                   <Box
                     sx={{
-                      display: "flex",
+                      "display": "flex",
                       "& .MuiAvatar-root": {
-                        width: 32,
-                        height: 32,
-                        fontSize: 12,
-                        border: `2px solid ${theme.palette.background.fill}`,
-                        marginLeft: "-8px",
+                        "width": 32,
+                        "height": 32,
+                        "fontSize": 12,
+                        "border": `2px solid ${theme.palette.background.fill}`,
+                        "marginLeft": "-8px",
                         "&:first-of-type": { marginLeft: 0 },
                       },
                     }}
@@ -426,13 +426,13 @@ const AvatarsSection: React.FC = () => {
                   </Typography>
                   <Box
                     sx={{
-                      display: "flex",
+                      "display": "flex",
                       "& .MuiAvatar-root": {
-                        width: 32,
-                        height: 32,
-                        fontSize: 12,
-                        border: `2px solid ${theme.palette.background.fill}`,
-                        marginLeft: "-8px",
+                        "width": 32,
+                        "height": 32,
+                        "fontSize": 12,
+                        "border": `2px solid ${theme.palette.background.fill}`,
+                        "marginLeft": "-8px",
                         "&:first-of-type": { marginLeft: 0 },
                       },
                     }}
@@ -614,14 +614,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -682,9 +682,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

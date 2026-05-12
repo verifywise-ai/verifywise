@@ -102,8 +102,8 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
             icon={<Save size={16} />}
             onClick={onSave}
             sx={{
-              backgroundColor: `${brand.primary}`,
-              border: `1px solid ${brand.primary}`,
+              "backgroundColor": `${brand.primary}`,
+              "border": `1px solid ${brand.primary}`,
               "&:hover": {
                 backgroundColor: "#0F5A48",
               },

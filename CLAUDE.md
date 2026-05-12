@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-03-25
+> **Last Updated:** 2026-05-05
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -168,7 +168,8 @@ Read the relevant file BEFORE implementing changes in that area:
 |---------------------|---------------|
 | Adding a new feature (full guide) | `docs/technical/guides/adding-new-feature.md` |
 | Adding a new framework | `docs/technical/guides/adding-new-framework.md` |
-| Code style | `docs/technical/guides/code-style.md` |
+| Code style (short version) | `docs/technical/guides/code-style.md` |
+| Detailed coding standards (TS, React, backend, security, testing) | `CodeRules/README.md` |
 | Plugin system | `docs/technical/infrastructure/plugin-system.md` |
 | Approval workflows | `docs/technical/domains/approvals.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |

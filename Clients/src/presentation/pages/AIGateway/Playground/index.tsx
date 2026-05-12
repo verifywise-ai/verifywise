@@ -97,9 +97,9 @@ export default function PlaygroundPage() {
               setShowSettings(true);
             }}
             sx={{
-              p: 1,
-              backgroundColor: showSettings ? palette.background.fill : "transparent",
-              borderRadius: "4px",
+              "p": 1,
+              "backgroundColor": showSettings ? palette.background.fill : "transparent",
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: palette.background.fill },
             }}
           >

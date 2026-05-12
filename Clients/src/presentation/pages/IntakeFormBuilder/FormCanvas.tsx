@@ -113,10 +113,10 @@ function EditableFormTitle({
             size="small"
             onClick={handleSave}
             sx={{
-              p: "4px",
-              color: theme.palette.background.main,
-              backgroundColor: theme.palette.primary.main,
-              borderRadius: "4px",
+              "p": "4px",
+              "color": theme.palette.background.main,
+              "backgroundColor": theme.palette.primary.main,
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
@@ -128,10 +128,10 @@ function EditableFormTitle({
             size="small"
             onClick={handleCancel}
             sx={{
-              p: "4px",
-              color: theme.palette.other.icon,
-              backgroundColor: theme.palette.background.accent,
-              borderRadius: "4px",
+              "p": "4px",
+              "color": theme.palette.other.icon,
+              "backgroundColor": theme.palette.background.accent,
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -149,15 +149,15 @@ function EditableFormTitle({
         setIsEditing(true);
       }}
       sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        borderRadius: "4px",
-        border: "1px solid transparent",
-        px: "8px",
-        py: "4px",
-        mx: "-8px",
-        cursor: "text",
-        transition: "border-color 0.15s ease, background-color 0.15s ease",
+        "display": "inline-flex",
+        "alignItems": "center",
+        "borderRadius": "4px",
+        "border": "1px solid transparent",
+        "px": "8px",
+        "py": "4px",
+        "mx": "-8px",
+        "cursor": "text",
+        "transition": "border-color 0.15s ease, background-color 0.15s ease",
         "&:hover": {
           borderColor: theme.palette.border.dark,
           backgroundColor: theme.palette.background.accent,
@@ -248,10 +248,10 @@ function EditableFormDescription({
             size="small"
             onClick={handleSave}
             sx={{
-              p: "4px",
-              color: theme.palette.background.main,
-              backgroundColor: theme.palette.primary.main,
-              borderRadius: "4px",
+              "p": "4px",
+              "color": theme.palette.background.main,
+              "backgroundColor": theme.palette.primary.main,
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
@@ -263,10 +263,10 @@ function EditableFormDescription({
             size="small"
             onClick={handleCancel}
             sx={{
-              p: "4px",
-              color: theme.palette.other.icon,
-              backgroundColor: theme.palette.background.accent,
-              borderRadius: "4px",
+              "p": "4px",
+              "color": theme.palette.other.icon,
+              "backgroundColor": theme.palette.background.accent,
+              "borderRadius": "4px",
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -284,16 +284,16 @@ function EditableFormDescription({
         setIsEditing(true);
       }}
       sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        borderRadius: "4px",
-        border: "1px solid transparent",
-        px: "8px",
-        py: "2px",
-        mx: "-8px",
-        mt: "4px",
-        cursor: "text",
-        transition: "border-color 0.15s ease, background-color 0.15s ease",
+        "display": "inline-flex",
+        "alignItems": "center",
+        "borderRadius": "4px",
+        "border": "1px solid transparent",
+        "px": "8px",
+        "py": "2px",
+        "mx": "-8px",
+        "mt": "4px",
+        "cursor": "text",
+        "transition": "border-color 0.15s ease, background-color 0.15s ease",
         "&:hover": {
           borderColor: theme.palette.border.dark,
           backgroundColor: theme.palette.background.accent,
@@ -340,10 +340,10 @@ function ContactInfoPreview() {
         <Box
           key={label}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            mb: "8px",
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "8px",
+            "mb": "8px",
             "&:last-child": { mb: 0 },
           }}
         >

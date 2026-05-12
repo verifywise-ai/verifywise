@@ -91,9 +91,9 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
 
   const pendingDeleteSummary = conversations.find((c) => c.id === pendingDeleteId);
   const iconButtonStyles = {
-    width: "28px",
-    height: "28px",
-    color: "text.secondary",
+    "width": "28px",
+    "height": "28px",
+    "color": "text.secondary",
     "&:hover": {
       backgroundColor: "rgba(19, 113, 91, 0.08)",
       color: "brand.primary",
@@ -179,8 +179,8 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
       >
         <Box
           sx={{
-            maxHeight: 480,
-            overflowY: "auto",
+            "maxHeight": 480,
+            "overflowY": "auto",
             "&::-webkit-scrollbar": { width: "6px" },
             "&::-webkit-scrollbar-track": { background: "transparent" },
             "&::-webkit-scrollbar-thumb": {
@@ -215,18 +215,18 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                     }
                   }}
                   sx={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 1.5,
-                    pl: "21px", // 24 - 3px accent border
-                    pr: "24px",
-                    py: "10px",
-                    cursor: "pointer",
-                    borderLeft: isActive ? "3px solid" : "3px solid transparent",
-                    borderLeftColor: isActive ? "brand.primary" : "transparent",
-                    backgroundColor: isActive ? "rgba(19, 113, 91, 0.04)" : "transparent",
-                    transition: "all 0.15s ease",
+                    "position": "relative",
+                    "display": "flex",
+                    "alignItems": "flex-start",
+                    "gap": 1.5,
+                    "pl": "21px", // 24 - 3px accent border
+                    "pr": "24px",
+                    "py": "10px",
+                    "cursor": "pointer",
+                    "borderLeft": isActive ? "3px solid" : "3px solid transparent",
+                    "borderLeftColor": isActive ? "brand.primary" : "transparent",
+                    "backgroundColor": isActive ? "rgba(19, 113, 91, 0.04)" : "transparent",
+                    "transition": "all 0.15s ease",
                     "&:hover": {
                       backgroundColor: isActive ? "rgba(19, 113, 91, 0.04)" : "rgba(0, 0, 0, 0.02)",
                     },
@@ -275,13 +275,13 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                       aria-label={`Delete chat: ${label}`}
                       onClick={(event) => handleRequestDelete(event, conv.id)}
                       sx={{
-                        width: "24px",
-                        height: "24px",
-                        flexShrink: 0,
-                        opacity: 0,
-                        transition:
+                        "width": "24px",
+                        "height": "24px",
+                        "flexShrink": 0,
+                        "opacity": 0,
+                        "transition":
                           "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
-                        color: "text.disabled",
+                        "color": "text.disabled",
                         "&:hover": {
                           color: "#EF4444",
                           backgroundColor: "rgba(239, 68, 68, 0.08)",

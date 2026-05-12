@@ -578,9 +578,9 @@ export default function ScanPage() {
             variant="determinate"
             value={progress.progress}
             sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: palette.border.light,
+              "height": 8,
+              "borderRadius": 4,
+              "backgroundColor": palette.border.light,
               "& .MuiLinearProgress-bar": {
                 backgroundColor: palette.brand.primary,
                 borderRadius: 4,

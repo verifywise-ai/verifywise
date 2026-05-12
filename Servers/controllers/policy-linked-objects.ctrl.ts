@@ -10,6 +10,7 @@ import {
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * GET /policies/:policyId/linked-objects
  */
@@ -70,7 +71,7 @@ export async function getAllLinkedObjects(req: Request, res: Response) {
     );
     logger.error("❌ Error in getAllLinkedObjects:", error);
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -132,7 +133,7 @@ export async function getLinkedObjects(req: Request, res: Response) {
       "policyLinkedObjects.ctrl.ts",
     );
     logger.error("❌ Error in getLinkedObjects:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -168,7 +169,7 @@ export async function createLinkedObject(req: Request, res: Response) {
     await transaction.commit();
 
     return res.status(201).json({
-      message: "Linked successfully",
+      message: req.t!("Linked successfully"),
     });
   } catch (error: any) {
     if (transaction) await transaction.rollback();
@@ -213,7 +214,9 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
       "policyLinkedObjects.ctrl.ts",
     );
 
-    return res.status(200).json(STATUS_CODE[200]("Risk unlinked from all policies successfully"));
+    return res
+      .status(200)
+      .json(STATUS_CODE[200](req.t!("Risk unlinked from all policies successfully")));
   } catch (error) {
     if (transaction) await transaction.rollback();
     logStructured(
@@ -223,7 +226,7 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
       "policyLinkedObjects.ctrl.ts",
     );
     logger.error("❌ Error in deleteRiskFromAllPolicies:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -251,10 +254,10 @@ export async function deleteEvidenceFromAllPolicies(req: Request, res: Response)
 
     return res
       .status(200)
-      .json(STATUS_CODE[200]("Evidence unlinked from all policies successfully"));
+      .json(STATUS_CODE[200](req.t!("Evidence unlinked from all policies successfully")));
   } catch (error) {
     if (transaction) await transaction.rollback();
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -265,7 +268,6 @@ export async function deleteLinkedObject(req: Request, res: Response) {
   const id = parseInt(
     Array.isArray(req.params.policyId) ? req.params.policyId[0] : req.params.policyId,
   );
-
   logStructured(
     "processing",
     `Deleting link for policy ${id}`,
@@ -292,7 +294,7 @@ export async function deleteLinkedObject(req: Request, res: Response) {
     );
     logger.debug(`✅ Link removed for policy ${id}`);
 
-    return res.status(200).json(STATUS_CODE[200]("Unlinked successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Unlinked successfully")));
   } catch (error) {
     if (transaction) await transaction.rollback();
 
@@ -303,6 +305,6 @@ export async function deleteLinkedObject(req: Request, res: Response) {
       "policyLinkedObjects.ctrl.ts",
     );
     logger.error("❌ Error in deleteLinkedObject:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

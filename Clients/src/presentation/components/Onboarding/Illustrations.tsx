@@ -176,14 +176,14 @@ const IconGrid: React.FC = () => (
       <Box
         key={i}
         sx={{
-          backgroundColor: "white",
-          borderRadius: "8px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-          position: "relative",
-          overflow: "hidden",
+          "backgroundColor": "white",
+          "borderRadius": "8px",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "boxShadow": "0 1px 3px rgba(0, 0, 0, 0.1)",
+          "position": "relative",
+          "overflow": "hidden",
           "&::before": {
             content: '""',
             position: "absolute",
@@ -235,10 +235,10 @@ const FlowDiagram: React.FC = () => (
         {step < 3 && (
           <Box
             sx={{
-              width: "30px",
-              height: "2px",
-              backgroundColor: "brand.primary",
-              position: "relative",
+              "width": "30px",
+              "height": "2px",
+              "backgroundColor": "brand.primary",
+              "position": "relative",
               "&::after": {
                 content: '""',
                 position: "absolute",

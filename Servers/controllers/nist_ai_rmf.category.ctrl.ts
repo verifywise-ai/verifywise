@@ -4,6 +4,7 @@ import { getAllNISTAIRMFCategoriesBytitleQuery } from "../utils/nist_ai_rmf.cate
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logEvent } from "../utils/logger/dbLogger";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getAllNISTAIRMFCategoriesByfunctionId(
   req: Request,
   res: Response,
@@ -44,6 +45,6 @@ export async function getAllNISTAIRMFCategoriesByfunctionId(
       req.organizationId!,
     );
     logger.error("❌ Error in getAllNISTAIRMFCategoriesByfunctionId:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

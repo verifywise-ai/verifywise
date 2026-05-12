@@ -215,8 +215,8 @@ export const getAllLlmApiKeys = () => evaluationLlmApiKeysService.getAllKeys();
 
 export const addLlmApiKey = (request: AddKeyRequest) => evaluationLlmApiKeysService.addKey(request);
 
-export const deleteLlmApiKey = (provider: LLMProvider) =>
-  evaluationLlmApiKeysService.deleteKey(provider);
+export const deleteLlmApiKey = (provider: LLMProvider, id?: number) =>
+  evaluationLlmApiKeysService.deleteKey(provider, id);
 
 export const hasLlmApiKey = (provider: LLMProvider) => evaluationLlmApiKeysService.hasKey(provider);
 

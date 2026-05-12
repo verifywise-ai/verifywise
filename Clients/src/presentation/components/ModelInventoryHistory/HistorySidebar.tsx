@@ -1,13 +1,6 @@
 import React from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  CircularProgress,
-  useTheme,
-  Collapse,
-  Avatar,
-} from "@mui/material";
+import { Box, Typography, Stack, CircularProgress, useTheme, Collapse } from "@mui/material";
+import VWAvatar from "../Avatar/VWAvatar";
 import { Clock } from "lucide-react";
 import {
   useModelInventoryChangeHistory,
@@ -186,7 +179,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
       <Box
         key={`${firstEntry.changed_at}_${firstEntry.id}`}
         sx={{
-          marginBottom: "32px",
+          "marginBottom": "32px",
           "&:last-child": {
             marginBottom: 0,
           },
@@ -194,19 +187,15 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
       >
         {/* Header */}
         <Stack direction="row" gap="8px" alignItems="center" marginBottom="8px">
-          <Avatar
-            src={avatarUrls[firstEntry.changed_by_user_id] || undefined}
-            alt={userName}
-            sx={{
-              width: 28,
-              height: 28,
-              backgroundColor: theme.palette.primary.main,
-              fontSize: 11,
-              fontWeight: 600,
+          <VWAvatar
+            user={{
+              firstname: firstEntry.user_name || userName,
+              lastname: firstEntry.user_surname || "",
+              pathToImage: avatarUrls[firstEntry.changed_by_user_id] || undefined,
             }}
-          >
-            {userName.charAt(0).toUpperCase()}
-          </Avatar>
+            size="small"
+            showBorder={false}
+          />
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
@@ -243,8 +232,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
             <Box
               key={entry.id}
               sx={{
-                marginBottom: "8px",
-                paddingLeft: "36px",
+                "marginBottom": "8px",
+                "paddingLeft": "36px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -448,9 +437,9 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
           >
             <Box
               sx={{
-                height: "100%",
-                overflow: "auto",
-                padding: "16px",
+                "height": "100%",
+                "overflow": "auto",
+                "padding": "16px",
                 // Custom scrollbar styling - invisible by default, visible on hover
                 "&::-webkit-scrollbar": {
                   width: "8px",
@@ -469,8 +458,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                   background: "text.muted",
                 },
                 // Firefox scrollbar styling
-                scrollbarWidth: "thin",
-                scrollbarColor: "transparent transparent",
+                "scrollbarWidth": "thin",
+                "scrollbarColor": "transparent transparent",
                 "&:hover": {
                   scrollbarColor: "#C1C7CD transparent",
                 },

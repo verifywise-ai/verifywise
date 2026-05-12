@@ -179,14 +179,14 @@ export function SubmissionSuccess() {
                 startIcon={<Edit size={15} />}
                 text="Edit and resubmit"
                 sx={{
-                  width: "100%",
-                  height: 44,
-                  backgroundColor: "brand.primary",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  textTransform: "none",
-                  boxShadow: "none",
+                  "width": "100%",
+                  "height": 44,
+                  "backgroundColor": "brand.primary",
+                  "fontSize": "13px",
+                  "fontWeight": 600,
+                  "borderRadius": "8px",
+                  "textTransform": "none",
+                  "boxShadow": "none",
                   "&:hover": { backgroundColor: "brand.primaryHover" },
                 }}
               />

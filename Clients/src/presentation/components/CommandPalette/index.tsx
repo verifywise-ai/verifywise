@@ -124,13 +124,13 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
               onClick={onDismiss}
               size="small"
               sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                color: `${background.main}`,
-                fontSize: "12px",
-                fontWeight: 500,
-                padding: "6px 16px",
-                borderRadius: "4px",
-                textTransform: "none",
+                "backgroundColor": "rgba(255, 255, 255, 0.1)",
+                "color": `${background.main}`,
+                "fontSize": "12px",
+                "fontWeight": 500,
+                "padding": "6px 16px",
+                "borderRadius": "4px",
+                "textTransform": "none",
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.15)",
                 },
@@ -145,15 +145,15 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
           component="button"
           onClick={onDismiss}
           sx={{
-            background: "none",
-            border: "none",
-            padding: "4px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "4px",
-            color: "rgba(255, 255, 255, 0.5)",
+            "background": "none",
+            "border": "none",
+            "padding": "4px",
+            "cursor": "pointer",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "borderRadius": "4px",
+            "color": "rgba(255, 255, 255, 0.5)",
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 0.1)",
               color: `${background.main}`,
@@ -529,20 +529,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
               className="command-filter-trigger"
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.5,
-                background: reviewStatus ? "rgba(19, 113, 91, 0.1)" : "transparent",
-                border: "1px solid",
-                borderColor: reviewStatus ? "rgba(19, 113, 91, 0.3)" : "rgba(0,0,0,0.12)",
-                borderRadius: "4px",
-                padding: "3px 8px",
-                cursor: "pointer",
-                fontSize: "12px",
-                color: reviewStatus ? "brand.primary" : "#666",
-                fontWeight: reviewStatus ? 500 : 400,
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": 0.5,
+                "background": reviewStatus ? "rgba(19, 113, 91, 0.1)" : "transparent",
+                "border": "1px solid",
+                "borderColor": reviewStatus ? "rgba(19, 113, 91, 0.3)" : "rgba(0,0,0,0.12)",
+                "borderRadius": "4px",
+                "padding": "3px 8px",
+                "cursor": "pointer",
+                "fontSize": "12px",
+                "color": reviewStatus ? "brand.primary" : "#666",
+                "fontWeight": reviewStatus ? 500 : 400,
+                "whiteSpace": "nowrap",
+                "transition": "all 0.15s ease",
                 "&:hover": {
                   borderColor: reviewStatus ? "rgba(19, 113, 91, 0.5)" : "rgba(0,0,0,0.25)",
                   background: reviewStatus ? "rgba(19, 113, 91, 0.15)" : "rgba(0,0,0,0.04)",
@@ -595,19 +595,19 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     }}
                     className="command-filter-option"
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "100%",
-                      padding: "8px 12px",
-                      border: "none",
-                      background:
+                      "display": "flex",
+                      "alignItems": "center",
+                      "width": "100%",
+                      "padding": "8px 12px",
+                      "border": "none",
+                      "background":
                         reviewStatus === option.value ? "rgba(19, 113, 91, 0.08)" : "transparent",
-                      cursor: "pointer",
-                      fontSize: "13px",
-                      color: reviewStatus === option.value ? "brand.primary" : "#666",
-                      fontWeight: reviewStatus === option.value ? 500 : 400,
-                      textAlign: "left",
-                      transition: "all 0.1s ease",
+                      "cursor": "pointer",
+                      "fontSize": "13px",
+                      "color": reviewStatus === option.value ? "brand.primary" : "#666",
+                      "fontWeight": reviewStatus === option.value ? 500 : 400,
+                      "textAlign": "left",
+                      "transition": "all 0.1s ease",
                       "&:hover": {
                         background:
                           reviewStatus === option.value
@@ -636,15 +636,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 setFilterDropdownOpen(false);
               }}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "none",
-                border: "none",
-                padding: "2px",
-                cursor: "pointer",
-                borderRadius: "3px",
-                color: "#999",
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "background": "none",
+                "border": "none",
+                "padding": "2px",
+                "cursor": "pointer",
+                "borderRadius": "3px",
+                "color": "#999",
                 "&:hover": {
                   background: "rgba(0,0,0,0.06)",
                   color: "#666",
@@ -802,15 +802,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             handleRemoveRecentSearch(e, recent.timestamp)
                           }
                           sx={{
-                            background: "none",
-                            border: "none",
-                            padding: "4px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            borderRadius: "4px",
-                            color: "#999",
+                            "background": "none",
+                            "border": "none",
+                            "padding": "4px",
+                            "cursor": "pointer",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "borderRadius": "4px",
+                            "color": "#999",
                             "&:hover": {
                               background: "rgba(0, 0, 0, 0.05)",
                               color: "#666",

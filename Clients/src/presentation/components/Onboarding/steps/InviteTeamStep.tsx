@@ -215,10 +215,10 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
           startIcon={<UserPlus size={16} />}
           isDisabled={isSending}
           sx={{
-            backgroundColor: "brand.primary",
-            fontSize: "14px",
-            padding: "10px 20px",
-            alignSelf: "flex-start",
+            "backgroundColor": "brand.primary",
+            "fontSize": "14px",
+            "padding": "10px 20px",
+            "alignSelf": "flex-start",
             "&:hover": {
               backgroundColor: "brand.primaryHover",
             },

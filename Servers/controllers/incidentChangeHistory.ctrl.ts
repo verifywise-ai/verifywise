@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getIncidentChangeHistory } from "../utils/incidentChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Get change history for a specific incident
  */
@@ -27,7 +28,7 @@ export const getIncidentHistory = async (req: Request, res: Response) => {
       ) || 0;
 
     if (isNaN(incidentId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid incident ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid incident ID")));
     }
 
     const result = await getIncidentChangeHistory(incidentId, req.organizationId!, limit, offset);
@@ -35,6 +36,6 @@ export const getIncidentHistory = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error("Error getting incident change history:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

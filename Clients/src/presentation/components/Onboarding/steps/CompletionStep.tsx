@@ -48,7 +48,7 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
     <Stack spacing={4} alignItems="center" justifyContent="center" sx={{ minHeight: "400px" }}>
       <Box
         sx={{
-          animation: "scaleIn 0.5s ease-out",
+          "animation": "scaleIn 0.5s ease-out",
           "@keyframes scaleIn": {
             from: {
               transform: "scale(0)",
@@ -97,9 +97,9 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
           onClick={onNext}
           endIcon={<Check size={16} />}
           sx={{
-            backgroundColor: `${brand.primary}`,
-            fontSize: "14px",
-            padding: "10px 24px",
+            "backgroundColor": `${brand.primary}`,
+            "fontSize": "14px",
+            "padding": "10px 24px",
             "&:hover": {
               backgroundColor: `${brand.primaryHover}`,
             },

@@ -25,8 +25,8 @@ export function PlayerControls({ player }: PlayerControlsProps) {
       <IconButton
         onClick={player.toggle}
         sx={{
-          color: `${background.main}`,
-          padding: "4px",
+          "color": `${background.main}`,
+          "padding": "4px",
           "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
         }}
       >

@@ -665,11 +665,11 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                       key={item.id}
                       onClick={() => onNavigateToEntity(connection.type, item.id)}
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        py: 0.5,
-                        cursor: "pointer",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "justifyContent": "space-between",
+                        "py": 0.5,
+                        "cursor": "pointer",
                         "&:hover": { color: "brand.primary" },
                       }}
                     >
@@ -706,10 +706,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
           fullWidth
           onClick={onClose}
           sx={{
-            borderColor: "border.dark",
-            color: "text.secondary",
-            textTransform: "none",
-            height: 34,
+            "borderColor": "border.dark",
+            "color": "text.secondary",
+            "textTransform": "none",
+            "height": 34,
             "&:hover": { borderColor: "text.disabled", backgroundColor: "background.accent" },
           }}
         >
@@ -722,9 +722,9 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
           onClick={handleGoToEntity}
           endIcon={<ExternalLink size={14} />}
           sx={{
-            backgroundColor: "brand.primary",
-            textTransform: "none",
-            height: 34,
+            "backgroundColor": "brand.primary",
+            "textTransform": "none",
+            "height": 34,
             "&:hover": { backgroundColor: "#0f5a48" },
           }}
         >

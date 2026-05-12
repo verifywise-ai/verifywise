@@ -229,9 +229,9 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
           text="New bias audit"
           onClick={() => setModalOpen(true)}
           sx={{
-            backgroundColor: palette.brand.primary,
-            border: `1px solid ${palette.brand.primary}`,
-            gap: 2,
+            "backgroundColor": palette.brand.primary,
+            "border": `1px solid ${palette.brand.primary}`,
+            "gap": 2,
             "&:hover": {
               backgroundColor: palette.brand.primaryHover,
             },
@@ -289,8 +289,8 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                         width: col.width,
                         ...(col.id === "action" && { minWidth: "60px", maxWidth: "60px" }),
                         ...(col.sortable && {
-                          cursor: "pointer",
-                          userSelect: "none",
+                          "cursor": "pointer",
+                          "userSelect": "none",
                           "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
                         }),
                       }}

@@ -219,15 +219,15 @@ const EventsTable: React.FC<IEventsTableProps> = ({
               key={column.id}
               sx={{
                 ...singleTheme.tableStyles.primary.header.cell,
-                width:
+                "width":
                   column.id === "description"
                     ? "auto"
                     : column.id === "id"
                       ? "80px"
                       : "fit-content",
-                whiteSpace: column.id === "description" ? "normal" : "nowrap",
-                cursor: "pointer",
-                userSelect: "none",
+                "whiteSpace": column.id === "description" ? "normal" : "nowrap",
+                "cursor": "pointer",
+                "userSelect": "none",
                 "&:hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.04)",
                 },
@@ -462,10 +462,10 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                     inputProps: { id: "pagination-dropdown" },
                     IconComponent: SelectorVertical,
                     sx: {
-                      ml: theme.spacing(4),
-                      mr: theme.spacing(12),
-                      minWidth: theme.spacing(20),
-                      textAlign: "left",
+                      "ml": theme.spacing(4),
+                      "mr": theme.spacing(12),
+                      "minWidth": theme.spacing(20),
+                      "textAlign": "left",
                       "&.Mui-focused > div": {
                         backgroundColor: theme.palette.background.main,
                       },
@@ -473,13 +473,13 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   },
                 }}
                 sx={{
-                  backgroundColor: theme.palette.grey[50],
-                  border: `1px solid ${theme.palette.border.light}`,
-                  borderTop: "none",
-                  borderRadius: `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
-                  color: theme.palette.text.secondary,
-                  height: "50px",
-                  minHeight: "50px",
+                  "backgroundColor": theme.palette.grey[50],
+                  "border": `1px solid ${theme.palette.border.light}`,
+                  "borderTop": "none",
+                  "borderRadius": `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
+                  "color": theme.palette.text.secondary,
+                  "height": "50px",
+                  "minHeight": "50px",
                   "& .MuiTablePagination-toolbar": {
                     minHeight: "50px",
                     paddingTop: "4px",

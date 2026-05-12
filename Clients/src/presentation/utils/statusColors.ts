@@ -14,43 +14,43 @@ export const statusColorSchemes = {
   // Vendor statuses
   vendors: {
     "in review": status.warning.text,
-    reviewed: status.success.text,
+    "reviewed": status.success.text,
     "requires follow up": status.error.text,
-    active: status.success.text,
-    inactive: status.default.text,
+    "active": status.success.text,
+    "inactive": status.default.text,
   },
 
   // Policy statuses
   policies: {
-    draft: status.default.text,
+    "draft": status.default.text,
     "in review": status.warning.text,
-    approved: status.success.text,
-    published: status.info.text,
-    archived: text.disabled,
+    "approved": status.success.text,
+    "published": status.info.text,
+    "archived": text.disabled,
   },
 
   // Training statuses
   trainings: {
-    planned: status.default.text,
+    "planned": status.default.text,
     "in progress": status.warning.text,
-    completed: status.success.text,
+    "completed": status.success.text,
   },
 
   // Vendor risk levels
   vendorRisks: {
     "very high": risk.critical.text,
-    high: risk.high.text,
-    medium: risk.medium.text,
-    low: risk.low.text,
+    "high": risk.high.text,
+    "medium": risk.medium.text,
+    "low": risk.low.text,
     "very low": risk.veryLow.text,
   },
 
   // Incident statuses
   incidents: {
-    open: status.error.text,
+    "open": status.error.text,
     "in progress": status.warning.text,
-    resolved: status.success.text,
-    closed: status.default.text,
+    "resolved": status.success.text,
+    "closed": status.default.text,
   },
 };
 

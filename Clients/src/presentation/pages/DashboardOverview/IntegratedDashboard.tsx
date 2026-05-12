@@ -357,10 +357,10 @@ const IntegratedDashboard: React.FC = () => {
         <Box
           data-joyride-id="dashboard-stats"
           sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "16px",
-            mb: "16px",
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": "16px",
+            "mb": "16px",
             "& > *": {
               flex: "1 1 0",
               minWidth: "150px",

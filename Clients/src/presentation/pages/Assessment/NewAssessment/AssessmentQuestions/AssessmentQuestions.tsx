@@ -126,8 +126,8 @@ const AssessmentQuestions = ({
                   borderColor: "border.dark",
                 }}
                 bodySx={{
-                  borderColor: "border.dark",
-                  borderRadius: "0 0 4px 4px",
+                  "borderColor": "border.dark",
+                  "borderRadius": "0 0 4px 4px",
                   "& .ProseMirror > p": {
                     margin: 0,
                   },
@@ -145,14 +145,14 @@ const AssessmentQuestions = ({
                 <Button
                   variant="contained"
                   sx={{
-                    mt: 2,
-                    borderRadius: 2,
-                    minWidth: 155, // ✅ minimum width
-                    height: 25,
-                    fontSize: 11,
-                    border: "1px solid #d0d5dd",
-                    backgroundColor: "white",
-                    color: "text.secondary",
+                    "mt": 2,
+                    "borderRadius": 2,
+                    "minWidth": 155, // ✅ minimum width
+                    "height": 25,
+                    "fontSize": 11,
+                    "border": "1px solid #d0d5dd",
+                    "backgroundColor": "white",
+                    "color": "text.secondary",
                     "&:hover": {
                       backgroundColor: "background.accent",
                       border: "1px solid #d0d5dd",

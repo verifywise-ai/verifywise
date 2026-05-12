@@ -28,6 +28,8 @@ import {
   Finding,
   VulnerabilityFindingType,
   VULNERABILITY_FINDING_TYPES,
+  SuppressionRule,
+  CreateSuppressionRequest,
 } from "../../domain/ai-detection/types";
 import {
   RiskScore,
@@ -591,4 +593,50 @@ export async function getScanVulnerabilityFindings(
     ),
   );
   return responses.flatMap((r) => r.findings);
+}
+
+// ============================================================================
+// Suppression Rules Operations
+// ============================================================================
+
+/**
+ * Create a finding suppression rule for the current organization.
+ */
+export async function createSuppression(
+  input: CreateSuppressionRequest,
+  signal?: AbortSignal,
+): Promise<SuppressionRule> {
+  const response = await apiServices.post<{ data: SuppressionRule }>(
+    `${BASE_URL}/suppressions`,
+    input,
+    { signal },
+  );
+  return response.data.data;
+}
+
+/**
+ * List finding suppression rules for the current organization.
+ *
+ * @param includeExpired - If true, also returns rules whose expires_at is in the past
+ */
+export async function listSuppressions(
+  options: { includeExpired?: boolean } = {},
+  signal?: AbortSignal,
+): Promise<SuppressionRule[]> {
+  const queryParams = new URLSearchParams();
+  if (options.includeExpired) queryParams.append("include_expired", "true");
+  const queryString = queryParams.toString();
+  const url = `${BASE_URL}/suppressions${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiServices.get<{ data: SuppressionRule[] }>(url, { signal });
+  return response.data.data;
+}
+
+/**
+ * Delete a finding suppression rule.
+ */
+export async function deleteSuppression(id: number, signal?: AbortSignal): Promise<void> {
+  await apiServices.delete<{ data: { id: number } }>(`${BASE_URL}/suppressions/${id}`, {
+    signal,
+  });
 }

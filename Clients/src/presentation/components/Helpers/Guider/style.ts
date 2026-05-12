@@ -5,10 +5,10 @@ export const useGuiderStyles = () => {
 
   return {
     helperFrameStyle: {
-      backgroundColor: theme.palette.background.fill,
-      border: `1px solid ${theme.palette.border.light}`,
-      p: theme.spacing(1.5),
-      borderRadius: "50%",
+      "backgroundColor": theme.palette.background.fill,
+      "border": `1px solid ${theme.palette.border.light}`,
+      "p": theme.spacing(1.5),
+      "borderRadius": "50%",
       "& svg": {
         "& path": {
           fill: theme.palette.text.secondary,

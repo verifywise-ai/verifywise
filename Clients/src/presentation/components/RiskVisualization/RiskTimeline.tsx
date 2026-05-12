@@ -163,11 +163,11 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                 <Box
                   key={event.id}
                   sx={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 2,
-                    mb: 3,
-                    cursor: onRiskSelect ? "pointer" : "default",
+                    "display": "flex",
+                    "alignItems": "flex-start",
+                    "gap": 2,
+                    "mb": 3,
+                    "cursor": onRiskSelect ? "pointer" : "default",
                     "&:hover": onRiskSelect
                       ? {
                           "& .timeline-card": {

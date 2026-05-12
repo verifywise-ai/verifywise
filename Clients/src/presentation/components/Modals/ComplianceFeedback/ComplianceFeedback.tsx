@@ -111,14 +111,14 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
         <Button
           variant="contained"
           sx={{
-            mt: 2,
-            borderRadius: 2,
-            minWidth: 155, // minimum width
-            height: 25,
-            fontSize: 11,
-            border: `1px solid ${borderPalette.dark}`,
-            backgroundColor: "white",
-            color: `${text.secondary}`,
+            "mt": 2,
+            "borderRadius": 2,
+            "minWidth": 155, // minimum width
+            "height": 25,
+            "fontSize": 11,
+            "border": `1px solid ${borderPalette.dark}`,
+            "backgroundColor": "white",
+            "color": `${text.secondary}`,
             "&:hover": {
               backgroundColor: `${background.accent}`,
               border: `1px solid ${borderPalette.dark}`,

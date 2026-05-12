@@ -255,21 +255,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
               onClick={() => handleItemClick(item)}
               disabled={isDisabled}
               sx={{
-                height: "32px",
-                gap: collapsed ? 0 : theme.spacing(4),
-                borderRadius: theme.shape.borderRadius,
-                px: theme.spacing(4),
-                justifyContent: collapsed ? "center" : "flex-start",
-                opacity: isDisabled ? 0.5 : 1,
-                cursor: isDisabled ? "not-allowed" : "pointer",
+                "height": "32px",
+                "gap": collapsed ? 0 : theme.spacing(4),
+                "borderRadius": theme.shape.borderRadius,
+                "px": theme.spacing(4),
+                "justifyContent": collapsed ? "center" : "flex-start",
+                "opacity": isDisabled ? 0.5 : 1,
+                "cursor": isDisabled ? "not-allowed" : "pointer",
                 "& .MuiListItemText-root": {
                   display: collapsed ? "none" : "block",
                 },
-                background:
+                "background":
                   isActive && !isDisabled
                     ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                     : "transparent",
-                border: isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+                "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
                 "&:hover": {
                   background: isDisabled
                     ? "transparent"
@@ -300,12 +300,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "16px",
-                  mr: 0,
+                  "minWidth": 0,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "width": "16px",
+                  "mr": 0,
                   "& svg": {
                     color: isDisabled
                       ? `${theme.palette.text.disabled} !important`
@@ -352,14 +352,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   label={item.count > 99 ? "99+" : item.count}
                   size="small"
                   sx={{
-                    height: "18px",
-                    fontSize: "10px",
-                    fontWeight: 500,
-                    backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
-                    color: "#475569",
-                    borderRadius: "9px",
-                    minWidth: "18px",
-                    maxWidth: "36px",
+                    "height": "18px",
+                    "fontSize": "10px",
+                    "fontWeight": 500,
+                    "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+                    "color": "#475569",
+                    "borderRadius": "9px",
+                    "minWidth": "18px",
+                    "maxWidth": "36px",
                     "& .MuiChip-label": {
                       px: "6px",
                       py: 0,
@@ -367,7 +367,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     },
-                    ml: "auto",
+                    "ml": "auto",
                   }}
                 />
               )}
@@ -380,21 +380,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
             onClick={() => handleItemClick(item)}
             disabled={isDisabled}
             sx={{
-              height: "32px",
-              gap: collapsed ? 0 : theme.spacing(4),
-              borderRadius: theme.shape.borderRadius,
-              px: theme.spacing(4),
-              justifyContent: collapsed ? "center" : "flex-start",
-              opacity: isDisabled ? 0.5 : 1,
-              cursor: isDisabled ? "not-allowed" : "pointer",
+              "height": "32px",
+              "gap": collapsed ? 0 : theme.spacing(4),
+              "borderRadius": theme.shape.borderRadius,
+              "px": theme.spacing(4),
+              "justifyContent": collapsed ? "center" : "flex-start",
+              "opacity": isDisabled ? 0.5 : 1,
+              "cursor": isDisabled ? "not-allowed" : "pointer",
               "& .MuiListItemText-root": {
                 display: collapsed ? "none" : "block",
               },
-              background:
+              "background":
                 isActive && !isDisabled
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                   : "transparent",
-              border: isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+              "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
               "&:hover": {
                 background: isDisabled
                   ? "transparent"
@@ -426,12 +426,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
           >
             <ListItemIcon
               sx={{
-                minWidth: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "16px",
-                mr: 0,
+                "minWidth": 0,
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "width": "16px",
+                "mr": 0,
                 "& svg": {
                   color: isDisabled
                     ? `${theme.palette.text.disabled} !important`
@@ -478,14 +478,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 label={item.count > 99 ? "99+" : item.count}
                 size="small"
                 sx={{
-                  height: "18px",
-                  fontSize: "10px",
-                  fontWeight: 500,
-                  backgroundColor: isActive ? "#f8fafc" : "#e2e8f0",
-                  color: "#475569",
-                  borderRadius: "9px",
-                  minWidth: "18px",
-                  maxWidth: "36px",
+                  "height": "18px",
+                  "fontSize": "10px",
+                  "fontWeight": 500,
+                  "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+                  "color": "#475569",
+                  "borderRadius": "9px",
+                  "minWidth": "18px",
+                  "maxWidth": "36px",
                   "& .MuiChip-label": {
                     px: "6px",
                     py: 0,
@@ -493,7 +493,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   },
-                  ml: "auto",
+                  "ml": "auto",
                 }}
               />
             )}
@@ -560,14 +560,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   <IconButton
                     onClick={handleHeartClick}
                     sx={{
-                      position: "absolute",
-                      top: "-16px",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      padding: 0,
-                      zIndex: 10,
+                      "position": "absolute",
+                      "top": "-16px",
+                      "left": "50%",
+                      "transform": "translateX(-50%)",
+                      "padding": 0,
+                      "zIndex": 10,
                       "&:hover": { backgroundColor: "transparent" },
-                      animation: heartReturning
+                      "animation": heartReturning
                         ? "slideDownBehind 0.5s ease-in forwards"
                         : "slideUpFromBehind 0.5s ease-out",
                       "@keyframes slideUpFromBehind": {
@@ -629,19 +629,19 @@ const SidebarShell: FC<SidebarShellProps> = ({
           <IconButton
             disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
             sx={{
-              position: "absolute",
-              right: delayedCollapsed ? "50%" : 0,
-              transform: delayedCollapsed ? "translateX(50%)" : "none",
-              top: 0,
-              bottom: 0,
-              display: "flex",
-              alignItems: "center",
-              p: theme.spacing(2),
-              borderRadius: theme.shape.borderRadius,
-              transition:
+              "position": "absolute",
+              "right": delayedCollapsed ? "50%" : 0,
+              "transform": delayedCollapsed ? "translateX(50%)" : "none",
+              "top": 0,
+              "bottom": 0,
+              "display": "flex",
+              "alignItems": "center",
+              "p": theme.spacing(2),
+              "borderRadius": theme.shape.borderRadius,
+              "transition":
                 "right 0.65s cubic-bezier(0.36, -0.01, 0, 0.77), transform 0.65s cubic-bezier(0.36, -0.01, 0, 0.77)",
               "& svg": {
-                opacity: 0.9,
+                "opacity": 0.9,
                 "& path": { stroke: theme.palette.text.tertiary },
               },
               "&:focus": { outline: "none" },
@@ -664,10 +664,10 @@ const SidebarShell: FC<SidebarShellProps> = ({
         component="nav"
         disablePadding
         sx={{
-          px: theme.spacing(8),
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
+          "px": theme.spacing(8),
+          "flex": 1,
+          "overflowY": "auto",
+          "overflowX": "hidden",
           "&::-webkit-scrollbar": { width: "4px" },
           "&::-webkit-scrollbar-track": { background: "transparent" },
           "&::-webkit-scrollbar-thumb": {
@@ -685,16 +685,16 @@ const SidebarShell: FC<SidebarShellProps> = ({
             <Box
               onClick={(e) => setProjectMenuAnchor(e.currentTarget)}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: "12px",
-                height: "34px",
-                borderRadius: theme.shape.borderRadius,
-                cursor: "pointer",
-                backgroundColor: theme.palette.background.main,
-                border: `1px solid ${theme.palette.border?.dark || borderPalette.dark}`,
-                transition: "all 0.2s ease",
+                "display": "flex",
+                "alignItems": "center",
+                "gap": 1,
+                "px": "12px",
+                "height": "34px",
+                "borderRadius": theme.shape.borderRadius,
+                "cursor": "pointer",
+                "backgroundColor": theme.palette.background.main,
+                "border": `1px solid ${theme.palette.border?.dark || borderPalette.dark}`,
+                "transition": "all 0.2s ease",
                 "&:hover": {
                   borderColor: brand.primary,
                 },
@@ -743,16 +743,16 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     setProjectMenuAnchor(null);
                   }}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    py: 1.25,
-                    px: 2,
-                    mx: 1,
-                    borderRadius: "6px",
-                    color: theme.palette.text.secondary,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "fontSize": "13px",
+                    "py": 1.25,
+                    "px": 2,
+                    "mx": 1,
+                    "borderRadius": "6px",
+                    "color": theme.palette.text.secondary,
+                    "cursor": "pointer",
+                    "transition": "all 0.15s ease",
                     "&:hover": {
                       backgroundColor: background.hover,
                       color: theme.palette.text.primary,
@@ -797,21 +797,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               setProjectMenuAnchor(null);
                             }}
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              fontSize: "13px",
-                              py: 1.25,
-                              px: 2,
-                              mx: 1,
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              backgroundColor: isSelected ? "#f0fdf4" : "transparent",
-                              borderLeft: isSelected
+                              "display": "flex",
+                              "alignItems": "center",
+                              "fontSize": "13px",
+                              "py": 1.25,
+                              "px": 2,
+                              "mx": 1,
+                              "borderRadius": "6px",
+                              "cursor": "pointer",
+                              "backgroundColor": isSelected ? "#f0fdf4" : "transparent",
+                              "borderLeft": isSelected
                                 ? `3px solid ${brand.primary}`
                                 : "3px solid transparent",
-                              color: theme.palette.text.primary,
-                              fontWeight: isSelected ? 500 : 400,
-                              transition: "all 0.15s ease",
+                              "color": theme.palette.text.primary,
+                              "fontWeight": isSelected ? 500 : 400,
+                              "transition": "all 0.15s ease",
                               "&:hover": {
                                 backgroundColor: isSelected ? "#f0fdf4" : "background.hover",
                               },
@@ -859,18 +859,18 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     setProjectMenuAnchor(null);
                   }}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    py: 1.25,
-                    px: 2,
-                    mx: 1,
-                    mt: projectSelector.allProjects.length === 0 ? 0.5 : 0,
-                    borderRadius: "6px",
-                    color: brand.primary,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "fontSize": "13px",
+                    "fontWeight": 500,
+                    "py": 1.25,
+                    "px": 2,
+                    "mx": 1,
+                    "mt": projectSelector.allProjects.length === 0 ? 0.5 : 0,
+                    "borderRadius": "6px",
+                    "color": brand.primary,
+                    "cursor": "pointer",
+                    "transition": "all 0.15s ease",
                     "&:hover": {
                       backgroundColor: "#f0fdf4",
                     },
@@ -913,15 +913,15 @@ const SidebarShell: FC<SidebarShellProps> = ({
               <Box
                 onClick={isCollapsible ? () => toggleGroup(group.name) : undefined}
                 sx={{
-                  display: collapsed ? "none" : "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  px: theme.spacing(4),
-                  pt: theme.spacing(4.5),
-                  pb: theme.spacing(1.5),
-                  mt: theme.spacing(3),
-                  cursor: isCollapsible ? "pointer" : "default",
-                  userSelect: "none",
+                  "display": collapsed ? "none" : "flex",
+                  "alignItems": "center",
+                  "justifyContent": "space-between",
+                  "px": theme.spacing(4),
+                  "pt": theme.spacing(4.5),
+                  "pb": theme.spacing(1.5),
+                  "mt": theme.spacing(3),
+                  "cursor": isCollapsible ? "pointer" : "default",
+                  "userSelect": "none",
                   "&:hover": isCollapsible ? { opacity: 0.8 } : {},
                 }}
               >
@@ -976,10 +976,10 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     onClick={item.onClick}
                     disableRipple
                     sx={{
-                      height: "30px",
-                      borderRadius: "4px",
-                      px: theme.spacing(4),
-                      mb: 0.25,
+                      "height": "30px",
+                      "borderRadius": "4px",
+                      "px": theme.spacing(4),
+                      "mb": 0.25,
                       "&:hover": { backgroundColor: "#F9F9F9" },
                     }}
                   >

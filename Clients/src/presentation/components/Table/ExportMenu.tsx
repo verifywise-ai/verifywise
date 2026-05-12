@@ -116,8 +116,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           onClick={handlePrint}
           onMouseEnter={handlePrintHover}
           sx={{
-            fontSize: "13px",
-            padding: "8px 12px",
+            "fontSize": "13px",
+            "padding": "8px 12px",
             "&:hover": {
               backgroundColor: `${background.accent} !important`,
             },
@@ -134,12 +134,12 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             e.stopPropagation();
           }}
           sx={{
-            fontSize: "13px",
-            padding: "8px 12px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            backgroundColor: exportAnchorEl ? `${background.accent}` : "transparent",
+            "fontSize": "13px",
+            "padding": "8px 12px",
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "backgroundColor": exportAnchorEl ? `${background.accent}` : "transparent",
             "&:hover": {
               backgroundColor: `${background.accent} !important`,
             },
@@ -172,11 +172,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <MenuItem
           onClick={() => handleExport("pdf")}
           sx={{
-            fontSize: "13px",
-            padding: "8px 12px",
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
+            "fontSize": "13px",
+            "padding": "8px 12px",
+            "display": "flex",
+            "gap": "12px",
+            "alignItems": "center",
             "&:hover": {
               backgroundColor: `${background.accent}`,
             },
@@ -192,11 +192,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <MenuItem
           onClick={() => handleExport("csv")}
           sx={{
-            fontSize: "13px",
-            padding: "8px 12px",
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
+            "fontSize": "13px",
+            "padding": "8px 12px",
+            "display": "flex",
+            "gap": "12px",
+            "alignItems": "center",
             "&:hover": {
               backgroundColor: `${background.accent}`,
             },
@@ -212,11 +212,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <MenuItem
           onClick={() => handleExport("excel")}
           sx={{
-            fontSize: "13px",
-            padding: "8px 12px",
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
+            "fontSize": "13px",
+            "padding": "8px 12px",
+            "display": "flex",
+            "gap": "12px",
+            "alignItems": "center",
             "&:hover": {
               backgroundColor: `${background.accent}`,
             },

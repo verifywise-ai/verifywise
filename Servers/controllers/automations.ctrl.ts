@@ -11,6 +11,7 @@ import {
 import { sequelize } from "../database/db";
 import { ITenantAutomationAction } from "../domain.layer/interfaces/i.tenantAutomationAction";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { translateError } from "../utils/i18n.utils";
 import {
   getAutomationExecutionLogs,
   getAutomationExecutionStats,
@@ -22,7 +23,7 @@ export const getAllAutomationTriggers = async (_req: Request, res: Response) => 
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error("Error fetching automation triggers:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
 };
 
@@ -32,7 +33,7 @@ export const getAllAutomationActionsByTriggerId = async (req: Request, res: Resp
     10,
   );
   if (isNaN(triggerId)) {
-    return res.status(400).json({ message: "Invalid trigger ID" });
+    return res.status(400).json({ message: req.t!("Invalid trigger ID") });
   }
 
   try {
@@ -40,7 +41,7 @@ export const getAllAutomationActionsByTriggerId = async (req: Request, res: Resp
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error(`Error fetching actions for trigger ID ${triggerId}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -50,7 +51,7 @@ export const getAllAutomations = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error("Error fetching automations:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -58,18 +59,18 @@ export const getAutomationById = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res.status(400).json({ message: "Invalid automation ID" });
+    return res.status(400).json({ message: req.t!("Invalid automation ID") });
   }
 
   try {
     const automation = await getAutomationByIdQuery(id, req.organizationId!);
     if (!automation) {
-      return res.status(404).json(STATUS_CODE[404]({ message: "Automation not found" }));
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Automation not found") }));
     }
     return res.status(200).json(STATUS_CODE[200](automation));
   } catch (error) {
     console.error(`Error fetching automation with ID ${id}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -85,7 +86,7 @@ export const createAutomation = async (req: Request, res: Response) => {
       await transaction.rollback();
       return res.status(400).json(
         STATUS_CODE[400]({
-          message: "Missing required fields: triggerId, name, actions",
+          message: req.t!("Missing required fields: triggerId, name, actions"),
         }),
       );
     }
@@ -122,14 +123,14 @@ export const createAutomation = async (req: Request, res: Response) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Error creating automation:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
 export const updateAutomation = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   if (isNaN(id)) {
-    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid automation ID") }));
   }
 
   const transaction = await sequelize.transaction();
@@ -176,7 +177,7 @@ export const updateAutomation = async (req: Request, res: Response) => {
   } catch (error) {
     await transaction.rollback();
     console.error(`Error updating automation with ID ${id}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -184,7 +185,7 @@ export const deleteAutomationById = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid automation ID") }));
   }
 
   const transaction = await sequelize.transaction();
@@ -192,14 +193,16 @@ export const deleteAutomationById = async (req: Request, res: Response) => {
     const deleted = await deleteAutomationByIdQuery(id, req.organizationId!, transaction);
     if (!deleted) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]({ message: "Automation not found" }));
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Automation not found") }));
     }
     await transaction.commit();
-    return res.status(200).json(STATUS_CODE[200]({ message: "Automation deleted successfully" }));
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ message: req.t!("Automation deleted successfully") }));
   } catch (error) {
     await transaction.rollback();
     console.error(`Error deleting automation with ID ${id}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -207,7 +210,7 @@ export const getAutomationHistory = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid automation ID") }));
   }
 
   try {
@@ -249,7 +252,7 @@ export const getAutomationHistory = async (req: Request, res: Response) => {
     );
   } catch (error) {
     console.error(`Error fetching automation history for ID ${id}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -257,7 +260,7 @@ export const getAutomationStats = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res.status(400).json(STATUS_CODE[400]({ message: "Invalid automation ID" }));
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid automation ID") }));
   }
 
   try {
@@ -265,6 +268,6 @@ export const getAutomationStats = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](stats));
   } catch (error) {
     console.error(`Error fetching automation stats for ID ${id}:`, error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

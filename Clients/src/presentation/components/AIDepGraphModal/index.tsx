@@ -129,7 +129,7 @@ const AIDepGraphModal: React.FC<AIDepGraphModalProps> = ({
               size="small"
               aria-label="Close AI dependency graph modal"
               sx={{
-                color: "text.secondary",
+                "color": "text.secondary",
                 "&:hover": {
                   bgcolor: "action.hover",
                 },

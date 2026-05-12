@@ -378,13 +378,13 @@ export default function ProjectsList() {
               label={projects.length}
               size="small"
               sx={{
-                backgroundColor: palette.status.default.bg,
-                color: palette.status.default.text,
-                fontWeight: 600,
-                fontSize: "11px",
-                height: "20px",
-                minWidth: "20px",
-                borderRadius: "10px",
+                "backgroundColor": palette.status.default.bg,
+                "color": palette.status.default.text,
+                "fontWeight": 600,
+                "fontSize": "11px",
+                "height": "20px",
+                "minWidth": "20px",
+                "borderRadius": "10px",
                 "& .MuiChip-label": {
                   padding: "0 6px",
                 },
@@ -471,7 +471,7 @@ export default function ProjectsList() {
                     onClick={() => handleOpenProject(project.id)}
                     sx={{
                       ...singleTheme.tableStyles.primary.body.row,
-                      cursor: "pointer",
+                      "cursor": "pointer",
                       "&:hover": {
                         backgroundColor: palette.background.accent,
                       },
@@ -507,18 +507,18 @@ export default function ProjectsList() {
                         }
                         label={getUseCaseLabel(project.useCase)}
                         sx={{
-                          backgroundColor:
+                          "backgroundColor":
                             project.useCase === "rag"
                               ? palette.accent.blue.bg
                               : palette.status.success.bg,
-                          color:
+                          "color":
                             project.useCase === "rag"
                               ? palette.accent.blue.text
                               : palette.status.success.text,
-                          fontWeight: 500,
-                          fontSize: "12px",
-                          height: "24px",
-                          borderRadius: "4px",
+                          "fontWeight": 500,
+                          "fontSize": "12px",
+                          "height": "24px",
+                          "borderRadius": "4px",
                           "& .MuiChip-icon": {
                             color: "inherit",
                             marginLeft: "8px",
@@ -587,7 +587,7 @@ export default function ProjectsList() {
                           size="small"
                           onClick={(e) => handleMenuOpen(e, project)}
                           sx={{
-                            color: palette.text.tertiary,
+                            "color": palette.text.tertiary,
                             "&:hover": {
                               backgroundColor: "rgba(0, 0, 0, 0.04)",
                             },

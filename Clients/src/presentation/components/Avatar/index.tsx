@@ -57,11 +57,11 @@ const AvatarComponent = ({ src, small, sx }: AvatarProps) => {
       alt={`${user.firstName} ${user.lastName}`}
       src={src ? src : user?.avatarImage ? image : "../../assets/imgs/profile.jpg"}
       sx={{
-        fontSize: small ? theme.typography.body1.fontSize : theme.typography.h6.fontSize,
-        color: theme.palette.common.white,
-        fontWeight: 400,
-        backgroundColor: stringToColor(`${user?.firstName} ${user?.lastName}`),
-        display: "inline-flex",
+        "fontSize": small ? theme.typography.body1.fontSize : theme.typography.h6.fontSize,
+        "color": theme.palette.common.white,
+        "fontWeight": 400,
+        "backgroundColor": stringToColor(`${user?.firstName} ${user?.lastName}`),
+        "display": "inline-flex",
         "&::before": {
           content: `""`,
           position: "absolute",

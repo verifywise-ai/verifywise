@@ -144,7 +144,7 @@ const CustomizableBasicTable = ({
                 key={row.id}
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
-                  height: "36px",
+                  "height": "36px",
                   "&:hover": { backgroundColor: `${background.surface}`, cursor: "pointer" },
                 }}
                 onClick={(event) => onRowClickHandler(event, row)}

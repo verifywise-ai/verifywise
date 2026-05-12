@@ -1,6 +1,6 @@
 import { FC, useContext, useEffect, useState, useRef, useCallback, memo } from "react";
 import { Stack, Box, useTheme, Avatar, Typography, Theme } from "@mui/material";
-import { MessagePrimitive, useMessagePartText, useAssistantState } from "@assistant-ui/react";
+import { MessagePrimitive, useMessagePartText, useAuiState } from "@assistant-ui/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -166,7 +166,7 @@ const DefaultToolFallback: FC = () => null;
 
 const MessageTimestamp: FC = () => {
   const theme = useTheme();
-  const message = useAssistantState(({ message }) => message);
+  const message = useAuiState((s) => s.message);
 
   // Skip welcome message (id: 'welcome') which is generated client-side
   if (!message?.createdAt || message.id === "welcome") {
@@ -196,7 +196,7 @@ const MessageTimestamp: FC = () => {
 const CopyButton: FC<{ bubbleRef: React.RefObject<HTMLDivElement | null> }> = ({ bubbleRef }) => {
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
-  const message = useAssistantState(({ message }) => message);
+  const message = useAuiState((s) => s.message);
 
   // Don't show while message is still generating or for welcome message
   if (message.status?.type === "running" || message.id === "welcome") {
@@ -231,14 +231,14 @@ const CopyButton: FC<{ bubbleRef: React.RefObject<HTMLDivElement | null> }> = ({
     <Box
       onClick={handleCopy}
       sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
-        cursor: "pointer",
-        color: copied
+        "display": "inline-flex",
+        "alignItems": "center",
+        "gap": "4px",
+        "cursor": "pointer",
+        "color": copied
           ? (theme.palette.success?.main ?? "#4CAF50")
           : (theme.palette.text.tertiary ?? theme.palette.text.disabled),
-        ml: 0.5,
+        "ml": 0.5,
         "&:hover": {
           color: copied ? (theme.palette.success?.main ?? "#4CAF50") : theme.palette.text.primary,
         },
@@ -328,12 +328,12 @@ const ThinkingIndicator: FC = () => {
               <Box
                 key={index}
                 sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: theme.palette.text.accent ?? theme.palette.text.secondary,
-                  animation: "pulse 1.4s infinite",
-                  animationDelay: `${delay}s`,
+                  "width": 8,
+                  "height": 8,
+                  "borderRadius": "50%",
+                  "backgroundColor": theme.palette.text.accent ?? theme.palette.text.secondary,
+                  "animation": "pulse 1.4s infinite",
+                  "animationDelay": `${delay}s`,
                   "@keyframes pulse": {
                     "0%, 60%, 100%": { opacity: 0.3 },
                     "30%": { opacity: 1 },

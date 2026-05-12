@@ -331,19 +331,19 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
           onChange={handleFormatChange}
           aria-label="report format"
           sx={{
-            width: "100%",
+            "width": "100%",
             "& .MuiToggleButtonGroup-grouped": {
-              flex: 1,
-              border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px !important",
+              "flex": 1,
+              "border": `1px solid ${theme.palette.border.dark}`,
+              "borderRadius": "4px !important",
               "&:not(:first-of-type)": {
                 marginLeft: "8px",
                 borderLeft: `1px solid ${theme.palette.border.dark}`,
               },
               "&.Mui-selected": {
-                backgroundColor: theme.palette.background.accent,
-                borderColor: "brand.primary",
-                color: "brand.primary",
+                "backgroundColor": theme.palette.background.accent,
+                "borderColor": "brand.primary",
+                "color": "brand.primary",
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                 },

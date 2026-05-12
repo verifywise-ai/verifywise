@@ -52,6 +52,16 @@ const preprocessLatex = (text: string): string => {
   return processed;
 };
 
+// For bias and toxicity the raw score IS the level (0 = none = best, 1 = worst).
+// Display it directly — no inversion needed.
+const getDisplayScore = (score: number, _metricName: string): number => score;
+
+// Metrics where a lower displayed score is better (green = low, red = high)
+const lowerIsBetter = (metricName: string): boolean => {
+  const n = metricName.toLowerCase();
+  return n.includes("bias") || n.includes("toxicity") || n.includes("hallucination");
+};
+
 // Convert camelCase or concatenated metric names to proper display format
 // e.g., "turnRelevancy" → "Turn Relevancy", "Knowledgeretention" → "Knowledge Retention"
 const formatMetricName = (name: string): string => {
@@ -85,9 +95,9 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
   return (
     <Box
       sx={{
-        fontSize: 14,
-        color: palette.text.secondary,
-        lineHeight: 1.7,
+        "fontSize": 14,
+        "color": palette.text.secondary,
+        "lineHeight": 1.7,
         "& p": { mb: 1, mt: 0 },
         "& h1": { fontSize: 16, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
         "& h2": { fontSize: 15, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
@@ -105,11 +115,11 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           color: "#0f766e",
         },
         "& pre": {
-          backgroundColor: "#1e293b",
-          borderRadius: "6px",
-          p: 2,
-          my: 1.5,
-          overflow: "auto",
+          "backgroundColor": "#1e293b",
+          "borderRadius": "6px",
+          "p": 2,
+          "my": 1.5,
+          "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
             color: "#e2e8f0",
@@ -432,12 +442,12 @@ export default function ExperimentDetailContent({
           component="span"
           onClick={onBack}
           sx={{
-            fontSize: "13px",
-            color: palette.brand.primary,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textDecorationStyle: "dashed",
-            textUnderlineOffset: "3px",
+            "fontSize": "13px",
+            "color": palette.brand.primary,
+            "cursor": "pointer",
+            "textDecoration": "underline",
+            "textDecorationStyle": "dashed",
+            "textUnderlineOffset": "3px",
             "&:hover": {
               color: palette.brand.primaryHover,
             },
@@ -451,9 +461,9 @@ export default function ExperimentDetailContent({
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Box
           sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 0.5,
+            "display": "inline-flex",
+            "alignItems": "center",
+            "gap": 0.5,
             "&:hover .edit-icon": {
               opacity: 1,
             },
@@ -473,7 +483,7 @@ export default function ExperimentDetailContent({
                 autoFocus
                 disabled={saving}
                 sx={{
-                  minWidth: "400px",
+                  "minWidth": "400px",
                   "& .MuiOutlinedInput-root": {
                     fontSize: "18px",
                     fontWeight: 700,
@@ -507,9 +517,9 @@ export default function ExperimentDetailContent({
                 onClick={handleStartEditName}
                 className="edit-icon"
                 sx={{
-                  opacity: 0,
-                  transition: "opacity 0.2s",
-                  color: palette.text.disabled,
+                  "opacity": 0,
+                  "transition": "opacity 0.2s",
+                  "color": palette.text.disabled,
                   "&:hover": {
                     color: palette.brand.primary,
                     backgroundColor: "rgba(19, 113, 91, 0.1)",
@@ -545,8 +555,8 @@ export default function ExperimentDetailContent({
             }}
             startIcon={<Download size={14} />}
             sx={{
-              borderColor: palette.border.dark,
-              color: palette.text.secondary,
+              "borderColor": palette.border.dark,
+              "color": palette.text.secondary,
               "&:hover": {
                 borderColor: palette.brand.primary,
                 color: palette.brand.primary,
@@ -569,8 +579,8 @@ export default function ExperimentDetailContent({
             }}
             startIcon={<Copy size={14} />}
             sx={{
-              borderColor: palette.border.dark,
-              color: palette.text.secondary,
+              "borderColor": palette.border.dark,
+              "color": palette.text.secondary,
               "&:hover": {
                 borderColor: palette.brand.primary,
                 color: palette.brand.primary,
@@ -589,8 +599,8 @@ export default function ExperimentDetailContent({
             isDisabled={rerunLoading || experiment.status === "running"}
             startIcon={<RotateCcw size={14} />}
             sx={{
-              backgroundColor: palette.brand.primary,
-              border: `1px solid ${palette.brand.primary}`,
+              "backgroundColor": palette.brand.primary,
+              "border": `1px solid ${palette.brand.primary}`,
               "&:hover": {
                 backgroundColor: palette.brand.primaryHover,
                 border: `1px solid ${palette.brand.primaryHover}`,
@@ -648,9 +658,9 @@ export default function ExperimentDetailContent({
               </Typography>
               <Box
                 sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
+                  "display": "inline-flex",
+                  "alignItems": "center",
+                  "gap": 0.5,
                   "&:hover .edit-icon": { opacity: 1 },
                 }}
               >
@@ -668,7 +678,7 @@ export default function ExperimentDetailContent({
                       autoFocus
                       disabled={saving}
                       placeholder="Add a description..."
-                      sx={{ minWidth: "250px", "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
+                      sx={{ "minWidth": "250px", "& .MuiOutlinedInput-root": { fontSize: "13px" } }}
                     />
                     <IconButton
                       size="small"
@@ -709,10 +719,10 @@ export default function ExperimentDetailContent({
                       onClick={handleStartEditDescription}
                       className="edit-icon"
                       sx={{
-                        opacity: 0,
-                        transition: "opacity 0.2s",
-                        color: palette.text.disabled,
-                        padding: "2px",
+                        "opacity": 0,
+                        "transition": "opacity 0.2s",
+                        "color": palette.text.disabled,
+                        "padding": "2px",
                         "&:hover": { color: palette.brand.primary },
                       }}
                     >
@@ -841,18 +851,18 @@ export default function ExperimentDetailContent({
           const displayNameToKey: Record<string, string> = {
             // Single-turn metrics
             "Answer Relevancy": "answerRelevancy",
-            Faithfulness: "faithfulness",
+            "Faithfulness": "faithfulness",
             "Contextual Relevancy": "contextualRelevancy",
             "Contextual Recall": "contextualRecall",
             "Contextual Precision": "contextualPrecision",
-            Bias: "bias",
-            Toxicity: "toxicity",
-            Hallucination: "hallucination",
+            "Bias": "bias",
+            "Toxicity": "toxicity",
+            "Hallucination": "hallucination",
             "Tool Correctness": "toolCorrectness",
             "Answer Correctness": "answerCorrectness",
-            Coherence: "coherence",
-            Tonality: "tonality",
-            Safety: "safety",
+            "Coherence": "coherence",
+            "Tonality": "tonality",
+            "Safety": "safety",
             // Conversational metrics (multi-turn)
             "Turn Relevancy": "turnRelevancy",
             "Knowledge Retention": "knowledgeRetention",
@@ -997,8 +1007,10 @@ export default function ExperimentDetailContent({
             },
           };
 
-          // Get score color based on value thresholds
-          // For inverse metrics (bias, toxicity), lower is better
+          // Get score color based on value thresholds.
+          // Hallucination is the only truly inverse metric (0 = no hallucination = best).
+          // Bias and Toxicity use the same 0→1 scale as quality metrics: the EvalServer
+          // stores score=1 when the output is unbiased/non-toxic and score=0 when it fails.
           const getScoreColor = (score: number | undefined, metricKey?: string) => {
             if (score === undefined)
               return {
@@ -1007,10 +1019,8 @@ export default function ExperimentDetailContent({
                 icon: palette.status.default.text,
               };
 
-            // Check if this is an inverse metric (lower is better)
-            const isInverse =
-              metricKey &&
-              (metricKey.toLowerCase() === "bias" || metricKey.toLowerCase() === "toxicity");
+            // Lower-is-better metrics: hallucination, bias, toxicity
+            const isInverse = metricKey && lowerIsBetter(metricKey);
 
             if (isInverse) {
               // For inverse metrics: low = good (green), high = bad (red)
@@ -1210,14 +1220,14 @@ export default function ExperimentDetailContent({
                 key={metric.key}
                 elevation={0}
                 sx={{
-                  position: "relative",
-                  overflow: "hidden",
-                  background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
-                  border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
-                  transition: "all 0.2s ease",
+                  "position": "relative",
+                  "overflow": "hidden",
+                  "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
+                  "border": `1px solid ${palette.border.dark}`,
+                  "borderRadius": "4px",
+                  "transition": "all 0.2s ease",
                   "&:hover": {
-                    background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
+                    "background": `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
                     "& .background-icon": {
                       opacity: 0.04,
                       transform: "translateY(-10px)",
@@ -1244,9 +1254,9 @@ export default function ExperimentDetailContent({
 
                 <CardContent
                   sx={{
-                    p: "16px",
-                    position: "relative",
-                    zIndex: 1,
+                    "p": "16px",
+                    "position": "relative",
+                    "zIndex": 1,
                     "&:last-child": { pb: "16px" },
                   }}
                 >
@@ -1322,7 +1332,9 @@ export default function ExperimentDetailContent({
                         fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                       }}
                     >
-                      {avgValue === undefined ? "N/A" : `${(avgValue * 100).toFixed(1)}%`}
+                      {avgValue === undefined
+                        ? "N/A"
+                        : `${(getDisplayScore(avgValue, metric.label) * 100).toFixed(1)}%`}
                     </Typography>
                     {scores.length >= 2 && <Sparkline scores={scores} color={colors.icon} />}
                   </Box>
@@ -1594,12 +1606,42 @@ export default function ExperimentDetailContent({
                           </td>
                           {metricColumns.map((metric) => {
                             const score = getMetricScore(log, metric);
-                            const isInverseMetric =
-                              metric.toLowerCase() === "bias" ||
-                              metric.toLowerCase() === "toxicity" ||
-                              metric.toLowerCase() === "hallucination";
+                            // Prefer the backend-computed passed flag; fall back to score >= 0.5
+                            const rawMetricData = (() => {
+                              const ms = log.metadata?.metric_scores as
+                                | Record<string, number | { score?: number; passed?: boolean }>
+                                | undefined;
+                              if (!ms) return undefined;
+                              return (
+                                ms[metric] ??
+                                ms[`G-Eval (${metric})`] ??
+                                ms[
+                                  Object.keys(ms).find(
+                                    (k) =>
+                                      k.toLowerCase() === metric.toLowerCase() ||
+                                      k.replace(/^G-Eval\s*\((.+)\)$/i, "$1").toLowerCase() ===
+                                        metric.toLowerCase(),
+                                  ) ?? ""
+                                ]
+                              );
+                            })();
+                            const backendPassedRaw =
+                              typeof rawMetricData === "object" &&
+                              rawMetricData !== null &&
+                              "passed" in rawMetricData
+                                ? (rawMetricData as { passed?: boolean }).passed
+                                : undefined;
+                            // For lower-is-better metrics the backend's passed flag is inverted
+                            // (it uses score >= threshold). Flip it so green = low = good.
                             const passed =
-                              score !== null && (isInverseMetric ? score < 0.5 : score >= 0.5);
+                              score !== null &&
+                              (backendPassedRaw !== undefined
+                                ? lowerIsBetter(metric)
+                                  ? !backendPassedRaw
+                                  : backendPassedRaw
+                                : lowerIsBetter(metric)
+                                  ? score <= 0.5
+                                  : score >= 0.5);
                             return (
                               <td
                                 key={metric}
@@ -1620,7 +1662,9 @@ export default function ExperimentDetailContent({
                                     score !== null ? palette.text.secondary : palette.text.disabled,
                                 }}
                               >
-                                {score !== null ? `${(score * 100).toFixed(0)}%` : "-"}
+                                {score !== null
+                                  ? `${(getDisplayScore(score, metric) * 100).toFixed(0)}%`
+                                  : "-"}
                               </td>
                             );
                           })}
@@ -1671,11 +1715,16 @@ export default function ExperimentDetailContent({
                 const metricScores = selectedLog.metadata?.metric_scores || {};
                 const scoreEntries = Object.entries(metricScores);
                 const passedCount = scoreEntries.filter(([name, data]) => {
+                  if (typeof data === "object" && data !== null && "passed" in (data as object)) {
+                    const bp = (data as { passed?: boolean }).passed;
+                    // Backend uses score >= threshold for all metrics — flip for lower-is-better ones
+                    return lowerIsBetter(name) ? bp === false : bp === true;
+                  }
                   const score =
                     typeof data === "number" ? data : (data as { score?: number })?.score;
-                  const isInverse =
-                    name.toLowerCase().includes("bias") || name.toLowerCase().includes("toxicity");
-                  return typeof score === "number" && (isInverse ? score < 0.5 : score >= 0.5);
+                  return (
+                    typeof score === "number" && (lowerIsBetter(name) ? score <= 0.5 : score >= 0.5)
+                  );
                 }).length;
 
                 return (
@@ -1699,10 +1748,10 @@ export default function ExperimentDetailContent({
                           isDisabled={isFirstSample}
                           icon={<ChevronLeft size={16} />}
                           sx={{
-                            minWidth: "100px",
-                            height: "34px",
-                            border: `1px solid ${palette.border.dark}`,
-                            color: isFirstSample ? palette.text.disabled : palette.text.secondary,
+                            "minWidth": "100px",
+                            "height": "34px",
+                            "border": `1px solid ${palette.border.dark}`,
+                            "color": isFirstSample ? palette.text.disabled : palette.text.secondary,
                             "&:hover:not(.Mui-disabled)": {
                               backgroundColor: palette.background.accent,
                               border: `1px solid ${palette.border.dark}`,
@@ -1716,15 +1765,15 @@ export default function ExperimentDetailContent({
                           isDisabled={isLastSample}
                           icon={<ChevronRight size={16} />}
                           sx={{
-                            minWidth: "100px",
-                            height: "34px",
-                            border: `1px solid ${palette.border.dark}`,
-                            color: isLastSample ? palette.text.disabled : palette.text.secondary,
+                            "minWidth": "100px",
+                            "height": "34px",
+                            "border": `1px solid ${palette.border.dark}`,
+                            "color": isLastSample ? palette.text.disabled : palette.text.secondary,
                             "&:hover:not(.Mui-disabled)": {
                               backgroundColor: palette.background.accent,
                               border: `1px solid ${palette.border.dark}`,
                             },
-                            flexDirection: "row-reverse",
+                            "flexDirection": "row-reverse",
                             "& .MuiButton-startIcon": {
                               marginLeft: "8px",
                               marginRight: "-4px",
@@ -1955,13 +2004,21 @@ export default function ExperimentDetailContent({
                                   typeof metricData === "number"
                                     ? metricData
                                     : (metricData as { score?: number })?.score;
-                                const isInverse =
-                                  metricName.toLowerCase().includes("bias") ||
-                                  metricName.toLowerCase().includes("toxicity") ||
-                                  metricName.toLowerCase().includes("hallucination");
+                                // Use the backend-computed passed flag when present.
+                                // It already handles per-metric thresholds and semantics.
+                                const backendPassed =
+                                  typeof metricData === "object" &&
+                                  metricData !== null &&
+                                  "passed" in (metricData as object)
+                                    ? (metricData as { passed?: boolean }).passed
+                                    : undefined;
                                 const passed =
-                                  typeof score === "number" &&
-                                  (isInverse ? score < 0.5 : score >= 0.5);
+                                  backendPassed !== undefined
+                                    ? lowerIsBetter(metricName)
+                                      ? !backendPassed
+                                      : backendPassed
+                                    : typeof score === "number" &&
+                                      (lowerIsBetter(metricName) ? score <= 0.5 : score >= 0.5);
                                 const rawReason =
                                   typeof metricData === "object" && metricData !== null
                                     ? (metricData as { reason?: string }).reason
@@ -2007,7 +2064,7 @@ export default function ExperimentDetailContent({
                                         }}
                                       >
                                         {typeof score === "number"
-                                          ? `${(score * 100).toFixed(0)}%`
+                                          ? `${(getDisplayScore(score, metricName) * 100).toFixed(0)}%`
                                           : "N/A"}
                                       </Typography>
                                     </Stack>
@@ -2025,7 +2082,7 @@ export default function ExperimentDetailContent({
                                       <Box
                                         sx={{
                                           height: "100%",
-                                          width: `${(typeof score === "number" ? score : 0) * 100}%`,
+                                          width: `${(typeof score === "number" ? getDisplayScore(score, metricName) : 0) * 100}%`,
                                           backgroundColor: passed
                                             ? palette.status.success.text
                                             : palette.status.error.text,

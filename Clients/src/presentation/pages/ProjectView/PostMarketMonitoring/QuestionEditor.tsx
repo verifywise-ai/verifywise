@@ -199,7 +199,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
                     onClick={() => handleRemoveOption(index)}
                     size="small"
                     sx={{
-                      color: theme.palette.other.icon,
+                      "color": theme.palette.other.icon,
                       "&:hover": {
                         backgroundColor: theme.palette.status.error.light,
                         color: theme.palette.status.error.text,
@@ -215,16 +215,16 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
                 type="button"
                 onClick={handleAddOption}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  padding: "8px 12px",
-                  border: `1px dashed ${theme.palette.border.dark}`,
-                  borderRadius: "4px",
-                  backgroundColor: "transparent",
-                  color: theme.palette.other.icon,
-                  fontSize: 13,
-                  cursor: "pointer",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": 1,
+                  "padding": "8px 12px",
+                  "border": `1px dashed ${theme.palette.border.dark}`,
+                  "borderRadius": "4px",
+                  "backgroundColor": "transparent",
+                  "color": theme.palette.other.icon,
+                  "fontSize": 13,
+                  "cursor": "pointer",
                   "&:hover": {
                     borderColor: theme.palette.other.icon,
                     backgroundColor: theme.palette.background.accent,

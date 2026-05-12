@@ -75,9 +75,9 @@ const LoginLoadingOverlay: React.FC = () => {
                     key={`${wordIndex}-${charIndex}`}
                     component="span"
                     sx={{
-                      display: "inline-block",
-                      animation: `colorWave 2s ease-in-out infinite`,
-                      animationDelay: `${totalIndex * 0.1}s`,
+                      "display": "inline-block",
+                      "animation": `colorWave 2s ease-in-out infinite`,
+                      "animationDelay": `${totalIndex * 0.1}s`,
                       "@keyframes colorWave": {
                         "0%, 100%": {
                           color: "status.default.text",

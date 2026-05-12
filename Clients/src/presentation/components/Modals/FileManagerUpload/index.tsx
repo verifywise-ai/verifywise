@@ -607,7 +607,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
               onClick={selectionOnly ? handleSelectFiles : handleUpload}
               disabled={!hasValidFiles || isUploading}
               sx={{
-                backgroundColor: theme.palette.primary.main,
+                "backgroundColor": theme.palette.primary.main,
                 "&:hover": {
                   backgroundColor: theme.palette.primary.dark,
                 },

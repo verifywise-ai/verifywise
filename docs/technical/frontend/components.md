@@ -688,7 +688,44 @@ return (
 | Sidebar | `components/Sidebar/index.tsx` |
 | EmptyState | `components/EmptyState/index.tsx` |
 
+## Bulk Actions
+
+Tables that need multi-row selection + batch operations (mark-complete, archive, assign-reviewer, etc.) compose three reusable pieces:
+
+- `useBulkSelection<T>` (`application/hooks/useBulkSelection.ts`) — selection state. Returns `{ selectedIds, isSelected, toggle, toggleAll, clear, allSelected, someSelected, count }`. Selection persists across re-renders; `allSelected`/`someSelected` reflect the rows currently passed in.
+- `StandardTableHead` (`components/Table/StandardTableHead`) — accepts an optional `selection` prop that renders the indeterminate-aware select-all checkbox in a leading cell.
+- `BulkActionsToolbar` (`components/Table/BulkActionsToolbar`) — sticky strip that appears when `count > 0`, showing action buttons. Each action takes `{ id, label, icon?, onClick, disabled?, confirm? }`. Actions with `confirm` open the existing `Dialogs/ConfirmationModal` automatically.
+
+```tsx
+const { selectedIds, isSelected, toggle, toggleAll, clear, allSelected, someSelected, count } =
+  useBulkSelection<MyRow>({ rows: pageRows, getId: (r) => r.id });
+
+const actions: BulkAction[] = [
+  { id: "complete", label: "Mark complete", onClick: () => mutate({ ids: selectedIds, action: "mark_complete" }) },
+  { id: "archive", label: "Archive", onClick: archive,
+    confirm: { title: "Archive selected?", body: "...", confirmLabel: "Archive", danger: true } },
+];
+
+return (
+  <>
+    {canRunBulkActions && <BulkActionsToolbar count={count} onClear={clear} actions={actions} />}
+    <Table>
+      <StandardTableHead
+        columns={cols}
+        sortConfig={sortConfig}
+        onSort={onSort}
+        selection={canRunBulkActions ? { allSelected, someSelected, onToggleAll: toggleAll } : undefined}
+      />
+      {/* body rows render their own leading <TableCell padding="checkbox"> with <Checkbox /> */}
+    </Table>
+  </>
+);
+```
+
+Gate `canRunBulkActions` on the user's role (typically Admin / Editor) and pass an `onBulkActionSuccess` callback so the parent can refetch and clear the selection after each mutation. The matching backend conventions live in [Backend Patterns → Bulk action endpoints](../guides/backend-patterns.md#bulk-action-endpoints).
+
 ## Related Documentation
 
 - [Frontend Overview](./overview.md)
 - [Styling](./styling.md)
+- [Backend Patterns → Bulk action endpoints](../guides/backend-patterns.md#bulk-action-endpoints)

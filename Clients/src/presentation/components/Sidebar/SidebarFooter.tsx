@@ -264,14 +264,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 }
               }}
               sx={{
-                height: "32px",
-                gap: theme.spacing(4),
-                borderRadius: theme.shape.borderRadius,
-                px: theme.spacing(4),
-                background: hasDemoData
+                "height": "32px",
+                "gap": theme.spacing(4),
+                "borderRadius": theme.shape.borderRadius,
+                "px": theme.spacing(4),
+                "background": hasDemoData
                   ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
                   : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
-                border: hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
+                "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
                 "&:hover": {
                   background: hasDemoData
                     ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
@@ -285,12 +285,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "16px",
-                  mr: 0,
+                  "minWidth": 0,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "width": "16px",
+                  "mr": 0,
                   "& svg": {
                     color: hasDemoData ? "#D92D20" : "#039855",
                     stroke: hasDemoData ? "#D92D20" : "#039855",
@@ -327,11 +327,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           onDismissDemoDataButton?.();
                         }}
                         sx={{
-                          p: 0,
-                          ml: "auto",
-                          width: 20,
-                          height: 20,
-                          minWidth: 20,
+                          "p": 0,
+                          "ml": "auto",
+                          "width": 20,
+                          "height": 20,
+                          "minWidth": 20,
                           "&:hover": {
                             backgroundColor: "rgba(0, 0, 0, 0.04)",
                           },
@@ -381,14 +381,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               onClick={() => navigate("/super-admin/settings")}
               sx={{
-                height: "32px",
-                gap: theme.spacing(4),
-                borderRadius: theme.shape.borderRadius,
-                px: theme.spacing(4),
-                background: location.pathname.startsWith("/super-admin/settings")
+                "height": "32px",
+                "gap": theme.spacing(4),
+                "borderRadius": theme.shape.borderRadius,
+                "px": theme.spacing(4),
+                "background": location.pathname.startsWith("/super-admin/settings")
                   ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
                   : "transparent",
-                border: location.pathname.startsWith("/super-admin/settings")
+                "border": location.pathname.startsWith("/super-admin/settings")
                   ? "1px solid #D8D8D8"
                   : "1px solid transparent",
                 "&:hover": {
@@ -403,12 +403,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "16px",
-                  mr: 0,
+                  "minWidth": 0,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "flex-start",
+                  "width": "16px",
+                  "mr": 0,
                   "& svg": {
                     color: location.pathname.startsWith("/super-admin/settings")
                       ? `${brand.primary} !important`
@@ -458,14 +458,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               onClick={(e) => setManagementAnchorEl(e.currentTarget)}
               sx={{
-                height: "32px",
-                gap: theme.spacing(4),
-                borderRadius: theme.shape.borderRadius,
-                px: theme.spacing(4),
-                background: isManagementActive
+                "height": "32px",
+                "gap": theme.spacing(4),
+                "borderRadius": theme.shape.borderRadius,
+                "px": theme.spacing(4),
+                "background": isManagementActive
                   ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
                   : "transparent",
-                border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
                 "&:hover": {
                   background: isManagementActive
                     ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
@@ -483,12 +483,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "16px",
-                  mr: 0,
+                  "minWidth": 0,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "flex-start",
+                  "width": "16px",
+                  "mr": 0,
                   "& svg": {
                     color: isManagementActive
                       ? `${brand.primary} !important`
@@ -569,13 +569,13 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   setManagementAnchorEl(null);
                 }}
                 sx={{
-                  display: "flex",
-                  gap: theme.spacing(4),
-                  px: theme.spacing(4),
-                  py: 0,
-                  height: "32px",
-                  fontSize: "13px",
-                  borderRadius: theme.shape.borderRadius,
+                  "display": "flex",
+                  "gap": theme.spacing(4),
+                  "px": theme.spacing(4),
+                  "py": 0,
+                  "height": "32px",
+                  "fontSize": "13px",
+                  "borderRadius": theme.shape.borderRadius,
                   "&:hover": {
                     backgroundColor: "#F9F9F9",
                   },
@@ -598,12 +598,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 >
                   <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "16px",
-                      height: "16px",
-                      flexShrink: 0,
+                      "display": "flex",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "width": "16px",
+                      "height": "16px",
+                      "flexShrink": 0,
                       "& svg": {
                         color:
                           item.path && location.pathname.includes(item.path)
@@ -683,11 +683,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             <IconButton
               onClick={openPopup}
               sx={{
-                p: 0,
+                "p": 0,
                 "&:focus": { outline: "none" },
-                justifyContent: "center",
-                alignItems: "center",
-                marginLeft: theme.spacing(3),
+                "justifyContent": "center",
+                "alignItems": "center",
+                "marginLeft": theme.spacing(3),
               }}
             >
               <Avatar user={userAvator} size="small" sx={{ margin: "auto" }} />
@@ -707,8 +707,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             <IconButton
               disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
               sx={{
-                ml: "auto",
-                mr: "-8px",
+                "ml": "auto",
+                "mr": "-8px",
                 "&:focus": { outline: "none" },
                 "& svg": {
                   width: "20px",
@@ -751,12 +751,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           <Box
             ref={drawerRef}
             sx={{
-              backgroundColor: theme.palette.background.main,
-              borderRadius: "8px",
-              border: `1px solid ${theme.palette.divider}`,
-              overflow: "hidden",
-              p: 1,
-              animation: slideoverOpen ? "fadeIn 0.2s ease-in-out" : "none",
+              "backgroundColor": theme.palette.background.main,
+              "borderRadius": "8px",
+              "border": `1px solid ${theme.palette.divider}`,
+              "overflow": "hidden",
+              "p": 1,
+              "animation": slideoverOpen ? "fadeIn 0.2s ease-in-out" : "none",
               "@keyframes fadeIn": {
                 "0%": { opacity: 0 },
                 "100%": { opacity: 1 },
@@ -788,11 +788,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      minHeight: "48px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
-                      py: 1,
+                      "minHeight": "48px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
+                      "py": 1,
                       "&:hover": {
                         backgroundColor: background.accent,
                       },
@@ -842,10 +842,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           closePopup();
                         }}
                         sx={{
-                          height: "32px",
-                          gap: theme.spacing(4),
-                          borderRadius: theme.shape.borderRadius,
-                          px: theme.spacing(4),
+                          "height": "32px",
+                          "gap": theme.spacing(4),
+                          "borderRadius": theme.shape.borderRadius,
+                          "px": theme.spacing(4),
                           "& svg": {
                             color: theme.palette.text.tertiary,
                             stroke: theme.palette.text.tertiary,
@@ -874,10 +874,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           closePopup();
                         }}
                         sx={{
-                          height: "32px",
-                          gap: theme.spacing(4),
-                          borderRadius: theme.shape.borderRadius,
-                          px: theme.spacing(4),
+                          "height": "32px",
+                          "gap": theme.spacing(4),
+                          "borderRadius": theme.shape.borderRadius,
+                          "px": theme.spacing(4),
                           "& svg": {
                             color: theme.palette.text.tertiary,
                             stroke: theme.palette.text.tertiary,
@@ -929,10 +929,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -962,10 +962,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -993,10 +993,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -1024,10 +1024,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -1055,10 +1055,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -1086,10 +1086,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       closePopup();
                     }}
                     sx={{
-                      height: "32px",
-                      gap: theme.spacing(4),
-                      borderRadius: theme.shape.borderRadius,
-                      px: theme.spacing(4),
+                      "height": "32px",
+                      "gap": theme.spacing(4),
+                      "borderRadius": theme.shape.borderRadius,
+                      "px": theme.spacing(4),
                       "& svg": {
                         color: theme.palette.text.tertiary,
                         stroke: theme.palette.text.tertiary,
@@ -1134,10 +1134,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     closePopup();
                   }}
                   sx={{
-                    height: "32px",
-                    gap: theme.spacing(4),
-                    borderRadius: theme.shape.borderRadius,
-                    px: theme.spacing(4),
+                    "height": "32px",
+                    "gap": theme.spacing(4),
+                    "borderRadius": theme.shape.borderRadius,
+                    "px": theme.spacing(4),
                     "& svg": {
                       color: theme.palette.text.tertiary,
                       stroke: theme.palette.text.tertiary,
@@ -1174,10 +1174,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   closePopup();
                 }}
                 sx={{
-                  height: "32px",
-                  gap: theme.spacing(4),
-                  borderRadius: theme.shape.borderRadius,
-                  px: theme.spacing(4),
+                  "height": "32px",
+                  "gap": theme.spacing(4),
+                  "borderRadius": theme.shape.borderRadius,
+                  "px": theme.spacing(4),
                   "& svg": {
                     color: theme.palette.text.tertiary,
                     stroke: theme.palette.text.tertiary,

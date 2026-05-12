@@ -9,29 +9,29 @@ import { background, status, risk } from "../themes/palette";
  */
 const VARIANT_COLORS: Record<ChipVariant, ChipColorConfig> = {
   // Risk levels
-  critical: { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
-  high: { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
-  medium: { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
-  low: { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
+  "critical": { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
+  "high": { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
+  "medium": { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
+  "low": { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
   "very-low": { backgroundColor: `${risk.veryLow.bg}`, textColor: `${risk.veryLow.text}` },
 
   // Status
-  success: { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
-  warning: { backgroundColor: `${status.warning.bg}`, textColor: `${status.warning.text}` },
-  error: { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
-  info: { backgroundColor: `${status.info.bg}`, textColor: `${status.info.text}` },
-  default: { backgroundColor: `${background.hover}`, textColor: `${status.default.text}` },
+  "success": { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
+  "warning": { backgroundColor: `${status.warning.bg}`, textColor: `${status.warning.text}` },
+  "error": { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
+  "info": { backgroundColor: `${status.info.bg}`, textColor: `${status.info.text}` },
+  "default": { backgroundColor: `${background.hover}`, textColor: `${status.default.text}` },
 
   // Severity (maps to same colors as risk levels)
-  catastrophic: { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
-  major: { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
-  moderate: { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
-  minor: { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
-  negligible: { backgroundColor: `${risk.veryLow.bg}`, textColor: `${risk.veryLow.text}` },
+  "catastrophic": { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },
+  "major": { backgroundColor: `${risk.high.bg}`, textColor: `${risk.high.text}` },
+  "moderate": { backgroundColor: `${risk.medium.bg}`, textColor: `${risk.medium.text}` },
+  "minor": { backgroundColor: `${risk.low.bg}`, textColor: `${status.success.text}` },
+  "negligible": { backgroundColor: `${risk.veryLow.bg}`, textColor: `${risk.veryLow.text}` },
 
   // Boolean
-  yes: { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
-  no: { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
+  "yes": { backgroundColor: `${status.success.bg}`, textColor: `${status.success.text}` },
+  "no": { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
 };
 
 /**
@@ -47,61 +47,61 @@ const SIZE_HEIGHT: Record<"small" | "medium", number> = {
  */
 const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   // Risk levels
-  critical: "critical",
+  "critical": "critical",
   "very high": "critical",
   "very high risk": "critical",
-  high: "high",
+  "high": "high",
   "high risk": "high",
-  medium: "medium",
+  "medium": "medium",
   "medium risk": "medium",
-  low: "low",
+  "low": "low",
   "low risk": "low",
   "very low": "very-low",
   "very low risk": "very-low",
 
   // Severity
-  catastrophic: "catastrophic",
-  major: "major",
-  moderate: "moderate",
-  minor: "minor",
-  negligible: "negligible",
+  "catastrophic": "catastrophic",
+  "major": "major",
+  "moderate": "moderate",
+  "minor": "minor",
+  "negligible": "negligible",
 
   // Status
-  approved: "success",
-  completed: "success",
-  confirmed: "success",
-  resolved: "success",
-  active: "success",
-  yes: "yes",
-  pending: "warning",
+  "approved": "success",
+  "completed": "success",
+  "confirmed": "success",
+  "resolved": "success",
+  "active": "success",
+  "yes": "yes",
+  "pending": "warning",
   "pending review": "warning",
-  unreviewed: "warning",
+  "unreviewed": "warning",
   "in progress": "warning",
   "under review": "warning",
-  draft: "default",
-  superseded: "default",
-  resubmitted: "info",
-  expired: "warning",
-  blocked: "error",
-  rejected: "error",
-  restricted: "error",
-  no: "no",
-  open: "error",
-  closed: "info",
+  "draft": "default",
+  "superseded": "default",
+  "resubmitted": "info",
+  "expired": "warning",
+  "blocked": "error",
+  "rejected": "error",
+  "restricted": "error",
+  "no": "no",
+  "open": "error",
+  "closed": "info",
 
   // Lifecycle stages (MLFlow)
-  production: "success",
-  staging: "warning",
-  archived: "default",
-  none: "default",
+  "production": "success",
+  "staging": "warning",
+  "archived": "default",
+  "none": "default",
 
   // Incident severity
-  serious: "high",
+  "serious": "high",
   "very serious": "critical",
 
   // Incident status
-  investigated: "warning",
-  mitigated: "success",
+  "investigated": "warning",
+  "mitigated": "success",
 
   // Incident approval
   "not required": "default",
@@ -109,43 +109,43 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   // Mitigation status
   "not started": "default",
   "on hold": "warning",
-  deferred: "warning",
-  canceled: "error",
+  "deferred": "warning",
+  "canceled": "error",
   "requires review": "info",
 
   // Likelihood
   "almost certain": "critical",
-  likely: "high",
-  possible: "warning",
-  unlikely: "low",
-  rare: "very-low",
+  "likely": "high",
+  "possible": "warning",
+  "unlikely": "low",
+  "rare": "very-low",
 
   // Policy status
-  published: "info",
-  deprecated: "error",
+  "published": "info",
+  "deprecated": "error",
 
   // Training status
-  planned: "info",
+  "planned": "info",
 
   // Shadow AI statuses
-  detected: "info",
-  governed: "success",
-  inactive: "default",
-  revoked: "error",
-  dismissed: "default",
+  "detected": "info",
+  "governed": "success",
+  "inactive": "default",
+  "revoked": "error",
+  "dismissed": "default",
 
   // AI risk classification (EU AI Act)
-  prohibited: "critical",
+  "prohibited": "critical",
   "limited risk": "warning",
   "minimal risk": "success",
 
   // Automation execution status
   "partial success": "warning",
-  failure: "error",
+  "failure": "error",
 
   // Guardrail actions
-  block: "error",
-  mask: "warning",
+  "block": "error",
+  "mask": "warning",
 };
 
 /**

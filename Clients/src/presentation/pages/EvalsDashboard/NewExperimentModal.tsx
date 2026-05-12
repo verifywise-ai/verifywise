@@ -177,9 +177,16 @@ export default function NewExperimentModal({
 
   // Saved models from the Models page (database)
   const [savedModels, setSavedModels] = useState<SavedModel[]>([]);
+  // Selected saved model ID — when set, bypasses provider/model config UI entirely
+  const [selectedSavedModelId, setSelectedSavedModelId] = useState<string | null>(null);
   // Track when user picks "Other (type custom)" in a saved-models dropdown
   const [useCustomModelName, setUseCustomModelName] = useState(false);
   const [useCustomJudgeModelName, setUseCustomJudgeModelName] = useState(false);
+
+  // Live LiteLLM model catalog fetched from AI Gateway, keyed by frontend provider ID.
+  // Populated lazily when the user picks a provider; falls back to static JSON if gateway is down.
+  const [gatewayModels, setGatewayModels] = useState<Record<string, ModelInfo[]>>({});
+  const gatewayModelsLoaded = useRef<Set<string>>(new Set());
 
   // Model preferences hook for auto-loading saved settings
   const {
@@ -454,35 +461,34 @@ export default function NewExperimentModal({
     })();
   }, [isOpen, orgId]);
 
-  // Apply saved model/judge preferences when they finish loading
+  // Reset model selection and apply saved judge preferences on each open
   useEffect(() => {
     if (!isOpen || preferencesApplied || preferencesLoading) return;
 
-    if (savedPreferences) {
-      console.log("Loading saved model preferences:", savedPreferences);
-      // Normalize "custom"/"self-hosted" → "custom_api" so Models-page saves auto-select the merged card
-      const am = savedPreferences.model.accessMethod;
-      const normalizedAccessMethod = am === "custom" || am === "self-hosted" ? "custom_api" : am;
-      setConfig((prev) => ({
-        ...prev,
-        model: {
-          ...prev.model,
-          name: savedPreferences.model.name || prev.model.name,
-          accessMethod: (normalizedAccessMethod || prev.model.accessMethod) as ProviderType | "",
-          endpointUrl: savedPreferences.model.endpointUrl || prev.model.endpointUrl,
-        },
-        judgeLlm: {
-          ...prev.judgeLlm,
-          provider: (savedPreferences.judgeLlm.provider || prev.judgeLlm.provider) as
-            | ProviderType
-            | "",
-          model: savedPreferences.judgeLlm.model || prev.judgeLlm.model,
-          endpointUrl: savedPreferences.judgeLlm.endpointUrl || prev.judgeLlm.endpointUrl,
-          temperature: savedPreferences.judgeLlm.temperature ?? prev.judgeLlm.temperature,
-          maxTokens: savedPreferences.judgeLlm.maxTokens ?? prev.judgeLlm.maxTokens,
-        },
-      }));
-    }
+    setSelectedSavedModelId(null);
+    setConfig((prev) => ({
+      ...prev,
+      // Always clear model so user chooses explicitly via "Saved Models" or provider grid
+      model: {
+        name: "",
+        accessMethod: "" as ProviderType | "",
+        endpointUrl: "",
+        apiKey: "",
+        modelPath: "",
+      },
+      judgeLlm: {
+        ...prev.judgeLlm,
+        ...(savedPreferences
+          ? {
+              provider: (savedPreferences.judgeLlm.provider || prev.judgeLlm.provider) as
+                | ProviderType
+                | "",
+              model: savedPreferences.judgeLlm.model || prev.judgeLlm.model,
+              endpointUrl: savedPreferences.judgeLlm.endpointUrl || prev.judgeLlm.endpointUrl,
+            }
+          : {}),
+      },
+    }));
     setPreferencesApplied(true);
   }, [isOpen, preferencesApplied, preferencesLoading, savedPreferences]);
 
@@ -596,9 +602,14 @@ export default function NewExperimentModal({
         return;
       }
 
-      // Validate model API key availability before creating experiment
-      const modelName = config.model.name;
-      const modelProvider = config.model.accessMethod;
+      // Resolve model name/provider for validation (saved model takes precedence)
+      const savedModelForValidation = selectedSavedModelId
+        ? (savedModels.find((m) => m.id === selectedSavedModelId) ?? null)
+        : null;
+      const modelName = savedModelForValidation?.name || config.model.name;
+      const modelProvider = savedModelForValidation
+        ? savedModelForValidation.provider.toLowerCase()
+        : config.model.accessMethod;
 
       // Skip validation if user already acknowledged the warning, or if they provided a key inline
       if (
@@ -679,20 +690,33 @@ export default function NewExperimentModal({
       await Promise.allSettled(saveApiKeyPromises);
 
       // Prepare experiment configuration
-      // Create experiment name with model name + date/time
+      // Resolve model: prefer saved model record over manual config
+      const savedModelRecord = selectedSavedModelId
+        ? (savedModels.find((m) => m.id === selectedSavedModelId) ?? null)
+        : null;
+      const resolvedModel = savedModelRecord
+        ? {
+            name: savedModelRecord.name,
+            accessMethod: savedModelRecord.provider.toLowerCase(),
+            endpointUrl: savedModelRecord.endpointUrl || "",
+            apiKey: config.model.apiKey || undefined,
+            modelPath: "",
+          }
+        : {
+            name: config.model.name,
+            accessMethod: config.model.accessMethod,
+            endpointUrl: config.model.endpointUrl,
+            apiKey: config.model.apiKey || undefined,
+            modelPath: config.model.modelPath,
+          };
+
+      // Create experiment name: model - DD/MM/YY
       const now = new Date();
-      const dateStr = now.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-      const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-      const dateTimeStr = `${dateStr}, ${timeStr}`;
-      const experimentModelName = modelName || "Unknown Model";
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yy = String(now.getFullYear()).slice(-2);
+      const dateTimeStr = `${dd}/${mm}/${yy}`;
+      const experimentModelName = resolvedModel.name || modelName || "Unknown Model";
 
       const experimentConfig = {
         project_id: projectId,
@@ -702,11 +726,11 @@ export default function NewExperimentModal({
         config: {
           project_id: projectId, // Include in config for runner
           model: {
-            name: config.model.name,
-            accessMethod: config.model.accessMethod,
-            endpointUrl: config.model.endpointUrl,
-            apiKey: config.model.apiKey || undefined, // Send actual key to runner, backend won't store it
-            modelPath: config.model.modelPath,
+            name: resolvedModel.name,
+            accessMethod: resolvedModel.accessMethod,
+            endpointUrl: resolvedModel.endpointUrl,
+            apiKey: resolvedModel.apiKey,
+            modelPath: resolvedModel.modelPath,
           },
           // Include scorer info if using custom scorer mode or both
           ...(judgeMode === "scorer" || judgeMode === "both"
@@ -778,10 +802,8 @@ export default function NewExperimentModal({
               ? {
                   provider: config.judgeLlm.provider,
                   model: config.judgeLlm.model,
-                  apiKey: config.judgeLlm.apiKey || undefined, // Send actual key to runner, backend won't store it
+                  apiKey: config.judgeLlm.apiKey || undefined,
                   endpointUrl: config.judgeLlm.endpointUrl || undefined,
-                  temperature: config.judgeLlm.temperature,
-                  maxTokens: config.judgeLlm.maxTokens,
                 }
               : undefined,
           // Include evaluation mode for the runner
@@ -830,16 +852,14 @@ export default function NewExperimentModal({
       // Save model and judge preferences for next experiment (fire and forget)
       savePreferences({
         model: {
-          name: config.model.name,
-          accessMethod: config.model.accessMethod,
-          endpointUrl: config.model.endpointUrl,
+          name: resolvedModel.name,
+          accessMethod: resolvedModel.accessMethod,
+          endpointUrl: resolvedModel.endpointUrl,
         },
         judgeLlm: {
           provider: config.judgeLlm.provider,
           model: config.judgeLlm.model,
           endpointUrl: config.judgeLlm.endpointUrl || undefined,
-          temperature: config.judgeLlm.temperature,
-          maxTokens: config.judgeLlm.maxTokens,
         },
       }).then((success) => {
         if (success) {
@@ -1054,16 +1074,24 @@ export default function NewExperimentModal({
     });
   };
 
-  // Get models for selected provider (saved models + static provider list)
+  // Get models for selected provider.
+  // Priority: saved DB models → live LiteLLM catalog from AI Gateway → static JSON fallback.
   const getProviderModels = (providerId: string): ModelInfo[] => {
-    // Convert saved models to ModelInfo format
     const saved = getSavedModelsForProvider(providerId).map((m) => ({
       id: m.name,
       name: m.name,
       description: m.endpointUrl ? `Saved · ${m.endpointUrl}` : "Saved model",
     }));
 
-    // For cloud providers, merge saved models with static list (deduplicate by id)
+    // Use live gateway catalog if already loaded for this provider
+    const live = gatewayModels[providerId];
+    if (live && live.length > 0) {
+      const liveIds = new Set(live.map((m) => m.id));
+      const uniqueSaved = saved.filter((s) => !liveIds.has(s.id));
+      return [...uniqueSaved, ...live];
+    }
+
+    // Fall back to bundled static JSON while gateway loads (or if gateway is down)
     if (PROVIDERS[providerId]) {
       const staticModels = PROVIDERS[providerId].models;
       const staticIds = new Set(staticModels.map((sm) => sm.id));
@@ -1071,7 +1099,6 @@ export default function NewExperimentModal({
       return [...uniqueSaved, ...staticModels];
     }
 
-    // For local providers, return only saved models
     return saved;
   };
 
@@ -1085,6 +1112,59 @@ export default function NewExperimentModal({
         });
       }, 100);
     }
+  }, [config.judgeLlm.provider]);
+
+  // Load live model catalog from AI Gateway when a cloud provider is selected.
+  // Runs for both the model-under-test and the judge provider.
+  useEffect(() => {
+    const loadForProvider = async (provider: string) => {
+      if (!provider || gatewayModelsLoaded.current.has(provider)) return;
+      // Only cloud providers — local/custom providers don't have a LiteLLM catalog entry
+      const cloudProviders = new Set([
+        "openai",
+        "anthropic",
+        "google",
+        "mistral",
+        "xai",
+        "openrouter",
+      ]);
+      if (!cloudProviders.has(provider)) return;
+      gatewayModelsLoaded.current.add(provider); // mark before fetch to prevent concurrent calls
+      try {
+        const models = await evalModelsService.getGatewayModelsForProvider(provider);
+        if (models.length > 0) {
+          setGatewayModels((prev) => ({ ...prev, [provider]: models }));
+        }
+      } catch {
+        // Gateway unreachable — static fallback will be used
+      }
+    };
+    loadForProvider(config.model.accessMethod as string);
+  }, [config.model.accessMethod]);
+
+  useEffect(() => {
+    const loadForProvider = async (provider: string) => {
+      if (!provider || gatewayModelsLoaded.current.has(provider)) return;
+      const cloudProviders = new Set([
+        "openai",
+        "anthropic",
+        "google",
+        "mistral",
+        "xai",
+        "openrouter",
+      ]);
+      if (!cloudProviders.has(provider)) return;
+      gatewayModelsLoaded.current.add(provider);
+      try {
+        const models = await evalModelsService.getGatewayModelsForProvider(provider);
+        if (models.length > 0) {
+          setGatewayModels((prev) => ({ ...prev, [provider]: models }));
+        }
+      } catch {
+        // Gateway unreachable — static fallback will be used
+      }
+    };
+    loadForProvider(config.judgeLlm.provider as string);
   }, [config.judgeLlm.provider]);
 
   // Auto-load default dataset when reaching step 2 (Dataset)
@@ -1163,6 +1243,7 @@ export default function NewExperimentModal({
                       <Grid size={{ xs: 4, sm: 3 }} key={provider.id}>
                         <Card
                           onClick={() => {
+                            setSelectedSavedModelId(null); // deselect saved model when picking a provider
                             setConfig((prev) => ({
                               ...prev,
                               model: {
@@ -1174,14 +1255,14 @@ export default function NewExperimentModal({
                             setUseCustomModelName(false);
                           }}
                           sx={{
-                            cursor: "pointer",
-                            border: "1px solid",
-                            borderColor: isSelected ? palette.brand.primary : palette.border.dark,
-                            backgroundColor: palette.background.main,
-                            boxShadow: "none",
-                            transition: "all 0.2s ease",
-                            position: "relative",
-                            height: "100%",
+                            "cursor": "pointer",
+                            "border": "1px solid",
+                            "borderColor": isSelected ? palette.brand.primary : palette.border.dark,
+                            "backgroundColor": palette.background.main,
+                            "boxShadow": "none",
+                            "transition": "all 0.2s ease",
+                            "position": "relative",
+                            "height": "100%",
                             "&:hover": {
                               borderColor: palette.brand.primary,
                               boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -1190,14 +1271,14 @@ export default function NewExperimentModal({
                         >
                           <CardContent
                             sx={{
-                              textAlign: "center",
-                              py: 3,
-                              px: 2,
-                              height: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
+                              "textAlign": "center",
+                              "py": 3,
+                              "px": 2,
+                              "height": "100%",
+                              "display": "flex",
+                              "flexDirection": "column",
+                              "alignItems": "center",
+                              "justifyContent": "center",
                               "&:last-child": { pb: 3 },
                             }}
                           >
@@ -1223,12 +1304,12 @@ export default function NewExperimentModal({
                             {/* Provider Logo */}
                             <Box
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 40,
-                                height: 40,
-                                mb: 1.5,
+                                "display": "flex",
+                                "alignItems": "center",
+                                "justifyContent": "center",
+                                "width": 40,
+                                "height": 40,
+                                "mb": 1.5,
                                 "& svg": {
                                   width: 32,
                                   height: 32,
@@ -1258,6 +1339,110 @@ export default function NewExperimentModal({
               </Box>
             )}
 
+            {/* Saved Models — toggle selection; bypasses provider/model UI when active */}
+            {savedModels.length > 0 && (
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: palette.text.disabled,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    mb: 1.5,
+                  }}
+                >
+                  Saved Models
+                </Typography>
+                <Stack spacing={1}>
+                  {savedModels.map((m) => {
+                    const providerKey = m.provider.toLowerCase();
+                    const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
+                    const ProviderLogo = providerEntry?.Logo ?? null;
+                    const isSelected = selectedSavedModelId === m.id;
+                    return (
+                      <Box
+                        key={m.id}
+                        onClick={() => {
+                          // Just toggle the saved model ID — don't touch config at all
+                          setSelectedSavedModelId(isSelected ? null : m.id);
+                        }}
+                        sx={{
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "px": 2,
+                          "py": 1.25,
+                          "borderRadius": "8px",
+                          "border": `1.5px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
+                          "backgroundColor": isSelected
+                            ? palette.brand.primaryLight
+                            : "transparent",
+                          "cursor": "pointer",
+                          "transition": "all 0.15s ease",
+                          "&:hover": {
+                            borderColor: palette.brand.primary,
+                            backgroundColor: palette.brand.primaryLight,
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                          {ProviderLogo && (
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
+                              <ProviderLogo style={{ width: 20, height: 20 }} />
+                            </Box>
+                          )}
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              color: isSelected ? palette.brand.primary : palette.text.primary,
+                            }}
+                          >
+                            {m.name}
+                          </Typography>
+                        </Stack>
+                        <Box
+                          sx={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            border: `1.5px solid ${isSelected ? palette.brand.primary : palette.border.dark}`,
+                            backgroundColor: isSelected ? palette.brand.primary : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isSelected && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path
+                                d="M1 4L3.5 6.5L9 1"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            )}
+
             {/* Conditional Fields Based on Provider */}
             {config.model.accessMethod && (
               <Box ref={formFieldsRef}>
@@ -1277,8 +1462,8 @@ export default function NewExperimentModal({
                         Model
                       </Typography>
                       <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
-                        OpenRouter supports any model. Enter the model ID or select from popular
-                        options.
+                        OpenRouter supports any model. Enter the model ID or select from saved or
+                        popular options.
                       </Typography>
                       <Field
                         label=""
@@ -1322,16 +1507,16 @@ export default function NewExperimentModal({
                               }))
                             }
                             sx={{
-                              cursor: "pointer",
-                              backgroundColor:
+                              "cursor": "pointer",
+                              "backgroundColor":
                                 config.model.name === m.id
                                   ? palette.brand.primaryLight
                                   : "transparent",
-                              borderColor:
+                              "borderColor":
                                 config.model.name === m.id
                                   ? palette.brand.primary
                                   : palette.border.dark,
-                              color:
+                              "color":
                                 config.model.name === m.id
                                   ? palette.brand.primary
                                   : palette.text.secondary,
@@ -1370,7 +1555,7 @@ export default function NewExperimentModal({
                           }
                           displayEmpty
                           sx={{
-                            fontSize: "13px",
+                            "fontSize": "13px",
                             "& .MuiOutlinedInput-notchedOutline": {
                               borderColor: palette.border.dark,
                             },
@@ -1454,7 +1639,7 @@ export default function NewExperimentModal({
                                 }}
                                 displayEmpty
                                 sx={{
-                                  fontSize: "13px",
+                                  "fontSize": "13px",
                                   "& .MuiOutlinedInput-notchedOutline": {
                                     borderColor: palette.border.dark,
                                   },
@@ -1526,12 +1711,12 @@ export default function NewExperimentModal({
                                 }));
                               }}
                               sx={{
-                                textTransform: "none",
-                                fontSize: "11px",
-                                color: palette.text.tertiary,
-                                p: 0,
-                                mb: 0.5,
-                                minWidth: "auto",
+                                "textTransform": "none",
+                                "fontSize": "11px",
+                                "color": palette.text.tertiary,
+                                "p": 0,
+                                "mb": 0.5,
+                                "minWidth": "auto",
                                 "&:hover": { color: palette.brand.primary },
                               }}
                             >
@@ -1696,16 +1881,16 @@ export default function NewExperimentModal({
               <Box
                 component="label"
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  p: "8px",
-                  border: "1px dashed",
-                  borderColor: uploadingDataset ? palette.brand.primary : palette.border.dark,
-                  borderRadius: "4px",
-                  backgroundColor: palette.background.accent,
-                  cursor: uploadingDataset ? "wait" : "pointer",
-                  transition: "all 0.15s ease",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": "8px",
+                  "p": "8px",
+                  "border": "1px dashed",
+                  "borderColor": uploadingDataset ? palette.brand.primary : palette.border.dark,
+                  "borderRadius": "4px",
+                  "backgroundColor": palette.background.accent,
+                  "cursor": uploadingDataset ? "wait" : "pointer",
+                  "transition": "all 0.15s ease",
                   "&:hover": {
                     borderColor: palette.brand.primary,
                     backgroundColor: palette.status.success.bg,
@@ -1879,11 +2064,11 @@ export default function NewExperimentModal({
                     startIcon={<ExternalLink size={12} />}
                     onClick={() => window.open(`/evals/${projectId}#datasets`, "_blank")}
                     sx={{
-                      textTransform: "none",
-                      fontSize: "11px",
-                      color: palette.text.tertiary,
-                      p: 0.5,
-                      minWidth: "auto",
+                      "textTransform": "none",
+                      "fontSize": "11px",
+                      "color": palette.text.tertiary,
+                      "p": 0.5,
+                      "minWidth": "auto",
                       "&:hover": { color: palette.brand.primary },
                     }}
                   >
@@ -2249,11 +2434,11 @@ export default function NewExperimentModal({
                             }
                           }}
                           sx={{
-                            textTransform: "none",
-                            fontSize: "11px",
-                            color: palette.text.tertiary,
-                            p: 0.5,
-                            minWidth: "auto",
+                            "textTransform": "none",
+                            "fontSize": "11px",
+                            "color": palette.text.tertiary,
+                            "p": 0.5,
+                            "minWidth": "auto",
                             "&:hover": { color: palette.brand.primary },
                           }}
                         >
@@ -2267,11 +2452,11 @@ export default function NewExperimentModal({
                           startIcon={<ExternalLink size={12} />}
                           onClick={() => window.open(`/evals/${projectId}#scorers`, "_blank")}
                           sx={{
-                            textTransform: "none",
-                            fontSize: "11px",
-                            color: palette.text.tertiary,
-                            p: 0.5,
-                            minWidth: "auto",
+                            "textTransform": "none",
+                            "fontSize": "11px",
+                            "color": palette.text.tertiary,
+                            "p": 0.5,
+                            "minWidth": "auto",
                             "&:hover": { color: palette.brand.primary },
                           }}
                         >
@@ -2371,10 +2556,10 @@ export default function NewExperimentModal({
                       startIcon={<Plus size={14} />}
                       onClick={() => window.open(`/evals/${projectId}#scorers`, "_blank")}
                       sx={{
-                        textTransform: "none",
-                        fontSize: "12px",
-                        color: palette.brand.primary,
-                        borderColor: palette.brand.primary,
+                        "textTransform": "none",
+                        "fontSize": "12px",
+                        "color": palette.brand.primary,
+                        "borderColor": palette.brand.primary,
                         "&:hover": {
                           borderColor: palette.brand.primaryHover,
                           backgroundColor: palette.status.success.bg,
@@ -2445,14 +2630,16 @@ export default function NewExperimentModal({
                               setUseCustomJudgeModelName(false);
                             }}
                             sx={{
-                              cursor: "pointer",
-                              border: "1px solid",
-                              borderColor: isSelected ? palette.brand.primary : palette.border.dark,
-                              backgroundColor: palette.background.main,
-                              boxShadow: "none",
-                              transition: "all 0.2s ease",
-                              position: "relative",
-                              height: "100%",
+                              "cursor": "pointer",
+                              "border": "1px solid",
+                              "borderColor": isSelected
+                                ? palette.brand.primary
+                                : palette.border.dark,
+                              "backgroundColor": palette.background.main,
+                              "boxShadow": "none",
+                              "transition": "all 0.2s ease",
+                              "position": "relative",
+                              "height": "100%",
                               "&:hover": {
                                 borderColor: palette.brand.primary,
                                 boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -2461,14 +2648,14 @@ export default function NewExperimentModal({
                           >
                             <CardContent
                               sx={{
-                                textAlign: "center",
-                                py: 3,
-                                px: 2,
-                                height: "100%",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
+                                "textAlign": "center",
+                                "py": 3,
+                                "px": 2,
+                                "height": "100%",
+                                "display": "flex",
+                                "flexDirection": "column",
+                                "alignItems": "center",
+                                "justifyContent": "center",
                                 "&:last-child": { pb: 3 },
                               }}
                             >
@@ -2498,12 +2685,12 @@ export default function NewExperimentModal({
                               {/* Provider Logo */}
                               <Box
                                 sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: 40,
-                                  height: 40,
-                                  mb: 1.5,
+                                  "display": "flex",
+                                  "alignItems": "center",
+                                  "justifyContent": "center",
+                                  "width": 40,
+                                  "height": 40,
+                                  "mb": 1.5,
                                   "& svg": {
                                     width: 32,
                                     height: 32,
@@ -2553,8 +2740,8 @@ export default function NewExperimentModal({
                           <Typography
                             sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}
                           >
-                            OpenRouter supports any model. Enter the model ID or select from popular
-                            options.
+                            OpenRouter supports any model. Enter the model ID or select from saved
+                            or popular options.
                           </Typography>
                           <Field
                             label=""
@@ -2598,16 +2785,16 @@ export default function NewExperimentModal({
                                   }))
                                 }
                                 sx={{
-                                  cursor: "pointer",
-                                  backgroundColor:
+                                  "cursor": "pointer",
+                                  "backgroundColor":
                                     config.judgeLlm.model === m.id
                                       ? palette.brand.primaryLight
                                       : "transparent",
-                                  borderColor:
+                                  "borderColor":
                                     config.judgeLlm.model === m.id
                                       ? palette.brand.primary
                                       : palette.border.dark,
-                                  color:
+                                  "color":
                                     config.judgeLlm.model === m.id
                                       ? palette.brand.primary
                                       : palette.text.secondary,
@@ -2646,7 +2833,7 @@ export default function NewExperimentModal({
                               }
                               displayEmpty
                               sx={{
-                                fontSize: "13px",
+                                "fontSize": "13px",
                                 "& .MuiOutlinedInput-notchedOutline": {
                                   borderColor: palette.border.dark,
                                 },
@@ -2749,7 +2936,7 @@ export default function NewExperimentModal({
                                       }}
                                       displayEmpty
                                       sx={{
-                                        fontSize: "13px",
+                                        "fontSize": "13px",
                                         "& .MuiOutlinedInput-notchedOutline": {
                                           borderColor: palette.border.dark,
                                         },
@@ -2821,12 +3008,12 @@ export default function NewExperimentModal({
                                         }));
                                       }}
                                       sx={{
-                                        textTransform: "none",
-                                        fontSize: "11px",
-                                        color: palette.text.tertiary,
-                                        p: 0,
-                                        mb: 0.5,
-                                        minWidth: "auto",
+                                        "textTransform": "none",
+                                        "fontSize": "11px",
+                                        "color": palette.text.tertiary,
+                                        "p": 0,
+                                        "mb": 0.5,
+                                        "minWidth": "auto",
                                         "&:hover": { color: palette.brand.primary },
                                       }}
                                     >
@@ -2904,37 +3091,6 @@ export default function NewExperimentModal({
                             helperText="Your key will be saved securely for future experiments"
                           />
                         ))}
-
-                      <Stack direction="row" spacing={3}>
-                        <Field
-                          label="Temperature"
-                          type="number"
-                          value={String(config.judgeLlm.temperature)}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              judgeLlm: {
-                                ...prev.judgeLlm,
-                                temperature: parseFloat(e.target.value) || 0,
-                              },
-                            }))
-                          }
-                        />
-                        <Field
-                          label="Max tokens"
-                          type="number"
-                          value={String(config.judgeLlm.maxTokens)}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              judgeLlm: {
-                                ...prev.judgeLlm,
-                                maxTokens: parseInt(e.target.value) || 0,
-                              },
-                            }))
-                          }
-                        />
-                      </Stack>
                     </Stack>
                   </Box>
                 )}
@@ -3031,9 +3187,9 @@ export default function NewExperimentModal({
                 disableGutters
                 elevation={0}
                 sx={{
-                  border: `1px solid ${palette.accent.blue.bg}`,
-                  borderRadius: "4px !important",
-                  backgroundColor: palette.accent.blue.bg,
+                  "border": `1px solid ${palette.accent.blue.bg}`,
+                  "borderRadius": "4px !important",
+                  "backgroundColor": palette.accent.blue.bg,
                   "&:before": { display: "none" },
                   "&.Mui-expanded": { margin: 0 },
                 }}
@@ -3041,8 +3197,8 @@ export default function NewExperimentModal({
                 <AccordionSummary
                   expandIcon={<ChevronDown size={18} color={palette.accent.blue.text} />}
                   sx={{
-                    minHeight: 48,
-                    px: "8px",
+                    "minHeight": 48,
+                    "px": "8px",
                     "&.Mui-expanded": { minHeight: 48 },
                     "& .MuiAccordionSummary-content": { my: "8px" },
                   }}
@@ -3191,8 +3347,8 @@ export default function NewExperimentModal({
                 disableGutters
                 elevation={0}
                 sx={{
-                  border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px !important",
+                  "border": `1px solid ${palette.border.dark}`,
+                  "borderRadius": "4px !important",
                   "&:before": { display: "none" },
                   "&.Mui-expanded": { margin: 0 },
                 }}
@@ -3200,8 +3356,8 @@ export default function NewExperimentModal({
                 <AccordionSummary
                   expandIcon={<ChevronDown size={18} color={palette.text.tertiary} />}
                   sx={{
-                    minHeight: 48,
-                    px: "8px",
+                    "minHeight": 48,
+                    "px": "8px",
                     "&.Mui-expanded": { minHeight: 48 },
                     "& .MuiAccordionSummary-content": { my: "8px" },
                   }}
@@ -3604,6 +3760,9 @@ export default function NewExperimentModal({
 
   const canProceed = (() => {
     if (activeStep === 0) {
+      // A saved model selection is always sufficient to proceed
+      if (selectedSavedModelId) return true;
+
       // Step 1: Model validation
       const hasName = !!config.model.name;
       const hasAccessMethod = !!config.model.accessMethod;

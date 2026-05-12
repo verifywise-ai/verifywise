@@ -27,12 +27,12 @@ export function DashboardCard({
     <Card
       elevation={0}
       sx={{
-        border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
-        height: "100%",
-        background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-        cursor: navigateTo ? "pointer" : "default",
-        transition: "all 0.2s ease",
+        "border": `1px solid ${borderPalette.dark}`,
+        "borderRadius": "4px",
+        "height": "100%",
+        "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+        "cursor": navigateTo ? "pointer" : "default",
+        "transition": "all 0.2s ease",
         "&:hover": navigateTo
           ? {
               background: `linear-gradient(135deg, ${background.accent} 0%, ${background.gradientStop} 100%)`,
@@ -44,7 +44,7 @@ export function DashboardCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => navigateTo && navigate(navigateTo)}
     >
-      <CardContent sx={{ p: "16px", "&:last-child": { pb: "16px" } }}>
+      <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
           <Typography
             sx={{

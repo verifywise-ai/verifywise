@@ -386,14 +386,14 @@ export default function RulesPage() {
               text="Create rule"
               variant="contained"
               sx={{
-                backgroundColor: palette.brand.primary,
+                "backgroundColor": palette.brand.primary,
                 "&:hover": { backgroundColor: palette.brand.primaryHover },
-                height: 34,
-                fontSize: 13,
-                position: "absolute",
-                right: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
+                "height": 34,
+                "fontSize": 13,
+                "position": "absolute",
+                "right": 0,
+                "top": "50%",
+                "transform": "translateY(-50%)",
               }}
               onClick={() => setCreateModalOpen(true)}
             />
@@ -613,10 +613,10 @@ export default function RulesPage() {
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: SelectorVertical,
                         sx: {
-                          ml: theme.spacing(4),
-                          mr: theme.spacing(12),
-                          minWidth: theme.spacing(20),
-                          textAlign: "left",
+                          "ml": theme.spacing(4),
+                          "mr": theme.spacing(12),
+                          "minWidth": theme.spacing(20),
+                          "textAlign": "left",
                           "&.Mui-focused > div": {
                             backgroundColor: theme.palette.background.main,
                           },
@@ -624,8 +624,8 @@ export default function RulesPage() {
                       },
                     }}
                     sx={{
-                      mt: theme.spacing(6),
-                      color: theme.palette.text.secondary,
+                      "mt": theme.spacing(6),
+                      "color": theme.palette.text.secondary,
                       "& .MuiSelect-icon": { width: "24px", height: "fit-content" },
                       "& .MuiSelect-select": {
                         width: theme.spacing(10),

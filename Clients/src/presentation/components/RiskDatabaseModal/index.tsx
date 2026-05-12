@@ -213,8 +213,8 @@ const RiskDatabaseModal = ({
                         }
                       }}
                       sx={{
-                        cursor: "pointer",
-                        backgroundColor: selectedId === risk.Id ? selectedRowBgColor : "inherit",
+                        "cursor": "pointer",
+                        "backgroundColor": selectedId === risk.Id ? selectedRowBgColor : "inherit",
                         "&:hover": {
                           backgroundColor: theme.palette.action.hover,
                         },

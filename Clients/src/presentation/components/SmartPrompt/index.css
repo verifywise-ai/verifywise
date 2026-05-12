@@ -1,0 +1,17 @@
+/* SmartPrompt animations */
+.smart-prompt {
+  transition:
+    transform 200ms ease-out,
+    opacity 200ms ease-out;
+}
+
+@media (max-width: 600px) {
+  .smart-prompt {
+    width: 100% !important;
+    max-width: 100% !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    border-radius: 12px 12px 0 0 !important;
+  }
+}

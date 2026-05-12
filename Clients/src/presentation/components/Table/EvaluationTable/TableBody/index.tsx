@@ -104,7 +104,7 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
             onClick={() => onShowDetails(row)}
             sx={{
               ...singleTheme.tableStyles.primary.body.row,
-              cursor: "pointer",
+              "cursor": "pointer",
               "&:hover": {
                 backgroundColor: palette.background.accent,
               },
@@ -283,8 +283,8 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
                   size="small"
                   onClick={(e) => handleMenuOpen(e, row)}
                   sx={{
-                    color: palette.text.tertiary,
-                    padding: "6px",
+                    "color": palette.text.tertiary,
+                    "padding": "6px",
                     "&:hover": {
                       backgroundColor: palette.background.hover,
                     },
@@ -330,13 +330,13 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
               }
               startIcon={<RotateCcw size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: palette.text.secondary,
-                borderColor: palette.border.dark,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: palette.status.success.bg,
                   borderColor: palette.brand.primary,
@@ -353,13 +353,13 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
               onClick={handleDownloadClick}
               startIcon={<Download size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: palette.text.secondary,
-                borderColor: palette.border.dark,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: palette.status.success.bg,
                   borderColor: palette.brand.primary,
@@ -376,13 +376,13 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
               onClick={handleCopyClick}
               startIcon={<Copy size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: palette.text.secondary,
-                borderColor: palette.border.dark,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: palette.status.success.bg,
                   borderColor: palette.brand.primary,
@@ -399,13 +399,13 @@ const EvaluationTableBody: React.FC<IEvaluationTableBodyProps> = ({
               onClick={handleDeleteClick}
               startIcon={<Trash2 size={14} />}
               sx={{
-                height: "34px",
-                fontSize: "13px",
-                fontWeight: 500,
-                color: palette.status.error.text,
-                borderColor: palette.border.dark,
-                backgroundColor: "transparent",
-                justifyContent: "flex-start",
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.status.error.text,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: palette.status.error.bg,
                   borderColor: palette.status.error.text,

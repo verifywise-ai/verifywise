@@ -8,6 +8,7 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import { translateError } from "../utils/i18n.utils";
 import {
   generateApiKey,
   createApiKeyQuery,
@@ -39,7 +40,7 @@ export async function createApiKey(req: Request, res: Response) {
   try {
     // Check admin role
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage API keys")));
     }
 
     const { label } = req.body;
@@ -79,7 +80,7 @@ export async function createApiKey(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -102,7 +103,7 @@ export async function listApiKeys(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage API keys")));
     }
 
     const keys = await listApiKeysQuery(organizationId);
@@ -127,7 +128,7 @@ export async function listApiKeys(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -151,17 +152,17 @@ export async function revokeApiKey(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage API keys")));
     }
 
     if (isNaN(keyId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid key ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid key ID")));
     }
 
     const revoked = await revokeApiKeyQuery(organizationId, keyId);
 
     if (!revoked) {
-      return res.status(404).json(STATUS_CODE[404]("API key not found or already revoked"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("API key not found or already revoked")));
     }
 
     // Clear the validation cache so revoked keys are immediately rejected
@@ -176,7 +177,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       organizationId,
     });
 
-    return res.status(200).json(STATUS_CODE[200]("API key revoked successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("API key revoked successfully")));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -187,7 +188,7 @@ export async function revokeApiKey(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -211,11 +212,11 @@ export async function deleteApiKey(req: Request, res: Response) {
 
   try {
     if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403]("Only admins can manage API keys"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage API keys")));
     }
 
     if (isNaN(keyId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid key ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid key ID")));
     }
 
     const deleted = await deleteApiKeyQuery(organizationId, keyId);
@@ -223,7 +224,7 @@ export async function deleteApiKey(req: Request, res: Response) {
     if (!deleted) {
       return res
         .status(404)
-        .json(STATUS_CODE[404]("API key not found or still active. Revoke it first."));
+        .json(STATUS_CODE[404](req.t!("API key not found or still active. Revoke it first.")));
     }
 
     await logSuccess({
@@ -235,7 +236,7 @@ export async function deleteApiKey(req: Request, res: Response) {
       organizationId,
     });
 
-    return res.status(200).json(STATUS_CODE[200]("API key permanently deleted"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("API key permanently deleted")));
   } catch (error) {
     await logFailure({
       eventType: "Delete",
@@ -246,6 +247,6 @@ export async function deleteApiKey(req: Request, res: Response) {
       organizationId,
       error: error as Error,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

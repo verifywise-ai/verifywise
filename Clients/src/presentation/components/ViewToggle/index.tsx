@@ -41,15 +41,15 @@ const ViewToggle: React.FC<IViewToggleProps> = ({
       disabled={disabled}
       sx={[
         {
-          height: "34px",
+          "height": "34px",
           "& .MuiToggleButton-root": {
-            border: `1px solid ${theme.palette.border.dark}`,
-            color: theme.palette.text.tertiary,
-            padding: "6px 12px",
-            height: "34px",
+            "border": `1px solid ${theme.palette.border.dark}`,
+            "color": theme.palette.text.tertiary,
+            "padding": "6px 12px",
+            "height": "34px",
             "&.Mui-selected": {
-              backgroundColor: "brand.primary",
-              color: theme.palette.background.main,
+              "backgroundColor": "brand.primary",
+              "color": theme.palette.background.main,
               "&:hover": {
                 backgroundColor: "brand.primary",
               },

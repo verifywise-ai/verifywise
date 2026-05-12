@@ -167,22 +167,22 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
                   key={framework.id}
                   onClick={() => handleFrameworkToggle(Number(framework.id))}
                   sx={{
-                    padding: 2,
-                    border: "1px solid",
-                    borderColor: selectedFrameworks.includes(Number(framework.id))
+                    "padding": 2,
+                    "border": "1px solid",
+                    "borderColor": selectedFrameworks.includes(Number(framework.id))
                       ? `${brand.primary}`
                       : `${status.default.border}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 1,
-                    backgroundColor: selectedFrameworks.includes(Number(framework.id))
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "gap": 1,
+                    "backgroundColor": selectedFrameworks.includes(Number(framework.id))
                       ? "#F0FDF4"
                       : "white",
-                    transition: "all 0.2s",
+                    "transition": "all 0.2s",
                     "&:hover": {
                       backgroundColor: selectedFrameworks.includes(Number(framework.id))
                         ? "#F0FDF4"
@@ -195,8 +195,8 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
                     checked={selectedFrameworks.includes(Number(framework.id))}
                     onChange={() => handleFrameworkToggle(Number(framework.id))}
                     sx={{
-                      padding: 0,
-                      color: `${borderPalette.dark}`,
+                      "padding": 0,
+                      "color": `${borderPalette.dark}`,
                       "&.Mui-checked": {
                         color: `${brand.primary}`,
                       },

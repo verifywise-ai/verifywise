@@ -175,18 +175,18 @@ export const paginationMenuProps = (theme: Theme) => ({
 });
 
 export const paginationSelectStyle = (theme: Theme) => ({
-  ml: theme.spacing(4),
-  mr: theme.spacing(12),
-  minWidth: theme.spacing(20),
-  textAlign: "left" as const,
+  "ml": theme.spacing(4),
+  "mr": theme.spacing(12),
+  "minWidth": theme.spacing(20),
+  "textAlign": "left" as const,
   "&.Mui-focused > div": {
     backgroundColor: theme.palette.background.main,
   },
 });
 
 export const paginationStyle = (theme: Theme) => ({
-  mt: theme.spacing(6),
-  color: theme.palette.text.secondary,
+  "mt": theme.spacing(6),
+  "color": theme.palette.text.secondary,
   "& .MuiSelect-icon": {
     width: "24px",
     height: "fit-content",

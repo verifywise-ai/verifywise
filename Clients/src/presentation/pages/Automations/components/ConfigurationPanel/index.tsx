@@ -788,9 +788,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       {/* Content */}
       <Stack
         sx={{
-          flex: 1,
-          overflow: "auto",
-          pt: automationName !== undefined ? 2 : 4,
+          "flex": 1,
+          "overflow": "auto",
+          "pt": automationName !== undefined ? 2 : 4,
           "&::-webkit-scrollbar": {
             width: "8px",
           },
@@ -901,16 +901,16 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                         key={item.var}
                         variant="outlined"
                         sx={{
-                          cursor: "pointer",
+                          "cursor": "pointer",
                           "&:hover": {
                             backgroundColor: theme.palette.action.hover,
                             borderColor: theme.palette.primary.main,
                           },
-                          transition: "all 0.2s ease-in-out",
+                          "transition": "all 0.2s ease-in-out",
                         }}
                         onClick={() => handleVariableInsert(item.var)}
                       >
-                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                        <CardContent sx={{ "p": 1.5, "&:last-child": { pb: 1.5 } }}>
                           <Stack spacing={0.5}>
                             <Typography
                               sx={{

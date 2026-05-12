@@ -215,7 +215,7 @@ const TemplateField = forwardRef(
         gap={theme.spacing(2)}
         className={`field field-${type}`}
         sx={{
-          position: "relative",
+          "position": "relative",
           "& fieldset": {
             borderColor: theme.palette.border.dark,
             borderRadius: theme.shape.borderRadius,
@@ -261,12 +261,12 @@ const TemplateField = forwardRef(
           inputRef={setRefs}
           inputProps={{
             sx: {
-              color: theme.palette.text.secondary,
+              "color": theme.palette.text.secondary,
               "&:-webkit-autofill": {
                 WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
                 WebkitTextFillColor: theme.palette.text.secondary,
               },
-              overflowY: "auto",
+              "overflowY": "auto",
             },
           }}
         />
@@ -300,8 +300,8 @@ const TemplateField = forwardRef(
                       "&:hover": {
                         backgroundColor: theme.palette.action.hover,
                       },
-                      py: 0.5,
-                      px: 1,
+                      "py": 0.5,
+                      "px": 1,
                     }}
                   >
                     <Stack spacing={0} sx={{ width: "100%" }}>

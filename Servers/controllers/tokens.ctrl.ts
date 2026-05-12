@@ -8,12 +8,13 @@ import { generateApiToken } from "../utils/jwt.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
 import { createApiTokenQuery, deleteApiTokenQuery, getApiTokensQuery } from "../utils/tokens.utils";
 
+import { translateError } from "../utils/i18n.utils";
 export const createApiToken = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   const { name, expires_in_days } = req.body;
 
   if (!expires_in_days) {
-    return res.status(400).json(STATUS_CODE[400]("expires_in_days is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("expires_in_days is required")));
   }
 
   const expiryDays = parseInt(expires_in_days, 10);
@@ -89,7 +90,7 @@ export const createApiToken = async (req: Request, res: Response) => {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
     logStructured("error", `unexpected error: ${name}`, "createApiToken", "tokens.ctrl.ts");
     await logEvent(
@@ -99,7 +100,7 @@ export const createApiToken = async (req: Request, res: Response) => {
       req.organizationId!,
     );
     logger.error("❌ Error in createApiToken:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -130,7 +131,7 @@ export const getApiTokens = async (req: Request, res: Response) => {
       req.organizationId!,
     );
     logger.error("❌ Error in getApiTokens:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -156,11 +157,13 @@ export const deleteApiToken = async (req: Request, res: Response) => {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(404).json(STATUS_CODE[404]({ message: "API token not found" }));
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("API token not found") }));
     }
     logStructured("successful", `deleted API token: ${id}`, "deleteApiToken", "tokens.ctrl.ts");
     logger.debug(`✅ Deleted API token: ${id}`);
-    return res.status(200).json(STATUS_CODE[200]({ message: "API token deleted successfully" }));
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ message: req.t!("API token deleted successfully") }));
   } catch (error) {
     logStructured("error", `unexpected error: ${id}`, "deleteApiToken", "tokens.ctrl.ts");
     await logEvent(
@@ -170,6 +173,6 @@ export const deleteApiToken = async (req: Request, res: Response) => {
       req.organizationId!,
     );
     logger.error("❌ Error in deleteApiToken:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

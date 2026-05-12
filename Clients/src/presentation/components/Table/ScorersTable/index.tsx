@@ -40,7 +40,7 @@ const columns: StandardColumn[] = [
   { id: "model", label: "MODEL", sortable: true },
   { id: "threshold", label: "THRESHOLD", sortable: true },
   { id: "choiceScores", label: "# CHOICE SCORES", sortable: true },
-  { id: "createdAt", label: "DATE", sortable: true },
+  { id: "createdAt", label: "LAST RUN", sortable: true },
   { id: "actions", label: "ACTION", sortable: false },
 ];
 
@@ -88,10 +88,13 @@ const ScorersTable: React.FC<ScorersTableProps> = ({
         aValue = a.config?.choiceScores?.length ?? 0;
         bValue = b.config?.choiceScores?.length ?? 0;
         break;
-      case "createdAt":
-        aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      case "createdAt": {
+        const aDate = a.updatedAt || a.createdAt;
+        const bDate = b.updatedAt || b.createdAt;
+        aValue = aDate ? new Date(aDate).getTime() : 0;
+        bValue = bDate ? new Date(bDate).getTime() : 0;
         break;
+      }
       default:
         return 0;
     }

@@ -13,13 +13,13 @@ export const aiTrustCenterHeaderDesc = {
 };
 
 export const aiTrustCenterTabStyle = {
-  textTransform: "none",
-  fontWeight: 400,
-  alignItems: "center",
-  justifyContent: "flex-end",
-  padding: "16px 0 7px",
-  minHeight: "20px",
-  minWidth: "auto",
+  "textTransform": "none",
+  "fontWeight": 400,
+  "alignItems": "center",
+  "justifyContent": "flex-end",
+  "padding": "16px 0 7px",
+  "minHeight": "20px",
+  "minWidth": "auto",
   "&.Mui-selected": {
     color: `${brand.primary}`,
   },
@@ -31,7 +31,7 @@ export const aiTrustCenterTabPanelStyle = {
 };
 
 export const aiTrustCenterTabListStyle = {
-  minHeight: "20px",
+  "minHeight": "20px",
   "& .MuiTabs-flexContainer": { columnGap: "34px" },
 };
 

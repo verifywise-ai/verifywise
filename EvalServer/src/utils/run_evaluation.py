@@ -23,10 +23,108 @@ evaluation_module_path = Path(__file__).parent.parent.parent.parent / "Evaluatio
 sys.path.insert(0, str((evaluation_module_path / "src").resolve()))
 
 from crud import evaluation_logs as crud
-from crud.deepeval_scorers import list_scorers
+from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
 from utils.error_detection import FatalErrorTracker, detect_fatal_error
+
+
+async def _upsert_judge_scorer(
+    *,
+    db: AsyncSession,
+    config: Dict[str, Any],
+    organization_id: int,
+) -> None:
+    """
+    After an experiment completes, ensure the standard judge LLM is persisted as a
+    scorer record so it appears in the Scorers page.  If a scorer for the same
+    judge model already exists we just touch its updated_at (= LAST RUN date);
+    otherwise we create a new record with sane defaults including choiceScores.
+    """
+    from uuid import uuid4
+    import re as _re
+
+    judge_config = config.get("judgeLlm") or {}
+    judge_model = judge_config.get("model", "").strip()
+    judge_provider = (judge_config.get("provider") or "openai").strip().lower()
+
+    if not judge_model:
+        return  # No standard judge used; nothing to save.
+
+    try:
+        existing = await list_scorers(organization_id=organization_id, db=db)
+
+        # Match on judgeModel.name inside config, legacy flat judgeModel string,
+        # or the auto-generated name pattern "Judge: {model}"
+        def _matches(s: Dict[str, Any]) -> bool:
+            if s.get("name", "") == f"Judge: {judge_model}":
+                return True
+            cfg = s.get("config") or {}
+            jm = cfg.get("judgeModel")
+            if isinstance(jm, dict):
+                return jm.get("name", "") == judge_model
+            if isinstance(jm, str):
+                return jm == judge_model
+            return False
+
+        matched = next((s for s in existing if _matches(s)), None)
+
+        if matched:
+            matched_cfg = matched.get("config") or {}
+            if not matched_cfg.get("choiceScores"):
+                # Backfill missing choiceScores and update judgeModel info
+                updated_cfg = {
+                    **matched_cfg,
+                    "provider": matched_cfg.get("provider") or judge_provider,
+                    "judgeModel": matched_cfg.get("judgeModel") or {"name": judge_model, "provider": judge_provider},
+                    "choiceScores": [
+                        {"label": "PASS", "score": 1},
+                        {"label": "FAIL", "score": 0},
+                    ],
+                }
+                await update_scorer(
+                    scorer_id=matched["id"],
+                    organization_id=organization_id,
+                    config=updated_cfg,
+                    db=db,
+                )
+            else:
+                # Just update the timestamp so LAST RUN shows correctly.
+                await touch_scorer_updated_at(
+                    scorer_id=matched["id"],
+                    organization_id=organization_id,
+                    db=db,
+                )
+        else:
+            # Build a safe metric_key from the model name.
+            safe_key = _re.sub(r"[^a-zA-Z0-9_]", "_", judge_model)
+            scorer_id = f"judge_{uuid4().hex}"
+            await create_scorer(
+                scorer_id=scorer_id,
+                organization_id=organization_id,
+                name=f"Judge: {judge_model}",
+                description=f"Standard LLM judge using {judge_provider}/{judge_model}",
+                scorer_type="llm",
+                metric_key=f"judge_{safe_key}",
+                config={
+                    "provider": judge_provider,
+                    "judgeModel": {"name": judge_model, "provider": judge_provider},
+                    "choiceScores": [
+                        {"label": "PASS", "score": 1},
+                        {"label": "FAIL", "score": 0},
+                    ],
+                },
+                enabled=True,
+                default_threshold=0.5,
+                weight=1.0,
+                created_by=None,
+                db=db,
+            )
+
+        await db.commit()
+        print(f"   ✅ Judge scorer upserted for {judge_model}")
+    except Exception as e:
+        print(f"   ⚠️  Could not upsert judge scorer: {e}")
 
 
 async def run_evaluation(
@@ -758,17 +856,19 @@ async def run_evaluation(
         )
         
         # Read UI-selected metrics from config
-        ui_metrics = config.get("metrics") or {}
+        raw_metrics = config.get("metrics") or {}
+        # Handle list-of-dicts format from CI runner: [{"name": "answer_relevancy", "threshold": 0.5}]
+        if isinstance(raw_metrics, list):
+            ui_metrics = {m["name"]: True for m in raw_metrics if isinstance(m, dict) and "name" in m}
+        else:
+            ui_metrics = raw_metrics
         task_type = (config.get("taskType") or config.get("task_type") or "").strip().lower()
         bundles = config.get("bundles") or {}
         
-        # Map frontend metric names (camelCase) to backend metric names (snake_case)
-        # New metric structure:
-        # - Universal Core (all use cases): relevance, correctness, completeness, hallucination, instruction_following, toxicity, bias
-        # - RAG: context_relevancy, context_precision, context_recall, faithfulness
-        # - Agent: tool_selection, tool_correctness, action_relevance, planning_quality
+        # Map metric names to backend snake_case names.
+        # Accepts both camelCase (frontend) and snake_case (CI runner / API).
         metric_name_map = {
-            # Universal Core
+            # Universal Core — camelCase
             "answerRelevancy": "answer_relevancy",
             "correctness": "correctness",
             "completeness": "completeness",
@@ -776,16 +876,38 @@ async def run_evaluation(
             "instructionFollowing": "instruction_following",
             "toxicity": "toxicity",
             "bias": "bias",
-            # RAG-specific
+            # RAG — camelCase
             "contextRelevancy": "context_relevancy",
+            "contextualRelevancy": "context_relevancy",
             "contextPrecision": "context_precision",
             "contextRecall": "context_recall",
             "faithfulness": "faithfulness",
-            # Agent-specific
+            # Agent — camelCase
             "toolSelection": "tool_selection",
             "toolCorrectness": "tool_correctness",
             "actionRelevance": "action_relevance",
             "planningQuality": "planning_quality",
+            "planQuality": "planning_quality",
+            "planAdherence": "plan_adherence",
+            "argumentCorrectness": "argument_correctness",
+            "taskCompletion": "task_completion",
+            "stepEfficiency": "step_efficiency",
+            # snake_case identity (CI runner sends these)
+            "answer_relevancy": "answer_relevancy",
+            "instruction_following": "instruction_following",
+            "context_relevancy": "context_relevancy",
+            "contextual_relevancy": "context_relevancy",
+            "context_precision": "context_precision",
+            "context_recall": "context_recall",
+            "tool_selection": "tool_selection",
+            "tool_correctness": "tool_correctness",
+            "action_relevance": "action_relevance",
+            "planning_quality": "planning_quality",
+            "plan_quality": "planning_quality",
+            "plan_adherence": "plan_adherence",
+            "argument_correctness": "argument_correctness",
+            "task_completion": "task_completion",
+            "step_efficiency": "step_efficiency",
         }
 
         # Start with all metrics disabled
@@ -808,6 +930,10 @@ async def run_evaluation(
             "tool_correctness": False,
             "action_relevance": False,
             "planning_quality": False,
+            "plan_adherence": False,
+            "argument_correctness": False,
+            "task_completion": False,
+            "step_efficiency": False,
         }
         
         # Enable metrics based on UI selection
@@ -1265,6 +1391,26 @@ async def run_evaluation(
             status="completed",
             results=experiment_results,
         )
+
+        # Auto-save / update the judge scorer record so the Scorers page reflects
+        # this run (correct choiceScores defaults and up-to-date LAST RUN timestamp).
+        await _upsert_judge_scorer(db=db, config=config, organization_id=organization_id)
+
+        # Touch updated_at for any custom scorers that ran in this experiment so
+        # their LAST RUN date reflects the most recent usage.
+        if enabled_scorers:
+            for scorer in enabled_scorers:
+                sid = scorer.get("id")
+                if sid:
+                    try:
+                        await touch_scorer_updated_at(
+                            scorer_id=sid,
+                            organization_id=organization_id,
+                            db=db,
+                        )
+                    except Exception:
+                        pass
+            await db.commit()
         
         print(f"\n✅ Evaluation completed successfully!")
         print(f"   Total prompts: {total_prompts}")

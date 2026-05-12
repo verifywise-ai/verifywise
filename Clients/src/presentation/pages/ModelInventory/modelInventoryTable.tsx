@@ -268,7 +268,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                   ...tableRowHoverStyle,
                   ...(deletingId === modelInventory.id?.toString() && tableRowDeletingStyle),
                   ...(flashRowId === modelInventory.id && {
-                    backgroundColor: singleTheme.flashColors.background,
+                    "backgroundColor": singleTheme.flashColors.background,
                     "& td": {
                       backgroundColor: "transparent !important",
                     },

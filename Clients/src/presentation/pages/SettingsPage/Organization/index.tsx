@@ -399,16 +399,16 @@ const Organization = () => {
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
               <Box
                 sx={{
-                  width: 100,
-                  height: 100,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  border: "2px dashed #ddd",
-                  backgroundColor: "#fafafa",
-                  position: "relative",
-                  overflow: "hidden",
+                  "width": 100,
+                  "height": 100,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "borderRadius": "50%",
+                  "border": "2px dashed #ddd",
+                  "backgroundColor": "#fafafa",
+                  "position": "relative",
+                  "overflow": "hidden",
                   "&:hover": {
                     borderColor: "#999",
                     backgroundColor: "background.surface",
@@ -466,9 +466,9 @@ const Organization = () => {
               <MUIButton
                 variant="text"
                 sx={{
-                  fontSize: 12,
-                  textTransform: "none",
-                  color: logoUrl ? "#666" : "#ccc",
+                  "fontSize": 12,
+                  "textTransform": "none",
+                  "color": logoUrl ? "#666" : "#ccc",
                   "&:hover": {
                     backgroundColor: logoUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
                   },
@@ -490,9 +490,9 @@ const Organization = () => {
                 component="label"
                 disableRipple
                 sx={{
-                  fontSize: 12,
-                  textTransform: "none",
-                  color: "brand.primary",
+                  "fontSize": 12,
+                  "textTransform": "none",
+                  "color": "brand.primary",
                   "&:hover": {
                     backgroundColor: "transparent !important",
                   },

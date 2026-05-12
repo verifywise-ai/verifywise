@@ -151,9 +151,9 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
       sx={{
         ...singleTheme.tableStyles.primary.header.cell,
         width,
-        cursor: "pointer",
-        userSelect: "none",
-        textAlign: sortKey === "name" ? "left" : "center",
+        "cursor": "pointer",
+        "userSelect": "none",
+        "textAlign": sortKey === "name" ? "left" : "center",
         "&:hover": {
           backgroundColor: "rgba(0, 0, 0, 0.04)",
         },
@@ -240,7 +240,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   onClick={() => onRowClick?.(template)}
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
-                    cursor: onRowClick ? "pointer" : "default",
+                    "cursor": onRowClick ? "pointer" : "default",
                     "&:hover": { backgroundColor: `${background.surface}` },
                   }}
                 >
@@ -339,10 +339,10 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       isDisabled={copyingTemplate}
                       text="Use"
                       sx={{
-                        fontSize: compact ? "11px" : "12px",
-                        minHeight: compact ? "24px" : "28px",
-                        borderColor: `${borderPalette.dark}`,
-                        color: `${text.secondary}`,
+                        "fontSize": compact ? "11px" : "12px",
+                        "minHeight": compact ? "24px" : "28px",
+                        "borderColor": `${borderPalette.dark}`,
+                        "color": `${text.secondary}`,
                         "&:hover": {
                           borderColor: `${brand.primary}`,
                           color: `${brand.primary}`,
@@ -367,7 +367,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 ActionsComponent={TablePaginationActions}
                 sx={{
-                  borderBottom: "none",
+                  "borderBottom": "none",
                   "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
                     fontSize: "12px",
                   },

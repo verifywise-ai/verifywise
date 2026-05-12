@@ -158,12 +158,12 @@ const Overview = ({
                   color="primary"
                   onClick={onShowAllResources}
                   sx={{
-                    textDecoration: "underline",
-                    fontSize: 14,
-                    minWidth: 0,
-                    padding: 0,
-                    fontWeight: 400,
-                    textTransform: "none",
+                    "textDecoration": "underline",
+                    "fontSize": 14,
+                    "minWidth": 0,
+                    "padding": 0,
+                    "fontWeight": 400,
+                    "textTransform": "none",
                     "&:hover": {
                       background: "none",
                       textDecoration: "underline",

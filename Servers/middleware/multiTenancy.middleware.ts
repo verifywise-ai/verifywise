@@ -64,8 +64,9 @@ export const checkMultiTenancy = async (req: Request, res: Response, next: NextF
     return next();
   } else {
     return res.status(403).json({
-      message:
+      message: req.t!(
         "Multi tenancy is not enabled in this server. Please contact VerifyWise to get a license for multi tenancy option.",
+      ),
     });
   }
 };

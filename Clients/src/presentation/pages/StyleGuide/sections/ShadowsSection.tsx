@@ -134,13 +134,13 @@ const ShadowsSection: React.FC = () => {
                   key={shadow.name}
                   onClick={() => handleCopy(shadow.css)}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "24px",
-                    p: "16px",
-                    backgroundColor: theme.palette.background.fill,
-                    borderRadius: "4px",
-                    cursor: "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "24px",
+                    "p": "16px",
+                    "backgroundColor": theme.palette.background.fill,
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
                     "&:hover": {
                       backgroundColor: theme.palette.background.accent,
                     },
@@ -303,14 +303,14 @@ const ShadowsSection: React.FC = () => {
                   </Box>
                   <Box
                     sx={{
-                      flex: "1 1 150px",
-                      p: "16px",
-                      backgroundColor: theme.palette.background.main,
-                      border: `1px solid ${theme.palette.border.dark}`,
-                      borderRadius: "4px",
-                      boxShadow: "none",
-                      transition: "box-shadow 0.2s ease",
-                      cursor: "pointer",
+                      "flex": "1 1 150px",
+                      "p": "16px",
+                      "backgroundColor": theme.palette.background.main,
+                      "border": `1px solid ${theme.palette.border.dark}`,
+                      "borderRadius": "4px",
+                      "boxShadow": "none",
+                      "transition": "box-shadow 0.2s ease",
+                      "cursor": "pointer",
                       "&:hover": {
                         boxShadow: theme.boxShadow,
                       },
@@ -493,14 +493,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -561,9 +561,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

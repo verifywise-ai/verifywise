@@ -41,27 +41,27 @@ const CustomModal: React.FC<ICustomModalProps> = ({
   // };
 
   const buttonTabStyles = {
-    backgroundColor: `${borderPalette.light}`,
-    color: "Black",
-    borderColor: `${borderPalette.light}`,
-    borderTop: 0,
-    borderBottom: 0,
-    borderRadius: 0,
-    fontWeight: 500,
-    boxShadow: "none",
-    textTransform: "none",
+    "backgroundColor": `${borderPalette.light}`,
+    "color": "Black",
+    "borderColor": `${borderPalette.light}`,
+    "borderTop": 0,
+    "borderBottom": 0,
+    "borderRadius": 0,
+    "fontWeight": 500,
+    "boxShadow": "none",
+    "textTransform": "none",
     "&:hover": {
       boxShadow: "none",
     },
   };
 
   const buttonStyle = {
-    fontSize: 13,
-    textTransform: "capitalize",
-    backgroundColor: "#4C7DE7",
-    boxShadow: "none",
-    borderRadius: "4px",
-    border: "1px solid #175CD3",
+    "fontSize": 13,
+    "textTransform": "capitalize",
+    "backgroundColor": "#4C7DE7",
+    "boxShadow": "none",
+    "borderRadius": "4px",
+    "border": "1px solid #175CD3",
     "&:hover": {
       boxShadow: "none",
       backgroundColor: "#175CD3 ",
@@ -84,21 +84,21 @@ const CustomModal: React.FC<ICustomModalProps> = ({
       <Stack
         gap={theme.spacing(4)}
         sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 800,
-          bgcolor: theme.palette.background.alt,
-          borderRadius: theme.shape.borderRadius,
-          boxShadow: 24,
-          paddingY: theme.spacing(15),
-          paddingX: theme.spacing(20),
+          "position": "absolute",
+          "top": "50%",
+          "left": "50%",
+          "transform": "translate(-50%, -50%)",
+          "width": 800,
+          "bgcolor": theme.palette.background.alt,
+          "borderRadius": theme.shape.borderRadius,
+          "boxShadow": 24,
+          "paddingY": theme.spacing(15),
+          "paddingX": theme.spacing(20),
           "&:focus": {
             outline: "none",
           },
-          maxHeight: "90vh",
-          overflowY: "auto",
+          "maxHeight": "90vh",
+          "overflowY": "auto",
         }}
       >
         <Stack
@@ -131,7 +131,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             onChange={handleSelectedTab}
             indicatorColor="primary"
             sx={{
-              justifyContent: "flex-start",
+              "justifyContent": "flex-start",
               "& .MuiTab-root": {
                 color: "primary.main",
               },
@@ -239,7 +239,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             // onClick={handleSave}
             sx={{
               ...buttonStyle,
-              width: 68,
+              "width": 68,
               "&:hover": {
                 backgroundColor: "#175CD3 ",
               },

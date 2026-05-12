@@ -256,7 +256,7 @@ const NewDataset: FC<NewDatasetProps> = ({
 
   const fieldStyle = useMemo(
     () => ({
-      backgroundColor: theme.palette.background.main,
+      "backgroundColor": theme.palette.background.main,
       "& input": {
         padding: "0 14px",
       },

@@ -160,16 +160,16 @@ const AnimationsSection: React.FC = () => {
                     >
                       <Box
                         sx={{
-                          width: 80,
-                          height: 40,
-                          backgroundColor: theme.palette.background.main,
-                          border: `1px solid ${theme.palette.border.dark}`,
-                          borderRadius: "4px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          transition: `all ${item.duration} ease-in-out`,
-                          cursor: "pointer",
+                          "width": 80,
+                          "height": 40,
+                          "backgroundColor": theme.palette.background.main,
+                          "border": `1px solid ${theme.palette.border.dark}`,
+                          "borderRadius": "4px",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "transition": `all ${item.duration} ease-in-out`,
+                          "cursor": "pointer",
                           "&:hover": {
                             backgroundColor: theme.palette.primary.main,
                             color: "white",
@@ -261,8 +261,8 @@ const AnimationsSection: React.FC = () => {
                 <Button
                   variant="contained"
                   sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    transition: "none",
+                    "backgroundColor": theme.palette.primary.main,
+                    "transition": "none",
                     "&:hover": {
                       backgroundColor: "brand.primaryDark",
                     },
@@ -273,8 +273,8 @@ const AnimationsSection: React.FC = () => {
                 <Button
                   variant="contained"
                   sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    transition: "all 0.3s ease",
+                    "backgroundColor": theme.palette.primary.main,
+                    "transition": "all 0.3s ease",
                     "&:hover": {
                       backgroundColor: "brand.primaryDark",
                     },
@@ -355,15 +355,15 @@ const AnimationsSection: React.FC = () => {
                       <Box
                         key={`scale-${demoKey}`}
                         sx={{
-                          width: 120,
-                          height: 60,
-                          backgroundColor: theme.palette.background.main,
-                          border: `1px solid ${theme.palette.border.dark}`,
-                          borderRadius: "4px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          animation: "scaleIn 0.2s ease-out",
+                          "width": 120,
+                          "height": 60,
+                          "backgroundColor": theme.palette.background.main,
+                          "border": `1px solid ${theme.palette.border.dark}`,
+                          "borderRadius": "4px",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "animation": "scaleIn 0.2s ease-out",
                           "@keyframes scaleIn": {
                             "0%": { transform: "scale(0.95)", opacity: 0 },
                             "100%": { transform: "scale(1)", opacity: 1 },
@@ -383,11 +383,11 @@ const AnimationsSection: React.FC = () => {
                       </Typography>
                       <Box
                         sx={{
-                          width: 120,
-                          height: 16,
-                          backgroundColor: "#f2f4f7",
-                          borderRadius: "4px",
-                          animation: "pulse 1.6s ease-in-out infinite",
+                          "width": 120,
+                          "height": 16,
+                          "backgroundColor": "#f2f4f7",
+                          "borderRadius": "4px",
+                          "animation": "pulse 1.6s ease-in-out infinite",
                           "@keyframes pulse": {
                             "0%, 100%": { opacity: 1 },
                             "50%": { opacity: 0.72 },
@@ -406,13 +406,13 @@ const AnimationsSection: React.FC = () => {
                       <Box
                         key={`float-${demoKey}`}
                         sx={{
-                          width: 60,
-                          height: 40,
-                          backgroundColor: theme.palette.background.main,
-                          border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "8px",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                          animation: "float 3s ease-in-out infinite",
+                          "width": 60,
+                          "height": 40,
+                          "backgroundColor": theme.palette.background.main,
+                          "border": `1px solid ${theme.palette.border.light}`,
+                          "borderRadius": "8px",
+                          "boxShadow": "0 4px 12px rgba(0,0,0,0.08)",
+                          "animation": "float 3s ease-in-out infinite",
                           "@keyframes float": {
                             "0%, 100%": { transform: "translateY(0)" },
                             "50%": { transform: "translateY(-8px)" },
@@ -441,14 +441,14 @@ const AnimationsSection: React.FC = () => {
                   <Box
                     key={`fade-${demoKey}`}
                     sx={{
-                      width: 80,
-                      height: 40,
-                      backgroundColor: theme.palette.primary.main,
-                      borderRadius: "4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      animation: "fadeIn 0.3s ease-in-out",
+                      "width": 80,
+                      "height": 40,
+                      "backgroundColor": theme.palette.primary.main,
+                      "borderRadius": "4px",
+                      "display": "flex",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "animation": "fadeIn 0.3s ease-in-out",
                       "@keyframes fadeIn": {
                         "0%": { opacity: 0 },
                         "100%": { opacity: 1 },
@@ -618,14 +618,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -686,9 +686,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

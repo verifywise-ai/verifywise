@@ -131,13 +131,13 @@ const Subprocessors = ({
             <TableRow sx={{ background: "#FAFAFA" }}>
               <TableCell
                 sx={{
-                  fontWeight: 400,
-                  color: `${text.icon}`,
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  px: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  "fontWeight": 400,
+                  "color": `${text.icon}`,
+                  "fontSize": 12,
+                  "textTransform": "uppercase",
+                  "px": 4,
+                  "cursor": "pointer",
+                  "userSelect": "none",
                   "&:hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.04)",
                   },
@@ -165,13 +165,13 @@ const Subprocessors = ({
               </TableCell>
               <TableCell
                 sx={{
-                  fontWeight: 400,
-                  color: `${text.icon}`,
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  px: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  "fontWeight": 400,
+                  "color": `${text.icon}`,
+                  "fontSize": 12,
+                  "textTransform": "uppercase",
+                  "px": 4,
+                  "cursor": "pointer",
+                  "userSelect": "none",
                   "&:hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.04)",
                   },
@@ -199,13 +199,13 @@ const Subprocessors = ({
               </TableCell>
               <TableCell
                 sx={{
-                  fontWeight: 400,
-                  color: `${text.icon}`,
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  px: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  "fontWeight": 400,
+                  "color": `${text.icon}`,
+                  "fontSize": 12,
+                  "textTransform": "uppercase",
+                  "px": 4,
+                  "cursor": "pointer",
+                  "userSelect": "none",
                   "&:hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.04)",
                   },
@@ -233,13 +233,13 @@ const Subprocessors = ({
               </TableCell>
               <TableCell
                 sx={{
-                  fontWeight: 400,
-                  color: `${text.icon}`,
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  px: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  "fontWeight": 400,
+                  "color": `${text.icon}`,
+                  "fontSize": 12,
+                  "textTransform": "uppercase",
+                  "px": 4,
+                  "cursor": "pointer",
+                  "userSelect": "none",
                   "&:hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.04)",
                   },

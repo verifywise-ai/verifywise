@@ -46,3 +46,13 @@
 .field-description .MuiFormControl-root .MuiInputBase-root {
   padding: 5px 10px;
 }
+
+.field-borderless .MuiOutlinedInput-notchedOutline {
+  border: none;
+}
+.field-borderless .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border: none;
+}
+.field-borderless .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border: none;
+}

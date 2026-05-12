@@ -92,6 +92,11 @@ import { ApprovalStepApproversModel } from "../domain.layer/models/approvalWorkf
 import { ApprovalWorkflowModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflow.model";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
+import { GovernanceControlMappingModel } from "../domain.layer/models/governanceOs/governanceControlMapping.model";
+import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/governanceScenario.model";
+import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
+import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
+import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 
 dotenv.config();
 
@@ -201,6 +206,11 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     ApprovalWorkflowModel,
     ApprovalWorkflowStepModel,
     DatasetModel,
+    GovernanceControlMappingModel,
+    GovernanceScenarioModel,
+    GovernanceScenarioRuleModel,
+    GovernanceOrgPreferencesModel,
+    GovernanceCoverageCacheModel,
   ],
 }) as Sequelize;
 

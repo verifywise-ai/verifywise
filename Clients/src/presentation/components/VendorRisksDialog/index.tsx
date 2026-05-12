@@ -184,7 +184,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                           key={risk.id}
                           sx={{
                             ...singleTheme.tableStyles.primary.body.row,
-                            cursor: "pointer",
+                            "cursor": "pointer",
                             "&:hover": {
                               backgroundColor: "rgba(0, 0, 0, 0.04)",
                             },

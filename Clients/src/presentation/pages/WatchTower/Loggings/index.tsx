@@ -140,7 +140,7 @@ const WatchTowerLogs = () => {
             onChange={(e) => setStateFilter(String(e.target.value))}
             items={stateOptions}
             sx={{
-              minWidth: 140,
+              "minWidth": 140,
               "& .MuiOutlinedInput-root": {
                 height: 34,
               },

@@ -129,7 +129,7 @@ function FrameworkButton({
         onClick={onClick}
         sx={{
           ...(type === "eu" ? euAiActChipStyle : iso42001ChipStyle),
-          cursor: "pointer",
+          "cursor": "pointer",
           "&:hover": {
             opacity: 0.9,
           },
@@ -253,14 +253,14 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    color: "#014576",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    minWidth: "auto",
-                    padding: 0,
-                    ml: 1,
+                    "color": "#014576",
+                    "textDecoration": "none",
+                    "cursor": "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "minWidth": "auto",
+                    "padding": 0,
+                    "ml": 1,
                     "&:hover": {
                       opacity: 0.7,
                     },
@@ -293,14 +293,14 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    color: "#014576",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    minWidth: "auto",
-                    padding: 0,
-                    ml: 1,
+                    "color": "#014576",
+                    "textDecoration": "none",
+                    "cursor": "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "minWidth": "auto",
+                    "padding": 0,
+                    "ml": 1,
                     "&:hover": {
                       opacity: 0.7,
                     },
@@ -365,14 +365,14 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      color: "#014576",
-                      textDecoration: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      minWidth: "auto",
-                      padding: 0,
-                      ml: 1,
+                      "color": "#014576",
+                      "textDecoration": "none",
+                      "cursor": "pointer",
+                      "display": "flex",
+                      "alignItems": "center",
+                      "minWidth": "auto",
+                      "padding": 0,
+                      "ml": 1,
                       "&:hover": {
                         opacity: 0.7,
                       },
@@ -405,14 +405,14 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      color: "#014576",
-                      textDecoration: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      minWidth: "auto",
-                      padding: 0,
-                      ml: 1,
+                      "color": "#014576",
+                      "textDecoration": "none",
+                      "cursor": "pointer",
+                      "display": "flex",
+                      "alignItems": "center",
+                      "minWidth": "auto",
+                      "padding": 0,
+                      "ml": 1,
                       "&:hover": {
                         opacity: 0.7,
                       },

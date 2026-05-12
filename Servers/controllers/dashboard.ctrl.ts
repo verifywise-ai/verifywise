@@ -3,6 +3,7 @@ import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { getDashboardDataQuery } from "../utils/dashboard.utils";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getDashboardData(req: Request, res: Response) {
   logProcessing({
     description: "starting getDashboardData",
@@ -36,6 +37,6 @@ export async function getDashboardData(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

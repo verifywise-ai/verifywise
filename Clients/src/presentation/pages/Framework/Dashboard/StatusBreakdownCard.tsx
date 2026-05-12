@@ -39,10 +39,10 @@ interface StatusBreakdownCardProps {
 
 interface StatusData {
   "not started": number;
-  draft: number;
+  "draft": number;
   "in progress": number;
   "awaiting review": number;
-  implemented: number;
+  "implemented": number;
   "needs rework": number;
 }
 
@@ -78,10 +78,10 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
 
         const clauseStatusCounts: StatusData = {
           "not started": clauseNotStarted,
-          draft: 0,
+          "draft": 0,
           "in progress": Math.floor(clauseDone * 0.3), // Approximate distribution
           "awaiting review": Math.floor(clauseDone * 0.2),
-          implemented: Math.floor(clauseDone * 0.5),
+          "implemented": Math.floor(clauseDone * 0.5),
           "needs rework": 0,
         };
 
@@ -97,10 +97,10 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
 
         const annexStatusCounts: StatusData = {
           "not started": annexNotStarted,
-          draft: 0,
+          "draft": 0,
           "in progress": Math.floor(annexDone * 0.3), // Approximate distribution
           "awaiting review": Math.floor(annexDone * 0.2),
-          implemented: Math.floor(annexDone * 0.5),
+          "implemented": Math.floor(annexDone * 0.5),
           "needs rework": 0,
         };
 
@@ -211,11 +211,11 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
 
               const nistStatusData: StatusData = {
                 "not started": nistData.notStarted || 0,
-                draft: nistData.draft || 0,
+                "draft": nistData.draft || 0,
                 "in progress": nistData.inProgress || 0,
                 "awaiting review":
                   (nistData.awaitingReview || 0) + (nistData.awaitingApproval || 0),
-                implemented: nistData.implemented || 0,
+                "implemented": nistData.implemented || 0,
                 "needs rework": nistData.needsRework || 0,
               };
 

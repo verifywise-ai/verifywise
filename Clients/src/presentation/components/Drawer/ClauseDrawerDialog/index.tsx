@@ -703,8 +703,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 850,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
             width: 850,
             margin: 0,
@@ -977,13 +977,13 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                       onClick={() => setShowFilePicker(true)}
                       disabled={isEditingDisabled}
                       sx={{
-                        borderRadius: 2,
-                        width: 165,
-                        height: 25,
-                        fontSize: 11,
-                        border: "1px solid #4C7BF4",
-                        backgroundColor: "#4C7BF4",
-                        color: "white",
+                        "borderRadius": 2,
+                        "width": 165,
+                        "height": 25,
+                        "fontSize": 11,
+                        "border": "1px solid #4C7BF4",
+                        "backgroundColor": "#4C7BF4",
+                        "color": "white",
                         "&:hover": {
                           backgroundColor: "#3D62C3",
                           border: "1px solid #3D62C3",
@@ -1023,13 +1023,13 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                       <Box
                         key={file.id}
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "10px 12px",
-                          border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "4px",
-                          backgroundColor: "background.main",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "space-between",
+                          "padding": "10px 12px",
+                          "border": `1px solid ${theme.palette.border.light}`,
+                          "borderRadius": "4px",
+                          "backgroundColor": "background.main",
                           "&:hover": {
                             backgroundColor: "background.accent",
                           },
@@ -1071,7 +1071,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                               size="small"
                               onClick={() => handleDownloadFile(file.id.toString(), file.fileName)}
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "primary.main",
                                   backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1088,7 +1088,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                               onClick={() => handleDeleteEvidenceFile(file.id.toString())}
                               disabled={isEditingDisabled}
                               sx={{
-                                color: "text.tertiary",
+                                "color": "text.tertiary",
                                 "&:hover": {
                                   color: "status.error.main",
                                   backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1158,7 +1158,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                             size="small"
                             onClick={() => handleDeleteUploadFile(file.id.toString())}
                             sx={{
-                              color: "#92400E",
+                              "color": "#92400E",
                               "&:hover": {
                                 color: "status.error.main",
                                 backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1222,7 +1222,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                             size="small"
                             onClick={() => handleRemovePendingAttach(file.id.toString())}
                             sx={{
-                              color: "#4C7BF4",
+                              "color": "#4C7BF4",
                               "&:hover": {
                                 color: "status.error.text",
                                 backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -1321,13 +1321,13 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                         <Box
                           key={risk.id}
                           sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "10px 12px",
-                            border: `1px solid ${theme.palette.border.light}`,
-                            borderRadius: "4px",
-                            backgroundColor: "background.main",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "space-between",
+                            "padding": "10px 12px",
+                            "border": `1px solid ${theme.palette.border.light}`,
+                            "borderRadius": "4px",
+                            "backgroundColor": "background.main",
                             "&:hover": {
                               backgroundColor: "background.accent",
                             },
@@ -1359,7 +1359,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                                 size="small"
                                 onClick={() => handleViewRiskDetails(risk)}
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "primary.main",
                                     backgroundColor: "rgba(19, 113, 91, 0.08)",
@@ -1382,7 +1382,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                                 }}
                                 disabled={isEditingDisabled}
                                 sx={{
-                                  color: "text.tertiary",
+                                  "color": "text.tertiary",
                                   "&:hover": {
                                     color: "status.error.main",
                                     backgroundColor: "rgba(211, 47, 47, 0.08)",

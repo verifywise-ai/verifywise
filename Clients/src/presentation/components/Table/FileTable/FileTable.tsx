@@ -18,6 +18,8 @@ const FileTable: React.FC<IFileTableProps> = ({
   onEditMetadata,
   onViewHistory,
   visibleColumnKeys,
+  canRunBulkActions = false,
+  onBulkActionSuccess,
 }) => {
   const [sortField, setSortField] = useState<keyof FileModel | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -108,6 +110,8 @@ const FileTable: React.FC<IFileTableProps> = ({
       onEditMetadata={onEditMetadata}
       onViewHistory={onViewHistory}
       visibleColumnKeys={visibleColumnKeys}
+      canRunBulkActions={canRunBulkActions}
+      onBulkActionSuccess={onBulkActionSuccess}
     />
   );
 };

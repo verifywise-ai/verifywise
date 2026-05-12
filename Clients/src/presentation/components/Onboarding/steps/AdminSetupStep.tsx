@@ -85,11 +85,11 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
           <Box
             key={index}
             sx={{
-              padding: 3,
-              backgroundColor: "white",
-              border: `2px solid ${status.default.border}`,
-              borderRadius: "4px",
-              transition: "all 0.2s",
+              "padding": 3,
+              "backgroundColor": "white",
+              "border": `2px solid ${status.default.border}`,
+              "borderRadius": "4px",
+              "transition": "all 0.2s",
               "&:hover": {
                 borderColor: task.color,
                 boxShadow: `0 4px 12px ${task.color}20`,

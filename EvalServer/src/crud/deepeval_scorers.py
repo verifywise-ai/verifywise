@@ -46,6 +46,14 @@ async def list_scorers(
     rows = result.mappings().all()
     scorers: List[Dict[str, Any]] = []
     for row in rows:
+        raw_config = row["config"]
+        if isinstance(raw_config, str):
+            try:
+                raw_config = json.loads(raw_config)
+            except (json.JSONDecodeError, TypeError):
+                raw_config = {}
+        elif raw_config is None:
+            raw_config = {}
         scorers.append(
             {
                 "id": row["id"],
@@ -54,7 +62,7 @@ async def list_scorers(
                 "description": row["description"],
                 "type": row["type"],
                 "metricKey": row["metric_key"],
-                "config": row["config"] or {},
+                "config": raw_config,
                 "enabled": row["enabled"],
                 "defaultThreshold": float(row["default_threshold"]) if row["default_threshold"] is not None else None,
                 "weight": float(row["weight"]) if row["weight"] is not None else None,
@@ -117,6 +125,15 @@ async def create_scorer(
     if not row:
         return None
 
+    raw_config = row["config"]
+    if isinstance(raw_config, str):
+        try:
+            raw_config = json.loads(raw_config)
+        except (json.JSONDecodeError, TypeError):
+            raw_config = {}
+    elif raw_config is None:
+        raw_config = {}
+
     return {
         "id": row["id"],
         "orgId": str(row["organization_id"]) if row["organization_id"] else None,
@@ -124,7 +141,7 @@ async def create_scorer(
         "description": row["description"],
         "type": row["type"],
         "metricKey": row["metric_key"],
-        "config": row["config"] or {},
+        "config": raw_config,
         "enabled": row["enabled"],
         "defaultThreshold": float(row["default_threshold"]) if row["default_threshold"] is not None else None,
         "weight": float(row["weight"]) if row["weight"] is not None else None,
@@ -211,6 +228,15 @@ async def update_scorer(
     if not row:
         return None
 
+    raw_config = row["config"]
+    if isinstance(raw_config, str):
+        try:
+            raw_config = json.loads(raw_config)
+        except (json.JSONDecodeError, TypeError):
+            raw_config = {}
+    elif raw_config is None:
+        raw_config = {}
+
     return {
         "id": row["id"],
         "orgId": str(row["organization_id"]) if row["organization_id"] else None,
@@ -218,7 +244,7 @@ async def update_scorer(
         "description": row["description"],
         "type": row["type"],
         "metricKey": row["metric_key"],
-        "config": row["config"] or {},
+        "config": raw_config,
         "enabled": row["enabled"],
         "defaultThreshold": float(row["default_threshold"]) if row["default_threshold"] is not None else None,
         "weight": float(row["weight"]) if row["weight"] is not None else None,
@@ -265,6 +291,15 @@ async def get_scorer_by_id(
     if not row:
         return None
 
+    raw_config = row["config"]
+    if isinstance(raw_config, str):
+        try:
+            raw_config = json.loads(raw_config)
+        except (json.JSONDecodeError, TypeError):
+            raw_config = {}
+    elif raw_config is None:
+        raw_config = {}
+
     return {
         "id": row["id"],
         "orgId": str(row["organization_id"]) if row["organization_id"] else None,
@@ -272,7 +307,7 @@ async def get_scorer_by_id(
         "description": row["description"],
         "type": row["type"],
         "metricKey": row["metric_key"],
-        "config": row["config"] or {},
+        "config": raw_config,
         "enabled": row["enabled"],
         "defaultThreshold": float(row["default_threshold"]) if row["default_threshold"] is not None else None,
         "weight": float(row["weight"]) if row["weight"] is not None else None,
@@ -280,6 +315,34 @@ async def get_scorer_by_id(
         "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
         "createdBy": row["created_by"],
     }
+
+
+async def touch_scorer_updated_at(
+    scorer_id: str,
+    *,
+    organization_id: int,
+    db: AsyncSession,
+) -> bool:
+    """
+    Update the updated_at timestamp of a scorer to reflect it was just used.
+    Called when an experiment runs with this judge/scorer.
+    Returns True if the scorer was found and updated.
+    """
+
+    result = await db.execute(
+        text(
+            '''
+            UPDATE llm_evals_scorers
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE organization_id = :organization_id AND id = :id
+            RETURNING id
+            '''
+        ),
+        {"organization_id": organization_id, "id": scorer_id},
+    )
+
+    row = result.fetchone()
+    return row is not None
 
 
 async def delete_scorer(
@@ -345,6 +408,15 @@ async def get_latest_scorer(
     if not row:
         return None
 
+    raw_config = row["config"]
+    if isinstance(raw_config, str):
+        try:
+            raw_config = json.loads(raw_config)
+        except (json.JSONDecodeError, TypeError):
+            raw_config = {}
+    elif raw_config is None:
+        raw_config = {}
+
     return {
         "id": row["id"],
         "orgId": str(row["organization_id"]) if row["organization_id"] else None,
@@ -352,7 +424,7 @@ async def get_latest_scorer(
         "description": row["description"],
         "type": row["type"],
         "metricKey": row["metric_key"],
-        "config": row["config"] or {},
+        "config": raw_config,
         "enabled": row["enabled"],
         "defaultThreshold": float(row["default_threshold"]) if row["default_threshold"] is not None else None,
         "weight": float(row["weight"]) if row["weight"] is not None else None,

@@ -86,3 +86,22 @@ export async function deleteProjectRisk({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/projectRisks/${id}`);
   return response;
 }
+
+export type BulkProjectRiskAction = "set_owner" | "set_category" | "archive";
+
+export interface BulkUpdateProjectRisksPayload {
+  ids: number[];
+  action: BulkProjectRiskAction;
+  ownerId?: number;
+  categories?: string[];
+}
+
+export async function bulkUpdateProjectRisks(payload: BulkUpdateProjectRisksPayload): Promise<any> {
+  try {
+    const response = await apiServices.patch("/projectRisks/bulk", payload);
+    return response.data;
+  } catch (error) {
+    console.error("Error performing bulk project-risk update:", error);
+    throw error;
+  }
+}

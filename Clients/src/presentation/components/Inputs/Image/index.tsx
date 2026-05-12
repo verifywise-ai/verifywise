@@ -39,13 +39,13 @@ function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
             className="image-field-wrapper"
             mt={theme.spacing(8)}
             sx={{
-              position: "relative",
-              height: "fit-content",
-              border: "dashed",
-              borderRadius: theme.shape.borderRadius,
-              borderColor: isDragging ? theme.palette.primary.main : theme.palette.border.light,
-              borderWidth: "2px",
-              transition: "0.2s",
+              "position": "relative",
+              "height": "fit-content",
+              "border": "dashed",
+              "borderRadius": theme.shape.borderRadius,
+              "borderColor": isDragging ? theme.palette.primary.main : theme.palette.border.light,
+              "borderWidth": "2px",
+              "transition": "0.2s",
               "&:hover": {
                 borderColor: theme.palette.primary.main,
                 backgroundColor: "hsl(215, 87%, 51%, 0.05)",

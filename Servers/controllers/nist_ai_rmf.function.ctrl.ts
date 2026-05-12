@@ -7,6 +7,7 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logEvent } from "../utils/logger/dbLogger";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getAllNISTAIRMFfunctions(req: Request, res: Response): Promise<any> {
   logStructured(
     "processing",
@@ -43,7 +44,7 @@ export async function getAllNISTAIRMFfunctions(req: Request, res: Response): Pro
       req.organizationId!,
     );
     logger.error("❌ Error in getAllNISTAIRMFfunctions:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -93,6 +94,6 @@ export async function getNISTAIRMFfunctionById(req: Request, res: Response) {
       req.userId!,
       req.organizationId!,
     );
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

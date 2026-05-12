@@ -179,9 +179,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           }}
           sx={{
             "& .MuiOutlinedInput-root": {
-              backgroundColor: theme.palette.background.accent,
-              borderRadius: "8px",
-              fontSize: theme.typography.fontSize,
+              "backgroundColor": theme.palette.background.accent,
+              "borderRadius": "8px",
+              "fontSize": theme.typography.fontSize,
               "& fieldset": {
                 borderColor: theme.palette.border.light,
               },
@@ -206,10 +206,10 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
             <Typography
               onClick={handleSelectAll}
               sx={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: "#4C7BF4",
-                cursor: "pointer",
+                "fontSize": 12,
+                "fontWeight": 500,
+                "color": "#4C7BF4",
+                "cursor": "pointer",
                 "&:hover": { color: "#3D62C3" },
               }}
             >
@@ -224,11 +224,11 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                 label={`${selectedIds.size} selected`}
                 size="small"
                 sx={{
-                  backgroundColor: "#EEF4FF",
-                  color: "#3B5BDB",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  height: 24,
+                  "backgroundColor": "#EEF4FF",
+                  "color": "#3B5BDB",
+                  "fontSize": 11,
+                  "fontWeight": 500,
+                  "height": 24,
                   "& .MuiChip-label": { px: 1.5 },
                 }}
               />
@@ -291,27 +291,27 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                   key={file.id}
                   onClick={() => handleToggle(file.id)}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 2,
-                    py: 1.5,
-                    cursor: "pointer",
-                    backgroundColor: selectedIds.has(file.id) ? "#F0F7FF" : "transparent",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": 1.5,
+                    "px": 2,
+                    "py": 1.5,
+                    "cursor": "pointer",
+                    "backgroundColor": selectedIds.has(file.id) ? "#F0F7FF" : "transparent",
                     "&:hover": {
                       backgroundColor: selectedIds.has(file.id)
                         ? "#E3EFFD"
                         : theme.palette.background.accent,
                     },
-                    transition: "background-color 0.12s ease",
+                    "transition": "background-color 0.12s ease",
                   }}
                 >
                   <Checkbox
                     checked={selectedIds.has(file.id)}
                     size="small"
                     sx={{
-                      p: 0.5,
-                      color: theme.palette.border.dark,
+                      "p": 0.5,
+                      "color": theme.palette.border.dark,
                       "&.Mui-checked": { color: "#4C7BF4" },
                     }}
                   />

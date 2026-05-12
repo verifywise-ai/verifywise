@@ -375,6 +375,7 @@ async def migrate_table(
 
     # Process each row
     migrated_count = 0
+    skipped_count = 0
     for row in rows:
         row_dict = dict(row)
         old_id = row_dict.get("id")
@@ -397,8 +398,11 @@ async def migrate_table(
                 else:
                     insert_data[col] = value
             elif col in USER_REFERENCE_COLUMNS:
-                # Keep user references as-is (they point to verifywise.users)
-                insert_data[col] = value
+                # Keep user references as-is (they point to verifywise.users).
+                # Cast to str if the old schema stored the value as an integer
+                # (e.g. created_by was INTEGER in old tenant schemas but is
+                # VARCHAR(255) in the shared verifywise schema).
+                insert_data[col] = str(value) if isinstance(value, int) else value
             else:
                 insert_data[col] = value
 
@@ -423,43 +427,58 @@ async def migrate_table(
         placeholder_list = ", ".join(f":{c}" for c in target_columns)
 
         try:
-            if is_serial_id_table:
-                # For SERIAL ID tables, get the new ID from RETURNING
-                insert_result = await session.execute(
-                    text(f"""
-                        INSERT INTO verifywise."{table_name}" ({column_list})
-                        VALUES ({placeholder_list})
-                        RETURNING id
-                    """),
-                    values_dict
-                )
-                new_row = insert_result.fetchone()
-                new_id = new_row[0] if new_row else None
-                if new_id is not None and old_id is not None:
-                    id_mapping.set(table_name, old_id, new_id)
-            else:
-                # For VARCHAR ID tables, just insert
-                await session.execute(
-                    text(f"""
-                        INSERT INTO verifywise."{table_name}" ({column_list})
-                        VALUES ({placeholder_list})
-                        ON CONFLICT DO NOTHING
-                    """),
-                    values_dict
-                )
-                # Map old ID to itself for VARCHAR IDs
-                if old_id is not None:
-                    id_mapping.set(table_name, old_id, old_id)
+            # Use a SAVEPOINT per row so that a failed insert (FK/unique violation)
+            # only rolls back the savepoint, not the entire outer transaction.
+            # Without this, asyncpg leaves the transaction in an aborted state and
+            # every subsequent statement fails with InFailedSQLTransactionError.
+            async with session.begin_nested():
+                if is_serial_id_table:
+                    # For SERIAL ID tables, get the new ID from RETURNING
+                    insert_result = await session.execute(
+                        text(f"""
+                            INSERT INTO verifywise."{table_name}" ({column_list})
+                            VALUES ({placeholder_list})
+                            RETURNING id
+                        """),
+                        values_dict
+                    )
+                    new_row = insert_result.fetchone()
+                    new_id = new_row[0] if new_row else None
+                    if new_id is not None and old_id is not None:
+                        id_mapping.set(table_name, old_id, new_id)
+                else:
+                    # For VARCHAR ID tables, just insert
+                    await session.execute(
+                        text(f"""
+                            INSERT INTO verifywise."{table_name}" ({column_list})
+                            VALUES ({placeholder_list})
+                            ON CONFLICT DO NOTHING
+                        """),
+                        values_dict
+                    )
+                    # Map old ID to itself for VARCHAR IDs
+                    if old_id is not None:
+                        id_mapping.set(table_name, old_id, old_id)
 
             migrated_count += 1
 
         except Exception as e:
-            # Handle unique constraint violations (might be duplicate from previous partial migration)
-            if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
-                # Already exists, add to mapping
+            err_str = str(e).lower()
+            err_type = type(e).__name__
+            # Handle unique constraint violations (duplicate from previous partial migration)
+            if "duplicate key" in err_str or "unique constraint" in err_str:
                 if old_id is not None:
                     id_mapping.set(table_name, old_id, old_id)
                 migrated_count += 1
+            elif (
+                "foreign key" in err_str
+                or "foreignkeyviolation" in err_type.lower()
+                or "fk" in err_type.lower()
+            ):
+                # Orphaned row — its FK target was never in the old schema.
+                # Skip it so the rest of the table can migrate successfully.
+                print(f"    ⚠️  {table_name}: skipping orphaned row {old_id} (FK violation: {e!s:.120})")
+                skipped_count += 1
             else:
                 raise
 
@@ -467,6 +486,8 @@ async def migrate_table(
 
     if migrated_count > 0:
         print(f"    ✓ {table_name}: {migrated_count} rows")
+    if skipped_count > 0:
+        print(f"    ⚠️  {table_name}: {skipped_count} orphaned rows skipped")
 
     return result
 

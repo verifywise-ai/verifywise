@@ -12,6 +12,7 @@ import { deleteEntityById } from "../../../application/repository/entity.reposit
 import CustomizableToast from "../Toast";
 import CustomizableSkeleton from "../Skeletons";
 import useUsers from "../../../application/hooks/useUsers";
+import { useAuth } from "../../../application/hooks/useAuth";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { IFilterState } from "../../types/interfaces/i.filter";
 import { IRiskLoadingStatus, IRisksViewProps } from "../../types/interfaces/i.risk";
@@ -29,6 +30,9 @@ const RisksView = ({
   readOnly = false,
 }: IRisksViewProps) => {
   const { users, loading: usersLoading } = useUsers();
+  const { userRoleName } = useAuth();
+  const canRunBulkActions =
+    !readOnly && !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
   const [refreshKey, setRefreshKey] = useState(0);
   const [projectRisks, setProjectRisks] = useState<RiskModel[]>([]);
   const [selectedRow, setSelectedRow] = useState<RiskModel[]>([]);
@@ -303,8 +307,8 @@ const RisksView = ({
                   href="/risk-management"
                   variant="body2"
                   sx={{
-                    color: "primary.main",
-                    textDecoration: "none",
+                    "color": "primary.main",
+                    "textDecoration": "none",
                     "&:hover": { textDecoration: "underline" },
                   }}
                 >
@@ -326,6 +330,8 @@ const RisksView = ({
               setAnchor={readOnly ? ((() => {}) as any) : setAnchor}
               onDeleteRisk={readOnly ? () => {} : handleDelete}
               flashRow={null}
+              canRunBulkActions={canRunBulkActions}
+              onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
             />
           )}
         </Stack>

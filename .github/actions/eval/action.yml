@@ -1,0 +1,254 @@
+name: 'VerifyWise LLM Evaluation'
+description: >
+  Run LLM evaluations against a VerifyWise instance and gate CI on quality
+  thresholds. Supports chatbot, RAG, and agent use cases.
+
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+# ─── Available metrics ──────────────────────────────────────────────────
+#
+#   Universal:  answer_relevancy, correctness, completeness,
+#               hallucination*, toxicity*, bias*, instruction_following
+#
+#   RAG:        faithfulness, contextual_relevancy,
+#               context_precision, context_recall
+#
+#   Agent:      tool_correctness, argument_correctness,
+#               task_completion, step_efficiency,
+#               plan_quality, plan_adherence
+#
+#   (* = inverted — lower is better)
+# ────────────────────────────────────────────────────────────────────────
+
+inputs:
+  api_url:
+    description: 'VerifyWise instance URL'
+    required: true
+  project_id:
+    description: 'Project ID'
+    required: true
+  dataset_id:
+    description: 'Dataset ID to evaluate against'
+    required: true
+  metrics:
+    description: 'Comma-separated metric names (e.g. answer_relevancy,bias,toxicity)'
+    required: true
+  model_name:
+    description: 'Model to evaluate (e.g. gpt-4o-mini, claude-3.5-sonnet)'
+    required: true
+  model_provider:
+    description: 'Provider: openai | anthropic | google | mistral | xai | self-hosted'
+    required: true
+  judge_model:
+    description: 'Judge LLM for metric scoring'
+    required: false
+    default: 'gpt-4o'
+  judge_provider:
+    description: 'Judge LLM provider'
+    required: false
+    default: 'openai'
+  threshold:
+    description: 'Pass/fail threshold (0.0–1.0)'
+    required: false
+    default: '0.7'
+  timeout_minutes:
+    description: 'Max wait time in minutes'
+    required: false
+    default: '30'
+  poll_interval_seconds:
+    description: 'Seconds between status polls'
+    required: false
+    default: '15'
+  experiment_name:
+    description: 'Custom experiment name (auto-generated if empty)'
+    required: false
+    default: ''
+  fail_on_threshold:
+    description: 'Fail the step when thresholds are not met'
+    required: false
+    default: 'true'
+  post_pr_comment:
+    description: 'Post results as a comment on the pull request'
+    required: false
+    default: 'true'
+  vw_api_token:
+    description: 'VerifyWise API token'
+    required: true
+  llm_api_key:
+    description: 'API key for the model being evaluated'
+    required: true
+  judge_api_key:
+    description: 'API key for the judge LLM (defaults to llm_api_key if not set)'
+    required: false
+    default: ''
+
+outputs:
+  passed:
+    description: 'Whether all metrics passed (true/false)'
+    value: ${{ steps.report.outputs.passed }}
+  results_path:
+    description: 'Path to results JSON'
+    value: ${{ steps.eval.outputs.results_path }}
+  summary_path:
+    description: 'Path to Markdown summary'
+    value: ${{ steps.eval.outputs.summary_path }}
+  experiment_id:
+    description: 'ID of the created experiment'
+    value: ${{ steps.eval.outputs.experiment_id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install requests
+
+    - name: Run evaluation
+      id: eval
+      shell: bash
+      env:
+        VW_API_URL: ${{ inputs.api_url }}
+        VW_API_TOKEN: ${{ inputs.vw_api_token }}
+        VW_PROJECT_ID: ${{ inputs.project_id }}
+        VW_DATASET_ID: ${{ inputs.dataset_id }}
+        VW_METRICS: ${{ inputs.metrics }}
+        VW_MODEL_NAME: ${{ inputs.model_name }}
+        VW_MODEL_PROVIDER: ${{ inputs.model_provider }}
+        VW_JUDGE_MODEL: ${{ inputs.judge_model }}
+        VW_JUDGE_PROVIDER: ${{ inputs.judge_provider }}
+        VW_THRESHOLD: ${{ inputs.threshold }}
+        VW_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        VW_POLL_INTERVAL: ${{ inputs.poll_interval_seconds }}
+        VW_EXPERIMENT_NAME: ${{ inputs.experiment_name }}
+        LLM_API_KEY: ${{ inputs.llm_api_key }}
+        JUDGE_API_KEY: ${{ inputs.judge_api_key }}
+      run: |
+        RESULTS="${{ runner.temp }}/vw-results.json"
+        SUMMARY="${{ runner.temp }}/vw-summary.md"
+
+        python "${{ github.action_path }}/ci_eval_runner.py" \
+          --output "$RESULTS" \
+          --markdown-output "$SUMMARY" \
+          || true
+
+        echo "results_path=$RESULTS" >> "$GITHUB_OUTPUT"
+        echo "summary_path=$SUMMARY" >> "$GITHUB_OUTPUT"
+
+        if [ -f "$RESULTS" ]; then
+          EXP_ID=$(python -c "import json; print(json.load(open('$RESULTS')).get('experiment_id',''))" 2>/dev/null || echo "")
+          echo "experiment_id=$EXP_ID" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Report results
+      id: report
+      if: always()
+      shell: bash
+      env:
+        RESULTS_PATH: ${{ steps.eval.outputs.results_path }}
+        SUMMARY_PATH: ${{ steps.eval.outputs.summary_path }}
+        FAIL_ON_THRESHOLD: ${{ inputs.fail_on_threshold }}
+      run: |
+        if [ ! -f "$RESULTS_PATH" ]; then
+          echo "::error title=Evaluation Failed::No results produced. The evaluation may have failed to connect to the VerifyWise instance."
+          echo "passed=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "## VerifyWise Evaluation"
+            echo ""
+            echo "**FAILED** -- No results were produced. The evaluation may have failed to start."
+            echo "Check the logs in the \"Run evaluation\" step for details."
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$FAIL_ON_THRESHOLD" = "true" ] && exit 1
+          exit 0
+        fi
+
+        if [ -f "$SUMMARY_PATH" ]; then
+          cat "$SUMMARY_PATH" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        python3 << 'PYEOF'
+        import json, os
+
+        results_path = os.environ["RESULTS_PATH"]
+        fail_on = os.environ.get("FAIL_ON_THRESHOLD", "true") == "true"
+
+        with open(results_path) as f:
+            data = json.load(f)
+
+        passed = data.get("passed", False)
+        metrics = data.get("metrics", [])
+        name = data.get("name", "Evaluation")
+        model = data.get("model", "unknown")
+
+        failing = [m for m in metrics if not m.get("passed")]
+
+        with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+            out.write(f"passed={'true' if passed else 'false'}\n")
+
+        if passed:
+            print(f"::notice title=All metrics passed::{len(metrics)} metrics passed for {model}")
+        else:
+            for m in failing:
+                inv = " (inverted -- lower is better)" if m.get("inverted") else ""
+                print(f"::error title={m['name']} failed threshold::"
+                      f"{m['name']}: scored {m['score']*100:.1f}% "
+                      f"against {m['threshold']*100:.0f}% threshold{inv}")
+
+            summary = ", ".join(f"{m['name']}={m['score']*100:.0f}%" for m in failing)
+            print(f"::error title=Evaluation Failed::"
+                  f"{len(failing)}/{len(metrics)} metrics below threshold "
+                  f"on {model}: {summary}")
+
+            if fail_on:
+                raise SystemExit(1)
+        PYEOF
+
+    - name: Post PR comment
+      if: always() && inputs.post_pr_comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summaryPath = '${{ steps.eval.outputs.summary_path }}';
+          if (!summaryPath || !fs.existsSync(summaryPath)) return;
+          const body = fs.readFileSync(summaryPath, 'utf8');
+          const marker = '<!-- verifywise-eval -->';
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body.includes(marker));
+          const fullBody = `${marker}\n${body}`;
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: fullBody,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: fullBody,
+            });
+          }
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: verifywise-eval-results
+        path: |
+          ${{ steps.eval.outputs.results_path }}
+          ${{ steps.eval.outputs.summary_path }}
+        retention-days: 30
+        if-no-files-found: ignore

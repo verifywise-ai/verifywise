@@ -62,11 +62,11 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
       <Box
         onClick={() => onSelectFolder("all")}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          cursor: "pointer",
-          padding: "4px 8px",
-          borderRadius: "4px",
+          "display": "flex",
+          "alignItems": "center",
+          "cursor": "pointer",
+          "padding": "4px 8px",
+          "borderRadius": "4px",
           "&:hover": {
             backgroundColor: `${background.hover}`,
           },
@@ -132,13 +132,13 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
                   <Box
                     onClick={() => !isLast && onSelectFolder(folder.id)}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      cursor: isLast ? "default" : "pointer",
-                      backgroundColor: isLast ? `${background.hover}` : "transparent",
+                      "display": "flex",
+                      "alignItems": "center",
+                      "gap": "6px",
+                      "padding": "4px 8px",
+                      "borderRadius": "4px",
+                      "cursor": isLast ? "default" : "pointer",
+                      "backgroundColor": isLast ? `${background.hover}` : "transparent",
                       "&:hover": {
                         backgroundColor: isLast ? `${background.hover}` : `${background.accent}`,
                       },

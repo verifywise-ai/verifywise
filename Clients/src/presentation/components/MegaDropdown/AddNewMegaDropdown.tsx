@@ -136,21 +136,21 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
         startIcon={<Plus size={14} />}
         onClick={handleClick}
         sx={{
-          background: `${brand.primary}`,
-          color: "white",
-          fontWeight: 500,
-          fontSize: "13px",
-          height: "34px",
-          minHeight: "34px",
-          padding: "0 12px",
-          borderRadius: "4px",
-          textTransform: "none",
-          boxShadow: "none",
+          "background": `${brand.primary}`,
+          "color": "white",
+          "fontWeight": 500,
+          "fontSize": "13px",
+          "height": "34px",
+          "minHeight": "34px",
+          "padding": "0 12px",
+          "borderRadius": "4px",
+          "textTransform": "none",
+          "boxShadow": "none",
           "&:hover": {
             background: "#0f5f4c",
             boxShadow: "none",
           },
-          transition: "background 0.2s ease",
+          "transition": "background 0.2s ease",
         }}
       >
         {buttonLabel}
@@ -170,7 +170,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
           horizontal: "right",
         }}
         sx={{
-          mt: 1,
+          "mt": 1,
           "& .MuiPopover-paper": {
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
@@ -205,19 +205,19 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 }
               }}
               sx={{
-                borderRadius: "8px",
-                padding: "12px 8px",
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
-                backgroundColor: hoveredItem === item.id ? "background.surface" : "transparent",
-                border: hoveredItem === item.id ? "1px solid #e0e0e0" : "1px solid transparent",
-                transition: "all 0.15s ease",
-                minWidth: "90px",
-                position: "relative",
+                "borderRadius": "8px",
+                "padding": "12px 8px",
+                "cursor": "pointer",
+                "display": "flex",
+                "flexDirection": "column",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "gap": 1,
+                "backgroundColor": hoveredItem === item.id ? "background.surface" : "transparent",
+                "border": hoveredItem === item.id ? "1px solid #e0e0e0" : "1px solid transparent",
+                "transition": "all 0.15s ease",
+                "minWidth": "90px",
+                "position": "relative",
                 "&:active": {
                   transform: "scale(0.97)",
                 },

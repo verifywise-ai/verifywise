@@ -218,8 +218,8 @@ const IconsSection: React.FC = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           size="small"
           sx={{
-            mb: "24px",
-            width: 300,
+            "mb": "24px",
+            "width": 300,
             "& .MuiOutlinedInput-root": {
               borderRadius: "4px",
             },
@@ -254,16 +254,16 @@ const IconsSection: React.FC = () => {
                 key={iconName}
                 onClick={() => handleCopy(`import { ${iconName} } from "lucide-react";`)}
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "6px",
-                  p: "12px 8px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  backgroundColor: theme.palette.background.main,
-                  border: `1px solid ${theme.palette.border.light}`,
-                  transition: "all 150ms ease",
+                  "display": "flex",
+                  "flexDirection": "column",
+                  "alignItems": "center",
+                  "gap": "6px",
+                  "p": "12px 8px",
+                  "borderRadius": "4px",
+                  "cursor": "pointer",
+                  "backgroundColor": theme.palette.background.main,
+                  "border": `1px solid ${theme.palette.border.light}`,
+                  "transition": "all 150ms ease",
                   "&:hover": {
                     borderColor: theme.palette.primary.main,
                     backgroundColor: theme.palette.background.accent,
@@ -652,14 +652,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -720,9 +720,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

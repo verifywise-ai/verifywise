@@ -236,12 +236,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 }
               }}
               sx={{
-                cursor: "pointer",
-                color: isDark ? "#9b8b74" : "#64748B",
-                display: "flex",
-                alignItems: "center",
-                padding: "4px",
-                borderRadius: "4px",
+                "cursor": "pointer",
+                "color": isDark ? "#9b8b74" : "#64748B",
+                "display": "flex",
+                "alignItems": "center",
+                "padding": "4px",
+                "borderRadius": "4px",
                 "&:hover": {
                   color: isDark ? "#6b5c47" : "#94A3B8",
                   bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
@@ -271,14 +271,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   key={i}
                   onClick={() => setStep(i)}
                   sx={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    height: 40,
-                    cursor: "pointer",
-                    bgcolor: isActive
+                    "flex": 1,
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "gap": "8px",
+                    "height": 40,
+                    "cursor": "pointer",
+                    "bgcolor": isActive
                       ? isDark
                         ? "rgba(181,33,128,0.12)"
                         : "rgba(74,222,128,0.12)"
@@ -287,13 +287,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           ? "rgba(181,33,128,0.05)"
                           : "rgba(74,222,128,0.05)"
                         : "transparent",
-                    borderRight:
+                    "borderRight":
                       i < steps.length - 1
                         ? isDark
                           ? "1px solid rgba(0,0,0,0.06)"
                           : "1px solid rgba(255,255,255,0.06)"
                         : "none",
-                    transition: "background-color 0.2s",
+                    "transition": "background-color 0.2s",
                     "&:hover": {
                       bgcolor: isActive
                         ? isDark
@@ -364,11 +364,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             text={step === 0 ? skipButtonText : "Back"}
             onClick={() => (step === 0 ? handleClose() : setStep(step - 1))}
             sx={{
-              minWidth: "70px",
-              height: 34,
-              fontSize: 13,
-              border: "1px solid #d0d5dd",
-              color: "text.secondary",
+              "minWidth": "70px",
+              "height": 34,
+              "fontSize": 13,
+              "border": "1px solid #d0d5dd",
+              "color": "text.secondary",
               "&:hover": {
                 bgcolor: "background.accent",
                 border: "1px solid #d0d5dd",
@@ -380,10 +380,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             text={isLast ? finishButtonText : "Continue"}
             onClick={() => (isLast ? handleFinish() : setStep(step + 1))}
             sx={{
-              minWidth: "70px",
-              height: 34,
-              fontSize: 13,
-              bgcolor: "brand.primary",
+              "minWidth": "70px",
+              "height": 34,
+              "fontSize": 13,
+              "bgcolor": "brand.primary",
               "&:hover": {
                 bgcolor: "brand.primaryHover",
               },

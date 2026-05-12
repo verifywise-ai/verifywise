@@ -4,7 +4,6 @@ import {
   Database,
   Award,
   Settings,
-  KeyRound,
   Swords,
   // Trophy,
   Cpu,
@@ -149,17 +148,10 @@ export default function EvalsSidebar({
       dividerAfter: true,
     },
     {
-      id: "configuration",
-      label: "Configuration",
-      value: "configuration",
-      icon: <Settings size={16} strokeWidth={1.5} />,
-      disabled: disabled,
-    },
-    {
       id: "settings",
       label: "Settings",
       value: "settings",
-      icon: <KeyRound size={16} strokeWidth={1.5} />,
+      icon: <Settings size={16} strokeWidth={1.5} />,
       disabled: false, // Organization-wide settings - always enabled
     },
   ];

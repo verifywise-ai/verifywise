@@ -102,21 +102,21 @@ const formatFileSize = (bytes: number): string => {
 
 // Delete modal button styles (matching uploader component patterns)
 const BasicModalCancelButtonStyle = {
-  textTransform: "none",
-  fontSize: 13,
-  borderRadius: "4px",
-  color: `${text.secondary}`,
+  "textTransform": "none",
+  "fontSize": 13,
+  "borderRadius": "4px",
+  "color": `${text.secondary}`,
   "&:hover": {
     backgroundColor: "rgba(19, 113, 91, 0.04)",
   },
 };
 
 const BasicModalDeleteButtonStyle = {
-  fontSize: 13,
-  backgroundColor: "#DB504A",
-  border: "1px solid #DB504A",
-  boxShadow: "none",
-  borderRadius: "4px",
+  "fontSize": 13,
+  "backgroundColor": "#DB504A",
+  "border": "1px solid #DB504A",
+  "boxShadow": "none",
+  "borderRadius": "4px",
   "&:hover": {
     boxShadow: "none",
   },
@@ -490,23 +490,23 @@ const Uploader: React.FC<UploaderProps> = ({
 
   // Modern drop zone styles
   const dropZoneStyles: SxProps<Theme> = {
-    position: "relative",
-    borderRadius: "4px",
-    background: isDragging
+    "position": "relative",
+    "borderRadius": "4px",
+    "background": isDragging
       ? "linear-gradient(135deg, rgba(19, 113, 91, 0.05) 0%, rgba(19, 113, 91, 0.1) 100%)"
       : "background.main",
-    border: `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : "#d0d5dd"}`,
-    boxShadow: "none",
-    transition: "all 0.2s ease",
-    cursor: "pointer",
-    overflow: "hidden",
-    minHeight: "200px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-    p: 4,
+    "border": `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : "#d0d5dd"}`,
+    "boxShadow": "none",
+    "transition": "all 0.2s ease",
+    "cursor": "pointer",
+    "overflow": "hidden",
+    "minHeight": "200px",
+    "display": "flex",
+    "flexDirection": "column",
+    "alignItems": "center",
+    "justifyContent": "center",
+    "gap": 2,
+    "p": 4,
     "&::before": {
       content: '""',
       position: "absolute",
@@ -521,21 +521,21 @@ const Uploader: React.FC<UploaderProps> = ({
       transition: "opacity 0.2s ease",
     },
     "&:hover": {
-      borderColor: "#5FA896",
-      backgroundColor: "rgba(19, 113, 91, 0.02)",
+      "borderColor": "#5FA896",
+      "backgroundColor": "rgba(19, 113, 91, 0.02)",
       "&::before": { opacity: 1 },
     },
   };
 
   // Modern file card styles
   const fileCardStyles: SxProps<Theme> = {
-    borderRadius: "4px",
-    background: "background.main",
-    border: `1px solid #EAECF0`,
-    boxShadow: "none",
-    transition: "all 0.2s ease",
-    overflow: "hidden",
-    mb: 2,
+    "borderRadius": "4px",
+    "background": "background.main",
+    "border": `1px solid #EAECF0`,
+    "boxShadow": "none",
+    "transition": "all 0.2s ease",
+    "overflow": "hidden",
+    "mb": 2,
     "&:hover": {
       backgroundColor: "rgba(19, 113, 91, 0.02)",
     },
@@ -698,9 +698,9 @@ const Uploader: React.FC<UploaderProps> = ({
                 variant="determinate"
                 value={overallProgress}
                 sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: "background.hover",
+                  "height": 6,
+                  "borderRadius": 3,
+                  "backgroundColor": "background.hover",
                   "& .MuiLinearProgress-bar": {
                     backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
                     borderRadius: 3,
@@ -790,11 +790,11 @@ const Uploader: React.FC<UploaderProps> = ({
                                   size="small"
                                   icon={<StatusIcon size={10} style={{ marginLeft: 2 }} />}
                                   sx={{
-                                    backgroundColor: statusChip.backgroundColor,
-                                    color: statusChip.color,
-                                    fontWeight: 500,
-                                    fontSize: "11px",
-                                    height: 20,
+                                    "backgroundColor": statusChip.backgroundColor,
+                                    "color": statusChip.color,
+                                    "fontWeight": 500,
+                                    "fontSize": "11px",
+                                    "height": 20,
                                     "& .MuiChip-icon": {
                                       fontSize: "10px",
                                     },
@@ -809,9 +809,9 @@ const Uploader: React.FC<UploaderProps> = ({
                                     variant="determinate"
                                     value={file.progress}
                                     sx={{
-                                      height: 4,
-                                      borderRadius: 2,
-                                      backgroundColor: "background.hover",
+                                      "height": 4,
+                                      "borderRadius": 2,
+                                      "backgroundColor": "background.hover",
                                       "& .MuiLinearProgress-bar": {
                                         backgroundColor:
                                           singleTheme.buttons.primary.contained.backgroundColor,
@@ -833,7 +833,7 @@ const Uploader: React.FC<UploaderProps> = ({
                                     onClick={() => handlePreviewFile(file)}
                                     title="Preview"
                                     sx={{
-                                      color: theme.palette.text.secondary,
+                                      "color": theme.palette.text.secondary,
                                       "&:hover": {
                                         backgroundColor: `${singleTheme.buttons.primary.contained.backgroundColor}10`,
                                         color:
@@ -853,7 +853,7 @@ const Uploader: React.FC<UploaderProps> = ({
                                       disabled={!isAdmin}
                                       title="Download"
                                       sx={{
-                                        color: !isAdmin
+                                        "color": !isAdmin
                                           ? theme.palette.action.disabled
                                           : theme.palette.text.secondary,
                                         "&:hover": {
@@ -876,7 +876,7 @@ const Uploader: React.FC<UploaderProps> = ({
                                 onClick={() => handleDeleteFile(file)}
                                 title="Delete"
                                 sx={{
-                                  color: theme.palette.text.secondary,
+                                  "color": theme.palette.text.secondary,
                                   "&:hover": {
                                     backgroundColor: `${singleTheme.buttons.error}10`,
                                     color: singleTheme.buttons.error,

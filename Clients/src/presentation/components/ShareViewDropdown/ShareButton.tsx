@@ -37,13 +37,13 @@ const ShareButton: React.FC<ShareButtonProps> = ({
           disabled={disabled}
           size={size}
           sx={{
-            color: `${brand.primary}`,
-            backgroundColor: "transparent",
-            border: `1px solid ${borderPalette.dark}`,
-            borderRadius: "4px",
-            padding: size === "small" ? "6px" : size === "large" ? "10px" : "6px",
-            width: size === "small" ? "32px" : size === "large" ? "44px" : "34px",
-            height: size === "small" ? "32px" : size === "large" ? "44px" : "34px",
+            "color": `${brand.primary}`,
+            "backgroundColor": "transparent",
+            "border": `1px solid ${borderPalette.dark}`,
+            "borderRadius": "4px",
+            "padding": size === "small" ? "6px" : size === "large" ? "10px" : "6px",
+            "width": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
+            "height": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
             "&:hover": {
               backgroundColor: "rgba(19, 113, 91, 0.08)",
               borderColor: `${brand.primary}`,
@@ -53,7 +53,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
               borderColor: `${status.default.border}`,
               backgroundColor: `${background.accent}`,
             },
-            transition: "all 0.2s ease",
+            "transition": "all 0.2s ease",
           }}
         >
           <Share2 size={iconSize} strokeWidth={1.5} />

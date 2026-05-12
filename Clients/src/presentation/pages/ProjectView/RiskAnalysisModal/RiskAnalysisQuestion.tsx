@@ -5,15 +5,15 @@ import Radio from "../../../components/Inputs/Radio";
 import { brand, background } from "../../../themes/palette";
 
 const radioOptionStyle = {
-  width: "100%",
-  padding: "0px 4px",
-  border: "1px solid #E4E7EC",
-  borderRadius: "4px",
-  backgroundColor: `${background.main}`,
-  cursor: "pointer",
-  transition: "all 0.2s ease-in-out",
-  marginLeft: 0,
-  marginRight: 0,
+  "width": "100%",
+  "padding": "0px 4px",
+  "border": "1px solid #E4E7EC",
+  "borderRadius": "4px",
+  "backgroundColor": `${background.main}`,
+  "cursor": "pointer",
+  "transition": "all 0.2s ease-in-out",
+  "marginLeft": 0,
+  "marginRight": 0,
   "&:hover": {
     borderColor: `${brand.primary}`,
     backgroundColor: "#F9F9F9",

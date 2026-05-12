@@ -383,9 +383,9 @@ describe("Test DeepEval Repository – LLM API Keys", () => {
     expect(mockLlmKeysService.addKey).toHaveBeenCalledWith(req);
   });
 
-  it("deleteLlmApiKey delegates with provider", () => {
-    deleteLlmApiKey("openai" as any);
-    expect(mockLlmKeysService.deleteKey).toHaveBeenCalledWith("openai");
+  it("deleteLlmApiKey delegates with provider and id", () => {
+    deleteLlmApiKey("openai" as any, 7);
+    expect(mockLlmKeysService.deleteKey).toHaveBeenCalledWith("openai", 7);
   });
 
   it("hasLlmApiKey delegates with provider", () => {

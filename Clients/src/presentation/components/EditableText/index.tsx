@@ -97,7 +97,7 @@ export default function EditableText({
           autoFocus
           disabled={saving}
           sx={{
-            minWidth: inputMinWidth,
+            "minWidth": inputMinWidth,
             "& .MuiOutlinedInput-root": textSx as object,
           }}
         />
@@ -126,9 +126,9 @@ export default function EditableText({
   return (
     <Box
       sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
+        "display": "inline-flex",
+        "alignItems": "center",
+        "gap": "4px",
         "&:hover .editable-text-icon": { opacity: disabled ? 0 : 1 },
       }}
     >
@@ -140,9 +140,9 @@ export default function EditableText({
           className="editable-text-icon"
           aria-label={editAriaLabel}
           sx={{
-            opacity: 0,
-            transition: "opacity 0.15s",
-            color: palette.text.disabled,
+            "opacity": 0,
+            "transition": "opacity 0.15s",
+            "color": palette.text.disabled,
             "&:hover": {
               color: palette.brand.primary,
               backgroundColor: "rgba(19, 113, 91, 0.1)",

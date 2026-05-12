@@ -202,16 +202,16 @@ function MyComponent() {
     <CustomizableButton
       variant="contained"
       sx={{
-        backgroundColor: theme.palette.primary.main,
-        borderRadius: 2,
-        textTransform: "none",
-        fontWeight: 600,
+        "backgroundColor": theme.palette.primary.main,
+        "borderRadius": 2,
+        "textTransform": "none",
+        "fontWeight": 600,
         "&:hover": {
           backgroundColor: theme.palette.primary.dark,
           transform: "translateY(-2px)",
           boxShadow: theme.shadows[4],
         },
-        transition: "all 0.2s ease-in-out",
+        "transition": "all 0.2s ease-in-out",
       }}
       onClick={handleClick}
     >
@@ -298,13 +298,13 @@ The component integrates with the application's theme system through the `v1Sing
 const buttons = {
   primary: {
     contained: {
-      height: 34,
-      fontSize: "13px",
-      backgroundColor: "#13715B",
-      boxShadow: "none",
-      textTransform: "Inherit",
-      borderRadius: "4px",
-      border: "1px solid #13715B",
+      "height": 34,
+      "fontSize": "13px",
+      "backgroundColor": "#13715B",
+      "boxShadow": "none",
+      "textTransform": "Inherit",
+      "borderRadius": "4px",
+      "border": "1px solid #13715B",
       "&:hover": {
         backgroundColor: "#0f604d",
         border: "1px solid #0f604d",
@@ -602,7 +602,7 @@ import CustomizableButton from "./components/Button/CustomizableButton";
 ```tsx
 <CustomizableButton
   sx={{
-    backgroundColor: "red", // Use proper MUI theme values
+    "backgroundColor": "red", // Use proper MUI theme values
     "&:hover": {
       backgroundColor: "darkred",
     },

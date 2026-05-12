@@ -52,15 +52,15 @@ const SectionSidebar = ({
               className={isActive ? "selected-path" : "unselected"}
               onClick={() => onSelect(section.id)}
               sx={{
-                height: "32px",
-                gap: "8px",
-                borderRadius: theme.shape.borderRadius,
-                padding: "0 8px",
-                justifyContent: "flex-start",
-                background: isActive
+                "height": "32px",
+                "gap": "8px",
+                "borderRadius": theme.shape.borderRadius,
+                "padding": "0 8px",
+                "justifyContent": "flex-start",
+                "background": isActive
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                   : "transparent",
-                border: isActive ? "1px solid #E8E8E8" : "1px solid transparent",
+                "border": isActive ? "1px solid #E8E8E8" : "1px solid transparent",
                 "&:hover": {
                   background: isActive
                     ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
@@ -79,12 +79,12 @@ const SectionSidebar = ({
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "16px",
-                  marginRight: 0,
+                  "minWidth": 0,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "width": "16px",
+                  "marginRight": 0,
                   "& svg": {
                     color: isActive
                       ? "#13715B !important"

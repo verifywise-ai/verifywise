@@ -1289,3 +1289,111 @@ export const deleteRiskByIdQuery = async (
 
   return result[0].length > 0;
 };
+
+/**
+ * Bulk-assign a single risk owner across many project risks.
+ * Caller must validate org ownership beforehand (e.g. via assertOrgOwnsIds).
+ * Skips rows that have already been soft-deleted.
+ */
+export const bulkSetProjectRisksOwnerQuery = async (
+  organizationId: number,
+  ids: number[],
+  ownerId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE risks
+       SET risk_owner = :ownerId,
+           updated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)
+       AND is_deleted = false`,
+    {
+      replacements: { organizationId, ids, ownerId },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Bulk-replace risk_category (enum array) on many project risks.
+ * Categories must already be validated against the predefined enum.
+ * Uses a JSONB → enum-array conversion so empty arrays serialize cleanly.
+ */
+export const bulkSetProjectRisksCategoryQuery = async (
+  organizationId: number,
+  ids: number[],
+  categories: string[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE risks
+       SET risk_category =
+             ARRAY(SELECT jsonb_array_elements_text(CAST(:categories AS jsonb)))
+             ::enum_projectrisks_risk_category[],
+           updated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)
+       AND is_deleted = false`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        categories: JSON.stringify(categories),
+      },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Bulk soft-delete project risks. Idempotent: rows already archived are
+ * left untouched.
+ */
+export const bulkArchiveProjectRisksQuery = async (
+  organizationId: number,
+  ids: number[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE risks
+       SET is_deleted = true,
+           deleted_at = NOW(),
+           updated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)
+       AND is_deleted = false`,
+    {
+      replacements: { organizationId, ids },
+      transaction,
+    },
+  );
+};
+
+export const PROJECT_RISK_CATEGORIES = [
+  "Strategic risk",
+  "Operational risk",
+  "Compliance risk",
+  "Financial risk",
+  "Cybersecurity risk",
+  "Reputational risk",
+  "Legal risk",
+  "Technological risk",
+  "Third-party/vendor risk",
+  "Environmental risk",
+  "Human resources risk",
+  "Geopolitical risk",
+  "Fraud risk",
+  "Data privacy risk",
+  "Health and safety risk",
+] as const;
+
+export type ProjectRiskCategory = (typeof PROJECT_RISK_CATEGORIES)[number];
+
+export const PROJECT_RISK_CATEGORIES_SET: Set<string> = new Set(PROJECT_RISK_CATEGORIES);

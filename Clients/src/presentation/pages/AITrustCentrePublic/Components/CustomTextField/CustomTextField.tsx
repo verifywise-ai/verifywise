@@ -36,9 +36,9 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
           maxRows={8}
           fullWidth
           sx={{
-            background: `${background.main}`,
-            border: "none",
-            p: 0,
+            "background": `${background.main}`,
+            "border": "none",
+            "p": 0,
             "& .MuiInputBase-input": {
               fontSize: 13,
               lineHeight: 1.5,

@@ -154,10 +154,10 @@ function Breadcrumbs({
           component="span"
           title={isLabelTruncated || item.tooltip ? item.tooltip || item.label : undefined}
           sx={{
-            fontSize: "13px",
-            fontWeight: isLast ? 500 : 400,
-            color: theme.palette.text.secondary,
-            cursor: isDisabled ? "default" : "pointer",
+            "fontSize": "13px",
+            "fontWeight": isLast ? 500 : 400,
+            "color": theme.palette.text.secondary,
+            "cursor": isDisabled ? "default" : "pointer",
             "&:hover": {
               color: isDisabled ? theme.palette.text.secondary : theme.palette.primary.main,
               backgroundColor: isDisabled
@@ -168,16 +168,16 @@ function Breadcrumbs({
                   ? "rgba(255, 255, 255, 0.12)"
                   : "rgba(0, 0, 0, 0.08)",
             },
-            transition: "color 0.2s ease, background-color 0.2s ease",
-            textDecoration: "none",
-            lineHeight: 1.2,
-            display: "flex",
-            alignItems: "center",
-            backgroundColor:
+            "transition": "color 0.2s ease, background-color 0.2s ease",
+            "textDecoration": "none",
+            "lineHeight": 1.2,
+            "display": "flex",
+            "alignItems": "center",
+            "backgroundColor":
               theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.04)",
-            padding: "3px 10px",
-            borderRadius: "4px",
-            gap: "6px",
+            "padding": "3px 10px",
+            "borderRadius": "4px",
+            "gap": "6px",
           }}
         >
           {item.icon && (
@@ -217,11 +217,11 @@ function Breadcrumbs({
             }
           }}
           sx={{
-            textDecoration: "none",
-            color: "inherit",
-            backgroundColor: "transparent",
-            border: "none",
-            padding: 0,
+            "textDecoration": "none",
+            "color": "inherit",
+            "backgroundColor": "transparent",
+            "border": "none",
+            "padding": 0,
             "&:hover": {
               textDecoration: "none",
             },

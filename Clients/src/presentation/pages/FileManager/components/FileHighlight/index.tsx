@@ -73,16 +73,16 @@ export function FileHighlight({ highlightTypes, size = "small" }: FileHighlightP
     <Tooltip title={tooltipText} arrow placement="top">
       <Box
         sx={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: size === "small" ? 22 : 26,
-          height: size === "small" ? 22 : 26,
-          borderRadius: "4px",
-          backgroundColor: config.backgroundColor,
-          color: config.color,
-          cursor: "help",
-          transition: "transform 0.1s ease",
+          "display": "inline-flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "width": size === "small" ? 22 : 26,
+          "height": size === "small" ? 22 : 26,
+          "borderRadius": "4px",
+          "backgroundColor": config.backgroundColor,
+          "color": config.color,
+          "cursor": "help",
+          "transition": "transform 0.1s ease",
           "&:hover": {
             transform: "scale(1.1)",
           },

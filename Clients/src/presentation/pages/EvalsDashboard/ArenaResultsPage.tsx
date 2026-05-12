@@ -77,9 +77,9 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
   return (
     <Box
       sx={{
-        fontSize: 13,
-        color: palette.text.secondary,
-        lineHeight: 1.7,
+        "fontSize": 13,
+        "color": palette.text.secondary,
+        "lineHeight": 1.7,
         "& p": { mb: 1, mt: 0 },
         "& h1": { fontSize: 15, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
         "& h2": { fontSize: 13, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
@@ -97,11 +97,11 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           color: "#0f766e",
         },
         "& pre": {
-          backgroundColor: "#1e293b",
-          borderRadius: "6px",
-          p: 2,
-          my: 1.5,
-          overflow: "auto",
+          "backgroundColor": "#1e293b",
+          "borderRadius": "6px",
+          "p": 2,
+          "my": 1.5,
+          "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
             color: "#e2e8f0",
@@ -280,12 +280,12 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           component="span"
           onClick={onBack}
           sx={{
-            fontSize: "13px",
-            color: palette.brand.primary,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textDecorationStyle: "dashed",
-            textUnderlineOffset: "3px",
+            "fontSize": "13px",
+            "color": palette.brand.primary,
+            "cursor": "pointer",
+            "textDecoration": "underline",
+            "textDecorationStyle": "dashed",
+            "textUnderlineOffset": "3px",
             "&:hover": {
               color: palette.brand.primaryHover,
             },
@@ -322,8 +322,8 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
             }}
             startIcon={<Download size={14} />}
             sx={{
-              borderColor: palette.border.dark,
-              color: palette.text.secondary,
+              "borderColor": palette.border.dark,
+              "color": palette.text.secondary,
               "&:hover": {
                 borderColor: palette.brand.primary,
                 color: palette.brand.primary,
@@ -344,8 +344,8 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
             }}
             startIcon={<Copy size={14} />}
             sx={{
-              borderColor: palette.border.dark,
-              color: palette.text.secondary,
+              "borderColor": palette.border.dark,
+              "color": palette.text.secondary,
               "&:hover": {
                 borderColor: palette.brand.primary,
                 color: palette.brand.primary,
@@ -837,12 +837,12 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 key={idx}
                 onClick={() => handleOpenRound(idx)}
                 sx={{
-                  p: "12px",
-                  border: `1px solid ${palette.border.light}`,
-                  borderRadius: "4px",
-                  backgroundColor: palette.background.main,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
+                  "p": "12px",
+                  "border": `1px solid ${palette.border.light}`,
+                  "borderRadius": "4px",
+                  "backgroundColor": palette.background.main,
+                  "cursor": "pointer",
+                  "transition": "all 0.2s ease",
                   "&:hover": {
                     backgroundColor: palette.background.accent,
                     borderColor: palette.brand.primary,
@@ -938,10 +938,10 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                     isDisabled={isFirstRound}
                     icon={<ChevronLeft size={16} />}
                     sx={{
-                      minWidth: "100px",
-                      height: "34px",
-                      border: `1px solid ${palette.border.dark}`,
-                      color: isFirstRound ? palette.text.disabled : palette.text.secondary,
+                      "minWidth": "100px",
+                      "height": "34px",
+                      "border": `1px solid ${palette.border.dark}`,
+                      "color": isFirstRound ? palette.text.disabled : palette.text.secondary,
                       "&:hover:not(.Mui-disabled)": {
                         backgroundColor: palette.background.accent,
                         border: `1px solid ${palette.border.dark}`,
@@ -955,15 +955,15 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                     isDisabled={isLastRound}
                     icon={<ChevronRight size={16} />}
                     sx={{
-                      minWidth: "100px",
-                      height: "34px",
-                      border: `1px solid ${palette.border.dark}`,
-                      color: isLastRound ? palette.text.disabled : palette.text.secondary,
+                      "minWidth": "100px",
+                      "height": "34px",
+                      "border": `1px solid ${palette.border.dark}`,
+                      "color": isLastRound ? palette.text.disabled : palette.text.secondary,
                       "&:hover:not(.Mui-disabled)": {
                         backgroundColor: palette.background.accent,
                         border: `1px solid ${palette.border.dark}`,
                       },
-                      flexDirection: "row-reverse",
+                      "flexDirection": "row-reverse",
                       "& .MuiButton-startIcon": {
                         marginLeft: "8px",
                         marginRight: "-4px",

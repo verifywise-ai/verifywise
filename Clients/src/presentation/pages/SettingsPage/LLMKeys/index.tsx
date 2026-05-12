@@ -415,8 +415,8 @@ const LLMKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: `${brand.primary}`,
-                color: `${background.main}`,
+                "backgroundColor": `${brand.primary}`,
+                "color": `${background.main}`,
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -464,8 +464,8 @@ const LLMKeys = () => {
               onClick={() => setIsCreateModalOpen(true)}
               isDisabled={isDisabled}
               sx={{
-                backgroundColor: `${brand.primary}`,
-                color: `${background.main}`,
+                "backgroundColor": `${brand.primary}`,
+                "color": `${background.main}`,
                 "&:hover": { backgroundColor: "#0e5c47" },
               }}
             />
@@ -549,8 +549,8 @@ const LLMKeys = () => {
                       disableRipple
                       disabled={isDisabled}
                       sx={{
-                        opacity: hoveredKeyId === key.id ? 1 : 0.6,
-                        transition: "opacity 0.2s ease-in-out",
+                        "opacity": hoveredKeyId === key.id ? 1 : 0.6,
+                        "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
                           backgroundColor: "#FEF2F2",
                         },
@@ -570,9 +570,9 @@ const LLMKeys = () => {
                       disableRipple
                       disabled={isDisabled}
                       sx={{
-                        color: "#DC2626",
-                        opacity: hoveredKeyId === key.id ? 1 : 0.6,
-                        transition: "opacity 0.2s ease-in-out",
+                        "color": "#DC2626",
+                        "opacity": hoveredKeyId === key.id ? 1 : 0.6,
+                        "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
                           backgroundColor: "#FEF2F2",
                         },
@@ -633,22 +633,22 @@ const LLMKeys = () => {
                   key={provider.id}
                   onClick={() => handleProviderChange(provider.name)}
                   sx={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 1,
-                    padding: "12px 8px",
-                    borderRadius: "4px",
-                    border: "0.5px solid",
-                    borderColor:
+                    "flex": 1,
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "alignItems": "center",
+                    "gap": 1,
+                    "padding": "12px 8px",
+                    "borderRadius": "4px",
+                    "border": "0.5px solid",
+                    "borderColor":
                       formData.name === provider.name
                         ? `${brand.primary}`
                         : `${borderPalette.light}`,
-                    backgroundColor:
+                    "backgroundColor":
                       formData.name === provider.name ? "#f0fdf4" : `${background.main}`,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    "cursor": "pointer",
+                    "transition": "all 0.15s ease",
                     "&:hover": {
                       borderColor: `${brand.primary}`,
                       backgroundColor: "#f8fffe",
@@ -760,12 +760,12 @@ const LLMKeys = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
-                    fontSize: 11,
-                    color: `${brand.primary}`,
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.25,
+                    "fontSize": 11,
+                    "color": `${brand.primary}`,
+                    "textDecoration": "none",
+                    "display": "inline-flex",
+                    "alignItems": "center",
+                    "gap": 0.25,
                     "&:hover": { textDecoration: "underline" },
                   }}
                 >
@@ -818,7 +818,7 @@ const LLMKeys = () => {
                       onClick={() => handleRemoveHeaderRow(index)}
                       size="small"
                       sx={{
-                        color: "#999999",
+                        "color": "#999999",
                         "&:hover": { color: "#DC2626", backgroundColor: "#FEF2F2" },
                       }}
                     >
@@ -830,12 +830,12 @@ const LLMKeys = () => {
                   <Typography
                     onClick={handleAddHeaderRow}
                     sx={{
-                      fontSize: 12,
-                      color: "brand.primary",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.5,
+                      "fontSize": 12,
+                      "color": "brand.primary",
+                      "cursor": "pointer",
+                      "display": "inline-flex",
+                      "alignItems": "center",
+                      "gap": 0.5,
                       "&:hover": { textDecoration: "underline" },
                     }}
                   >

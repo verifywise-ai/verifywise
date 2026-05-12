@@ -14,23 +14,23 @@ const getTagStyle = (tag: string) => {
   const tagStyles: Record<string, { bg: string; color: string }> = {
     // Ethics & Fairness - Green tones
     "ai ethics": { bg: `${status.success.bg}`, color: `${status.success.text}` },
-    fairness: { bg: "#E8F5E9", color: "#2E7D32" },
+    "fairness": { bg: "#E8F5E9", color: "#2E7D32" },
     "bias mitigation": { bg: "#F1F8E9", color: "#558B2F" },
 
     // Transparency & Explainability - Blue tones
-    transparency: { bg: `${status.info.bg}`, color: `${status.info.text}` },
-    explainability: { bg: "#E1F5FE", color: "#0277BD" },
+    "transparency": { bg: `${status.info.bg}`, color: `${status.info.text}` },
+    "explainability": { bg: "#E1F5FE", color: "#0277BD" },
 
     // Privacy & Data Governance - Purple tones
-    privacy: { bg: "#F3E5F5", color: "#6A1B9A" },
+    "privacy": { bg: "#F3E5F5", color: "#6A1B9A" },
     "data governance": { bg: `${accent.purple.bg}`, color: "#4527A0" },
 
     // Risk & Security - Orange/Red tones
     "model risk": { bg: `${risk.high.bg}`, color: `${risk.high.text}` },
-    security: { bg: `${accent.amber.border}`, color: "#F57F17" },
+    "security": { bg: `${accent.amber.border}`, color: "#F57F17" },
 
     // Accountability & Oversight - Deep Purple
-    accountability: { bg: `${accent.purple.bg}`, color: `${accent.purple.text}` },
+    "accountability": { bg: `${accent.purple.bg}`, color: `${accent.purple.text}` },
     "human oversight": { bg: `${accent.indigo.bg}`, color: `${accent.indigo.text}` },
 
     // Compliance & Standards - Amber/Brown tones
@@ -39,7 +39,7 @@ const getTagStyle = (tag: string) => {
     "nist rmf": { bg: `${accent.amber.border}`, color: "#F9A825" },
 
     // LLM Specific - Cyan
-    llm: { bg: `${risk.veryLow.bg}`, color: "#00838F" },
+    "llm": { bg: `${risk.veryLow.bg}`, color: "#00838F" },
   };
 
   // Check for exact matches (case-insensitive)

@@ -30,13 +30,13 @@ export const SubtitleValue = styled(Typography)(({ theme }) => ({
 }));
 
 export const Btn = styled(Button)(({ theme }) => ({
-  textTransform: "none",
-  borderRadius: 2,
-  maxHeight: 34,
-  borderColor: theme.palette.border.dark,
-  color: theme.palette.text.secondary,
-  boxShadow: "none",
-  backgroundColor: theme.palette.background.main,
+  "textTransform": "none",
+  "borderRadius": 2,
+  "maxHeight": 34,
+  "borderColor": theme.palette.border.dark,
+  "color": theme.palette.text.secondary,
+  "boxShadow": "none",
+  "backgroundColor": theme.palette.background.main,
   "&:hover": {
     boxShadow: "none",
   },

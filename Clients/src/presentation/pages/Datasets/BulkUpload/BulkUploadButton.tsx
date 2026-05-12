@@ -15,9 +15,9 @@ export default function BulkUploadButton({ onTriggerModal }: BulkUploadButtonPro
     <CustomizableButton
       variant="outlined"
       sx={{
-        borderColor: `${brand.primary}`,
-        color: `${brand.primary}`,
-        gap: "8px",
+        "borderColor": `${brand.primary}`,
+        "color": `${brand.primary}`,
+        "gap": "8px",
         "&:hover": { borderColor: "#0e5a48", backgroundColor: "#f0faf7" },
       }}
       text="Bulk upload"

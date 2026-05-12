@@ -265,8 +265,8 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
           borderColor: "border.dark",
         }}
         bodySx={{
-          borderColor: "border.dark",
-          borderRadius: `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
+          "borderColor": "border.dark",
+          "borderRadius": `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`,
           "& .ProseMirror > p": {
             margin: 0,
           },
@@ -301,11 +301,11 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
           <Button
             variant="contained"
             sx={{
-              minWidth: 155, // minimum width
-              border: "1px solid #d0d5dd",
-              backgroundColor: "white",
-              color: "text.secondary",
-              flexShrink: 0, //  prevent shrinking in flex layouts
+              "minWidth": 155, // minimum width
+              "border": "1px solid #d0d5dd",
+              "backgroundColor": "white",
+              "color": "text.secondary",
+              "flexShrink": 0, //  prevent shrinking in flex layouts
               "&:hover": {
                 backgroundColor: "background.accent",
                 border: "1px solid #d0d5dd",
@@ -360,14 +360,14 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             <Button
               variant="contained"
               sx={{
-                mt: 2,
-                borderRadius: 2,
-                width: 155,
-                height: 25,
-                fontSize: 11,
-                border: "1px solid #d0d5dd",
-                backgroundColor: "white",
-                color: "text.secondary",
+                "mt": 2,
+                "borderRadius": 2,
+                "width": 155,
+                "height": 25,
+                "fontSize": 11,
+                "border": "1px solid #d0d5dd",
+                "backgroundColor": "white",
+                "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
                   border: "1px solid #d0d5dd",

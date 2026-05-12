@@ -130,13 +130,13 @@ function PresetCard({
     <Box
       onClick={onClick}
       sx={{
-        border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.border.dark}`,
-        borderRadius: "4px",
-        p: "8px",
-        cursor: "pointer",
-        backgroundColor: selected ? palette.brand.primaryLight : theme.palette.background.paper,
+        "border": `1px solid ${selected ? theme.palette.primary.main : theme.palette.border.dark}`,
+        "borderRadius": "4px",
+        "p": "8px",
+        "cursor": "pointer",
+        "backgroundColor": selected ? palette.brand.primaryLight : theme.palette.background.paper,
         "&:hover": { borderColor: theme.palette.primary.main },
-        transition: "border-color 0.15s",
+        "transition": "border-color 0.15s",
       }}
     >
       <Stack spacing={1}>
@@ -785,16 +785,16 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         {/* File upload area */}
         <Box
           sx={{
-            border: `2px dashed ${palette.border.dark}`,
-            borderRadius: "4px",
-            p: 4,
-            textAlign: "center",
-            cursor: "pointer",
+            "border": `2px dashed ${palette.border.dark}`,
+            "borderRadius": "4px",
+            "p": 4,
+            "textAlign": "center",
+            "cursor": "pointer",
             "&:hover": {
               borderColor: palette.brand.primary,
               backgroundColor: palette.background.accent,
             },
-            position: "relative",
+            "position": "relative",
           }}
           onClick={() => document.getElementById("csv-upload-input")?.click()}
         >

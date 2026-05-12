@@ -283,7 +283,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     }))}
                     error={errorMessage}
                     sx={{
-                      width: "100%",
+                      "width": "100%",
                       "& .MuiOutlinedInput-root": {
                         borderRadius: "8px",
                         fontSize: "15px",
@@ -370,17 +370,17 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                               }
                             }}
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              px: "12px",
-                              py: "8px",
-                              cursor: "pointer",
-                              backgroundColor: isChecked ? "#f0fdf4" : "transparent",
+                              "display": "flex",
+                              "alignItems": "center",
+                              "gap": "8px",
+                              "px": "12px",
+                              "py": "8px",
+                              "cursor": "pointer",
+                              "backgroundColor": isChecked ? "#f0fdf4" : "transparent",
                               "&:hover": {
                                 backgroundColor: isChecked ? "#dcfce7" : "#f8fafc",
                               },
-                              borderBottom: "1px solid #f1f5f9",
+                              "borderBottom": "1px solid #f1f5f9",
                               "&:last-child": { borderBottom: "none" },
                             }}
                           >

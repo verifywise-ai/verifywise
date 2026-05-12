@@ -66,11 +66,11 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
       component="form"
       onSubmit={handleSubmit}
       sx={{
-        backgroundColor: theme.palette.background.paper,
-        border: `1px solid ${theme.palette.border.light}`,
-        borderRadius: "4px",
-        padding: theme.spacing(3),
-        transition: `border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out`,
+        "backgroundColor": theme.palette.background.paper,
+        "border": `1px solid ${theme.palette.border.light}`,
+        "borderRadius": "4px",
+        "padding": theme.spacing(3),
+        "transition": `border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out`,
         "&:focus-within": {
           borderColor: theme.palette.primary.main,
           boxShadow: `0 0 0 3px rgba(19, 113, 91, 0.1)`,
@@ -96,17 +96,17 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
           }}
           sx={{
             "& .MuiInput-root": {
-              fontFamily: "inherit",
-              fontSize: "13px",
-              color: theme.palette.text.primary,
+              "fontFamily": "inherit",
+              "fontSize": "13px",
+              "color": theme.palette.text.primary,
               "&::placeholder": {
                 color: theme.palette.text.secondary,
                 opacity: 0.5,
               },
             },
             "& .MuiInput-input": {
-              padding: 0,
-              lineHeight: 1.6,
+              "padding": 0,
+              "lineHeight": 1.6,
               "&:disabled": {
                 color: theme.palette.text.secondary,
                 opacity: 0.6,
@@ -148,10 +148,10 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
                 onClick={handleCancel}
                 isDisabled={isLoading}
                 sx={{
-                  minWidth: "80px",
-                  height: "34px",
-                  border: "1px solid #d0d5dd",
-                  color: "text.secondary",
+                  "minWidth": "80px",
+                  "height": "34px",
+                  "border": "1px solid #d0d5dd",
+                  "color": "text.secondary",
                   "&:hover": {
                     backgroundColor: "background.accent",
                     border: "1px solid #d0d5dd",

@@ -128,17 +128,17 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
         disableScrollLock: true,
         PaperProps: {
           sx: {
-            borderRadius: theme.shape.borderRadius || 4,
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            mt: 0.5,
+            "borderRadius": theme.shape.borderRadius || 4,
+            "boxShadow": "0px 4px 12px rgba(0, 0, 0, 0.15)",
+            "mt": 0.5,
             "& .MuiMenuItem-root": {
-              fontSize: fontSize,
-              color: theme.palette.text?.primary || `${text.black}`,
+              "fontSize": fontSize,
+              "color": theme.palette.text?.primary || `${text.black}`,
               "&:hover": {
                 backgroundColor: theme.palette.action?.hover || `${background.surface}`,
               },
               "&.Mui-selected": {
-                backgroundColor: theme.palette.action?.hover || `${background.surface}`,
+                "backgroundColor": theme.palette.action?.hover || `${background.surface}`,
                 "&:hover": {
                   backgroundColor: theme.palette.action?.hover || `${background.surface}`,
                 },
@@ -148,12 +148,12 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
         },
       }}
       sx={{
-        minWidth: minWidth,
-        height: dropdownHeight,
-        fontSize: fontSize,
-        backgroundColor: statusColor,
-        color: `${background.main}`,
-        borderRadius: "4px",
+        "minWidth": minWidth,
+        "height": dropdownHeight,
+        "fontSize": fontSize,
+        "backgroundColor": statusColor,
+        "color": `${background.main}`,
+        "borderRadius": "4px",
         "& .MuiSelect-select": {
           padding: padding,
           display: "flex",

@@ -239,10 +239,10 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               text="Cancel"
               onClick={handleOnCloseModal}
               sx={{
-                minWidth: "80px",
-                height: "34px",
-                border: "1px solid #d0d5dd",
-                color: "text.secondary",
+                "minWidth": "80px",
+                "height": "34px",
+                "border": "1px solid #d0d5dd",
+                "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
                   border: "1px solid #d0d5dd",
@@ -254,9 +254,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               text="Next"
               onClick={handleNextPage}
               sx={{
-                minWidth: "80px",
-                height: "34px",
-                backgroundColor: "brand.primary",
+                "minWidth": "80px",
+                "height": "34px",
+                "backgroundColor": "brand.primary",
                 "&:hover": {
                   backgroundColor: "brand.primaryHover",
                 },
@@ -275,10 +275,10 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
             text="Back"
             onClick={handleBackPage}
             sx={{
-              minWidth: "80px",
-              height: "34px",
-              border: "1px solid #d0d5dd",
-              color: "text.secondary",
+              "minWidth": "80px",
+              "height": "34px",
+              "border": "1px solid #d0d5dd",
+              "color": "text.secondary",
               "&:hover": {
                 backgroundColor: "background.accent",
                 border: "1px solid #d0d5dd",
@@ -291,10 +291,10 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               text="Cancel"
               onClick={handleOnCloseModal}
               sx={{
-                minWidth: "80px",
-                height: "34px",
-                border: "1px solid #d0d5dd",
-                color: "text.secondary",
+                "minWidth": "80px",
+                "height": "34px",
+                "border": "1px solid #d0d5dd",
+                "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
                   border: "1px solid #d0d5dd",
@@ -307,9 +307,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               onClick={handleGenerateReport}
               isDisabled={!hasAnySelection}
               sx={{
-                minWidth: "120px",
-                height: "34px",
-                backgroundColor: "brand.primary",
+                "minWidth": "120px",
+                "height": "34px",
+                "backgroundColor": "brand.primary",
                 "&:hover:not(.Mui-disabled)": {
                   backgroundColor: "brand.primaryHover",
                 },
@@ -343,9 +343,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
             text="Close"
             onClick={onClose}
             sx={{
-              minWidth: "80px",
-              height: "34px",
-              backgroundColor: "brand.primary",
+              "minWidth": "80px",
+              "height": "34px",
+              "backgroundColor": "brand.primary",
               "&:hover": {
                 backgroundColor: "brand.primaryHover",
               },

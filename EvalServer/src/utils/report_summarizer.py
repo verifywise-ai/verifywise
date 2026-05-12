@@ -26,6 +26,11 @@ PROVIDER_CONFIG = {
     "openrouter": {"env_var": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1"},
 }
 
+from utils.gateway_litellm_client import (
+    gateway_chat_completion_sync,
+    gateway_mode_enabled,
+    to_litellm_model,
+)
 from utils.metric_constants import (
     is_safety_metric as _is_safety_metric,
     is_inverted_metric as _is_inverted_metric,
@@ -55,7 +60,45 @@ def _get_client(provider: str, api_key: Optional[str] = None, endpoint_url: Opti
     return OpenAI(api_key=resolved_key)
 
 
-def _call_llm(client, model: str, system_prompt: str, user_prompt: str, max_tokens: int = 512) -> str:
+def _call_llm(
+    provider: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    api_key: Optional[str],
+    endpoint_url: Optional[str],
+    max_tokens: int = 512,
+) -> str:
+    p = (provider or "").lower()
+    if p in ("self-hosted", "ollama"):
+        client = _get_client(provider, api_key, endpoint_url)
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4,
+            max_tokens=max_tokens,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    if gateway_mode_enabled() and api_key:
+        litellm_model = to_litellm_model(provider, model)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        return gateway_chat_completion_sync(
+            litellm_model,
+            messages,
+            api_key,
+            max_tokens=max_tokens,
+            temperature=0.4,
+        )
+
+    client = _get_client(provider, api_key, endpoint_url)
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -65,7 +108,7 @@ def _call_llm(client, model: str, system_prompt: str, user_prompt: str, max_toke
         temperature=0.4,
         max_tokens=max_tokens,
     )
-    return response.choices[0].message.content.strip()
+    return (response.choices[0].message.content or "").strip()
 
 
 METRIC_SYSTEM_PROMPT = (
@@ -108,7 +151,6 @@ def generate_metric_summary(
     api_key: Optional[str] = None,
     endpoint_url: Optional[str] = None,
 ) -> str:
-    client = _get_client(provider, api_key, endpoint_url)
     display_name = _format_metric_name(metric_name)
     category = "safety" if is_safety else "quality"
     status = "PASSED" if passed else "FAILED"
@@ -122,7 +164,15 @@ def generate_metric_summary(
         f"{'This is an inverted metric (lower is better).' if _is_safety_metric(metric_name) and _is_inverted_metric(metric_name) else ''}"
     )
 
-    return _call_llm(client, model, METRIC_SYSTEM_PROMPT, user_prompt, max_tokens=200)
+    return _call_llm(
+        provider,
+        model,
+        METRIC_SYSTEM_PROMPT,
+        user_prompt,
+        api_key=api_key,
+        endpoint_url=endpoint_url,
+        max_tokens=200,
+    )
 
 
 def generate_executive_summary(
@@ -133,8 +183,6 @@ def generate_executive_summary(
     api_key: Optional[str] = None,
     endpoint_url: Optional[str] = None,
 ) -> str:
-    client = _get_client(provider, api_key, endpoint_url)
-
     lines = []
     for exp in experiments:
         name = exp.get("name", exp.get("id", "Unknown"))
@@ -162,7 +210,15 @@ def generate_executive_summary(
         lines.append("")
 
     user_prompt = "Here are the evaluation results:\n\n" + "\n".join(lines)
-    return _call_llm(client, model, EXECUTIVE_SYSTEM_PROMPT, user_prompt, max_tokens=400)
+    return _call_llm(
+        provider,
+        model,
+        EXECUTIVE_SYSTEM_PROMPT,
+        user_prompt,
+        api_key=api_key,
+        endpoint_url=endpoint_url,
+        max_tokens=400,
+    )
 
 
 def generate_recommendations_summary(
@@ -172,8 +228,6 @@ def generate_recommendations_summary(
     api_key: Optional[str] = None,
     endpoint_url: Optional[str] = None,
 ) -> str:
-    client = _get_client(provider, api_key, endpoint_url)
-
     lines = []
     for exp in experiments:
         name = exp.get("name", exp.get("id", "Unknown"))
@@ -199,7 +253,15 @@ def generate_recommendations_summary(
         lines.append("")
 
     user_prompt = "Here are the evaluation results:\n\n" + "\n".join(lines)
-    return _call_llm(client, model, RECOMMENDATIONS_SYSTEM_PROMPT, user_prompt, max_tokens=500)
+    return _call_llm(
+        provider,
+        model,
+        RECOMMENDATIONS_SYSTEM_PROMPT,
+        user_prompt,
+        api_key=api_key,
+        endpoint_url=endpoint_url,
+        max_tokens=500,
+    )
 
 
 def generate_all_summaries(

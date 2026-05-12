@@ -6,8 +6,10 @@ export const getPreferencesByUserQuery = async (
   userId: number,
 ): Promise<UserPreferencesModel | null> => {
   try {
+    // date_format lives inside the JSONB `preferences` column; surface it as a
+    // top-level field so mapToModel hydrates the model's date_format property.
     const [preference] = await sequelize.query(
-      `SELECT * FROM user_preferences WHERE user_id = :id`,
+      `SELECT *, (preferences->>'date_format') AS date_format FROM user_preferences WHERE user_id = :id`,
       {
         replacements: { id: userId },
         mapToModel: true,
@@ -28,12 +30,16 @@ export const createNewUserPreferencesQuery = async (
   data: Omit<UserPreferencesModel, "id">,
   transaction: Transaction,
 ): Promise<UserPreferencesModel> => {
+  // NOTE: date_format is stored inside the JSONB `preferences` column on this
+  // table, not as a top-level column. We persist `language` as a real column
+  // (added in migration 20260424194346) and stash other prefs in JSONB.
   const result = await sequelize.query(
-    `INSERT INTO user_preferences (user_id, date_format) VALUES (:user_id, :date_format) RETURNING *`,
+    `INSERT INTO user_preferences (user_id, language, preferences) VALUES (:user_id, :language, :preferences::jsonb) RETURNING *`,
     {
       replacements: {
         user_id: data.user_id,
-        date_format: data.date_format,
+        language: data.language ?? "en",
+        preferences: JSON.stringify(data.date_format ? { date_format: data.date_format } : {}),
       },
       mapToModel: true,
       model: UserPreferencesModel,
@@ -48,27 +54,36 @@ export const updateUserPreferencesByIdQuery = async (
   data: Partial<UserPreferencesModel>,
   transaction: Transaction,
 ): Promise<UserPreferencesModel | null> => {
-  const updatedData: Partial<Record<keyof UserPreferencesModel, any>> = {};
-  const setClause = ["date_format"]
-    .filter((f) => {
-      if (
-        data[f as keyof UserPreferencesModel] !== undefined &&
-        data[f as keyof UserPreferencesModel]
-      ) {
-        updatedData[f as keyof UserPreferencesModel] = data[f as keyof UserPreferencesModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
+  // language is a top-level column; date_format lives inside the JSONB
+  // `preferences` column. Build the SET clause accordingly.
+  const setParts: string[] = [];
+  const replacements: Record<string, any> = { id };
 
-  const query = `UPDATE user_preferences SET ${setClause} WHERE user_id = :id RETURNING *;`;
+  if (data.language !== undefined) {
+    setParts.push("language = :language");
+    replacements.language = data.language;
+  }
+  if (data.date_format !== undefined) {
+    setParts.push(
+      "preferences = COALESCE(preferences, '{}'::jsonb) || jsonb_build_object('date_format', :date_format::text)",
+    );
+    replacements.date_format = data.date_format;
+  }
 
-  updatedData.id = id;
+  if (setParts.length === 0) {
+    // Nothing to update — fetch and return the existing row.
+    const existing = await sequelize.query(`SELECT * FROM user_preferences WHERE user_id = :id`, {
+      replacements,
+      mapToModel: true,
+      model: UserPreferencesModel,
+      transaction,
+    });
+    return existing[0] ?? null;
+  }
 
+  const query = `UPDATE user_preferences SET ${setParts.join(", ")} WHERE user_id = :id RETURNING *;`;
   const result = await sequelize.query(query, {
-    replacements: updatedData,
+    replacements,
     mapToModel: true,
     model: UserPreferencesModel,
     transaction,

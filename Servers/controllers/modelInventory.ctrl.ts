@@ -21,6 +21,7 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 
+import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -75,7 +76,7 @@ export async function getAllModelInventories(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in getAllModelInventories:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -121,7 +122,7 @@ export async function getModelInventoryById(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in getModelInventoryById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -169,7 +170,7 @@ export async function getModelByProjectId(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in getModelByProjectId:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -211,7 +212,7 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in getModelByFrameworkId:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -343,7 +344,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in createNewModelInventory:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -408,7 +409,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         "updateModelInventoryById",
         "modelInventory.ctrl.ts",
       );
-      return res.status(404).json(STATUS_CODE[404]("Model inventory not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
     }
 
     // Track changes before updating
@@ -532,7 +533,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in updateModelInventoryById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -566,7 +567,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
         "deleteModelInventoryById",
         "modelInventory.ctrl.ts",
       );
-      return res.status(404).json(STATUS_CODE[404]("Model inventory not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
     }
 
     // Use the existing database query approach for deleting
@@ -594,7 +595,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       "deleteModelInventoryById",
       "modelInventory.ctrl.ts",
     );
-    return res.status(200).json(STATUS_CODE[200]("Model inventory deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Model inventory deleted successfully")));
   } catch (error) {
     // Rollback transaction if it exists
     if (transaction) {
@@ -613,6 +614,6 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       "modelInventory.ctrl.ts",
     );
     logger.error("❌ Error in deleteModelInventoryById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

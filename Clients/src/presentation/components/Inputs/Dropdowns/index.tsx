@@ -225,21 +225,21 @@ function DropDowns({
       </Typography>
       <Stack
         sx={{
-          height: 90,
-          borderRadius: theme.shape.borderRadius,
+          "height": 90,
+          "borderRadius": theme.shape.borderRadius,
           "& .MuiInputBase-root": {
             height: "90px",
           },
           "& .MuiOutlinedInput-input": {
             padding: "30px",
           },
-          marginBottom: theme.spacing(4),
+          "marginBottom": theme.spacing(4),
         }}
       >
         <Field
           type="description"
           sx={{
-            cursor: "text",
+            "cursor": "text",
             "& .field field-decription field-input MuiInputBase-root MuiInputBase-input": {
               height: "73px",
             },

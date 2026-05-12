@@ -127,8 +127,8 @@ export default function ModelEvaluationsTab() {
         <Box
           component="table"
           sx={{
-            width: "100%",
-            borderCollapse: "collapse",
+            "width": "100%",
+            "borderCollapse": "collapse",
             "& th": {
               textAlign: "left",
               fontSize: "11px",

@@ -260,8 +260,8 @@ const Users = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          color: "#dc2626",
-                          borderColor: "#fecaca",
+                          "color": "#dc2626",
+                          "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: "#dc2626",
                             color: "#fff",

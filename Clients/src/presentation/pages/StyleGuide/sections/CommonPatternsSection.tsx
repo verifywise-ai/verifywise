@@ -481,9 +481,9 @@ const MyTable = ({ items, onEdit, onDelete }: {
             <Box
               onClick={() => handleCopy(pattern.id, pattern.code)}
               sx={{
-                position: "relative",
-                backgroundColor: "#1e1e1e",
-                cursor: "pointer",
+                "position": "relative",
+                "backgroundColor": "#1e1e1e",
+                "cursor": "pointer",
                 "&:hover .copy-btn": {
                   opacity: 1,
                 },

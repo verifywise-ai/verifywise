@@ -48,6 +48,16 @@ function aiGatewayRoutes() {
       },
       error: (err, req, res) => {
         const errAny = err as any;
+        const isConnectionRefused = errAny.code === "ECONNREFUSED" || errAny.code === "ECONNRESET";
+
+        // For read-only GET endpoints, return a graceful empty response when the
+        // AI Gateway service is not running, so the UI degrades silently.
+        if (isConnectionRefused && req.method === "GET" && res && "writeHead" in res) {
+          (res as any).writeHead(200, { "Content-Type": "application/json" });
+          (res as any).end(JSON.stringify({ data: [] }));
+          return;
+        }
+
         console.error(
           `[AI Gateway Proxy] Error for ${req.url}:`,
           errAny.message || errAny.code || errAny,

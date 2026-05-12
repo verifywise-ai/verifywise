@@ -22,9 +22,9 @@ const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
       width: "fit-content",
     },
     stackItem: {
-      p: "15px",
-      position: "relative",
-      width: 124,
+      "p": "15px",
+      "position": "relative",
+      "width": 124,
       "&:after": {
         content: `""`,
         position: "absolute",

@@ -54,17 +54,17 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
           e.preventDefault();
         }}
         sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 450,
-          bgcolor: theme.palette.background.modal,
-          border: 1,
-          borderColor: theme.palette.border.dark,
-          borderRadius: theme.shape.borderRadius,
-          boxShadow: 24,
-          p: theme.spacing(15),
+          "position": "absolute",
+          "top": "50%",
+          "left": "50%",
+          "transform": "translate(-50%, -50%)",
+          "width": 450,
+          "bgcolor": theme.palette.background.modal,
+          "border": 1,
+          "borderColor": theme.palette.border.dark,
+          "borderRadius": theme.shape.borderRadius,
+          "boxShadow": 24,
+          "p": theme.spacing(15),
           "&:focus": {
             outline: "none",
           },
@@ -103,9 +103,9 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
             onClick={handleKeepRisks}
             sx={{
               ...BasicModalCancelButtonStyle,
-              width: 120,
-              borderColor: theme.palette.primary.main,
-              color: theme.palette.primary.main,
+              "width": 120,
+              "borderColor": theme.palette.primary.main,
+              "color": theme.palette.primary.main,
               "&:hover": {
                 backgroundColor: theme.palette.primary.main + "0A",
                 borderColor: theme.palette.primary.main,

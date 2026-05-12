@@ -781,6 +781,49 @@ export class PMMSchedulerService {
 }
 ```
 
+## Bulk action endpoints
+
+Endpoints that mutate many rows in a single request (e.g. `PATCH /api/tasks/bulk`) should reuse the helpers in `Servers/utils/bulkAction.utils.ts` so validation, tenant scoping, transactions, and audit logging stay consistent.
+
+```typescript
+import {
+  parseBulkIds,
+  assertOrgOwnsIds,
+  withBulkTransaction,
+} from "../utils/bulkAction.utils";
+
+export const bulkUpdateTasks = async (req: Request, res: Response) => {
+  const ids = parseBulkIds(req.body.ids);                 // validate + dedupe + cap
+  await assertOrgOwnsIds({                                // cross-tenant guard
+    table: "tasks",
+    ids,
+    organizationId: req.organizationId!,
+  });
+
+  await withBulkTransaction(                              // 1 transaction + 1 audit entry
+    {
+      audit: {
+        action: "mark_complete",
+        ids,
+        fileName: "task.ctrl.ts",
+        functionName: "bulkUpdateTasks",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      },
+    },
+    async (transaction) => {
+      await markTasksCompleteQuery(req.organizationId!, ids, transaction);
+    },
+  );
+
+  return res.status(200).json(STATUS_CODE[200]({ updated: ids.length }));
+};
+```
+
+Conventions: cap at 200 ids per request, always pass the `transaction` through to utils, never construct table names from user input (the helper validates them via `safeSQLIdentifier`).
+
+The matching frontend helpers (`useBulkSelection`, `StandardTableHead` selection prop, `BulkActionsToolbar`) are documented in [Frontend Components → Bulk Actions](../frontend/components.md#bulk-actions).
+
 ## Related Documentation
 
 - [Code Style](./code-style.md) - Naming and TypeScript conventions

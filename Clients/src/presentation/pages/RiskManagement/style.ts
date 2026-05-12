@@ -29,7 +29,7 @@ export const addNewRiskButtonStyle = {
 
 // C. Popover (Insert Risk Mega Dropdown)
 export const riskPopoverStyle = {
-  mt: 1,
+  "mt": 1,
   "& .MuiPopover-paper": {
     borderRadius: singleTheme.borderRadius,
     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
@@ -48,16 +48,16 @@ export const riskPopoverContentStyle = {
 
 // D. Uniform list row (used by Manual, IBM, MIT, and plugin items)
 export const riskMenuItemStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  padding: "12px 14px",
-  borderRadius: singleTheme.borderRadius,
-  cursor: "pointer",
-  border: "1px solid transparent",
-  backgroundColor: "transparent",
-  transition: "background-color 0.15s ease, border-color 0.15s ease",
-  position: "relative" as const,
+  "display": "flex",
+  "alignItems": "center",
+  "gap": "12px",
+  "padding": "12px 14px",
+  "borderRadius": singleTheme.borderRadius,
+  "cursor": "pointer",
+  "border": "1px solid transparent",
+  "backgroundColor": "transparent",
+  "transition": "background-color 0.15s ease, border-color 0.15s ease",
+  "position": "relative" as const,
   "&:hover": {
     backgroundColor: "rgba(19, 113, 91, 0.04)",
     border: "1px solid rgba(19, 113, 91, 0.12)",

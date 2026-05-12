@@ -23,10 +23,29 @@ export interface ListScorersResponse {
   scorers: DeepEvalScorer[];
 }
 
+function parseConfig(config: any): Record<string, any> {
+  if (typeof config === "string") {
+    try {
+      return JSON.parse(config);
+    } catch {
+      return {};
+    }
+  }
+  return config || {};
+}
+
+function normalizeScorerConfig(scorer: DeepEvalScorer): DeepEvalScorer {
+  return { ...scorer, config: parseConfig(scorer.config) };
+}
+
 class DeepEvalScorersService {
   async list(params?: { org_id?: string }): Promise<ListScorersResponse> {
     const res = await CustomAxios.get("/deepeval/scorers", { params });
-    return res.data as ListScorersResponse;
+    const data = res.data as ListScorersResponse;
+    return {
+      ...data,
+      scorers: (data.scorers || []).map(normalizeScorerConfig),
+    };
   }
 
   async create(

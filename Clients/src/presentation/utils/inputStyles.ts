@@ -99,8 +99,8 @@ export const getInputStyles = (theme: Theme, options: InputStylesOptions = {}) =
 
     // Disabled state
     "& .MuiOutlinedInput-root.Mui-disabled": {
-      backgroundColor: theme.palette.grey?.[50] || background.accent,
-      cursor: "not-allowed",
+      "backgroundColor": theme.palette.grey?.[50] || background.accent,
+      "cursor": "not-allowed",
       "& fieldset": {
         borderColor: theme.palette.grey?.[300] || status.default.border,
       },
@@ -162,8 +162,8 @@ export const getSelectStyles = (theme: Theme, options: InputStylesOptions = {}) 
 
     // Disabled state
     "&.Mui-disabled": {
-      backgroundColor: theme.palette.grey?.[50] || background.accent,
-      cursor: "not-allowed",
+      "backgroundColor": theme.palette.grey?.[50] || background.accent,
+      "cursor": "not-allowed",
       "& .MuiOutlinedInput-notchedOutline": {
         borderColor: theme.palette.grey?.[300] || status.default.border,
       },
@@ -234,7 +234,7 @@ export const getAutocompleteStyles = (theme: Theme, options: InputStylesOptions 
 
       // Disabled state
       "&.Mui-disabled": {
-        backgroundColor: theme.palette.grey?.[50] || background.accent,
+        "backgroundColor": theme.palette.grey?.[50] || background.accent,
         "& fieldset": {
           borderColor: theme.palette.grey?.[300] || status.default.border,
         },
@@ -272,9 +272,9 @@ export const getSearchBoxStyles = (theme: Theme, options: InputStylesOptions = {
   const focusRing = focusRingColor || `${theme.palette.primary.main}1A`;
 
   return {
-    border: `1px solid ${defaultBorderColor}`,
-    borderRadius: theme.shape.borderRadius,
-    transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
+    "border": `1px solid ${defaultBorderColor}`,
+    "borderRadius": theme.shape.borderRadius,
+    "transition": "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
 
     // Hover state
     ...(!disableHover && {

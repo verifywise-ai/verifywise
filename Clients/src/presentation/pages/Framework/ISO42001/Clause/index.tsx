@@ -398,8 +398,8 @@ const ISO42001Clause = ({
                   // Subtle indent + hairline tree-tick to mark nested children.
                   ...(isNested
                     ? {
-                        padding: "16px 16px 16px 40px",
-                        position: "relative",
+                        "padding": "16px 16px 16px 40px",
+                        "position": "relative",
                         "&::before": {
                           content: '""',
                           position: "absolute",

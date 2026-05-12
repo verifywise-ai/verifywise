@@ -206,8 +206,8 @@ const TablesSection: React.FC = () => {
             <TableContainer>
               <Table
                 sx={{
-                  border: "1px solid #d0d5dd",
-                  borderRadius: "4px",
+                  "border": "1px solid #d0d5dd",
+                  "borderRadius": "4px",
                   "& td, & th": {
                     border: 0,
                   },
@@ -245,10 +245,10 @@ const TablesSection: React.FC = () => {
                     <TableRow
                       key={index}
                       sx={{
-                        textTransform: "capitalize",
-                        borderBottom: "1px solid #d0d5dd",
-                        backgroundColor: "white",
-                        transition: "background-color 0.3s ease-in-out",
+                        "textTransform": "capitalize",
+                        "borderBottom": "1px solid #d0d5dd",
+                        "backgroundColor": "white",
+                        "transition": "background-color 0.3s ease-in-out",
                         "&:hover td": {
                           backgroundColor: "#fafafa",
                         },
@@ -475,9 +475,9 @@ const SpecGrid: React.FC<{ children: React.ReactNode; columns?: number }> = ({
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: "16px",
+        "display": "grid",
+        "gridTemplateColumns": `repeat(${columns}, 1fr)`,
+        "gap": "16px",
         "@media (max-width: 1200px)": {
           gridTemplateColumns: "repeat(3, 1fr)",
         },
@@ -506,13 +506,13 @@ const SpecCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },
@@ -590,14 +590,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },

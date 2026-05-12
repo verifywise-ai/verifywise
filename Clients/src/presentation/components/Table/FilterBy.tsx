@@ -248,9 +248,9 @@ const FilterByHeader: React.FC<{
     <Box
       onClick={onClose}
       sx={{
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
+        "cursor": "pointer",
+        "display": "flex",
+        "alignItems": "center",
         "&:hover": { opacity: 0.7 },
       }}
     >
@@ -375,10 +375,10 @@ const FilterRow: React.FC<{
       <Box
         onClick={showRemove ? onRemove : undefined}
         sx={{
-          cursor: showRemove ? "pointer" : "default",
-          display: "flex",
-          alignItems: "center",
-          opacity: showRemove ? 1 : 0.3,
+          "cursor": showRemove ? "pointer" : "default",
+          "display": "flex",
+          "alignItems": "center",
+          "opacity": showRemove ? 1 : 0.3,
           "&:hover": showRemove ? { opacity: 0.7 } : {},
         }}
       >
@@ -503,15 +503,15 @@ export const FilterBy: React.FC<FilterByProps> = ({
         onClick={handleClick}
         variant="outlined"
         sx={{
-          fontSize: "13px",
-          fontWeight: 500,
-          padding: "6px 12px",
-          textTransform: "none",
-          color: "#374151",
-          borderColor: "border.dark",
-          height: "34px",
-          minWidth: activeFilterCount > 0 ? "100px" : "80px",
-          backgroundColor: open ? "#eff6ff" : "transparent",
+          "fontSize": "13px",
+          "fontWeight": 500,
+          "padding": "6px 12px",
+          "textTransform": "none",
+          "color": "#374151",
+          "borderColor": "border.dark",
+          "height": "34px",
+          "minWidth": activeFilterCount > 0 ? "100px" : "80px",
+          "backgroundColor": open ? "#eff6ff" : "transparent",
           "&:hover": {
             borderColor: "text.muted",
             backgroundColor: "#eff6ff",
@@ -601,12 +601,12 @@ export const FilterBy: React.FC<FilterByProps> = ({
             <Typography
               onClick={handleClearAll}
               sx={{
-                fontSize: "9px",
-                fontWeight: 600,
-                color: "status.default.text",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                cursor: "pointer",
+                "fontSize": "9px",
+                "fontWeight": 600,
+                "color": "status.default.text",
+                "textTransform": "uppercase",
+                "letterSpacing": "0.5px",
+                "cursor": "pointer",
                 "&:hover": {
                   color: "#374151",
                 },

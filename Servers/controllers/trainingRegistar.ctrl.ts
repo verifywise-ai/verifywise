@@ -15,6 +15,7 @@ import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper
 import logger from "../utils/logger/fileLogger";
 import { notifyTrainingAssigned } from "../services/inAppNotification.service";
 import { getAllUsersQuery } from "../utils/user.utils";
+import { translateError } from "../utils/i18n.utils";
 import {
   recordEntityCreation,
   trackEntityChanges,
@@ -66,7 +67,7 @@ export async function getAllTrainingRegistar(req: Request, res: Response): Promi
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -122,7 +123,7 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -234,7 +235,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -330,7 +331,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -402,6 +403,6 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

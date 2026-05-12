@@ -15,6 +15,15 @@ export interface ExceptionOptions {
   metadata?: ExceptionMetadata;
   cause?: Error;
   timestamp?: Date;
+  /**
+   * Translation key for i18n. When set, the controller's catch block uses
+   * `req.t(error.i18nKey, error.i18nVars)` instead of `req.t(error.message)`,
+   * which lets the dictionary include placeholders the literal `message`
+   * cannot match (e.g. `"Action with ID {id} not found"` vs the interpolated
+   * `"Action with ID 47 not found"`).
+   */
+  i18nKey?: string;
+  i18nVars?: Record<string, string | number>;
 }
 
 /**
@@ -26,6 +35,8 @@ export class CustomException extends Error {
   public readonly metadata: ExceptionMetadata;
   public readonly timestamp: Date;
   public readonly cause?: Error;
+  public readonly i18nKey?: string;
+  public readonly i18nVars?: Record<string, string | number>;
 
   constructor(message: string, options: ExceptionOptions = {}) {
     super(message);
@@ -36,6 +47,8 @@ export class CustomException extends Error {
     this.metadata = options.metadata || {};
     this.cause = options.cause;
     this.timestamp = options.timestamp || new Date();
+    this.i18nKey = options.i18nKey;
+    this.i18nVars = options.i18nVars;
 
     // Ensure proper prototype chain for instanceof checks
     Object.setPrototypeOf(this, CustomException.prototype);

@@ -144,7 +144,7 @@ function InfoBox({
         size="small"
         aria-label="Dismiss"
         sx={{
-          padding: "4px",
+          "padding": "4px",
           "&:hover": {
             backgroundColor: theme.palette.action.hover,
           },

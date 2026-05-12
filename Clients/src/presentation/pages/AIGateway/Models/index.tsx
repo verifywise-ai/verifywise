@@ -440,8 +440,8 @@ export default function ModelsPage() {
                         direction="row"
                         alignItems="center"
                         sx={{
-                          p: "8px 0",
-                          borderBottom: `1px solid ${palette.border.light}`,
+                          "p": "8px 0",
+                          "borderBottom": `1px solid ${palette.border.light}`,
                           "&:last-child": { borderBottom: "none" },
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
@@ -709,9 +709,9 @@ export default function ModelsPage() {
                           direction="row"
                           alignItems="center"
                           sx={{
-                            p: "8px 12px",
-                            borderBottom: `1px solid ${palette.border.light}`,
-                            backgroundColor:
+                            "p": "8px 12px",
+                            "borderBottom": `1px solid ${palette.border.light}`,
+                            "backgroundColor":
                               i === 0
                                 ? "#F0FDF4"
                                 : i === 1
@@ -946,11 +946,11 @@ export default function ModelsPage() {
                             setSearch("");
                           }}
                           sx={{
-                            p: "6px 8px",
-                            borderRadius: "4px",
-                            cursor: "pointer",
+                            "p": "6px 8px",
+                            "borderRadius": "4px",
+                            "cursor": "pointer",
                             "&:hover": { backgroundColor: palette.background.alt },
-                            backgroundColor: compareIds.includes(m.id)
+                            "backgroundColor": compareIds.includes(m.id)
                               ? `${palette.brand.primary}08`
                               : "transparent",
                           }}

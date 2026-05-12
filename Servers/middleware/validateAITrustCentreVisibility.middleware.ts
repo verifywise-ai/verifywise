@@ -6,13 +6,13 @@ export const validateVisibility = async (req: Request, res: Response, next: Next
   const hash = Array.isArray(req.params.hash) ? req.params.hash[0] : req.params.hash;
 
   if (!hash || hash.replace(/\s+/g, " ").trim().length !== 10) {
-    return res.status(400).json({ error: "Invalid hash" });
+    return res.status(400).json({ error: req.t!("Invalid hash") });
   }
 
   // Reverse lookup organization ID from tenant hash
   const organizationId = await getOrganizationIdFromTenantHash(hash);
   if (!organizationId) {
-    return res.status(404).json({ error: "Organization not found" });
+    return res.status(404).json({ error: req.t!("Organization not found") });
   }
 
   const isVisible = await getIsVisibleQuery(organizationId);

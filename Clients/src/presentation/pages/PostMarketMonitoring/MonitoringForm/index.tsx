@@ -379,22 +379,22 @@ const MonitoringForm: React.FC = () => {
                       type="button"
                       onClick={() => question.id && handleToggleFlag(question.id)}
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        padding: "4px 8px",
-                        border: flaggedQuestions.has(question.id!)
+                        "display": "flex",
+                        "alignItems": "center",
+                        "gap": 0.5,
+                        "padding": "4px 8px",
+                        "border": flaggedQuestions.has(question.id!)
                           ? `1px solid ${theme.palette.status.error.text}`
                           : `1px solid ${theme.palette.border.dark}`,
-                        borderRadius: "4px",
-                        backgroundColor: flaggedQuestions.has(question.id!)
+                        "borderRadius": "4px",
+                        "backgroundColor": flaggedQuestions.has(question.id!)
                           ? theme.palette.status.error.bg
                           : "transparent",
-                        color: flaggedQuestions.has(question.id!)
+                        "color": flaggedQuestions.has(question.id!)
                           ? theme.palette.status.error.text
                           : theme.palette.other.icon,
-                        fontSize: 12,
-                        cursor: "pointer",
+                        "fontSize": 12,
+                        "cursor": "pointer",
                         "&:hover": {
                           borderColor: theme.palette.status.error.text,
                           backgroundColor: theme.palette.status.error.bg,
@@ -525,9 +525,9 @@ const MonitoringForm: React.FC = () => {
             onClick={handleSaveDraft}
             isDisabled={isSaving || isSubmitting}
             sx={{
-              height: "34px",
-              border: `1px solid ${theme.palette.border.dark}`,
-              color: theme.palette.text.secondary,
+              "height": "34px",
+              "border": `1px solid ${theme.palette.border.dark}`,
+              "color": theme.palette.text.secondary,
               "&:hover": {
                 backgroundColor: theme.palette.background.accent,
                 border: `1px solid ${theme.palette.border.dark}`,
@@ -540,8 +540,8 @@ const MonitoringForm: React.FC = () => {
             onClick={handleSubmit}
             isDisabled={isSaving || isSubmitting}
             sx={{
-              height: "34px",
-              backgroundColor: theme.palette.primary.main,
+              "height": "34px",
+              "backgroundColor": theme.palette.primary.main,
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark || brand.primaryHover,
               },

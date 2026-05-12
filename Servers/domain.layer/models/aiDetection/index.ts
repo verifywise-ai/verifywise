@@ -8,3 +8,4 @@
 
 export { ScanModel } from "./scan.model";
 export { FindingModel } from "./finding.model";
+export { SuppressionModel } from "./suppression.model";

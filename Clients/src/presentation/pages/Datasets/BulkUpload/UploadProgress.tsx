@@ -46,9 +46,9 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           variant="determinate"
           value={progress}
           sx={{
-            height: 6,
-            borderRadius: "3px",
-            backgroundColor: "#E0E4E9",
+            "height": 6,
+            "borderRadius": "3px",
+            "backgroundColor": "#E0E4E9",
             "& .MuiLinearProgress-bar": {
               backgroundColor: errorCount > 0 ? "#DC6803" : "brand.primary",
               borderRadius: "3px",
@@ -66,9 +66,9 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             size="small"
             variant="outlined"
             sx={{
-              color: "#079455",
-              borderColor: "#17B26A",
-              backgroundColor: "#ECFDF3",
+              "color": "#079455",
+              "borderColor": "#17B26A",
+              "backgroundColor": "#ECFDF3",
               "& .MuiChip-icon": { color: "#079455" },
             }}
           />
@@ -79,9 +79,9 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               size="small"
               variant="outlined"
               sx={{
-                color: "#F04438",
-                borderColor: "#FDA29B",
-                backgroundColor: "#F9ECED",
+                "color": "#F04438",
+                "borderColor": "#FDA29B",
+                "backgroundColor": "#F9ECED",
                 "& .MuiChip-icon": { color: "#F04438" },
               }}
             />

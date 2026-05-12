@@ -73,8 +73,8 @@ const PageBreadcrumbs = memo(function PageBreadcrumbs({
           maxLabelLength={maxLabelLength}
           onItemClick={onItemClick}
           sx={{
-            py: 0.5,
-            px: 0,
+            "py": 0.5,
+            "px": 0,
             "& .MuiBreadcrumbs-separator": {
               color: theme.palette.text.disabled,
               mx: 0.5,

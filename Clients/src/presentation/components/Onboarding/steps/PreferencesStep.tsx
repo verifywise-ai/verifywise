@@ -89,7 +89,7 @@ const PreferencesStep: React.FC<OnboardingStepProps> = ({ preferences, updatePre
                 control={
                   <Radio
                     sx={{
-                      color: `${borderPalette.dark}`,
+                      "color": `${borderPalette.dark}`,
                       "&.Mui-checked": {
                         color: `${brand.primary}`,
                       },

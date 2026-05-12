@@ -256,14 +256,14 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                 <Box
                   key={version.id}
                   sx={{
-                    padding: "10px 12px",
-                    borderRadius: "4px",
-                    backgroundColor: isCurrent ? "#F0FDF4" : "transparent",
-                    border: isCurrent ? "1px solid #BBF7D0" : "1px solid transparent",
+                    "padding": "10px 12px",
+                    "borderRadius": "4px",
+                    "backgroundColor": isCurrent ? "#F0FDF4" : "transparent",
+                    "border": isCurrent ? "1px solid #BBF7D0" : "1px solid transparent",
                     "&:hover": {
                       backgroundColor: isCurrent ? "#F0FDF4" : "background.accent",
                     },
-                    position: "relative",
+                    "position": "relative",
                   }}
                 >
                   {/* Timeline connector */}

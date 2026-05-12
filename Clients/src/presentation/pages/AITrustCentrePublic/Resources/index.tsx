@@ -123,13 +123,13 @@ const Resources = ({
             <TableRow sx={{ background: "#FAFAFA" }}>
               <TableCell
                 sx={{
-                  fontWeight: 400,
-                  color: `${text.icon}`,
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  paddingLeft: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
+                  "fontWeight": 400,
+                  "color": `${text.icon}`,
+                  "fontSize": 12,
+                  "textTransform": "uppercase",
+                  "paddingLeft": 4,
+                  "cursor": "pointer",
+                  "userSelect": "none",
                   "&:hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.04)",
                   },

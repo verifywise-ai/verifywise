@@ -46,8 +46,8 @@ const getStyles = (theme: Theme) => ({
     borderColor: theme.palette.border.light,
   },
   fileLink: {
-    textDecoration: "none",
-    color: theme.palette.primary.main,
+    "textDecoration": "none",
+    "color": theme.palette.primary.main,
     "&:hover": {
       textDecoration: "underline",
     },

@@ -77,7 +77,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 16,
+    articleCount: 17,
     articles: [
       {
         id: 'use-cases',
@@ -174,6 +174,12 @@ export const collections: Collection[] = [
         title: 'Share links',
         description: 'Share read-only views of resources with external stakeholders via expiring links.',
         keywords: ['share', 'link', 'external', 'read-only', 'token', 'expiration', 'public'],
+      },
+      {
+        id: 'governance-os',
+        title: 'Core Governance OS',
+        description: 'Cross-framework intelligence layer with control mappings, scenario recommendations, and unified coverage analysis.',
+        keywords: ['governance', 'os', 'mapping', 'cross-framework', 'scenario', 'coverage', 'insights', 'synergy', 'gap'],
       },
     ],
   },

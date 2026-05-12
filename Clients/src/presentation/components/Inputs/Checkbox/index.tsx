@@ -21,7 +21,6 @@ import { CheckboxProps } from "../../../types/widget.types";
 
 // Soft unchecked square icon with thin border
 function SoftSquare({ size = 24 }: { size?: number }) {
-  const theme = useTheme();
   return (
     <svg
       width={size}
@@ -29,16 +28,17 @@ function SoftSquare({ size = 24 }: { size?: number }) {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      style={{ width: size, height: size, display: "block", flexShrink: 0 }}
     >
       <rect
-        x="3.5"
-        y="3.5"
-        width="17"
-        height="17"
-        rx="2"
-        stroke={theme.palette.text.accent}
-        strokeWidth="1"
-        fill="none"
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="4"
+        stroke="#D0D5DD"
+        strokeWidth="1.5"
+        fill="white"
       />
     </svg>
   );
@@ -54,10 +54,11 @@ function FilledCheckSquare({ size = 24 }: { size?: number }) {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      style={{ width: size, height: size, display: "block", flexShrink: 0 }}
     >
-      <rect x="3" y="3" width="18" height="18" rx="2" fill={theme.palette.primary.main} />
+      <rect x="3" y="3" width="18" height="18" rx="4" fill={theme.palette.primary.main} />
       <path
-        d="M9 12l2 2 4-4"
+        d="M8 12.5L10.5 15L16 9"
         stroke="white"
         strokeWidth="2"
         strokeLinecap="round"
@@ -67,45 +68,64 @@ function FilledCheckSquare({ size = 24 }: { size?: number }) {
   );
 }
 
+function IndeterminateSquare({ size = 24 }: { size?: number }) {
+  const theme = useTheme();
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ width: size, height: size, display: "block", flexShrink: 0 }}
+    >
+      <rect x="3" y="3" width="18" height="18" rx="4" fill={theme.palette.primary.main} />
+      <path d="M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function Checkbox({
   id,
   label,
+  ariaLabel,
   size = "medium",
   isChecked,
+  isIndeterminate,
   value,
   onChange,
   onClick,
   isDisabled,
   sx: customSx,
 }: CheckboxProps) {
-  const sizes: { [key in "small" | "medium" | "large"]: string } = {
-    small: "20px",
-    medium: "24px",
-    large: "28px",
+  const sizes: Record<"small" | "medium" | "large", number> = {
+    small: 16,
+    medium: 20,
+    large: 24,
   };
   const theme = useTheme();
+  const iconSize = sizes[size];
 
   const checkboxElement = (
     <MuiCheckbox
       disableRipple
       checked={isChecked}
-      checkedIcon={<FilledCheckSquare size={16} />}
-      icon={<SoftSquare size={16} />}
+      indeterminate={isIndeterminate}
+      checkedIcon={<FilledCheckSquare size={iconSize} />}
+      indeterminateIcon={<IndeterminateSquare size={iconSize} />}
+      icon={<SoftSquare size={iconSize} />}
       value={value}
       onChange={onChange}
       onClick={onClick}
       disabled={isDisabled}
       inputProps={{
-        "aria-label": label || "controlled checkbox",
-        id: id,
+        "aria-label": ariaLabel || label || "controlled checkbox",
+        "id": id,
       }}
       sx={{
-        borderRadius: theme.shape.borderRadius,
+        "borderRadius": theme.shape.borderRadius,
         "&:hover": { backgroundColor: "transparent" },
-        "& svg": { width: sizes[size], height: sizes[size] },
-        "& .MuiTouchRipple-root": {
-          display: "none",
-        },
+        "& .MuiTouchRipple-root": { display: "none" },
         ...customSx,
       }}
       size={size}
@@ -125,9 +145,9 @@ function Checkbox({
       label={label}
       disabled={isDisabled}
       sx={{
-        borderRadius: theme.shape.borderRadius,
-        p: theme.spacing(2.5),
-        m: theme.spacing(-2.5),
+        "borderRadius": theme.shape.borderRadius,
+        "p": theme.spacing(2.5),
+        "m": theme.spacing(-2.5),
         "& .MuiButtonBase-root": {
           width: theme.spacing(10),
           p: 0,

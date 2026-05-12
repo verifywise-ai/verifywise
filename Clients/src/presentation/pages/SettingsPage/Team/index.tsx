@@ -510,8 +510,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
                               ...singleTheme.tableStyles.primary.header.cell,
                               ...(!isLastColumn && sortable
                                 ? {
-                                    cursor: "pointer",
-                                    userSelect: "none",
+                                    "cursor": "pointer",
+                                    "userSelect": "none",
                                     "&:hover": {
                                       backgroundColor: "rgba(0, 0, 0, 0.04)",
                                     },
@@ -608,10 +608,10 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                 displayEmpty
                                 renderValue={renderRoleValue}
                                 sx={{
-                                  minWidth: "120px",
-                                  fontSize: "13px",
-                                  fontFamily: "Inter, sans-serif",
-                                  color: "text.secondary",
+                                  "minWidth": "120px",
+                                  "fontSize": "13px",
+                                  "fontFamily": "Inter, sans-serif",
+                                  "color": "text.secondary",
                                   "& .MuiOutlinedInput-notchedOutline": {
                                     border: "none",
                                   },
@@ -705,10 +705,10 @@ const TeamManagement: React.FC = (): JSX.Element => {
                             inputProps: { id: "pagination-dropdown" },
                             IconComponent: SelectorVertical,
                             sx: {
-                              ml: theme.spacing(4),
-                              mr: theme.spacing(12),
-                              minWidth: theme.spacing(20),
-                              textAlign: "left",
+                              "ml": theme.spacing(4),
+                              "mr": theme.spacing(12),
+                              "minWidth": theme.spacing(20),
+                              "textAlign": "left",
                               "&.Mui-focused > div": {
                                 backgroundColor: theme.palette.background.main,
                               },
@@ -716,8 +716,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
                           },
                         }}
                         sx={{
-                          mt: theme.spacing(6),
-                          color: theme.palette.text.secondary,
+                          "mt": theme.spacing(6),
+                          "color": theme.palette.text.secondary,
                           "& .MuiSelect-icon": {
                             width: "24px",
                             height: "fit-content",

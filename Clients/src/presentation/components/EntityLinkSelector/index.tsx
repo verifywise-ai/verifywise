@@ -888,14 +888,14 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
             onClick={handleAddLink}
             disabled={disabled}
             sx={{
-              backgroundColor: theme.palette.primary.main,
-              color: "white",
-              borderRadius: theme.shape.borderRadius,
+              "backgroundColor": theme.palette.primary.main,
+              "color": "white",
+              "borderRadius": theme.shape.borderRadius,
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark,
               },
-              height: "34px",
-              width: "34px",
+              "height": "34px",
+              "width": "34px",
             }}
           >
             <Plus size={16} />

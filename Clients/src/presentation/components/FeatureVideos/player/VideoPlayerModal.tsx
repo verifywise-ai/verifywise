@@ -120,12 +120,12 @@ export function VideoPlayerModal({ open, onClose, config }: VideoPlayerModalProp
         <IconButton
           onClick={handleClose}
           sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            zIndex: 10,
-            color: "background.main",
-            backgroundColor: "rgba(0,0,0,0.5)",
+            "position": "absolute",
+            "top": 8,
+            "right": 8,
+            "zIndex": 10,
+            "color": "background.main",
+            "backgroundColor": "rgba(0,0,0,0.5)",
             "&:hover": { backgroundColor: "rgba(0,0,0,0.7)" },
           }}
         >

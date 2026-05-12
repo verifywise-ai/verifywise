@@ -20,6 +20,7 @@ interface AutoCompleteFieldProps<
   label?: string;
   placeholder?: string;
   error?: string;
+  helperText?: string;
   isRequired?: boolean;
   isOptional?: boolean;
   optionalLabel?: string;
@@ -35,6 +36,7 @@ function AutoCompleteField<
   label,
   placeholder,
   error,
+  helperText,
   isRequired,
   isOptional,
   optionalLabel,
@@ -104,6 +106,8 @@ function AutoCompleteField<
             {...params}
             size="small"
             placeholder={placeholder}
+            error={!!error || !!helperText}
+            helperText={helperText}
             sx={{
               "& .MuiOutlinedInput-root": {
                 minHeight: "34px",
@@ -118,7 +122,7 @@ function AutoCompleteField<
         )}
         sx={{
           ...getAutocompleteStyles(theme, { hasError: !!error }),
-          backgroundColor: theme.palette.background.main,
+          "backgroundColor": theme.palette.background.main,
           "& .MuiOutlinedInput-root": {
             ...getAutocompleteStyles(theme, { hasError: !!error })["& .MuiOutlinedInput-root"],
             borderRadius: theme.shape.borderRadius,
@@ -136,9 +140,9 @@ function AutoCompleteField<
             sx: {
               "& ul": { p: 0 },
               "& li": {
-                fontSize: 13,
-                borderRadius: theme.shape.borderRadius,
-                transition: "color 0.2s ease, background-color 0.2s ease",
+                "fontSize": 13,
+                "borderRadius": theme.shape.borderRadius,
+                "transition": "color 0.2s ease, background-color 0.2s ease",
                 "&:hover": {
                   color: theme.palette.primary.main,
                   backgroundColor: theme.palette.background.accent,

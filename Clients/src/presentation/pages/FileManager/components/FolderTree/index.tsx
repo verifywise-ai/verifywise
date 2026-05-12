@@ -109,17 +109,17 @@ const FolderItem: React.FC<FolderItemProps> = ({
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          padding: "6px 8px",
-          paddingLeft: `${8 + level * 16}px`,
-          cursor: "pointer",
-          borderRadius: "4px",
-          backgroundColor: isSelected ? "#E8F5F1" : "transparent",
+          "display": "flex",
+          "alignItems": "center",
+          "padding": "6px 8px",
+          "paddingLeft": `${8 + level * 16}px`,
+          "cursor": "pointer",
+          "borderRadius": "4px",
+          "backgroundColor": isSelected ? "#E8F5F1" : "transparent",
           "&:hover": {
             backgroundColor: isSelected ? "#E8F5F1" : "#F0F2F5",
           },
-          transition: "background-color 0.15s ease",
+          "transition": "background-color 0.15s ease",
         }}
       >
         {/* Expand/Collapse toggle */}
@@ -190,7 +190,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               size="small"
               onClick={handleCreateSubfolder}
               sx={{
-                padding: "2px",
+                "padding": "2px",
                 "&:hover": { backgroundColor: "#E8F5F1" },
               }}
               title="Create subfolder"
@@ -202,7 +202,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               size="small"
               onClick={handleEdit}
               sx={{
-                padding: "2px",
+                "padding": "2px",
                 "&:hover": { backgroundColor: "#E8F5F1" },
               }}
               title="Edit folder"
@@ -214,7 +214,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               size="small"
               onClick={handleDelete}
               sx={{
-                padding: "2px",
+                "padding": "2px",
                 "&:hover": { backgroundColor: "#FEE2E2" },
               }}
               title="Delete folder"
@@ -308,7 +308,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
             size="small"
             onClick={onToggleCollapse}
             sx={{
-              padding: "4px",
+              "padding": "4px",
               "&:hover": { backgroundColor: "#E8F5F1" },
             }}
             title="Expand sidebar"
@@ -323,7 +323,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 size="small"
                 onClick={onToggleCollapse}
                 sx={{
-                  padding: "4px",
+                  "padding": "4px",
                   "&:hover": { backgroundColor: "#E8F5F1" },
                 }}
                 title="Collapse sidebar"
@@ -348,7 +348,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 size="small"
                 onClick={() => onCreateFolder?.(null)}
                 sx={{
-                  padding: "4px",
+                  "padding": "4px",
                   "&:hover": { backgroundColor: "#E8F5F1" },
                 }}
                 title="Create folder"
@@ -400,16 +400,16 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
               <Box
                 onClick={() => onSelectFolder("all")}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  backgroundColor: selectedFolder === "all" ? "#E8F5F1" : "transparent",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "padding": "6px 8px",
+                  "cursor": "pointer",
+                  "borderRadius": "4px",
+                  "backgroundColor": selectedFolder === "all" ? "#E8F5F1" : "transparent",
                   "&:hover": {
                     backgroundColor: selectedFolder === "all" ? "#E8F5F1" : "#F0F2F5",
                   },
-                  marginBottom: "4px",
+                  "marginBottom": "4px",
                 }}
               >
                 <Box sx={{ width: 20 }} />
@@ -433,16 +433,17 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 <Box
                   onClick={() => onSelectFolder("uncategorized")}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "6px 8px",
-                    cursor: "pointer",
-                    borderRadius: "4px",
-                    backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "transparent",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "padding": "6px 8px",
+                    "cursor": "pointer",
+                    "borderRadius": "4px",
+                    "backgroundColor":
+                      selectedFolder === "uncategorized" ? "#E8F5F1" : "transparent",
                     "&:hover": {
                       backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "#F0F2F5",
                     },
-                    marginBottom: "8px",
+                    "marginBottom": "8px",
                   }}
                 >
                   <Box sx={{ width: 20 }} />

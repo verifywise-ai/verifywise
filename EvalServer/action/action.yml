@@ -1,0 +1,146 @@
+name: "VerifyWise LLM Evaluation"
+description: "Run LLM quality and safety evaluations against a VerifyWise instance. Checks metric thresholds and reports results."
+author: "VerifyWise"
+
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  api_url:
+    description: "Base URL of the VerifyWise instance (e.g. https://app.verifywise.ai)"
+    required: true
+  project_id:
+    description: "VerifyWise project ID"
+    required: true
+  dataset_id:
+    description: "Dataset ID to evaluate against"
+    required: true
+  metrics:
+    description: "Comma-separated metric names (e.g. correctness,completeness,hallucination)"
+    required: true
+  model_name:
+    description: "Model to evaluate (e.g. gpt-4o, claude-3.5-sonnet)"
+    required: true
+  model_provider:
+    description: "Model provider (openai, anthropic, google, mistral, xai, self-hosted)"
+    required: true
+  judge_model:
+    description: "Judge LLM model name"
+    required: false
+    default: "gpt-4o"
+  judge_provider:
+    description: "Judge LLM provider"
+    required: false
+    default: "openai"
+  threshold:
+    description: "Global pass threshold (0.0–1.0). Metrics below this fail the check."
+    required: false
+    default: "0.7"
+  timeout_minutes:
+    description: "Maximum minutes to wait for evaluation to complete"
+    required: false
+    default: "30"
+  poll_interval_seconds:
+    description: "Seconds between status polls"
+    required: false
+    default: "15"
+  experiment_name:
+    description: "Custom experiment name (defaults to commit-based name)"
+    required: false
+    default: ""
+  fail_on_threshold:
+    description: "Set to 'false' to report results without failing the CI check"
+    required: false
+    default: "true"
+  vw_api_token:
+    description: "VerifyWise JWT token for authentication"
+    required: true
+  llm_api_key:
+    description: "API key for the LLM provider being evaluated"
+    required: true
+
+outputs:
+  passed:
+    description: "'true' if all metrics passed, 'false' otherwise"
+    value: ${{ steps.eval.outputs.passed }}
+  results_file:
+    description: "Path to the results JSON file"
+    value: ${{ steps.eval.outputs.results_file }}
+  summary_file:
+    description: "Path to the markdown summary file"
+    value: ${{ steps.eval.outputs.summary_file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -q requests
+
+    - name: Run LLM evaluation
+      id: eval
+      shell: bash
+      env:
+        VW_API_URL: ${{ inputs.api_url }}
+        VW_API_TOKEN: ${{ inputs.vw_api_token }}
+        VW_PROJECT_ID: ${{ inputs.project_id }}
+        VW_DATASET_ID: ${{ inputs.dataset_id }}
+        VW_METRICS: ${{ inputs.metrics }}
+        VW_MODEL_NAME: ${{ inputs.model_name }}
+        VW_MODEL_PROVIDER: ${{ inputs.model_provider }}
+        VW_JUDGE_MODEL: ${{ inputs.judge_model }}
+        VW_JUDGE_PROVIDER: ${{ inputs.judge_provider }}
+        VW_THRESHOLD: ${{ inputs.threshold }}
+        VW_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        VW_POLL_INTERVAL: ${{ inputs.poll_interval_seconds }}
+        VW_EXPERIMENT_NAME: ${{ inputs.experiment_name }}
+        LLM_API_KEY: ${{ inputs.llm_api_key }}
+      run: |
+        set +e
+        python "${{ github.action_path }}/eval_runner.py" \
+          --api-url "$VW_API_URL" \
+          --token "$VW_API_TOKEN" \
+          --project-id "$VW_PROJECT_ID" \
+          --dataset-id "$VW_DATASET_ID" \
+          --metrics "$VW_METRICS" \
+          --model-name "$VW_MODEL_NAME" \
+          --model-provider "$VW_MODEL_PROVIDER" \
+          --judge-model "$VW_JUDGE_MODEL" \
+          --judge-provider "$VW_JUDGE_PROVIDER" \
+          --threshold "$VW_THRESHOLD" \
+          --timeout "$VW_TIMEOUT_MINUTES" \
+          --poll-interval "$VW_POLL_INTERVAL" \
+          --output "${{ runner.temp }}/vw_results.json" \
+          --markdown-output "${{ runner.temp }}/vw_summary.md" \
+          ${VW_EXPERIMENT_NAME:+--name "$VW_EXPERIMENT_NAME"}
+        EXIT_CODE=$?
+
+        echo "results_file=${{ runner.temp }}/vw_results.json" >> "$GITHUB_OUTPUT"
+        echo "summary_file=${{ runner.temp }}/vw_summary.md" >> "$GITHUB_OUTPUT"
+
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "passed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [ -f "${{ runner.temp }}/vw_summary.md" ]; then
+          echo "## VerifyWise LLM Evaluation" >> "$GITHUB_STEP_SUMMARY"
+          cat "${{ runner.temp }}/vw_summary.md" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        if [ "${{ inputs.fail_on_threshold }}" = "true" ] && [ $EXIT_CODE -eq 1 ]; then
+          echo "::error::LLM evaluation failed — one or more metrics below threshold"
+          exit 1
+        fi
+
+        if [ $EXIT_CODE -eq 2 ]; then
+          echo "::error::LLM evaluation encountered an error"
+          exit 1
+        fi

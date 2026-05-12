@@ -39,7 +39,9 @@ import {
 } from "./presentation/components/UserGuide";
 import { AdvisorConversationProvider } from "./application/contexts/AdvisorConversation.context";
 import { PluginRegistryProvider } from "./application/contexts/PluginRegistry.context";
+import { SmartPromptProvider } from "./application/contexts/SmartPrompt.context";
 import PluginLoader from "./presentation/components/PluginLoader";
+import SmartPrompt from "./presentation/components/SmartPrompt";
 // SSE notifications disabled for now - can be re-enabled later if needed
 // import { useNotifications } from "./application/hooks/useNotifications";
 
@@ -262,34 +264,37 @@ function App() {
             <PluginRegistryProvider>
               <PluginLoader />
               <UserGuideSidebarProvider>
-                <ConditionalThemeWrapper>
-                  {alert && (
-                    <Alert
-                      variant={alert.variant}
-                      title={alert.title}
-                      body={alert.body}
-                      isToast={true}
-                      onClick={() => setAlert(null)}
-                    />
-                  )}
-                  <CommandPaletteErrorBoundary>
-                    <CommandPalette
-                      open={commandPalette.isOpen}
-                      onOpenChange={commandPalette.close}
-                    />
-                  </CommandPaletteErrorBoundary>
-                  {showModal && (
-                    <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
-                  )}
-                  <ChunkErrorBoundary>
-                    <Routes>{createRoutes(triggerSidebar, triggerSidebarReload)}</Routes>
-                  </ChunkErrorBoundary>
+                <SmartPromptProvider>
+                  <ConditionalThemeWrapper>
+                    {alert && (
+                      <Alert
+                        variant={alert.variant}
+                        title={alert.title}
+                        body={alert.body}
+                        isToast={true}
+                        onClick={() => setAlert(null)}
+                      />
+                    )}
+                    <SmartPrompt />
+                    <CommandPaletteErrorBoundary>
+                      <CommandPalette
+                        open={commandPalette.isOpen}
+                        onOpenChange={commandPalette.close}
+                      />
+                    </CommandPaletteErrorBoundary>
+                    {showModal && (
+                      <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
+                    )}
+                    <ChunkErrorBoundary>
+                      <Routes>{createRoutes(triggerSidebar, triggerSidebarReload)}</Routes>
+                    </ChunkErrorBoundary>
 
-                  {/* User Guide Sidebar with Advisor Conversation persistence */}
-                  <AdvisorConversationProvider>
-                    <UserGuideSidebarContainer />
-                  </AdvisorConversationProvider>
-                </ConditionalThemeWrapper>
+                    {/* User Guide Sidebar with Advisor Conversation persistence */}
+                    <AdvisorConversationProvider>
+                      <UserGuideSidebarContainer />
+                    </AdvisorConversationProvider>
+                  </ConditionalThemeWrapper>
+                </SmartPromptProvider>
               </UserGuideSidebarProvider>
             </PluginRegistryProvider>
           </VerifyWiseContext.Provider>

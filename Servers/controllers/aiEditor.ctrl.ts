@@ -45,12 +45,12 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const organizationId = req.organizationId;
 
     if (!prompt) {
-      res.status(400).json({ error: "Prompt is required" });
+      res.status(400).json({ error: req.t!("Prompt is required") });
       return;
     }
 
     if (!organizationId) {
-      res.status(400).json({ error: "Organization context is required" });
+      res.status(400).json({ error: req.t!("Organization context is required") });
       return;
     }
 
@@ -58,7 +58,7 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
 
     if (clients.length === 0) {
       res.status(400).json({
-        error: "No LLM keys configured. Ask your admin to add one in Settings > LLM keys.",
+        error: req.t!("No LLM keys configured. Ask your admin to add one in Settings > LLM keys."),
       });
       return;
     }
@@ -82,7 +82,7 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
   } catch (error) {
     logger.error("AI editor command failed:", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: "AI editor command failed" });
+      res.status(500).json({ error: req.t!("AI editor command failed") });
     }
   }
 }

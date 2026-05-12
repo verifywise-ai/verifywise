@@ -983,6 +983,18 @@ const Tasks: React.FC = () => {
                 onHardDelete={handleHardDeleteTask}
                 flashRowId={flashRowId}
                 visibleColumns={visibleColumns}
+                canRunBulkActions={!isCreatingDisabled}
+                onBulkActionSuccess={(action, count) => {
+                  setRefreshKey((k) => k + 1);
+                  setAlert({
+                    variant: "success",
+                    title:
+                      action === "mark_complete"
+                        ? `${count} task${count === 1 ? "" : "s"} marked complete`
+                        : `Categories updated on ${count} task${count === 1 ? "" : "s"}`,
+                  });
+                  setTimeout(() => setAlert(null), 4000);
+                }}
               />
             )}
           />

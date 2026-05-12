@@ -130,7 +130,7 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
             onClick={onClose}
             aria-label="Close drawer"
             sx={{
-              color: theme.palette.action.active,
+              "color": theme.palette.action.active,
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
               },

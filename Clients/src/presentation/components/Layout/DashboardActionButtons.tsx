@@ -94,10 +94,10 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   }, []);
 
   const baseStyles = {
-    width: "32px",
-    height: "32px",
-    borderRadius: "4px",
-    transition: "all 0.2s ease",
+    "width": "32px",
+    "height": "32px",
+    "borderRadius": "4px",
+    "transition": "all 0.2s ease",
     "&:hover svg": {
       animation: "icon-shake 400ms ease-in-out",
     },

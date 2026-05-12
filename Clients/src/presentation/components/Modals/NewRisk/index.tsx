@@ -542,7 +542,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
           }}
           sx={{
-            width: "100%",
+            "width": "100%",
             "& .MuiChip-root": {
               borderRadius: "4px",
             },

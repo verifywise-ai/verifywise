@@ -22,9 +22,9 @@ interface TaskRadarCardProps {
 }
 
 const BAR_COLORS: Record<string, string> = {
-  Overdue: "#EF4444",
+  "Overdue": "#EF4444",
   "Due soon": "#F59E0B",
-  Upcoming: "#10B981",
+  "Upcoming": "#10B981",
 };
 
 export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
@@ -40,15 +40,15 @@ export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
   return (
     <Stack
       sx={{
-        border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
-        background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-        width: "100%",
-        padding: "16px",
-        height: "100%",
-        boxSizing: "border-box",
-        cursor: "pointer",
-        transition: "all 0.2s ease",
+        "border": `1px solid ${borderPalette.dark}`,
+        "borderRadius": "4px",
+        "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+        "width": "100%",
+        "padding": "16px",
+        "height": "100%",
+        "boxSizing": "border-box",
+        "cursor": "pointer",
+        "transition": "all 0.2s ease",
         "&:hover": {
           background: `linear-gradient(135deg, ${background.accent} 0%, ${background.gradientStop} 100%)`,
           borderColor: borderPalette.light,

@@ -31,6 +31,7 @@ import {
   wouldCreateCircularReferenceQuery,
 } from "../utils/virtualFolder.utils";
 import { sequelize } from "../database/db";
+import { translateError } from "../utils/i18n.utils";
 import {
   IVirtualFolderInput,
   IVirtualFolderUpdate,
@@ -68,7 +69,7 @@ export const getAllFolders = async (req: Request, res: Response): Promise<Respon
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting folders:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -82,7 +83,7 @@ export const getFolderTree = async (req: Request, res: Response): Promise<Respon
     return res.status(200).json(STATUS_CODE[200](tree));
   } catch (error) {
     console.error("Error getting folder tree:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -94,18 +95,18 @@ export const getFolderById = async (req: Request, res: Response): Promise<Respon
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     return res.status(200).json(STATUS_CODE[200](folder));
   } catch (error) {
     console.error("Error getting folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -117,14 +118,14 @@ export const getFolderPath = async (req: Request, res: Response): Promise<Respon
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     const path = await getFolderPathQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](path));
   } catch (error) {
     console.error("Error getting folder path:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -138,7 +139,7 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const { name, description, parent_id, color, icon } = req.body as IVirtualFolderInput;
@@ -146,13 +147,15 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
     // Validate required fields
     if (!name || name.trim().length === 0) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Folder name is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Folder name is required")));
     }
 
     // Validate folder name length
     if (name.trim().length > 255) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Folder name cannot exceed 255 characters"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Folder name cannot exceed 255 characters")));
     }
 
     // Check for duplicate name in same parent
@@ -161,7 +164,9 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
       await transaction.rollback();
       return res
         .status(409)
-        .json(STATUS_CODE[409]("A folder with this name already exists in the same location"));
+        .json(
+          STATUS_CODE[409](req.t!("A folder with this name already exists in the same location")),
+        );
     }
 
     // Verify parent folder exists if specified
@@ -169,7 +174,7 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
       const parentFolder = await getFolderByIdQuery(req.organizationId!, parent_id);
       if (!parentFolder) {
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400]("Parent folder not found"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Parent folder not found")));
       }
     }
 
@@ -185,7 +190,7 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
   } catch (error) {
     await transaction.rollback();
     console.error("Error creating folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -199,13 +204,13 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     const { name, description, parent_id, color, icon } = req.body as IVirtualFolderUpdate;
@@ -214,19 +219,21 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
     const existingFolder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!existingFolder) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     // Check if it's a system folder
     if (existingFolder.is_system) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("System folders cannot be modified"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("System folders cannot be modified")));
     }
 
     // Validate folder name length if provided
     if (name && name.trim().length > 255) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Folder name cannot exceed 255 characters"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Folder name cannot exceed 255 characters")));
     }
 
     // Check for duplicate name if name is being changed
@@ -242,7 +249,9 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
         await transaction.rollback();
         return res
           .status(409)
-          .json(STATUS_CODE[409]("A folder with this name already exists in the same location"));
+          .json(
+            STATUS_CODE[409](req.t!("A folder with this name already exists in the same location")),
+          );
       }
     }
 
@@ -253,7 +262,7 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
         const parentFolder = await getFolderByIdQuery(req.organizationId!, parent_id);
         if (!parentFolder) {
           await transaction.rollback();
-          return res.status(400).json(STATUS_CODE[400]("Parent folder not found"));
+          return res.status(400).json(STATUS_CODE[400](req.t!("Parent folder not found")));
         }
 
         // Check for circular reference
@@ -266,7 +275,7 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
           await transaction.rollback();
           return res
             .status(400)
-            .json(STATUS_CODE[400]("Cannot move folder into its own subfolder"));
+            .json(STATUS_CODE[400](req.t!("Cannot move folder into its own subfolder")));
         }
       }
     }
@@ -280,7 +289,7 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
 
     if (!folder) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Folder not found or update failed"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found or update failed")));
     }
 
     await transaction.commit();
@@ -288,7 +297,7 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -302,32 +311,32 @@ export const deleteFolder = async (req: Request, res: Response): Promise<Respons
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     // Check folder exists
     const existingFolder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!existingFolder) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     // Check if it's a system folder
     if (existingFolder.is_system) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("System folders cannot be deleted"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("System folders cannot be deleted")));
     }
 
     const deleted = await deleteFolderByIdQuery(req.organizationId!, folderId, transaction);
     if (!deleted) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     await transaction.commit();
@@ -335,7 +344,7 @@ export const deleteFolder = async (req: Request, res: Response): Promise<Respons
   } catch (error) {
     await transaction.rollback();
     console.error("Error deleting folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -351,20 +360,20 @@ export const getFilesInFolder = async (req: Request, res: Response): Promise<Res
   try {
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     // Verify folder exists
     const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     const files = await getFilesInFolderQuery(req.organizationId!, folderId);
     return res.status(200).json(STATUS_CODE[200](files));
   } catch (error) {
     console.error("Error getting files in folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -378,7 +387,7 @@ export const getUncategorizedFiles = async (req: Request, res: Response): Promis
     return res.status(200).json(STATUS_CODE[200](files));
   } catch (error) {
     console.error("Error getting uncategorized files:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -392,26 +401,26 @@ export const assignFilesToFolder = async (req: Request, res: Response): Promise<
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder ID")));
     }
 
     const { file_ids } = req.body as { file_ids: number[] };
     if (!Array.isArray(file_ids) || file_ids.length === 0) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("File IDs array is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("File IDs array is required")));
     }
 
     // Verify folder exists
     const folder = await getFolderByIdQuery(req.organizationId!, folderId);
     if (!folder) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Folder not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
     }
 
     const assignedCount = await assignFilesToFolderQuery(
@@ -427,7 +436,7 @@ export const assignFilesToFolder = async (req: Request, res: Response): Promise<
   } catch (error) {
     await transaction.rollback();
     console.error("Error assigning files to folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -441,14 +450,14 @@ export const removeFileFromFolder = async (req: Request, res: Response): Promise
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const folderId = parseParamId(req.params.id);
     const fileId = parseParamId(req.params.fileId);
     if (isNaN(folderId) || isNaN(fileId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid folder or file ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid folder or file ID")));
     }
 
     const removed = await removeFileFromFolderQuery(
@@ -463,7 +472,7 @@ export const removeFileFromFolder = async (req: Request, res: Response): Promise
   } catch (error) {
     await transaction.rollback();
     console.error("Error removing file from folder:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -475,14 +484,14 @@ export const getFileFolders = async (req: Request, res: Response): Promise<Respo
   try {
     const fileId = parseParamId(req.params.id);
     if (isNaN(fileId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 
     const folders = await getFileFoldersQuery(req.organizationId!, fileId);
     return res.status(200).json(STATUS_CODE[200](folders));
   } catch (error) {
     console.error("Error getting file folders:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };
 
@@ -496,19 +505,19 @@ export const updateFileFolders = async (req: Request, res: Response): Promise<Re
     // Check permissions
     if (!hasManagePermission(req.role)) {
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403]("Insufficient permissions"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const fileId = parseParamId(req.params.id);
     if (isNaN(fileId)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 
     const { folder_ids } = req.body as { folder_ids: number[] };
     if (!Array.isArray(folder_ids)) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Folder IDs array is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
     }
 
     await bulkUpdateFileFoldersQuery(
@@ -526,6 +535,6 @@ export const updateFileFolders = async (req: Request, res: Response): Promise<Re
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating file folders:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

@@ -18,6 +18,7 @@ export class FileModel {
   version?: string;
   reviewStatus?: string;
   fileGroupId?: string;
+  tags?: string[];
 
   constructor(data: FileModel) {
     this.id = data.id;
@@ -39,6 +40,7 @@ export class FileModel {
     this.version = data.version;
     this.reviewStatus = data.reviewStatus;
     this.fileGroupId = data.fileGroupId;
+    this.tags = data.tags;
   }
 
   static createNewFile(data: Partial<FileModel>): FileModel {
@@ -73,6 +75,7 @@ export class FileModel {
       version: apiData.version,
       reviewStatus: apiData.reviewStatus,
       fileGroupId: apiData.fileGroupId,
+      tags: apiData.tags,
     } as FileModel);
   }
 

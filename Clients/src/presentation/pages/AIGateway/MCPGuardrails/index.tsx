@@ -226,11 +226,11 @@ export default function MCPGuardrailsPage() {
       justifyContent="space-between"
       alignItems="center"
       sx={{
-        p: "12px 16px",
-        border: `1px solid ${palette.border.dark}`,
-        borderRadius: "4px",
-        opacity: rule.is_active ? 1 : 0.6,
-        cursor: "pointer",
+        "p": "12px 16px",
+        "border": `1px solid ${palette.border.dark}`,
+        "borderRadius": "4px",
+        "opacity": rule.is_active ? 1 : 0.6,
+        "cursor": "pointer",
         "&:hover": { bgcolor: "action.hover" },
       }}
       onClick={() => openEditModal(rule)}

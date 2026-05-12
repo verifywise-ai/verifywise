@@ -26,7 +26,7 @@ export function PortfolioTrendChart({ snapshots, height = 200 }: PortfolioTrendC
       sorted.map((s) => {
         const d = new Date(s.snapshot_date);
         return {
-          label: `${d.getMonth() + 1}/${d.getDate()}`,
+          "label": `${d.getMonth() + 1}/${d.getDate()}`,
           "Total ALE": s.total_ale,
           "Residual ALE": s.total_residual_ale,
         };

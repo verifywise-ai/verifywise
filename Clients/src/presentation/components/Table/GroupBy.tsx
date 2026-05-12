@@ -59,9 +59,9 @@ const GroupByHeader: React.FC<{
     <Box
       onClick={selectedGroup ? onClear : onClose}
       sx={{
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
+        "cursor": "pointer",
+        "display": "flex",
+        "alignItems": "center",
         "&:hover": { opacity: 0.7 },
       }}
     >
@@ -195,15 +195,15 @@ export const GroupBy: React.FC<GroupByProps> = ({
         onClick={handleClick}
         variant="outlined"
         sx={{
-          fontSize: "13px",
-          fontWeight: 500,
-          padding: "6px 12px",
-          textTransform: "none",
-          color: "#374151",
-          borderColor: `${borderPalette.dark}`,
-          height: "34px",
-          minWidth: selectedGroup ? "110px" : "80px",
-          backgroundColor: open ? "#f0fdf4" : "transparent",
+          "fontSize": "13px",
+          "fontWeight": 500,
+          "padding": "6px 12px",
+          "textTransform": "none",
+          "color": "#374151",
+          "borderColor": `${borderPalette.dark}`,
+          "height": "34px",
+          "minWidth": selectedGroup ? "110px" : "80px",
+          "backgroundColor": open ? "#f0fdf4" : "transparent",
           "&:hover": {
             borderColor: `${text.muted}`,
             backgroundColor: "#f0fdf4",

@@ -208,12 +208,12 @@ const CardsSection: React.FC = () => {
             </Typography>
             <Box
               sx={{
-                backgroundColor: theme.palette.background.main,
-                border: `1px solid ${theme.palette.border.light}`,
-                borderRadius: "4px",
-                p: "16px",
-                cursor: "pointer",
-                transition: "all 150ms ease",
+                "backgroundColor": theme.palette.background.main,
+                "border": `1px solid ${theme.palette.border.light}`,
+                "borderRadius": "4px",
+                "p": "16px",
+                "cursor": "pointer",
+                "transition": "all 150ms ease",
                 "&:hover": {
                   borderColor: theme.palette.primary.main,
                   boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08)",
@@ -403,9 +403,9 @@ const CardsSection: React.FC = () => {
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "16px",
+            "display": "grid",
+            "gridTemplateColumns": "repeat(4, 1fr)",
+            "gap": "16px",
             "@media (max-width: 1000px)": {
               gridTemplateColumns: "repeat(2, 1fr)",
             },
@@ -581,9 +581,9 @@ const SpecGrid: React.FC<{ children: React.ReactNode; columns?: number }> = ({
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: "16px",
+        "display": "grid",
+        "gridTemplateColumns": `repeat(${columns}, 1fr)`,
+        "gap": "16px",
         "@media (max-width: 1200px)": {
           gridTemplateColumns: "repeat(3, 1fr)",
         },
@@ -612,13 +612,13 @@ const SpecCard: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       sx={{
-        p: "16px",
-        backgroundColor: theme.palette.background.alt,
-        borderRadius: "4px",
-        border: `1px solid ${theme.palette.border.light}`,
-        cursor: "pointer",
-        transition: "border-color 150ms ease",
-        position: "relative",
+        "p": "16px",
+        "backgroundColor": theme.palette.background.alt,
+        "borderRadius": "4px",
+        "border": `1px solid ${theme.palette.border.light}`,
+        "cursor": "pointer",
+        "transition": "border-color 150ms ease",
+        "position": "relative",
         "&:hover": {
           borderColor: theme.palette.primary.main,
         },
@@ -793,9 +793,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": {
               color: theme.palette.primary.main,
             },

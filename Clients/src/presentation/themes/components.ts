@@ -58,14 +58,14 @@ export const frameworkStyles = {
     }),
 
   manageButton: (theme: Theme): SxProps<Theme> => ({
-    borderRadius: theme.spacing(1),
-    textTransform: "none",
-    fontWeight: 400,
-    backgroundColor: theme.palette.primary.main,
-    border: `1px solid ${theme.palette.primary.main}`,
-    color: "#fff",
-    fontFamily: theme.typography.fontFamily,
-    fontSize: theme.typography.fontSize,
+    "borderRadius": theme.spacing(1),
+    "textTransform": "none",
+    "fontWeight": 400,
+    "backgroundColor": theme.palette.primary.main,
+    "border": `1px solid ${theme.palette.primary.main}`,
+    "color": "#fff",
+    "fontFamily": theme.typography.fontFamily,
+    "fontSize": theme.typography.fontSize,
     "&:hover": {
       backgroundColor: theme.palette.primary.dark || "#10614d",
     },
@@ -140,8 +140,8 @@ export const cardStyles = {
 
   project: (theme: Theme): SxProps<Theme> => ({
     ...cardStyles.base(theme),
-    cursor: "pointer",
-    transition: "all 0.2s ease-in-out",
+    "cursor": "pointer",
+    "transition": "all 0.2s ease-in-out",
     "&:hover": {
       backgroundColor: theme.palette.action?.hover || "#fafafa",
       boxShadow: theme.boxShadow,
@@ -160,8 +160,8 @@ export const cardStyles = {
 // Table styles (standardized for all tables)
 export const tableStyles = {
   container: (theme: Theme): SxProps<Theme> => ({
-    border: `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
-    borderRadius: theme.shape.borderRadius,
+    "border": `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
+    "borderRadius": theme.shape.borderRadius,
     "& td, & th": {
       border: 0,
     },
@@ -174,10 +174,10 @@ export const tableStyles = {
   }),
 
   headerCell: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.tertiary,
-    fontWeight: 400,
-    padding: theme.spacing(1.5, 1.25),
-    whiteSpace: "nowrap",
+    "color": theme.palette.text.tertiary,
+    "fontWeight": 400,
+    "padding": theme.spacing(1.5, 1.25),
+    "whiteSpace": "nowrap",
     "&:not(:last-child)": {
       minWidth: "120px",
       width: "120px",
@@ -185,10 +185,10 @@ export const tableStyles = {
   }),
 
   bodyRow: (theme: Theme): SxProps<Theme> => ({
-    backgroundColor: theme.palette.background.main,
-    textTransform: "capitalize",
-    borderBottom: `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
-    transition: "background-color 0.3s ease-in-out",
+    "backgroundColor": theme.palette.background.main,
+    "textTransform": "capitalize",
+    "borderBottom": `1px solid ${theme.palette.border?.light || "#EEEEEE"}`,
+    "transition": "background-color 0.3s ease-in-out",
     "&:hover td": {
       backgroundColor: theme.palette.action?.hover || "#fafafa",
     },
@@ -198,10 +198,10 @@ export const tableStyles = {
   }),
 
   bodyCell: (theme: Theme): SxProps<Theme> => ({
-    fontSize: theme.typography.fontSize,
-    padding: theme.spacing(1.5, 1.25),
-    whiteSpace: "nowrap",
-    backgroundColor: theme.palette.background.main,
+    "fontSize": theme.typography.fontSize,
+    "padding": theme.spacing(1.5, 1.25),
+    "whiteSpace": "nowrap",
+    "backgroundColor": theme.palette.background.main,
     "&:not(:last-child)": {
       minWidth: "120px",
       width: "120px",
@@ -226,8 +226,8 @@ export const formStyles = {
 
   inputField: (theme: Theme): SxProps<Theme> => ({
     "& .MuiOutlinedInput-root": {
-      borderRadius: theme.shape.borderRadius,
-      fontSize: theme.typography.fontSize,
+      "borderRadius": theme.shape.borderRadius,
+      "fontSize": theme.typography.fontSize,
       "& fieldset": {
         borderColor: theme.palette.border?.light || "#eaecf0",
       },
@@ -283,14 +283,14 @@ export const buttonStyles = {
     (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
     (theme: Theme): SxProps<Theme> => ({
       ...COMPONENT_SIZES.button[size],
-      backgroundColor: theme.palette.primary.main,
-      border: `1px solid ${theme.palette.primary.main}`,
-      color: "#fff",
-      fontFamily: theme.typography.fontFamily,
-      fontWeight: 400,
-      textTransform: "none",
-      borderRadius: theme.shape.borderRadius,
-      boxShadow: "none",
+      "backgroundColor": theme.palette.primary.main,
+      "border": `1px solid ${theme.palette.primary.main}`,
+      "color": "#fff",
+      "fontFamily": theme.typography.fontFamily,
+      "fontWeight": 400,
+      "textTransform": "none",
+      "borderRadius": theme.shape.borderRadius,
+      "boxShadow": "none",
       "&:hover": {
         backgroundColor: theme.palette.primary.dark || "#10614d",
         boxShadow: "none",
@@ -304,14 +304,14 @@ export const buttonStyles = {
     (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
     (theme: Theme): SxProps<Theme> => ({
       ...COMPONENT_SIZES.button[size],
-      backgroundColor: theme.palette.secondary.main,
-      border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-      color: theme.palette.secondary.contrastText,
-      fontFamily: theme.typography.fontFamily,
-      fontWeight: 400,
-      textTransform: "none",
-      borderRadius: theme.shape.borderRadius,
-      boxShadow: "none",
+      "backgroundColor": theme.palette.secondary.main,
+      "border": `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+      "color": theme.palette.secondary.contrastText,
+      "fontFamily": theme.typography.fontFamily,
+      "fontWeight": 400,
+      "textTransform": "none",
+      "borderRadius": theme.shape.borderRadius,
+      "boxShadow": "none",
       "&:hover": {
         backgroundColor: theme.palette.secondary.dark,
         boxShadow: "none",
@@ -325,14 +325,14 @@ export const buttonStyles = {
     (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
     (theme: Theme): SxProps<Theme> => ({
       ...COMPONENT_SIZES.button[size],
-      backgroundColor: "transparent",
-      border: `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
-      color: theme.palette.text.secondary,
-      fontFamily: theme.typography.fontFamily,
-      fontWeight: 400,
-      textTransform: "none",
-      borderRadius: theme.shape.borderRadius,
-      boxShadow: "none",
+      "backgroundColor": "transparent",
+      "border": `1px solid ${theme.palette.border?.light || "#eaecf0"}`,
+      "color": theme.palette.text.secondary,
+      "fontFamily": theme.typography.fontFamily,
+      "fontWeight": 400,
+      "textTransform": "none",
+      "borderRadius": theme.shape.borderRadius,
+      "boxShadow": "none",
       "&:hover": {
         backgroundColor: theme.palette.action?.hover || "#f5f5f5",
         boxShadow: "none",
@@ -346,14 +346,14 @@ export const buttonStyles = {
     (size: keyof typeof COMPONENT_SIZES.button = "medium") =>
     (theme: Theme): SxProps<Theme> => ({
       ...COMPONENT_SIZES.button[size],
-      backgroundColor: theme.palette.status?.error?.main || "#d32f2f",
-      border: `1px solid ${theme.palette.status?.error?.border || "#f04438"}`,
-      color: "#fff",
-      fontFamily: theme.typography.fontFamily,
-      fontWeight: 400,
-      textTransform: "none",
-      borderRadius: theme.shape.borderRadius,
-      boxShadow: "none",
+      "backgroundColor": theme.palette.status?.error?.main || "#d32f2f",
+      "border": `1px solid ${theme.palette.status?.error?.border || "#f04438"}`,
+      "color": "#fff",
+      "fontFamily": theme.typography.fontFamily,
+      "fontWeight": 400,
+      "textTransform": "none",
+      "borderRadius": theme.shape.borderRadius,
+      "boxShadow": "none",
       "&:hover": {
         backgroundColor: theme.palette.status?.error?.dark || "#932020",
         boxShadow: "none",
@@ -367,8 +367,8 @@ export const buttonStyles = {
 // Icon styles (standardized icon button styles)
 export const iconStyles = {
   button: (theme: Theme): SxProps<Theme> => ({
-    padding: theme.spacing(0.5),
-    transition: "none",
+    "padding": theme.spacing(0.5),
+    "transition": "none",
     "&:hover": {
       backgroundColor: theme.palette.background.fill,
     },
@@ -381,12 +381,12 @@ export const iconStyles = {
   }),
 
   closeButton: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.tertiary,
+    "color": theme.palette.text.tertiary,
     "&:hover": {
       color: theme.palette.text.primary,
       backgroundColor: theme.palette.action?.hover || "#e3f5e6",
     },
-    padding: theme.spacing(0.5),
+    "padding": theme.spacing(0.5),
   }),
 };
 
@@ -470,7 +470,7 @@ export const emptyStateStyles = {
   }),
 
   image: (): SxProps<Theme> => ({
-    marginBottom: (theme) => theme.spacing(4),
+    "marginBottom": (theme) => theme.spacing(4),
     "& img": {
       maxWidth: "100%",
       height: "auto",

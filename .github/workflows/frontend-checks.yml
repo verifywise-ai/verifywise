@@ -71,6 +71,9 @@ jobs:
       - name: Run tests with coverage
         run: npx vitest run --coverage
 
+      - name: i18n audit (catch dictionary drift)
+        run: npm run i18n:audit:strict
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7
@@ -87,7 +90,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         continue-on-error: true
         with:
           fail-on-severity: high

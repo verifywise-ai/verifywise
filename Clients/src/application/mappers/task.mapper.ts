@@ -27,11 +27,11 @@ export function mapPriority(priority: string): TaskPriority {
  */
 export function mapStatus(status: string): TaskStatus {
   const mapping: Record<string, TaskStatus> = {
-    open: TaskStatus.OPEN,
+    "open": TaskStatus.OPEN,
     "in progress": TaskStatus.IN_PROGRESS,
-    completed: TaskStatus.COMPLETED,
-    overdue: TaskStatus.OVERDUE,
-    deleted: TaskStatus.DELETED,
+    "completed": TaskStatus.COMPLETED,
+    "overdue": TaskStatus.OVERDUE,
+    "deleted": TaskStatus.DELETED,
   };
   return mapping[status] || TaskStatus.OPEN;
 }

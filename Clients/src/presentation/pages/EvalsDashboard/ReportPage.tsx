@@ -6,16 +6,25 @@ import {
   CircularProgress,
   Chip,
   IconButton,
+  Popover,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
   useTheme,
 } from "@mui/material";
-import { FileText, Download, AlertTriangle, Eye, X, ExternalLink, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Download,
+  AlertTriangle,
+  Eye,
+  X,
+  ExternalLink,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
@@ -68,6 +77,20 @@ export default function ReportPage({
   const [reports, setReports] = useState<StoredReport[]>([]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  // Dots menu state
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuReport, setMenuReport] = useState<StoredReport | null>(null);
+
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, report: StoredReport) => {
+    e.stopPropagation();
+    setMenuAnchorEl(e.currentTarget);
+    setMenuReport(report);
+  };
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setMenuReport(null);
+  };
 
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfTitle, setPdfTitle] = useState("");
@@ -324,10 +347,10 @@ export default function ReportPage({
             target="_blank"
             rel="noopener noreferrer"
             sx={{
-              fontSize: 13,
-              color: palette.brand.primary,
-              fontWeight: 600,
-              textDecoration: "none",
+              "fontSize": 13,
+              "color": palette.brand.primary,
+              "fontWeight": 600,
+              "textDecoration": "none",
               "&:hover": { textDecoration: "underline" },
             }}
           >
@@ -518,8 +541,9 @@ export default function ReportPage({
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.header.cell,
-                    width: "15%",
-                    minWidth: 120,
+                    width: "60px",
+                    minWidth: 60,
+                    textAlign: "center",
                   }}
                 >
                   <Typography sx={{ fontWeight: 500, fontSize: 13 }}>Actions</Typography>
@@ -537,7 +561,7 @@ export default function ReportPage({
                   }
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
-                    cursor: "pointer",
+                    "cursor": "pointer",
                     "&:hover": { backgroundColor: palette.background.accent },
                   }}
                 >
@@ -580,38 +604,29 @@ export default function ReportPage({
                     </Typography>
                   </TableCell>
                   <TableCell
-                    sx={singleTheme.tableStyles.primary.body.cell}
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      textAlign: "center",
+                      minWidth: 60,
+                      maxWidth: 60,
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Stack direction="row" spacing="4px">
-                      <Tooltip title="Download">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDownloadReport(report)}
-                          disabled={loadingReportId === report.id}
-                          sx={{ padding: "4px" }}
-                        >
-                          <Download
-                            size={16}
-                            strokeWidth={1.5}
-                            color={theme.palette.text.secondary}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteReport(report.id)}
-                          sx={{ padding: "4px" }}
-                        >
-                          <Trash2
-                            size={16}
-                            strokeWidth={1.5}
-                            color={theme.palette.text.secondary}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleMenuOpen(e, report)}
+                      sx={{
+                        "color": theme.palette.text.secondary,
+                        "padding": "6px",
+                        "&:hover": { backgroundColor: palette.background.accent },
+                      }}
+                    >
+                      {loadingReportId === report.id ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <MoreVertical size={18} />
+                      )}
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -619,6 +634,76 @@ export default function ReportPage({
           </Table>
         </TableContainer>
       )}
+
+      {/* Dots action menu */}
+      <Popover
+        open={Boolean(menuAnchorEl)}
+        anchorEl={menuAnchorEl}
+        onClose={handleMenuClose}
+        onClick={(e) => e.stopPropagation()}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        sx={{
+          "& .MuiPopover-paper": {
+            minWidth: 140,
+            borderRadius: "4px",
+            border: `1px solid ${palette.border.dark}`,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            overflow: "hidden",
+            mt: 0.5,
+            p: 1,
+          },
+        }}
+      >
+        <Stack spacing={1}>
+          <CustomizableButton
+            variant="outlined"
+            onClick={() => {
+              if (menuReport) handleDownloadReport(menuReport);
+              handleMenuClose();
+            }}
+            startIcon={<Download size={14} />}
+            sx={{
+              "height": "34px",
+              "fontSize": "13px",
+              "fontWeight": 500,
+              "color": palette.text.secondary,
+              "borderColor": palette.border.dark,
+              "backgroundColor": "transparent",
+              "justifyContent": "flex-start",
+              "&:hover": {
+                backgroundColor: palette.background.accent,
+                borderColor: palette.border.dark,
+              },
+            }}
+          >
+            Download
+          </CustomizableButton>
+          <CustomizableButton
+            variant="outlined"
+            onClick={() => {
+              if (menuReport) handleDeleteReport(menuReport.id);
+              handleMenuClose();
+            }}
+            startIcon={<Trash2 size={14} />}
+            sx={{
+              "height": "34px",
+              "fontSize": "13px",
+              "fontWeight": 500,
+              "color": "#DC2626",
+              "borderColor": palette.border.dark,
+              "backgroundColor": "transparent",
+              "justifyContent": "flex-start",
+              "&:hover": {
+                backgroundColor: "#FEF2F2",
+                borderColor: "#DC2626",
+              },
+            }}
+          >
+            Delete
+          </CustomizableButton>
+        </Stack>
+      </Popover>
 
       {/* Config Modal */}
       <ReportConfigModal

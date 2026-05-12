@@ -163,10 +163,10 @@ export function EvidenceCoverageCard({
         variant="determinate"
         value={coveragePercentage}
         sx={{
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: C.progressBackground,
-          mb: "32px",
+          "height": 8,
+          "borderRadius": 4,
+          "backgroundColor": C.progressBackground,
+          "mb": "32px",
           "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: 4 },
         }}
       />

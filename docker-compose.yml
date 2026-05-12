@@ -80,6 +80,7 @@ services:
     depends_on:
       - backend
       - redis
+      - ai_gateway
     image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
     expose:
       - "8000"
@@ -93,6 +94,9 @@ services:
       - DB_NAME=$DB_NAME
       - BACKEND_URL=http://backend:$BACKEND_PORT
       - REDIS_URL=redis://redis:6379/0
+      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - AI_GATEWAY_URL=http://ai_gateway:8100
+      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
   ai_gateway:
     depends_on:
       postgresdb:

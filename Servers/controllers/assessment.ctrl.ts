@@ -16,6 +16,7 @@ import { TopicModel } from "../domain.layer/models/topic/topic.model";
 import { SubtopicModel } from "../domain.layer/models/subtopic/subtopic.model";
 import { sequelize } from "../database/db";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { translateError } from "../utils/i18n.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 
 export async function getAllAssessments(req: Request, res: Response): Promise<any> {
@@ -53,7 +54,7 @@ export async function getAllAssessments(req: Request, res: Response): Promise<an
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -92,7 +93,7 @@ export async function getAssessmentById(req: Request, res: Response): Promise<an
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -113,7 +114,7 @@ export async function createAssessment(req: Request, res: Response): Promise<any
     if (!assessmentData.project_id) {
       return res.status(400).json(
         STATUS_CODE[400]({
-          message: "project_id is required",
+          message: req.t!("project_id is required"),
           field: "project_id",
         }),
       );
@@ -135,7 +136,7 @@ export async function createAssessment(req: Request, res: Response): Promise<any
 
       return res.status(201).json(
         STATUS_CODE[201]({
-          message: "Assessment created successfully",
+          message: req.t!("Assessment created successfully"),
           assessment: createdAssessment.toSafeJSON(),
         }),
       );
@@ -154,7 +155,7 @@ export async function createAssessment(req: Request, res: Response): Promise<any
 
     return res.status(503).json(
       STATUS_CODE[503]({
-        message: "Failed to create assessment",
+        message: req.t!("Failed to create assessment"),
       }),
     );
   } catch (error) {
@@ -174,7 +175,7 @@ export async function createAssessment(req: Request, res: Response): Promise<any
       return res.status(400).json(STATUS_CODE[400](error));
     }
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -195,7 +196,7 @@ export async function updateAssessmentById(req: Request, res: Response): Promise
     if (!assessmentData.project_id) {
       return res.status(400).json(
         STATUS_CODE[400]({
-          message: "project_id is required",
+          message: req.t!("project_id is required"),
           field: "project_id",
         }),
       );
@@ -220,7 +221,7 @@ export async function updateAssessmentById(req: Request, res: Response): Promise
 
       return res.status(202).json(
         STATUS_CODE[202]({
-          message: "Assessment updated successfully",
+          message: req.t!("Assessment updated successfully"),
           assessment: updatedAssessments[0].toSafeJSON(),
         }),
       );
@@ -239,7 +240,7 @@ export async function updateAssessmentById(req: Request, res: Response): Promise
 
     return res.status(404).json(
       STATUS_CODE[404]({
-        message: "Assessment not found or no changes made",
+        message: req.t!("Assessment not found or no changes made"),
         assessmentId: assessmentId,
       }),
     );
@@ -260,7 +261,7 @@ export async function updateAssessmentById(req: Request, res: Response): Promise
       return res.status(400).json(STATUS_CODE[400](error));
     }
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -320,7 +321,7 @@ export async function deleteAssessmentById(req: Request, res: Response): Promise
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -380,7 +381,7 @@ export async function getAnswers(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -421,6 +422,6 @@ export async function getAssessmentByProjectId(req: Request, res: Response): Pro
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

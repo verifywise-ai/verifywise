@@ -59,17 +59,17 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
-        background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
-        border: `1px solid ${palette.border.light}`,
-        height: "100%",
-        minHeight: "80px",
-        position: "relative",
-        transition: "all 0.2s ease",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-        borderRadius: "8px",
-        overflow: "hidden",
+        "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
+        "border": `1px solid ${palette.border.light}`,
+        "height": "100%",
+        "minHeight": "80px",
+        "position": "relative",
+        "transition": "all 0.2s ease",
+        "display": "flex",
+        "flexDirection": "column",
+        "boxSizing": "border-box",
+        "borderRadius": "8px",
+        "overflow": "hidden",
         "&:hover": {
           background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
           borderColor: palette.border.dark,
@@ -78,13 +78,13 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
     >
       <CardContent
         sx={{
-          p: "14px 16px",
-          position: "relative",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflow: "hidden",
+          "p": "14px 16px",
+          "position": "relative",
+          "height": "100%",
+          "display": "flex",
+          "flexDirection": "column",
+          "flex": 1,
+          "overflow": "hidden",
           "&:last-child": { pb: "14px" },
         }}
       >
@@ -420,9 +420,9 @@ export default function ProjectOverview({
           icon={<Play size={16} />}
           isDisabled={!canCreateExperiment}
           sx={{
-            backgroundColor: palette.brand.primary,
-            border: `1px solid ${palette.brand.primary}`,
-            gap: 2,
+            "backgroundColor": palette.brand.primary,
+            "border": `1px solid ${palette.brand.primary}`,
+            "gap": 2,
             "&:hover": {
               backgroundColor: palette.brand.primaryHover,
             },
@@ -511,11 +511,11 @@ export default function ProjectOverview({
               icon={<Play size={14} />}
               isDisabled={!canCreateExperiment}
               sx={{
-                backgroundColor: palette.brand.primary,
-                border: `1px solid ${palette.brand.primary}`,
-                gap: 1,
-                fontSize: "12px",
-                height: "32px",
+                "backgroundColor": palette.brand.primary,
+                "border": `1px solid ${palette.brand.primary}`,
+                "gap": 1,
+                "fontSize": "12px",
+                "height": "32px",
                 "&:hover": {
                   backgroundColor: palette.brand.primaryHover,
                 },

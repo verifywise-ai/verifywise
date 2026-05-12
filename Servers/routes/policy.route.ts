@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { PolicyController } from "../controllers/policy.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import multer from "multer";
 import { DOCX_MAX_FILE_SIZE_BYTES } from "../services/policies/policyImporter";
 
@@ -13,6 +14,15 @@ const router = Router();
 
 // POST /policies/import/docx - Import DOCX and convert to HTML
 router.post("/import/docx", authenticateJWT, upload.single("file"), PolicyController.importDocx);
+
+// PATCH /policies/bulk - Bulk archive / assign reviewer / set tags (Admin/Editor)
+// Must come before generic /:id routes.
+router.patch(
+  "/bulk",
+  authenticateJWT,
+  authorize(["Admin", "Editor"]),
+  PolicyController.bulkUpdatePolicies,
+);
 
 // GET /policies - Get all policies
 router.get("/", authenticateJWT, PolicyController.getAllPolicies);

@@ -121,20 +121,20 @@ const ReadOnlyBanner = () => {
           style: { zIndex: 10001 },
           PaperProps: {
             sx: {
-              maxHeight: 240,
-              borderRadius: theme.shape.borderRadius,
-              boxShadow: theme.boxShadow,
-              mt: 1,
+              "maxHeight": 240,
+              "borderRadius": theme.shape.borderRadius,
+              "boxShadow": theme.boxShadow,
+              "mt": 1,
               "& .MuiMenuItem-root": {
-                fontSize: 13,
-                color: theme.palette.text.primary,
-                transition: "color 0.2s ease, background-color 0.2s ease",
+                "fontSize": 13,
+                "color": theme.palette.text.primary,
+                "transition": "color 0.2s ease, background-color 0.2s ease",
                 "&:hover": {
                   backgroundColor: theme.palette.background.accent,
                   color: theme.palette.primary.main,
                 },
                 "&.Mui-selected": {
-                  backgroundColor: theme.palette.background.accent,
+                  "backgroundColor": theme.palette.background.accent,
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,
@@ -148,13 +148,13 @@ const ReadOnlyBanner = () => {
           },
         }}
         sx={{
-          fontSize: 13,
-          minWidth: 160,
-          maxWidth: 240,
-          height: 28,
-          backgroundColor: background.main,
-          position: "relative",
-          cursor: "pointer",
+          "fontSize": 13,
+          "minWidth": 160,
+          "maxWidth": 240,
+          "height": 28,
+          "backgroundColor": background.main,
+          "position": "relative",
+          "cursor": "pointer",
           ...getSelectStyles(theme),
           "& .MuiSelect-select": {
             py: "3px",
@@ -174,15 +174,15 @@ const ReadOnlyBanner = () => {
         variant="outlined"
         onClick={() => navigate("/super-admin")}
         sx={{
-          textTransform: "none",
-          fontSize: 12,
-          fontWeight: 600,
-          minWidth: "auto",
-          px: 1.5,
-          py: 0.25,
-          color: status.info.text,
-          borderColor: status.info.text,
-          borderRadius: theme.shape.borderRadius,
+          "textTransform": "none",
+          "fontSize": 12,
+          "fontWeight": 600,
+          "minWidth": "auto",
+          "px": 1.5,
+          "py": 0.25,
+          "color": status.info.text,
+          "borderColor": status.info.text,
+          "borderRadius": theme.shape.borderRadius,
           "&:hover": {
             color: text.primary,
             borderColor: text.primary,

@@ -95,7 +95,17 @@ export interface RiskScoreResult {
  */
 function getDimensionsForFinding(finding: FindingForScoring): DimensionKey[] {
   const dimensions: DimensionKey[] = [];
-  const { finding_type, provider, risk_level } = finding;
+  const { finding_type, provider, risk_level, suppressed, governance_status } = finding;
+
+  // Suppressed (rule-matched) or manually marked as suppressed/accepted_risk
+  // findings do not penalize any dimension.
+  if (
+    suppressed === true ||
+    governance_status === "suppressed" ||
+    governance_status === "accepted_risk"
+  ) {
+    return dimensions;
+  }
 
   const isInventory = INVENTORY_FINDING_TYPES.has(finding_type);
   const hasElevatedRisk = risk_level === "high" || risk_level === "medium";
@@ -589,8 +599,14 @@ export async function calculateAndStoreRiskScore(
   try {
     logger.info(`Calculating risk score for scan ${scanId}, tenant ${ctx.organizationId}`);
 
-    // 1. Get all findings
-    const findings = await getAllFindingsForScoringQuery(scanId, ctx.organizationId);
+    // 1. Get all findings (excluding suppressed ones from scoring + LLM input)
+    const allFindings = await getAllFindingsForScoringQuery(scanId, ctx.organizationId);
+    const findings = allFindings.filter(
+      (f) =>
+        f.suppressed !== true &&
+        f.governance_status !== "suppressed" &&
+        f.governance_status !== "accepted_risk",
+    );
     if (findings.length === 0) {
       // No findings = perfect score
       const details: RiskScoreDetails = {

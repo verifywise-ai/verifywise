@@ -3,6 +3,7 @@ import { getModelInventoryChangeHistory } from "../utils/modelInventoryChangeHis
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Get change history for a specific model inventory with pagination support
  */
@@ -57,6 +58,6 @@ export async function getModelInventoryChangeHistoryById(req: Request, res: Resp
       "modelInventoryChangeHistory.ctrl.ts",
     );
     logger.error("❌ Error in getModelInventoryChangeHistoryById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

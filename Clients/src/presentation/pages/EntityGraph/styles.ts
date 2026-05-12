@@ -40,10 +40,10 @@ export const loadingTextSx: SxProps<Theme> = {
 };
 
 export const loadingProgressSx: SxProps<Theme> = {
-  width: 300,
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: COLORS.borderLight,
+  "width": 300,
+  "height": 8,
+  "borderRadius": 4,
+  "backgroundColor": COLORS.borderLight,
   "& .MuiLinearProgress-bar": {
     backgroundColor: COLORS.primary,
     borderRadius: 4,
@@ -137,18 +137,18 @@ export const entityTypesLabelSx: SxProps<Theme> = {
 };
 
 export const toggleButtonGroupSx: SxProps<Theme> = {
-  display: "flex",
-  flexWrap: "wrap",
-  columnGap: "4px",
-  rowGap: "8px",
-  maxWidth: 220,
+  "display": "flex",
+  "flexWrap": "wrap",
+  "columnGap": "4px",
+  "rowGap": "8px",
+  "maxWidth": 220,
   "& .MuiToggleButton-root": {
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: "4px !important",
-    textTransform: "none",
-    fontSize: 11,
-    py: 0.5,
-    px: 1,
+    "border": `1px solid ${COLORS.border}`,
+    "borderRadius": "4px !important",
+    "textTransform": "none",
+    "fontSize": 11,
+    "py": 0.5,
+    "px": 1,
     "&.Mui-selected": {
       backgroundColor: COLORS.primaryLight,
       borderColor: COLORS.primary,

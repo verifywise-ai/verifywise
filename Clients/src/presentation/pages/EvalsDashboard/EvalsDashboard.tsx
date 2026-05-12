@@ -4,9 +4,8 @@ import {
   Box,
   Stack,
   Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
+  Select,
+  MenuItem,
   Button,
   Card,
   CardContent,
@@ -23,8 +22,11 @@ import {
   Settings,
   Save,
   Workflow,
-  KeyRound,
   Swords,
+  MessageSquare,
+  FileText,
+  Scale,
+  Cpu,
 } from "lucide-react";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
@@ -106,6 +108,7 @@ import { ProjectDatasets } from "./ProjectDatasets";
 import ProjectScorers from "./ProjectScorers";
 import ModelsPage from "./ModelsPage";
 import ExperimentDetailContent from "./ExperimentDetailContent";
+import PlaygroundPage from "./PlaygroundPage";
 import ArenaPage from "./ArenaPage";
 import BiasAuditsList from "./BiasAuditsList";
 import BiasAuditDetail from "./BiasAuditDetail";
@@ -226,6 +229,7 @@ export default function EvalsDashboard() {
   const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName);
 
   // Determine tab from URL hash or default
+  const [openModelsAddModal, setOpenModelsAddModal] = useState(false);
   const [tab, setTab] = useState(() => {
     const hash = location.hash.replace("#", "");
     // When no projectId, default to "overview" to show projects list
@@ -470,6 +474,11 @@ export default function EvalsDashboard() {
   };
 
   useEffect(() => {
+    // Redirect legacy "configuration" deep-links to "settings"
+    if (tab === "configuration") {
+      setTab("settings");
+      return;
+    }
     if (tab === "settings") {
       fetchLlmApiKeys();
     }
@@ -483,7 +492,7 @@ export default function EvalsDashboard() {
     setDeleteKeyModalOpen(false);
 
     try {
-      await deleteLlmApiKey(keyToDelete.provider);
+      await deleteLlmApiKey(keyToDelete.provider, keyToDelete.id);
 
       // Wait for animation then refresh
       setTimeout(async () => {
@@ -1023,15 +1032,16 @@ export default function EvalsDashboard() {
   // Tab label and icon mapping for breadcrumbs
   const getTabInfo = (tabValue: string): { label: string; icon: React.ReactNode } => {
     const tabMap: Record<string, { label: string; icon: React.ReactNode }> = {
-      overview: { label: "Overview", icon: <LayoutDashboard size={14} strokeWidth={1.5} /> },
-      experiments: { label: "Experiments", icon: <FlaskConical size={14} strokeWidth={1.5} /> },
-      datasets: { label: "Datasets", icon: <Database size={14} strokeWidth={1.5} /> },
-      models: { label: "Models", icon: <Bot size={14} strokeWidth={1.5} /> },
-      scorers: { label: "Scorers", icon: <Award size={14} strokeWidth={1.5} /> },
-      "bias-audits": { label: "Bias audits", icon: <FileSearch size={14} strokeWidth={1.5} /> },
-      arena: { label: "Arena", icon: <Swords size={14} strokeWidth={1.5} /> },
-      configuration: { label: "Configuration", icon: <Settings size={14} strokeWidth={1.5} /> },
-      settings: { label: "Settings", icon: <KeyRound size={14} strokeWidth={1.5} /> },
+      "overview": { label: "Overview", icon: <LayoutDashboard size={14} strokeWidth={1.5} /> },
+      "experiments": { label: "Experiments", icon: <FlaskConical size={14} strokeWidth={1.5} /> },
+      "datasets": { label: "Datasets", icon: <Database size={14} strokeWidth={1.5} /> },
+      "models": { label: "Models", icon: <Cpu size={14} strokeWidth={1.5} /> },
+      "scorers": { label: "Scorers", icon: <Award size={14} strokeWidth={1.5} /> },
+      "bias-audits": { label: "Bias audits", icon: <Scale size={14} strokeWidth={1.5} /> },
+      "arena": { label: "Arena", icon: <Swords size={14} strokeWidth={1.5} /> },
+      "playground": { label: "Playground", icon: <MessageSquare size={14} strokeWidth={1.5} /> },
+      "reports": { label: "Reports", icon: <FileText size={14} strokeWidth={1.5} /> },
+      "settings": { label: "Settings", icon: <Settings size={14} strokeWidth={1.5} /> },
     };
     return tabMap[tabValue] || { label: tabValue, icon: <Workflow size={14} strokeWidth={1.5} /> };
   };
@@ -1199,7 +1209,7 @@ export default function EvalsDashboard() {
 
   return (
     <Stack className="vwhome" gap={"16px"}>
-      <PageBreadcrumbs items={breadcrumbItems} sx={{ mb: 0, "& > hr": { mb: 0 } }} />
+      <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
 
       {/* Server Connection Error Banner */}
       {serverConnectionError && (
@@ -1245,9 +1255,9 @@ export default function EvalsDashboard() {
             onClick={handleRetryConnection}
             disabled={initialLoading}
             sx={{
-              textTransform: "none",
-              borderColor: palette.status.error.text,
-              color: palette.status.error.text,
+              "textTransform": "none",
+              "borderColor": palette.status.error.text,
+              "color": palette.status.error.text,
               "&:hover": {
                 borderColor: palette.status.error.text,
                 backgroundColor: palette.status.error.bg,
@@ -1268,8 +1278,13 @@ export default function EvalsDashboard() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
             <PageHeader
               title="Settings"
-              description="Manage your organization's LLM provider API keys. These keys are shared across all projects."
+              description="Manage your organization's LLM provider API keys and project configuration."
             />
+
+            {/* ── API keys section ── */}
+            <Typography sx={{ fontWeight: 600, fontSize: 15, color: palette.text.secondary }}>
+              API keys
+            </Typography>
 
             {/* LLM API Keys Card */}
             <Box
@@ -1308,8 +1323,8 @@ export default function EvalsDashboard() {
                     }}
                     isDisabled={!canManageApiKeys}
                     sx={{
-                      backgroundColor: palette.brand.primary,
-                      color: palette.background.main,
+                      "backgroundColor": palette.brand.primary,
+                      "color": palette.background.main,
                       "&:hover": { backgroundColor: palette.brand.primaryHover },
                     }}
                   />
@@ -1365,8 +1380,8 @@ export default function EvalsDashboard() {
                     }}
                     isDisabled={!canManageApiKeys}
                     sx={{
-                      backgroundColor: palette.brand.primary,
-                      color: palette.background.main,
+                      "backgroundColor": palette.brand.primary,
+                      "color": palette.background.main,
                       "&:hover": { backgroundColor: palette.brand.primaryHover },
                     }}
                   />
@@ -1419,12 +1434,12 @@ export default function EvalsDashboard() {
                             >
                               <Box
                                 sx={{
-                                  position: "absolute",
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                  width: 32,
-                                  height: 32,
+                                  "position": "absolute",
+                                  "top": "50%",
+                                  "left": "50%",
+                                  "transform": "translate(-50%, -50%)",
+                                  "width": 32,
+                                  "height": 32,
                                   "& svg": {
                                     width: "32px !important",
                                     height: "32px !important",
@@ -1505,8 +1520,8 @@ export default function EvalsDashboard() {
                               }}
                               disabled={!canManageApiKeys}
                               sx={{
-                                color: palette.text.tertiary,
-                                padding: "8px",
+                                "color": palette.text.tertiary,
+                                "padding": "8px",
                                 "&:hover": {
                                   backgroundColor: palette.background.hover,
                                   color: palette.text.secondary,
@@ -1537,8 +1552,8 @@ export default function EvalsDashboard() {
                               }}
                               disabled={!canManageApiKeys}
                               sx={{
-                                color: palette.status.error.text,
-                                padding: "8px",
+                                "color": palette.status.error.text,
+                                "padding": "8px",
                                 "&:hover": {
                                   backgroundColor: palette.status.error.bg,
                                   color: palette.status.error.text,
@@ -1597,10 +1612,10 @@ export default function EvalsDashboard() {
                     icon={<PlusIcon size={16} />}
                     onClick={() => setLocalProviderModalOpen(true)}
                     sx={{
-                      backgroundColor: palette.brand.primary,
-                      color: palette.background.main,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
+                      "backgroundColor": palette.brand.primary,
+                      "color": palette.background.main,
+                      "whiteSpace": "nowrap",
+                      "flexShrink": 0,
                       "&:hover": { backgroundColor: palette.brand.primaryHover },
                     }}
                   />
@@ -1706,8 +1721,8 @@ export default function EvalsDashboard() {
                           >
                             <Box
                               sx={{
-                                width: 32,
-                                height: 32,
+                                "width": 32,
+                                "height": 32,
                                 "& svg": { width: "32px !important", height: "32px !important" },
                               }}
                             >
@@ -1754,8 +1769,8 @@ export default function EvalsDashboard() {
                         <IconButton
                           onClick={() => handleDeleteLocalProvider(provider.id)}
                           sx={{
-                            color: palette.status.error.text,
-                            padding: "8px",
+                            "color": palette.status.error.text,
+                            "padding": "8px",
                             "&:hover": {
                               backgroundColor: palette.status.error.bg,
                               color: palette.status.error.text,
@@ -1770,6 +1785,126 @@ export default function EvalsDashboard() {
                 </Box>
               )}
             </Box>
+
+            {/* ── Project settings section ── */}
+            {currentProject && (
+              <>
+                <Typography
+                  sx={{ fontWeight: 600, fontSize: 15, color: palette.text.secondary, mt: 2 }}
+                >
+                  Project settings
+                </Typography>
+
+                <Box
+                  sx={{
+                    background: palette.background.main,
+                    border: `1px solid ${palette.border.dark}`,
+                    borderRadius: "4px",
+                    boxShadow: "none",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Row: Use case type */}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{
+                      px: "20px",
+                      py: "14px",
+                      borderBottom: `1px solid ${palette.border.dark}`,
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}
+                      >
+                        Use case type
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: 0.25 }}>
+                        The type of LLM application being evaluated
+                      </Typography>
+                    </Box>
+                    <Select
+                      value={currentProject?.useCase || "chatbot"}
+                      disabled={experimentsCount > 0}
+                      onChange={(e) => {
+                        if (currentProject && experimentsCount === 0) {
+                          setCurrentProject({
+                            ...currentProject,
+                            useCase: e.target.value as "rag" | "chatbot" | "agent",
+                          });
+                        }
+                      }}
+                      size="small"
+                      sx={{
+                        "minWidth": 160,
+                        "fontSize": 13,
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: palette.border.dark },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: palette.border.dark,
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: palette.brand.primary,
+                        },
+                        "&.Mui-disabled": { opacity: 0.6 },
+                      }}
+                    >
+                      <MenuItem value="chatbot" sx={{ fontSize: 13 }}>
+                        Chatbot
+                      </MenuItem>
+                      <MenuItem value="rag" sx={{ fontSize: 13 }}>
+                        RAG
+                      </MenuItem>
+                      <MenuItem value="agent" sx={{ fontSize: 13 }}>
+                        Agent
+                      </MenuItem>
+                    </Select>
+                  </Stack>
+
+                  {/* Locked notice + save row */}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent={experimentsCount > 0 ? "space-between" : "flex-end"}
+                    sx={{ px: "20px", py: "12px" }}
+                    gap={2}
+                  >
+                    {experimentsCount > 0 && (
+                      <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
+                        Use case is locked — this project has {experimentsCount} experiment
+                        {experimentsCount !== 1 ? "s" : ""}.
+                      </Typography>
+                    )}
+                    {experimentsCount === 0 && (
+                      <CustomizableButton
+                        sx={{
+                          "width": "fit-content",
+                          "gap": 1,
+                          "backgroundColor": hasUseCaseChanged
+                            ? palette.brand.primary
+                            : palette.border.dark,
+                          "border": hasUseCaseChanged
+                            ? `1px solid ${palette.brand.primary}`
+                            : `1px solid ${palette.border.dark}`,
+                          "&:hover": hasUseCaseChanged
+                            ? { backgroundColor: palette.brand.primaryHover }
+                            : {},
+                        }}
+                        icon={<Save size={14} />}
+                        variant="contained"
+                        onClick={handleSaveConfiguration}
+                        isDisabled={!hasUseCaseChanged || savingConfig}
+                        loading={savingConfig}
+                        text={savingConfig ? "Saving..." : "Save changes"}
+                      />
+                    )}
+                  </Stack>
+                </Box>
+
+                {configAlert && <Alert variant={configAlert.variant} body={configAlert.body} />}
+              </>
+            )}
           </Box>
         ) : !projectId ? (
           /* No project selected - show projects list */
@@ -1815,9 +1950,25 @@ export default function EvalsDashboard() {
               <ProjectScorers projectId={projectId} orgId={orgId || currentProject?.orgId || ""} />
             )}
 
-            {tab === "models" && <ModelsPage orgId={orgId || currentProject?.orgId || ""} />}
+            {tab === "models" && (
+              <ModelsPage
+                orgId={orgId || currentProject?.orgId || ""}
+                openAddModal={openModelsAddModal}
+                onAddModalConsumed={() => setOpenModelsAddModal(false)}
+              />
+            )}
 
             {tab === "arena" && <ArenaPage orgId={orgId || currentProject?.orgId || ""} />}
+
+            {tab === "playground" && (
+              <PlaygroundPage
+                orgId={orgId || currentProject?.orgId || ""}
+                onNavigateToModels={() => {
+                  setOpenModelsAddModal(true);
+                  setTab("models");
+                }}
+              />
+            )}
 
             {tab === "bias-audits" &&
               (selectedBiasAuditId ? (
@@ -1838,232 +1989,6 @@ export default function EvalsDashboard() {
                 projectName={currentProject?.name || ""}
                 orgId={orgId || currentProject?.orgId || ""}
               />
-            )}
-
-            {tab === "configuration" && (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-                <PageHeader
-                  title="Configuration"
-                  description="Configure your project's LLM use case for running evaluations."
-                />
-
-                {/* LLM Use Case Card */}
-                <Box
-                  sx={{
-                    background: palette.background.main,
-                    border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
-                    p: "20px 24px",
-                    boxShadow: "none",
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-                    <Typography
-                      sx={{ fontWeight: 600, fontSize: 16, color: palette.text.secondary }}
-                    >
-                      LLM use case
-                    </Typography>
-                  </Stack>
-
-                  {/* Locked notice when experiments exist */}
-                  {experimentsCount > 0 && (
-                    <Box
-                      sx={{
-                        backgroundColor: palette.status.warning.bg,
-                        border: `1px solid ${palette.status.warning.border}`,
-                        borderRadius: "6px",
-                        p: "8px",
-                        mb: 3,
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        gap={2}
-                      >
-                        <Box>
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              fontWeight: 600,
-                              color: palette.status.warning.text,
-                              mb: 0.5,
-                            }}
-                          >
-                            Use case is locked
-                          </Typography>
-                          <Typography
-                            sx={{
-                              fontSize: "12px",
-                              color: palette.status.warning.text,
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            This project has {experimentsCount} experiment
-                            {experimentsCount !== 1 ? "s" : ""}. To evaluate a different use case,
-                            create a new project.
-                          </Typography>
-                        </Box>
-                        <CustomizableButton
-                          variant="contained"
-                          onClick={() => setCreateProjectModalOpen(true)}
-                          icon={<PlusIcon size={14} />}
-                          text="Create new project"
-                          sx={{
-                            backgroundColor: palette.brand.primary,
-                            border: `1px solid ${palette.brand.primary}`,
-                            gap: 2,
-                            whiteSpace: "nowrap",
-                            "&:hover": {
-                              backgroundColor: palette.brand.primaryHover,
-                            },
-                          }}
-                        />
-                      </Stack>
-                    </Box>
-                  )}
-
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "220px 1fr",
-                      rowGap: "20px",
-                      columnGap: "80px",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    {/* Use Case Row */}
-                    <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case type</Typography>
-                      <Typography sx={{ fontSize: 12, color: palette.text.accent }}>
-                        {experimentsCount > 0
-                          ? "Use case cannot be changed after experiments are created"
-                          : "Select the type of LLM application you want to evaluate"}
-                      </Typography>
-                    </Box>
-                    <RadioGroup
-                      value={currentProject?.useCase || "chatbot"}
-                      onChange={(e) => {
-                        if (currentProject && experimentsCount === 0) {
-                          setCurrentProject({
-                            ...currentProject,
-                            useCase: e.target.value as "rag" | "chatbot" | "agent",
-                          });
-                        }
-                      }}
-                    >
-                      <FormControlLabel
-                        value="rag"
-                        disabled={experimentsCount > 0}
-                        control={
-                          <Radio
-                            sx={{
-                              color: palette.border.dark,
-                              "&.Mui-checked": { color: palette.brand.primary },
-                              "&.Mui-disabled": { color: palette.border.dark },
-                              "& .MuiSvgIcon-root": { fontSize: 20 },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box sx={{ opacity: experimentsCount > 0 ? 0.6 : 1 }}>
-                            <Typography sx={{ fontWeight: 600, fontSize: "13px" }}>RAG</Typography>
-                            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                              Evaluate retrieval-augmented generation, including recall, precision,
-                              relevancy and faithfulness.
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ alignItems: "flex-start", mb: 1.5 }}
-                      />
-                      <FormControlLabel
-                        value="chatbot"
-                        disabled={experimentsCount > 0}
-                        control={
-                          <Radio
-                            sx={{
-                              color: palette.border.dark,
-                              "&.Mui-checked": { color: palette.brand.primary },
-                              "&.Mui-disabled": { color: palette.border.dark },
-                              "& .MuiSvgIcon-root": { fontSize: 20 },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box sx={{ opacity: experimentsCount > 0 ? 0.6 : 1 }}>
-                            <Typography sx={{ fontWeight: 600, fontSize: "13px" }}>
-                              Chatbot
-                            </Typography>
-                            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                              Evaluate single and multi-turn conversational experiences for
-                              coherence, correctness and safety.
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ alignItems: "flex-start", mb: 1.5 }}
-                      />
-                      <FormControlLabel
-                        value="agent"
-                        disabled={experimentsCount > 0}
-                        control={
-                          <Radio
-                            sx={{
-                              color: palette.border.dark,
-                              "&.Mui-checked": { color: palette.brand.primary },
-                              "&.Mui-disabled": { color: palette.border.dark },
-                              "& .MuiSvgIcon-root": { fontSize: 20 },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box sx={{ opacity: experimentsCount > 0 ? 0.6 : 1 }}>
-                            <Typography sx={{ fontWeight: 600, fontSize: "13px" }}>
-                              Agent
-                            </Typography>
-                            <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                              Evaluate AI agents for planning, tool usage, task completion, and step
-                              efficiency.
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ alignItems: "flex-start" }}
-                      />
-                    </RadioGroup>
-                  </Box>
-                </Box>
-
-                {/* Config Alert */}
-                {configAlert && <Alert variant={configAlert.variant} body={configAlert.body} />}
-
-                {/* Save Button - only show when use case is not locked */}
-                {experimentsCount === 0 && (
-                  <Stack>
-                    <CustomizableButton
-                      sx={{
-                        alignSelf: "flex-end",
-                        width: "fit-content",
-                        gap: 2,
-                        backgroundColor: hasUseCaseChanged
-                          ? palette.brand.primary
-                          : palette.border.dark,
-                        border: hasUseCaseChanged
-                          ? `1px solid ${palette.brand.primary}`
-                          : `1px solid ${palette.border.dark}`,
-                        "&:hover": hasUseCaseChanged
-                          ? { backgroundColor: palette.brand.primaryHover }
-                          : {},
-                      }}
-                      icon={<Save size={16} />}
-                      variant="contained"
-                      onClick={handleSaveConfiguration}
-                      isDisabled={!hasUseCaseChanged || savingConfig}
-                      loading={savingConfig}
-                      text={savingConfig ? "Saving..." : "Save changes"}
-                    />
-                  </Stack>
-                )}
-              </Box>
             )}
           </>
         )}
@@ -2283,14 +2208,14 @@ export default function EvalsDashboard() {
                       <Card
                         onClick={() => handleProviderSelect(provider._id)}
                         sx={{
-                          cursor: "pointer",
-                          border: "1px solid",
-                          borderColor: isSelected ? palette.brand.primary : palette.border.dark,
-                          backgroundColor: palette.background.main,
-                          boxShadow: "none",
-                          transition: "all 0.2s ease",
-                          position: "relative",
-                          height: "100%",
+                          "cursor": "pointer",
+                          "border": "1px solid",
+                          "borderColor": isSelected ? palette.brand.primary : palette.border.dark,
+                          "backgroundColor": palette.background.main,
+                          "boxShadow": "none",
+                          "transition": "all 0.2s ease",
+                          "position": "relative",
+                          "height": "100%",
                           "&:hover": {
                             borderColor: palette.brand.primary,
                             boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -2299,14 +2224,14 @@ export default function EvalsDashboard() {
                       >
                         <CardContent
                           sx={{
-                            textAlign: "center",
-                            py: 3,
-                            px: 2,
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            "textAlign": "center",
+                            "py": 3,
+                            "px": 2,
+                            "height": "100%",
+                            "display": "flex",
+                            "flexDirection": "column",
+                            "alignItems": "center",
+                            "justifyContent": "center",
                             "&:last-child": { pb: 3 },
                           }}
                         >
@@ -2358,12 +2283,12 @@ export default function EvalsDashboard() {
                           {/* Provider Logo */}
                           <Box
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: 40,
-                              height: 40,
-                              mb: 1.5,
+                              "display": "flex",
+                              "alignItems": "center",
+                              "justifyContent": "center",
+                              "width": 40,
+                              "height": 40,
+                              "mb": 1.5,
                               "& svg": {
                                 width: 32,
                                 height: 32,
@@ -2553,17 +2478,17 @@ export default function EvalsDashboard() {
                   setLocalProviderUrl("http://localhost:11434");
                 }}
                 sx={{
-                  flex: 1,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor:
+                  "flex": 1,
+                  "cursor": "pointer",
+                  "border": "1px solid",
+                  "borderColor":
                     selectedLocalProviderType === "ollama"
                       ? palette.brand.primary
                       : palette.border.dark,
-                  backgroundColor: palette.background.main,
-                  boxShadow: "none",
-                  transition: "all 0.2s ease",
-                  position: "relative",
+                  "backgroundColor": palette.background.main,
+                  "boxShadow": "none",
+                  "transition": "all 0.2s ease",
+                  "position": "relative",
                   "&:hover": {
                     borderColor: palette.brand.primary,
                     boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -2633,17 +2558,17 @@ export default function EvalsDashboard() {
                   setLocalProviderUrl("http://localhost:8000/api/generate");
                 }}
                 sx={{
-                  flex: 1,
-                  cursor: "pointer",
-                  border: "1px solid",
-                  borderColor:
+                  "flex": 1,
+                  "cursor": "pointer",
+                  "border": "1px solid",
+                  "borderColor":
                     selectedLocalProviderType === "local"
                       ? palette.brand.primary
                       : palette.border.dark,
-                  backgroundColor: palette.background.main,
-                  boxShadow: "none",
-                  transition: "all 0.2s ease",
-                  position: "relative",
+                  "backgroundColor": palette.background.main,
+                  "boxShadow": "none",
+                  "transition": "all 0.2s ease",
+                  "position": "relative",
                   "&:hover": {
                     borderColor: palette.brand.primary,
                     boxShadow: "0 2px 6px rgba(0,0,0,0.06)",

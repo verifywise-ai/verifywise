@@ -97,7 +97,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
             horizontal: "left",
           }}
           sx={{
-            mt: 1,
+            "mt": 1,
             "& .MuiPopover-paper": {
               borderRadius: "4px",
               boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
@@ -135,19 +135,19 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
                     }
                   }}
                   sx={{
-                    background:
+                    "background":
                       "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
-                    borderRadius: "4px",
-                    padding: "20px 16px",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "flex-start",
-                    gap: 1.5,
-                    border: "1px solid rgba(0, 0, 0, 0.04)",
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    minHeight: "140px",
+                    "borderRadius": "4px",
+                    "padding": "20px 16px",
+                    "cursor": "pointer",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "alignItems": "center",
+                    "justifyContent": "flex-start",
+                    "gap": 1.5,
+                    "border": "1px solid rgba(0, 0, 0, 0.04)",
+                    "transition": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "minHeight": "140px",
                     "&:hover": {
                       boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                       border: "1px solid rgba(0, 0, 0, 0.08)",

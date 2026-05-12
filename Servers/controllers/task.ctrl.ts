@@ -8,7 +8,10 @@ import {
   deleteTaskByIdQuery,
   restoreTaskByIdQuery,
   hardDeleteTaskByIdQuery,
+  bulkMarkTasksCompleteQuery,
+  bulkSetTasksCategoriesQuery,
 } from "../utils/task.utils";
+import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { ITask } from "../domain.layer/interfaces/i.task";
@@ -26,6 +29,7 @@ import {
   ITaskEntityLinkForEmail,
 } from "../services/inAppNotification.service";
 import { getTaskEntityLinksQuery } from "../utils/taskEntityLink.utils";
+import { translateError } from "../utils/i18n.utils";
 import {
   recordEntityCreation,
   trackEntityChanges,
@@ -46,7 +50,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId } = req;
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const {
@@ -174,7 +178,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -187,7 +191,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -200,7 +204,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -216,7 +220,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     // Extract query parameters for filters, sorting, and pagination
@@ -305,7 +309,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -323,7 +327,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
@@ -369,7 +373,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -405,7 +409,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const updateData: Partial<ITask> = {};
@@ -582,7 +586,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -595,7 +599,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -633,7 +637,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const deleted = await deleteTaskByIdQuery({
@@ -661,7 +665,9 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
         tenantId: req.organizationId!,
       });
 
-      return res.status(200).json(STATUS_CODE[200]({ message: "Task deleted successfully" }));
+      return res
+        .status(200)
+        .json(STATUS_CODE[200]({ message: req.t!("Task deleted successfully") }));
     }
 
     await logSuccess({
@@ -712,7 +718,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const restoredTask = await restoreTaskByIdQuery({
@@ -767,7 +773,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -780,7 +786,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     if (error instanceof ForbiddenException) {
@@ -793,7 +799,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -831,7 +837,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const deleted = await hardDeleteTaskByIdQuery({
@@ -854,7 +860,9 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         tenantId: req.organizationId!,
       });
 
-      return res.status(200).json(STATUS_CODE[200]({ message: "Task permanently deleted" }));
+      return res
+        .status(200)
+        .json(STATUS_CODE[200]({ message: req.t!("Task permanently deleted") }));
     }
 
     await logSuccess({
@@ -880,7 +888,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -893,7 +901,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     if (error instanceof ForbiddenException) {
@@ -906,7 +914,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -926,5 +934,105 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         : 500;
 
     return res.status(statusCode).json(STATUS_CODE[statusCode]((error as Error).message));
+  }
+}
+
+type BulkTaskAction = "mark_complete" | "set_categories";
+
+const MAX_TASK_CATEGORIES = 10;
+const MAX_TASK_CATEGORY_LENGTH = 50;
+
+function validateBulkCategories(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    throw new ValidationException("categories must be an array", "categories", input);
+  }
+  if (input.length > MAX_TASK_CATEGORIES) {
+    throw new ValidationException(
+      `Maximum ${MAX_TASK_CATEGORIES} categories allowed`,
+      "categories",
+      input.length,
+    );
+  }
+  for (const value of input) {
+    if (typeof value !== "string" || value.length < 1 || value.length > MAX_TASK_CATEGORY_LENGTH) {
+      throw new ValidationException(
+        `Each category must be a string between 1 and ${MAX_TASK_CATEGORY_LENGTH} characters`,
+        "categories",
+        value,
+      );
+    }
+  }
+  return input as string[];
+}
+
+/**
+ * PATCH /api/tasks/bulk
+ *
+ * Body: { ids: number[], action: 'mark_complete' | 'set_categories', categories?: string[] }
+ *
+ * Tenant-scoped bulk update of tasks. Authorized for Admin and Editor roles.
+ */
+export async function bulkUpdateTasks(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting bulkUpdateTasks",
+    functionName: "bulkUpdateTasks",
+    fileName: "task.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const ids = parseBulkIds(req.body?.ids);
+    const action = req.body?.action as BulkTaskAction;
+
+    if (action !== "mark_complete" && action !== "set_categories") {
+      throw new ValidationException(
+        "action must be 'mark_complete' or 'set_categories'",
+        "action",
+        req.body?.action,
+      );
+    }
+
+    let categories: string[] | undefined;
+    if (action === "set_categories") {
+      categories = validateBulkCategories(req.body?.categories);
+    }
+
+    await withBulkTransaction(
+      {
+        audit: {
+          action,
+          ids,
+          fileName: "task.ctrl.ts",
+          functionName: "bulkUpdateTasks",
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        },
+      },
+      async (transaction) => {
+        await assertOrgOwnsIds({
+          table: "tasks",
+          ids,
+          organizationId: req.organizationId!,
+          transaction,
+        });
+
+        if (action === "mark_complete") {
+          await bulkMarkTasksCompleteQuery(req.organizationId!, ids, transaction);
+        } else {
+          await bulkSetTasksCategoriesQuery(req.organizationId!, ids, categories!, transaction);
+        }
+      },
+    );
+
+    return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
+  } catch (error) {
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](error.message));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](error.message));
+    }
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

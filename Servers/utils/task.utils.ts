@@ -949,3 +949,60 @@ export const hardDeleteTaskByIdQuery = async ({
 
   return true;
 };
+
+/**
+ * Bulk mark tasks as Completed for the given organization.
+ * Caller must validate org ownership beforehand (e.g. via assertOrgOwnsIds).
+ */
+export const bulkMarkTasksCompleteQuery = async (
+  organizationId: number,
+  ids: number[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE tasks
+       SET status = :status
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)
+       AND status != :deleted`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        status: TaskStatus.COMPLETED,
+        deleted: TaskStatus.DELETED,
+      },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Bulk set the `categories` column for the given tasks. Caller must validate
+ * org ownership and category constraints (max 10, each 1-50 chars) beforehand.
+ */
+export const bulkSetTasksCategoriesQuery = async (
+  organizationId: number,
+  ids: number[],
+  categories: string[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (ids.length === 0) return;
+
+  await sequelize.query(
+    `UPDATE tasks
+       SET categories = :categories
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)`,
+    {
+      replacements: {
+        organizationId,
+        ids,
+        categories: JSON.stringify(categories),
+      },
+      transaction,
+    },
+  );
+};

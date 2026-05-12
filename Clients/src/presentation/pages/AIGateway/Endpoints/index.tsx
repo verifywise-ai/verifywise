@@ -330,10 +330,10 @@ export default function EndpointsPage() {
                   justifyContent="space-between"
                   alignItems="center"
                   sx={{
-                    p: "12px 16px",
-                    border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
+                    "p": "12px 16px",
+                    "border": `1px solid ${palette.border.dark}`,
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
                     "&:hover": { bgcolor: "action.hover" },
                   }}
                   onClick={() => openEditModal(ep)}

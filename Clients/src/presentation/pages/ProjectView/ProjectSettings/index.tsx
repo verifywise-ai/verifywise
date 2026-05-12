@@ -590,7 +590,7 @@ const ProjectSettings = React.memo(
 
     const fieldStyle = useMemo(
       () => ({
-        backgroundColor: theme.palette.background.main,
+        "backgroundColor": theme.palette.background.main,
         "& input": {
           padding: "0 14px",
         },
@@ -1031,8 +1031,8 @@ const ProjectSettings = React.memo(
                                     component="li"
                                     {...props}
                                     sx={{
-                                      opacity: isComingSoon ? 0.5 : 1,
-                                      cursor: isComingSoon ? "not-allowed" : "pointer",
+                                      "opacity": isComingSoon ? 0.5 : 1,
+                                      "cursor": isComingSoon ? "not-allowed" : "pointer",
                                       "&:hover": {
                                         backgroundColor: isComingSoon ? "transparent" : undefined,
                                       },
@@ -1094,8 +1094,8 @@ const ProjectSettings = React.memo(
                                 ...getAutocompleteStyles(theme, {
                                   hasError: !!errors.monitoredRegulationsAndStandards,
                                 }),
-                                width: "400px",
-                                backgroundColor: theme.palette.background.main,
+                                "width": "400px",
+                                "backgroundColor": theme.palette.background.main,
                                 ".MuiAutocomplete-clearIndicator": {
                                   display: "none",
                                 },
@@ -1106,7 +1106,7 @@ const ProjectSettings = React.memo(
                                   borderRadius: "4px",
                                 },
                                 "& .MuiChip-root": {
-                                  borderRadius: "4px",
+                                  "borderRadius": "4px",
                                   "& .MuiChip-deleteIcon": {
                                     display:
                                       values.monitoredRegulationsAndStandards.length === 1
@@ -1241,8 +1241,8 @@ const ProjectSettings = React.memo(
                     )}
                     sx={{
                       ...getAutocompleteStyles(theme, { hasError: !!errors.members }),
-                      width: "400px",
-                      backgroundColor: theme.palette.background.main,
+                      "width": "400px",
+                      "backgroundColor": theme.palette.background.main,
                       "& .MuiOutlinedInput-root": {
                         ...getAutocompleteStyles(theme, { hasError: !!errors.members })[
                           "& .MuiOutlinedInput-root"

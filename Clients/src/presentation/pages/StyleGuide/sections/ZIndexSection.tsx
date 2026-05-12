@@ -168,20 +168,20 @@ const ZIndexSection: React.FC = () => {
                       key={item.name}
                       onClick={() => handleCopy(item.value.toString())}
                       sx={{
-                        position: "absolute",
-                        left: index * 20,
-                        bottom: index * 36,
-                        width: `calc(100% - ${index * 40}px)`,
-                        height: 40,
-                        backgroundColor: theme.palette.background.main,
-                        border: `2px solid ${item.color}`,
-                        borderRadius: "4px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        px: "12px",
-                        cursor: "pointer",
-                        transition: "transform 0.2s ease",
+                        "position": "absolute",
+                        "left": index * 20,
+                        "bottom": index * 36,
+                        "width": `calc(100% - ${index * 40}px)`,
+                        "height": 40,
+                        "backgroundColor": theme.palette.background.main,
+                        "border": `2px solid ${item.color}`,
+                        "borderRadius": "4px",
+                        "display": "flex",
+                        "alignItems": "center",
+                        "justifyContent": "space-between",
+                        "px": "12px",
+                        "cursor": "pointer",
+                        "transition": "transform 0.2s ease",
                         "&:hover": {
                           transform: "scale(1.02)",
                           zIndex: 10000, // Bring hovered item to top
@@ -544,14 +544,14 @@ const SpecTable: React.FC<{
           onMouseEnter={() => setHoveredIndex(index)}
           onMouseLeave={() => setHoveredIndex(null)}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            p: "10px 14px",
-            borderBottom:
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "p": "10px 14px",
+            "borderBottom":
               index < specs.length - 1 ? `1px solid ${theme.palette.border.light}` : "none",
-            cursor: "pointer",
-            transition: "background-color 150ms ease",
+            "cursor": "pointer",
+            "transition": "background-color 150ms ease",
             "&:hover": {
               backgroundColor: theme.palette.background.fill,
             },
@@ -612,9 +612,9 @@ const ExampleWithCode: React.FC<{
         <Box
           onClick={() => setShowCode(!showCode)}
           sx={{
-            fontSize: 11,
-            color: showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
-            cursor: "pointer",
+            "fontSize": 11,
+            "color": showCode ? theme.palette.primary.main : theme.palette.text.tertiary,
+            "cursor": "pointer",
             "&:hover": { color: theme.palette.primary.main },
           }}
         >

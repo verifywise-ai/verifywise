@@ -8,10 +8,10 @@ import type { CSSProperties } from "react";
  * @returns {SxProps<Theme>} The styles for the IconButton component.
  */
 export const iconButtonStyles = (hasIcon: boolean): SxProps<Theme> => ({
-  alignSelf: "flex-start",
-  ml: "auto",
-  mr: "-5px",
-  mt: hasIcon ? "-5px" : 0,
+  "alignSelf": "flex-start",
+  "ml": "auto",
+  "mr": "-5px",
+  "mt": hasIcon ? "-5px" : 0,
   "&:focus": {
     outline: "none",
   },

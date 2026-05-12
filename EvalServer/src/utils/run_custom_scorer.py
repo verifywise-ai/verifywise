@@ -338,15 +338,28 @@ async def run_custom_scorer(
         )
     
     try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=rendered_messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        
-        raw_response = response.choices[0].message.content.strip()
-        usage = response.usage
+        from utils.gateway_litellm_client import gateway_chat_completion_sync, gateway_mode_enabled, to_litellm_model
+
+        if provider != "self-hosted" and gateway_mode_enabled():
+            litellm_model = to_litellm_model(provider, model_name)
+            raw_response = gateway_chat_completion_sync(
+                litellm_model,
+                rendered_messages,
+                api_key,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            ).strip()
+            usage = None
+        else:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=rendered_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+            raw_response = response.choices[0].message.content.strip()
+            usage = response.usage
 
         # Try to parse a JSON response of the form {"verdict": "PASS", "reason": "..."}
         extracted_reason: Optional[str] = None

@@ -67,12 +67,12 @@ const validateAndParseAuth = (
   const orgId = Number(req.organizationId);
 
   if (!Number.isSafeInteger(userId) || userId <= 0) {
-    res.status(400).json(STATUS_CODE[400]("Invalid user ID"));
+    res.status(400).json(STATUS_CODE[400](req.t!("Invalid user ID")));
     return null;
   }
 
   if (!Number.isSafeInteger(orgId) || orgId <= 0) {
-    res.status(400).json(STATUS_CODE[400]("Invalid organization ID"));
+    res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
     return null;
   }
 
@@ -246,7 +246,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400]("No file provided"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("No file provided")));
     }
 
     // Validate authentication
@@ -283,13 +283,13 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       )) as any[];
 
       if (!workflow) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid approval workflow ID"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid approval workflow ID")));
       }
 
       if (workflow.entity_type !== "file") {
         return res
           .status(400)
-          .json(STATUS_CODE[400]("Selected workflow is not configured for files"));
+          .json(STATUS_CODE[400](req.t!("Selected workflow is not configured for files")));
       }
     }
 
@@ -459,7 +459,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -554,7 +554,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -574,7 +574,7 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
   const queryText = typeof qParam === "string" ? qParam.trim() : "";
 
   if (!queryText) {
-    return res.status(400).json(STATUS_CODE[400]("Query parameter 'q' is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Query parameter 'q' is required")));
   }
 
   const pageParam = req.query.page;
@@ -623,7 +623,9 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
       organizationId: orgId,
     });
 
-    return res.status(500).json(STATUS_CODE[500]("Internal server error while searching files"));
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](req.t!("Internal server error while searching files")));
   }
 };
 
@@ -639,14 +641,14 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
 export const downloadFile = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   // Validate parsed file ID is a safe integer
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   // Validate authentication
@@ -677,7 +679,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     // Authorization check based on file type:
@@ -697,7 +699,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
           userId: req.userId!,
           tenantId: req.organizationId!,
         });
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
       // Project-level file: verify user has access to the project
@@ -726,7 +728,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
           userId: req.userId!,
           tenantId: req.organizationId!,
         });
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     }
 
@@ -754,7 +756,9 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       return res
         .status(404)
         .json(
-          STATUS_CODE[404]("File content not available. This file may need to be re-uploaded."),
+          STATUS_CODE[404](
+            req.t!("File content not available. This file may need to be re-uploaded."),
+          ),
         );
     }
 
@@ -789,7 +793,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -805,14 +809,14 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
 export const removeFile = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   // Validate parsed file ID is a safe integer
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   // Validate authentication
@@ -832,7 +836,9 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(403).json(STATUS_CODE[403]("Insufficient permissions to delete files"));
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Insufficient permissions to delete files")));
   }
 
   logProcessing({
@@ -857,7 +863,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     // Authorization check based on file type:
@@ -877,7 +883,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           userId: req.userId!,
           tenantId: req.organizationId!,
         });
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
       // Project-level file: verify user has access to the project
@@ -906,7 +912,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           userId: req.userId!,
           tenantId: req.organizationId!,
         });
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     }
 
@@ -952,7 +958,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     await logSuccess({
@@ -966,7 +972,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
 
     return res.status(200).json(
       STATUS_CODE[200]({
-        message: "File deleted successfully",
+        message: req.t!("File deleted successfully"),
         fileId,
       }),
     );
@@ -980,7 +986,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -996,13 +1002,13 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
 export const getFileMetadata = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const auth = validateAndParseAuth(req, res);
@@ -1022,7 +1028,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
     const file = await getFileWithMetadata(fileId, orgId);
 
     if (!file) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     // Authorization check based on file type
@@ -1031,7 +1037,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
       if (Number(file.org_id) !== orgId) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
       // Project-level file: verify user has access to the project
@@ -1045,7 +1051,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
       const isFileOwner = Number(file.uploaded_by) === userId;
 
       if (!isProjectMember && !isProjectOwner && !isFileOwner) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     }
 
@@ -1069,7 +1075,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -1085,13 +1091,13 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
 export const updateMetadata = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const auth = validateAndParseAuth(req, res);
@@ -1103,7 +1109,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
   if (!hasPermission(req, "update:file-metadata", ["Admin", "SuperAdmin", "Reviewer", "Editor"])) {
     return res
       .status(403)
-      .json(STATUS_CODE[403]("Insufficient permissions to update file metadata"));
+      .json(STATUS_CODE[403](req.t!("Insufficient permissions to update file metadata")));
   }
 
   logProcessing({
@@ -1119,7 +1125,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
     const currentFile = await getFileById(fileId, orgId);
 
     if (!currentFile) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     // Authorization check based on file type
@@ -1128,7 +1134,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
       if (Number(currentFile.org_id) !== orgId) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
       // Project-level file: verify user has access to the project
@@ -1142,7 +1148,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
       const isFileOwner = Number(currentFile.uploaded_by) === userId;
 
       if (!isProjectMember && !isProjectOwner && !isFileOwner) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     }
 
@@ -1159,12 +1165,14 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
       "superseded",
     ];
     if (review_status && !validStatuses.includes(review_status)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid review status"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid review status")));
     }
 
     // Validate version format if provided (semver-like: X.Y or X.Y.Z)
     if (version && !/^[0-9]+\.[0-9]+(\.[0-9]+)?$/.test(version)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid version format. Use X.Y or X.Y.Z"));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Invalid version format. Use X.Y or X.Y.Z")));
     }
 
     // Validate tags using helper function if provided
@@ -1180,24 +1188,26 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
     // Validate expiry_date format and value if provided
     if (expiry_date && expiry_date !== null) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(expiry_date)) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid date format. Use YYYY-MM-DD"));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Invalid date format. Use YYYY-MM-DD")));
       }
       // Validate it's a real date
       const parsedDate = new Date(expiry_date);
       if (isNaN(parsedDate.getTime())) {
-        return res.status(400).json(STATUS_CODE[400]("Invalid date value"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid date value")));
       }
     }
 
     // Validate description length if provided
     if (description !== undefined && description !== null) {
       if (typeof description !== "string") {
-        return res.status(400).json(STATUS_CODE[400]("Description must be a string"));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Description must be a string")));
       }
       if (description.length > 2000) {
         return res
           .status(400)
-          .json(STATUS_CODE[400]("Description must not exceed 2000 characters"));
+          .json(STATUS_CODE[400](req.t!("Description must not exceed 2000 characters")));
       }
     }
 
@@ -1217,7 +1227,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
     const updatedFile = await updateFileMetadata(fileId, updates, orgId);
 
     if (!updatedFile) {
-      return res.status(404).json(STATUS_CODE[404]("File not found after update"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found after update")));
     }
 
     // Record changes in file change history
@@ -1253,7 +1263,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -1334,7 +1344,7 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -1399,7 +1409,7 @@ export const getHighlighted = async (req: Request, res: Response): Promise<any> 
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -1415,13 +1425,13 @@ export const getHighlighted = async (req: Request, res: Response): Promise<any> 
 export const previewFile = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const auth = validateAndParseAuth(req, res);
@@ -1442,7 +1452,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     const fileMeta = await getFileById(fileId, orgId);
 
     if (!fileMeta) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     // Authorization check based on file type
@@ -1451,7 +1461,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
       if (Number(fileMeta.org_id) !== orgId) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
       // Project-level file: verify user has access to the project
@@ -1465,7 +1475,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       const isFileOwner = Number(fileMeta.uploaded_by) === userId;
 
       if (!isProjectMember && !isProjectOwner && !isFileOwner) {
-        return res.status(403).json(STATUS_CODE[403]("Access denied"));
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     }
 
@@ -1473,7 +1483,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     const preview = await getFilePreview(fileId, orgId);
 
     if (!preview) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     if (!preview.canPreview) {
@@ -1482,10 +1492,12 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
         return res
           .status(404)
           .json(
-            STATUS_CODE[404]("File content not available. This file may need to be re-uploaded."),
+            STATUS_CODE[404](
+              req.t!("File content not available. This file may need to be re-uploaded."),
+            ),
           );
       }
-      return res.status(413).json(STATUS_CODE[400]("File too large for preview"));
+      return res.status(413).json(STATUS_CODE[400](req.t!("File too large for preview")));
     }
 
     // Log file access for preview
@@ -1552,7 +1564,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -1568,13 +1580,13 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
 export const getFileVersionHistory = async (req: Request, res: Response): Promise<any> => {
   // Validate file ID is numeric-only string before parsing
   if (!/^\d+$/.test(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (!Number.isSafeInteger(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   const auth = validateAndParseAuth(req, res);
@@ -1595,7 +1607,7 @@ export const getFileVersionHistory = async (req: Request, res: Response): Promis
     const file = await getFileWithMetadata(fileId, orgId);
 
     if (!file) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     if (!file.file_group_id) {
@@ -1625,6 +1637,6 @@ export const getFileVersionHistory = async (req: Request, res: Response): Promis
       userId: req.userId!,
       tenantId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };

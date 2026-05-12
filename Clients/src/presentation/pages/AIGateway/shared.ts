@@ -273,7 +273,7 @@ export async function streamPromptTest(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAuthToken()}`,
+      "Authorization": `Bearer ${getAuthToken()}`,
     },
     body: JSON.stringify({
       content: opts.messages,

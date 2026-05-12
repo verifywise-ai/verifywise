@@ -84,8 +84,8 @@ const SortableTableHeader: React.FC<{
               ...singleTheme.tableStyles.primary.header.cell,
               minWidth: column.minWidth,
               ...(column.sortable && {
-                cursor: "pointer",
-                userSelect: "none",
+                "cursor": "pointer",
+                "userSelect": "none",
                 "&:hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.04)",
                 },
@@ -449,7 +449,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                 role="button"
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
-                  cursor: "pointer",
+                  "cursor": "pointer",
                   "&:last-child td, &:last-child th": {
                     border: 0,
                   },
@@ -623,10 +623,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       inputProps: { id: "pagination-dropdown" },
                       IconComponent: SelectorVertical,
                       sx: {
-                        ml: theme.spacing(4),
-                        mr: theme.spacing(12),
-                        minWidth: theme.spacing(20),
-                        textAlign: "left",
+                        "ml": theme.spacing(4),
+                        "mr": theme.spacing(12),
+                        "minWidth": theme.spacing(20),
+                        "textAlign": "left",
                         "&.Mui-focused > div": {
                           backgroundColor: theme.palette.background.main,
                         },
@@ -634,8 +634,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                     },
                   }}
                   sx={{
-                    mt: theme.spacing(6),
-                    color: theme.palette.text.secondary,
+                    "mt": theme.spacing(6),
+                    "color": theme.palette.text.secondary,
                     "& .MuiSelect-icon": {
                       width: "24px",
                       height: "fit-content",

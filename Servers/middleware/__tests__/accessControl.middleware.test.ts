@@ -3,7 +3,10 @@ import { Request, Response } from "express";
 import authorize from "../accessControl.middleware";
 
 function createMockReq(role?: string): Partial<Request> {
-  return { role } as any;
+  // The i18nMiddleware always runs before access-control middleware in the
+  // real stack, so `req.t` is set. Simulate with an identity translator —
+  // assertions in this file expect the English source string verbatim.
+  return { role, t: (key: string) => key } as any;
 }
 
 function createMockRes(): Partial<Response> {

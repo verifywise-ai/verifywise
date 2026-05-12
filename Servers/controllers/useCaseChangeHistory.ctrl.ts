@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getUseCaseChangeHistory } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 
+import { translateError } from "../utils/i18n.utils";
 /**
  * Get change history for a specific use case
  */
@@ -27,7 +28,7 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
       ) || 0;
 
     if (isNaN(useCaseId)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid use case ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid use case ID")));
     }
 
     const result = await getUseCaseChangeHistory(useCaseId, req.organizationId!, limit, offset);
@@ -35,6 +36,6 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     console.error("Error getting use case change history:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

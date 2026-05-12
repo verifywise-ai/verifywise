@@ -395,16 +395,16 @@ const AITrustCenterSettings: React.FC = () => {
             <Box gap={1} sx={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Box
                 sx={{
-                  width: 120,
-                  height: 60,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 2,
-                  border: "2px dashed #ddd",
-                  backgroundColor: "#fafafa",
-                  position: "relative",
-                  overflow: "hidden",
+                  "width": 120,
+                  "height": 60,
+                  "display": "flex",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "borderRadius": 2,
+                  "border": "2px dashed #ddd",
+                  "backgroundColor": "#fafafa",
+                  "position": "relative",
+                  "overflow": "hidden",
                   "&:hover": {
                     borderColor: "#999",
                     backgroundColor: `${background.surface}`,
@@ -583,7 +583,7 @@ const AITrustCenterSettings: React.FC = () => {
             <Box
               sx={{
                 ...styles.customColorCircle(formData?.info?.header_color),
-                cursor: "pointer",
+                "cursor": "pointer",
                 "&:hover": {
                   transform: "scale(1.05)",
                   transition: "transform 0.2s ease",
@@ -604,7 +604,7 @@ const AITrustCenterSettings: React.FC = () => {
             placeholder="Company's AI Trust Center"
             value={formData?.info?.title}
             onChange={(e) => handleFieldChange("info", "title", e.target.value)}
-            sx={styles.trustTitleInput}
+            width={340}
           />
         </Box>
       </Box>

@@ -55,10 +55,10 @@ const sectionTitleSx = {
 };
 
 const docLinkSx = {
-  fontSize: 13,
-  color: palette.brand.primary,
-  cursor: "pointer",
-  textDecoration: "none",
+  "fontSize": 13,
+  "color": palette.brand.primary,
+  "cursor": "pointer",
+  "textDecoration": "none",
   "&:hover": { textDecoration: "underline" },
 };
 
@@ -225,10 +225,10 @@ function ApiKeysSection() {
             text="Create API key"
             variant="contained"
             sx={{
-              backgroundColor: palette.brand.primary,
+              "backgroundColor": palette.brand.primary,
               "&:hover": { backgroundColor: palette.brand.primaryHover },
-              height: 34,
-              fontSize: 13,
+              "height": 34,
+              "fontSize": 13,
             }}
             onClick={() => setCreateModalOpen(true)}
           />
@@ -530,10 +530,10 @@ function SyslogConfigSection() {
             text="Add source"
             variant="contained"
             sx={{
-              backgroundColor: palette.brand.primary,
+              "backgroundColor": palette.brand.primary,
               "&:hover": { backgroundColor: palette.brand.primaryHover },
-              height: 34,
-              fontSize: 13,
+              "height": 34,
+              "fontSize": 13,
             }}
             onClick={() => setCreateModalOpen(true)}
           />
@@ -1060,11 +1060,11 @@ function RateLimitSection({
               variant="contained"
               isDisabled={!hasChanged || saving}
               sx={{
-                backgroundColor: palette.brand.primary,
+                "backgroundColor": palette.brand.primary,
                 "&:hover": { backgroundColor: palette.brand.primaryHover },
-                height: 34,
-                fontSize: 13,
-                mb: "2px",
+                "height": 34,
+                "fontSize": 13,
+                "mb": "2px",
               }}
               onClick={handleSave}
             />
@@ -1211,11 +1211,11 @@ function DataRetentionSection({
               variant="contained"
               isDisabled={!hasChanged || saving}
               sx={{
-                backgroundColor: palette.brand.primary,
+                "backgroundColor": palette.brand.primary,
                 "&:hover": { backgroundColor: palette.brand.primaryHover },
-                height: 34,
-                fontSize: 13,
-                alignSelf: "flex-start",
+                "height": 34,
+                "fontSize": 13,
+                "alignSelf": "flex-start",
               }}
               onClick={handleSave}
             />

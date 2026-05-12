@@ -57,6 +57,7 @@ import {
 import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 
+import { translateError } from "../utils/i18n.utils";
 export async function getAllProjects(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllProjects",
@@ -69,7 +70,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const projects = (await getAllProjectsQuery(
@@ -142,7 +143,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -214,7 +215,7 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -509,7 +510,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -522,7 +523,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -535,7 +536,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -564,7 +565,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     // Find existing project
@@ -590,7 +591,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
     // if (!updatedProject.project_title || !updatedProject.owner) {
     //   return res.status(400).json(
-    //     STATUS_CODE[400]({ message: "project_title and owner are required" })
+    //     STATUS_CODE[400]({ message: req.t!("project_title and owner are required") })
     //   );
     // }
 
@@ -767,7 +768,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](error.message));
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -780,7 +781,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         tenantId: req.organizationId!,
       });
-      return res.status(403).json(STATUS_CODE[403](error.message));
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
@@ -793,7 +794,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -880,7 +881,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -934,7 +935,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -975,7 +976,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1016,7 +1017,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1096,7 +1097,7 @@ export async function getCompliances(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1157,7 +1158,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1218,7 +1219,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1236,7 +1237,7 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
@@ -1290,7 +1291,7 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1308,7 +1309,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
     const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
@@ -1362,7 +1363,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -1437,7 +1438,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
     }
 
     await transaction.rollback();
-    return res.status(500).json(STATUS_CODE[500]("Failed to update project status"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to update project status")));
   } catch (error) {
     await transaction.rollback();
 
@@ -1451,6 +1452,6 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
       tenantId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

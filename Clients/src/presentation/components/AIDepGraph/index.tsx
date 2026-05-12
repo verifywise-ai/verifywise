@@ -436,19 +436,19 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
               size="small"
               aria-label="Filter component types"
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                alignItems: "flex-start",
+                "display": "flex",
+                "flexDirection": "column",
+                "gap": "8px",
+                "alignItems": "flex-start",
                 "& .MuiToggleButton-root": {
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: "4px !important",
-                  textTransform: "none",
-                  fontSize: theme.typography.caption.fontSize,
-                  py: 0.25,
-                  px: 1,
-                  width: "auto",
-                  minWidth: 0,
+                  "border": `1px solid ${theme.palette.divider}`,
+                  "borderRadius": "4px !important",
+                  "textTransform": "none",
+                  "fontSize": theme.typography.caption.fontSize,
+                  "py": 0.25,
+                  "px": 1,
+                  "width": "auto",
+                  "minWidth": 0,
                   "&.Mui-selected": {
                     backgroundColor: theme.palette.primary.light,
                     borderColor: theme.palette.primary.main,

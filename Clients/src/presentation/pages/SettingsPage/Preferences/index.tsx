@@ -14,6 +14,14 @@ import {
 import { useAuth } from "../../../../application/hooks/useAuth";
 import Select from "../../../components/Inputs/Select";
 import { brand } from "../../../themes/palette";
+import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
+import type { Lang } from "../../../../i18n/translations";
+
+const LANGUAGE_OPTIONS: { _id: Lang; name: string }[] = [
+  { _id: "en", name: "English" },
+  { _id: "de", name: "Deutsch" },
+  { _id: "fr", name: "Français" },
+];
 
 const Preferences: React.FC = () => {
   const theme = useTheme();
@@ -21,6 +29,18 @@ const Preferences: React.FC = () => {
   const { userPreferences, isDefault, loading, refreshUserPreferences } = useUserPreferences();
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [dateFormat, setDateFormat] = useState<UserDateFormat>(UserDateFormat.DD_MM_YYYY_DASH);
+
+  const [language, setLang] = useState<Lang>("en");
+
+  useEffect(() => {
+    setLang(getLanguage());
+  }, []);
+
+  const handleLanguageChange = (event: SelectChangeEvent<string | number>) => {
+    const next = event.target.value as Lang;
+    setLang(next);
+    setIsSaveDisabled(false);
+  };
 
   const [showToast, setShowToast] = useState(false);
   const [alert, setAlert] = useState<{
@@ -40,6 +60,12 @@ const Preferences: React.FC = () => {
   useEffect(() => {
     if (userPreferences) {
       setDateFormat(userPreferences.date_format);
+      const serverLang = (userPreferences.language ?? "en") as Lang;
+      setLang(serverLang);
+      // Server is the source of truth — apply it locally if it differs.
+      if (getLanguage() !== serverLang) {
+        setLanguage(serverLang);
+      }
 
       setIsSaveDisabled(!isDefault);
     }
@@ -57,10 +83,12 @@ const Preferences: React.FC = () => {
         const created = await createNewUserPreferences({
           user_id: userId!,
           date_format: dateFormat,
+          language,
         });
 
         if (created) {
           localStorage.setItem("verifywise_preferences", JSON.stringify(created.data));
+          setLanguage(language);
 
           setAlert({
             variant: "success",
@@ -73,11 +101,12 @@ const Preferences: React.FC = () => {
       } else {
         const updated = await updateUserPreferencesById({
           userId: userId!,
-          data: { user_id: userId!, date_format: dateFormat },
+          data: { user_id: userId!, date_format: dateFormat, language },
         });
 
         if (updated) {
           localStorage.setItem("verifywise_preferences", JSON.stringify(updated.data));
+          setLanguage(language);
 
           setAlert({
             variant: "success",
@@ -147,6 +176,16 @@ const Preferences: React.FC = () => {
               ]}
               isRequired
             />
+            <Box sx={{ mt: theme.spacing(8) }}>
+              <Select
+                id="language-input"
+                label="Language"
+                placeholder="Select a language"
+                value={language}
+                onChange={handleLanguageChange}
+                items={LANGUAGE_OPTIONS}
+              />
+            </Box>
             <Stack
               sx={{
                 display: "flex",

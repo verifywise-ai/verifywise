@@ -47,8 +47,29 @@ class ModelRunner:
         
         self.model = None
         self.tokenizer = None
-        
-        if self.provider == "huggingface":
+        self._gateway_mode = False
+        self._gateway_api_key: Optional[str] = None
+
+        from deepeval_engine.gateway_litellm_client import gateway_mode_enabled
+
+        cloud_via_gateway = self.provider in (
+            "openai",
+            "anthropic",
+            "google",
+            "xai",
+            "mistral",
+            "openrouter",
+            "huggingface",
+        )
+        if cloud_via_gateway and gateway_mode_enabled():
+            self._gateway_api_key = self._env_api_key_for_provider()
+            if not self._gateway_api_key:
+                raise ValueError(
+                    f"No API key in environment for provider '{self.provider}' (AI Gateway mode)"
+                )
+            self._gateway_mode = True
+            print(f"✓ Model runner via AI Gateway (LiteLLM): {model_name} ({self.provider})")
+        elif self.provider == "huggingface":
             self._load_huggingface_model()
         elif self.provider == "openai":
             self._setup_openai()
@@ -66,8 +87,27 @@ class ModelRunner:
             self._setup_openrouter()
         else:
             raise ValueError(f"Unsupported provider: {provider}")
-        
+
         print(f"✓ Model runner initialized: {model_name} on {self.device}")
+
+    @staticmethod
+    def _env_api_key_for_provider_static(provider: str) -> Optional[str]:
+        env_map = {
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "gemini": "GOOGLE_API_KEY",
+            "xai": "XAI_API_KEY",
+            "mistral": "MISTRAL_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+            "huggingface": "HF_API_KEY",
+        }
+        var = env_map.get(provider.lower())
+        return os.getenv(var, "") if var else None
+
+    def _env_api_key_for_provider(self) -> Optional[str]:
+        v = self._env_api_key_for_provider_static(self.provider)
+        return v if v else None
 
     def _retry_with_backoff(self, func, max_retries=3, base_delay=2):
         """
@@ -226,6 +266,8 @@ class ModelRunner:
         Returns:
             Generated response text
         """
+        if getattr(self, "_gateway_mode", False):
+            return self._generate_gateway(prompt, max_tokens, temperature, top_p)
         if self.provider == "huggingface":
             return self._generate_huggingface(prompt, max_tokens, temperature, top_p)
         elif self.provider == "openai":
@@ -294,10 +336,42 @@ class ModelRunner:
 
         def _call_openai():
             response = self.openai_client.chat.completions.create(**params)
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content if response.choices else None
+            if content is None:
+                raise ValueError("OpenAI returned an empty response (None content).")
+            return content.strip()
 
         return self._retry_with_backoff(_call_openai)
-    
+
+    def _generate_gateway(
+        self,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+        top_p: Optional[float],
+    ) -> str:
+        from deepeval_engine.gateway_litellm_client import (
+            gateway_chat_completion_sync,
+            to_litellm_model,
+        )
+
+        litellm_model = to_litellm_model(self.provider, self.model_name)
+        messages = [{"role": "user", "content": prompt}]
+        key = self._gateway_api_key or ""
+        if not key:
+            raise RuntimeError("Gateway mode without API key")
+
+        def _call():
+            return gateway_chat_completion_sync(
+                litellm_model,
+                messages,
+                key,
+                max_tokens=max_tokens,
+                temperature=temperature if top_p is None else temperature,
+            )
+
+        return self._retry_with_backoff(_call)
+
     def _generate_anthropic(
         self,
         prompt: str,
@@ -460,7 +534,10 @@ class ModelRunner:
 
         def _call_openrouter():
             response = self.openrouter_client.chat.completions.create(**params)
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content if response.choices else None
+            if content is None:
+                raise ValueError("OpenRouter returned an empty response (None content). The model may have refused or timed out.")
+            return content.strip()
 
         return self._retry_with_backoff(_call_openrouter)
     

@@ -39,6 +39,11 @@ import {
   getRiskScoringConfigController,
   updateRiskScoringConfigController,
 } from "../controllers/aiDetection.ctrl";
+import {
+  createSuppressionController,
+  listSuppressionsController,
+  deleteSuppressionController,
+} from "../controllers/aiDetectionSuppression.ctrl";
 
 const router = express.Router();
 
@@ -261,6 +266,34 @@ router.patch(
   authenticateJWT,
   authorize(ADMIN_ONLY),
   updateRiskScoringConfigController,
+);
+
+/**
+ * @route   POST /ai-detection/suppressions
+ * @desc    Create a finding suppression rule
+ * @access  Private - Admin, Editor
+ * @body    { match_type, field, value, reason?, expires_at? }
+ */
+router.post("/suppressions", authenticateJWT, authorize(WRITE_ROLES), createSuppressionController);
+
+/**
+ * @route   GET /ai-detection/suppressions
+ * @desc    List finding suppression rules for the organization
+ * @access  Private - All roles
+ * @query   include_expired
+ */
+router.get("/suppressions", authenticateJWT, authorize(ALL_ROLES), listSuppressionsController);
+
+/**
+ * @route   DELETE /ai-detection/suppressions/:id
+ * @desc    Delete a finding suppression rule
+ * @access  Private - Admin, Editor
+ */
+router.delete(
+  "/suppressions/:id",
+  authenticateJWT,
+  authorize(WRITE_ROLES),
+  deleteSuppressionController,
 );
 
 export default router;

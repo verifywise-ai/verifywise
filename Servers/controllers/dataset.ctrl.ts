@@ -21,6 +21,7 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { ValidationError } from "../utils/validations/validation.utils";
+import { translateError } from "../utils/i18n.utils";
 import {
   validateCompleteDatasetCreation,
   validateCompleteDatasetUpdate,
@@ -46,7 +47,7 @@ export async function getAllDatasets(req: Request, res: Response) {
   } catch (error) {
     logStructured("error", "failed to retrieve datasets", "getAllDatasets", "dataset.ctrl.ts");
     logger.error("Error in getAllDatasets:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -102,7 +103,7 @@ export async function getDatasetById(req: Request, res: Response) {
   } catch (error) {
     logStructured("error", "failed to retrieve dataset", "getDatasetById", "dataset.ctrl.ts");
     logger.error("Error in getDatasetById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -140,7 +141,7 @@ export async function getDatasetsByModelId(req: Request, res: Response) {
       "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetsByModelId:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -178,7 +179,7 @@ export async function getDatasetsByProjectId(req: Request, res: Response) {
       "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetsByProjectId:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -287,7 +288,7 @@ export async function createNewDataset(req: Request, res: Response) {
 
     logStructured("error", "failed to create new dataset", "createNewDataset", "dataset.ctrl.ts");
     logger.error("Error in createNewDataset:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -351,7 +352,7 @@ export async function updateDatasetById(req: Request, res: Response) {
 
     if (!currentDataset) {
       logStructured("successful", "no dataset found", "updateDatasetById", "dataset.ctrl.ts");
-      return res.status(404).json(STATUS_CODE[404]("Dataset not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Dataset not found")));
     }
 
     // Validate request body with existing data for business rules
@@ -460,7 +461,7 @@ export async function updateDatasetById(req: Request, res: Response) {
 
     logStructured("error", "failed to update dataset", "updateDatasetById", "dataset.ctrl.ts");
     logger.error("Error in updateDatasetById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -497,7 +498,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
 
     if (!existingDataset) {
       logStructured("successful", "no dataset found", "deleteDatasetById", "dataset.ctrl.ts");
-      return res.status(404).json(STATUS_CODE[404]("Dataset not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Dataset not found")));
     }
 
     // Use transaction for deleting
@@ -511,7 +512,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
     await transaction.commit();
 
     logStructured("successful", "dataset deleted", "deleteDatasetById", "dataset.ctrl.ts");
-    return res.status(200).json(STATUS_CODE[200]("Dataset deleted successfully"));
+    return res.status(200).json(STATUS_CODE[200](req.t!("Dataset deleted successfully")));
   } catch (error) {
     if (transaction) {
       try {
@@ -523,7 +524,7 @@ export async function deleteDatasetById(req: Request, res: Response) {
 
     logStructured("error", "failed to delete dataset", "deleteDatasetById", "dataset.ctrl.ts");
     logger.error("Error in deleteDatasetById:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -572,6 +573,6 @@ export async function getDatasetHistory(req: Request, res: Response) {
       "dataset.ctrl.ts",
     );
     logger.error("Error in getDatasetHistory:", error);
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

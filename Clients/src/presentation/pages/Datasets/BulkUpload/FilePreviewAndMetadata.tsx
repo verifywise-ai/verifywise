@@ -60,7 +60,7 @@ export default function FilePreviewAndMetadata({
 
   const fieldStyle = useMemo(
     () => ({
-      backgroundColor: theme.palette.background.main,
+      "backgroundColor": theme.palette.background.main,
       "& input": {
         padding: "0 14px",
       },
@@ -132,13 +132,13 @@ export default function FilePreviewAndMetadata({
             size="small"
             onClick={handleApplyBatch}
             sx={{
-              border: `1px solid ${theme.palette.border.dark}`,
-              color: theme.palette.text.secondary,
-              height: 34,
-              fontSize: 13,
-              fontWeight: 500,
-              textTransform: "none",
-              borderRadius: `${theme.shape.borderRadius}px`,
+              "border": `1px solid ${theme.palette.border.dark}`,
+              "color": theme.palette.text.secondary,
+              "height": 34,
+              "fontSize": 13,
+              "fontWeight": 500,
+              "textTransform": "none",
+              "borderRadius": `${theme.shape.borderRadius}px`,
               "&:hover": {
                 backgroundColor: theme.palette.background.accent,
                 border: `1px solid ${theme.palette.border.dark}`,
@@ -157,11 +157,11 @@ export default function FilePreviewAndMetadata({
           expanded={expanded === index}
           onChange={(_, isExpanded) => setExpanded(isExpanded ? index : false)}
           sx={{
-            opacity: analysis.skipped ? 0.5 : 1,
-            border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "4px !important",
-            overflow: "hidden",
-            boxShadow: "none",
+            "opacity": analysis.skipped ? 0.5 : 1,
+            "border": `1px solid ${theme.palette.border.light}`,
+            "borderRadius": "4px !important",
+            "overflow": "hidden",
+            "boxShadow": "none",
             "&:before": { display: "none" },
             "&.Mui-expanded": { margin: 0 },
           }}

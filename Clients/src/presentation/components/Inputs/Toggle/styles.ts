@@ -2,17 +2,17 @@ import { Theme } from "@mui/material";
 import { brand, background } from "../../../themes/palette";
 
 export const getToggleStyles = (theme: Theme) => ({
-  width: 34,
-  height: 18,
-  padding: 0,
-  display: "flex",
-  alignItems: "center",
+  "width": 34,
+  "height": 18,
+  "padding": 0,
+  "display": "flex",
+  "alignItems": "center",
   "& .MuiSwitch-switchBase": {
-    padding: 0,
-    margin: "2px",
+    "padding": 0,
+    "margin": "2px",
     "&.Mui-checked": {
-      transform: "translateX(16px)",
-      color: `${background.main}`,
+      "transform": "translateX(16px)",
+      "color": `${background.main}`,
       "& + .MuiSwitch-track": {
         backgroundColor: `${brand.primary}`,
         opacity: 1,
