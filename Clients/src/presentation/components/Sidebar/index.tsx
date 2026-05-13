@@ -18,6 +18,7 @@ import {
   Database,
   Rocket,
   GitCompareArrows,
+  Radio,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -188,6 +189,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: "AI trust center",
           icon: <Brain size={16} strokeWidth={1.5} />,
           path: "/ai-trust-center",
+        },
+        {
+          id: "continuous-monitoring",
+          label: "Continuous monitoring",
+          icon: <Radio size={16} strokeWidth={1.5} />,
+          path: "/continuous-monitoring",
         },
       ],
     },
