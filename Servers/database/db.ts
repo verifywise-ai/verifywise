@@ -97,6 +97,11 @@ import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/gov
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
+import { CcmConnectorModel } from "../domain.layer/models/ccmConnector/ccmConnector.model";
+import { CcmControlTestModel } from "../domain.layer/models/ccmControlTest/ccmControlTest.model";
+import { CcmTestResultModel } from "../domain.layer/models/ccmTestResult/ccmTestResult.model";
+import { CcmControlHealthModel } from "../domain.layer/models/ccmControlHealth/ccmControlHealth.model";
+import { CcmAlertModel } from "../domain.layer/models/ccmAlert/ccmAlert.model";
 
 dotenv.config();
 
@@ -211,6 +216,11 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     GovernanceScenarioRuleModel,
     GovernanceOrgPreferencesModel,
     GovernanceCoverageCacheModel,
+    CcmConnectorModel,
+    CcmControlTestModel,
+    CcmTestResultModel,
+    CcmControlHealthModel,
+    CcmAlertModel,
   ],
 }) as Sequelize;
 
