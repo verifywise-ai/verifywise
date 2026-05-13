@@ -296,24 +296,37 @@ export async function getCcmDashboard(req: Request, res: Response): Promise<Resp
   try {
     const orgId = req.organizationId!;
 
-    const [[posture]] = await sequelize.query(
+    const [testStats] = await sequelize.query(
       `SELECT
-        COUNT(*) FILTER (WHERE current_status = 'pass') AS passed,
-        COUNT(*) FILTER (WHERE current_status = 'fail') AS failed,
-        COUNT(*) FILTER (WHERE current_status = 'warning') AS warning,
-        COUNT(*) FILTER (WHERE current_status = 'not_tested') AS not_tested,
-        COUNT(*) AS total,
-        CASE WHEN COUNT(*) > 0 THEN ROUND(100.0 * COUNT(*) FILTER (WHERE current_status = 'pass') / COUNT(*)) ELSE 0 END AS score
+        COUNT(*) AS total_tests,
+        COUNT(*) FILTER (WHERE is_active = TRUE) AS active_tests,
+        COUNT(*) FILTER (WHERE is_active = FALSE) AS inactive_tests
+      FROM verifywise.ccm_control_tests
+      WHERE organization_id = :orgId`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    ) as any;
+
+    const [healthStats] = await sequelize.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE current_status = 'pass') AS passing_tests,
+        COUNT(*) FILTER (WHERE current_status = 'fail') AS failing_tests
       FROM verifywise.ccm_control_health
       WHERE organization_id = :orgId`,
       { replacements: { orgId }, type: QueryTypes.SELECT },
     ) as any;
 
-    const [[alertsSummary]] = await sequelize.query(
-      `SELECT
-        COUNT(*) FILTER (WHERE status = 'open') AS open_alerts,
-        COUNT(*) FILTER (WHERE severity = 'critical' AND status = 'open') AS critical_alerts
+    const [alertStats] = await sequelize.query(
+      `SELECT COUNT(*) AS open_alerts
       FROM verifywise.ccm_alerts
+      WHERE organization_id = :orgId AND status = 'open'`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    ) as any;
+
+    const [connectorStats] = await sequelize.query(
+      `SELECT
+        COUNT(*) AS connector_count,
+        COUNT(*) FILTER (WHERE status = 'healthy') AS healthy_connectors
+      FROM verifywise.ccm_connectors
       WHERE organization_id = :orgId`,
       { replacements: { orgId }, type: QueryTypes.SELECT },
     ) as any;
@@ -324,10 +337,22 @@ export async function getCcmDashboard(req: Request, res: Response): Promise<Resp
       limit: 10,
     });
 
+    const recentAlerts = await CcmAlertModel.findAll({
+      where: { organization_id: orgId },
+      order: [["created_at", "DESC"]],
+      limit: 10,
+    });
+
     return res.status(200).json(STATUS_CODE[200]({
-      posture,
-      alerts: alertsSummary,
-      recentResults,
+      totalTests: Number(testStats?.total_tests || 0),
+      activeTests: Number(testStats?.active_tests || 0),
+      passingTests: Number(healthStats?.passing_tests || 0),
+      failingTests: Number(healthStats?.failing_tests || 0),
+      openAlerts: Number(alertStats?.open_alerts || 0),
+      connectorCount: Number(connectorStats?.connector_count || 0),
+      healthyConnectors: Number(connectorStats?.healthy_connectors || 0),
+      recentResults: recentResults || [],
+      recentAlerts: recentAlerts || [],
     }));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
