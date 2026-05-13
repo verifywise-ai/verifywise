@@ -96,6 +96,7 @@ import aiGatewayRoutes from "./routes/aiGateway.route";
 import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
+import ccmRoutes from "./routes/ccm.route";
 // superAdminReadOnly is now enforced inside authenticateJWT middleware
 import { i18nMiddleware } from "./middleware/i18n.middleware";
 import {
@@ -325,6 +326,7 @@ try {
 
   // Super-admin routes (authenticated + super-admin only)
   app.use("/api/super-admin", superAdminRoutes);
+  app.use("/api/ccm", ccmRoutes);
 
   // Internal routes — callbacks from Python services (no JWT, internal key auth)
   app.use("/api/internal", internalRoutes);
