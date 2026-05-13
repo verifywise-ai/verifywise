@@ -150,6 +150,9 @@ const MonitoringForm = lazyRoute(
 const ReportsArchive = lazyRoute(
   () => import("../../presentation/pages/PostMarketMonitoring/ReportsArchive"),
 );
+const CCMDashboard = lazyRoute(() => import("../../presentation/pages/CCMDashboard"));
+const CCMConnectors = lazyRoute(() => import("../../presentation/pages/CCMConnectors"));
+const CCMTests = lazyRoute(() => import("../../presentation/pages/CCMTests"));
 const IntakeFormsListPage = lazyRoute(
   () => import("../../presentation/pages/IntakeFormBuilder/IntakeFormsListPage"),
 );
@@ -846,6 +849,30 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <ReportsArchive />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/continuous-monitoring"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <CCMDashboard />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/continuous-monitoring/connectors"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <CCMConnectors />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/continuous-monitoring/tests"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <CCMTests />
         </Suspense>
       }
     />
