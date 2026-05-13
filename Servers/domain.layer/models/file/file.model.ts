@@ -24,7 +24,8 @@ export type FileSource =
   | "File Manager"
   | "policy_editor"
   | "Post-Market Monitoring report"
-  | "dataset_bulk_upload";
+  | "dataset_bulk_upload"
+  | "CCM automated evidence";
 
 export type ReviewStatus =
   | "draft"

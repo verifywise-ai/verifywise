@@ -21,6 +21,7 @@ import {
   runNightlyRiskScoring,
 } from "../shadowAiAggregation.service";
 import { runAgentDiscoverySync } from "../agentDiscovery/agentDiscoverySync.service";
+import { runAllDueTests, runConnectorHealthChecks } from "../ccm/ccmEngine";
 import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanProcessor";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
@@ -529,6 +530,10 @@ export const createAutomationWorker = () => {
           } catch (err) {
             console.error(`MCP Gateway cleanup failed: ${err}`);
           }
+        } else if (name === "ccm_run_due_tests") {
+          await runAllDueTests();
+        } else if (name === "ccm_connector_health_check") {
+          await runConnectorHealthChecks();
         } else if (name === "send_pmm_notification") {
           // PMM notification handling - send email using MJML templates
           const { type, data } = job.data;

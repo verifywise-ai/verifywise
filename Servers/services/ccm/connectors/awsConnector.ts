@@ -19,6 +19,7 @@ export class AwsConnector extends BaseConnector {
 
   async testConnection(): Promise<{ success: boolean; message?: string }> {
     try {
+      // @ts-ignore — optional runtime dependency
       const { STSClient, GetCallerIdentityCommand } = await import("@aws-sdk/client-sts");
       const client = this.createClient(STSClient);
       const result = await client.send(new GetCallerIdentityCommand({}));
@@ -72,6 +73,7 @@ export class AwsConnector extends BaseConnector {
 
   private async checkS3Encryption(testConfig: Record<string, unknown>): Promise<TestExecutionResult> {
     try {
+      // @ts-ignore — optional runtime dependency
       const { S3Client, ListBucketsCommand, GetBucketEncryptionCommand } = await import("@aws-sdk/client-s3");
       const client = this.createClient(S3Client);
       const buckets = await client.send(new ListBucketsCommand({}));
@@ -115,12 +117,13 @@ export class AwsConnector extends BaseConnector {
 
   private async checkIamMfa(_testConfig: Record<string, unknown>): Promise<TestExecutionResult> {
     try {
+      // @ts-ignore — optional runtime dependency
       const { IAMClient, ListUsersCommand, ListMFADevicesCommand } = await import("@aws-sdk/client-iam");
       const client = this.createClient(IAMClient);
       const users = await client.send(new ListUsersCommand({}));
       const usersWithoutMfa: string[] = [];
 
-      for (const user of users.Users || []) {
+      for (const user of (users.Users || []) as any[]) {
         if (user.PasswordLastUsed) {
           const mfa = await client.send(new ListMFADevicesCommand({ UserName: user.UserName }));
           if ((mfa.MFADevices?.length || 0) === 0) {
@@ -133,7 +136,7 @@ export class AwsConnector extends BaseConnector {
         return {
           status: "pass",
           message: "All console users have MFA enabled.",
-          details: { totalConsoleUsers: users.Users?.filter((u) => u.PasswordLastUsed).length || 0 },
+          details: { totalConsoleUsers: (users.Users || []).filter((u: any) => u.PasswordLastUsed).length || 0 },
         };
       }
 
@@ -152,16 +155,17 @@ export class AwsConnector extends BaseConnector {
 
   private async checkCloudTrail(_testConfig: Record<string, unknown>): Promise<TestExecutionResult> {
     try {
+      // @ts-ignore — optional runtime dependency
       const { CloudTrailClient, DescribeTrailsCommand } = await import("@aws-sdk/client-cloudtrail");
       const client = this.createClient(CloudTrailClient);
       const trails = await client.send(new DescribeTrailsCommand({}));
-      const activeTrails = (trails.trailList || []).filter((t) => t.IsMultiRegionTrail);
+      const activeTrails = (trails.trailList || []).filter((t: any) => t.IsMultiRegionTrail);
 
       if (activeTrails.length > 0) {
         return {
           status: "pass",
           message: `CloudTrail is enabled with ${activeTrails.length} multi-region trail(s).`,
-          details: { trailNames: activeTrails.map((t) => t.Name) },
+          details: { trailNames: activeTrails.map((t: any) => t.Name) },
         };
       }
 
@@ -180,18 +184,19 @@ export class AwsConnector extends BaseConnector {
 
   private async checkVpcFlowLogs(_testConfig: Record<string, unknown>): Promise<TestExecutionResult> {
     try {
+      // @ts-ignore — optional runtime dependency
       const { EC2Client, DescribeVpcsCommand, DescribeFlowLogsCommand } = await import("@aws-sdk/client-ec2");
       const client = this.createClient(EC2Client);
       const vpcs = await client.send(new DescribeVpcsCommand({}));
-      const vpcIds = (vpcs.Vpcs || []).map((v) => v.VpcId!).filter(Boolean);
+      const vpcIds = (vpcs.Vpcs || []).map((v: any) => v.VpcId!).filter(Boolean);
 
       if (vpcIds.length === 0) {
         return { status: "pass", message: "No VPCs found in this region.", details: { vpcCount: 0 } };
       }
 
       const flowLogs = await client.send(new DescribeFlowLogsCommand({}));
-      const vpcsWithFlowLogs = new Set((flowLogs.FlowLogs || []).map((f) => f.ResourceId));
-      const missingVpcs = vpcIds.filter((v) => !vpcsWithFlowLogs.has(v));
+      const vpcsWithFlowLogs = new Set((flowLogs.FlowLogs || []).map((f: any) => f.ResourceId));
+      const missingVpcs = vpcIds.filter((v: string) => !vpcsWithFlowLogs.has(v));
 
       if (missingVpcs.length === 0) {
         return {

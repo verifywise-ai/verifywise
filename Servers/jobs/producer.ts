@@ -13,6 +13,8 @@ import {
   scheduleAiGatewayRiskDetection,
   scheduleAiGatewayCacheCleanup,
   scheduleMcpGatewayCleanup,
+  scheduleCcmDueTests,
+  scheduleCcmConnectorHealthCheck,
 } from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
@@ -27,6 +29,8 @@ export async function addAllJobs(): Promise<void> {
   await scheduleAiGatewayRiskDetection();
   await scheduleAiGatewayCacheCleanup();
   await scheduleMcpGatewayCleanup();
+  await scheduleCcmDueTests();
+  await scheduleCcmConnectorHealthCheck();
 }
 
 if (require.main === module) {

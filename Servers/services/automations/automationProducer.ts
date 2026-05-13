@@ -209,3 +209,31 @@ export async function scheduleMcpGatewayCleanup() {
     },
   );
 }
+
+export async function scheduleCcmDueTests() {
+  logger.info("Adding CCM due tests job to the queue...");
+  // Every 15 minutes — run all due control tests
+  await automationQueue.add(
+    "ccm_run_due_tests",
+    { type: "ccm" },
+    {
+      repeat: { pattern: "*/15 * * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleCcmConnectorHealthCheck() {
+  logger.info("Adding CCM connector health check job to the queue...");
+  // Every 6 hours — test all active connectors
+  await automationQueue.add(
+    "ccm_connector_health_check",
+    { type: "ccm" },
+    {
+      repeat: { pattern: "0 */6 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
