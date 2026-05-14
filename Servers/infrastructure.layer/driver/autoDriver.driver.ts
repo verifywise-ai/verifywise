@@ -26,6 +26,251 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority.enum";
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
+import { CcmConnectorModel } from "../../domain.layer/models/ccmConnector/ccmConnector.model";
+import { CcmControlTestModel } from "../../domain.layer/models/ccmControlTest/ccmControlTest.model";
+import { CcmTestResultModel } from "../../domain.layer/models/ccmTestResult/ccmTestResult.model";
+import { CcmAlertModel } from "../../domain.layer/models/ccmAlert/ccmAlert.model";
+
+async function insertCcmDemoData(
+  organizationId: number,
+  userId: number,
+  transaction: any,
+) {
+  const now = new Date();
+
+  // Check if CCM demo data already exists
+  const existingConnectors = await CcmConnectorModel.count({
+    where: { organization_id: organizationId, is_demo: true },
+    transaction,
+  });
+  if (existingConnectors > 0) return;
+
+  // 1. Create connectors
+  const connector1 = await CcmConnectorModel.create(
+    {
+      organization_id: organizationId,
+      name: "AWS Production Account",
+      type: "mock",
+      config: { region: "us-east-1", roleArn: "arn:aws:iam::123456789012:role/CCMReadOnlyRole" },
+      status: "active",
+      created_by: userId,
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  const connector2 = await CcmConnectorModel.create(
+    {
+      organization_id: organizationId,
+      name: "GitHub Organization",
+      type: "mock",
+      config: { org: "verifywise", repoPattern: ".*" },
+      status: "active",
+      created_by: userId,
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  // 2. Create control tests
+  const test1 = await CcmControlTestModel.create(
+    {
+      organization_id: organizationId,
+      connector_id: connector1.id!,
+      framework_type: "NIST_AI_RMF",
+      name: "S3 Bucket Encryption Check",
+      test_type: "s3_encryption",
+      test_config: {
+        query: "SELECT COUNT(*) FROM aws_s3_buckets WHERE server_side_encryption IS NULL AND region = 'us-east-1'",
+        expectation: "count_equals",
+        threshold: 0,
+      },
+      schedule_cron: "0 */6 * * *",
+      severity: "high",
+      is_active: true,
+      next_run_at: new Date(now.getTime() + 6 * 60 * 60 * 1000),
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  const test2 = await CcmControlTestModel.create(
+    {
+      organization_id: organizationId,
+      connector_id: connector1.id!,
+      framework_type: "ISO_27001",
+      name: "IAM MFA Enforcement",
+      test_type: "iam_mfa",
+      test_config: {
+        query: "SELECT user_name FROM aws_iam_users WHERE mfa_enabled = false",
+        expectation: "count_equals",
+        threshold: 0,
+      },
+      schedule_cron: "0 0 * * *",
+      severity: "critical",
+      is_active: true,
+      next_run_at: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  const test3 = await CcmControlTestModel.create(
+    {
+      organization_id: organizationId,
+      connector_id: connector2.id!,
+      framework_type: "NIST_AI_RMF",
+      name: "Repository Branch Protection",
+      test_type: "branch_protection",
+      test_config: {
+        query: "SELECT repo FROM github_repos WHERE branch_protection = false",
+        expectation: "count_equals",
+        threshold: 0,
+      },
+      schedule_cron: "0 */12 * * *",
+      severity: "medium",
+      is_active: true,
+      next_run_at: new Date(now.getTime() + 12 * 60 * 60 * 1000),
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  // 3. Create test results
+  await CcmTestResultModel.create(
+    {
+      organization_id: organizationId,
+      test_id: test1.id!,
+      connector_id: connector1.id!,
+      status: "pass",
+      details_json: { found: 0, threshold: 0, query: "s3 encryption" },
+      executed_at: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      duration_ms: 1240,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  const result2 = await CcmTestResultModel.create(
+    {
+      organization_id: organizationId,
+      test_id: test1.id!,
+      connector_id: connector1.id!,
+      status: "fail",
+      details_json: { found: 3, threshold: 0, buckets: ["bucket-a", "bucket-b", "bucket-c"] },
+      executed_at: new Date(now.getTime() - 8 * 60 * 60 * 1000),
+      duration_ms: 980,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  await CcmTestResultModel.create(
+    {
+      organization_id: organizationId,
+      test_id: test2.id!,
+      connector_id: connector1.id!,
+      status: "pass",
+      details_json: { found: 0, threshold: 0, query: "iam mfa" },
+      executed_at: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      duration_ms: 1560,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  await CcmTestResultModel.create(
+    {
+      organization_id: organizationId,
+      test_id: test3.id!,
+      connector_id: connector2.id!,
+      status: "pass",
+      details_json: { found: 0, threshold: 0, query: "branch protection" },
+      executed_at: new Date(now.getTime() - 6 * 60 * 60 * 1000),
+      duration_ms: 890,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  const result5 = await CcmTestResultModel.create(
+    {
+      organization_id: organizationId,
+      test_id: test3.id!,
+      connector_id: connector2.id!,
+      status: "error",
+      details_json: { error: "API rate limit exceeded" },
+      executed_at: new Date(now.getTime() - 18 * 60 * 60 * 1000),
+      duration_ms: 320,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  // 4. Create alerts
+  await CcmAlertModel.create(
+    {
+      organization_id: organizationId,
+      test_result_id: result2.id!,
+      severity: "high",
+      status: "open",
+      message: "3 S3 buckets in us-east-1 are missing server-side encryption",
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+
+  await CcmAlertModel.create(
+    {
+      organization_id: organizationId,
+      test_result_id: result5.id!,
+      severity: "medium",
+      status: "open",
+      message: "GitHub connector failed due to API rate limit — test coverage gap",
+      created_at: now,
+      updated_at: now,
+      is_demo: true,
+    } as any,
+    { transaction },
+  );
+}
+
+async function deleteCcmDemoData(organizationId: number, transaction: any) {
+  // Delete order: alerts -> results -> control_health -> control_tests -> connectors
+  await sequelize.query(
+    `DELETE FROM verifywise.ccm_alerts WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
+  await sequelize.query(
+    `DELETE FROM verifywise.ccm_test_results WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
+  await sequelize.query(
+    `DELETE FROM verifywise.ccm_control_health WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
+  await sequelize.query(
+    `DELETE FROM verifywise.ccm_control_tests WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
+  await sequelize.query(
+    `DELETE FROM verifywise.ccm_connectors WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
+}
+
 export async function insertMockData(
   organizationId: number,
   _organization: number,
@@ -514,6 +759,9 @@ export async function insertMockData(
     // Seed Shadow AI demo data (tools, events, rollups, rules, alerts)
     await insertShadowAiDemoData(organizationId, userId, transaction);
 
+    // Seed CCM demo data (connectors, tests, results, alerts)
+    await insertCcmDemoData(organizationId, userId, transaction);
+
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
@@ -526,6 +774,9 @@ export async function deleteMockData(organizationId: number) {
   try {
     // Clean all Shadow AI demo data first (no FK ties to governance tables)
     await deleteShadowAiDemoData(organizationId, transaction);
+
+    // Clean CCM demo data (respect FK: alerts -> results -> tests/connectors)
+    await deleteCcmDemoData(organizationId, transaction);
 
     // =====================================================
     // DELETE ORDER MATTERS - respect foreign key constraints
