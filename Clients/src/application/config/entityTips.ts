@@ -288,6 +288,28 @@ export const ENTITY_TIPS: EntityTips = {
         "Not everyone needs access to all governance data. Use roles to grant appropriate access levels: viewers for stakeholders, editors for governance team members, and admins for system owners. Role-based access protects sensitive information.",
     },
   ],
+  "continuous-monitoring": [
+    {
+      header: "Connectors are the bridge between VerifyWise and your infrastructure.",
+      content:
+        "Create connectors for AWS, GitHub, or generic APIs to enable automated data collection. Each connector stores authentication and configuration needed to query your systems. Test connector health regularly to ensure tests can run.",
+    },
+    {
+      header: "Control Tests prove your controls are working automatically.",
+      content:
+        "A control test defines a query (like 'count unencrypted S3 buckets') and an expectation (like 'equals zero'). Tests run on a schedule you define and produce pass/fail results with evidence. Failed tests generate alerts for investigation.",
+    },
+    {
+      header: "Start with critical compliance controls.",
+      content:
+        "Prioritize automated tests for controls tied to high-risk frameworks like EU AI Act or ISO 27001. Encryption checks, access controls, and MFA enforcement are common starting points. Expand coverage as your monitoring program matures.",
+    },
+    {
+      header: "Alerts help you catch control failures early.",
+      content:
+        "When a test fails, an alert is created with severity and details. Acknowledge alerts to track investigations, and resolve them when remediation is complete. Review alert trends to identify systemic issues.",
+    },
+  ],
   "governance-os": [
     {
       header: "Cross-framework mappings reveal shared compliance effort.",

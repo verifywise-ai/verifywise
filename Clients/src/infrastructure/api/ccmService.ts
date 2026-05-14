@@ -196,4 +196,5 @@ export const ccmService = {
     const response = await CustomAxios.patch(`/ccm/alerts/${id}`, payload);
     return response.data.data;
   },
+
 };
