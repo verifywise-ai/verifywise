@@ -2,22 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Stack,
-  Typography,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   Tooltip,
   Chip,
   CircularProgress,
-  TextField,
-  MenuItem,
-  Switch,
-  FormControlLabel,
+  Typography,
 } from "@mui/material";
 import {
   Plus,
@@ -26,13 +21,19 @@ import {
   Play,
   FlaskConical,
   CheckCircle,
-  XCircle,
   AlertCircle,
 } from "lucide-react";
+import singleTheme from "../../themes/v1SingleTheme";
+import { palette } from "../../themes/palette";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
+import { EmptyState } from "../../components/EmptyState";
 import Alert from "../../components/Alert";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import Toggle from "../../components/Inputs/Toggle";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import {
   getCcmControlTests,
   getCcmConnectors,
@@ -55,6 +56,7 @@ const CCMTests: React.FC = () => {
     variant: "success" | "error" | "info";
     title: string;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CcmControlTest | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -164,15 +166,21 @@ const CCMTests: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this test?")) return;
+  const handleDelete = (test: CcmControlTest) => {
+    setDeleteTarget(test);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteCcmControlTest(id);
+      await deleteCcmControlTest(deleteTarget.id);
       setAlert({ variant: "success", title: "Test deleted" });
       fetchData();
     } catch (err) {
       console.error("Error deleting test:", err);
       setAlert({ variant: "error", title: "Failed to delete test" });
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -195,6 +203,20 @@ const CCMTests: React.FC = () => {
     return c?.name || `Connector ${id}`;
   };
 
+  const connectorItems = connectors.map((c) => ({
+    _id: String(c.id),
+    name: `${c.name} (${c.type})`,
+  }));
+
+  const expectationItems = [
+    { _id: "count_greater_than", name: "Count Greater Than" },
+    { _id: "count_less_than", name: "Count Less Than" },
+    { _id: "count_equals", name: "Count Equals" },
+    { _id: "not_empty", name: "Not Empty" },
+    { _id: "contains", name: "Contains" },
+    { _id: "custom", name: "Custom" },
+  ];
+
   return (
     <PageHeaderExtended
       title="Control Tests"
@@ -210,7 +232,12 @@ const CCMTests: React.FC = () => {
     >
       {alert && (
         <Box sx={{ mb: 2 }}>
-          <Alert variant={alert.variant} title={alert.title} isToast onClick={() => setAlert(null)} />
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            isToast
+            onClick={() => setAlert(null)}
+          />
         </Box>
       )}
 
@@ -219,32 +246,51 @@ const CCMTests: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : tests.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <FlaskConical size={48} style={{ marginBottom: 16, opacity: 0.4 }} />
-          <Typography variant="h6" color="text.secondary">
-            No control tests yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Add a test to automatically verify your controls.
-          </Typography>
-        </Box>
+        <EmptyState
+          message="No control tests yet. Add a test to automatically verify your controls."
+          icon={FlaskConical}
+          showBorder
+        />
       ) : (
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer sx={singleTheme.tableStyles.primary.frame}>
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Connector</TableCell>
-                <TableCell>Schedule</TableCell>
-                <TableCell>Active</TableCell>
-                <TableCell>Last Run</TableCell>
-                <TableCell align="right">Actions</TableCell>
+            <TableHead
+              sx={{
+                backgroundColor:
+                  singleTheme.tableStyles.primary.header.backgroundColors,
+              }}
+            >
+              <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                <TableCell style={singleTheme.tableStyles.primary.header.cell}>
+                  Name
+                </TableCell>
+                <TableCell style={singleTheme.tableStyles.primary.header.cell}>
+                  Connector
+                </TableCell>
+                <TableCell style={singleTheme.tableStyles.primary.header.cell}>
+                  Schedule
+                </TableCell>
+                <TableCell style={singleTheme.tableStyles.primary.header.cell}>
+                  Active
+                </TableCell>
+                <TableCell style={singleTheme.tableStyles.primary.header.cell}>
+                  Last Run
+                </TableCell>
+                <TableCell
+                  style={singleTheme.tableStyles.primary.header.cell}
+                  align="right"
+                >
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {tests.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>
+                <TableRow
+                  key={t.id}
+                  sx={singleTheme.tableStyles.primary.body.row}
+                >
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Typography variant="body2" fontWeight={500}>
                       {t.name}
                     </Typography>
@@ -254,22 +300,44 @@ const CCMTests: React.FC = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>{getConnectorName(t.connector_id)}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={t.schedule} variant="outlined" />
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    {getConnectorName(t.connector_id)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Chip
                       size="small"
-                      color={t.is_active ? "success" : "default"}
-                      label={t.is_active ? "Active" : "Inactive"}
-                      icon={t.is_active ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                      label={t.schedule}
+                      variant="outlined"
+                      sx={{ fontSize: "11px", height: "22px", borderRadius: "4px" }}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <Chip
+                      size="small"
+                      icon={t.is_active ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                      label={t.is_active ? "Active" : "Inactive"}
+                      sx={{
+                        backgroundColor: t.is_active
+                          ? palette.status.success.bg
+                          : palette.status.default.bg,
+                        color: t.is_active
+                          ? palette.status.success.text
+                          : palette.status.default.text,
+                        border: `1px solid ${t.is_active ? palette.status.success.border : palette.status.default.border}`,
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        borderRadius: "4px",
+                        height: "22px",
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     {t.last_run_at ? new Date(t.last_run_at).toLocaleString() : "-"}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell
+                    sx={singleTheme.tableStyles.primary.body.cell}
+                    align="right"
+                  >
                     <Tooltip title="Run now">
                       <IconButton
                         size="small"
@@ -289,7 +357,7 @@ const CCMTests: React.FC = () => {
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete">
-                      <IconButton size="small" onClick={() => handleDelete(t.id)}>
+                      <IconButton size="small" onClick={() => handleDelete(t)}>
                         <Trash2 size={16} />
                       </IconButton>
                     </Tooltip>
@@ -313,87 +381,96 @@ const CCMTests: React.FC = () => {
         submitButtonText={editingTest ? "Update" : "Create"}
         isSubmitting={isSubmitting}
       >
-        <Stack spacing={3} sx={{ mt: 2 }}>
-          <TextField
+        <Stack spacing={6} sx={{ mt: 2 }}>
+          <Field
+            id="test-name"
             label="Name"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            fullWidth
-            required
+            isRequired
           />
-          <TextField
+          <Field
+            id="test-description"
             label="Description"
             value={formDescription}
             onChange={(e) => setFormDescription(e.target.value)}
-            fullWidth
             multiline
             rows={2}
           />
-          <TextField
-            select
+          <Select
+            id="test-connector"
             label="Connector"
             value={formConnectorId}
-            onChange={(e) => setFormConnectorId(e.target.value)}
-            fullWidth
-            required
-          >
-            {connectors.map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}>
-                {c.name} ({c.type})
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
+            items={connectorItems}
+            onChange={(e) => setFormConnectorId(e.target.value as string)}
+            getOptionValue={(item) => item._id as string}
+            isRequired
+          />
+          <Field
+            id="test-query"
             label="Query Template"
             value={formQueryTemplate}
             onChange={(e) => setFormQueryTemplate(e.target.value)}
-            fullWidth
-            multiline
-            rows={3}
             placeholder="SELECT COUNT(*) FROM events WHERE ..."
             helperText="The query or API call template to execute"
-            required
+            multiline
+            rows={3}
+            isRequired
           />
-          <TextField
-            select
+          <Select
+            id="test-expectation"
             label="Expectation Type"
             value={formExpectationType}
-            onChange={(e) => setFormExpectationType(e.target.value)}
-            fullWidth
-          >
-            <MenuItem value="count_greater_than">Count Greater Than</MenuItem>
-            <MenuItem value="count_less_than">Count Less Than</MenuItem>
-            <MenuItem value="count_equals">Count Equals</MenuItem>
-            <MenuItem value="not_empty">Not Empty</MenuItem>
-            <MenuItem value="contains">Contains</MenuItem>
-            <MenuItem value="custom">Custom</MenuItem>
-          </TextField>
-          <TextField
+            items={expectationItems}
+            onChange={(e) => setFormExpectationType(e.target.value as string)}
+            getOptionValue={(item) => item._id as string}
+          />
+          <Field
+            id="test-expectation-config"
             label="Expectation Config (JSON)"
             value={formExpectationConfig}
             onChange={(e) => setFormExpectationConfig(e.target.value)}
-            fullWidth
-            multiline
-            rows={3}
             placeholder='{"threshold": 0}'
             helperText="Enter expectation configuration as JSON"
+            multiline
+            rows={3}
           />
-          <TextField
+          <Field
+            id="test-schedule"
             label="Schedule (cron)"
             value={formSchedule}
             onChange={(e) => setFormSchedule(e.target.value)}
-            fullWidth
             placeholder="0 */6 * * *"
             helperText="Cron expression for test execution frequency"
           />
-          <FormControlLabel
-            control={
-              <Switch checked={formIsActive} onChange={(e) => setFormIsActive(e.target.checked)} />
-            }
-            label="Active"
-          />
+          <Stack direction="row" alignItems="center" gap={2}>
+            <Toggle
+              checked={formIsActive}
+              onChange={(e) => setFormIsActive(e.target.checked)}
+            />
+            <Typography variant="body2" color="text.secondary">
+              Active
+            </Typography>
+          </Stack>
         </Stack>
       </StandardModal>
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        title="Delete Control Test"
+        body={
+          <span>
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
+            This action cannot be undone.
+          </span>
+        }
+        cancelText="Cancel"
+        proceedText="Delete"
+        proceedButtonVariant="contained"
+        proceedButtonColor="error"
+        onCancel={() => setDeleteTarget(null)}
+        onProceed={confirmDelete}
+      />
     </PageHeaderExtended>
   );
 };
