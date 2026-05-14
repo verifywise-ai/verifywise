@@ -2,14 +2,16 @@ import { BaseConnector } from "./baseConnector";
 import { AwsConnector } from "./awsConnector";
 import { GithubConnector } from "./githubConnector";
 import { GenericApiConnector } from "./genericApiConnector";
+import { MockConnector } from "./mockConnector";
 
-export { BaseConnector, AwsConnector, GithubConnector, GenericApiConnector };
+export { BaseConnector, AwsConnector, GithubConnector, GenericApiConnector, MockConnector };
 export type { TestExecutionResult, ConnectorConfig } from "./baseConnector";
 
 const connectorRegistry: Record<string, new () => BaseConnector> = {
   aws: AwsConnector,
   github: GithubConnector,
   generic_api: GenericApiConnector,
+  mock: MockConnector,
 };
 
 export function getConnectorTypes(): { type: string; displayName: string }[] {
