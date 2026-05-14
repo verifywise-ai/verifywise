@@ -207,23 +207,28 @@ async function updateControlHealth(
   test: CcmControlTestModel,
   resultStatus: "pass" | "fail" | "error" | "not_tested",
 ): Promise<void> {
+  const healthWhere: any = {
+    organization_id: test.organization_id,
+    control_id: test.control_id,
+    framework_type: test.framework_type,
+  };
+  const healthDefaults: any = {
+    organization_id: test.organization_id,
+    control_id: test.control_id!,
+    framework_type: test.framework_type,
+    current_status: "not_tested",
+    consecutive_passes: 0,
+    consecutive_failures: 0,
+    score: 0,
+  };
+  if (test.subcontrol_id != null) {
+    healthWhere.subcontrol_id = test.subcontrol_id;
+    healthDefaults.subcontrol_id = test.subcontrol_id;
+  }
+
   const [health] = await CcmControlHealthModel.findOrCreate({
-    where: {
-      organization_id: test.organization_id,
-      control_id: test.control_id,
-      subcontrol_id: test.subcontrol_id || undefined,
-      framework_type: test.framework_type,
-    } as any,
-    defaults: {
-      organization_id: test.organization_id,
-      control_id: test.control_id!,
-      subcontrol_id: test.subcontrol_id || undefined,
-      framework_type: test.framework_type,
-      current_status: "not_tested",
-      consecutive_passes: 0,
-      consecutive_failures: 0,
-      score: 0,
-    } as any,
+    where: healthWhere,
+    defaults: healthDefaults,
   });
 
   const isPass = resultStatus === "pass";
@@ -258,15 +263,18 @@ async function createAlert(
   testResult: CcmTestResultModel,
   message: string,
 ): Promise<void> {
-  await CcmAlertModel.create({
+  const alertPayload: any = {
     organization_id: test.organization_id,
     test_result_id: testResult.id!,
     control_id: test.control_id,
-    subcontrol_id: test.subcontrol_id,
     severity: test.severity || "medium",
     status: "open",
     message: `[${test.name}] ${message}`,
-  } as any);
+  };
+  if (test.subcontrol_id != null) {
+    alertPayload.subcontrol_id = test.subcontrol_id;
+  }
+  await CcmAlertModel.create(alertPayload);
 }
 
 /**
