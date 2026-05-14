@@ -82,4 +82,11 @@ export class CcmAlertModel extends Model<CcmAlertModel> {
     allowNull: false,
   })
   created_at?: Date;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  is_demo?: boolean;
 }

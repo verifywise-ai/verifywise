@@ -70,4 +70,11 @@ export class CcmTestResultModel extends Model<CcmTestResultModel> {
     type: DataType.INTEGER,
   })
   duration_ms?: number;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  is_demo?: boolean;
 }

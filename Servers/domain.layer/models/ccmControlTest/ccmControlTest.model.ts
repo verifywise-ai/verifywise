@@ -112,4 +112,11 @@ export class CcmControlTestModel extends Model<CcmControlTestModel> {
     allowNull: false,
   })
   updated_at?: Date;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  is_demo?: boolean;
 }
