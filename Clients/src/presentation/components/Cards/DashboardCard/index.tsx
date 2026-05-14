@@ -30,12 +30,12 @@ export function DashboardCard({
         "border": `1px solid ${borderPalette.dark}`,
         "borderRadius": "4px",
         "height": "100%",
-        "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+        "background": background.main,
         "cursor": navigateTo ? "pointer" : "default",
         "transition": "all 0.2s ease",
         "&:hover": navigateTo
           ? {
-              background: `linear-gradient(135deg, ${background.accent} 0%, ${background.gradientStop} 100%)`,
+              background: background.accent,
               borderColor: `${borderPalette.light}`,
             }
           : {},

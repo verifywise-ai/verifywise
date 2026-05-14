@@ -19,7 +19,7 @@ export const projectRisksTileCard = {
   width: { sm: "140px" },
   height: { sm: "100px" },
   justifyContent: "center",
-  background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+  background: background.main,
   border: `1px solid ${borderPalette.dark}`,
   borderRadius: 2,
   transition: "all 0.2s ease",
