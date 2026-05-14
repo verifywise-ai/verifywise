@@ -77,7 +77,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 17,
+    articleCount: 18,
     articles: [
       {
         id: 'use-cases',
@@ -180,6 +180,12 @@ export const collections: Collection[] = [
         title: 'Core Governance OS',
         description: 'Cross-framework intelligence layer with control mappings, scenario recommendations, and unified coverage analysis.',
         keywords: ['governance', 'os', 'mapping', 'cross-framework', 'scenario', 'coverage', 'insights', 'synergy', 'gap'],
+      },
+      {
+        id: 'continuous-monitoring',
+        title: 'Continuous Control Monitoring',
+        description: 'Automated control testing with scheduled execution, connector health tracking, and failure alerting.',
+        keywords: ['ccm', 'continuous monitoring', 'control test', 'connector', 'alert', 'automation', 'aws', 'github', 'schedule', 'cron'],
       },
     ],
   },
