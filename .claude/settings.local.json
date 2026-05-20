@@ -68,7 +68,13 @@
       "Bash(npm install *)",
       "Bash(git -C /Users/harsh/Data/vw/verifywise remote -v)",
       "Bash(node scripts/i18n-audit.mjs --json)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npx -p typescript tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npx -p typescript@5 tsc --noEmit)",
+      "Bash(md5 *)",
+      "Bash(cp /Users/harsh/Data/vw/plugin-marketplace/plugins/ai-ethics/ui/dist/index.esm.js /Users/harsh/Data/vw/verifywise/Servers/temp/plugins/ai-ethics/ui/dist/index.esm.js)",
+      "Bash(cp /Users/harsh/Data/vw/plugin-marketplace/plugins/nyc-local-law-144/ui/dist/index.esm.js /Users/harsh/Data/vw/verifywise/Servers/temp/plugins/nyc-local-law-144/ui/dist/index.esm.js)"
     ]
   }
 }

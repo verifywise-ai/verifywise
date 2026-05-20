@@ -43,6 +43,70 @@ export const dashboardContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'governance-score',
+      level: 2,
+      text: 'AI governance score',
+    },
+    {
+      type: 'paragraph',
+      text: 'The ring chart in the executive view summarizes your governance posture as a single number from 0 to 100. It rolls up five areas into one weighted score, so leadership can see at a glance where the program is strong and where attention is needed. Each area is also shown next to the ring with its own 0–100% score.',
+    },
+    {
+      type: 'paragraph',
+      text: "The overall score is a weighted average of the five areas. The weights reflect how much each area contributes to your governance posture — risk and vendor management together account for 60% of the score.",
+    },
+    {
+      type: 'grid-cards',
+      items: [
+        {
+          icon: 'AlertTriangle',
+          title: 'Risk management — 30%',
+          description: 'Share of risks moved to Mitigation status = Completed, with a penalty for any unmitigated risks at Very high risk level.',
+        },
+        {
+          icon: 'Building2',
+          title: 'Vendor management — 30%',
+          description: 'Share of vendors marked Review status = Reviewed, with a penalty for vendors flagged as high risk (risk score ≥ 70 or review result High risk).',
+        },
+        {
+          icon: 'FolderTree',
+          title: 'Project governance — 25%',
+          description: 'Share of use cases moved to status Completed, plus share of use cases with at least one compliance framework attached. Organizational frameworks (ISO 42001, etc.) are not counted here.',
+        },
+        {
+          icon: 'Brain',
+          title: 'Model lifecycle — 10%',
+          description: 'Share of models at status Approved, with a penalty for any models in status Blocked.',
+        },
+        {
+          icon: 'ScrollText',
+          title: 'Policy & documentation — 5%',
+          description: 'Share of policies at status Active, with a penalty for any overdue (past next review date and not Active).',
+        },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'To improve a category, progress its items through their lifecycle:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Risk management', text: 'Set Mitigation status = Completed on risks as they are remediated. Lower or close any unmitigated Very high risk items first — they carry the steepest penalty.' },
+        { bold: 'Vendor management', text: 'Mark vendors as Reviewed once their assessment is finished. Reduce a vendor’s risk score below 70 or change a High risk review result to lower the high-risk penalty.' },
+        { bold: 'Project governance', text: 'Move use cases to Completed when finished, and attach at least one compliance framework to each.' },
+        { bold: 'Model lifecycle', text: 'Promote vetted models from Pending to Approved. Avoid leaving models in Blocked status — each one removes 25 points from this area.' },
+        { bold: 'Policy & documentation', text: 'Publish policies to Active status, and keep the next review date up to date so policies don’t become overdue.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Why a category may show 0%',
+      text: 'The score measures workflow completion, not inventory size. If you have items registered (risks, vendors, models, etc.) but none of them have been moved into a “completed” state (Mitigated, Reviewed, Approved, Active), that category reads as 0% governed. An empty category — no items at all — also shows 0%, not 100%, by design.',
+    },
+    {
+      type: 'heading',
       id: 'header-cards',
       level: 2,
       text: 'Summary cards',

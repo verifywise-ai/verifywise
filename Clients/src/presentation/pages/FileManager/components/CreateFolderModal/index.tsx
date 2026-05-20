@@ -7,7 +7,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Stack, Box, Typography, TextField } from "@mui/material";
+import { Stack, Box, Typography } from "@mui/material";
+import Field from "../../../../components/Inputs/Field";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import {
   IVirtualFolderInput,
@@ -145,36 +146,16 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
           >
             Folder name <span style={{ color: "#EF4444" }}>*</span>
           </Typography>
-          <TextField
+          <Field
+            autoFocus
+            width="100%"
+            placeholder="Enter folder name"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
               if (error) setError(null);
             }}
-            placeholder="Enter folder name"
-            fullWidth
-            size="small"
-            error={!!displayError}
-            helperText={displayError}
-            autoFocus
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                "borderRadius": "4px",
-                "& fieldset": {
-                  borderColor: error ? "#EF4444" : "border.dark",
-                },
-                "&:hover fieldset": {
-                  borderColor: error ? "#EF4444" : "text.muted",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: error ? "#EF4444" : "brand.primary",
-                },
-              },
-              "& .MuiInputBase-input": {
-                fontSize: 13,
-                padding: "10px 12px",
-              },
-            }}
+            error={displayError ?? undefined}
           />
         </Stack>
 
@@ -189,31 +170,12 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
           >
             Description
           </Typography>
-          <TextField
+          <Field
+            rows={3}
+            width="100%"
+            placeholder="Enter folder description (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter folder description (optional)"
-            fullWidth
-            multiline
-            rows={3}
-            size="small"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                "borderRadius": "4px",
-                "& fieldset": {
-                  borderColor: "border.dark",
-                },
-                "&:hover fieldset": {
-                  borderColor: "text.muted",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: "brand.primary",
-                },
-              },
-              "& .MuiInputBase-input": {
-                fontSize: 13,
-              },
-            }}
           />
         </Stack>
 

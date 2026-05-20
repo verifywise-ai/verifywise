@@ -25,6 +25,9 @@ export interface IEvidenceHub {
   /** Multiple model IDs can be mapped (empty array or null allowed) */
   mapped_model_ids?: number[] | null;
 
+  /** Multiple training IDs can be mapped (empty array or null allowed) */
+  mapped_training_ids?: number[] | null;
+
   created_at?: Date;
   updated_at?: Date;
 }

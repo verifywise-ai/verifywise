@@ -96,9 +96,12 @@ export interface EvidenceHubTableProps {
   isLoading?: boolean;
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
+  onPreview?: (id: number, fileIndex?: number) => void;
   paginated?: boolean;
   deletingId?: number | null;
   modelInventoryData: IModelInventory[];
+  /** Optional training data so the table can render mapped_trainings names */
+  trainingData?: { id?: number | string; training_name?: string | null }[];
   hidePagination?: boolean;
   visibleColumns?: Set<string>;
 }

@@ -19,6 +19,7 @@ export interface PolicyInput {
   tags?: string[];
   content_html: string;
   next_review_date?: Date | undefined;
+  policy_owner_id?: number | null;
   assigned_reviewer_ids?: number[];
 }
 
@@ -30,6 +31,7 @@ export interface PolicyFormData {
   status: string;
   tags: string[];
   nextReviewDate?: string;
+  policyOwner: User | null;
   assignedReviewers: User[];
   content: string;
 }
@@ -51,6 +53,7 @@ export interface PolicyFormErrors {
   status?: string;
   tags?: string;
   nextReviewDate?: string;
+  policyOwner?: string;
   assignedReviewers?: string;
   content?: string;
 }

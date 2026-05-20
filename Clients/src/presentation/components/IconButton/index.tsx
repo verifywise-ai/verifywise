@@ -321,7 +321,7 @@ function IconButton({
       return BUTTONS_BY_TYPE[normalizedType as ButtonType];
     }
 
-    return ["edit", "remove"];
+    return onPreview ? ["preview", "edit", "remove"] : ["edit", "remove"];
   };
 
   const listOfButtons = getListOfButtons();

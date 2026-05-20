@@ -64,14 +64,23 @@ async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
         }
       }
 
-      // Get provider for judge model (default to openai if not specified)
+      // Use explicit judgeProvider when available; fall back to model-name inference
       const judgeModel = body.judgeModel || "gpt-4o";
-      let judgeProvider = "openai";
-      if (judgeModel.includes("claude")) judgeProvider = "anthropic";
-      else if (judgeModel.includes("gemini")) judgeProvider = "google";
-      else if (judgeModel.includes("mistral") || judgeModel.includes("magistral"))
-        judgeProvider = "mistral";
-      else if (judgeModel.includes("grok")) judgeProvider = "xai";
+      let judgeProvider: string;
+      if (
+        body.judgeProvider &&
+        VALID_PROVIDERS.includes(body.judgeProvider.toLowerCase() as LLMProvider)
+      ) {
+        judgeProvider = body.judgeProvider.toLowerCase();
+      } else {
+        judgeProvider = "openai";
+        if (judgeModel.includes("claude")) judgeProvider = "anthropic";
+        else if (judgeModel.includes("gemini")) judgeProvider = "google";
+        else if (judgeModel.includes("mistral") || judgeModel.includes("magistral"))
+          judgeProvider = "mistral";
+        else if (judgeModel.includes("grok")) judgeProvider = "xai";
+        else if (judgeModel.includes("/")) judgeProvider = "openrouter";
+      }
 
       if (!apiKeys[judgeProvider]) {
         try {

@@ -77,7 +77,6 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { notifyVendorReviewDue, notifyPolicyDueSoon } from "../inAppNotification.service";
 import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
-import { PolicyManagerModel } from "../../domain.layer/models/policy/policy.model";
 
 const handlers = {
   send_email: sendEmail,
@@ -189,7 +188,7 @@ async function sendPolicyDueSoonEmailNotification() {
   for (const org of organizations) {
     const organizationId = org.id!;
     try {
-      const policies: PolicyManagerModel[] = await getAllPoliciesDueSoonQuery(organizationId);
+      const policies = await getAllPoliciesDueSoonQuery(organizationId);
 
       for (const policy of policies) {
         if (!policy.author_id) continue;
@@ -203,17 +202,19 @@ async function sendPolicyDueSoonEmailNotification() {
           : "Not set";
 
         try {
-          await notifyPolicyDueSoon(
-            organizationId,
-            policy.author_id,
-            {
-              id: policy.id!,
-              name: policy.title,
-              projectName: "",
-              dueDate: reviewDate,
-            },
-            baseUrl,
-          );
+          for (let user_id of policy.reviewer_ids || []) {
+            await notifyPolicyDueSoon(
+              organizationId,
+              user_id,
+              {
+                id: policy.id!,
+                name: policy.title,
+                projectName: "",
+                dueDate: reviewDate,
+              },
+              baseUrl,
+            );
+          }
         } catch (notifyError) {
           console.error(
             `Failed to send policy due soon notification for policy ${policy.id}:`,

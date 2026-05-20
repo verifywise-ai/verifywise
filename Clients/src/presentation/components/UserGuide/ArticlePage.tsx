@@ -51,6 +51,10 @@ interface ArticlePageProps {
   nextArticle?: Article;
   prevArticle?: Article;
   tocItems?: TocItem[];
+  /** Heading block id to scroll to once the article content mounts. */
+  targetSectionId?: string;
+  /** Called after the page has scrolled to targetSectionId (or given up). */
+  onSectionScrolled?: () => void;
   children?: React.ReactNode;
   mode?: Mode;
 }
@@ -65,12 +69,23 @@ const ArticlePage: React.FC<ArticlePageProps> = ({
   nextArticle,
   prevArticle,
   tocItems,
+  targetSectionId,
+  onSectionScrolled,
   children,
   mode = "web",
 }) => {
   const IconComponent = iconMap[collection.icon];
   const isInApp = mode === "in-app";
   const [activeSection, setActiveSection] = useState<string>("");
+
+  useEffect(() => {
+    if (!targetSectionId) return;
+    const id = setTimeout(() => {
+      document.getElementById(targetSectionId)?.scrollIntoView({ block: "start" });
+      onSectionScrolled?.();
+    }, 50);
+    return () => clearTimeout(id);
+  }, [targetSectionId, onSectionScrolled]);
 
   // Track active section on scroll
   useEffect(() => {

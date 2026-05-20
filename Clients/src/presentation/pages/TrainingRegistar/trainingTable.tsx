@@ -263,7 +263,9 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                     <TableCell
                       sx={{
                         ...singleTheme.tableStyles.primary.body.cell,
-                        minWidth: "50px",
+                        width: "80px",
+                        minWidth: "80px",
+                        maxWidth: "80px",
                       }}
                     >
                       {isDeletingAllowed && (

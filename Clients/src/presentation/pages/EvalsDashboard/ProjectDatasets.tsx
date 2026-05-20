@@ -97,9 +97,9 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
   const theme = useTheme();
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canUploadDataset = allowedRoles.evals.uploadDataset.includes(userRoleName);
-  const canDeleteDataset = allowedRoles.evals.deleteDataset.includes(userRoleName);
+  const { userRoleName, isSuperAdmin } = useAuth();
+  const canUploadDataset = allowedRoles.evals.uploadDataset.includes(userRoleName) && !isSuperAdmin;
+  const canDeleteDataset = allowedRoles.evals.deleteDataset.includes(userRoleName) && !isSuperAdmin;
 
   // Tab state: "my" for user datasets, "templates" for built-in datasets
   const [activeTab, setActiveTab] = useState<"my" | "templates">("my");

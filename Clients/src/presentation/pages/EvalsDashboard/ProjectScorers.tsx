@@ -41,10 +41,10 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
   const [alert, setAlert] = useState<AlertState | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateScorer = allowedRoles.evals.createScorer.includes(userRoleName);
-  const canEditScorer = allowedRoles.evals.editScorer.includes(userRoleName);
-  const canDeleteScorer = allowedRoles.evals.deleteScorer.includes(userRoleName);
+  const { userRoleName, isSuperAdmin } = useAuth();
+  const canCreateScorer = allowedRoles.evals.createScorer.includes(userRoleName) && !isSuperAdmin;
+  const canEditScorer = allowedRoles.evals.editScorer.includes(userRoleName) && !isSuperAdmin;
+  const canDeleteScorer = allowedRoles.evals.deleteScorer.includes(userRoleName) && !isSuperAdmin;
 
   // Edit modal state - using comprehensive CreateScorerModal
   const [editScorerModalOpen, setEditScorerModalOpen] = useState(false);

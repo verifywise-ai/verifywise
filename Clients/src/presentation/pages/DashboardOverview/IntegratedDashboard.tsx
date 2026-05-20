@@ -36,6 +36,7 @@ import {
   ModelLifecycleCard,
 } from "../../components/Charts/NewMetricsCards";
 import { GovernanceScoreCard } from "../../components/Charts/GovernanceScoreCard";
+import HelperIcon from "../../components/HelperIcon";
 import { PortfolioExposureCard } from "../../components/Charts/PortfolioExposureCard";
 import { PortfolioTrendChart } from "../../components/Charts/PortfolioTrendChart";
 import { LossCategoryBreakdown } from "../../components/Charts/LossCategoryBreakdown";
@@ -476,7 +477,15 @@ const IntegratedDashboard: React.FC = () => {
             <Box
               sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", mb: "16px" }}
             >
-              <DashboardCard title="AI governance score">
+              <DashboardCard
+                title="AI governance score"
+                action={
+                  <HelperIcon
+                    articlePath="getting-started/dashboard"
+                    sectionId="governance-score"
+                  />
+                }
+              >
                 {governanceScoreMetrics && governanceScoreMetrics?.score > 0 ? (
                   <GovernanceScoreCard
                     score={governanceScoreMetrics?.score}
@@ -827,7 +836,15 @@ const IntegratedDashboard: React.FC = () => {
             <Box
               sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", mb: "16px" }}
             >
-              <DashboardCard title="AI governance score">
+              <DashboardCard
+                title="AI governance score"
+                action={
+                  <HelperIcon
+                    articlePath="getting-started/dashboard"
+                    sectionId="governance-score"
+                  />
+                }
+              >
                 {governanceScoreMetrics && governanceScoreMetrics?.score > 0 ? (
                   <GovernanceScoreCard
                     score={governanceScoreMetrics.score}

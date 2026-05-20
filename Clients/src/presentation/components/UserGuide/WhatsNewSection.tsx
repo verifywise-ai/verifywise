@@ -11,6 +11,48 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.3.4",
+    date: "May 19, 2026",
+    title: "Training evidence uploads, governance score helper, and policy ownership",
+    summary:
+      "Patch release adding evidence uploads inside training records, a context-sensitive helper icon next to the AI governance score, a dedicated policy owner field, and broader German/French coverage. Also fixes governance score calculations and a minified React error in the training modal.",
+    items: [
+      "Training evidence uploads — attach certificates, attendance records, course completions, assessment results, and other evidence files to any training record, with optional expiry dates",
+      "AI governance score helper — new (i) icon on the dashboard opens the user guide directly at the governance score explanation",
+      "Policy owner field — assign an accountable owner to every policy, automatically excluded from the reviewer list",
+      "Policy title limit raised to 128 characters",
+      "Governance score calculation fixes for more accurate posture reporting",
+      "Fixed minified React error #306 in the new training modal",
+      "Expanded German and French translations across training, evidence, and policy forms",
+      "Updated nginx base image and frontend dependency bumps",
+    ],
+  },
+  {
+    version: "v2.3.1",
+    date: "May 4, 2026",
+    title: "EU AI Act control workflow, clearable selects, and AI advisor fix",
+    summary:
+      "Maintenance and polish release on top of v2.3. Moves owner, reviewer, approver, due date, and risk review up to the EU AI Act control level; adds a (none) clear option across framework drawers; fixes the AI advisor for non-OpenAI providers; and ships a 77-fix user guide truthfulness audit plus a wave of dependency and security updates.",
+    items: [
+      "EU AI Act control-level workflow — owner, reviewer, approver, due date, and risk review now live at the control level with assignee validation against the organization and a date-typed due_date column",
+      "EU AI Act progress counter now respects tier and role filters",
+      "EU AI Act second tab renamed from Controls to Assessments",
+      "(none) clear option added to optional dropdowns across EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF drawers",
+      "GRS adds Accountability & Transparency as a 5th scoring dimension",
+      "Approval workflow replaces inline validation with a reusable hook",
+      "Risk section, ProjectForm, and use case fields migrated from raw MUI Autocomplete to AutoCompleteField",
+      "Column visibility (ColumnSelector) added to Datasets, AI Trust Center Resources, and Subprocessors tabs",
+      "Notifications polish — delete button, action_url routing fix, graceful handling of stale training ids",
+      'AI advisor fix — Chat Completions now used for non-OpenAI providers (OpenRouter, custom endpoints), fixing the "Invalid Responses API request" error',
+      "AI Gateway /providers endpoint now returns model objects with mode",
+      "RBAC fixes and auto demo data creation flow",
+      "User guide truthfulness audit — 77 documentation fixes across 91 articles",
+      "Backend domain layer unit test coverage completed; additional frontend unit tests",
+      "Repo-wide Prettier format check added; OpenAPI YAML unblocked",
+      "Dependency updates across backend, frontend, EvaluationModule, AI Gateway, MJML, postcss, and Trivy CI",
+    ],
+  },
+  {
     version: "v2.2",
     date: "April 2, 2026",
     title: "AI Gateway, Policy Radar, and CI/CD scanning",

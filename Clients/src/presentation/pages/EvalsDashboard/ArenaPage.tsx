@@ -338,6 +338,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
           evaluationParams: ["input", "actual_output"],
         },
         judgeModel: newComparison.judgeModel,
+        judgeProvider: newComparison.judgeProvider,
       });
 
       setAlert({ variant: "success", body: "Arena battle started!" });

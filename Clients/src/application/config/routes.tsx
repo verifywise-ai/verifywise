@@ -397,6 +397,14 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/training/evidence-hub"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <Training />
+        </Suspense>
+      }
+    />
+    <Route
       path="/ai-trust-center"
       element={
         <Suspense fallback={<LazyFallback />}>

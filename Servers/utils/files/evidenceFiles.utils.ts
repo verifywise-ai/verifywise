@@ -16,6 +16,8 @@ export interface EvidenceFile {
   link_id?: number;
   id: string;
   fileName: string;
+  size?: number | null;
+  mimetype?: string | null;
   project_id?: number;
   uploaded_by: number;
   uploaded_time: string;
@@ -37,6 +39,8 @@ export async function getEvidenceFilesForEntity(
       fel.id AS link_id,
       f.id::text AS id,
       f.filename AS "fileName",
+      f.size,
+      f.type AS mimetype,
       f.project_id,
       f.uploaded_by,
       f.uploaded_time::text AS uploaded_time,
@@ -78,6 +82,8 @@ export async function getEvidenceFilesForEntities(
       fel.entity_id,
       f.id::text AS id,
       f.filename AS "fileName",
+      f.size,
+      f.type AS mimetype,
       f.project_id,
       f.uploaded_by,
       f.uploaded_time::text AS uploaded_time,
@@ -106,6 +112,8 @@ export async function getEvidenceFilesForEntities(
     map.get(entityId)!.push({
       id: row.id,
       fileName: row.fileName,
+      size: row.size,
+      mimetype: row.mimetype,
       project_id: row.project_id,
       uploaded_by: row.uploaded_by,
       uploaded_time: row.uploaded_time,
@@ -142,7 +150,7 @@ export async function createFileEntityLink(
         entityType,
         entityId,
         linkType,
-        createdBy,
+        createdBy: createdBy ?? null,
       },
       ...(transaction && { transaction }),
     },

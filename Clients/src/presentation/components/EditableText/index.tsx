@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, IconButton, TextField, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
+import Field from "../Inputs/Field";
 import type { SxProps, Theme } from "@mui/material";
 import { Check, Pencil, X } from "lucide-react";
 import { palette } from "../../themes/palette";
@@ -79,8 +80,9 @@ export default function EditableText({
   if (isEditing) {
     return (
       <Box sx={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-        <TextField
-          inputRef={inputRef}
+        <Field
+          ref={inputRef}
+          autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value.slice(0, maxLength))}
           onKeyDown={(e) => {
@@ -92,9 +94,6 @@ export default function EditableText({
               handleCancel();
             }
           }}
-          variant="outlined"
-          size="small"
-          autoFocus
           disabled={saving}
           sx={{
             "minWidth": inputMinWidth,

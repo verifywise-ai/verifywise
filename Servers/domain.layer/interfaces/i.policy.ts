@@ -8,6 +8,7 @@ export interface IPolicy {
   tags?: PolicyTag[];
   next_review_date?: Date;
   author_id: number;
+  policy_owner_id?: number | null;
   assigned_reviewer_ids?: number[];
   last_updated_by: number;
   last_updated_at?: Date;

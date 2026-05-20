@@ -7,7 +7,8 @@
     "webreel:record:risks": "webreel record risk-management",
     "webreel:record:frameworks": "webreel record frameworks",
     "webreel:preview": "webreel preview",
-    "webreel:validate": "webreel validate"
+    "webreel:validate": "webreel validate",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

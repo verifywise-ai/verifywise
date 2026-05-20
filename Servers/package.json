@@ -20,7 +20,8 @@
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "i18n:audit:strict": "node scripts/i18n-audit.mjs --strict",
     "format": "prettier --write .",
-    "format-check": "prettier --check ."
+    "format-check": "prettier --check .",
+    "prepare": "husky"
   },
   "author": "",
   "license": "ISC",
@@ -103,7 +104,9 @@
     "@types/swagger-ui-express": "^4.1.6",
     "@types/winston": "^2.4.4",
     "@types/yamljs": "^0.2.34",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "lint-staged": "^17.0.5",
     "npm-run-all": "^4.1.5",
     "patch-package": "^8.0.1",
     "prettier": "^3.3.3",
@@ -113,6 +116,11 @@
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "tsc-watch": "^7.2.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": [
+      "prettier --write"
+    ]
   },
   "overrides": {
     "html-minifier": "npm:html-minifier-terser@^7.2.0",

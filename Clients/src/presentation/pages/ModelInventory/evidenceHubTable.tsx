@@ -65,6 +65,7 @@ const TABLE_COLUMNS = [
   { id: "evidence_name", label: "EVIDENCE NAME", sortable: true },
   { id: "evidence_type", label: "TYPE", sortable: true },
   { id: "mapped_models", label: "MAPPED MODELS", sortable: false },
+  { id: "mapped_trainings", label: "MAPPED TRAININGS", sortable: false },
   { id: "tags", label: "TAGS", sortable: false },
   { id: "frameworks", label: "FRAMEWORKS", sortable: false },
   { id: "reviewer", label: "REVIEWER", sortable: true },
@@ -168,9 +169,11 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
   isLoading,
   onEdit,
   onDelete,
+  onPreview,
   paginated = true,
   deletingId,
   modelInventoryData,
+  trainingData,
   hidePagination = false,
   visibleColumns,
 }) => {
@@ -250,6 +253,17 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     return map;
   }, [modelInventoryData]);
 
+  const trainingMap = useMemo(() => {
+    const map = new Map<number, string>();
+    (trainingData ?? []).forEach((t) => {
+      const idNum = typeof t.id === "string" ? Number(t.id) : t.id;
+      if (typeof idNum === "number" && !Number.isNaN(idNum)) {
+        map.set(idNum, t.training_name || `Training ${idNum}`);
+      }
+    });
+    return map;
+  }, [trainingData]);
+
   const handleChangePage = useCallback((_: unknown, newPage: number) => {
     setPage(newPage);
   }, []);
@@ -319,16 +333,21 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
               : "";
           break;
 
-        case "uploaded_on":
-          aValue =
+        case "uploaded_on": {
+          const aDate =
             a.evidence_files && a.evidence_files.length > 0
-              ? new Date(a.evidence_files[0].upload_date).getTime()
-              : 0;
-          bValue =
+              ? ((a.evidence_files[0] as any).upload_date ??
+                (a.evidence_files[0] as any).uploaded_time)
+              : null;
+          const bDate =
             b.evidence_files && b.evidence_files.length > 0
-              ? new Date(b.evidence_files[0].upload_date).getTime()
-              : 0;
+              ? ((b.evidence_files[0] as any).upload_date ??
+                (b.evidence_files[0] as any).uploaded_time)
+              : null;
+          aValue = aDate ? new Date(aDate).getTime() : 0;
+          bValue = bDate ? new Date(bDate).getTime() : 0;
           break;
+        }
 
         case "expiry_date":
           aValue = a.expiry_date ? new Date(a.expiry_date).getTime() : 0;
@@ -375,29 +394,69 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                   ...tableRowHoverStyle,
                   ...(deletingId === evidence.id && tableRowDeletingStyle),
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit?.(Number(evidence.id));
-                }}
+                // onClick={(e) => {
+                //   e.stopPropagation();
+                //   onEdit?.(Number(evidence.id));
+                // }}
               >
                 {isColVisible("evidence_name") && (
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <FileIcon
-                        fileName={
-                          evidence.evidence_files && evidence.evidence_files.length > 0
-                            ? evidence.evidence_files[0].filename
-                            : ""
-                        }
-                      />
-                      {evidence.evidence_name}
-                    </Box>
+                    <Stack direction="column" spacing={0.5}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <FileIcon
+                          fileName={
+                            evidence.evidence_files && evidence.evidence_files.length > 0
+                              ? ((evidence.evidence_files[0] as any).filename ??
+                                (evidence.evidence_files[0] as any).fileName ??
+                                "")
+                              : ""
+                          }
+                        />
+                        {evidence.evidence_name}
+                      </Box>
+                      {evidence.evidence_files && evidence.evidence_files.length > 1 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "4px",
+                            pl: "24px",
+                          }}
+                        >
+                          {evidence.evidence_files.map((f: any, idx: number) => {
+                            const name = f.filename ?? f.fileName ?? `File ${idx + 1}`;
+                            return (
+                              <Tooltip key={`${f.id}-${idx}`} title={`Preview ${name}`}>
+                                <Chip
+                                  label={name}
+                                  size="small"
+                                  clickable
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPreview?.(evidence.id || 0, idx);
+                                  }}
+                                  sx={{
+                                    "height": 20,
+                                    "fontSize": 11,
+                                    "maxWidth": 180,
+                                    "& .MuiChip-label": {
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    },
+                                  }}
+                                />
+                              </Tooltip>
+                            );
+                          })}
+                        </Box>
+                      )}
+                    </Stack>
                   </TableCell>
                 )}
                 {isColVisible("evidence_type") && (
@@ -412,6 +471,19 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                         evidence.mapped_model_ids?.length
                           ? evidence.mapped_model_ids
                               .map((id) => modelMap.get(id) || `Model ${id}`)
+                              .join(", ")
+                          : "-"
+                      }
+                    />
+                  </TableCell>
+                )}
+                {isColVisible("mapped_trainings") && (
+                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                    <TooltipCell
+                      value={
+                        evidence.mapped_training_ids?.length
+                          ? evidence.mapped_training_ids
+                              .map((id) => trainingMap.get(id) || `Training ${id}`)
                               .join(", ")
                           : "-"
                       }
@@ -479,9 +551,11 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                 )}
                 {isColVisible("uploaded_on") && (
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.evidence_files && evidence.evidence_files.length > 0
-                      ? displayFormattedDate(evidence.evidence_files[0].upload_date)
-                      : "-"}
+                    {(() => {
+                      const f = evidence.evidence_files?.[0] as any;
+                      const d = f?.upload_date ?? f?.uploaded_time;
+                      return d ? displayFormattedDate(d) : "-";
+                    })()}
                   </TableCell>
                 )}
                 {isColVisible("expiry_date") && (
@@ -497,6 +571,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                       onEdit={() => {
                         onEdit?.(evidence.id || 0);
                       }}
+                      onPreview={onPreview ? () => onPreview(evidence.id || 0) : undefined}
                       type=""
                       warningTitle="Delete this evidence?"
                       warningMessage="When you delete this evidence, all data related to this evidence will be removed. This action is non-recoverable."
@@ -541,6 +616,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
       deletingId,
       userMap,
       onEdit,
+      onPreview,
       modelMap,
       onDelete,
       isColVisible,

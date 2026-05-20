@@ -11,5 +11,6 @@ module.exports = {
     ...tsJestTransformCfg,
   },
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
+  testPathIgnorePatterns: ["/helpers/"],
   forceExit: true,
 };

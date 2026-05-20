@@ -488,17 +488,26 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
   policy: {
     tableName: "policy_change_history",
     foreignKeyField: "policy_id",
-    fieldsToTrack: ["title", "status", "tags", "next_review_date", "assigned_reviewer_ids"],
+    fieldsToTrack: [
+      "title",
+      "status",
+      "tags",
+      "next_review_date",
+      "policy_owner_id",
+      "assigned_reviewer_ids",
+    ],
     fieldLabels: {
       title: "Title",
       status: "Status",
       tags: "Tags",
       next_review_date: "Next review date",
+      policy_owner_id: "Policy owner",
       assigned_reviewer_ids: "Assigned reviewers",
     },
     fieldFormatters: {
       tags: GENERIC_FORMATTERS.array,
       next_review_date: GENERIC_FORMATTERS.date,
+      policy_owner_id: GENERIC_FORMATTERS.user,
       assigned_reviewer_ids: GENERIC_FORMATTERS.userArray,
     },
   },

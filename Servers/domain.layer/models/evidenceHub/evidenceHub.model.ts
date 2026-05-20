@@ -59,6 +59,12 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
   })
   mapped_model_ids?: number[] | null;
 
+  @Column({
+    type: DataType.ARRAY(DataType.INTEGER),
+    allowNull: true,
+  })
+  mapped_training_ids?: number[] | null;
+
   /** timestamps */
   @Column({
     type: DataType.DATE,
@@ -81,6 +87,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_files: this.evidence_files,
       expiry_date: this.expiry_date?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
+      mapped_training_ids: this.mapped_training_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };
@@ -99,6 +106,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_files: this.evidence_files,
       expiry_date: this.expiry_date?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
+      mapped_training_ids: this.mapped_training_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };
@@ -115,6 +123,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_files: data.evidence_files ?? existingEvidence.evidence_files,
       expiry_date: data.expiry_date ?? existingEvidence.expiry_date,
       mapped_model_ids: data.mapped_model_ids ?? existingEvidence.mapped_model_ids,
+      mapped_training_ids: data.mapped_training_ids ?? existingEvidence.mapped_training_ids,
       updated_at: new Date(),
     });
 

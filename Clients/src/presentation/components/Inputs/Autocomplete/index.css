@@ -1,0 +1,30 @@
+/* Cap the chip area height so many selections don't grow the field
+   vertically and push surrounding layout (e.g. policy editor textarea). */
+.MuiAutocomplete-root .MuiAutocomplete-inputRoot {
+  max-height: 78px !important;
+  overflow-y: auto !important;
+  align-content: flex-start !important;
+  flex-wrap: wrap !important;
+}
+
+.MuiAutocomplete-root .MuiAutocomplete-inputRoot::-webkit-scrollbar {
+  width: 6px;
+}
+
+.MuiAutocomplete-root .MuiAutocomplete-inputRoot::-webkit-scrollbar-thumb {
+  background-color: #d0d5dd;
+  border-radius: 3px;
+}
+
+/* Prevent a single long chip label from pushing the field's neighbors.
+   Chip stays inside its column and truncates with ellipsis. */
+.MuiAutocomplete-root .MuiAutocomplete-tag {
+  flex-shrink: 0 !important;
+  max-width: calc(100% - 8px) !important;
+}
+
+.MuiAutocomplete-root .MuiAutocomplete-tag .MuiChip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

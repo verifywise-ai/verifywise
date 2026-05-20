@@ -121,11 +121,13 @@ export async function createNewEvidence(req: Request, res: Response) {
   try {
     const evidence = new EvidenceHubModel({
       ...req.body,
-      // evidence_files: JSON.stringify(req.body.evidence_files),
       uploaded_at: new Date(),
       created_at: new Date(),
       updated_at: new Date(),
     });
+    // evidence_files is not a @Column — Sequelize's constructor strips it.
+    // Re-attach so createNewEvidenceQuery can create file_entity_links rows.
+    (evidence as any).evidence_files = req.body.evidence_files;
 
     const savedEvidence = await createNewEvidenceQuery(evidence, req.organizationId!, transaction);
 

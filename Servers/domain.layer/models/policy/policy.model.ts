@@ -55,6 +55,13 @@ export class PolicyManagerModel extends Model<PolicyManagerModel> implements IPo
   @ForeignKey(() => UserModel)
   @Column({
     type: DataType.INTEGER,
+    allowNull: true,
+  })
+  policy_owner_id?: number | null;
+
+  @ForeignKey(() => UserModel)
+  @Column({
+    type: DataType.INTEGER,
     allowNull: false,
   })
   last_updated_by!: number;
@@ -111,6 +118,7 @@ export class PolicyManagerModel extends Model<PolicyManagerModel> implements IPo
       tags: this.tags,
       next_review_date: this.next_review_date,
       author_id: this.author_id,
+      policy_owner_id: this.policy_owner_id,
       last_updated_by: this.last_updated_by,
       last_updated_at: this.last_updated_at,
       review_status: this.review_status,

@@ -69,21 +69,25 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 };
 
 export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
-  const result = await sequelize.query(
-    `SELECT * FROM policy_manager
-     WHERE organization_id = :organizationId
-     AND next_review_date IS NOT NULL
-     AND next_review_date <= NOW() + INTERVAL '${daysAhead} days'
-     AND next_review_date >= NOW()
-     ORDER BY next_review_date ASC`,
+  const result = (await sequelize.query(
+    `SELECT 
+        pm.*,
+        array_agg(pm_rev.user_id) AS reviewer_ids
+      FROM verifywise.policy_manager AS pm
+      INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
+        ON pm.id = pm_rev.policy_manager_id
+      WHERE pm.organization_id = :organizationId
+        AND pm.next_review_date IS NOT NULL
+        AND pm.next_review_date <= NOW() + INTERVAL '${daysAhead} days'
+        AND pm.next_review_date >= NOW()
+      GROUP BY pm.id
+      ORDER BY pm.next_review_date ASC;`,
     {
       replacements: { organizationId },
-      mapToModel: true,
-      model: PolicyManagerModel,
     },
-  );
+  )) as [(PolicyManagerModel & { reviewer_ids: number[] })[], number];
 
-  return result;
+  return result[0];
 };
 
 export const getPolicyByIdQuery = async (organizationId: number, id: number) => {
@@ -124,12 +128,15 @@ export const createPolicyQuery = async (
 ) => {
   verifyPolicyTags(policy.tags || []);
 
+  const ownerId = policy.policy_owner_id ?? null;
+  const reviewerIds = (policy.assigned_reviewer_ids || []).filter((id) => id !== ownerId);
+
   // Insert policy without assigned_reviewer_ids
   const result = (await sequelize.query(
     `INSERT INTO policy_manager (
-      organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
+      organization_id, title, content_html, status, tags, next_review_date, author_id, policy_owner_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
-      :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, :is_demo
+      :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
     ) RETURNING *`,
     {
       replacements: {
@@ -140,6 +147,7 @@ export const createPolicyQuery = async (
         tags: policy.tags,
         next_review_date: policy.next_review_date,
         author_id: userId,
+        policy_owner_id: ownerId,
         last_updated_by: userId,
         last_updated_at: new Date(),
         is_demo: policy.is_demo || false,
@@ -153,8 +161,8 @@ export const createPolicyQuery = async (
   const policyId = createdPolicy.id;
 
   // Insert assigned reviewers into mapping table
-  if (policy.assigned_reviewer_ids && policy.assigned_reviewer_ids.length > 0) {
-    for (const reviewerId of policy.assigned_reviewer_ids) {
+  if (reviewerIds.length > 0) {
+    for (const reviewerId of reviewerIds) {
       await sequelize.query(
         `INSERT INTO policy_manager__assigned_reviewer_ids
          (organization_id, policy_manager_id, user_id)
@@ -168,7 +176,7 @@ export const createPolicyQuery = async (
   }
 
   // Add assigned_reviewer_ids to the returned object for consistency
-  createdPolicy.assigned_reviewer_ids = policy.assigned_reviewer_ids || [];
+  createdPolicy.assigned_reviewer_ids = reviewerIds;
 
   const automations = (await sequelize.query(
     `SELECT
@@ -244,12 +252,22 @@ export const updatePolicyByIdQuery = async (
     "status",
     "tags",
     "next_review_date",
+    "policy_owner_id",
     "last_updated_by",
     "last_updated_at",
   ]
     .filter((f) => {
       if (f === "last_updated_by" || f === "last_updated_at") {
         return true;
+      }
+
+      // policy_owner_id is nullable — accept null/undefined explicitly so the caller can clear it
+      if (f === "policy_owner_id") {
+        if (policy.policy_owner_id !== undefined) {
+          updatePolicy.policy_owner_id = policy.policy_owner_id;
+          return true;
+        }
+        return false;
       }
 
       if (policy[f as keyof IPolicy] !== undefined && policy[f as keyof IPolicy]) {
@@ -282,8 +300,18 @@ export const updatePolicyByIdQuery = async (
     type: QueryTypes.UPDATE,
   });
 
+  // Determine the effective owner after this update so reviewers can be filtered.
+  const effectiveOwnerId =
+    policy.policy_owner_id !== undefined
+      ? policy.policy_owner_id
+      : ((existingPolicy[0] as any)?.policy_owner_id ?? null);
+
   // Handle assigned_reviewer_ids update
   if (policy.assigned_reviewer_ids !== undefined) {
+    const reviewerIds = (policy.assigned_reviewer_ids || []).filter(
+      (rid) => rid !== effectiveOwnerId,
+    );
+
     // Delete existing reviewer mappings
     await sequelize.query(
       `DELETE FROM policy_manager__assigned_reviewer_ids
@@ -295,8 +323,8 @@ export const updatePolicyByIdQuery = async (
     );
 
     // Insert new reviewer mappings
-    if (policy.assigned_reviewer_ids && policy.assigned_reviewer_ids.length > 0) {
-      for (const reviewerId of policy.assigned_reviewer_ids) {
+    if (reviewerIds.length > 0) {
+      for (const reviewerId of reviewerIds) {
         await sequelize.query(
           `INSERT INTO policy_manager__assigned_reviewer_ids
            (organization_id, policy_manager_id, user_id)
@@ -308,6 +336,19 @@ export const updatePolicyByIdQuery = async (
         );
       }
     }
+  } else if (policy.policy_owner_id !== undefined && effectiveOwnerId !== null) {
+    // Owner changed but reviewers payload not supplied — still remove the owner
+    // from the existing reviewers so they never both hold the same user.
+    await sequelize.query(
+      `DELETE FROM policy_manager__assigned_reviewer_ids
+       WHERE organization_id = :organizationId
+         AND policy_manager_id = :policyId
+         AND user_id = :ownerId`,
+      {
+        replacements: { organizationId, policyId: id, ownerId: effectiveOwnerId },
+        transaction,
+      },
+    );
   }
 
   // Get the updated policy with reviewer IDs

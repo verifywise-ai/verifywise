@@ -119,5 +119,5 @@
     "domain.layer/tests/**/*.ts",
     "domain.layer/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist", "migrations", "database/migrations"]
+  "exclude": ["node_modules", "dist", "migrations", "database/migrations", "controllers/__tests__"]
 }

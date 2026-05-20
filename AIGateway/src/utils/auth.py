@@ -46,3 +46,10 @@ def require_admin(request: Request) -> None:
     role = get_role(request)
     if role != "Admin":
         raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def require_admin_or_editor(request: Request) -> None:
+    """Raise 403 if the user is not an Admin or Editor."""
+    role = get_role(request)
+    if role not in ("Admin", "Editor"):
+        raise HTTPException(status_code=403, detail="Admin or Editor access required")

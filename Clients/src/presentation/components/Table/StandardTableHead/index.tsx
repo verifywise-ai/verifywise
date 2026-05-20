@@ -56,8 +56,7 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
               </Box>
             </TableCell>
           )}
-          {columns.map((column, index) => {
-            const isFirstColumn = index === 0;
+          {columns.map((column) => {
             const isActionColumn = column.id === "actions";
 
             return (
@@ -65,7 +64,7 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
                 key={column.id}
                 sx={{
                   ...singleTheme.tableStyles.primary.header.cell,
-                  textAlign: column.align ?? (isFirstColumn ? "left" : "center"),
+                  textAlign: column.align ?? "left",
                   ...(column.sortable
                     ? {
                         "cursor": "pointer",

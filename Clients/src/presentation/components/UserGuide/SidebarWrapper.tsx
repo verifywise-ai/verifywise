@@ -52,6 +52,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
   const [activeTab, setActiveTab] = useState<Tab>("user-guide");
   const [collectionId, setCollectionId] = useState<string | undefined>();
   const [articleId, setArticleId] = useState<string | undefined>();
+  const [targetSectionId, setTargetSectionId] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [contentWidth, setContentWidthLocal] = useState(DEFAULT_CONTENT_WIDTH);
@@ -112,16 +113,19 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
     return getDomainByPath(location.pathname);
   };
 
-  // Parse initial path and switch to user-guide tab
+  // Parse initial path and switch to user-guide tab.
+  // Path syntax: "collection/article" or "collection/article#sectionId".
   useEffect(() => {
     if (initialPath) {
-      const parts = initialPath.split("/");
+      const [pathPart, section] = initialPath.split("#");
+      const parts = pathPart.split("/");
       if (parts.length >= 1 && parts[0]) {
         setCollectionId(parts[0]);
         if (parts.length >= 2 && parts[1]) {
           setArticleId(parts[1]);
         }
       }
+      setTargetSectionId(section || undefined);
       setActiveTab("user-guide");
     }
   }, [initialPath]);
@@ -331,6 +335,8 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
             nextArticle ? () => handleNavigate(collectionId!, nextArticle.id) : undefined
           }
           tocItems={tocItems}
+          targetSectionId={targetSectionId}
+          onSectionScrolled={() => setTargetSectionId(undefined)}
           mode="in-app"
         >
           {articleContent && (

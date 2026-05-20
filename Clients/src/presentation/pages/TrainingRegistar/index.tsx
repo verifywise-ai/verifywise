@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from "react";
 import { Box, Stack, Fade } from "@mui/material";
+import TabContext from "@mui/lab/TabContext";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -32,6 +33,14 @@ import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
+import TabBar from "../../components/TabBar";
+import EvidenceHubTable from "../ModelInventory/evidenceHubTable";
+import NewTrainingEvidence from "../../../presentation/components/Modals/NewTrainingEvidence";
+import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evidenceHub.model";
+import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
+import { FilePreviewPanel } from "../FileManager/components/FilePreviewPanel";
+import { FileMetadata } from "../../../application/repository/file.repository";
+import { User } from "../../../domain/types/User";
 
 const Alert = React.lazy(() => import("../../../presentation/components/Alert"));
 
@@ -65,6 +74,15 @@ const createAlert = (variant: AlertVariant, body: string, title?: string): Alert
   title,
 });
 
+// Year-first format ("2026 Q1") keeps chronological order under localeCompare.
+const getQuarterLabel = (raw: unknown): string => {
+  if (!raw) return "Undated";
+  const d = new Date(raw as string | number | Date);
+  if (Number.isNaN(d.getTime())) return "Undated";
+  const quarter = Math.floor(d.getMonth() / 3) + 1;
+  return `${d.getFullYear()} Q${quarter}`;
+};
+
 // Column type for Training table
 type TrainingColumn =
   | "training_name"
@@ -84,6 +102,32 @@ const TRAINING_COLUMNS: ColumnConfig<TrainingColumn>[] = [
   { key: "numberOfPeople", label: "People", defaultVisible: true },
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
+
+type EvidenceColumn =
+  | "evidence_name"
+  | "evidence_type"
+  | "mapped_trainings"
+  | "uploaded_by"
+  | "uploaded_on"
+  | "expiry_date"
+  | "actions";
+
+const EVIDENCE_COLUMNS: ColumnConfig<EvidenceColumn>[] = [
+  { key: "evidence_name", label: "Evidence name", defaultVisible: true, alwaysVisible: true },
+  { key: "evidence_type", label: "Type", defaultVisible: true },
+  { key: "mapped_trainings", label: "Mapped trainings", defaultVisible: true },
+  { key: "uploaded_by", label: "Uploaded by", defaultVisible: true },
+  { key: "uploaded_on", label: "Uploaded on", defaultVisible: true },
+  { key: "expiry_date", label: "Expiry", defaultVisible: true },
+  { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
+];
+
+type TrainingTab = "trainings" | "evidence-hub";
+
+const getTabFromPath = (pathname: string): TrainingTab => {
+  if (pathname.includes("/evidence-hub")) return "evidence-hub";
+  return "trainings";
+};
 
 const Training: React.FC = () => {
   const location = useLocation();
@@ -116,8 +160,56 @@ const Training: React.FC = () => {
       columns: TRAINING_COLUMNS,
     });
 
+  // Evidence tab column visibility
+  const {
+    visibleColumns: evidenceVisibleColumns,
+    allColumns: evidenceAllColumns,
+    toggleColumn: evidenceToggleColumn,
+    resetToDefaults: evidenceResetToDefaults,
+  } = useColumnVisibility<EvidenceColumn>({
+    tableId: "training-evidence-hub-table",
+    columns: EVIDENCE_COLUMNS,
+  });
+
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
+
+  // GroupBy state - evidence tab
+  const {
+    groupBy: groupByEvidence,
+    groupSortOrder: groupSortOrderEvidence,
+    handleGroupChange: handleGroupChangeEvidence,
+  } = useGroupByState();
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<TrainingTab>(() => getTabFromPath(location.pathname));
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
+  }, [location.pathname]);
+
+  const handleTabChange = (_e: React.SyntheticEvent, newValue: string) => {
+    const next = newValue as TrainingTab;
+    setActiveTab(next);
+    if (next === "trainings") {
+      navigate("/training");
+    } else if (next === "evidence-hub") {
+      navigate("/training/evidence-hub");
+    }
+  };
+
+  // Evidence tab state
+  const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
+  const [isEvidenceLoading, setIsEvidenceLoading] = useState(false);
+  const [isEvidenceHubModalOpen, setIsEvidenceHubModalOpen] = useState(false);
+  const [selectedEvidenceHub, setSelectedEvidenceHub] = useState<EvidenceHubModel | null>(null);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(null);
+  const [evidenceSearchTerm, setEvidenceSearchTerm] = useState("");
+  const [evidenceUsers, setEvidenceUsers] = useState<User[]>([]);
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<FileMetadata[]>([]);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
+  const [isEvidencePreviewOpen, setIsEvidencePreviewOpen] = useState(false);
 
   const fetchTrainingData = useCallback(async () => {
     setIsLoading(true);
@@ -144,6 +236,169 @@ const Training: React.FC = () => {
   useEffect(() => {
     fetchTrainingData();
   }, [fetchTrainingData]);
+
+  const fetchEvidenceData = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsEvidenceLoading(true);
+    try {
+      const response = await getAllEntities({ routeUrl: "/evidenceHub" });
+      if (response?.data) {
+        const trainingScoped = (response.data as EvidenceHubModel[]).filter(
+          (e) => Array.isArray(e.mapped_training_ids) && e.mapped_training_ids.length > 0,
+        );
+        setEvidenceHubData(trainingScoped);
+      }
+    } catch (error) {
+      logEngine({
+        type: "error",
+        message: `Failed to fetch evidence data: ${error}`,
+      });
+    } finally {
+      if (showLoading) setIsEvidenceLoading(false);
+    }
+  }, []);
+
+  const fetchEvidenceUsers = useCallback(async () => {
+    try {
+      const response = await getAllEntities({ routeUrl: "/users" });
+      if (response?.data) setEvidenceUsers(response.data);
+    } catch (error) {
+      logEngine({ type: "error", message: `Failed to fetch users: ${error}` });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "evidence-hub") {
+      fetchEvidenceData();
+      fetchEvidenceUsers();
+    }
+  }, [activeTab, fetchEvidenceData, fetchEvidenceUsers]);
+
+  // Evidence handlers
+  const handleNewUploadEvidenceClick = useCallback(() => {
+    setSelectedEvidenceHub(null);
+    setIsEvidenceHubModalOpen(true);
+  }, []);
+
+  const handleEditEvidence = useCallback(async (id: number) => {
+    try {
+      const response = await getEntityById({ routeUrl: `/evidenceHub/${id}` });
+      if (response?.data) {
+        setSelectedEvidenceHub(response.data);
+        setIsEvidenceHubModalOpen(true);
+      }
+    } catch (error) {
+      logEngine({ type: "error", message: `Failed to load evidence: ${error}` });
+      setAlert({
+        variant: "error",
+        body: "Failed to load evidence details. Please try again.",
+      });
+    }
+  }, []);
+
+  const handleDeleteEvidence = useCallback(
+    async (id: number) => {
+      try {
+        setDeletingEvidenceId(id);
+        await deleteEntityById({ routeUrl: `/evidenceHub/${id}` });
+        await fetchEvidenceData(false);
+        setAlert({ variant: "success", body: "Evidence deleted successfully!" });
+      } catch (error) {
+        logEngine({ type: "error", message: `Failed to delete evidence: ${error}` });
+        setAlert({ variant: "error", body: "Failed to delete evidence. Please try again." });
+      } finally {
+        setDeletingEvidenceId(null);
+      }
+    },
+    [fetchEvidenceData],
+  );
+
+  const handleCloseEvidenceModal = useCallback(() => {
+    setIsEvidenceHubModalOpen(false);
+    setSelectedEvidenceHub(null);
+  }, []);
+
+  const handleEvidenceUploadSuccess = useCallback(
+    async (formData: EvidenceHubModel) => {
+      try {
+        if (selectedEvidenceHub) {
+          await updateEntityById({
+            routeUrl: `/evidenceHub/${selectedEvidenceHub.id}`,
+            body: formData,
+          });
+          setAlert({ variant: "success", body: "Evidence updated successfully!" });
+        } else {
+          await createEvidenceHub("/evidenceHub", formData);
+          setAlert({ variant: "success", body: "New evidence added successfully!" });
+        }
+        await fetchEvidenceData(false);
+        setSelectedEvidenceHub(null);
+        setIsEvidenceHubModalOpen(false);
+      } catch (error) {
+        logEngine({ type: "error", message: `Failed to save evidence: ${error}` });
+        setAlert({
+          variant: "error",
+          body: selectedEvidenceHub
+            ? "Failed to update evidence. Please try again."
+            : "Failed to add new evidence. Please try again.",
+        });
+      }
+    },
+    [selectedEvidenceHub, fetchEvidenceData],
+  );
+
+  const handlePreviewEvidence = useCallback(
+    (id: number, fileIndex: number = 0) => {
+      const evidence = evidenceHubData.find((e) => e.id === id);
+      const rawFiles: any[] = Array.isArray(evidence?.evidence_files)
+        ? (evidence!.evidence_files as any[])
+        : [];
+      if (rawFiles.length === 0) {
+        setAlert({
+          variant: "info",
+          body: "This evidence has no file attached to preview.",
+        });
+        return;
+      }
+      const fileMetas: FileMetadata[] = rawFiles.map((rawFile) => {
+        const filename = rawFile.filename ?? rawFile.fileName;
+        const uploadDate = rawFile.upload_date ?? rawFile.uploaded_time;
+        const sizeRaw = rawFile.size;
+        const size = typeof sizeRaw === "string" ? parseInt(sizeRaw, 10) || 0 : (sizeRaw ?? 0);
+        const mimetype: string | undefined = rawFile.mimetype;
+        const uploader = evidenceUsers.find(
+          (u: any) => String(u.id) === String(rawFile.uploaded_by),
+        );
+        return {
+          id: String(rawFile.id),
+          filename: filename || "Unknown file",
+          size,
+          mimetype: mimetype || "application/octet-stream",
+          upload_date: uploadDate,
+          uploaded_by: String(rawFile.uploaded_by),
+          uploader_name: uploader?.name,
+          uploader_surname: uploader?.surname,
+          tags: evidence?.tags,
+          expiry_date: evidence?.expiry_date
+            ? new Date(evidence.expiry_date).toISOString()
+            : undefined,
+          description: evidence?.description ?? undefined,
+        };
+      });
+      const safeIndex = Math.max(0, Math.min(fileIndex, fileMetas.length - 1));
+      setPreviewFiles(fileMetas);
+      setPreviewIndex(safeIndex);
+      setPreviewFile(fileMetas[safeIndex]);
+      setIsEvidencePreviewOpen(true);
+    },
+    [evidenceHubData, evidenceUsers],
+  );
+
+  const handleCloseEvidencePreview = useCallback(() => {
+    setIsEvidencePreviewOpen(false);
+    setPreviewFile(null);
+    setPreviewFiles([]);
+    setPreviewIndex(0);
+  }, []);
 
   useEffect(() => {
     if (alert) {
@@ -418,6 +673,42 @@ const Training: React.FC = () => {
   const { filterData: filterTrainingData, handleFilterChange: handleTrainingFilterChange } =
     useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
+  // Evidence filter
+  const evidenceFilterColumns: FilterColumn[] = useMemo(() => {
+    const uniqueTypes = new Set<string>();
+    evidenceHubData.forEach((e) => {
+      if (e.evidence_type) uniqueTypes.add(e.evidence_type);
+    });
+    return [
+      { id: "evidence_name", label: "Evidence name", type: "text" as const },
+      {
+        id: "evidence_type",
+        label: "Type",
+        type: "select" as const,
+        options: Array.from(uniqueTypes)
+          .sort()
+          .map((t) => ({ value: t, label: t })),
+      },
+    ];
+  }, [evidenceHubData]);
+
+  const getEvidenceFieldValue = useCallback(
+    (item: EvidenceHubModel, fieldId: string): string | number | Date | null | undefined => {
+      switch (fieldId) {
+        case "evidence_name":
+          return item.evidence_name;
+        case "evidence_type":
+          return item.evidence_type;
+        default:
+          return null;
+      }
+    },
+    [],
+  );
+
+  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
+    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+
   // Filtered trainings using FilterBy and search
   const filteredTraining = useMemo(() => {
     // First apply FilterBy conditions
@@ -447,6 +738,12 @@ const Training: React.FC = () => {
         return training.provider || "Unknown Provider";
       case "department":
         return training.department || "Unknown Department";
+      case "quarter": {
+        // created_at is included in the API response but absent from the client model class.
+        const raw =
+          (training as any).created_at ?? (training as any).createdAt ?? (training as any).created;
+        return getQuarterLabel(raw);
+      }
       default:
         return "Other";
     }
@@ -458,6 +755,55 @@ const Training: React.FC = () => {
     groupByField: groupBy,
     sortOrder: groupSortOrder,
     getGroupKey: getTrainingGroupKey,
+  });
+
+  // Filter + group evidence
+  const filteredEvidence = useMemo(() => {
+    let result = filterEvidenceData(evidenceHubData);
+    if (evidenceSearchTerm.trim()) {
+      const q = evidenceSearchTerm.toLowerCase();
+      result = result.filter(
+        (e) =>
+          (e.evidence_name || "").toLowerCase().includes(q) ||
+          (e.evidence_type || "").toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [filterEvidenceData, evidenceHubData, evidenceSearchTerm]);
+
+  const trainingNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    trainingData.forEach((t) => {
+      const idNum = typeof t.id === "string" ? Number(t.id) : t.id;
+      if (typeof idNum === "number" && !Number.isNaN(idNum)) {
+        map.set(idNum, t.training_name || `Training ${idNum}`);
+      }
+    });
+    return map;
+  }, [trainingData]);
+
+  const getEvidenceGroupKey = useCallback(
+    (item: EvidenceHubModel, field: string): string | string[] => {
+      switch (field) {
+        case "evidence_type":
+          return item.evidence_type || "Unknown type";
+        case "training": {
+          const ids = item.mapped_training_ids || [];
+          if (ids.length === 0) return "Unmapped";
+          return ids.map((id) => trainingNameById.get(id) || `Training ${id}`);
+        }
+        default:
+          return "Other";
+      }
+    },
+    [trainingNameById],
+  );
+
+  const groupedEvidence = useTableGrouping({
+    data: filteredEvidence,
+    groupByField: groupByEvidence,
+    sortOrder: groupSortOrderEvidence,
+    getGroupKey: getEvidenceGroupKey,
   });
 
   // Define export columns for training table
@@ -485,6 +831,27 @@ const Training: React.FC = () => {
       };
     });
   }, [filteredTraining]);
+
+  // Evidence export
+  const evidenceExportColumns = useMemo(() => {
+    return [
+      { id: "evidence_name", label: "Evidence name" },
+      { id: "evidence_type", label: "Type" },
+      { id: "mapped_trainings", label: "Mapped trainings" },
+      { id: "expiry_date", label: "Expiry" },
+    ];
+  }, []);
+
+  const evidenceExportData = useMemo(() => {
+    return filteredEvidence.map((e) => ({
+      evidence_name: e.evidence_name || "-",
+      evidence_type: e.evidence_type || "-",
+      mapped_trainings: e.mapped_training_ids?.length
+        ? e.mapped_training_ids.map((id) => trainingNameById.get(id) || `Training ${id}`).join(", ")
+        : "-",
+      expiry_date: e.expiry_date ? new Date(e.expiry_date as any).toLocaleDateString() : "-",
+    }));
+  }, [filteredEvidence, trainingNameById]);
 
   return (
     <PageHeaderExtended
@@ -523,85 +890,196 @@ const Training: React.FC = () => {
         )
       }
     >
-      {/* Filter + Search row */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        spacing={4}
-        sx={{ width: "100%" }}
-      >
-        {/* Left side: FilterBy, GroupBy, Search */}
-        <Stack direction="row" spacing={2} alignItems="center">
-          <FilterBy columns={trainingFilterColumns} onFilterChange={handleTrainingFilterChange} />
-
-          <GroupBy
-            options={[
-              { id: "status", label: "Status" },
-              { id: "provider", label: "Provider" },
-              { id: "department", label: "Department" },
+      <TabContext value={activeTab}>
+        <Box sx={{ marginBottom: 3 }}>
+          <TabBar
+            tabs={[
+              {
+                label: "Trainings",
+                value: "trainings",
+                icon: "Box",
+                count: trainingData.length,
+                isLoading: isLoading,
+                tooltip: "All AI-related training programs",
+              },
+              {
+                label: "Evidence hub",
+                value: "evidence-hub",
+                icon: "Database" as const,
+                count: evidenceHubData.length,
+                isLoading: isEvidenceLoading,
+                tooltip: "Compliance evidence linked to trainings",
+              },
             ]}
-            onGroupChange={handleGroupChange}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            dataJoyrideId="training-tabs"
           />
+        </Box>
+      </TabContext>
 
-          <ColumnSelector
-            columns={allColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
+      {activeTab === "trainings" && (
+        <>
+          {/* Filter + Search row */}
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ gap: "20px" }}
+          >
+            {/* Left side: FilterBy, GroupBy, Search */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <FilterBy
+                columns={trainingFilterColumns}
+                onFilterChange={handleTrainingFilterChange}
+              />
+
+              <GroupBy
+                options={[
+                  { id: "status", label: "Status" },
+                  { id: "provider", label: "Provider" },
+                  { id: "department", label: "Department" },
+                  { id: "quarter", label: "Quarter (year)" },
+                ]}
+                onGroupChange={handleGroupChange}
+              />
+
+              <ColumnSelector
+                columns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
+              />
+
+              <SearchBox
+                placeholder="Search trainings..."
+                value={searchTerm}
+                onChange={setSearchTerm}
+                inputProps={{ "aria-label": "Search trainings" }}
+                fullWidth={false}
+              />
+            </Stack>
+
+            {/* Right side: Export and Add Button */}
+            <Stack direction="row" gap="8px" alignItems="center">
+              <ExportMenu
+                data={exportData}
+                columns={exportColumns}
+                filename="training-registry"
+                title="Training Registry"
+              />
+              <Box data-joyride-id="add-training-button">
+                <CustomizableButton
+                  variant="contained"
+                  sx={{
+                    backgroundColor: "brand.primary",
+                    border: "1px solid brand.primary",
+                    gap: 2,
+                  }}
+                  text="New training"
+                  icon={<AddCircleOutlineIcon size={16} />}
+                  onClick={handleNewTrainingClick}
+                  isDisabled={isCreatingDisabled}
+                />
+              </Box>
+            </Stack>
+          </Stack>
+
+          {/* Table */}
+          <GroupedTableView
+            groupedData={groupedTraining}
+            ungroupedData={filteredTraining}
+            renderTable={(data, options) => (
+              <TrainingTable
+                data={data}
+                isLoading={isLoading}
+                onEdit={handleEditTraining}
+                onDelete={handleDeleteTraining}
+                hidePagination={options?.hidePagination}
+                visibleColumns={visibleColumns as Set<string>}
+              />
+            )}
           />
+        </>
+      )}
 
-          <SearchBox
-            placeholder="Search trainings..."
-            value={searchTerm}
-            onChange={setSearchTerm}
-            inputProps={{ "aria-label": "Search trainings" }}
-            fullWidth={false}
+      {activeTab === "evidence-hub" && (
+        <>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ gap: "20px" }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center">
+              <FilterBy
+                columns={evidenceFilterColumns}
+                onFilterChange={handleEvidenceFilterChange}
+              />
+              <GroupBy
+                options={[
+                  { id: "evidence_type", label: "Evidence type" },
+                  { id: "training", label: "Training" },
+                ]}
+                onGroupChange={handleGroupChangeEvidence}
+              />
+              <ColumnSelector
+                columns={evidenceAllColumns}
+                visibleColumns={evidenceVisibleColumns}
+                onToggleColumn={evidenceToggleColumn}
+                onResetToDefaults={evidenceResetToDefaults}
+              />
+              <SearchBox
+                placeholder="Search evidence..."
+                value={evidenceSearchTerm}
+                onChange={setEvidenceSearchTerm}
+                inputProps={{ "aria-label": "Search evidence" }}
+                fullWidth={false}
+              />
+            </Stack>
+
+            <Stack direction="row" gap="8px" alignItems="center">
+              <ExportMenu
+                data={evidenceExportData}
+                columns={evidenceExportColumns}
+                filename="training-evidence-hub"
+                title="Training Evidence Hub"
+              />
+              <CustomizableButton
+                variant="contained"
+                sx={{
+                  backgroundColor: "brand.primary",
+                  border: "1px solid brand.primary",
+                  gap: 2,
+                }}
+                text="Upload evidence"
+                icon={<AddCircleOutlineIcon size={16} />}
+                onClick={handleNewUploadEvidenceClick}
+                isDisabled={isCreatingDisabled}
+              />
+            </Stack>
+          </Stack>
+
+          <GroupedTableView
+            groupedData={groupedEvidence}
+            ungroupedData={filteredEvidence}
+            renderTable={(data, options) => (
+              <EvidenceHubTable
+                data={data}
+                isLoading={isEvidenceLoading}
+                onEdit={handleEditEvidence}
+                onDelete={handleDeleteEvidence}
+                onPreview={handlePreviewEvidence}
+                modelInventoryData={[]}
+                trainingData={trainingData as any}
+                deletingId={deletingEvidenceId}
+                hidePagination={options?.hidePagination}
+                visibleColumns={evidenceVisibleColumns as Set<string>}
+              />
+            )}
           />
-        </Stack>
-
-        {/* Right side: Export and Add Button */}
-        <Stack direction="row" gap="8px" alignItems="center">
-          <ExportMenu
-            data={exportData}
-            columns={exportColumns}
-            filename="training-registry"
-            title="Training Registry"
-          />
-          <Box data-joyride-id="add-training-button">
-            <CustomizableButton
-              variant="contained"
-              sx={{
-                backgroundColor: "brand.primary",
-                border: "1px solid brand.primary",
-                gap: 2,
-              }}
-              text="New training"
-              icon={<AddCircleOutlineIcon size={16} />}
-              onClick={handleNewTrainingClick}
-              isDisabled={isCreatingDisabled}
-            />
-          </Box>
-        </Stack>
-      </Stack>
-
-      {/* Table */}
-      <Box sx={{ mt: 1 }}>
-        <GroupedTableView
-          groupedData={groupedTraining}
-          ungroupedData={filteredTraining}
-          renderTable={(data, options) => (
-            <TrainingTable
-              data={data}
-              isLoading={isLoading}
-              onEdit={handleEditTraining}
-              onDelete={handleDeleteTraining}
-              hidePagination={options?.hidePagination}
-              visibleColumns={visibleColumns as Set<string>}
-            />
-          )}
-        />
-      </Box>
+        </>
+      )}
 
       {/* Modal */}
       <NewTraining
@@ -611,6 +1089,27 @@ const Training: React.FC = () => {
         initialData={selectedTraining ? mapTrainingToFormData(selectedTraining) : undefined}
         isEdit={!!selectedTraining}
         entityId={selectedTraining?.id ? Number(selectedTraining.id) : undefined}
+      />
+
+      <NewTrainingEvidence
+        isOpen={isEvidenceHubModalOpen}
+        setIsOpen={handleCloseEvidenceModal}
+        onSuccess={handleEvidenceUploadSuccess}
+        initialData={selectedEvidenceHub || undefined}
+        isEdit={!!selectedEvidenceHub}
+      />
+
+      <FilePreviewPanel
+        isOpen={isEvidencePreviewOpen}
+        onClose={handleCloseEvidencePreview}
+        file={previewFile}
+        files={previewFiles}
+        currentIndex={previewIndex}
+        onNavigate={(newIndex: number) => {
+          if (newIndex < 0 || newIndex >= previewFiles.length) return;
+          setPreviewIndex(newIndex);
+          setPreviewFile(previewFiles[newIndex]);
+        }}
       />
 
       <PageTour steps={TrainingSteps} run={true} tourKey="training-tour" />

@@ -19,7 +19,17 @@ import {
   Divider,
   Tooltip,
 } from "@mui/material";
-import { X, Download, Pencil, FileText, Image, FileType, FileSpreadsheet } from "lucide-react";
+import {
+  X,
+  Download,
+  Pencil,
+  FileText,
+  Image,
+  FileType,
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   FileMetadata,
   downloadFileFromManager,
@@ -40,6 +50,10 @@ interface FilePreviewPanelProps {
   file: FileMetadata | null;
   onEdit?: (file: FileMetadata) => void;
   onDownload?: (file: FileMetadata) => void;
+  /** Full file list for prev/next navigation. When provided with length > 1, header shows navigation. */
+  files?: FileMetadata[];
+  currentIndex?: number;
+  onNavigate?: (newIndex: number) => void;
 }
 
 type PreviewType = "pdf" | "image" | "text" | "office" | "unsupported";
@@ -104,7 +118,14 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   file,
   onEdit,
   onDownload,
+  files,
+  currentIndex,
+  onNavigate,
 }) => {
+  const fileCount = files?.length ?? 0;
+  const canNavigate = !!onNavigate && fileCount > 1 && typeof currentIndex === "number";
+  const canPrev = canNavigate && (currentIndex as number) > 0;
+  const canNext = canNavigate && (currentIndex as number) < fileCount - 1;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -414,19 +435,55 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           borderBottom: "1px solid #E0E4E9",
         }}
       >
-        <Typography
-          sx={{
-            fontSize: 16,
-            fontWeight: 600,
-            color: "#101828",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            maxWidth: "70%",
-          }}
-        >
-          {file?.filename || "File preview"}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
+          {canNavigate && (
+            <Tooltip title="Previous file">
+              <span>
+                <IconButton
+                  onClick={() => onNavigate?.((currentIndex as number) - 1)}
+                  size="small"
+                  disabled={!canPrev}
+                  sx={{ color: "text.icon" }}
+                >
+                  <ChevronLeft size={18} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#101828",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            {file?.filename || "File preview"}
+          </Typography>
+          {canNavigate && (
+            <>
+              <Typography sx={{ fontSize: 12, color: "text.icon", whiteSpace: "nowrap" }}>
+                {(currentIndex as number) + 1} / {fileCount}
+              </Typography>
+              <Tooltip title="Next file">
+                <span>
+                  <IconButton
+                    onClick={() => onNavigate?.((currentIndex as number) + 1)}
+                    size="small"
+                    disabled={!canNext}
+                    sx={{ color: "text.icon" }}
+                  >
+                    <ChevronRight size={18} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </>
+          )}
+        </Box>
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           {onEdit && file && (
             <IconButton onClick={() => onEdit(file)} size="small" sx={{ color: "text.icon" }}>

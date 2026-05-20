@@ -15,6 +15,7 @@ export class EvidenceHubModel {
   evidence_files: FileResponse[] = [];
   expiry_date?: Date | null;
   mapped_model_ids?: number[] | null;
+  mapped_training_ids?: number[] | null;
   tags?: string[];
   framework_ids?: string[];
   reviewer_id?: number | null;
@@ -30,6 +31,7 @@ export class EvidenceHubModel {
     this.evidence_files = data.evidence_files ?? [];
     this.expiry_date = data.expiry_date ? new Date(data.expiry_date) : null;
     this.mapped_model_ids = data.mapped_model_ids ?? null;
+    this.mapped_training_ids = data.mapped_training_ids ?? null;
     this.tags = data.tags ?? [];
     this.framework_ids = data.framework_ids ?? [];
     this.reviewer_id = data.reviewer_id ?? null;

@@ -4995,6 +4995,10 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
+    "EU AI Act control workflow, clearable selects, and AI advisor fix":
+      "EU-KI-Verordnungs-Kontroll-Workflow, löschbare Auswahlfelder und KI-Berater-Fix",
+    "Training evidence uploads, governance score helper, and policy ownership":
+      "Schulungsnachweis-Uploads, Governance-Punktzahl-Helfer und Richtlinien-Verantwortliche",
     "AI Lifecycle Risk Management": "Risikomanagement im KI-Lebenszyklus",
     "AI Literacy and Responsible AI Training": "KI-Kompetenz- und Responsible-AI-Schulung",
     "AI Management System": "KI-Managementsystem",
@@ -7715,6 +7719,58 @@ export const translations: Record<string, Record<string, string>> = {
       "Sie haben jetzt mehrere Frameworks zugewiesen. Aktivieren Sie Governance OS, um übergreifende Zuordnungen zu erkunden, intelligente Empfehlungen zu erhalten und die Abdeckung über alle Frameworks hinweg zu analysieren.",
     "Your compliance dashboard will prioritize tasks from the primary framework first":
       "Ihr Compliance-Dashboard priorisiert zuerst Aufgaben aus dem primären Framework",
+    "All AI-related training programs": "Alle KI-bezogenen Schulungsprogramme",
+    "Assessment Result": "Bewertungsergebnis",
+    "Attendance Record": "Anwesenheitsnachweis",
+    "Compliance evidence linked to trainings": "Mit Schulungen verknüpfte Compliance-Nachweise",
+    "Course Completion": "Kursabschluss",
+    "Delete evidence": "Nachweis löschen",
+    "Failed to load evidence details. Please try again.":
+      "Nachweisdetails konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "MAPPED TRAININGS": "ZUGEORDNETE SCHULUNGEN",
+    "Mapped trainings": "Zugeordnete Schulungen",
+    "Next file": "Nächste Datei",
+    "No evidence uploaded yet for this training.":
+      "Für diese Schulung wurden noch keine Nachweise hochgeladen.",
+    "No files uploaded yet.": "Noch keine Dateien hochgeladen.",
+    "Optional notes about this evidence": "Optionale Notizen zu diesem Nachweis",
+    "Policy owner": "Richtlinienverantwortlicher",
+    "Previous file": "Vorherige Datei",
+    "Quarter (year)": "Quartal (Jahr)",
+    "Select a training": "Schulung auswählen",
+    "Select a type": "Typ auswählen",
+    "Select policy owner": "Richtlinienverantwortlichen auswählen",
+    "This evidence has no file attached to preview.":
+      "Diesem Nachweis ist keine Datei zur Vorschau angehängt.",
+    "Training Certificate": "Schulungszertifikat",
+    "Training Evidence Hub": "Schulungsnachweiszentrale",
+    "Upload certificates, attendance proofs, or other compliance evidence for this training.":
+      "Laden Sie Zertifikate, Anwesenheitsnachweise oder andere Compliance-Nachweise für diese Schulung hoch.",
+
+    // Training & evidence modals
+    "Edit training": "Schulung bearbeiten",
+    "Update training": "Schulung aktualisieren",
+    "Create training": "Schulung erstellen",
+    "Edit training evidence": "Schulungsnachweis bearbeiten",
+    "Upload training evidence": "Schulungsnachweis hochladen",
+    "Update evidence": "Nachweis aktualisieren",
+    "Save evidence": "Nachweis speichern",
+    "Add more files": "Weitere Dateien hinzufügen",
+    "Upload files": "Dateien hochladen",
+    "Status is required.": "Status ist erforderlich.",
+    "Number of people is required and must be a positive number.":
+      "Personenanzahl ist erforderlich und muss eine positive Zahl sein.",
+    "Evidence name is required": "Nachweisname ist erforderlich",
+    "Please upload at least one file": "Bitte laden Sie mindestens eine Datei hoch",
+    "Please select a training": "Bitte wählen Sie eine Schulung",
+    "Record and manage your organization's AI literacy and compliance trainings. Enter training details such as name, provider, duration, department, participants, and status to keep a clear history of all AI-related education initiatives.":
+      "Erfassen und verwalten Sie die KI-Kompetenz- und Compliance-Schulungen Ihrer Organisation. Geben Sie Schulungsdetails wie Name, Anbieter, Dauer, Abteilung, Teilnehmer und Status ein, um einen klaren Verlauf aller KI-bezogenen Bildungsinitiativen zu führen.",
+
+    // Policy form
+    "Under Review": "In Überprüfung",
+    "All members selected": "Alle Mitglieder ausgewählt",
+    "No options": "Keine Optionen",
+    "All tags selected": "Alle Tags ausgewählt",
   },
 
   fr: {
@@ -12638,6 +12694,10 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
+    "EU AI Act control workflow, clearable selects, and AI advisor fix":
+      "Workflow des contrôles du Règlement IA de l'UE, sélections effaçables et correctif de l'assistant IA",
+    "Training evidence uploads, governance score helper, and policy ownership":
+      "Téléversement des preuves de formation, assistant du score de gouvernance et propriété des politiques",
     "AI Lifecycle Risk Management": "Gestion des risques du cycle de vie IA",
     "AI Literacy and Responsible AI Training": "Formation à la culture IA et à l'IA responsable",
     "AI Management System": "Système de management de l'IA",
@@ -15359,5 +15419,57 @@ export const translations: Record<string, Record<string, string>> = {
       "Vous avez désormais plusieurs référentiels assignés. Activez Governance OS pour explorer les correspondances inter-référentiels, obtenir des recommandations intelligentes et analyser la couverture sur l'ensemble de vos référentiels.",
     "Your compliance dashboard will prioritize tasks from the primary framework first":
       "Votre tableau de bord de conformité priorisera d'abord les tâches du référentiel principal",
+    "All AI-related training programs": "Tous les programmes de formation liés à l'IA",
+    "Assessment Result": "Résultat d'évaluation",
+    "Attendance Record": "Registre de présence",
+    "Compliance evidence linked to trainings": "Preuves de conformité liées aux formations",
+    "Course Completion": "Achèvement du cours",
+    "Delete evidence": "Supprimer la preuve",
+    "Failed to load evidence details. Please try again.":
+      "Échec du chargement des détails de la preuve. Veuillez réessayer.",
+    "MAPPED TRAININGS": "FORMATIONS ASSOCIÉES",
+    "Mapped trainings": "Formations associées",
+    "Next file": "Fichier suivant",
+    "No evidence uploaded yet for this training.":
+      "Aucune preuve n'a encore été téléversée pour cette formation.",
+    "No files uploaded yet.": "Aucun fichier téléversé pour le moment.",
+    "Optional notes about this evidence": "Notes facultatives concernant cette preuve",
+    "Policy owner": "Responsable de la politique",
+    "Previous file": "Fichier précédent",
+    "Quarter (year)": "Trimestre (année)",
+    "Select a training": "Sélectionner une formation",
+    "Select a type": "Sélectionner un type",
+    "Select policy owner": "Sélectionner le responsable de la politique",
+    "This evidence has no file attached to preview.":
+      "Aucun fichier n'est attaché à cette preuve pour l'aperçu.",
+    "Training Certificate": "Certificat de formation",
+    "Training Evidence Hub": "Centre de preuves de formation",
+    "Upload certificates, attendance proofs, or other compliance evidence for this training.":
+      "Téléversez des certificats, des justificatifs de présence ou d'autres preuves de conformité pour cette formation.",
+
+    // Training & evidence modals
+    "Edit training": "Modifier la formation",
+    "Update training": "Mettre à jour la formation",
+    "Create training": "Créer la formation",
+    "Edit training evidence": "Modifier la preuve de formation",
+    "Upload training evidence": "Téléverser une preuve de formation",
+    "Update evidence": "Mettre à jour la preuve",
+    "Save evidence": "Enregistrer la preuve",
+    "Add more files": "Ajouter d'autres fichiers",
+    "Upload files": "Téléverser des fichiers",
+    "Status is required.": "Le statut est requis.",
+    "Number of people is required and must be a positive number.":
+      "Le nombre de personnes est requis et doit être un nombre positif.",
+    "Evidence name is required": "Le nom de la preuve est requis",
+    "Please upload at least one file": "Veuillez téléverser au moins un fichier",
+    "Please select a training": "Veuillez sélectionner une formation",
+    "Record and manage your organization's AI literacy and compliance trainings. Enter training details such as name, provider, duration, department, participants, and status to keep a clear history of all AI-related education initiatives.":
+      "Enregistrez et gérez les formations à la culture de l'IA et à la conformité de votre organisation. Saisissez les détails de la formation tels que le nom, le fournisseur, la durée, le service, les participants et le statut afin de conserver un historique clair de toutes les initiatives de formation liées à l'IA.",
+
+    // Policy form
+    "Under Review": "En cours de révision",
+    "All members selected": "Tous les membres sélectionnés",
+    "No options": "Aucune option",
+    "All tags selected": "Toutes les étiquettes sélectionnées",
   },
 };

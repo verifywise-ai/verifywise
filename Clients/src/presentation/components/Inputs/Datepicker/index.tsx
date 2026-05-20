@@ -25,26 +25,36 @@ function DatePicker({
 }: DatePickerProps) {
   const theme = useTheme();
 
-  // Extract width, flexGrow, minWidth, maxWidth from sx prop to apply to wrapper Stack
-  const extractedLayoutProps =
-    sx && isRecordSx(sx)
-      ? {
-          width: sx.width as string | number | undefined,
-          flexGrow: sx.flexGrow as number | undefined,
-          minWidth: sx.minWidth as string | number | undefined,
-          maxWidth: sx.maxWidth as string | number | undefined,
-        }
-      : {};
+  const LAYOUT_KEYS = [
+    "width",
+    "flex",
+    "flexGrow",
+    "flexShrink",
+    "flexBasis",
+    "minWidth",
+    "maxWidth",
+  ] as const;
 
-  // Create a copy of sx without layout props to pass to MuiDatePicker
+  const extractedLayoutProps = (() => {
+    if (!sx || !isRecordSx(sx)) return {};
+    const props: Record<string, unknown> = {};
+    LAYOUT_KEYS.forEach((key) => {
+      if (sx[key] !== undefined) props[key] = sx[key];
+    });
+    return props;
+  })();
+
   const sxWithoutLayoutProps =
     sx && isRecordSx(sx)
       ? Object.fromEntries(
-          Object.entries(sx).filter(
-            ([key]) => !["width", "flexGrow", "minWidth", "maxWidth"].includes(key),
-          ),
+          Object.entries(sx).filter(([key]) => !(LAYOUT_KEYS as readonly string[]).includes(key)),
         )
       : sx;
+
+  if (import.meta.env?.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug("[DatePicker] layout", { label, extractedLayoutProps });
+  }
 
   return (
     <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>

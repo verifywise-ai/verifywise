@@ -1,8 +1,23 @@
 import React, { FC, useState, useMemo, useCallback, useEffect } from "react";
-import { useTheme, Stack, Box, SelectChangeEvent } from "@mui/material";
-import { Suspense, lazy } from "react";
-const Field = lazy(() => import("../../Inputs/Field"));
+import {
+  useTheme,
+  Stack,
+  Box,
+  SelectChangeEvent,
+  Typography,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
+import { CirclePlus as AddCircleOutlineIcon, Trash2 } from "lucide-react";
 
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
@@ -17,6 +32,14 @@ import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { logEngine } from "../../../../application/tools/log.engine";
+import NewTrainingEvidence from "../NewTrainingEvidence";
+import { EvidenceHubModel } from "../../../../domain/models/Common/evidenceHub/evidenceHub.model";
+import {
+  getAllEntities,
+  deleteEntityById,
+} from "../../../../application/repository/entity.repository";
+import { createEvidenceHub } from "../../../../application/repository/evidenceHub.repository";
+import { CustomizableButton } from "../../button/customizable-button";
 
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
@@ -80,6 +103,66 @@ const NewTraining: FC<NewTrainingProps> = ({
   const { errors, validateAll, clearFieldError, resetErrors } =
     useFormValidation<TrainingFormState>(validators);
   const [activeTab, setActiveTab] = useState("details");
+
+  // Evidence tab state — only used in edit mode where we have an entityId
+  const [evidenceList, setEvidenceList] = useState<EvidenceHubModel[]>([]);
+  const [isEvidenceLoading, setIsEvidenceLoading] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(null);
+
+  const fetchEvidenceForTraining = useCallback(async () => {
+    if (!entityId) return;
+    setIsEvidenceLoading(true);
+    try {
+      const response = await getAllEntities({ routeUrl: "/evidenceHub" });
+      if (response?.data) {
+        const list = (response.data as EvidenceHubModel[]).filter(
+          (e) =>
+            Array.isArray(e.mapped_training_ids) &&
+            e.mapped_training_ids.includes(Number(entityId)),
+        );
+        setEvidenceList(list);
+      }
+    } catch (error) {
+      logEngine({ type: "error", message: `Failed to fetch training evidence: ${error}` });
+    } finally {
+      setIsEvidenceLoading(false);
+    }
+  }, [entityId]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "evidence" && entityId) {
+      fetchEvidenceForTraining();
+    }
+  }, [isOpen, activeTab, entityId, fetchEvidenceForTraining]);
+
+  const handleEvidenceUploadSuccess = useCallback(
+    async (formData: EvidenceHubModel) => {
+      try {
+        await createEvidenceHub("/evidenceHub", formData);
+        await fetchEvidenceForTraining();
+        setIsUploadModalOpen(false);
+      } catch (error) {
+        logEngine({ type: "error", message: `Failed to upload training evidence: ${error}` });
+      }
+    },
+    [fetchEvidenceForTraining],
+  );
+
+  const handleDeleteEvidence = useCallback(
+    async (id: number) => {
+      try {
+        setDeletingEvidenceId(id);
+        await deleteEntityById({ routeUrl: `/evidenceHub/${id}` });
+        await fetchEvidenceForTraining();
+      } catch (error) {
+        logEngine({ type: "error", message: `Failed to delete training evidence: ${error}` });
+      } finally {
+        setDeletingEvidenceId(null);
+      }
+    },
+    [fetchEvidenceForTraining],
+  );
 
   useEffect(() => {
     if (initialData) {
@@ -202,110 +285,96 @@ const NewTraining: FC<NewTrainingProps> = ({
     <Stack spacing={6}>
       <Stack direction="row" spacing={6}>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="training-name"
-              label="Training name"
-              value={values.training_name}
-              onChange={handleOnTextFieldChange("training_name")}
-              error={errors.training_name}
-              isRequired
-              sx={fieldStyle}
-              placeholder="e.g., Introduction to AI Ethics"
-            />
-          </Suspense>
+          <Field
+            id="training-name"
+            label="Training name"
+            value={values.training_name}
+            onChange={handleOnTextFieldChange("training_name")}
+            error={errors.training_name}
+            isRequired
+            sx={fieldStyle}
+            placeholder="e.g., Introduction to AI Ethics"
+          />
         </Box>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="duration"
-              label="Duration"
-              value={values.duration}
-              onChange={handleOnTextFieldChange("duration")}
-              error={errors.duration}
-              isRequired
-              sx={fieldStyle}
-              type="text"
-              placeholder="e.g., 2 hours, 3 days, 6 weeks"
-            />
-          </Suspense>
+          <Field
+            id="duration"
+            label="Duration"
+            value={values.duration}
+            onChange={handleOnTextFieldChange("duration")}
+            error={errors.duration}
+            isRequired
+            sx={fieldStyle}
+            type="text"
+            placeholder="e.g., 2 hours, 3 days, 6 weeks"
+          />
         </Box>
       </Stack>
       <Stack direction="row" spacing={6}>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="provider"
-              label="Provider"
-              value={values.provider}
-              onChange={handleOnTextFieldChange("provider")}
-              error={errors.provider}
-              isRequired
-              sx={fieldStyle}
-              placeholder="e.g., VerifyWise, External Vendor, Internal Team"
-            />
-          </Suspense>
+          <Field
+            id="provider"
+            label="Provider"
+            value={values.provider}
+            onChange={handleOnTextFieldChange("provider")}
+            error={errors.provider}
+            isRequired
+            sx={fieldStyle}
+            placeholder="e.g., VerifyWise, External Vendor, Internal Team"
+          />
         </Box>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="department"
-              label="Department"
-              value={values.department}
-              onChange={handleOnTextFieldChange("department")}
-              error={errors.department}
-              isRequired
-              sx={fieldStyle}
-              placeholder="e.g., Compliance, Engineering, HR"
-            />
-          </Suspense>
+          <Field
+            id="department"
+            label="Department"
+            value={values.department}
+            onChange={handleOnTextFieldChange("department")}
+            error={errors.department}
+            isRequired
+            sx={fieldStyle}
+            placeholder="e.g., Compliance, Engineering, HR"
+          />
         </Box>
       </Stack>
       <Stack direction="row" spacing={6}>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Select
-              items={statusOptions}
-              value={values.status}
-              error={errors.status}
-              sx={{ width: "100%" }}
-              id="status"
-              label="Status"
-              isRequired
-              onChange={handleOnSelectChange("status")}
-              placeholder="Select status"
-            />
-          </Suspense>
+          <Select
+            items={statusOptions}
+            value={values.status}
+            error={errors.status}
+            sx={{ width: "100%" }}
+            id="status"
+            label="Status"
+            isRequired
+            onChange={handleOnSelectChange("status")}
+            placeholder="Select status"
+          />
         </Box>
         <Box sx={{ width: "350px" }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="number-of-people"
-              label="Number of people"
-              value={values.numberOfPeople?.toString() || ""}
-              onChange={handleOnTextFieldChange("numberOfPeople")}
-              error={errors.numberOfPeople}
-              isRequired
-              sx={fieldStyle}
-              type="number"
-              placeholder="Enter total participants (e.g., 25)"
-            />
-          </Suspense>
+          <Field
+            id="number-of-people"
+            label="Number of people"
+            value={values.numberOfPeople?.toString() || ""}
+            onChange={handleOnTextFieldChange("numberOfPeople")}
+            error={errors.numberOfPeople}
+            isRequired
+            sx={fieldStyle}
+            type="number"
+            placeholder="Enter total participants (e.g., 25)"
+          />
         </Box>
       </Stack>
       <Box sx={{ width: "100%" }}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="description"
-            label="Description"
-            type="description"
-            value={values.description}
-            onChange={handleOnTextFieldChange("description")}
-            error={errors.description}
-            sx={fieldStyle}
-            placeholder="Provide a short overview of the training goals and content"
-          />
-        </Suspense>
+        <Field
+          id="description"
+          label="Description"
+          type="description"
+          value={values.description}
+          onChange={handleOnTextFieldChange("description")}
+          error={errors.description}
+          sx={fieldStyle}
+          placeholder="Provide a short overview of the training goals and content"
+        />
       </Box>
     </Stack>
   );
@@ -317,6 +386,7 @@ const NewTraining: FC<NewTrainingProps> = ({
       title={isEdit ? "Edit training" : "New training"}
       description="Record and manage your organization's AI literacy and compliance trainings. Enter training details such as name, provider, duration, department, participants, and status to keep a clear history of all AI-related education initiatives."
       onSubmit={activeTab === "details" ? handleSubmit : undefined}
+      hideSubmitButton={activeTab !== "details"}
       submitButtonText={isEdit ? "Update training" : "Create training"}
       maxWidth="680px"
     >
@@ -326,6 +396,13 @@ const NewTraining: FC<NewTrainingProps> = ({
             <TabBar
               tabs={[
                 { label: "Training details", value: "details", icon: "GraduationCap" },
+                {
+                  label: "Evidence",
+                  value: "evidence",
+                  icon: "Database",
+                  count: evidenceList.length,
+                  isLoading: isEvidenceLoading,
+                },
                 { label: "Activity", value: "activity", icon: "History" },
               ]}
               activeTab={activeTab}
@@ -333,6 +410,140 @@ const NewTraining: FC<NewTrainingProps> = ({
             />
           </Box>
           {activeTab === "details" && formContent}
+          {activeTab === "evidence" && (
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  Upload certificates, attendance proofs, or other compliance evidence for this
+                  training.
+                </Typography>
+                <Box sx={{ flexShrink: 0 }}>
+                  <CustomizableButton
+                    variant="contained"
+                    sx={{
+                      backgroundColor: "brand.primary",
+                      border: "1px solid brand.primary",
+                      gap: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "160px",
+                      height: 34,
+                    }}
+                    text="Upload evidence"
+                    icon={<AddCircleOutlineIcon size={16} />}
+                    onClick={() => setIsUploadModalOpen(true)}
+                  />
+                </Box>
+              </Stack>
+
+              <TableContainer
+                sx={{
+                  border: "1px solid",
+                  borderColor: "border.light",
+                  borderRadius: "4px",
+                }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "background.accent" }}>
+                      <TableCell sx={{ fontSize: 11, fontWeight: 600, color: "text.icon" }}>
+                        EVIDENCE NAME
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 11, fontWeight: 600, color: "text.icon" }}>
+                        TYPE
+                      </TableCell>
+                      <TableCell
+                        sx={{ fontSize: 11, fontWeight: 600, color: "text.icon" }}
+                        align="center"
+                      >
+                        FILES
+                      </TableCell>
+                      <TableCell sx={{ width: 48 }} />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {isEvidenceLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                          <CircularProgress size={20} />
+                        </TableCell>
+                      </TableRow>
+                    ) : evidenceList.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          align="center"
+                          sx={{ py: 5, color: "text.icon", fontSize: 13 }}
+                        >
+                          No evidence uploaded yet for this training.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      evidenceList.map((evidence) => {
+                        const fileCount = evidence.evidence_files?.length ?? 0;
+                        return (
+                          <TableRow key={evidence.id} hover>
+                            <TableCell
+                              sx={{
+                                fontSize: 13,
+                                color: "text.primary",
+                                maxWidth: 220,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {evidence.evidence_name || "-"}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: 13, color: "text.secondary" }}>
+                              {evidence.evidence_type || "-"}
+                            </TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{ fontSize: 13, color: "text.secondary" }}
+                            >
+                              {fileCount}
+                            </TableCell>
+                            <TableCell align="right" sx={{ width: 48 }}>
+                              <Tooltip title="Delete evidence">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    disabled={deletingEvidenceId === evidence.id}
+                                    onClick={() => evidence.id && handleDeleteEvidence(evidence.id)}
+                                    sx={{ color: "text.icon" }}
+                                  >
+                                    {deletingEvidenceId === evidence.id ? (
+                                      <CircularProgress size={14} />
+                                    ) : (
+                                      <Trash2 size={14} />
+                                    )}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <NewTrainingEvidence
+                isOpen={isUploadModalOpen}
+                setIsOpen={setIsUploadModalOpen}
+                onSuccess={handleEvidenceUploadSuccess}
+                trainingId={Number(entityId)}
+              />
+            </Stack>
+          )}
           {activeTab === "activity" && (
             <HistorySidebar inline isOpen={true} entityType="training" entityId={entityId} />
           )}

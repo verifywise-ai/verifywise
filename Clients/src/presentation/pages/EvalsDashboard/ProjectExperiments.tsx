@@ -97,9 +97,11 @@ export default function ProjectExperiments({
   const prevRunningIdsRef = useRef<Set<string>>(new Set());
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateExperiment = allowedRoles.evals.createExperiment.includes(userRoleName);
-  const canDeleteExperiment = allowedRoles.evals.deleteExperiment.includes(userRoleName);
+  const { userRoleName, isSuperAdmin } = useAuth();
+  const canCreateExperiment =
+    allowedRoles.evals.createExperiment.includes(userRoleName) && !isSuperAdmin;
+  const canDeleteExperiment =
+    allowedRoles.evals.deleteExperiment.includes(userRoleName) && !isSuperAdmin;
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();

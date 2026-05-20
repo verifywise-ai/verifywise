@@ -833,9 +833,18 @@ export const useDashboardMetrics = () => {
     try {
       const response = await getAllEntities({ routeUrl: "/compliance/score" });
       const data = response.data || response;
+      console.log("[governance-score] /compliance/score response", { response, data });
 
       if (data && typeof data.overallScore === "number") {
         const modules = data.modules || {};
+        console.log("[governance-score] overallScore + modules", {
+          overallScore: data.overallScore,
+          riskManagement: modules.riskManagement,
+          vendorManagement: modules.vendorManagement,
+          projectGovernance: modules.projectGovernance,
+          modelLifecycle: modules.modelLifecycle,
+          policyDocumentation: modules.policyDocumentation,
+        });
         const metrics: GovernanceScoreMetrics = {
           score: data.overallScore,
           modules: [

@@ -513,83 +513,60 @@ function ModelSelector({
                     </Typography>
 
                     {/* Endpoint URL */}
-                    <Typography
-                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
-                    >
-                      Endpoint URL *
-                    </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      placeholder="http://localhost:11434/v1"
-                      value={endpointUrl || ""}
-                      onChange={(e) => onEndpointUrlChange?.(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      autoComplete="off"
-                      sx={{
-                        "mb": 1.5,
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: 13,
-                          borderRadius: "8px",
-                        },
-                      }}
-                    />
+                    <Box sx={{ mb: 1.5 }}>
+                      <Field
+                        label="Endpoint URL *"
+                        placeholder="http://localhost:11434/v1"
+                        value={endpointUrl || ""}
+                        onChange={(e) => onEndpointUrlChange?.(e.target.value)}
+                        InputProps={{
+                          onClick: (e) => e.stopPropagation(),
+                          onKeyDown: (e) => e.stopPropagation(),
+                        }}
+                        autoComplete="off"
+                      />
+                    </Box>
 
                     {/* Model Name */}
-                    <Typography
-                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
-                    >
-                      Model Name *
-                    </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      placeholder="e.g., llama3.2, mistral, codellama"
-                      value={customModel}
-                      onChange={(e) => setCustomModel(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && customModel.trim() && (endpointUrl || "").trim()) {
-                          onModelChange(customModel.trim());
-                          setOpen(false);
-                        }
-                        e.stopPropagation();
-                      }}
-                      autoComplete="off"
-                      sx={{
-                        "mb": 1.5,
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: 13,
-                          borderRadius: "8px",
-                        },
-                      }}
-                    />
+                    <Box sx={{ mb: 1.5 }}>
+                      <Field
+                        label="Model Name *"
+                        placeholder="e.g., llama3.2, mistral, codellama"
+                        value={customModel}
+                        onChange={(e) => setCustomModel(e.target.value)}
+                        InputProps={{
+                          onClick: (e) => e.stopPropagation(),
+                          onKeyDown: (e) => {
+                            if (
+                              e.key === "Enter" &&
+                              customModel.trim() &&
+                              (endpointUrl || "").trim()
+                            ) {
+                              onModelChange(customModel.trim());
+                              setOpen(false);
+                            }
+                            e.stopPropagation();
+                          },
+                        }}
+                        autoComplete="off"
+                      />
+                    </Box>
 
                     {/* API Key (optional) */}
-                    <Typography
-                      sx={{ fontSize: 11, fontWeight: 600, color: palette.text.secondary, mb: 0.5 }}
-                    >
-                      API Key (optional)
-                    </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      type="password"
-                      placeholder="Leave empty if not required"
-                      value={apiKey || ""}
-                      onChange={(e) => onApiKeyChange?.(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      autoComplete="off"
-                      sx={{
-                        "mb": 2,
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: 13,
-                          borderRadius: "8px",
-                        },
-                      }}
-                    />
+                    <Box sx={{ mb: 2 }}>
+                      <Field
+                        label="API Key (optional)"
+                        type="password"
+                        placeholder="Leave empty if not required"
+                        value={apiKey || ""}
+                        onChange={(e) => onApiKeyChange?.(e.target.value)}
+                        InputProps={{
+                          onClick: (e) => e.stopPropagation(),
+                          onKeyDown: (e) => e.stopPropagation(),
+                        }}
+                        autoComplete="off"
+                      />
+                    </Box>
 
                     {/* Use this model button */}
                     <Box
@@ -699,38 +676,28 @@ function ModelSelector({
                 ) : isOpenRouter ? (
                   /* Custom model input for OpenRouter */
                   <Box sx={{ p: 2 }}>
-                    <Typography
-                      sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: 1 }}
-                    >
-                      Enter Model Name
-                    </Typography>
                     <Typography sx={{ fontSize: 11, color: palette.text.tertiary, mb: 1.5 }}>
                       OpenRouter supports any model. Enter the model ID (e.g.,
                       anthropic/claude-3-opus)
                     </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                      value={customModel}
-                      onChange={(e) => setCustomModel(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && customModel.trim()) {
-                          onModelChange(customModel.trim());
-                          setOpen(false);
-                        }
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      autoComplete="off"
-                      sx={{
-                        "mb": 1.5,
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: 13,
-                          borderRadius: "8px",
-                        },
-                      }}
-                    />
+                    <Box sx={{ mb: 1.5 }}>
+                      <Field
+                        placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
+                        value={customModel}
+                        onChange={(e) => setCustomModel(e.target.value)}
+                        InputProps={{
+                          onKeyDown: (e) => {
+                            if (e.key === "Enter" && customModel.trim()) {
+                              onModelChange(customModel.trim());
+                              setOpen(false);
+                            }
+                            e.stopPropagation();
+                          },
+                          onClick: (e) => e.stopPropagation(),
+                        }}
+                        autoComplete="off"
+                      />
+                    </Box>
                     <Box
                       onClick={() => {
                         if (customModel.trim()) {
@@ -1420,12 +1387,11 @@ export default function CreateScorerModal({
             </Stack>
             {config.choiceScores.map((cs, index) => (
               <Stack key={index} direction="row" spacing={2} alignItems="center">
-                <TextField
-                  size="small"
+                <Field
                   placeholder="e.g. PASS"
                   value={cs.label}
                   onChange={(e) => handleUpdateChoiceScore(index, "label", e.target.value)}
-                  sx={{ "flex": 1, "& .MuiInputBase-input": { fontSize: 13 } }}
+                  sx={{ flex: 1 }}
                 />
                 <ScoreInput
                   value={cs.score}
