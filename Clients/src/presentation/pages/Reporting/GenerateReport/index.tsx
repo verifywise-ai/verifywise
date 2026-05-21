@@ -1,10 +1,10 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { Box, Popover, Typography } from "@mui/material";
 import { ChevronDown, FileText, Building2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { brand, background } from "../../../themes/palette";
-const GenerateReportPopup = lazy(() => import("../../../components/Reporting/GenerateReport"));
-const ReportStatus = lazy(() => import("./ReportStatus"));
+import GenerateReportPopup from "../../../components/Reporting/GenerateReport";
+import ReportStatus from "./ReportStatus";
 import { styles } from "./styles";
 import { useProjects } from "../../../../application/hooks/useProjects";
 
@@ -189,22 +189,18 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
         </Popover>
 
         {/* Render generate report status */}
-        <Suspense fallback={null}>
-          <ReportStatus isDisabled={isDisabled} />
-        </Suspense>
+        <ReportStatus isDisabled={isDisabled} />
       </Box>
 
       {isModalOpen && (
-        <Suspense fallback={null}>
-          <GenerateReportPopup
-            onClose={() => {
-              setIsModalOpen(false);
-              setSelectedReportType(null);
-            }}
-            onReportGenerated={onReportGenerated}
-            reportType={selectedReportType}
-          />
-        </Suspense>
+        <GenerateReportPopup
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedReportType(null);
+          }}
+          onReportGenerated={onReportGenerated}
+          reportType={selectedReportType}
+        />
       )}
     </>
   );

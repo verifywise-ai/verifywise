@@ -11,7 +11,7 @@
  * - Notes: Collaboration notes (lazy-loaded)
  */
 
-import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -44,12 +44,9 @@ import Alert from "../../Alert";
 import StandardModal from "../../Modals/StandardModal";
 import { text } from "../../../themes/palette";
 
-// Lazy-loaded components
-const LinkedRisksPopup = lazy(() =>
-  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
-);
-const NotesTab = lazy(() => import("../../Notes/NotesTab"));
-const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
+import { LinkedRisksPopup } from "../../LinkedRisks";
+import NotesTab from "../../Notes/NotesTab";
+import AddNewRiskForm from "../../AddNewRiskForm";
 
 // Types & Constants
 import { EUAIActQuestionDrawerProps, EUAIActFormData, EUAIACT_STATUS_OPTIONS } from "./types";
@@ -1597,17 +1594,15 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
                 {/* LinkedRisks Modal */}
                 {isLinkedRisksModalOpen && (
-                  <Suspense fallback={"Loading..."}>
-                    <LinkedRisksPopup
-                      onClose={() => setIsLinkedRisksModalOpen(false)}
-                      currentRisks={currentRisks
-                        .concat(selectedRisks)
-                        .filter((risk) => !deletedRisks.includes(risk))}
-                      setSelectecRisks={setSelectedRisks}
-                      _setDeletedRisks={setDeletedRisks}
-                      frameworkId={1}
-                    />
-                  </Suspense>
+                  <LinkedRisksPopup
+                    onClose={() => setIsLinkedRisksModalOpen(false)}
+                    currentRisks={currentRisks
+                      .concat(selectedRisks)
+                      .filter((risk) => !deletedRisks.includes(risk))}
+                    setSelectecRisks={setSelectedRisks}
+                    _setDeletedRisks={setDeletedRisks}
+                    frameworkId={1}
+                  />
                 )}
               </Stack>
             </TabPanel>
@@ -1617,15 +1612,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             {/* ================================================================ */}
 
             <TabPanel value="notes" sx={{ padding: "15px 20px" }}>
-              <Suspense fallback={<CircularProgress />}>
-                {displayQuestion?.question_id && (
-                  <NotesTab
-                    key={`eu-ai-act-question-${displayQuestion.question_id}`}
-                    attachedTo="EU_AI_ACT_QUESTION"
-                    attachedToId={displayQuestion.question_id.toString()}
-                  />
-                )}
-              </Suspense>
+              {displayQuestion?.question_id && (
+                <NotesTab
+                  key={`eu-ai-act-question-${displayQuestion.question_id}`}
+                  attachedTo="EU_AI_ACT_QUESTION"
+                  attachedToId={displayQuestion.question_id.toString()}
+                />
+              )}
             </TabPanel>
           </TabContext>
 
@@ -1668,22 +1661,20 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         submitButtonText="Update"
         maxWidth="1039px"
       >
-        <Suspense fallback={<CircularProgress />}>
-          <AddNewRiskForm
-            closePopup={handleRiskDetailModalClose}
-            popupStatus="edit"
-            initialRiskValues={riskFormData}
-            onSuccess={handleRiskUpdateSuccess}
-            onError={(error) => {
-              handleAlertCall({
-                variant: "error",
-                body: error || "Failed to update risk",
-              });
-            }}
-            users={users}
-            onSubmitRef={onRiskSubmitRef}
-          />
-        </Suspense>
+        <AddNewRiskForm
+          closePopup={handleRiskDetailModalClose}
+          popupStatus="edit"
+          initialRiskValues={riskFormData}
+          onSuccess={handleRiskUpdateSuccess}
+          onError={(error) => {
+            handleAlertCall({
+              variant: "error",
+              body: error || "Failed to update risk",
+            });
+          }}
+          users={users}
+          onSubmitRef={onRiskSubmitRef}
+        />
       </StandardModal>
 
       {/* ALERT */}

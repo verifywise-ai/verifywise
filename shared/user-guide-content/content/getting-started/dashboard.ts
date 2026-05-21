@@ -66,7 +66,7 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'Building2',
           title: 'Vendor management — 30%',
-          description: 'Share of vendors marked Review status = Reviewed, with a penalty for vendors flagged as high risk (risk score ≥ 70 or review result High risk).',
+          description: 'Share of vendors marked Review status = Reviewed, with a penalty for vendors with a risk score of 70 or higher.',
         },
         {
           icon: 'FolderTree',
@@ -81,7 +81,7 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'ScrollText',
           title: 'Policy & documentation — 5%',
-          description: 'Share of policies at status Active, with a penalty for any overdue (past next review date and not Active).',
+          description: 'Share of policies at status Published, with a penalty for any overdue (past next review date and not yet Published).',
         },
       ],
     },
@@ -93,17 +93,17 @@ export const dashboardContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Risk management', text: 'Set Mitigation status = Completed on risks as they are remediated. Lower or close any unmitigated Very high risk items first — they carry the steepest penalty.' },
-        { bold: 'Vendor management', text: 'Mark vendors as Reviewed once their assessment is finished. Reduce a vendor’s risk score below 70 or change a High risk review result to lower the high-risk penalty.' },
+        { bold: 'Vendor management', text: 'Mark vendors as Reviewed once their assessment is finished. Bring a vendor’s risk score below 70 to remove the high-risk penalty.' },
         { bold: 'Project governance', text: 'Move use cases to Completed when finished, and attach at least one compliance framework to each.' },
         { bold: 'Model lifecycle', text: 'Promote vetted models from Pending to Approved. Avoid leaving models in Blocked status — each one removes 25 points from this area.' },
-        { bold: 'Policy & documentation', text: 'Publish policies to Active status, and keep the next review date up to date so policies don’t become overdue.' },
+        { bold: 'Policy & documentation', text: 'Move policies to Published status once they are released, and keep the next review date up to date so policies don’t become overdue.' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Why a category may show 0%',
-      text: 'The score measures workflow completion, not inventory size. If you have items registered (risks, vendors, models, etc.) but none of them have been moved into a “completed” state (Mitigated, Reviewed, Approved, Active), that category reads as 0% governed. An empty category — no items at all — also shows 0%, not 100%, by design.',
+      text: 'The score measures workflow completion, not inventory size. If you have items registered (risks, vendors, models, etc.) but none of them have been moved into a “completed” state (Mitigated, Reviewed, Approved, Published), that category reads as 0% governed. An empty category — no items at all — also shows 0%, not 100%, by design.',
     },
     {
       type: 'heading',

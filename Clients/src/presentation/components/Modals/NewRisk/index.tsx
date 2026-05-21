@@ -16,7 +16,7 @@ import TabContext from "@mui/lab/TabContext";
 import { Autocomplete, Box, Stack, TextField, Typography, Divider } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
-import { Suspense, useEffect, useState, useMemo, lazy, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -39,7 +39,7 @@ import { useVendorRiskChangeHistory } from "../../../../application/hooks/useVen
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
-const RiskLevel = lazy(() => import("../../RiskLevel"));
+import RiskLevel from "../../RiskLevel";
 
 interface FormErrors {
   risk_description: string;
@@ -562,14 +562,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             assigning these scores, the risk level will be determined based on your inputs.
           </Typography>
           <Stack direction="row" spacing={6}>
-            <Suspense fallback={<div>Loading...</div>}>
-              <RiskLevel
-                likelihood={Number(values.likelihood) || 1}
-                riskSeverity={Number(values.risk_severity) || 1}
-                handleOnSelectChange={handleOnSelectChange}
-                disabled={isEditingDisabled}
-              />
-            </Suspense>
+            <RiskLevel
+              likelihood={Number(values.likelihood) || 1}
+              riskSeverity={Number(values.risk_severity) || 1}
+              handleOnSelectChange={handleOnSelectChange}
+              disabled={isEditingDisabled}
+            />
           </Stack>
         </Box>
       </Stack>
@@ -579,15 +577,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   return (
     <Stack>
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            body={alert.body}
-            isToast={true}
-            onClick={() => setAlert(null)}
-          />
-        </Suspense>
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body}
+          isToast={true}
+          onClick={() => setAlert(null)}
+        />
       )}
       {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
       <StandardModal

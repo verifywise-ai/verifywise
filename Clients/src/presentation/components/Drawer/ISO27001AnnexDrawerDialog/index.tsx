@@ -25,7 +25,7 @@ import RichTextEditor from "../../RichTextEditor";
 import { inputStyles } from "../ClauseDrawerDialog";
 import DatePicker from "../../Inputs/Datepicker";
 import Select from "../../Inputs/Select";
-import { useState, useEffect, useMemo, lazy, Suspense, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import TabBar from "../../TabBar";
 import StandardModal from "../../Modals/StandardModal";
 import {
@@ -54,12 +54,10 @@ import Alert from "../../Alert";
 import { SelectChangeEvent } from "@mui/material";
 import { RiskFormValues } from "../../AddNewRiskForm/interface";
 import { text } from "../../../themes/palette";
-const AuditRiskPopup = lazy(() => import("../../RiskPopup/AuditRiskPopup"));
-const LinkedRisksPopup = lazy(() =>
-  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
-);
-const NotesTab = lazy(() => import("../../Notes/NotesTab"));
-const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
+import AuditRiskPopup from "../../RiskPopup/AuditRiskPopup";
+import { LinkedRisksPopup } from "../../LinkedRisks";
+import NotesTab from "../../Notes/NotesTab";
+import AddNewRiskForm from "../../AddNewRiskForm";
 
 interface AnnexControlData {
   id: number;
@@ -1419,31 +1417,27 @@ const VWISO27001AnnexDrawerDialog = ({
                   },
                 }}
               >
-                <Suspense fallback={"loading..."}>
-                  <AuditRiskPopup
-                    onClose={() => setAuditedStatusModalOpen(false)}
-                    risks={formData.risks.concat(selectedRisks)}
-                    _deletedRisks={deletedRisks}
-                    _setDeletedRisks={setDeletedRisks}
-                    _selectedRisks={selectedRisks}
-                    _setSelectedRisks={setSelectedRisks}
-                  />
-                </Suspense>
+                <AuditRiskPopup
+                  onClose={() => setAuditedStatusModalOpen(false)}
+                  risks={formData.risks.concat(selectedRisks)}
+                  _deletedRisks={deletedRisks}
+                  _setDeletedRisks={setDeletedRisks}
+                  _selectedRisks={selectedRisks}
+                  _setSelectedRisks={setSelectedRisks}
+                />
               </Dialog>
 
               {isLinkedRisksModalOpen && (
-                <Suspense fallback={"loading..."}>
-                  <LinkedRisksPopup
-                    onClose={() => setIsLinkedRisksModalOpen(false)}
-                    currentRisks={formData.risks
-                      .concat(selectedRisks)
-                      .filter((risk) => !deletedRisks.includes(risk))}
-                    setSelectecRisks={setSelectedRisks}
-                    _setDeletedRisks={setDeletedRisks}
-                    frameworkId={3}
-                    isOrganizational={true}
-                  />
-                </Suspense>
+                <LinkedRisksPopup
+                  onClose={() => setIsLinkedRisksModalOpen(false)}
+                  currentRisks={formData.risks
+                    .concat(selectedRisks)
+                    .filter((risk) => !deletedRisks.includes(risk))}
+                  setSelectecRisks={setSelectedRisks}
+                  _setDeletedRisks={setDeletedRisks}
+                  frameworkId={3}
+                  isOrganizational={true}
+                />
               )}
 
               {/* Risk Detail Modal */}
@@ -1456,35 +1450,31 @@ const VWISO27001AnnexDrawerDialog = ({
                 submitButtonText="Update"
                 maxWidth="1039px"
               >
-                <Suspense fallback={<CircularProgress />}>
-                  <AddNewRiskForm
-                    closePopup={handleRiskDetailModalClose}
-                    popupStatus="edit"
-                    initialRiskValues={riskFormData}
-                    onSuccess={handleRiskUpdateSuccess}
-                    onError={(error) => {
-                      handleAlert({
-                        variant: "error",
-                        body: error || "Failed to update risk",
-                        setAlert,
-                      });
-                    }}
-                    users={users}
-                    onSubmitRef={onRiskSubmitRef}
-                  />
-                </Suspense>
+                <AddNewRiskForm
+                  closePopup={handleRiskDetailModalClose}
+                  popupStatus="edit"
+                  initialRiskValues={riskFormData}
+                  onSuccess={handleRiskUpdateSuccess}
+                  onError={(error) => {
+                    handleAlert({
+                      variant: "error",
+                      body: error || "Failed to update risk",
+                      setAlert,
+                    });
+                  }}
+                  users={users}
+                  onSubmitRef={onRiskSubmitRef}
+                />
               </StandardModal>
             </Stack>
           </TabPanel>
 
           {/* Tab 4: Notes */}
           <TabPanel value="notes" sx={{ padding: "15px 20px" }}>
-            <Suspense fallback={<CircularProgress />}>
-              <NotesTab
-                attachedTo="ISO_27001_ANNEX"
-                attachedToId={fetchedAnnex?.id?.toString() || ""}
-              />
-            </Suspense>
+            <NotesTab
+              attachedTo="ISO_27001_ANNEX"
+              attachedToId={fetchedAnnex?.id?.toString() || ""}
+            />
           </TabPanel>
         </TabContext>
 

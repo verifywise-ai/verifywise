@@ -19,7 +19,7 @@ import {
   Eye as ViewIcon,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { useState, useEffect, useMemo, Suspense, lazy, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -34,11 +34,9 @@ import StandardModal from "../../Modals/StandardModal";
 import { FilePickerModal } from "../../FilePickerModal";
 import { text, status } from "../../../themes/palette";
 
-const NotesTab = lazy(() => import("../../Notes/NotesTab"));
-const LinkedRisksPopup = lazy(() =>
-  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
-);
-const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
+import NotesTab from "../../Notes/NotesTab";
+import { LinkedRisksPopup } from "../../LinkedRisks";
+import AddNewRiskForm from "../../AddNewRiskForm";
 
 import { AlertBox, styles } from "../../../pages/ComplianceTracker/1.0ComplianceTracker/styles";
 import { handleAlert } from "../../../../application/tools/alertUtils";
@@ -2242,50 +2240,46 @@ const NewControlPane = ({
 
                 {/* LINKED RISKS POPUP - LAZY LOADED */}
                 {showLinkedRisksPopup && (
-                  <Suspense fallback={<CircularProgress size={24} />}>
-                    <LinkedRisksPopup
-                      onClose={() => setShowLinkedRisksPopup(false)}
-                      currentRisks={currentFormData.risks
-                        .concat(currentFormData.selectedRisks)
-                        .filter((risk: number) => !currentFormData.deletedRisks.includes(risk))}
-                      setSelectecRisks={(selectedRisks: number[]) => {
-                        const currentSubcontrol = controlData.subControls![selectedSubcontrolIndex];
-                        if (!currentSubcontrol.id) return;
-                        const subcontrolId = currentSubcontrol.id;
-                        setSubcontrolFormData((prev) => ({
-                          ...prev,
-                          [subcontrolId]: {
-                            ...prev[subcontrolId],
-                            selectedRisks,
-                          },
-                        }));
-                      }}
-                      _setDeletedRisks={(deletedRisks: number[]) => {
-                        const currentSubcontrol = controlData.subControls![selectedSubcontrolIndex];
-                        if (!currentSubcontrol.id) return;
-                        const subcontrolId = currentSubcontrol.id;
-                        setSubcontrolFormData((prev) => ({
-                          ...prev,
-                          [subcontrolId]: {
-                            ...prev[subcontrolId],
-                            deletedRisks,
-                          },
-                        }));
-                      }}
-                      projectId={projectId}
-                      frameworkId={1}
-                    />
-                  </Suspense>
+                  <LinkedRisksPopup
+                    onClose={() => setShowLinkedRisksPopup(false)}
+                    currentRisks={currentFormData.risks
+                      .concat(currentFormData.selectedRisks)
+                      .filter((risk: number) => !currentFormData.deletedRisks.includes(risk))}
+                    setSelectecRisks={(selectedRisks: number[]) => {
+                      const currentSubcontrol = controlData.subControls![selectedSubcontrolIndex];
+                      if (!currentSubcontrol.id) return;
+                      const subcontrolId = currentSubcontrol.id;
+                      setSubcontrolFormData((prev) => ({
+                        ...prev,
+                        [subcontrolId]: {
+                          ...prev[subcontrolId],
+                          selectedRisks,
+                        },
+                      }));
+                    }}
+                    _setDeletedRisks={(deletedRisks: number[]) => {
+                      const currentSubcontrol = controlData.subControls![selectedSubcontrolIndex];
+                      if (!currentSubcontrol.id) return;
+                      const subcontrolId = currentSubcontrol.id;
+                      setSubcontrolFormData((prev) => ({
+                        ...prev,
+                        [subcontrolId]: {
+                          ...prev[subcontrolId],
+                          deletedRisks,
+                        },
+                      }));
+                    }}
+                    projectId={projectId}
+                    frameworkId={1}
+                  />
                 )}
 
                 {/* TAB 4: NOTES */}
                 <TabPanel value="notes" sx={{ padding: "15px 0" }}>
-                  <Suspense fallback={<CircularProgress size={24} />}>
-                    <NotesTab
-                      attachedTo="EU_AI_ACT_SUBCONTROL"
-                      attachedToId={currentSubcontrol.id?.toString() || ""}
-                    />
-                  </Suspense>
+                  <NotesTab
+                    attachedTo="EU_AI_ACT_SUBCONTROL"
+                    attachedToId={currentSubcontrol.id?.toString() || ""}
+                  />
                 </TabPanel>
               </TabContext>
             </Stack>
@@ -2325,23 +2319,21 @@ const NewControlPane = ({
         submitButtonText="Update"
         maxWidth="1039px"
       >
-        <Suspense fallback={<CircularProgress />}>
-          <AddNewRiskForm
-            closePopup={handleRiskDetailModalClose}
-            popupStatus="edit"
-            initialRiskValues={riskFormData}
-            onSuccess={handleRiskUpdateSuccess}
-            onError={(error) => {
-              handleAlert({
-                variant: "error",
-                body: error || "Failed to update risk",
-                setAlert,
-              });
-            }}
-            users={users}
-            onSubmitRef={onRiskSubmitRef}
-          />
-        </Suspense>
+        <AddNewRiskForm
+          closePopup={handleRiskDetailModalClose}
+          popupStatus="edit"
+          initialRiskValues={riskFormData}
+          onSuccess={handleRiskUpdateSuccess}
+          onError={(error) => {
+            handleAlert({
+              variant: "error",
+              body: error || "Failed to update risk",
+              setAlert,
+            });
+          }}
+          users={users}
+          onSubmitRef={onRiskSubmitRef}
+        />
       </StandardModal>
 
       {/* File Picker Modal for Evidence Files */}

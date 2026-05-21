@@ -1,5 +1,5 @@
 import { Button, Stack, Typography, useTheme, Box } from "@mui/material";
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
 import { Check } from "../../../components/Checks";
 import Field from "../../../components/Inputs/Field";
@@ -14,7 +14,7 @@ import { extractUserToken } from "../../../../application/tools/extractToken";
 import { useSearchParams } from "react-router-dom";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { background } from "../../../themes/palette";
-const Alert = lazy(() => import("../../../components/Alert"));
+import Alert from "../../../components/Alert";
 
 export interface AlertType {
   variant: "success" | "info" | "warning" | "error";
@@ -174,17 +174,15 @@ const RegisterUser: React.FC = () => {
       }}
     >
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Box>
-            <Alert
-              variant={alert.variant}
-              title={alert.title}
-              body={alert.body}
-              isToast={true}
-              onClick={() => setAlert(null)}
-            />
-          </Box>
-        </Suspense>
+        <Box>
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            body={alert.body}
+            isToast={true}
+            onClick={() => setAlert(null)}
+          />
+        </Box>
       )}
 
       {/* Toast component */}

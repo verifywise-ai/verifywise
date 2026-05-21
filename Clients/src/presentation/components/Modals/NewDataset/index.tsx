@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import React, { FC, useState, useMemo, useCallback, useEffect } from "react";
 import { useTheme, Stack, Box, FormControlLabel, Typography } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import Toggle from "../../Inputs/Toggle";
-import { lazy } from "react";
-const Field = lazy(() => import("../../Inputs/Field"));
-const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
+import Field from "../../Inputs/Field";
+import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
 import { ChevronDown } from "lucide-react";
 import StandardModal from "../StandardModal";
@@ -268,50 +267,44 @@ const NewDataset: FC<NewDatasetProps> = ({
     <Stack spacing={3}>
       {/* First Row: Name, Version */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="name"
-            label="Dataset name"
-            width={"50%"}
-            value={values.name}
-            onChange={handleOnTextFieldChange("name")}
-            error={errors.name}
-            isRequired
-            sx={fieldStyle}
-            placeholder="e.g., Customer transaction data"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="version"
-            label="Version"
-            width={"50%"}
-            value={values.version}
-            onChange={handleOnTextFieldChange("version")}
-            error={errors.version}
-            isRequired
-            sx={fieldStyle}
-            placeholder="e.g., 1.0.0"
-          />
-        </Suspense>
+        <Field
+          id="name"
+          label="Dataset name"
+          width={"50%"}
+          value={values.name}
+          onChange={handleOnTextFieldChange("name")}
+          error={errors.name}
+          isRequired
+          sx={fieldStyle}
+          placeholder="e.g., Customer transaction data"
+        />
+        <Field
+          id="version"
+          label="Version"
+          width={"50%"}
+          value={values.version}
+          onChange={handleOnTextFieldChange("version")}
+          error={errors.version}
+          isRequired
+          sx={fieldStyle}
+          placeholder="e.g., 1.0.0"
+        />
       </Stack>
 
       {/* Description */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          id="description"
-          label="Description"
-          type="description"
-          width={"100%"}
-          value={values.description}
-          onChange={handleOnTextFieldChange("description")}
-          error={errors.description}
-          isRequired
-          sx={fieldStyle}
-          placeholder="Describe the dataset and its purpose"
-          rows={2}
-        />
-      </Suspense>
+      <Field
+        id="description"
+        label="Description"
+        type="description"
+        width={"100%"}
+        value={values.description}
+        onChange={handleOnTextFieldChange("description")}
+        error={errors.description}
+        isRequired
+        sx={fieldStyle}
+        placeholder="Describe the dataset and its purpose"
+        rows={2}
+      />
 
       {/* Second Row: Type, Classification, Status */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
@@ -352,86 +345,74 @@ const NewDataset: FC<NewDatasetProps> = ({
 
       {/* Third Row: Owner, Status Date, Source */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="owner"
-            label="Owner"
-            width={"33%"}
-            value={values.owner}
-            onChange={handleOnTextFieldChange("owner")}
-            error={errors.owner}
-            isRequired
-            sx={fieldStyle}
-            placeholder="e.g., Data Science Team"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <DatePicker
-            label="Status date"
-            date={values.status_date ? dayjs(values.status_date) : dayjs(new Date())}
-            handleDateChange={handleDateChange}
-            sx={{
-              width: "33%",
-              backgroundColor: theme.palette.background.main,
-            }}
-            isRequired
-            error={errors.status_date}
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="source"
-            label="Source"
-            width={"33%"}
-            value={values.source}
-            onChange={handleOnTextFieldChange("source")}
-            error={errors.source}
-            isRequired
-            sx={fieldStyle}
-            placeholder="e.g., Internal CRM"
-          />
-        </Suspense>
+        <Field
+          id="owner"
+          label="Owner"
+          width={"33%"}
+          value={values.owner}
+          onChange={handleOnTextFieldChange("owner")}
+          error={errors.owner}
+          isRequired
+          sx={fieldStyle}
+          placeholder="e.g., Data Science Team"
+        />
+        <DatePicker
+          label="Status date"
+          date={values.status_date ? dayjs(values.status_date) : dayjs(new Date())}
+          handleDateChange={handleDateChange}
+          sx={{
+            width: "33%",
+            backgroundColor: theme.palette.background.main,
+          }}
+          isRequired
+          error={errors.status_date}
+        />
+        <Field
+          id="source"
+          label="Source"
+          width={"33%"}
+          value={values.source}
+          onChange={handleOnTextFieldChange("source")}
+          error={errors.source}
+          isRequired
+          sx={fieldStyle}
+          placeholder="e.g., Internal CRM"
+        />
       </Stack>
 
       {/* Function */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          id="function"
-          label="Function"
-          width={"100%"}
-          value={values.function}
-          onChange={handleOnTextFieldChange("function")}
-          error={errors.function}
-          isRequired
-          sx={fieldStyle}
-          placeholder="Describe the dataset's function in AI model development"
-        />
-      </Suspense>
+      <Field
+        id="function"
+        label="Function"
+        width={"100%"}
+        value={values.function}
+        onChange={handleOnTextFieldChange("function")}
+        error={errors.function}
+        isRequired
+        sx={fieldStyle}
+        placeholder="Describe the dataset's function in AI model development"
+      />
 
       {/* Fourth Row: License, Format */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="license"
-            label="License"
-            width={"50%"}
-            value={values.license}
-            onChange={handleOnTextFieldChange("license")}
-            sx={fieldStyle}
-            placeholder="e.g., CC BY 4.0, MIT"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="format"
-            label="Format"
-            width={"50%"}
-            value={values.format}
-            onChange={handleOnTextFieldChange("format")}
-            sx={fieldStyle}
-            placeholder="e.g., CSV, JSON, Parquet"
-          />
-        </Suspense>
+        <Field
+          id="license"
+          label="License"
+          width={"50%"}
+          value={values.license}
+          onChange={handleOnTextFieldChange("license")}
+          sx={fieldStyle}
+          placeholder="e.g., CC BY 4.0, MIT"
+        />
+        <Field
+          id="format"
+          label="Format"
+          width={"50%"}
+          value={values.format}
+          onChange={handleOnTextFieldChange("format")}
+          sx={fieldStyle}
+          placeholder="e.g., CSV, JSON, Parquet"
+        />
       </Stack>
 
       {/* PII Section */}
@@ -457,69 +438,59 @@ const NewDataset: FC<NewDatasetProps> = ({
       </Stack>
 
       {values.contains_pii && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="pii_types"
-            label="PII types"
-            width={"100%"}
-            value={values.pii_types}
-            onChange={handleOnTextFieldChange("pii_types")}
-            sx={fieldStyle}
-            placeholder="e.g., Names, Email addresses, Phone numbers"
-          />
-        </Suspense>
+        <Field
+          id="pii_types"
+          label="PII types"
+          width={"100%"}
+          value={values.pii_types}
+          onChange={handleOnTextFieldChange("pii_types")}
+          sx={fieldStyle}
+          placeholder="e.g., Names, Email addresses, Phone numbers"
+        />
       )}
 
       {/* Biases Section */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="known_biases"
-            label="Known biases"
-            width={"50%"}
-            value={values.known_biases}
-            onChange={handleOnTextFieldChange("known_biases")}
-            sx={fieldStyle}
-            placeholder="Document any known biases"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="bias_mitigation"
-            label="Bias mitigation"
-            width={"50%"}
-            value={values.bias_mitigation}
-            onChange={handleOnTextFieldChange("bias_mitigation")}
-            sx={fieldStyle}
-            placeholder="Describe mitigation strategies"
-          />
-        </Suspense>
+        <Field
+          id="known_biases"
+          label="Known biases"
+          width={"50%"}
+          value={values.known_biases}
+          onChange={handleOnTextFieldChange("known_biases")}
+          sx={fieldStyle}
+          placeholder="Document any known biases"
+        />
+        <Field
+          id="bias_mitigation"
+          label="Bias mitigation"
+          width={"50%"}
+          value={values.bias_mitigation}
+          onChange={handleOnTextFieldChange("bias_mitigation")}
+          sx={fieldStyle}
+          placeholder="Describe mitigation strategies"
+        />
       </Stack>
 
       {/* Collection and Preprocessing */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="collection_method"
-            label="Collection method"
-            width={"50%"}
-            value={values.collection_method}
-            onChange={handleOnTextFieldChange("collection_method")}
-            sx={fieldStyle}
-            placeholder="e.g., Web scraping, API, Manual"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="preprocessing_steps"
-            label="Preprocessing steps"
-            width={"50%"}
-            value={values.preprocessing_steps}
-            onChange={handleOnTextFieldChange("preprocessing_steps")}
-            sx={fieldStyle}
-            placeholder="e.g., Normalization, tokenization"
-          />
-        </Suspense>
+        <Field
+          id="collection_method"
+          label="Collection method"
+          width={"50%"}
+          value={values.collection_method}
+          onChange={handleOnTextFieldChange("collection_method")}
+          sx={fieldStyle}
+          placeholder="e.g., Web scraping, API, Manual"
+        />
+        <Field
+          id="preprocessing_steps"
+          label="Preprocessing steps"
+          width={"50%"}
+          value={values.preprocessing_steps}
+          onChange={handleOnTextFieldChange("preprocessing_steps")}
+          sx={fieldStyle}
+          placeholder="e.g., Normalization, tokenization"
+        />
       </Stack>
 
       {/* Used in Models */}

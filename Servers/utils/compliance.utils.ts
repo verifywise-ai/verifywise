@@ -178,11 +178,11 @@ async function getVendorManagementData(organizationId: number): Promise<VendorMa
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
-    // High risk vendors (based on risk_score)
+    // High risk vendors (based on risk_score; review_result is a free-text field, not a category)
     const highRiskResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM vendors
        WHERE organization_id = :organizationId
-       AND (risk_score >= 70 OR review_result = 'High risk')`,
+       AND risk_score >= 70`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
@@ -312,19 +312,20 @@ async function getPolicyDocumentationData(
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
-    // Active policies
+    // Active policies (i.e. published — "Active" is not a valid policy_manager.status value)
     const activeResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId
-       AND status = 'Active'`,
+       AND status = 'Published'`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
-    // Overdue policies
+    // Overdue policies — past review date and not currently published
     const overdueResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId
-       AND (status = 'Overdue' OR (next_review_date < NOW() AND status != 'Active'))`,
+       AND next_review_date < NOW()
+       AND status != 'Published'`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 

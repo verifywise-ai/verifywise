@@ -1,7 +1,7 @@
-import { Suspense, lazy, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-const GenerateReport = lazy(() => import("./GenerateReport"));
-const ReportLists = lazy(() => import("./Reports"));
+import GenerateReport from "./GenerateReport";
+import ReportLists from "./Reports";
 import PageTour from "../../components/PageTour";
 import ReportingSteps from "./ReportingSteps";
 
@@ -21,16 +21,14 @@ const Reporting = () => {
       tipBoxEntity="reporting"
     >
       <div data-joyride-id="reports-list">
-        <Suspense fallback={null}>
-          <ReportLists
-            refreshKey={refreshKey}
-            generateReportButton={
-              <div data-joyride-id="generate-report-button">
-                <GenerateReport onReportGenerated={handleReportGenerated} />
-              </div>
-            }
-          />
-        </Suspense>
+        <ReportLists
+          refreshKey={refreshKey}
+          generateReportButton={
+            <div data-joyride-id="generate-report-button">
+              <GenerateReport onReportGenerated={handleReportGenerated} />
+            </div>
+          }
+        />
       </div>
 
       <PageTour steps={ReportingSteps} run={true} tourKey="reporting-tour" />

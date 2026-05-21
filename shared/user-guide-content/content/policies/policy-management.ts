@@ -104,9 +104,11 @@ export const policyManagementContent: ArticleContent = {
       items: [
         { text: 'Click "Add new policy" in the organizational policies tab' },
         { text: 'Enter a title that clearly describes the policy\'s purpose' },
+        { text: 'Assign a policy owner who is accountable for the policy' },
         { text: 'Write or paste the policy content using the rich text editor' },
         { text: 'Select relevant tags to categorize the policy' },
         { text: 'Set the initial status (typically Draft)' },
+        { text: 'Optionally add team members as reviewers' },
         { text: 'Optionally set a next review date' },
         { text: 'Save the policy' },
       ],
@@ -130,10 +132,12 @@ export const policyManagementContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Title', text: 'A clear, descriptive name for the policy' },
+        { bold: 'Title', text: 'A clear, descriptive name for the policy (up to 128 characters)' },
+        { bold: 'Policy owner', text: 'The person accountable for the policy. Owners cannot also be assigned as reviewers on the same policy.' },
         { bold: 'Content', text: 'The full policy text with rich formatting support' },
         { bold: 'Status', text: 'Current lifecycle stage (Draft, Under review, Approved, Published, Archived, Deprecated)' },
         { bold: 'Tags', text: 'Categories like AI ethics, Privacy, Security, EU AI Act, ISO 42001, etc.' },
+        { bold: 'Team members', text: 'Reviewers assigned to evaluate the policy. The policy owner is excluded from this list.' },
         { bold: 'Next review date', text: 'When the policy should be reviewed for updates' },
         { bold: 'Author', text: 'The person who created the policy' },
         { bold: 'Last updated', text: 'When the policy was most recently modified' },

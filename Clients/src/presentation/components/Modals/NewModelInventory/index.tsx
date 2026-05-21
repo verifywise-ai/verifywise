@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import React, { FC, useState, useMemo, useCallback, useEffect } from "react";
 import {
   useTheme,
   Stack,
@@ -10,9 +10,8 @@ import {
   Tooltip,
 } from "@mui/material";
 import Toggle from "../../Inputs/Toggle";
-import { lazy } from "react";
-const Field = lazy(() => import("../../Inputs/Field"));
-const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
+import Field from "../../Inputs/Field";
+import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
 import { ChevronDown, DownloadIcon } from "lucide-react";
 import StandardModal from "../StandardModal";
@@ -503,85 +502,79 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     <Stack spacing={3}>
       {/* First Row: Provider, Model, Version */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="provider"
-            label="Provider"
-            width={220}
-            value={values.provider}
-            onChange={handleOnTextFieldChange("provider")}
-            error={errors.provider}
-            isRequired
-            sx={fieldStyle}
-            placeholder="eg. OpenAI"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <AutoCompleteField<
-            { _id: string; name: string; surname: string; email: string },
-            false,
-            false,
-            true
-          >
-            id="model-input"
-            label="Model"
-            isRequired
-            freeSolo
-            value={values.model}
-            options={modelInventoryList || []}
-            getOptionLabel={(option) => (typeof option === "string" ? option : option.name)}
-            onChange={(_event, newValue) => {
-              if (typeof newValue === "string") {
-                setValues((prev) => ({ ...prev, model: newValue }));
-              } else if (newValue && typeof newValue === "object") {
-                setValues((prev) => ({ ...prev, model: newValue.name }));
-              } else {
-                setValues((prev) => ({ ...prev, model: "" }));
-              }
+        <Field
+          id="provider"
+          label="Provider"
+          width={220}
+          value={values.provider}
+          onChange={handleOnTextFieldChange("provider")}
+          error={errors.provider}
+          isRequired
+          sx={fieldStyle}
+          placeholder="eg. OpenAI"
+        />
+        <AutoCompleteField<
+          { _id: string; name: string; surname: string; email: string },
+          false,
+          false,
+          true
+        >
+          id="model-input"
+          label="Model"
+          isRequired
+          freeSolo
+          value={values.model}
+          options={modelInventoryList || []}
+          getOptionLabel={(option) => (typeof option === "string" ? option : option.name)}
+          onChange={(_event, newValue) => {
+            if (typeof newValue === "string") {
+              setValues((prev) => ({ ...prev, model: newValue }));
+            } else if (newValue && typeof newValue === "object") {
+              setValues((prev) => ({ ...prev, model: newValue.name }));
+            } else {
+              setValues((prev) => ({ ...prev, model: "" }));
+            }
+            clearFieldError("model");
+          }}
+          onInputChange={(_event, newInputValue, reason) => {
+            if (reason === "input") {
+              setValues((prev) => ({ ...prev, model: newInputValue }));
               clearFieldError("model");
-            }}
-            onInputChange={(_event, newInputValue, reason) => {
-              if (reason === "input") {
-                setValues((prev) => ({ ...prev, model: newInputValue }));
-                clearFieldError("model");
-              }
-            }}
-            renderOption={(props, option) => {
-              const { key, ...otherProps } = props;
-              return (
-                <Box component="li" key={key} {...otherProps}>
-                  <Typography sx={{ fontSize: 13, color: theme.palette.text.primary }}>
-                    {option.name}
-                  </Typography>
-                </Box>
-              );
-            }}
-            popupIcon={<ChevronDown size={16} />}
-            filterOptions={(options, state) => {
-              const filtered = options.filter((option) =>
-                option.name.toLowerCase().includes(state.inputValue.toLowerCase()),
-              );
-              return filtered.length === 0 ? [] : filtered;
-            }}
-            placeholder="Select or enter model"
-            error={errors.model}
-            disabled={isLoadingUsers}
-            sx={{ width: 220 }}
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="version"
-            label="Version"
-            width={220}
-            value={values.version}
-            onChange={handleOnTextFieldChange("version")}
-            error={errors.version}
-            isRequired
-            sx={fieldStyle}
-            placeholder="e.g., 4.0, 1.5"
-          />
-        </Suspense>
+            }
+          }}
+          renderOption={(props, option) => {
+            const { key, ...otherProps } = props;
+            return (
+              <Box component="li" key={key} {...otherProps}>
+                <Typography sx={{ fontSize: 13, color: theme.palette.text.primary }}>
+                  {option.name}
+                </Typography>
+              </Box>
+            );
+          }}
+          popupIcon={<ChevronDown size={16} />}
+          filterOptions={(options, state) => {
+            const filtered = options.filter((option) =>
+              option.name.toLowerCase().includes(state.inputValue.toLowerCase()),
+            );
+            return filtered.length === 0 ? [] : filtered;
+          }}
+          placeholder="Select or enter model"
+          error={errors.model}
+          disabled={isLoadingUsers}
+          sx={{ width: 220 }}
+        />
+        <Field
+          id="version"
+          label="Version"
+          width={220}
+          value={values.version}
+          onChange={handleOnTextFieldChange("version")}
+          error={errors.version}
+          isRequired
+          sx={fieldStyle}
+          placeholder="e.g., 4.0, 1.5"
+        />
       </Stack>
 
       {/* Second Row: Approver, Status, Status Date */}
@@ -608,19 +601,17 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           onChange={handleOnSelectChange("status")}
           placeholder="Select status"
         />
-        <Suspense fallback={<div>Loading...</div>}>
-          <DatePicker
-            label="Status date"
-            date={values.status_date ? dayjs(values.status_date) : dayjs(new Date())}
-            handleDateChange={handleDateChange}
-            sx={{
-              width: 220,
-              backgroundColor: theme.palette.background.main,
-            }}
-            isRequired
-            error={errors.status_date}
-          />
-        </Suspense>
+        <DatePicker
+          label="Status date"
+          date={values.status_date ? dayjs(values.status_date) : dayjs(new Date())}
+          handleDateChange={handleDateChange}
+          sx={{
+            width: 220,
+            backgroundColor: theme.palette.background.main,
+          }}
+          isRequired
+          error={errors.status_date}
+        />
       </Stack>
 
       {/* Capabilities Section */}
@@ -719,53 +710,45 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
       />
 
       <Stack direction={"row"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="reference_link"
-            label="Reference link"
-            width={"50%"}
-            value={values.reference_link}
-            onChange={handleOnTextFieldChange("reference_link")}
-            sx={fieldStyle}
-            placeholder="eg. www.org.ca"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="biases"
-            label="Biases"
-            width={"50%"}
-            value={values.biases}
-            onChange={handleOnTextFieldChange("biases")}
-            sx={fieldStyle}
-            placeholder="Biases"
-          />
-        </Suspense>
+        <Field
+          id="reference_link"
+          label="Reference link"
+          width={"50%"}
+          value={values.reference_link}
+          onChange={handleOnTextFieldChange("reference_link")}
+          sx={fieldStyle}
+          placeholder="eg. www.org.ca"
+        />
+        <Field
+          id="biases"
+          label="Biases"
+          width={"50%"}
+          value={values.biases}
+          onChange={handleOnTextFieldChange("biases")}
+          sx={fieldStyle}
+          placeholder="Biases"
+        />
       </Stack>
 
       <Stack direction={"row"} spacing={6}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="hosting_provider"
-            label="Hosting provider"
-            value={values.hosting_provider}
-            width={"50%"}
-            onChange={handleOnTextFieldChange("hosting_provider")}
-            sx={fieldStyle}
-            placeholder="eg. OpenAI"
-          />
-        </Suspense>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="limitations"
-            label="Limitations"
-            width={"50%"}
-            value={values.limitations}
-            onChange={handleOnTextFieldChange("limitations")}
-            sx={fieldStyle}
-            placeholder="Limitation"
-          />
-        </Suspense>
+        <Field
+          id="hosting_provider"
+          label="Hosting provider"
+          value={values.hosting_provider}
+          width={"50%"}
+          onChange={handleOnTextFieldChange("hosting_provider")}
+          sx={fieldStyle}
+          placeholder="eg. OpenAI"
+        />
+        <Field
+          id="limitations"
+          label="Limitations"
+          width={"50%"}
+          value={values.limitations}
+          onChange={handleOnTextFieldChange("limitations")}
+          sx={fieldStyle}
+          placeholder="Limitation"
+        />
       </Stack>
 
       {/* Security Assessment Section */}

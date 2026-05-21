@@ -8,7 +8,7 @@ import {
   useTheme,
   TableFooter,
 } from "@mui/material";
-import { Suspense, lazy, useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import TablePaginationActions from "../../TablePagination";
 import StandardTableHead from "../StandardTableHead";
 import { EmptyState } from "../../EmptyState";
@@ -27,7 +27,7 @@ import {
 import { IEvaluationTableProps, IEvaluationRow } from "../../../types/interfaces/i.table";
 import type { SortConfig, StandardColumn } from "../../../../domain/types/standardTable";
 
-const EvaluationTableBody = lazy(() => import("./TableBody"));
+import EvaluationTableBody from "./TableBody";
 
 const EVALUATION_SORTING_KEY = "verifywise_evaluation_sorting";
 
@@ -194,110 +194,108 @@ const EvaluationTable: React.FC<IEvaluationTableProps> = ({
   return (
     <>
       <TableContainer sx={{ mt: 10 }}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-            <StandardTableHead
-              columns={standardColumns}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-            />
-            {sortedRows.length !== 0 ? (
-              <>
-                <EvaluationTableBody
-                  rows={sortedRows}
-                  onRemoveModel={removeModel}
-                  onShowDetails={onShowDetails}
-                  onRerun={onRerun}
-                  onDownload={onDownload}
-                  onCopy={onCopy}
-                  page={hidePagination ? 0 : page}
-                  rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
-                />
-                {!hidePagination && (
-                  <TableFooter>
-                    <TableRow
-                      sx={{
-                        "& .MuiTableCell-root.MuiTableCell-footer": {
-                          paddingX: theme.spacing(8),
-                          paddingY: theme.spacing(4),
+        <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
+          <StandardTableHead
+            columns={standardColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+          {sortedRows.length !== 0 ? (
+            <>
+              <EvaluationTableBody
+                rows={sortedRows}
+                onRemoveModel={removeModel}
+                onShowDetails={onShowDetails}
+                onRerun={onRerun}
+                onDownload={onDownload}
+                onCopy={onCopy}
+                page={hidePagination ? 0 : page}
+                rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
+              />
+              {!hidePagination && (
+                <TableFooter>
+                  <TableRow
+                    sx={{
+                      "& .MuiTableCell-root.MuiTableCell-footer": {
+                        paddingX: theme.spacing(8),
+                        paddingY: theme.spacing(4),
+                      },
+                    }}
+                  >
+                    <TableCell sx={paginationStatus(theme)}>
+                      Showing {getRange} of {sortedRows?.length} evaluation
+                      {sortedRows?.length !== 1 ? "s" : ""}
+                    </TableCell>
+                    <TablePagination
+                      count={sortedRows.length}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      rowsPerPage={rowsPerPage}
+                      rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                      labelRowsPerPage="Evaluations per page"
+                      labelDisplayedRows={({ page, count }) =>
+                        `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                      }
+                      sx={paginationStyle(theme)}
+                      slotProps={{
+                        select: {
+                          MenuProps: {
+                            keepMounted: true,
+                            PaperProps: {
+                              className: "pagination-dropdown",
+                              sx: paginationDropdown(theme),
+                            },
+                            transformOrigin: {
+                              vertical: "bottom",
+                              horizontal: "left",
+                            },
+                            anchorOrigin: {
+                              vertical: "top",
+                              horizontal: "left",
+                            },
+                            sx: { mt: theme.spacing(-2) },
+                          },
+                          inputProps: { id: "pagination-dropdown" },
+                          IconComponent: SelectorVertical,
+                          sx: paginationSelect(theme),
                         },
                       }}
-                    >
-                      <TableCell sx={paginationStatus(theme)}>
-                        Showing {getRange} of {sortedRows?.length} evaluation
-                        {sortedRows?.length !== 1 ? "s" : ""}
-                      </TableCell>
-                      <TablePagination
-                        count={sortedRows.length}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        rowsPerPage={rowsPerPage}
-                        rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                        labelRowsPerPage="Evaluations per page"
-                        labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
-                        }
-                        sx={paginationStyle(theme)}
-                        slotProps={{
-                          select: {
-                            MenuProps: {
-                              keepMounted: true,
-                              PaperProps: {
-                                className: "pagination-dropdown",
-                                sx: paginationDropdown(theme),
-                              },
-                              transformOrigin: {
-                                vertical: "bottom",
-                                horizontal: "left",
-                              },
-                              anchorOrigin: {
-                                vertical: "top",
-                                horizontal: "left",
-                              },
-                              sx: { mt: theme.spacing(-2) },
-                            },
-                            inputProps: { id: "pagination-dropdown" },
-                            IconComponent: SelectorVertical,
-                            sx: paginationSelect(theme),
-                          },
-                        }}
-                      />
-                    </TableRow>
-                  </TableFooter>
-                )}
-              </>
-            ) : (
-              <TableBody>
-                <TableRow>
-                  <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
-                    <EmptyState
-                      icon={FlaskConical}
-                      message="No experiments run yet. Create an experiment to evaluate model performance."
-                    >
-                      <EmptyStateTip
-                        icon={Play}
-                        title="Run your first experiment"
-                        description="Select a dataset, pick one or more models, and choose scorers. The system runs each prompt through the models and grades the outputs."
-                      />
-                      <EmptyStateTip
-                        icon={Database}
-                        title="Prepare a dataset first"
-                        description="Experiments need a dataset with prompts and expected outputs. Upload one in the datasets tab before running an experiment."
-                      />
-                      <EmptyStateTip
-                        icon={BarChart3}
-                        title="Compare results over time"
-                        description="Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress."
-                      />
-                    </EmptyState>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            )}
-          </Table>
-        </Suspense>
+                    />
+                  </TableRow>
+                </TableFooter>
+              )}
+            </>
+          ) : (
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={columns.length} sx={{ border: "none", p: 0 }}>
+                  <EmptyState
+                    icon={FlaskConical}
+                    message="No experiments run yet. Create an experiment to evaluate model performance."
+                  >
+                    <EmptyStateTip
+                      icon={Play}
+                      title="Run your first experiment"
+                      description="Select a dataset, pick one or more models, and choose scorers. The system runs each prompt through the models and grades the outputs."
+                    />
+                    <EmptyStateTip
+                      icon={Database}
+                      title="Prepare a dataset first"
+                      description="Experiments need a dataset with prompts and expected outputs. Upload one in the datasets tab before running an experiment."
+                    />
+                    <EmptyStateTip
+                      icon={BarChart3}
+                      title="Compare results over time"
+                      description="Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress."
+                    />
+                  </EmptyState>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          )}
+        </Table>
       </TableContainer>
     </>
   );

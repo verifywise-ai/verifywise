@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useCallback, useEffect, Suspense, useMemo } from "react";
+import React, { FC, useState, useCallback, useEffect, useMemo } from "react";
 import { useTheme, Stack, Typography, Box } from "@mui/material";
-import { lazy } from "react";
-const Field = lazy(() => import("../../Inputs/Field"));
-const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
+import Field from "../../Inputs/Field";
+import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
 import ChipInput from "../../Inputs/ChipInput";
 import EntityLinkSelector, { EntityLink } from "../../EntityLinkSelector";
@@ -282,63 +281,57 @@ const CreateTask: FC<ICreateTaskProps> = ({
     <Stack spacing={6}>
       {/* Row 1: Task title | Assignees */}
       <Stack direction="row" spacing={6} sx={{ width: "748px" }}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="title"
-            label="Task title"
-            width="350px"
-            value={values.title}
-            onChange={handleOnTextFieldChange("title")}
-            error={errors.title}
-            isRequired
-            sx={fieldStyle}
-            placeholder="Enter task title"
-          />
-        </Suspense>
+        <Field
+          id="title"
+          label="Task title"
+          width="350px"
+          value={values.title}
+          onChange={handleOnTextFieldChange("title")}
+          error={errors.title}
+          isRequired
+          sx={fieldStyle}
+          placeholder="Enter task title"
+        />
 
-        <Suspense fallback={<div>Loading...</div>}>
-          <AutoCompleteField
-            multiple
-            id="assignees-input"
-            label="Assignees"
-            isRequired
-            placeholder="Select assignees"
-            error={errors.assignees}
-            value={values.assignees}
-            options={assigneeOptions}
-            onChange={handleAssigneesChange}
-            getOptionLabel={(user) => `${user.name} ${user.surname}`.trim()}
-            renderOption={(props, option) => {
-              const { key, ...optionProps } = props;
-              const userEmail =
-                option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
-              return (
-                <Box component="li" key={key} {...optionProps}>
-                  <Typography sx={{ fontSize: "13px" }}>
-                    {option.name} {option.surname}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: "11px",
-                      color: "rgb(157, 157, 157)",
-                      position: "absolute",
-                      right: "9px",
-                    }}
-                  >
-                    {userEmail}
-                  </Typography>
-                </Box>
-              );
-            }}
-            noOptionsText={
-              values.assignees.length === (users?.length ?? 0)
-                ? "All members selected"
-                : "No options"
-            }
-            popupIcon={<GreyDownArrowIcon size={16} />}
-            sx={{ width: "350px" }}
-          />
-        </Suspense>
+        <AutoCompleteField
+          multiple
+          id="assignees-input"
+          label="Assignees"
+          isRequired
+          placeholder="Select assignees"
+          error={errors.assignees}
+          value={values.assignees}
+          options={assigneeOptions}
+          onChange={handleAssigneesChange}
+          getOptionLabel={(user) => `${user.name} ${user.surname}`.trim()}
+          renderOption={(props, option) => {
+            const { key, ...optionProps } = props;
+            const userEmail =
+              option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
+            return (
+              <Box component="li" key={key} {...optionProps}>
+                <Typography sx={{ fontSize: "13px" }}>
+                  {option.name} {option.surname}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "11px",
+                    color: "rgb(157, 157, 157)",
+                    position: "absolute",
+                    right: "9px",
+                  }}
+                >
+                  {userEmail}
+                </Typography>
+              </Box>
+            );
+          }}
+          noOptionsText={
+            values.assignees.length === (users?.length ?? 0) ? "All members selected" : "No options"
+          }
+          popupIcon={<GreyDownArrowIcon size={16} />}
+          sx={{ width: "350px" }}
+        />
       </Stack>
 
       {/* Row 2: Status | Categories */}
@@ -423,37 +416,33 @@ const CreateTask: FC<ICreateTaskProps> = ({
           )}
         </Stack>
 
-        <Suspense fallback={<div>Loading...</div>}>
-          <DatePicker
-            label="Due date"
-            date={values.due_date ? dayjs(values.due_date) : null}
-            handleDateChange={handleDateChange}
-            sx={{
-              ...datePickerStyle,
-              width: "350px",
-              backgroundColor: theme.palette.background.main,
-            }}
-            isRequired
-            error={errors.due_date}
-          />
-        </Suspense>
+        <DatePicker
+          label="Due date"
+          date={values.due_date ? dayjs(values.due_date) : null}
+          handleDateChange={handleDateChange}
+          sx={{
+            ...datePickerStyle,
+            width: "350px",
+            backgroundColor: theme.palette.background.main,
+          }}
+          isRequired
+          error={errors.due_date}
+        />
       </Stack>
 
       {/* Row 4: Description (full width) */}
       <Stack direction="row" spacing={6} sx={{ width: "748px" }}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Field
-            id="description"
-            label="Description"
-            width="100%"
-            type="description"
-            value={values.description}
-            onChange={handleOnTextFieldChange("description")}
-            error={errors.description}
-            sx={fieldStyle}
-            placeholder="Enter description"
-          />
-        </Suspense>
+        <Field
+          id="description"
+          label="Description"
+          width="100%"
+          type="description"
+          value={values.description}
+          onChange={handleOnTextFieldChange("description")}
+          error={errors.description}
+          sx={fieldStyle}
+          placeholder="Enter description"
+        />
       </Stack>
 
       {/* Row 5: Entity Links */}

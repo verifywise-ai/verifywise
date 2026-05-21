@@ -12,6 +12,7 @@ import {
   AccordionDetails,
   CircularProgress,
 } from "@mui/material";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import VWChip from "../../components/Chip";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -223,48 +224,32 @@ export default function DatasetEditorPage() {
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button
+          <CustomizableButton
+            color="secondary"
             variant="outlined"
             onClick={handleCopyJson}
             startIcon={copied ? <Check size={16} /> : <Copy size={16} />}
-            sx={{
-              "color": copied ? palette.status.success.text : palette.text.secondary,
-              "borderColor": copied ? palette.status.success.text : palette.border.dark,
-              "&:hover": {
-                borderColor: palette.text.disabled,
-                backgroundColor: palette.background.accent,
-              },
-            }}
-          >
-            {copied ? "Copied!" : "Copy JSON"}
-          </Button>
-          <Button
+            text={copied ? "Copied!" : "Copy JSON"}
+          />
+          <CustomizableButton
+            color="secondary"
             variant="outlined"
             onClick={handleDownload}
             startIcon={<Download size={16} />}
-            sx={{
-              "color": palette.text.secondary,
-              "borderColor": palette.border.dark,
-              "&:hover": {
-                borderColor: palette.text.disabled,
-                backgroundColor: palette.background.accent,
-              },
-            }}
-          >
-            Download
-          </Button>
-          <Button
+            text="Download"
+          />
+          <CustomizableButton
             variant="contained"
-            disabled={!isValidToSave || saving || !datasetName.trim()}
+            isDisabled={!isValidToSave || !datasetName.trim()}
+            loading={saving}
             sx={{
               "bgcolor": palette.brand.primary,
               "&:hover": { bgcolor: palette.brand.primaryHover },
             }}
             startIcon={<SaveIcon size={16} />}
             onClick={handleSave}
-          >
-            {saving ? "Saving..." : "Save"}
-          </Button>
+            text="Save"
+          />
         </Stack>
       </Stack>
 

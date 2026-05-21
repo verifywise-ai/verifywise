@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { Suspense, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Fade, Stack } from "@mui/material";
 import StandardModal from "../Modals/StandardModal";
 import {
@@ -10,7 +10,7 @@ import { toastFadeStyle } from "../../../presentation/pages/ModelInventory/style
 import { getAllPolicies } from "../../../application/repository/policy.repository";
 import { PolicyManagerModel } from "../../../../src/domain/models/Common/policy/policyManager.model";
 import LinkedPolicyObjectsTable from "../Table/PolicyTable/LinkedPolicyObjectTable";
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 interface ProjectRiskLinkedPoliciesModalProps {
   onClose: () => void;
@@ -187,22 +187,20 @@ const ProjectRiskLinkedPolicies: React.FC<ProjectRiskLinkedPoliciesModalProps> =
       </StandardModal>
 
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-            <Box mb={2}>
-              <Alert
-                variant={alert.variant}
-                title={alert.title}
-                body={alert.body}
-                isToast={true}
-                onClick={() => {
-                  setShowAlert(false);
-                  setTimeout(() => setAlert(null), 300);
-                }}
-              />
-            </Box>
-          </Fade>
-        </Suspense>
+        <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
+          <Box mb={2}>
+            <Alert
+              variant={alert.variant}
+              title={alert.title}
+              body={alert.body}
+              isToast={true}
+              onClick={() => {
+                setShowAlert(false);
+                setTimeout(() => setAlert(null), 300);
+              }}
+            />
+          </Box>
+        </Fade>
       )}
     </>
   );

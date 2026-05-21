@@ -27,12 +27,12 @@ import { FileData } from "../../../../domain/types/File";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
 import { Dayjs } from "dayjs";
-import { useState, useEffect, useMemo, Suspense, lazy, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { CustomizableButton } from "../../button/customizable-button";
 import TabBar from "../../TabBar";
 import { text } from "../../../themes/palette";
-const NotesTab = lazy(() => import("../../Notes/NotesTab"));
-const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
+import NotesTab from "../../Notes/NotesTab";
+import AddNewRiskForm from "../../AddNewRiskForm";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
@@ -51,9 +51,7 @@ import StandardModal from "../../Modals/StandardModal";
 import allowedRoles from "../../../../application/constants/permissions";
 import { FilePickerModal } from "../../FilePickerModal";
 import AuditRiskPopup from "../../RiskPopup/AuditRiskPopup";
-const LinkedRisksPopup = lazy(() =>
-  import("../../LinkedRisks").then((m) => ({ default: m.LinkedRisksPopup })),
-);
+import { LinkedRisksPopup } from "../../LinkedRisks";
 import { ISO27001GetSubClauseById } from "../../../../application/repository/subClause_iso.repository";
 import { RiskFormValues } from "../../../../domain/types/riskForm.types";
 
@@ -1514,33 +1512,29 @@ const VWISO27001ClauseDrawerDialog = ({
 
                 {/* LinkedRisks Modal */}
                 {isLinkedRisksModalOpen && (
-                  <Suspense fallback={"Loading..."}>
-                    <LinkedRisksPopup
-                      onClose={() => setIsLinkedRisksModalOpen(false)}
-                      currentRisks={currentRisks
-                        .concat(selectedRisks)
-                        .filter((risk) => !deletedRisks.includes(risk))}
-                      setSelectecRisks={setSelectedRisks}
-                      _setDeletedRisks={setDeletedRisks}
-                      frameworkId={3}
-                      isOrganizational={true}
-                    />
-                  </Suspense>
+                  <LinkedRisksPopup
+                    onClose={() => setIsLinkedRisksModalOpen(false)}
+                    currentRisks={currentRisks
+                      .concat(selectedRisks)
+                      .filter((risk) => !deletedRisks.includes(risk))}
+                    setSelectecRisks={setSelectedRisks}
+                    _setDeletedRisks={setDeletedRisks}
+                    frameworkId={3}
+                    isOrganizational={true}
+                  />
                 )}
               </Stack>
             </TabPanel>
 
             {/* Tab 4: Notes */}
             <TabPanel value="notes" sx={{ padding: "15px 20px" }}>
-              <Suspense fallback={<CircularProgress />}>
-                {fetchedSubClause?.id && (
-                  <NotesTab
-                    key={`iso27001-clause-${fetchedSubClause.id}`}
-                    attachedTo="ISO_27001_CLAUSE"
-                    attachedToId={fetchedSubClause.id.toString()}
-                  />
-                )}
-              </Suspense>
+              {fetchedSubClause?.id && (
+                <NotesTab
+                  key={`iso27001-clause-${fetchedSubClause.id}`}
+                  attachedTo="ISO_27001_CLAUSE"
+                  attachedToId={fetchedSubClause.id.toString()}
+                />
+              )}
             </TabPanel>
           </TabContext>
           <Stack
@@ -1577,22 +1571,20 @@ const VWISO27001ClauseDrawerDialog = ({
         submitButtonText="Update"
         maxWidth="1039px"
       >
-        <Suspense fallback={<CircularProgress />}>
-          <AddNewRiskForm
-            closePopup={handleRiskDetailModalClose}
-            popupStatus="edit"
-            initialRiskValues={riskFormData}
-            onSuccess={handleRiskUpdateSuccess}
-            onError={(error) => {
-              handleAlert({
-                variant: "error",
-                body: error || "Failed to update risk",
-              });
-            }}
-            users={users}
-            onSubmitRef={onRiskSubmitRef}
-          />
-        </Suspense>
+        <AddNewRiskForm
+          closePopup={handleRiskDetailModalClose}
+          popupStatus="edit"
+          initialRiskValues={riskFormData}
+          onSuccess={handleRiskUpdateSuccess}
+          onError={(error) => {
+            handleAlert({
+              variant: "error",
+              body: error || "Failed to update risk",
+            });
+          }}
+          users={users}
+          onSubmitRef={onRiskSubmitRef}
+        />
       </StandardModal>
 
       {/* Audit Risk Dialog */}
@@ -1606,16 +1598,14 @@ const VWISO27001ClauseDrawerDialog = ({
           },
         }}
       >
-        <Suspense fallback={"Loading..."}>
-          <AuditRiskPopup
-            onClose={() => setAuditedStatusModalOpen(false)}
-            risks={formData.risks.concat(selectedRisks)}
-            _deletedRisks={deletedRisks}
-            _setDeletedRisks={setDeletedRisks}
-            _selectedRisks={selectedRisks}
-            _setSelectedRisks={setSelectedRisks}
-          />
-        </Suspense>
+        <AuditRiskPopup
+          onClose={() => setAuditedStatusModalOpen(false)}
+          risks={formData.risks.concat(selectedRisks)}
+          _deletedRisks={deletedRisks}
+          _setDeletedRisks={setDeletedRisks}
+          _selectedRisks={selectedRisks}
+          _setSelectedRisks={setSelectedRisks}
+        />
       </Dialog>
 
       {/* Alert */}

@@ -35,6 +35,12 @@ export default defineConfig({
     manifest: true,
     chunkSizeWarningLimit: 600,
     cssCodeSplit: true,
+    modulePreload: {
+      // Drop heavy chunks that aren't needed for first paint (charts, rich-text editor,
+      // xlsx) so they don't compete with the critical-path bundle download.
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((d) => !/vendor-charts|vendor-editor|xlsx|ExportMenu/.test(d)),
+    },
     rollupOptions: {
       output: {
         // Add hash to filenames for cache busting

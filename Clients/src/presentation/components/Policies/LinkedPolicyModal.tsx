@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { Suspense, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Box, Fade, Stack } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import StandardModal from "../Modals/StandardModal";
@@ -25,7 +25,7 @@ import { transformFilesData } from "../../../application/utils/fileTransform.uti
 import { FileModel } from "../../../domain/models/Common/file/file.model";
 import LinkEvidenceSelectorModal from "./LinkEvidenceSelectorModal";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 interface LinkedPolicyModalProps {
   onClose: () => void;
@@ -254,22 +254,20 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
       </StandardModal>
 
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-            <Box mb={2}>
-              <Alert
-                variant={alert.variant}
-                title={alert.title}
-                body={alert.body}
-                isToast={true}
-                onClick={() => {
-                  setShowAlert(false);
-                  setTimeout(() => setAlert(null), 300);
-                }}
-              />
-            </Box>
-          </Fade>
-        </Suspense>
+        <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
+          <Box mb={2}>
+            <Alert
+              variant={alert.variant}
+              title={alert.title}
+              body={alert.body}
+              isToast={true}
+              onClick={() => {
+                setShowAlert(false);
+                setTimeout(() => setAlert(null), 300);
+              }}
+            />
+          </Box>
+        </Fade>
       )}
     </>
   );

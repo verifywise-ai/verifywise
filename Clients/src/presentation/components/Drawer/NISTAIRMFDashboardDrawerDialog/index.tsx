@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense, useRef, lazy } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { Box, IconButton, Tooltip } from "@mui/material";
@@ -27,8 +27,8 @@ import { LinkedRisksPopup } from "../../LinkedRisks";
 import StandardModal from "../../Modals/StandardModal";
 import { text } from "../../../themes/palette";
 
-const AddNewRiskForm = lazy(() => import("../../AddNewRiskForm"));
-const NotesTab = lazy(() => import("../../Notes/NotesTab"));
+import AddNewRiskForm from "../../AddNewRiskForm";
+import NotesTab from "../../Notes/NotesTab";
 import { NISTAIRMFDrawerProps, NISTAIRMFStatus } from "../../../pages/Framework/NIST-AI-RMF/types";
 import { AlertProps } from "../../../types/alert.types";
 import {
@@ -1210,29 +1210,25 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
 
                 {/* Notes Tab */}
                 <TabPanel value="notes" sx={{ padding: "15px 20px" }}>
-                  <Suspense fallback={<CircularProgress />}>
-                    <NotesTab
-                      attachedTo="NIST_SUBCATEGORY"
-                      attachedToId={subcategory?.id?.toString() || ""}
-                    />
-                  </Suspense>
+                  <NotesTab
+                    attachedTo="NIST_SUBCATEGORY"
+                    attachedToId={subcategory?.id?.toString() || ""}
+                  />
                 </TabPanel>
               </TabContext>
 
               {/* Linked Risks Modal */}
               {isLinkedRisksModalOpen && (
-                <Suspense fallback={"Loading..."}>
-                  <LinkedRisksPopup
-                    onClose={() => setIsLinkedRisksModalOpen(false)}
-                    currentRisks={currentRisks
-                      .concat(selectedRisks)
-                      .filter((risk) => !deletedRisks.includes(risk))}
-                    setSelectecRisks={setSelectedRisks}
-                    _setDeletedRisks={setDeletedRisks}
-                    frameworkId={4}
-                    isOrganizational={true}
-                  />
-                </Suspense>
+                <LinkedRisksPopup
+                  onClose={() => setIsLinkedRisksModalOpen(false)}
+                  currentRisks={currentRisks
+                    .concat(selectedRisks)
+                    .filter((risk) => !deletedRisks.includes(risk))}
+                  setSelectecRisks={setSelectedRisks}
+                  _setDeletedRisks={setDeletedRisks}
+                  frameworkId={4}
+                  isOrganizational={true}
+                />
               )}
 
               {/* Footer */}
@@ -1278,23 +1274,21 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
         submitButtonText="Update"
         maxWidth="1039px"
       >
-        <Suspense fallback={<CircularProgress />}>
-          <AddNewRiskForm
-            closePopup={handleRiskDetailModalClose}
-            popupStatus="edit"
-            initialRiskValues={riskFormData}
-            onSuccess={handleRiskUpdateSuccess}
-            onError={(error) => {
-              setAlert({
-                variant: "error",
-                body: error || "Failed to update risk",
-              });
-              setTimeout(() => setAlert(null), 3000);
-            }}
-            users={users}
-            onSubmitRef={onRiskSubmitRef}
-          />
-        </Suspense>
+        <AddNewRiskForm
+          closePopup={handleRiskDetailModalClose}
+          popupStatus="edit"
+          initialRiskValues={riskFormData}
+          onSuccess={handleRiskUpdateSuccess}
+          onError={(error) => {
+            setAlert({
+              variant: "error",
+              body: error || "Failed to update risk",
+            });
+            setTimeout(() => setAlert(null), 3000);
+          }}
+          users={users}
+          onSubmitRef={onRiskSubmitRef}
+        />
       </StandardModal>
     </>
   );

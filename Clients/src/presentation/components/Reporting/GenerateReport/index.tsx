@@ -1,10 +1,10 @@
-import React, { useState, lazy, Suspense, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
-const GenerateReportFrom = lazy(() => import("./GenerateReportFrom"));
-const SectionSelector = lazy(() => import("./SectionSelector"));
-const DownloadReportForm = lazy(() => import("./DownloadReportFrom"));
+import GenerateReportFrom from "./GenerateReportFrom";
+import SectionSelector from "./SectionSelector";
+import DownloadReportForm from "./DownloadReportFrom";
 import { handleAutoDownload } from "../../../../application/tools/fileDownload";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import Alert from "../../Alert";
@@ -368,17 +368,15 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   return (
     <Stack>
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Box>
-            <Alert
-              variant={alert.variant}
-              title={alert.title}
-              body={alert.body}
-              isToast={true}
-              onClick={() => setAlert(null)}
-            />
-          </Box>
-        </Suspense>
+        <Box>
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            body={alert.body}
+            isToast={true}
+            onClick={() => setAlert(null)}
+          />
+        </Box>
       )}
 
       <StandardModal
@@ -392,24 +390,20 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
       >
         <Stack sx={{ minHeight: currentPage === "status" ? "200px" : "auto" }}>
           {currentPage === "status" ? (
-            <Suspense fallback={<div>Loading...</div>}>
-              <DownloadReportForm
-                statusCode={responseStatusCode}
-                aiEnhanced={basicFormValues.aiEnhanced}
-              />
-            </Suspense>
+            <DownloadReportForm
+              statusCode={responseStatusCode}
+              aiEnhanced={basicFormValues.aiEnhanced}
+            />
           ) : currentPage === "sections" ? (
-            <Suspense fallback={<div>Loading...</div>}>
-              <SectionSelector
-                frameworkId={basicFormValues.framework}
-                isOrganizational={isOrganizational}
-                selection={sectionSelection}
-                onSelectionChange={setSectionSelection}
-                aiEnhanced={basicFormValues.aiEnhanced}
-              />
-            </Suspense>
+            <SectionSelector
+              frameworkId={basicFormValues.framework}
+              isOrganizational={isOrganizational}
+              selection={sectionSelection}
+              onSelectionChange={setSectionSelection}
+              aiEnhanced={basicFormValues.aiEnhanced}
+            />
           ) : (
-            <Suspense fallback={<div>Loading...</div>}>
+            <>
               {!hasKeys && (
                 <Box sx={{ mb: 3 }}>
                   <AIKeyBanner onClose={handleOnCloseModal} />
@@ -422,7 +416,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
                 onValidateRef={validateFormRef}
                 hasKeys={hasKeys}
               />
-            </Suspense>
+            </>
           )}
         </Stack>
       </StandardModal>

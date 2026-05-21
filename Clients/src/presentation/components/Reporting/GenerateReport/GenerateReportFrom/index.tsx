@@ -1,12 +1,4 @@
-import React, {
-  useState,
-  lazy,
-  Suspense,
-  useCallback,
-  useContext,
-  useMemo,
-  useEffect,
-} from "react";
+import React, { useState, useCallback, useContext, useMemo, useEffect } from "react";
 import {
   Stack,
   Box,
@@ -19,9 +11,9 @@ import {
 import Toggle from "../../../../components/Inputs/Toggle";
 import Chip from "../../../../components/Chip";
 import { brand } from "../../../../themes/palette";
-const Field = lazy(() => import("../../../Inputs/Field"));
+import Field from "../../../Inputs/Field";
 import { fieldStyle } from "./styles";
-const Select = lazy(() => import("../../../../components/Inputs/Select"));
+import Select from "../../../../components/Inputs/Select";
 import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
 import { Project, FrameworkValues } from "../../../../../application/interfaces/appStates";
 import { FileText, FileType, Sparkles } from "lucide-react";
@@ -262,65 +254,59 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
       )}
 
       {/* Use Case / Organizational Project Selection */}
-      <Suspense fallback={<div>Loading...</div>}>
+      <Select
+        id="project-input"
+        label={isOrganizational ? "Organizational project" : "Use case"}
+        placeholder={isOrganizational ? "Select organizational project" : "Select use case"}
+        value={values.project ?? ""}
+        onChange={handleOnSelectChange("project")}
+        items={
+          availableProjects?.map((project: Project) => ({
+            _id: project.id,
+            name: project.project_title || `Project ${project.id}`,
+          })) || []
+        }
+        sx={{
+          width: "100%",
+          backgroundColor: theme.palette.background.main,
+        }}
+        error={errors.project}
+        isRequired
+      />
+
+      {/* Framework Selection - Only for organizational reports */}
+      {isOrganizational && (
         <Select
-          id="project-input"
-          label={isOrganizational ? "Organizational project" : "Use case"}
-          placeholder={isOrganizational ? "Select organizational project" : "Select use case"}
-          value={values.project ?? ""}
-          onChange={handleOnSelectChange("project")}
+          id="framework-input"
+          label="Framework"
+          placeholder="Select framework"
+          value={values.framework}
+          onChange={handleOnSelectChange("framework")}
           items={
-            availableProjects?.map((project: Project) => ({
-              _id: project.id,
-              name: project.project_title || `Project ${project.id}`,
+            organizationFrameworks?.map((framework) => ({
+              _id: framework.framework_id,
+              name: framework.name,
             })) || []
           }
           sx={{
             width: "100%",
             backgroundColor: theme.palette.background.main,
           }}
-          error={errors.project}
+          error={errors.framework}
           isRequired
         />
-      </Suspense>
-
-      {/* Framework Selection - Only for organizational reports */}
-      {isOrganizational && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Select
-            id="framework-input"
-            label="Framework"
-            placeholder="Select framework"
-            value={values.framework}
-            onChange={handleOnSelectChange("framework")}
-            items={
-              organizationFrameworks?.map((framework) => ({
-                _id: framework.framework_id,
-                name: framework.name,
-              })) || []
-            }
-            sx={{
-              width: "100%",
-              backgroundColor: theme.palette.background.main,
-            }}
-            error={errors.framework}
-            isRequired
-          />
-        </Suspense>
       )}
 
       {/* Report Name */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          id="report-name"
-          label="Report name"
-          placeholder="Enter a name for your report"
-          width="100%"
-          value={values.reportName}
-          onChange={handleOnTextFieldChange("reportName")}
-          sx={fieldStyle}
-        />
-      </Suspense>
+      <Field
+        id="report-name"
+        label="Report name"
+        placeholder="Enter a name for your report"
+        width="100%"
+        value={values.reportName}
+        onChange={handleOnTextFieldChange("reportName")}
+        sx={fieldStyle}
+      />
 
       {/* Export Format */}
       <Stack>

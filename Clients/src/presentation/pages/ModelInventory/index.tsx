@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, Suspense, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Fade, Modal, Typography, useTheme, IconButton } from "@mui/material";
 import { CirclePlus as AddCircleOutlineIcon, BarChart3 } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -72,7 +72,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { palette } from "../../themes/palette";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -2057,22 +2057,20 @@ const ModelInventory: React.FC = () => {
         summaryCardsJoyrideId={activeTab === "models" ? "model-summary-cards" : undefined}
         alert={
           alert && (
-            <Suspense fallback={<div>Loading...</div>}>
-              <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-                <Box mb={2}>
-                  <Alert
-                    variant={alert.variant}
-                    title={alert.title}
-                    body={alert.body}
-                    isToast={true}
-                    onClick={() => {
-                      setShowAlert(false);
-                      setTimeout(() => setAlert(null), 300);
-                    }}
-                  />
-                </Box>
-              </Fade>
-            </Suspense>
+            <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
+              <Box mb={2}>
+                <Alert
+                  variant={alert.variant}
+                  title={alert.title}
+                  body={alert.body}
+                  isToast={true}
+                  onClick={() => {
+                    setShowAlert(false);
+                    setTimeout(() => setAlert(null), 300);
+                  }}
+                />
+              </Box>
+            </Fade>
           )
         }
       >

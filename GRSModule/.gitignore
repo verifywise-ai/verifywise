@@ -8,3 +8,7 @@ build/
 
 # Dataset versions — tracked on data/grs_scenarios_v0.1 branch only
 datasets/
+
+# Node.js / React frontend
+ui/frontend/node_modules/
+ui/backend/static/

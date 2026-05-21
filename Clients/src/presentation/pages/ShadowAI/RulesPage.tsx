@@ -5,7 +5,7 @@
  * Tabs use URL-based routing: /shadow-ai/rules and /shadow-ai/rules/alerts
  */
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Stack,
@@ -26,7 +26,7 @@ import {
   Checkbox as MuiCheckbox,
 } from "@mui/material";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 import Toggle from "../../components/Inputs/Toggle";
 import Chip from "../../components/Chip";
 import TabContext from "@mui/lab/TabContext";
@@ -366,14 +366,12 @@ export default function RulesPage() {
       tipBoxEntity="shadow-ai-rules"
       alert={
         toast ? (
-          <Suspense fallback={null}>
-            <Alert
-              variant={toast.variant}
-              body={toast.body}
-              isToast={true}
-              onClick={() => setToast(null)}
-            />
-          </Suspense>
+          <Alert
+            variant={toast.variant}
+            body={toast.body}
+            isToast={true}
+            onClick={() => setToast(null)}
+          />
         ) : undefined
       }
     >

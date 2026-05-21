@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, lazy, Suspense, useEffect, type JSX } from "react";
+import React, { useState, useCallback, useMemo, useEffect, type JSX } from "react";
 import {
   Box,
   Typography,
@@ -51,7 +51,7 @@ interface AlertState {
   body: string;
   isToast?: boolean;
 }
-const Alert = lazy(() => import("../../../components/Alert"));
+import Alert from "../../../components/Alert";
 
 // Constants for roles
 
@@ -418,17 +418,15 @@ const TeamManagement: React.FC = (): JSX.Element => {
   return (
     <Stack sx={{ mt: 3 }}>
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Box>
-            <Alert
-              variant={alert.variant}
-              title={alert.title}
-              body={alert.body}
-              isToast={true}
-              onClick={() => setAlert(null)}
-            />
-          </Box>
-        </Suspense>
+        <Box>
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            body={alert.body}
+            isToast={true}
+            onClick={() => setAlert(null)}
+          />
+        </Box>
       )}
 
       <Box sx={{ mb: 4, maxWidth: theme.spacing(480) }}>

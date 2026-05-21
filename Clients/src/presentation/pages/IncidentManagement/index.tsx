@@ -36,7 +36,7 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 type IncidentColumnKey =
   | "incident_id"

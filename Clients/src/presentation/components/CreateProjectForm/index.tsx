@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Suspense, lazy } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Button,
   SelectChangeEvent,
@@ -27,10 +27,9 @@ import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification
 import { HighRiskRole } from "../../../domain/enums/highRiskRole.enum";
 import { getAutocompleteStyles } from "../../utils/inputStyles";
 import { CreateProjectFormUserModel } from "../../../domain/models/Common/user/user.model";
-
-const Select = lazy(() => import("../Inputs/Select"));
-const DatePicker = lazy(() => import("../Inputs/Datepicker"));
-const Field = lazy(() => import("../Inputs/Field"));
+import Select from "../Inputs/Select";
+import DatePicker from "../Inputs/Datepicker";
+import Field from "../Inputs/Field";
 
 const initialState: CreateProjectFormValues = {
   project_title: "",
@@ -230,155 +229,140 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
       <Stack component="form" onSubmit={handleSubmit}>
         <Stack direction="row" sx={createProjectFormStyles.formContainer}>
           <Stack sx={createProjectFormStyles.leftColumn}>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Field
-                id="project-title-input"
-                label="Use case title"
-                width="350px"
-                value={values.project_title}
-                onChange={handleOnTextFieldChange("project_title")}
-                error={errors.projectTitle}
-                sx={fieldStyle}
-                isRequired
-              />
-            </Suspense>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Select
-                id="owner-input"
-                label="Owner"
-                placeholder="Select owner"
-                value={values.owner === 0 ? "" : values.owner}
-                onChange={handleOnSelectChange("owner")}
-                items={
-                  users?.map((user) => ({
-                    _id: user.id,
-                    name: `${user.name} ${user.surname}`,
-                    email: user.email,
-                  })) || []
-                }
-                sx={createProjectFormStyles.selectStyle(theme)}
-                error={errors.owner}
-                isRequired
-              />
-            </Suspense>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Select
-                id="risk-classification-input"
-                label="AI risk classification"
-                placeholder="Select an option"
-                value={values.ai_risk_classification === 0 ? "" : values.ai_risk_classification}
-                onChange={handleOnSelectChange("ai_risk_classification")}
-                items={riskClassificationItems}
-                sx={createProjectFormStyles.selectStyle(theme)}
-                error={errors.riskClassification}
-                isRequired
-              />
-            </Suspense>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Select
-                id="type-of-high-risk-role-input"
-                label="Type of high risk role"
-                placeholder="Select an option"
-                value={values.type_of_high_risk_role === 0 ? "" : values.type_of_high_risk_role}
-                onChange={handleOnSelectChange("type_of_high_risk_role")}
-                items={highRiskRoleItems}
-                sx={createProjectFormStyles.selectStyle(theme)}
-                isRequired
-                error={errors.typeOfHighRiskRole}
-              />
-            </Suspense>
+            <Field
+              id="project-title-input"
+              label="Use case title"
+              width="350px"
+              value={values.project_title}
+              onChange={handleOnTextFieldChange("project_title")}
+              error={errors.projectTitle}
+              sx={fieldStyle}
+              isRequired
+            />
+            <Select
+              id="owner-input"
+              label="Owner"
+              placeholder="Select owner"
+              value={values.owner === 0 ? "" : values.owner}
+              onChange={handleOnSelectChange("owner")}
+              items={
+                users?.map((user) => ({
+                  _id: user.id,
+                  name: `${user.name} ${user.surname}`,
+                  email: user.email,
+                })) || []
+              }
+              sx={createProjectFormStyles.selectStyle(theme)}
+              error={errors.owner}
+              isRequired
+            />
+            <Select
+              id="risk-classification-input"
+              label="AI risk classification"
+              placeholder="Select an option"
+              value={values.ai_risk_classification === 0 ? "" : values.ai_risk_classification}
+              onChange={handleOnSelectChange("ai_risk_classification")}
+              items={riskClassificationItems}
+              sx={createProjectFormStyles.selectStyle(theme)}
+              error={errors.riskClassification}
+              isRequired
+            />
+            <Select
+              id="type-of-high-risk-role-input"
+              label="Type of high risk role"
+              placeholder="Select an option"
+              value={values.type_of_high_risk_role === 0 ? "" : values.type_of_high_risk_role}
+              onChange={handleOnSelectChange("type_of_high_risk_role")}
+              items={highRiskRoleItems}
+              sx={createProjectFormStyles.selectStyle(theme)}
+              isRequired
+              error={errors.typeOfHighRiskRole}
+            />
           </Stack>
           <Stack>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Typography sx={createProjectFormStyles.teamMembersTitle(theme)}>
-                Team members *
-              </Typography>
-              <Autocomplete
-                multiple
-                readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
-                id="users-input"
-                size="small"
-                value={values.members}
-                options={
-                  users
-                    ?.filter(
-                      (user) =>
-                        !values.members.some((selectedUser) => selectedUser._id === user.id),
-                    )
-                    .map(
-                      (user) =>
-                        ({
-                          _id: user.id,
-                          name: user.name,
-                          surname: user.surname,
-                          email: user.email,
-                        }) satisfies CreateProjectFormUserModel,
-                    ) || []
-                }
-                noOptionsText={
-                  values.members.length === users?.length ? "All members selected" : "No options"
-                }
-                onChange={handleOnMultiSelect("members")}
-                getOptionLabel={(user) => `${user.name} ${user.surname}`}
-                renderOption={(props, option) => {
-                  const userEmail =
-                    option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
-                  return (
-                    <Box component="li" {...props}>
-                      <Typography sx={createProjectFormStyles.autocompleteOptionText}>
-                        {option.name} {option.surname}
-                      </Typography>
-                      <Typography sx={createProjectFormStyles.autocompleteEmailText}>
-                        {userEmail}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                filterSelectedOptions
-                popupIcon={<GreyDownArrowIcon size={20} />}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="Select users"
-                    error={memberRequired}
-                    sx={createProjectFormStyles.autocompleteTextField}
-                  />
-                )}
-                sx={{
-                  ...getAutocompleteStyles(theme, { hasError: memberRequired }),
-                  ...createProjectFormStyles.autocompleteContainer(theme),
-                }}
-                slotProps={createProjectFormStyles.autocompleteSlotProps}
-              />
-              {memberRequired && (
-                <Typography variant="caption" sx={createProjectFormStyles.errorText}>
-                  {errors.members}
-                </Typography>
+            <Typography sx={createProjectFormStyles.teamMembersTitle(theme)}>
+              Team members *
+            </Typography>
+            <Autocomplete
+              multiple
+              readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+              id="users-input"
+              size="small"
+              value={values.members}
+              options={
+                users
+                  ?.filter(
+                    (user) => !values.members.some((selectedUser) => selectedUser._id === user.id),
+                  )
+                  .map(
+                    (user) =>
+                      ({
+                        _id: user.id,
+                        name: user.name,
+                        surname: user.surname,
+                        email: user.email,
+                      }) satisfies CreateProjectFormUserModel,
+                  ) || []
+              }
+              noOptionsText={
+                values.members.length === users?.length ? "All members selected" : "No options"
+              }
+              onChange={handleOnMultiSelect("members")}
+              getOptionLabel={(user) => `${user.name} ${user.surname}`}
+              renderOption={(props, option) => {
+                const userEmail =
+                  option.email.length > 30 ? `${option.email.slice(0, 30)}...` : option.email;
+                return (
+                  <Box component="li" {...props}>
+                    <Typography sx={createProjectFormStyles.autocompleteOptionText}>
+                      {option.name} {option.surname}
+                    </Typography>
+                    <Typography sx={createProjectFormStyles.autocompleteEmailText}>
+                      {userEmail}
+                    </Typography>
+                  </Box>
+                );
+              }}
+              filterSelectedOptions
+              popupIcon={<GreyDownArrowIcon size={20} />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Select users"
+                  error={memberRequired}
+                  sx={createProjectFormStyles.autocompleteTextField}
+                />
               )}
-            </Suspense>
+              sx={{
+                ...getAutocompleteStyles(theme, { hasError: memberRequired }),
+                ...createProjectFormStyles.autocompleteContainer(theme),
+              }}
+              slotProps={createProjectFormStyles.autocompleteSlotProps}
+            />
+            {memberRequired && (
+              <Typography variant="caption" sx={createProjectFormStyles.errorText}>
+                {errors.members}
+              </Typography>
+            )}
             <Stack sx={createProjectFormStyles.rightColumnContainer}>
-              <Suspense fallback={<div>Loading...</div>}>
-                <DatePicker
-                  label="Start date"
-                  date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
-                  handleDateChange={handleDateChange}
-                  sx={createProjectFormStyles.datePicker}
-                  isRequired
-                  error={errors.startDate}
-                />
-              </Suspense>
-              <Suspense fallback={<div>Loading...</div>}>
-                <Field
-                  id="goal-input"
-                  label="Goal"
-                  type="description"
-                  value={values.goal}
-                  onChange={handleOnTextFieldChange("goal")}
-                  sx={createProjectFormStyles.goalField(theme)}
-                  isRequired
-                  error={errors.goal}
-                />
-              </Suspense>
+              <DatePicker
+                label="Start date"
+                date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
+                handleDateChange={handleDateChange}
+                sx={createProjectFormStyles.datePicker}
+                isRequired
+                error={errors.startDate}
+              />
+              <Field
+                id="goal-input"
+                label="Goal"
+                type="description"
+                value={values.goal}
+                onChange={handleOnTextFieldChange("goal")}
+                sx={createProjectFormStyles.goalField(theme)}
+                isRequired
+                error={errors.goal}
+              />
             </Stack>
           </Stack>
         </Stack>

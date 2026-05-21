@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import React, { FC, useState, useMemo, useCallback, useEffect } from "react";
 import { Stack, Box, useTheme } from "@mui/material";
-import { lazy } from "react";
-const Field = lazy(() => import("../../Inputs/Field"));
-const DatePicker = lazy(() => import("../../Inputs/Datepicker"));
+import Field from "../../Inputs/Field";
+import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
 import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
@@ -265,19 +264,17 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       {/* First Row: Risk Name, Category, Risk Level */}
       <Stack direction="row" spacing={6}>
         <Box sx={{ flex: 1 }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Field
-              id="riskName"
-              label="Risk name"
-              width="100%"
-              value={values.risk_name}
-              onChange={handleOnTextFieldChange("risk_name")}
-              error={errors.risk_name}
-              isRequired
-              sx={fieldStyle}
-              placeholder="e.g., Model accuracy decline"
-            />
-          </Suspense>
+          <Field
+            id="riskName"
+            label="Risk name"
+            width="100%"
+            value={values.risk_name}
+            onChange={handleOnTextFieldChange("risk_name")}
+            error={errors.risk_name}
+            isRequired
+            sx={fieldStyle}
+            placeholder="e.g., Model accuracy decline"
+          />
         </Box>
         <Box sx={{ flex: 1 }}>
           <SelectComponent
@@ -337,19 +334,17 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
           />
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <DatePicker
-              label="Next review date"
-              date={values.target_date ? dayjs(values.target_date) : dayjs(new Date())}
-              handleDateChange={handleDateChange}
-              sx={{
-                width: "100%",
-                backgroundColor: theme.palette.background.main,
-              }}
-              isRequired
-              error={errors.target_date}
-            />
-          </Suspense>
+          <DatePicker
+            label="Next review date"
+            date={values.target_date ? dayjs(values.target_date) : dayjs(new Date())}
+            handleDateChange={handleDateChange}
+            sx={{
+              width: "100%",
+              backgroundColor: theme.palette.background.main,
+            }}
+            isRequired
+            error={errors.target_date}
+          />
         </Box>
       </Stack>
 
@@ -372,46 +367,40 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       </Stack>
 
       {/* Description Section */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          label="Description"
-          width="100%"
-          type="description"
-          rows={2}
-          value={values.description}
-          onChange={handleOnTextFieldChange("description")}
-          placeholder="Describe the risk in detail"
-          error={errors.description}
-        />
-      </Suspense>
+      <Field
+        label="Description"
+        width="100%"
+        type="description"
+        rows={2}
+        value={values.description}
+        onChange={handleOnTextFieldChange("description")}
+        placeholder="Describe the risk in detail"
+        error={errors.description}
+      />
 
       {/* Impact Section */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          label="Impact"
-          width="100%"
-          type="description"
-          rows={2}
-          value={values.impact}
-          onChange={handleOnTextFieldChange("impact")}
-          placeholder="Describe the potential impact of this risk"
-          error={errors.impact}
-        />
-      </Suspense>
+      <Field
+        label="Impact"
+        width="100%"
+        type="description"
+        rows={2}
+        value={values.impact}
+        onChange={handleOnTextFieldChange("impact")}
+        placeholder="Describe the potential impact of this risk"
+        error={errors.impact}
+      />
 
       {/* Mitigation Plan Section */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <Field
-          label="Mitigation plan"
-          width="100%"
-          type="description"
-          rows={2}
-          value={values.mitigation_plan}
-          onChange={handleOnTextFieldChange("mitigation_plan")}
-          placeholder="Describe the plan to mitigate this risk"
-          error={errors.mitigation_plan}
-        />
-      </Suspense>
+      <Field
+        label="Mitigation plan"
+        width="100%"
+        type="description"
+        rows={2}
+        value={values.mitigation_plan}
+        onChange={handleOnTextFieldChange("mitigation_plan")}
+        placeholder="Describe the plan to mitigate this risk"
+        error={errors.mitigation_plan}
+      />
     </Stack>
   );
 

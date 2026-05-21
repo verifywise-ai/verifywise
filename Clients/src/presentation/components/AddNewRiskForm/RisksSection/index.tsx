@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
-  Suspense,
   Dispatch,
   SetStateAction,
 } from "react";
@@ -13,6 +12,7 @@ import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import Alert from "../../Alert";
+import RiskLevel from "../../RiskLevel";
 import { RiskFormValues } from "../interface";
 import { aiLifecyclePhase, riskCategoryItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
@@ -25,8 +25,6 @@ import AutoCompleteField from "../../Inputs/Autocomplete";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
-
-const RiskLevel = React.lazy(() => import("../../RiskLevel"));
 
 // Layout constants
 const LAYOUT = {
@@ -588,14 +586,12 @@ const RiskSection: FC<RiskSectionProps> = ({
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <RiskLevel
-              likelihood={riskValues.likelihood}
-              riskSeverity={riskValues.riskSeverity}
-              handleOnSelectChange={handleOnSelectChange}
-              disabled={isEditingDisabled}
-            />
-          </Suspense>
+          <RiskLevel
+            likelihood={riskValues.likelihood}
+            riskSeverity={riskValues.riskSeverity}
+            handleOnSelectChange={handleOnSelectChange}
+            disabled={isEditingDisabled}
+          />
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
           <Field

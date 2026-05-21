@@ -1,5 +1,5 @@
 // React imports
-import { FC, useState, useContext, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
+import { FC, useState, useContext, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // MUI imports
@@ -91,7 +91,7 @@ const HTTP_STATUS = {
   UPDATED: 202,
 } as const;
 
-const Alert = lazy(() => import("../Alert"));
+import Alert from "../Alert";
 
 const INITIAL_FORM_STATE: FormValues = {
   vendorName: 0,
@@ -431,21 +431,13 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
   return (
     <Stack role="main" aria-label="Vendor risk form">
       {alert && (
-        <Suspense
-          fallback={
-            <Box display="flex" justifyContent="center" p={2}>
-              <CircularProgress size={20} />
-            </Box>
-          }
-        >
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            body={alert.body}
-            isToast={true}
-            onClick={() => setAlert(null)}
-          />
-        </Suspense>
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body}
+          isToast={true}
+          onClick={() => setAlert(null)}
+        />
       )}
       <Stack
         component="form"

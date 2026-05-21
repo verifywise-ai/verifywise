@@ -188,6 +188,59 @@ export const trainingTrackingContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'uploading-evidence',
+      level: 2,
+      text: 'Uploading training evidence',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each training record has an Evidence tab where you can attach supporting documents such as certificates, attendance records and assessment results. This gives auditors direct proof that the training actually took place and that participants completed it.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To upload evidence:',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Open a training record and switch to the Evidence tab' },
+        { text: 'Click "Upload evidence"' },
+        { text: 'Enter an evidence name that identifies the document' },
+        { text: 'Choose an evidence type (see the list below)' },
+        { text: 'Optionally add a description with notes about the evidence' },
+        { text: 'Optionally set an expiry date for time-sensitive evidence such as certifications' },
+        { text: 'Drag and drop files into the upload area, or click to browse' },
+        { text: 'Save the evidence' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'evidence-types',
+      level: 3,
+      text: 'Evidence types',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Training certificate', text: 'A formal certificate of completion issued by the training provider' },
+        { bold: 'Attendance record', text: 'A sign-in sheet, register or other proof that participants attended' },
+        { bold: 'Course completion', text: 'A summary report confirming the course was finished' },
+        { bold: 'Assessment result', text: 'Test or quiz results showing participants met the required level' },
+        { bold: 'Other', text: 'Any other supporting documentation that does not fit the categories above' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      title: 'Set expiry dates for renewable certifications',
+      text: 'When evidence covers a certification that expires (for example, an annual AI ethics training certificate), set the expiry date so you get a reminder when renewal is needed.',
+    },
+    {
+      type: 'paragraph',
+      text: 'You can upload multiple files per evidence record. Use "Add more files" to attach additional documents, or remove individual files before saving. To remove or replace evidence later, open the training record and use the delete action next to each evidence entry.',
+    },
+    {
+      type: 'heading',
       id: 'common-training-types',
       level: 2,
       text: 'Common AI training topics',

@@ -7,7 +7,7 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { Mail as Email } from "lucide-react";
 import { ArrowLeft as LeftArrowLong } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, lazy, Suspense } from "react";
+import { useState } from "react";
 import { sendPasswordResetEmail } from "../../../../application/repository/auth.repository";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
@@ -15,7 +15,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import Field from "../../../components/Inputs/Field";
 import { text, border as borderPalette } from "../../../themes/palette";
 
-const Alert = lazy(() => import("../../../components/Alert"));
+import Alert from "../../../components/Alert";
 
 interface FormValues {
   email: string;
@@ -85,15 +85,13 @@ const ResetPassword = () => {
         }}
       />
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            body={alert.body}
-            isToast={true}
-            onClick={() => setAlert(null)}
-          />
-        </Suspense>
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body}
+          isToast={true}
+          onClick={() => setAlert(null)}
+        />
       )}
       <Stack
         className="reg-admin-form"

@@ -69,3 +69,13 @@ publish-dataset: export-parquet
 	cd /tmp/grs-data && git add GRSModule/datasets/ && git commit -m "$(if $(MSG),$(MSG),data: publish $(VERSION) $$(date +%Y-%m-%d))"
 	git -C .. worktree remove /tmp/grs-data
 	@echo "Done. $(VERSION) committed to data/grs_scenarios."
+
+ui-install:
+	uv sync && cd ui/frontend && npm install
+
+ui-dev:
+	uvicorn ui.backend.app:app --port 8200 --reload &
+	cd ui/frontend && npm run dev
+
+ui-build:
+	cd ui/frontend && npm run build

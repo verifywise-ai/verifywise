@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -17,7 +17,7 @@ import { EmptyState } from "../../EmptyState";
 import { ChevronsUpDown, ChevronUp, ChevronDown, FileBarChart } from "lucide-react";
 import TablePaginationActions from "../../TablePagination";
 import { text } from "../../../themes/palette";
-const ReportTableBody = lazy(() => import("./TableBody"));
+import ReportTableBody from "./TableBody";
 import {
   tableWrapper,
   pagniationStatus,
@@ -274,98 +274,96 @@ const ReportTable: React.FC<IReportTablePropsExtended> = ({
   return (
     <>
       <TableContainer>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Table
-            sx={{
-              ...singleTheme.tableStyles.primary.frame,
-              ...tableWrapper,
-            }}
-          >
-            <SortableTableHead
-              columns={visibleColumnList}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-            />
-            {sortedRows.length !== 0 ? (
-              <>
-                <ReportTableBody
-                  rows={sortedRows}
-                  onRemoveReport={removeReport}
-                  page={hidePagination ? 0 : page}
-                  rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
-                  sortConfig={sortConfig}
-                  visibleColumns={visibleColumns}
-                />
-                {!hidePagination && (
-                  <TableFooter>
-                    <TableRow
-                      sx={{
-                        "& .MuiTableCell-root.MuiTableCell-footer": {
-                          paddingX: theme.spacing(8),
-                          paddingY: theme.spacing(4),
+        <Table
+          sx={{
+            ...singleTheme.tableStyles.primary.frame,
+            ...tableWrapper,
+          }}
+        >
+          <SortableTableHead
+            columns={visibleColumnList}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+          {sortedRows.length !== 0 ? (
+            <>
+              <ReportTableBody
+                rows={sortedRows}
+                onRemoveReport={removeReport}
+                page={hidePagination ? 0 : page}
+                rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
+                sortConfig={sortConfig}
+                visibleColumns={visibleColumns}
+              />
+              {!hidePagination && (
+                <TableFooter>
+                  <TableRow
+                    sx={{
+                      "& .MuiTableCell-root.MuiTableCell-footer": {
+                        paddingX: theme.spacing(8),
+                        paddingY: theme.spacing(4),
+                      },
+                    }}
+                  >
+                    <TableCell sx={pagniationStatus}>
+                      Showing {getRange} of {sortedRows?.length} project report(s)
+                    </TableCell>
+                    <TablePagination
+                      count={sortedRows?.length}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      rowsPerPage={rowsPerPage}
+                      rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                      labelRowsPerPage="Reports per page"
+                      labelDisplayedRows={({ page, count }) =>
+                        `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                      }
+                      sx={paginationStyle}
+                      slotProps={{
+                        select: {
+                          MenuProps: {
+                            keepMounted: true,
+                            PaperProps: {
+                              className: "pagination-dropdown",
+                              sx: paginationDropdown,
+                            },
+                            transformOrigin: {
+                              vertical: "bottom",
+                              horizontal: "left",
+                            },
+                            anchorOrigin: {
+                              vertical: "top",
+                              horizontal: "left",
+                            },
+                            sx: { mt: theme.spacing(-2) },
+                          },
+                          inputProps: { id: "pagination-dropdown" },
+                          IconComponent: SelectorVertical,
+                          sx: paginationSelect,
                         },
                       }}
-                    >
-                      <TableCell sx={pagniationStatus}>
-                        Showing {getRange} of {sortedRows?.length} project report(s)
-                      </TableCell>
-                      <TablePagination
-                        count={sortedRows?.length}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        rowsPerPage={rowsPerPage}
-                        rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                        labelRowsPerPage="Reports per page"
-                        labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
-                        }
-                        sx={paginationStyle}
-                        slotProps={{
-                          select: {
-                            MenuProps: {
-                              keepMounted: true,
-                              PaperProps: {
-                                className: "pagination-dropdown",
-                                sx: paginationDropdown,
-                              },
-                              transformOrigin: {
-                                vertical: "bottom",
-                                horizontal: "left",
-                              },
-                              anchorOrigin: {
-                                vertical: "top",
-                                horizontal: "left",
-                              },
-                              sx: { mt: theme.spacing(-2) },
-                            },
-                            inputProps: { id: "pagination-dropdown" },
-                            IconComponent: SelectorVertical,
-                            sx: paginationSelect,
-                          },
-                        }}
-                      />
-                    </TableRow>
-                  </TableFooter>
-                )}
-              </>
-            ) : (
-              <>
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={visibleColumnList.length} sx={{ border: "none", p: 0 }}>
-                      <EmptyState
-                        icon={FileBarChart}
-                        message="There is currently no data in this table."
-                      />
-                    </TableCell>
+                    />
                   </TableRow>
-                </TableBody>
-              </>
-            )}
-          </Table>
-        </Suspense>
+                </TableFooter>
+              )}
+            </>
+          ) : (
+            <>
+              <TableBody>
+                <TableRow>
+                  <TableCell colSpan={visibleColumnList.length} sx={{ border: "none", p: 0 }}>
+                    <EmptyState
+                      icon={FileBarChart}
+                      message="There is currently no data in this table."
+                    />
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </>
+          )}
+        </Table>
       </TableContainer>
     </>
   );

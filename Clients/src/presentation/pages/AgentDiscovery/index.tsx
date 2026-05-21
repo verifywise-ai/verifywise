@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
 import { SearchBox } from "../../components/Search";
@@ -20,7 +20,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 interface AgentStats {
   total: number;
@@ -372,15 +372,13 @@ const AgentDiscovery: React.FC = () => {
         showAlert && alert ? (
           <Fade in={showAlert}>
             <Box sx={agentToastContainer}>
-              <Suspense fallback={null}>
-                <Alert
-                  variant={alert.variant}
-                  title={alert.title}
-                  body={alert.body}
-                  isToast
-                  onClick={() => setShowAlert(false)}
-                />
-              </Suspense>
+              <Alert
+                variant={alert.variant}
+                title={alert.title}
+                body={alert.body}
+                isToast
+                onClick={() => setShowAlert(false)}
+              />
             </Box>
           </Fade>
         ) : undefined

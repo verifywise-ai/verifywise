@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Box, Stack, Fade } from "@mui/material";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -33,7 +33,7 @@ import DatasetSummary from "../ModelInventory/DatasetSummary";
 import DatasetTable from "../ModelInventory/DatasetTable";
 import NewDataset from "../../components/Modals/NewDataset";
 
-const Alert = React.lazy(() => import("../../components/Alert"));
+import Alert from "../../components/Alert";
 
 const DATASET_GROUP_BY_OPTIONS = [
   { id: "status", label: "Status" },
@@ -443,22 +443,20 @@ const Datasets: React.FC = () => {
       }
       alert={
         alert && (
-          <Suspense fallback={null}>
-            <Fade in={showAlert} timeout={300}>
-              <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
-                <Alert
-                  variant={alert.variant}
-                  title={alert.title}
-                  body={alert.body}
-                  isToast
-                  onClick={() => {
-                    setShowAlert(false);
-                    setTimeout(() => setAlert(null), 300);
-                  }}
-                />
-              </Box>
-            </Fade>
-          </Suspense>
+          <Fade in={showAlert} timeout={300}>
+            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
+              <Alert
+                variant={alert.variant}
+                title={alert.title}
+                body={alert.body}
+                isToast
+                onClick={() => {
+                  setShowAlert(false);
+                  setTimeout(() => setAlert(null), 300);
+                }}
+              />
+            </Box>
+          </Fade>
         )
       }
     >

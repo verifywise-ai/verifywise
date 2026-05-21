@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Box, Stack, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -42,7 +42,7 @@ import { FilePreviewPanel } from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import { User } from "../../../domain/types/User";
 
-const Alert = React.lazy(() => import("../../../presentation/components/Alert"));
+import Alert from "../../../presentation/components/Alert";
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -861,32 +861,30 @@ const Training: React.FC = () => {
       tipBoxEntity="training"
       alert={
         alert && (
-          <Suspense fallback={<div>Loading...</div>}>
-            <Fade
-              in={showAlert}
-              timeout={300}
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                zIndex: 1000,
-              }}
-            >
-              <Box mb={2}>
-                <Alert
-                  variant={alert.variant}
-                  title={alert.title}
-                  body={alert.body}
-                  isToast={true}
-                  onClick={() => {
-                    setShowAlert(false);
-                    setTimeout(() => setAlert(null), 300);
-                  }}
-                />
-              </Box>
-            </Fade>
-          </Suspense>
+          <Fade
+            in={showAlert}
+            timeout={300}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 1000,
+            }}
+          >
+            <Box mb={2}>
+              <Alert
+                variant={alert.variant}
+                title={alert.title}
+                body={alert.body}
+                isToast={true}
+                onClick={() => {
+                  setShowAlert(false);
+                  setTimeout(() => setAlert(null), 300);
+                }}
+              />
+            </Box>
+          </Fade>
         )
       }
     >

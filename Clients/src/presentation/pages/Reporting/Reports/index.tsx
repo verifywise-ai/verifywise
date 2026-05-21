@@ -1,6 +1,6 @@
-import React, { useState, lazy, Suspense, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Stack, Box } from "@mui/material";
-const ReportTable = lazy(() => import("../../../components/Table/ReportTable"));
+import ReportTable from "../../../components/Table/ReportTable";
 import { TITLE_OF_COLUMNS } from "./constants";
 import useGeneratedReports from "../../../../application/hooks/useGeneratedReports";
 import { GeneratedReports } from "../../../../domain/interfaces/i.reports";
@@ -393,25 +393,21 @@ const Reports: React.FC<ReportsProps> = ({
       {loadingProjects || loadingReports ? (
         <CustomizableSkeleton variant="rectangular" sx={reportTablePlaceholder} />
       ) : (
-        <Suspense
-          fallback={<CustomizableSkeleton variant="rectangular" sx={reportTablePlaceholder} />}
-        >
-          <GroupedTableView
-            groupedData={groupedReports}
-            ungroupedData={transformedReports}
-            renderTable={(data, options) => (
-              <ReportTable
-                columns={TITLE_OF_COLUMNS}
-                rows={data}
-                removeReport={handleRemoveReport}
-                setCurrentPagingation={setCurrentPagingation}
-                page={currentPage}
-                hidePagination={options?.hidePagination}
-                visibleColumns={visibleColumns as Set<string>}
-              />
-            )}
-          />
-        </Suspense>
+        <GroupedTableView
+          groupedData={groupedReports}
+          ungroupedData={transformedReports}
+          renderTable={(data, options) => (
+            <ReportTable
+              columns={TITLE_OF_COLUMNS}
+              rows={data}
+              removeReport={handleRemoveReport}
+              setCurrentPagingation={setCurrentPagingation}
+              page={currentPage}
+              hidePagination={options?.hidePagination}
+              visibleColumns={visibleColumns as Set<string>}
+            />
+          )}
+        />
       )}
     </Stack>
   );
