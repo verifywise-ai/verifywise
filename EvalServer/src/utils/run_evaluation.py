@@ -510,9 +510,14 @@ async def run_evaluation(
             
             # Convert simulated test cases to our format
             for idx, conv_tc in enumerate(simulated_test_cases, 1):
+                # Pair back with the golden to retrieve expected_outcome
+                golden_outcome = ""
+                if idx <= len(goldens):
+                    golden_outcome = getattr(goldens[idx - 1], "expected_outcome", "") or ""
                 test_cases_data.append({
                     "test_case": conv_tc,
                     "is_conversational": True,
+                    "expected_outcome": golden_outcome,
                     "metadata": {
                         "sample_id": f"simulated_scenario_{idx}",
                         "protected_attributes": {"category": conv_tc.scenario or f"scenario_{idx}", "difficulty": "simulated"},
