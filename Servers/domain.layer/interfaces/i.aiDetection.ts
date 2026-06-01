@@ -575,6 +575,37 @@ export interface IGitHubTokenTestResponse {
   error?: string;
 }
 
+// ============================================================================
+// Scan Comparison Types
+// ============================================================================
+
+/**
+ * Summary counters and risk score delta for a scan comparison.
+ */
+export interface IComparisonSummary {
+  new_count: number;
+  fixed_count: number;
+  unchanged_count: number;
+  /** Difference in risk score (current - baseline). Null if either scan has no score. */
+  score_delta: number | null;
+}
+
+/**
+ * Result of comparing two completed scans of the same repository.
+ */
+export interface IScanComparisonResult {
+  scan_id: number;
+  baseline_scan_id: number;
+  new: IFinding[];
+  fixed: IFinding[];
+  unchanged: IFinding[];
+  summary: IComparisonSummary;
+}
+
+// ============================================================================
+// Suppression Types
+// ============================================================================
+
 /**
  * Match type for an AI detection suppression rule.
  * - exact: literal equality on the chosen field

@@ -17,6 +17,7 @@ import {
   ICreateFindingInput,
   ScanStatus,
   GovernanceStatus,
+  IScanComparisonResult,
 } from "../domain.layer/interfaces/i.aiDetection";
 import { ICreateModelSecurityFindingInput } from "../domain.layer/interfaces/i.modelSecurity";
 
@@ -1500,4 +1501,93 @@ export async function getBaselineFindingsQuery(
       type: QueryTypes.SELECT,
     },
   );
+}
+
+// ============================================================================
+// Scan Comparison
+// ============================================================================
+
+/**
+ * Compare findings between two completed scans of the same repository.
+ *
+ * Findings are matched by the tuple (finding_type, name, provider).
+ * Returns findings categorised as new (appeared), fixed (removed), or unchanged.
+ *
+ * @param scanId - The current scan to compare
+ * @param baselineScanId - The earlier scan used as baseline
+ * @param organizationId - Org ID for multi-tenancy
+ */
+export async function compareScanQuery(
+  scanId: number,
+  baselineScanId: number,
+  organizationId: number,
+): Promise<IScanComparisonResult> {
+  validateOrganizationId(organizationId);
+
+  const [currentFindings, baselineFindings, scans] = await Promise.all([
+    sequelize.query<IFinding>(
+      `SELECT * FROM ai_detection_findings WHERE scan_id = :scanId AND organization_id = :organizationId`,
+      { replacements: { scanId, organizationId }, type: QueryTypes.SELECT },
+    ),
+    sequelize.query<IFinding>(
+      `SELECT * FROM ai_detection_findings WHERE scan_id = :baselineScanId AND organization_id = :organizationId`,
+      { replacements: { baselineScanId, organizationId }, type: QueryTypes.SELECT },
+    ),
+    sequelize.query<{ id: number; risk_score: number | null }>(
+      `SELECT id, risk_score FROM ai_detection_scans WHERE id IN (:scanId, :baselineScanId) AND organization_id = :organizationId`,
+      { replacements: { scanId, baselineScanId, organizationId }, type: QueryTypes.SELECT },
+    ),
+  ]);
+
+  const key = (f: IFinding) =>
+    `${f.finding_type}::${f.name}::${f.provider || "unknown"}`;
+
+  const baselineMap = new Map<string, IFinding>();
+  for (const f of baselineFindings) {
+    baselineMap.set(key(f), f);
+  }
+
+  const currentMap = new Map<string, IFinding>();
+  for (const f of currentFindings) {
+    currentMap.set(key(f), f);
+  }
+
+  const newFindings: IFinding[] = [];
+  const unchangedFindings: IFinding[] = [];
+
+  for (const f of currentFindings) {
+    if (baselineMap.has(key(f))) {
+      unchangedFindings.push(f);
+    } else {
+      newFindings.push(f);
+    }
+  }
+
+  const fixedFindings: IFinding[] = [];
+  for (const f of baselineFindings) {
+    if (!currentMap.has(key(f))) {
+      fixedFindings.push(f);
+    }
+  }
+
+  const scanRecord = scans.find((s) => s.id === scanId);
+  const baselineRecord = scans.find((s) => s.id === baselineScanId);
+  const scoreDelta =
+    scanRecord?.risk_score != null && baselineRecord?.risk_score != null
+      ? scanRecord.risk_score - baselineRecord.risk_score
+      : null;
+
+  return {
+    scan_id: scanId,
+    baseline_scan_id: baselineScanId,
+    new: newFindings,
+    fixed: fixedFindings,
+    unchanged: unchangedFindings,
+    summary: {
+      new_count: newFindings.length,
+      fixed_count: fixedFindings.length,
+      unchanged_count: unchangedFindings.length,
+      score_delta: scoreDelta,
+    },
+  };
 }

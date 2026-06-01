@@ -538,3 +538,24 @@ export interface ComplianceMappingResponse {
   summary: ComplianceSummary;
   generatedAt: string;
 }
+
+// ============================================================================
+// Scan Comparison Types
+// ============================================================================
+
+export interface ComparisonSummary {
+  new_count: number;
+  fixed_count: number;
+  unchanged_count: number;
+  /** Risk score delta (current minus baseline). Null if either scan has no score. */
+  score_delta: number | null;
+}
+
+export interface ScanComparison {
+  scan_id: number;
+  baseline_scan_id: number;
+  new: Finding[];
+  fixed: Finding[];
+  unchanged: Finding[];
+  summary: ComparisonSummary;
+}

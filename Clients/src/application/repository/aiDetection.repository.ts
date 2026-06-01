@@ -30,6 +30,7 @@ import {
   VULNERABILITY_FINDING_TYPES,
   SuppressionRule,
   CreateSuppressionRequest,
+  ScanComparison,
 } from "../../domain/ai-detection/types";
 import {
   RiskScore,
@@ -639,4 +640,26 @@ export async function deleteSuppression(id: number, signal?: AbortSignal): Promi
   await apiServices.delete<{ data: { id: number } }>(`${BASE_URL}/suppressions/${id}`, {
     signal,
   });
+}
+
+// ============================================================================
+// Scan Comparison
+// ============================================================================
+
+/**
+ * Compare two completed scans and return new, fixed, and unchanged findings.
+ *
+ * @param scanId - The current scan
+ * @param baselineScanId - The earlier scan to compare against
+ */
+export async function compareScans(
+  scanId: number,
+  baselineScanId: number,
+  signal?: AbortSignal,
+): Promise<ScanComparison> {
+  const response = await apiServices.get<{ data: ScanComparison }>(
+    `${BASE_URL}/scans/${scanId}/compare/${baselineScanId}`,
+    { signal },
+  );
+  return response.data.data;
 }
