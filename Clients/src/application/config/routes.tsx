@@ -84,6 +84,9 @@ const RepositoriesPage = lazyRoute(
 const ScanDetailsPage = lazyRoute(
   () => import("../../presentation/pages/AIDetection/ScanDetailsPage"),
 );
+const ScanComparisonPage = lazyRoute(
+  () => import("../../presentation/pages/AIDetection/ScanComparisonPage"),
+);
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
   () => import("../../presentation/pages/ShadowAI/UserActivityPage"),
@@ -623,6 +626,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <ScanDetailsPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-detection/scans/:scanId/compare/:baselineScanId"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ScanComparisonPage />
         </Suspense>
       }
     />

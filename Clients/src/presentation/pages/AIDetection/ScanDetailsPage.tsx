@@ -43,6 +43,7 @@ import {
   RefreshCw,
   Plus,
   Sparkles,
+  GitCompare,
 } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
@@ -2132,6 +2133,23 @@ export default function ScanDetailsPage() {
         {/* Action Buttons */}
         {scan.scan.status === "completed" && (
           <Box sx={{ display: "flex", gap: "8px" }}>
+            {scan.scan.baseline_scan_id && (
+              <Tooltip title="Compare findings with baseline scan" arrow placement="top">
+                <span>
+                  <CustomizableButton
+                    text="Compare with previous"
+                    onClick={() =>
+                      navigate(
+                        `/ai-detection/scans/${scanId}/compare/${scan.scan.baseline_scan_id}`,
+                      )
+                    }
+                    variant="outlined"
+                    startIcon={<GitCompare size={16} />}
+                    sx={{ height: 34 }}
+                  />
+                </span>
+              </Tooltip>
+            )}
             <Tooltip title="Recalculate risk score" arrow placement="top">
               <span>
                 <CustomizableButton

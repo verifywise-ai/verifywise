@@ -33,6 +33,7 @@ import {
   exportScanAsAIBOM,
   getDependencyGraph,
   getComplianceMapping,
+  compareScan,
 } from "../services/aiDetection.service";
 import {
   IServiceContext,
@@ -1180,6 +1181,51 @@ export async function updateRiskScoringConfigController(
     });
 
     return res.status(200).json(STATUS_CODE[200](updated));
+  } catch (error) {
+    return handleException(req, res, error);
+  }
+}
+
+/**
+ * Compare two completed scans and return categorised findings.
+ *
+ * GET /ai-detection/scans/:scanId/compare/:baselineScanId
+ */
+export async function compareScanController(req: Request, res: Response): Promise<Response> {
+  const scanId = parseInt(
+    Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId,
+    10,
+  );
+  const baselineScanId = parseInt(
+    Array.isArray(req.params.baselineScanId) ? req.params.baselineScanId[0] : req.params.baselineScanId,
+    10,
+  );
+
+  logProcessing({
+    description: "Comparing AI detection scans",
+    functionName: "compareScanController",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    tenantId: req.organizationId!,
+  });
+
+  if (isNaN(scanId) || isNaN(baselineScanId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid scan ID")));
+  }
+
+  try {
+    const result = await compareScan(scanId, baselineScanId, buildServiceContext(req));
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Compared scan ${scanId} against baseline ${baselineScanId}`,
+      functionName: "compareScanController",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      tenantId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     return handleException(req, res, error);
   }

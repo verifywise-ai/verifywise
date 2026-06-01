@@ -38,6 +38,7 @@ import {
   recalculateRiskScoreController,
   getRiskScoringConfigController,
   updateRiskScoringConfigController,
+  compareScanController,
 } from "../controllers/aiDetection.ctrl";
 import {
   createSuppressionController,
@@ -89,6 +90,18 @@ router.get("/scans/active", authenticateJWT, authorize(ALL_ROLES), getActiveScan
  * @access  Private - All roles
  */
 router.get("/scans/:scanId", authenticateJWT, authorize(ALL_ROLES), getScanController);
+
+/**
+ * @route   GET /ai-detection/scans/:scanId/compare/:baselineScanId
+ * @desc    Compare two completed scans — returns new, fixed, and unchanged findings
+ * @access  Private - All roles
+ */
+router.get(
+  "/scans/:scanId/compare/:baselineScanId",
+  authenticateJWT,
+  authorize(ALL_ROLES),
+  compareScanController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/status

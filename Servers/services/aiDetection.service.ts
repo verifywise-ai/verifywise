@@ -61,6 +61,7 @@ import {
   IAIDetectionStats,
   getLatestCompletedFullScanQuery,
   getBaselineFindingsQuery,
+  compareScanQuery,
 } from "../utils/aiDetection.utils";
 import { getActiveSuppressionsQuery } from "../utils/aiDetectionSuppression.utils";
 import { applySuppressions } from "./aiDetection/suppressionMatcher";
@@ -1078,6 +1079,13 @@ export async function startScan(
       scanMode = "full";
     } else {
       baselineScanId = baselineScan.id!;
+    }
+  } else {
+    // For full scans, auto-link to the previous completed full scan so
+    // the comparison feature ("Compare with previous") is available.
+    const previousScan = await getLatestCompletedFullScanQuery(owner, repo, ctx.organizationId);
+    if (previousScan) {
+      baselineScanId = previousScan.id!;
     }
   }
 
@@ -3561,4 +3569,52 @@ export function getRequirementsForFindingType(
   provider?: string,
 ): ComplianceRequirement[] {
   return getComplianceRequirementsForFinding(findingType, provider);
+}
+
+// ============================================================================
+// Scan Comparison
+// ============================================================================
+
+/**
+ * Compare findings between two completed scans of the same repository.
+ *
+ * Validates both scans exist, belong to the org, are completed, and share
+ * the same repository before delegating to the query layer.
+ */
+export async function compareScan(
+  scanId: number,
+  baselineScanId: number,
+  context: IServiceContext,
+) {
+  const { organizationId } = context;
+
+  if (scanId === baselineScanId) {
+    throw new ValidationException("scan_id and baseline_scan_id must be different", "baseline_scan_id");
+  }
+
+  const [scan, baseline] = await Promise.all([
+    getScanByIdQuery(scanId, organizationId),
+    getScanByIdQuery(baselineScanId, organizationId),
+  ]);
+
+  if (!scan) {
+    throw new NotFoundException(`Scan ${scanId} not found`);
+  }
+  if (!baseline) {
+    throw new NotFoundException(`Baseline scan ${baselineScanId} not found`);
+  }
+  if (scan.status !== "completed") {
+    throw new BusinessLogicException("Scan must be completed before comparison");
+  }
+  if (baseline.status !== "completed") {
+    throw new BusinessLogicException("Baseline scan must be completed before comparison");
+  }
+  if (
+    scan.repository_owner !== baseline.repository_owner ||
+    scan.repository_name !== baseline.repository_name
+  ) {
+    throw new BusinessLogicException("Both scans must be from the same repository");
+  }
+
+  return compareScanQuery(scanId, baselineScanId, organizationId);
 }
