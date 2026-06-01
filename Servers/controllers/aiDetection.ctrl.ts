@@ -34,6 +34,7 @@ import {
   getDependencyGraph,
   getComplianceMapping,
   compareScan,
+  compareScan,
 } from "../services/aiDetection.service";
 import {
   IServiceContext,
