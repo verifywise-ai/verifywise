@@ -14,6 +14,8 @@ from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
 from database.redis import close_redis
 from database.config import settings
+from observability import install_observability
+from database.db import engine as _vw_db_engine
 
 import logging
 logger = logging.getLogger('uvicorn')
@@ -48,6 +50,8 @@ async def shutdown_redis():
     await close_redis()
 
 app = FastAPI(on_shutdown=[shutdown_redis])
+
+install_observability(app, service="eval_server", engine=_vw_db_engine)
 
 # enable CORS
 origins = [os.environ.get("BACKEND_URL") or "http://localhost:3000"]
@@ -111,6 +115,11 @@ async def startup_event():
 @app.get("/")
 def root():
     return {"message": "Welcome to the Eval Server!"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"])
 app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"])

@@ -5,6 +5,7 @@ type RequestContext = {
   tenantId?: number;
   organizationId?: number;
   tenantHash?: string;
+  requestId?: string;
 };
 
 export const asyncLocalStorage = new AsyncLocalStorage<RequestContext>();

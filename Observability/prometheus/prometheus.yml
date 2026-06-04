@@ -1,0 +1,70 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: verifywise
+    env: ${ENV:-dev}
+
+# All app services run in Docker and are reached by their compose service names
+# on the shared default network created when this file is merged with
+# docker-compose.yml + docker-compose.override.yml under `-p verifywise`.
+#
+# Ports below are the container-internal ports the services LISTEN on (not the
+# published host ports). Prometheus reaches them directly inside the network.
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:3000"]
+        labels:
+          service: backend
+
+  - job_name: worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["worker:9464"]
+        labels:
+          service: worker
+
+  - job_name: eval_server
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["eval_server:8000"]
+        labels:
+          service: eval_server
+
+  - job_name: ai_gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ai_gateway:8100"]
+        labels:
+          service: ai_gateway
+
+  - job_name: postgres_exporter
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+        labels:
+          service: postgres
+
+  - job_name: redis_exporter
+    static_configs:
+      - targets: ["redis_exporter:9121"]
+        labels:
+          service: redis
+
+  # node_exporter and cadvisor are disabled by default (incompatible with Docker
+  # Desktop on macOS). Re-enable on Linux — see Observability/README.md.
+  # - job_name: node_exporter
+  #   static_configs:
+  #     - targets: ["node_exporter:9100"]
+  #       labels:
+  #         service: host
+  # - job_name: cadvisor
+  #   static_configs:
+  #     - targets: ["cadvisor:8080"]
+  #       labels:
+  #         service: containers

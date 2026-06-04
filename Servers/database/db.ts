@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { Sequelize } from "sequelize-typescript";
+import logger from "../utils/logger/fileLogger";
 import { RoleModel } from "../domain.layer/models/role/role.model";
 import { AssessmentModel } from "../domain.layer/models/assessment/assessment.model";
 import { ControlModel } from "../domain.layer/models/control/control.model";
@@ -104,12 +105,35 @@ dotenv.config();
 
 const conf = dbConfig.development;
 
+// Slow-query threshold: queries above this are logged at warn level.
+// Set DB_SLOW_QUERY_MS=0 to log every query (verbose), or DB_LOG_QUERIES=false to disable.
+const SLOW_QUERY_MS = parseInt(process.env.DB_SLOW_QUERY_MS || "100", 10);
+const DB_LOG_ENABLED = process.env.DB_LOG_QUERIES !== "false";
+const MAX_SQL_PREVIEW = 500;
+
+const sequelizeLogger = (sql: string, timingMs?: number): void => {
+  if (!DB_LOG_ENABLED) return;
+  const duration = typeof timingMs === "number" ? timingMs : 0;
+  if (SLOW_QUERY_MS > 0 && duration < SLOW_QUERY_MS) return;
+
+  // Sequelize prefixes with "Executing (transactionId): " — strip for readability.
+  const cleaned = sql.replace(/^Executing \([^)]*\):\s*/, "");
+  const preview = cleaned.length > MAX_SQL_PREVIEW ? cleaned.slice(0, MAX_SQL_PREVIEW) + "…" : cleaned;
+
+  logger.warn(`slow query ${duration}ms`, {
+    kind: "db_query",
+    duration_ms: Math.round(duration * 100) / 100,
+    sql: preview,
+  });
+};
+
 const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
   host: conf.host!,
   port: Number(conf.port!),
   dialect: conf.dialect! as Dialect,
   schema: "verifywise",
-  logging: false,
+  logging: DB_LOG_ENABLED ? sequelizeLogger : false,
+  benchmark: DB_LOG_ENABLED,
   define: {
     schema: "verifywise",
   },

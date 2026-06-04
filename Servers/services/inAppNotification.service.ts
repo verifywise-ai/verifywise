@@ -1,6 +1,7 @@
 import redisClient from "../database/redis";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import logger from "../utils/logger/fileLogger";
 import { createNotificationQuery, createBulkNotificationsQuery } from "../utils/notification.utils";
 import {
   ICreateNotification,
@@ -91,11 +92,19 @@ export const sendInAppNotification = async (
             emailConfig.template,
             emailConfig.variables,
           );
-          console.log(`📧 Email notification sent to ${user.email}`);
+          logger.info("email notification sent", {
+            kind: "email_sent",
+            recipient: user.email,
+            template: emailConfig.template,
+          });
         }
       } catch (emailError) {
-        console.error("Failed to send email notification:", emailError);
-        // Don't fail the whole notification if email fails
+        logger.error("failed to send email notification", {
+          kind: "email_failed",
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+          stack: emailError instanceof Error ? emailError.stack : undefined,
+          template: emailConfig.template,
+        });
       }
     }
 

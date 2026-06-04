@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { reportRumError } from "../../../application/utils/rum";
 
 interface Props {
   children: ReactNode;
@@ -49,6 +50,7 @@ class ChunkErrorBoundary extends Component<Props, State> {
       error,
       info,
     );
+    reportRumError(error, { kind: "react:ChunkErrorBoundary" });
   }
 
   render() {

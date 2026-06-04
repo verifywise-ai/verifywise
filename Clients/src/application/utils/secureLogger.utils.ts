@@ -16,6 +16,8 @@
  * Principles: KISS, Defensive Programming, GDPR/Compliance-Safe
  */
 
+import { reportRumError } from "./rum";
+
 type LogLevel = "info" | "warn" | "error";
 
 interface SecureLogOptions {
@@ -67,14 +69,11 @@ export const secureLog = ({
     return;
   }
 
-  // Production mode: Silent or minimal logging
-  // In production, you might want to send errors to a monitoring service
-  // without exposing them in browser console
+  // Production: forward errors to the backend RUM endpoint, which ships them
+  // to Loki. Generic console message stays for operator visibility; the
+  // structured payload (with context) is what gets logged centrally.
   if (level === "error") {
-    // TODO: Send to monitoring service (Sentry, DataDog, etc.)
-    // Example: Sentry.captureMessage(formattedMessage, 'error');
-
-    // For now, silent in production (or show generic message)
+    reportRumError(formattedMessage, { kind: context ? `secure:${context}` : "secure" });
     console.error("[Error] An error occurred. Please contact support if the issue persists.");
   }
 };

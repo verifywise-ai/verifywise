@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from "react";
 import { Box, Typography, Alert } from "@mui/material";
 import { background } from "../../themes/palette";
+import { reportRumError } from "../../../application/utils/rum";
 
 interface CommandPaletteErrorBoundaryProps {
   children: ReactNode;
@@ -39,11 +40,8 @@ class CommandPaletteErrorBoundary extends Component<
       errorInfo,
     });
 
-    // Log error to monitoring service
     console.error("Command Palette Error:", error, errorInfo);
-
-    // You could integrate with error reporting service here
-    // Example: Sentry.captureException(error, { contexts: { react: errorInfo } })
+    reportRumError(error, { kind: "react:CommandPaletteErrorBoundary" });
   }
 
   private handleRetry = () => {

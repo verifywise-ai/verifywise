@@ -1,0 +1,119 @@
+# Observability stack — Prometheus, Grafana, Loki, and exporters.
+#
+# This file contains ONLY observability services. App-side wiring (LOKI_URL
+# env vars for backend/worker/eval_server/ai_gateway) lives in
+# docker-compose.override.yml — see Observability/README.md.
+#
+# Run command:
+#   docker compose -p verifywise --env-file ./.env.dev \
+#     -f docker-compose.yml \
+#     -f docker-compose.override.yml \
+#     -f Observability/docker-compose.observability.yml up -d --build
+#
+# The -p verifywise project name puts every container on the same default
+# network so Prometheus can scrape app services by their compose service name
+# (e.g. backend:3000) and postgres_exporter / redis_exporter can reach
+# postgresdb / redis directly.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.2.1
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+
+  # ── Exporters (always in Docker; reach postgres/redis via compose network) ──
+  #
+  # node_exporter and cadvisor are intentionally NOT included here. Both need
+  # shared mount propagation on the host root filesystem, which Docker Desktop
+  # on macOS does not support — they crash with "path / is mounted on / but
+  # it is not a shared or slave mount". On Linux you can add them back by
+  # appending the blocks shown in Observability/README.md.
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${DB_USER}:${DB_PASSWORD}@postgresdb:${DB_PORT}/${DB_NAME}?sslmode=disable
+    expose:
+      - "9187"
+
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    expose:
+      - "9121"
+
+  # ── App-service overrides ────────────────────────────────────────────────
+  #
+  # When this file is merged in via -f Observability/docker-compose.observability.yml
+  # these stanzas extend the matching service from docker-compose.yml with
+  # the env vars our loggers/metrics endpoints need. Without this file in the
+  # merge, LOKI_URL is unset and the loggers gracefully skip Loki shipping
+  # (fileLogger.ts:15 — LOKI_ENABLED = !!LOKI_URL && ...).
+
+  backend:
+    environment:
+      - LOKI_URL=http://loki:3100
+      - SERVICE_NAME=backend
+
+  worker:
+    environment:
+      - LOKI_URL=http://loki:3100
+      - SERVICE_NAME=worker
+      - WORKER_METRICS_PORT=9464
+    expose:
+      - "9464"
+
+  eval_server:
+    environment:
+      - LOKI_URL=http://loki:3100
+      - SERVICE_NAME=eval_server
+
+  ai_gateway:
+    environment:
+      - LOKI_URL=http://loki:3100
+      - SERVICE_NAME=ai_gateway
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:

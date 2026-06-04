@@ -1,3 +1,6 @@
+import { installOutboundHttpLogging } from "./utils/http/outboundLog";
+installOutboundHttpLogging();
+
 import { createApp } from "./app";
 import { addAllJobs } from "./jobs/producer";
 import {

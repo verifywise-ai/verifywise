@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Box, Typography, Button, Card, CardContent } from "@mui/material";
 import { AlertCircle, RotateCcw } from "lucide-react";
+import { reportRumError } from "../../../application/utils/rum";
 
 interface Props {
   children: ReactNode;
@@ -32,14 +33,8 @@ class DashboardErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log the error to console for development
     console.error("Dashboard Error Boundary caught an error:", error, errorInfo);
-
-    // In production, send to error tracking service (Sentry, etc.)
-    if (process.env.NODE_ENV === "production") {
-      // TODO: Send to error tracking service
-      // errorTrackingService.captureException(error, { extra: errorInfo });
-    }
+    reportRumError(error, { kind: "react:DashboardErrorBoundary" });
 
     this.setState({
       error,

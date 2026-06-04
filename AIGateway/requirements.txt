@@ -29,3 +29,7 @@ spacy>=3.7.0
 
 # MCP Gateway — Model Context Protocol SDK
 mcp>=1.0.0
+
+# Observability — Prometheus metrics + Loki log shipping
+prometheus-fastapi-instrumentator>=7.0.0
+python-logging-loki>=0.3.1

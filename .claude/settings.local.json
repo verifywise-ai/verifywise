@@ -110,7 +110,13 @@
       "Bash(xargs -I{} grep -n \"organization_id\" {})",
       "Bash(npx jest *)",
       "Bash(xargs cat)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(date -v-1d +%s)",
+      "Bash(date -v+1d +%s)",
+      "Bash(date -v-10M +%s)",
+      "Bash(date -v+1M +%s)",
+      "Bash(date -v-30M +%s)",
+      "Bash(docker compose *)"
     ]
   }
 }

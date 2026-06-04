@@ -18,6 +18,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./application/config/queryClient";
 import { initDomTranslator } from "./i18n/domTranslator";
+import { initWebVitals } from "./application/utils/webVitals";
 
 // Expose React and related libraries as globals for plugin UI bundles
 (window as any).React = React;
@@ -29,6 +30,7 @@ import { initDomTranslator } from "./i18n/domTranslator";
 (window as any).ReactRouterDOM = ReactRouterDOM;
 
 initDomTranslator();
+initWebVitals();
 
 createRoot(document.getElementById("root")!).render(
   <Provider store={store}>

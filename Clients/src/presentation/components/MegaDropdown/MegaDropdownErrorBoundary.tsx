@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from "react";
 import { Button } from "@mui/material";
 import { Plus } from "lucide-react";
+import { reportRumError } from "../../../application/utils/rum";
 
 interface MegaDropdownErrorBoundaryProps {
   children: ReactNode;
@@ -28,13 +29,8 @@ class MegaDropdownErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log to error reporting service in production
-    if (process.env.NODE_ENV === "production") {
-      // TODO: Send to error tracking service (e.g., Sentry)
-      console.error("MegaDropdown Error:", error, errorInfo);
-    } else {
-      console.error("MegaDropdown crashed:", error, errorInfo);
-    }
+    console.error("MegaDropdown crashed:", error, errorInfo);
+    reportRumError(error, { kind: "react:MegaDropdownErrorBoundary" });
   }
 
   render() {

@@ -103,8 +103,10 @@ const authenticateJWT = async (
   // Test bypass: integration tests may inject mock auth context via
   // createTestApp({ bypassAuth: true }). Only active in test environment.
   if (process.env.NODE_ENV === "test" && req.testBypassAuth === true) {
+    const prev = asyncLocalStorage.getStore() || {};
     return asyncLocalStorage.run(
       {
+        ...prev,
         userId: req.userId ?? 1,
         tenantId: req.organizationId ?? 1,
         organizationId: req.organizationId ?? 1,
@@ -216,12 +218,16 @@ const authenticateJWT = async (
       }
     }
 
-    // Initialize AsyncLocalStorage context for request tracing
+    // Initialize AsyncLocalStorage context for request tracing.
+    // Merges with the prior store (requestId set by requestIdMiddleware).
+    const prev = asyncLocalStorage.getStore() || {};
     asyncLocalStorage.run(
       {
+        ...prev,
         userId: decoded.id,
         tenantId: req.organizationId ?? 0,
         organizationId: req.organizationId ?? 0,
+        tenantHash: req.tenantHash,
       },
       () => {
         next();

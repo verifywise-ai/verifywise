@@ -106,6 +106,11 @@ import { i18nMiddleware } from "./middleware/i18n.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
+import { requestIdMiddleware } from "./middleware/requestId.middleware";
+import { metricsMiddleware } from "./middleware/metrics.middleware";
+import { accessLogMiddleware } from "./middleware/accessLog.middleware";
+import { register as metricsRegister } from "./utils/metrics/registry";
+import rumRoutes from "./routes/rum.route";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -114,6 +119,19 @@ const DEFAULT_HOST = "localhost";
 export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Application {
   const app = express();
   const host = process.env.HOST || DEFAULT_HOST;
+
+  app.use(requestIdMiddleware);
+  app.use(metricsMiddleware);
+  app.use(accessLogMiddleware);
+
+  app.get("/metrics", async (_req, res) => {
+    try {
+      res.set("Content-Type", metricsRegister.contentType);
+      res.send(await metricsRegister.metrics());
+    } catch (err) {
+      res.status(500).send((err as Error).message);
+    }
+  });
 
   app.use(
     cors({
@@ -206,6 +224,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
 
+  app.use("/api/rum", rumRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);
   app.use("/api/vendors", vendorRoutes);

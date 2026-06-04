@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-06-04
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -8,6 +8,7 @@ This document contains cross-cutting rules for the VerifyWise codebase. Director
 - **Frontend:** `Clients/CLAUDE.md` — clean architecture, component patterns
 - **EvalServer:** `EvalServer/CLAUDE.md` — Alembic migrations, FastAPI patterns
 - **AI Gateway:** `AIGateway/CLAUDE.md` — LLM proxy, guardrails, spend tracking
+- **Observability:** `Observability/README.md` — Prometheus + Grafana + Loki stack
 
 ### Custom Agents
 
@@ -143,6 +144,23 @@ fix(dashboard): resolve chart rendering issue
 | Frontend | 5173 | Yes |
 | EvalServer | 8000 | For LLM Evals |
 | AI Gateway | 8100 | For LLM governance |
+| Prometheus | 9090 | For metrics (optional) |
+| Grafana | 3001 | For dashboards (optional) |
+| Loki | 3100 | For log aggregation (optional) |
+
+Start the observability stack alongside the app:
+
+```bash
+docker compose -p verifywise --env-file ./.env.dev \
+  -f docker-compose.yml \
+  -f docker-compose.override.yml \
+  -f Observability/docker-compose.observability.yml \
+  up -d --build
+```
+
+See `Observability/README.md` for the `LOKI_URL` / `SERVICE_NAME` env you need to add to `docker-compose.override.yml`.
+
+The backend exposes `/metrics` (Prometheus exposition format) and `/api/rum/*` (frontend RUM ingestion). The worker exposes `/metrics` on port 9464. Logs from Node and Python services push directly to Loki via HTTP when `LOKI_URL` is set; tenant info (`org_id`, `request_id`, `user_id`) is in the JSON payload, not Loki labels.
 
 ---
 

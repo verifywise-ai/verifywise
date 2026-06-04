@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from middlewares.tenant import TenantMiddleware
+from observability import install_observability
+from database.db import engine as _vw_db_engine
 from routers.completions import router as completions_router
 from routers.models import router as models_router
 from routers.guardrails import router as guardrails_router
@@ -48,6 +50,8 @@ app = FastAPI(
     version="1.0.0",
     redirect_slashes=False,
 )
+
+install_observability(app, service="ai_gateway", engine=_vw_db_engine)
 
 # CORS: allow Express backend + any employee SDK origin
 origins = [
