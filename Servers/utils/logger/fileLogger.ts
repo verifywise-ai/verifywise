@@ -45,7 +45,10 @@ const consoleFormat = combine(
   colorize(),
   timestamp(),
   printf(({ level, message, timestamp, request_id, org_id }) => {
-    const ctx = [request_id ? `req=${request_id}` : null, org_id !== undefined ? `org=${org_id}` : null]
+    const ctx = [
+      request_id ? `req=${request_id}` : null,
+      org_id !== undefined ? `org=${org_id}` : null,
+    ]
       .filter(Boolean)
       .join(" ");
     return `${timestamp} [${level}]${ctx ? ` (${ctx})` : ""}: ${message}`;
@@ -131,7 +134,9 @@ const buildTransports = (): (transports.ConsoleTransportInstance | LokiTransport
   }
 
   // eslint-disable-next-line no-console
-  console.error(`[logger-init] transports installed: ${list.length} (${list.map((t) => t.constructor.name).join(", ")})`);
+  console.error(
+    `[logger-init] transports installed: ${list.length} (${list.map((t) => t.constructor.name).join(", ")})`,
+  );
 
   return list;
 };

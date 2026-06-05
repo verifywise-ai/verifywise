@@ -69,7 +69,8 @@ const logCall = (params: {
     }
   })();
 
-  const level = error || (status && status >= 500) ? "error" : status && status >= 400 ? "warn" : "info";
+  const level =
+    error || (status && status >= 500) ? "error" : status && status >= 400 ? "warn" : "info";
 
   logger.log(level, `${method} ${host} ${status ?? "ERR"}`, {
     kind: "http_outbound",
@@ -90,7 +91,9 @@ function patchFetch(): void {
 
   globalThis.fetch = async (input, init) => {
     const url = normalizeUrl(input);
-    const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+    const method = (
+      init?.method || (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
     const start = process.hrtime.bigint();
 
     // Stamp X-Request-Id on outbound calls so the trace ID propagates downstream.

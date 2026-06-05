@@ -118,7 +118,8 @@ const sequelizeLogger = (sql: string, timingMs?: number): void => {
 
   // Sequelize prefixes with "Executing (transactionId): " — strip for readability.
   const cleaned = sql.replace(/^Executing \([^)]*\):\s*/, "");
-  const preview = cleaned.length > MAX_SQL_PREVIEW ? cleaned.slice(0, MAX_SQL_PREVIEW) + "…" : cleaned;
+  const preview =
+    cleaned.length > MAX_SQL_PREVIEW ? cleaned.slice(0, MAX_SQL_PREVIEW) + "…" : cleaned;
 
   logger.warn(`slow query ${duration}ms`, {
     kind: "db_query",
