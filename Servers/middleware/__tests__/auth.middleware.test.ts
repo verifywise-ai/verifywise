@@ -18,6 +18,7 @@ jest.mock("../../utils/security.utils", () => ({
 jest.mock("../../utils/context/context", () => ({
   asyncLocalStorage: {
     run: jest.fn((_ctx: any, cb: () => void) => cb()),
+    getStore: jest.fn(() => ({})),
   },
 }));
 
@@ -26,6 +27,7 @@ import { getTokenPayload } from "../../utils/jwt.utils";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../../utils/user.utils";
 import { getTenantHash } from "../../tools/getTenantHash";
 import { isValidTenantHash } from "../../utils/security.utils";
+import { asyncLocalStorage } from "../../utils/context/context";
 
 // Cast mocks for type safety
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
@@ -76,6 +78,10 @@ describe("authenticateJWT middleware", () => {
   beforeEach(() => {
     next = jest.fn();
     jest.clearAllMocks();
+    (asyncLocalStorage.run as jest.Mock).mockImplementation(
+      (_ctx: any, cb: () => void) => cb(),
+    );
+    (asyncLocalStorage.getStore as jest.Mock).mockReturnValue({});
   });
 
   afterEach(() => {
