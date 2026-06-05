@@ -78,9 +78,7 @@ describe("authenticateJWT middleware", () => {
   beforeEach(() => {
     next = jest.fn();
     jest.clearAllMocks();
-    (asyncLocalStorage.run as jest.Mock).mockImplementation(
-      (_ctx: any, cb: () => void) => cb(),
-    );
+    (asyncLocalStorage.run as jest.Mock).mockImplementation((_ctx: any, cb: () => void) => cb());
     (asyncLocalStorage.getStore as jest.Mock).mockReturnValue({});
   });
 
