@@ -209,3 +209,102 @@ export async function scheduleMcpGatewayCleanup() {
     },
   );
 }
+
+export async function scheduleProactiveRiskAnomalyDetection() {
+  logger.info("Adding Proactive Risk Anomaly Detection jobs to the queue...");
+  // Detect spikes in high/critical risks every 6 hours
+  await automationQueue.add(
+    "proactive_risk_anomaly_detection",
+    { type: "proactive" },
+    {
+      repeat: { pattern: "0 */6 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleProactiveComplianceScoreCheck() {
+  logger.info("Adding Proactive Compliance Score Check jobs to the queue...");
+  // Weekly compliance score drop check — Mondays at 1 AM
+  await automationQueue.add(
+    "proactive_compliance_score_check",
+    { type: "proactive" },
+    {
+      repeat: { pattern: "0 1 * * 1" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleProactiveTaskOverdueCheck() {
+  logger.info("Adding Proactive Task Overdue Check jobs to the queue...");
+  // Overdue task escalation — daily at 9 AM
+  await automationQueue.add(
+    "proactive_task_overdue_check",
+    { type: "proactive" },
+    {
+      repeat: { pattern: "0 9 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleProactiveWeeklyDigest() {
+  logger.info("Adding Proactive Weekly Digest jobs to the queue...");
+  // Weekly digest — Mondays at 9 AM
+  await automationQueue.add(
+    "proactive_weekly_digest",
+    { type: "proactive" },
+    {
+      repeat: { pattern: "0 9 * * 1" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+/**
+ * Phase 6 / issue 3813 — schedule the time-based autopilot workflow triggers.
+ *  - policy_renewal: daily, fans out per policy due within 30 days
+ *  - framework_gap_remediation: daily, one run per org (workflow self-skips)
+ *  - audit_preparation: quarterly, one run per org
+ */
+export async function scheduleWorkflowAutopilotJobs() {
+  logger.info("Adding Autopilot workflow scheduled jobs to the queue...");
+
+  // Policy renewal scan — daily at 7 AM
+  await automationQueue.add(
+    "workflow_policy_renewal",
+    { type: "workflow" },
+    {
+      repeat: { pattern: "0 7 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+
+  // Framework gap remediation scan — daily at 7 AM
+  await automationQueue.add(
+    "workflow_framework_gap",
+    { type: "workflow" },
+    {
+      repeat: { pattern: "0 7 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+
+  // Audit preparation scan — quarterly at 5 AM on the 1st of Jan/Apr/Jul/Oct
+  await automationQueue.add(
+    "workflow_audit_preparation",
+    { type: "workflow" },
+    {
+      repeat: { pattern: "0 5 1 1,4,7,10 *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}

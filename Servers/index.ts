@@ -95,7 +95,10 @@ import aiConfirmationRoutes from "./routes/aiConfirmation.route";
 import aiApprovalRoutes from "./routes/aiApproval.route";
 import aiApprovalRulesRoutes from "./routes/aiApprovalRules.route";
 import aiAuditRoutes from "./routes/aiAudit.route";
+import observabilityRouter from "./routes/observability.route";
 import { startTimeoutHandler } from "./advisor/approval/timeoutHandler";
+import { bootstrapAgentNetwork } from "./advisor/network/agentNetwork";
+import { registerAllWorkflows } from "./services/workflows";
 import featureSettingsRoutes from "./routes/featureSettings.route";
 import friaRoutes from "./routes/fria.route";
 import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
@@ -290,6 +293,7 @@ try {
   app.use("/api/ai-approvals", aiApprovalRoutes);
   app.use("/api/ai-approval-rules", aiApprovalRulesRoutes);
   app.use("/api/ai-audit", aiAuditRoutes);
+  app.use("/api/observability", observabilityRouter);
   app.use("/api/advisor", advisorRouter);
   app.use("/api/policy-linked", policyLinkedObjects);
 
@@ -401,6 +405,13 @@ try {
 
   // Start approval timeout handler (expires pending approvals past TTL)
   startTimeoutHandler();
+
+  // Bootstrap the multi-agent network once (registers all specialized agents)
+  bootstrapAgentNetwork();
+
+  // Phase 6 / issue 3813 — register all autopilot workflow definitions once so
+  // triggers and the scheduler can resolve them by key.
+  registerAllWorkflows();
 
   const server = app.listen(port, () => {
     console.log(`Server running on port http://${host}:${port}/`);

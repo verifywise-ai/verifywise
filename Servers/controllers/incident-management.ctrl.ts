@@ -23,6 +23,10 @@ import {
   trackIncidentChanges,
   recordMultipleFieldChanges,
 } from "../utils/incidentChangeHistory.utils";
+import { triggerIncidentResponse } from "../services/workflows/triggers";
+
+/** Severity values that launch the critical incident_response workflow. */
+const CRITICAL_INCIDENT_SEVERITIES = new Set(["very serious", "critical"]);
 
 /**
  * Get all incidents
@@ -203,6 +207,21 @@ export async function createNewIncident(req: Request, res: Response) {
     }
 
     await transaction.commit();
+
+    // Phase 6 / issue 3813 — launch the critical incident_response autopilot
+    // workflow when the new incident is critical-tier. Fire-and-forget; never
+    // blocks or fails the response.
+    if (
+      savedIncident.id &&
+      typeof savedIncident.severity === "string" &&
+      CRITICAL_INCIDENT_SEVERITIES.has(savedIncident.severity.toLowerCase())
+    ) {
+      triggerIncidentResponse(
+        req.organizationId!,
+        savedIncident.id,
+        savedIncident.severity,
+      ).catch((err) => console.error("Failed to trigger incident_response workflow:", err));
+    }
 
     logStructured(
       "successful",

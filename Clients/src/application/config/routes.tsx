@@ -71,6 +71,8 @@ const ModelLifecycleDetail = lazyRoute(
 );
 const Datasets = lazyRoute(() => import("../../presentation/pages/Datasets"));
 const AITrustCenter = lazyRoute(() => import("../../presentation/pages/AITrustCenter"));
+const AIAuditDashboard = lazyRoute(() => import("../../presentation/pages/AIAuditDashboard"));
+const AIObservability = lazyRoute(() => import("../../presentation/pages/AIObservability"));
 
 // ── AI Detection & Shadow AI routes ───────────────────────────────────
 const ScanPage = lazyRoute(() => import("../../presentation/pages/AIDetection/ScanPage"));
@@ -566,6 +568,22 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <AgentDiscovery />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-audit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIAuditDashboard />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-observability"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIObservability />
         </Suspense>
       }
     />

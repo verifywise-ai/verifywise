@@ -130,6 +130,29 @@ export function endTrace(
 }
 
 /**
+ * Log an error event onto a trace. No-ops when Langfuse is unconfigured.
+ */
+export function logError(
+  traceHandle: TraceHandle | null,
+  error: unknown,
+  metadata?: Record<string, unknown>,
+): void {
+  if (!traceHandle) return;
+
+  try {
+    const message = error instanceof Error ? error.message : String(error);
+    traceHandle.trace.event({
+      name: "error",
+      level: "ERROR",
+      statusMessage: message,
+      metadata: metadata || {},
+    });
+  } catch (err) {
+    logStructured("error", `log error failed: ${err}`, "logError", fileName);
+  }
+}
+
+/**
  * Log a generation (LLM call) within a trace.
  */
 export function logGeneration(

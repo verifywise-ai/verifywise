@@ -15,6 +15,7 @@ import {
   adminClearAgentMemory,
   adminListAgentMessages,
 } from "../controllers/advisor.ctrl";
+import { planCommand, executeCommand } from "../controllers/commandPlane.ctrl";
 
 // Run advisor query
 router.post("/", authenticateJWT, runAdvisor);
@@ -24,6 +25,13 @@ router.post("/stream", authenticateJWT, streamAdvisor);
 
 // AI SDK streaming endpoint (native UI message stream protocol for useChat)
 router.post("/chat", authenticateJWT, streamAdvisorV2);
+
+// Multi-step command endpoints (planner + executor — issue 3812)
+//
+// POST /advisor/command-plan     — decompose one NL command into CommandStep[]
+// POST /advisor/command-execute  — drive the steps, SSE stream of StepStatusEvent
+router.post("/command-plan", authenticateJWT, planCommand);
+router.post("/command-execute", authenticateJWT, executeCommand);
 
 // Conversation persistence endpoints (multi-conversation per domain)
 //

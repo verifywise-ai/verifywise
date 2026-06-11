@@ -11,6 +11,7 @@ import {
   getMessages as getAgentMessages,
 } from "./memory/memoryService";
 import { selectActiveTools } from "./routing";
+import { startTrace, startSpan, endSpan, endTrace, logError } from "./observability/traceManager";
 
 export interface StreamChunk {
   type: "text" | "status";
@@ -352,6 +353,14 @@ export async function* streamAdvisorAiSdk(
   const agentStartTime = Date.now();
   logger.debug(`[AI-SDK] streamAdvisor started for ${params.provider} with model ${params.model}`);
 
+  // Open a Langfuse trace (no-op when unconfigured).
+  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
+    provider: params.provider,
+    model: params.model,
+    agent: params.agentName || "advisor",
+    fn: "streamAdvisorAiSdk",
+  });
+
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
 
@@ -364,76 +373,89 @@ export async function* streamAdvisorAiSdk(
     });
   }
 
-  const result = streamText({
-    model,
-    system: getAdvisorPrompt(),
-    messages: await selectMessages(params),
-    tools,
-    stopWhen: stepCountIs(12),
-    maxOutputTokens: 4096,
-    onStepFinish: ({ toolCalls, text }) => {
-      if (toolCalls && toolCalls.length > 0) {
-        const toolNames = toolCalls.map((tc: { toolName: string }) => tc.toolName).join(", ");
-        logger.debug(`[AI-SDK] Tool step completed: ${toolNames}`);
-        // Record each tool invocation in agent memory. We persist the tool
-        // name + a JSON-serialized summary of the input so an admin can
-        // reconstruct what the agent did. Output is captured in metadata.
-        for (const tc of toolCalls) {
-          const inputPreview =
-            typeof (tc as any).input === "string"
-              ? (tc as any).input
-              : JSON.stringify((tc as any).input ?? {}).slice(0, 800);
-          void safeSaveMessage(params, "tool", `${tc.toolName}: ${inputPreview}`, {
-            toolCallId: (tc as any).toolCallId,
-            toolName: tc.toolName,
-          });
+  try {
+    const result = streamText({
+      model,
+      system: getAdvisorPrompt(),
+      messages: await selectMessages(params),
+      tools,
+      stopWhen: stepCountIs(12),
+      maxOutputTokens: 4096,
+      onStepFinish: ({ toolCalls, text }) => {
+        if (toolCalls && toolCalls.length > 0) {
+          const toolNames = toolCalls.map((tc: { toolName: string }) => tc.toolName).join(", ");
+          logger.debug(`[AI-SDK] Tool step completed: ${toolNames}`);
+          // Record each tool invocation in agent memory. We persist the tool
+          // name + a JSON-serialized summary of the input so an admin can
+          // reconstruct what the agent did. Output is captured in metadata.
+          for (const tc of toolCalls) {
+            const inputPreview =
+              typeof (tc as any).input === "string"
+                ? (tc as any).input
+                : JSON.stringify((tc as any).input ?? {}).slice(0, 800);
+            const span = startSpan(traceHandle, `tool:${tc.toolName}`, {
+              toolCallId: (tc as any).toolCallId,
+              toolName: tc.toolName,
+            });
+            endSpan(span, { status: "success" });
+            void safeSaveMessage(params, "tool", `${tc.toolName}: ${inputPreview}`, {
+              toolCallId: (tc as any).toolCallId,
+              toolName: tc.toolName,
+            });
+          }
+        } else {
+          logger.debug(`[AI-SDK] Text step completed, text length: ${text?.length || 0}`);
         }
-      } else {
-        logger.debug(`[AI-SDK] Text step completed, text length: ${text?.length || 0}`);
-      }
-    },
-  });
-
-  let hasYieldedStatus = false;
-  let chunkCount = 0;
-  let firstChunkTime = 0;
-  let assistantBuffer = "";
-
-  for await (const part of result.fullStream) {
-    if (part.type === "text-delta") {
-      chunkCount++;
-      assistantBuffer += part.text;
-      if (chunkCount === 1) {
-        firstChunkTime = Date.now();
-        logger.debug(`[AI-SDK] First text chunk at +${firstChunkTime - agentStartTime}ms`);
-      }
-      yield { type: "text", content: part.text };
-    } else if (part.type === "tool-call") {
-      // Yield a status event when tools are being called
-      if (!hasYieldedStatus) {
-        yield { type: "status", content: "analyzing" };
-        hasYieldedStatus = true;
-      }
-    } else if (part.type === "finish-step") {
-      // Reset status flag for the next step's text stream
-      hasYieldedStatus = false;
-    }
-  }
-
-  // Persist the assembled assistant turn (best-effort).
-  if (assistantBuffer.trim().length > 0) {
-    void safeSaveMessage(params, "assistant", assistantBuffer, {
-      provider: params.provider,
-      model: params.model,
-      durationMs: Date.now() - agentStartTime,
-      chunkCount,
+      },
     });
-  }
 
-  const agentEndTime = Date.now();
-  logger.debug(
-    `[AI-SDK] streamAdvisor completed in ${agentEndTime - agentStartTime}ms (${((agentEndTime - agentStartTime) / 1000).toFixed(2)}s), ${chunkCount} text chunks`,
-  );
+    let hasYieldedStatus = false;
+    let chunkCount = 0;
+    let firstChunkTime = 0;
+    let assistantBuffer = "";
+
+    for await (const part of result.fullStream) {
+      if (part.type === "text-delta") {
+        chunkCount++;
+        assistantBuffer += part.text;
+        if (chunkCount === 1) {
+          firstChunkTime = Date.now();
+          logger.debug(`[AI-SDK] First text chunk at +${firstChunkTime - agentStartTime}ms`);
+        }
+        yield { type: "text", content: part.text };
+      } else if (part.type === "tool-call") {
+        // Yield a status event when tools are being called
+        if (!hasYieldedStatus) {
+          yield { type: "status", content: "analyzing" };
+          hasYieldedStatus = true;
+        }
+      } else if (part.type === "finish-step") {
+        // Reset status flag for the next step's text stream
+        hasYieldedStatus = false;
+      }
+    }
+
+    // Persist the assembled assistant turn (best-effort).
+    if (assistantBuffer.trim().length > 0) {
+      void safeSaveMessage(params, "assistant", assistantBuffer, {
+        provider: params.provider,
+        model: params.model,
+        durationMs: Date.now() - agentStartTime,
+        chunkCount,
+      });
+    }
+
+    endTrace(traceHandle, { output: assistantBuffer, status: "success" });
+
+    const agentEndTime = Date.now();
+    logger.debug(
+      `[AI-SDK] streamAdvisor completed in ${agentEndTime - agentStartTime}ms (${((agentEndTime - agentStartTime) / 1000).toFixed(2)}s), ${chunkCount} text chunks`,
+    );
+  } catch (error) {
+    logError(traceHandle, error, { fn: "streamAdvisorAiSdk" });
+    endTrace(traceHandle, { status: "error" });
+    throw error;
+  }
 }
 
 /**
@@ -443,6 +465,15 @@ export async function* streamAdvisorAiSdk(
 export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<string> {
   const agentStartTime = Date.now();
   logger.debug(`[AI-SDK] runAdvisor started for ${params.provider} with model ${params.model}`);
+
+  // Open a Langfuse trace for this run. No-ops when Langfuse is unconfigured
+  // (traceHandle stays null and every traceManager call below is a no-op).
+  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
+    provider: params.provider,
+    model: params.model,
+    agent: params.agentName || "advisor",
+    fn: "runAdvisorAiSdk",
+  });
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
@@ -455,45 +486,59 @@ export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<strin
     });
   }
 
-  const result = streamText({
-    model,
-    system: getAdvisorPrompt(),
-    messages: await selectMessages(params),
-    tools,
-    stopWhen: stepCountIs(12),
-    maxOutputTokens: 4096,
-    onStepFinish: ({ toolCalls }) => {
-      if (toolCalls && toolCalls.length > 0) {
-        for (const tc of toolCalls) {
-          const inputPreview =
-            typeof (tc as any).input === "string"
-              ? (tc as any).input
-              : JSON.stringify((tc as any).input ?? {}).slice(0, 800);
-          void safeSaveMessage(params, "tool", `${tc.toolName}: ${inputPreview}`, {
-            toolCallId: (tc as any).toolCallId,
-            toolName: tc.toolName,
-          });
+  try {
+    const result = streamText({
+      model,
+      system: getAdvisorPrompt(),
+      messages: await selectMessages(params),
+      tools,
+      stopWhen: stepCountIs(12),
+      maxOutputTokens: 4096,
+      onStepFinish: ({ toolCalls }) => {
+        if (toolCalls && toolCalls.length > 0) {
+          for (const tc of toolCalls) {
+            const inputPreview =
+              typeof (tc as any).input === "string"
+                ? (tc as any).input
+                : JSON.stringify((tc as any).input ?? {}).slice(0, 800);
+            // Record one span per tool invocation (no-op without Langfuse).
+            const span = startSpan(traceHandle, `tool:${tc.toolName}`, {
+              toolCallId: (tc as any).toolCallId,
+              toolName: tc.toolName,
+            });
+            endSpan(span, { status: "success" });
+            void safeSaveMessage(params, "tool", `${tc.toolName}: ${inputPreview}`, {
+              toolCallId: (tc as any).toolCallId,
+              toolName: tc.toolName,
+            });
+          }
         }
-      }
-    },
-  });
-
-  const text = await result.text;
-
-  if (text && text.trim().length > 0) {
-    void safeSaveMessage(params, "assistant", text, {
-      provider: params.provider,
-      model: params.model,
-      durationMs: Date.now() - agentStartTime,
+      },
     });
+
+    const text = await result.text;
+
+    if (text && text.trim().length > 0) {
+      void safeSaveMessage(params, "assistant", text, {
+        provider: params.provider,
+        model: params.model,
+        durationMs: Date.now() - agentStartTime,
+      });
+    }
+
+    endTrace(traceHandle, { output: text, status: "success" });
+
+    const agentEndTime = Date.now();
+    logger.debug(
+      `[AI-SDK] runAdvisor completed in ${agentEndTime - agentStartTime}ms (${((agentEndTime - agentStartTime) / 1000).toFixed(2)}s)`,
+    );
+
+    return text;
+  } catch (error) {
+    logError(traceHandle, error, { fn: "runAdvisorAiSdk" });
+    endTrace(traceHandle, { status: "error" });
+    throw error;
   }
-
-  const agentEndTime = Date.now();
-  logger.debug(
-    `[AI-SDK] runAdvisor completed in ${agentEndTime - agentStartTime}ms (${((agentEndTime - agentStartTime) / 1000).toFixed(2)}s)`,
-  );
-
-  return text;
 }
 
 /**
@@ -509,6 +554,15 @@ export async function getStreamTextResult(params: AiSdkAdvisorParams) {
   const tools = await buildRoutedTools(params);
   const startTime = Date.now();
   const messagesForStream = await selectMessages(params);
+
+  // Open a Langfuse trace (no-op when unconfigured). Closed in onFinish /
+  // onError below since the streamText result is handed back to the caller.
+  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
+    provider: params.provider,
+    model: params.model,
+    agent: params.agentName || "advisor",
+    fn: "getStreamTextResult",
+  });
 
   // Persist the inbound user turn before the stream begins. Memory writes
   // are best-effort and never block the stream.
@@ -536,12 +590,21 @@ export async function getStreamTextResult(params: AiSdkAdvisorParams) {
             typeof (tc as any).input === "string"
               ? (tc as any).input
               : JSON.stringify((tc as any).input ?? {}).slice(0, 800);
+          const span = startSpan(traceHandle, `tool:${tc.toolName}`, {
+            toolCallId: (tc as any).toolCallId,
+            toolName: tc.toolName,
+          });
+          endSpan(span, { status: "success" });
           void safeSaveMessage(params, "tool", `${tc.toolName}: ${inputPreview}`, {
             toolCallId: (tc as any).toolCallId,
             toolName: tc.toolName,
           });
         }
       }
+    },
+    onError: ({ error }) => {
+      logError(traceHandle, error, { fn: "getStreamTextResult" });
+      endTrace(traceHandle, { status: "error" });
     },
     onFinish: ({ text }) => {
       // Capture the final assembled assistant text once the stream closes.
@@ -552,6 +615,7 @@ export async function getStreamTextResult(params: AiSdkAdvisorParams) {
           durationMs: Date.now() - startTime,
         });
       }
+      endTrace(traceHandle, { output: text, status: "success" });
     },
   });
 }

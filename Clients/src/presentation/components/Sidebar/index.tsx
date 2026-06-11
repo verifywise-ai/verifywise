@@ -20,6 +20,8 @@ import {
   Workflow,
   Sparkles,
   GitCompareArrows,
+  FileSearch,
+  Activity,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -230,6 +232,18 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: "AI Skills",
           icon: <Sparkles size={16} strokeWidth={1.5} />,
           path: "/skills",
+        },
+        {
+          id: "ai-audit",
+          label: "AI audit",
+          icon: <FileSearch size={16} strokeWidth={1.5} />,
+          path: "/ai-audit",
+        },
+        {
+          id: "ai-observability",
+          label: "AI observability",
+          icon: <Activity size={16} strokeWidth={1.5} />,
+          path: "/ai-observability",
         },
       ],
     },

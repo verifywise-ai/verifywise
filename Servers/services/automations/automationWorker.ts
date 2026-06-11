@@ -77,6 +77,22 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { notifyVendorReviewDue, notifyPolicyDueSoon } from "../inAppNotification.service";
 import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
+import {
+  detectRiskAnomaly,
+  findOverdueTasks,
+  detectComplianceDrop,
+  buildWeeklyDigest,
+} from "../../utils/proactiveDetection.utils";
+import { notifyProactive } from "../proactiveNotify";
+import {
+  runPolicyRenewalScan,
+  runFrameworkGapScan,
+  runAuditPreparationScan,
+} from "../workflows/triggers";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../../domain.layer/interfaces/i.notification";
 
 const handlers = {
   send_email: sendEmail,
@@ -472,6 +488,142 @@ async function sendReportNotificationEmail(jobData: any) {
   });
 }
 
+/**
+ * Phase 4 / issue 3811 — proactive scheduled job handlers.
+ *
+ * Each handler iterates every organization, runs an in-house detection
+ * (proactiveDetection.utils) and, when the detection is positive, fans the
+ * result out via notifyProactive on the requested channels. Per-org failures
+ * are isolated so one org never blocks the rest.
+ */
+export async function handleRiskAnomalyJob() {
+  const organizations = await getAllOrganizationsQuery();
+  for (const org of organizations) {
+    const organizationId = org.id!;
+    try {
+      const result = await detectRiskAnomaly(organizationId);
+      if (result.isAnomaly) {
+        await notifyProactive(organizationId, {
+          title: "Risk anomaly detected",
+          body: `${result.count24h} high/critical risks created in the last 24h (≈${result.avg30d.toFixed(2)}/day over the prior 30 days).`,
+          notification: {
+            user_id: 0,
+            type: NotificationType.SYSTEM,
+            title: "Risk anomaly detected",
+            message: `${result.count24h} high/critical risks created in the last 24h.`,
+            entity_type: NotificationEntityType.RISK,
+          },
+          channels: { inApp: true, teams: { webhookUrl: null } },
+          meta: { ...result },
+        });
+      }
+    } catch (error) {
+      console.error(`Risk anomaly detection failed for org ${organizationId}:`, error);
+    }
+  }
+}
+
+export async function handleComplianceScoreJob() {
+  const organizations = await getAllOrganizationsQuery();
+  for (const org of organizations) {
+    const organizationId = org.id!;
+    try {
+      const drops = await detectComplianceDrop(organizationId);
+      if (drops.length > 0) {
+        const summary = drops
+          .map((d) => `${d.framework_type}: -${d.drop} pts (${d.previous_score} → ${d.latest_score})`)
+          .join("; ");
+        await notifyProactive(organizationId, {
+          title: "Compliance score drop detected",
+          body: `Framework readiness dropped: ${summary}.`,
+          notification: {
+            user_id: 0,
+            type: NotificationType.SYSTEM,
+            title: "Compliance score drop detected",
+            message: `Framework readiness dropped: ${summary}.`,
+            entity_type: NotificationEntityType.ASSESSMENT,
+          },
+          channels: {
+            slack: { userId: 0, routingType: "compliance" },
+            teams: { webhookUrl: null },
+          },
+          meta: { drops },
+        });
+      }
+    } catch (error) {
+      console.error(`Compliance score check failed for org ${organizationId}:`, error);
+    }
+  }
+}
+
+export async function handleTaskOverdueJob() {
+  const organizations = await getAllOrganizationsQuery();
+  for (const org of organizations) {
+    const organizationId = org.id!;
+    try {
+      const overdueTasks = await findOverdueTasks(organizationId);
+      if (overdueTasks.length > 0) {
+        await notifyProactive(organizationId, {
+          title: "Overdue tasks escalation",
+          body: `${overdueTasks.length} task(s) are past their due date and not yet completed.`,
+          notification: {
+            user_id: 0,
+            type: NotificationType.SYSTEM,
+            title: "Overdue tasks escalation",
+            message: `${overdueTasks.length} task(s) are overdue.`,
+            entity_type: NotificationEntityType.TASK,
+          },
+          channels: {
+            slack: { userId: 0, routingType: "escalation" },
+            teams: { webhookUrl: null },
+          },
+          meta: { overdueCount: overdueTasks.length },
+        });
+      }
+    } catch (error) {
+      console.error(`Task overdue check failed for org ${organizationId}:`, error);
+    }
+  }
+}
+
+export async function handleWeeklyDigestJob() {
+  const organizations = await getAllOrganizationsQuery();
+  for (const org of organizations) {
+    const organizationId = org.id!;
+    try {
+      const digest = await buildWeeklyDigest(organizationId);
+      const body = `Open risks: ${digest.openRisks}. Overdue tasks: ${digest.overdueTasks.length}. Frameworks tracked: ${digest.frameworkScores.length}.`;
+      await notifyProactive(organizationId, {
+        title: "Weekly governance digest",
+        body,
+        notification: {
+          user_id: 0,
+          type: NotificationType.SYSTEM,
+          title: "Weekly governance digest",
+          message: body,
+        },
+        channels: {
+          inApp: true,
+          email: {
+            template: "weekly-digest",
+            subject: "Weekly governance digest",
+            variables: {
+              openRisks: String(digest.openRisks),
+              overdueTasks: String(digest.overdueTasks.length),
+              frameworksTracked: String(digest.frameworkScores.length),
+            },
+          },
+          slack: { userId: 0, routingType: "digest" },
+          teams: { webhookUrl: null },
+        },
+        meta: { digest },
+      });
+    } catch (error) {
+      console.error(`Weekly digest failed for org ${organizationId}:`, error);
+    }
+  }
+}
+
 export const createAutomationWorker = () => {
   const automationWorker = new Worker(
     "automation-actions",
@@ -530,6 +682,20 @@ export const createAutomationWorker = () => {
           } catch (err) {
             console.error(`MCP Gateway cleanup failed: ${err}`);
           }
+        } else if (name === "proactive_risk_anomaly_detection") {
+          await handleRiskAnomalyJob();
+        } else if (name === "proactive_compliance_score_check") {
+          await handleComplianceScoreJob();
+        } else if (name === "proactive_task_overdue_check") {
+          await handleTaskOverdueJob();
+        } else if (name === "proactive_weekly_digest") {
+          await handleWeeklyDigestJob();
+        } else if (name === "workflow_policy_renewal") {
+          await runPolicyRenewalScan();
+        } else if (name === "workflow_framework_gap") {
+          await runFrameworkGapScan();
+        } else if (name === "workflow_audit_preparation") {
+          await runAuditPreparationScan();
         } else if (name === "send_pmm_notification") {
           // PMM notification handling - send email using MJML templates
           const { type, data } = job.data;

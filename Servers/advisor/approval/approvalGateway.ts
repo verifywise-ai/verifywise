@@ -22,6 +22,8 @@ import {
   NotificationEntityType,
 } from "../../domain.layer/interfaces/i.notification";
 import { logStateHistory } from "../../services/aiAuditTrail.service";
+import { startTrace, startSpan, endSpan, logError } from "../observability/traceManager";
+import { resumeWorkflow } from "../../services/workflows/engine";
 
 const fileName = "approvalGateway.ts";
 
@@ -144,8 +146,32 @@ async function updateApprovalRecord(
 /**
  * Submit a write tool operation for approval.
  * Uses the rule engine to evaluate, then routes through XState machine.
+ *
+ * Thin Langfuse-instrumented wrapper. Opens a trace + span around the
+ * underlying evaluation/execution. Every traceManager call no-ops when
+ * Langfuse is unconfigured, so behaviour is unchanged when tracing is off.
  */
 export async function submitForApproval(
+  config: SubmitForApprovalConfig,
+): Promise<ApprovalSubmitResult> {
+  const trace = startTrace(config.userId ?? 0, "", {
+    fn: "submitForApproval",
+    toolName: config.toolName,
+    riskLevel: config.riskLevel,
+  });
+  const span = startSpan(trace, "approval:submit", { toolName: config.toolName });
+  try {
+    const result = await submitForApprovalImpl(config);
+    endSpan(span, { output: { outcome: result.outcome }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "submitForApproval" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function submitForApprovalImpl(
   config: SubmitForApprovalConfig,
 ): Promise<ApprovalSubmitResult> {
   const functionName = "submitForApproval";
@@ -384,8 +410,28 @@ export async function submitForApproval(
 
 /**
  * Approve a pending approval and execute the write operation.
+ *
+ * Thin Langfuse-instrumented wrapper (no-ops when Langfuse is unconfigured).
  */
 export async function approveAction(
+  organizationId: number,
+  id: string,
+  userId: number,
+): Promise<{ success: boolean; result?: unknown; error?: string }> {
+  const trace = startTrace(userId, "", { fn: "approveAction", approvalId: id });
+  const span = startSpan(trace, "approval:approve", { approvalId: id });
+  try {
+    const result = await approveActionImpl(organizationId, id, userId);
+    endSpan(span, { output: { success: result.success }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "approveAction" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function approveActionImpl(
   organizationId: number,
   id: string,
   userId: number,
@@ -533,14 +579,68 @@ export async function approveAction(
   // Log audit trail for approve + execute + complete
   logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
 
+  // Phase 6 / issue 3813 — if this approval is gating a paused workflow run,
+  // resume it now that the action has been approved. Non-fatal.
+  resumePausedWorkflowForApproval(organizationId, id).catch((resumeError) => {
+    logStructured(
+      "error",
+      `workflow resume after approval failed (non-fatal): ${resumeError}`,
+      functionName,
+      fileName,
+    );
+  });
+
   logStructured("successful", `approved and executed ${record.tool_name}`, functionName, fileName);
   return { success: true, result };
 }
 
 /**
+ * Resume any workflow run parked in 'awaiting_approval' that is linked to the
+ * given approval. Looks the run up by ai_workflow_runs.awaiting_approval_id;
+ * a no-op when nothing is linked.
+ */
+async function resumePausedWorkflowForApproval(
+  organizationId: number,
+  approvalId: string,
+): Promise<void> {
+  const runs = (await sequelize.query(
+    `SELECT id FROM ai_workflow_runs
+      WHERE organization_id = :organizationId
+        AND awaiting_approval_id = :approvalId
+        AND state = 'awaiting_approval'
+      LIMIT 1`,
+    { replacements: { organizationId, approvalId }, type: QueryTypes.SELECT },
+  )) as Array<{ id: number }>;
+  const run = runs[0];
+  if (!run) return;
+  await resumeWorkflow(run.id, approvalId, organizationId);
+}
+
+/**
  * Reject a pending approval.
+ *
+ * Thin Langfuse-instrumented wrapper (no-ops when Langfuse is unconfigured).
  */
 export async function rejectAction(
+  organizationId: number,
+  id: string,
+  userId: number,
+  reason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const trace = startTrace(userId, "", { fn: "rejectAction", approvalId: id });
+  const span = startSpan(trace, "approval:reject", { approvalId: id });
+  try {
+    const result = await rejectActionImpl(organizationId, id, userId, reason);
+    endSpan(span, { output: { success: result.success }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "rejectAction" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function rejectActionImpl(
   organizationId: number,
   id: string,
   userId: number,

@@ -129,7 +129,9 @@ function selectLLMKey(clients: any[], llmKeyId?: number): any {
 // AI write tools (agent_create_*, agent_update_*, etc.) are composed via
 // the AI Actions registry — adding one only requires creating a new
 // `advisor/aiActions/<action>/` module and registering it there.
-const availableTools = {
+// Exported so the command-plane controller can resolve read-step tool
+// executors from the same canonical registry.
+export const availableTools = {
   ...availableRiskTools,
   ...availableModelInventoryTools,
   ...availableModelRiskTools,
