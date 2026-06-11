@@ -25,6 +25,7 @@ export type Lang = "en" | "de" | "fr";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    "Snooze": "Schlummern",
     // Sidebar / nav
     "Start here": "Hier starten",
     "Dashboard": "Dashboard",
@@ -284,6 +285,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No due date": "Kein Fälligkeitsdatum",
     "Expiry": "Ablauf",
     "EXPIRY": "ABLAUF",
+    "EXPERIMENT NAME": "EXPERIMENTNAME",
+    "JUDGE/SCORER": "JURY/BEWERTER",
     "Expiry date": "Ablaufdatum",
     "Assessment date": "Bewertungsdatum",
     "Last updated": "Zuletzt aktualisiert",
@@ -479,6 +482,10 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Typ I",
     "SOC2 Type II": "SOC 2 Typ II",
     "AI regulation in the Middle East": "KI-Regulierung im Nahen Osten",
+    "US AI regulations 2026": "KI-Regulierungen in den USA 2026",
+    "EU AI Act omnibus: what changed": "EU-KI-Verordnung Omnibus: Was sich geändert hat",
+    "VerifyWise YouTube channel launched": "VerifyWise YouTube-Kanal gestartet",
+    "Why LLM evaluations matter": "Warum LLM-Evaluierungen wichtig sind",
     "Clauses": "Klauseln",
     "Annexes": "Anhänge",
     "AI models mapped to this framework": "Diesem Rahmenwerk zugeordnete KI-Modelle",
@@ -1101,6 +1108,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close entity graph modal": "Entitätsgraph-Modal schließen",
     "Close icon": "Schließen-Symbol",
     "Close notification": "Benachrichtigung schließen",
+    "Close notifications": "Benachrichtigungen schließen",
     "Close tooltip": "Tooltip schließen",
     "Close tour": "Tour schließen",
     "Close viewer": "Betrachter schließen",
@@ -1141,6 +1149,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Create Configuration": "Konfiguration erstellen",
     "Create Dataset": "Datensatz erstellen",
     "Create demo data": "Demodaten erstellen",
+    "Hide demo data button": "Demodaten-Schaltfläche ausblenden",
     "Create endpoint": "Endpunkt erstellen",
     "Create folder": "Ordner erstellen",
     "Create from scratch": "Von Grund auf erstellen",
@@ -1187,6 +1196,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Delete server": "Server löschen",
     "Delete this dataset?": "Diesen Datensatz löschen?",
     "Delete this evaluation?": "Diese Bewertung löschen?",
+    "Delete this experiment?": "Dieses Experiment löschen?",
     "Delete this project?": "Dieses Projekt löschen?",
     "Delete use case": "Anwendungsfall löschen",
     "Deny": "Ablehnen",
@@ -1265,6 +1275,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Logout": "Abmelden",
     "Make your first request": "Erste Anfrage senden",
     "Mark all as read": "Alle als gelesen markieren",
+    "Mark all notifications as read": "Alle Benachrichtigungen als gelesen markieren",
     "Move down": "Nach unten verschieben",
     "Move up": "Nach oben verschieben",
     "Navigate": "Navigieren",
@@ -1932,6 +1943,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Spend log cleanup": "Bereinigung von Ausgabenprotokollen",
     "Spot usage trends": "Nutzungstrends erkennen",
     "Spread some love!": "Verbreiten Sie etwas Liebe!",
+    "Spread some love": "Verbreiten Sie etwas Liebe!",
     "Stakeholders consulted": "Konsultierte Stakeholder",
     "Standard card": "Standard-Karte",
     "Standard judge only": "Nur Standard-Juror",
@@ -3852,12 +3864,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Notifications center": "Benachrichtigungszentrale",
     "Open notifications": "Benachrichtigungen öffnen",
     "Open user menu": "Benutzermenü öffnen",
+    "Open user options": "Benutzeroptionen öffnen",
+    "Open Wise Search": "Wise Search öffnen",
     "Account menu": "Kontomenü",
     "Command menu": "Befehlsmenü",
     "Open command palette": "Befehlspalette öffnen",
     "Marketplace": "Marktplatz",
     "Marketplace for plugins": "Marktplatz für Plugins",
     "Open marketplace": "Marktplatz öffnen",
+    "Plugins marketplace": "Plugin-Marktplatz",
 
     // i18n audit gap fill (auto-applied)
     "A concise name for your AI use case": "Ein prägnanter Name für Ihren KI-Anwendungsfall",
@@ -7752,6 +7767,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Abdeckungsanalyse identifiziert Lücken und Synergien je Projekt.",
     "Coverage analysis will measure your progress against the prioritized frameworks":
       "Die Abdeckungsanalyse misst Ihren Fortschritt anhand der priorisierten Rahmenwerke",
+    "Cross-framework control mappings": "Framework-übergreifende Kontrollzuordnungen",
     "Cross-framework intelligence layer with control mappings, governance scenarios, and unified coverage analysis.":
       "Übergreifende Intelligenzschicht mit Kontrollzuordnungen, Governance-Szenarien und einheitlicher Abdeckungsanalyse.",
     "Cross-framework mappings reveal shared compliance effort.":
@@ -7903,9 +7919,206 @@ export const translations: Record<string, Record<string, string>> = {
     "All members selected": "Alle Mitglieder ausgewählt",
     "No options": "Keine Optionen",
     "All tags selected": "Alle Tags ausgewählt",
+
+    // Custom fields
+    "Custom fields": "Benutzerdefinierte Felder",
+    "Define organization-specific fields on entities like Vendors, Policies, etc.":
+      "Definieren Sie organisationsspezifische Felder für Entitäten wie Anbieter, Richtlinien usw.",
+    "Only Admins can manage custom fields.":
+      "Nur Administratoren können benutzerdefinierte Felder verwalten.",
+    "Edit field": "Feld bearbeiten",
+    "Delete custom field": "Benutzerdefiniertes Feld löschen",
+    "Field key": "Feldschlüssel",
+    "Field type": "Feldtyp",
+    "Options (one per line)": "Optionen (eine pro Zeile)",
+    "Clear value": "Wert löschen",
+    "Failed to load custom fields.": "Benutzerdefinierte Felder konnten nicht geladen werden.",
+    "Required custom fields missing": "Erforderliche benutzerdefinierte Felder fehlen",
+
+    // Microsoft Entra ID SSO
+    "Sign in with Microsoft": "Mit Microsoft anmelden",
+    "Configure Microsoft Entra ID single sign-on":
+      "Microsoft Entra ID Single Sign-on konfigurieren",
+    "Entra ID SSO configuration": "Entra ID SSO-Konfiguration",
+    "Enable Entra ID SSO": "Entra ID SSO aktivieren",
+    "Cloud environment": "Cloud-Umgebung",
+    "Azure Public Cloud": "Azure Public Cloud",
+    "Azure Government": "Azure Government",
+    "Tenant id": "Mandanten-ID",
+    "Enter your Azure AD Tenant ID": "Geben Sie Ihre Azure AD-Mandanten-ID ein",
+    "Found in Azure Portal &gt; Microsoft Entra ID &gt; Overview &gt; Tenant ID":
+      "Zu finden im Azure-Portal &gt; Microsoft Entra ID &gt; Übersicht &gt; Mandanten-ID",
+    "Client id": "Client-ID",
+    "Enter your Application (client) ID": "Geben Sie Ihre Anwendungs-(Client-)ID ein",
+    "Client secret": "Client-Geheimnis",
+    "Enter your client secret": "Geben Sie Ihr Client-Geheimnis ein",
+    "Select your organization": "Wählen Sie Ihre Organisation aus",
+    "Completing sign in...": "Anmeldung wird abgeschlossen...",
+    "Redirecting to login...": "Weiterleitung zur Anmeldung...",
+
+    // Governance OS
+    "Activate": "Aktivieren",
+    "Activate scenario": "Szenario aktivieren",
+    "Activate this scenario": "Dieses Szenario aktivieren",
+    "Activation History": "Aktivierungsverlauf",
+    "Activation summary": "Aktivierungszusammenfassung",
+    "Active Scenario": "Aktives Szenario",
+    "Active governance scenario": "Aktives Governance-Szenario",
+    "Active scenario": "Aktives Szenario",
+    "Analyze Coverage": "Abdeckung analysieren",
+    "Analyze coverage, gaps, and synergies across projects":
+      "Abdeckung, Lücken und Synergien über Projekte hinweg analysieren",
+    "Attribute": "Attribut",
+    "Avg Coverage": "Durchschn. Abdeckung",
+    "Base scenario": "Basisszenario",
+    "Bulk Import Mappings": "Mappings massenhaft importieren",
+    "By domain": "Nach Domäne",
+    "By mapping strength": "Nach Mapping-Stärke",
+    "Centralize and manage compliance evidence across all frameworks and projects.":
+      "Compliance-Nachweise über alle Rahmenwerke und Projekte hinweg zentralisieren und verwalten.",
+    "Centralize evidence with automated collection":
+      "Nachweise mit automatisierter Erfassung zentralisieren",
+    "Centralized compliance evidence": "Zentralisierte Compliance-Nachweise",
+    "Change scenario": "Szenario ändern",
+    "Choose a scenario": "Szenario wählen",
+    "Choose scenario": "Szenario wählen",
+    "Clear": "Zurücksetzen",
+    "Click any cell to view mappings between those frameworks":
+      "Auf eine Zelle klicken, um Mappings zwischen diesen Rahmenwerken anzuzeigen",
+    "Continue your governance workflow": "Governance-Workflow fortsetzen",
+    "Control whether the system prompts you to enable Governance Intelligence when conditions are met.":
+      "Steuern, ob das System Sie auffordert, Governance Intelligence zu aktivieren, wenn die Bedingungen erfüllt sind.",
+    "Coverage aligned with active scenario:": "Abdeckung abgestimmt auf aktives Szenario:",
+    "Coverage analysis and gap detection": "Abdeckungsanalyse und Lückenerkennung",
+    "Coverage analysis and gaps": "Abdeckungsanalyse und Lücken",
+    "Deactivate": "Deaktivieren",
+    "Default filters applied to the Framework Mapper view.":
+      "Standardfilter, die auf die Framework-Mapper-Ansicht angewendet werden.",
+    "Delete Mapping": "Mapping löschen",
+    "Delete Scenario": "Szenario löschen",
+    "Density:": "Dichte:",
+    "Domain Tag": "Domänen-Tag",
+    "Don&apos;t ask me again about enabling Governance Intelligence":
+      "Nicht erneut nachfragen, ob Governance Intelligence aktiviert werden soll",
+    "Enable or disable the Governance Intelligence module for your organization.":
+      "Governance-Intelligence-Modul für Ihre Organisation aktivieren oder deaktivieren.",
+    "Errors": "Fehler",
+    "Est. coverage": "Geschätzte Abdeckung",
+    "Est. effort": "Geschätzter Aufwand",
+    "Explore and manage cross-framework control mappings":
+      "Framework-übergreifende Control-Mappings erkunden und verwalten",
+    "Explore cross-framework control mappings. Select source and target frameworks to see how controls align.":
+      "Framework-übergreifende Control-Mappings erkunden. Quell- und Zielrahmenwerke auswählen, um die Ausrichtung der Controls zu sehen.",
+    "Failed to create task. Please try again.":
+      "Aufgabe konnte nicht erstellt werden. Bitte erneut versuchen.",
+    "Failed to save settings. Please try again.":
+      "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
+    "Framework owners": "Framework-Eigentümer",
+    "Gap Hotspots": "Lücken-Hotspots",
+    "Get framework recommendations based on your organization context, or browse and manage governance scenarios.":
+      "Framework-Empfehlungen basierend auf Ihrem Organisationskontext erhalten oder Governance-Szenarien durchsuchen und verwalten.",
+    "Get personalized framework recommendations and activate scenario-based compliance strategies across your projects.":
+      "Personalisierte Framework-Empfehlungen erhalten und szenarienbasierte Compliance-Strategien in Ihren Projekten aktivieren.",
+    "Get recommendations and manage governance scenarios":
+      "Empfehlungen erhalten und Governance-Szenarien verwalten",
+    "Governance Intelligence": "Governance Intelligence",
+    "Governance Intelligence Hub": "Governance Intelligence Hub",
+    "Governance overview and module navigation": "Governance-Übersicht und Modulnavigation",
+    "Governance preferences": "Governance-Einstellungen",
+    "Governance scenario recommendations": "Governance-Szenario-Empfehlungen",
+    "Governance scenarios and recommendations": "Governance-Szenarien und Empfehlungen",
+    "Governance workspace dashboard": "Governance-Arbeitsbereich-Dashboard",
+    "Hub": "Hub",
+    "Import": "Importieren",
+    "Knowledge Graph": "Wissensgraph",
+    "Manage Governance Intelligence configuration":
+      "Governance-Intelligence-Konfiguration verwalten",
+    "Manage Governance Intelligence configuration, preferences, and defaults.":
+      "Governance-Intelligence-Konfiguration, -Einstellungen und -Standards verwalten.",
+    "Mapping Filters": "Mapping-Filter",
+    "Mapping Statistics": "Mapping-Statistiken",
+    "Mapping Strength": "Mapping-Stärke",
+    "Module Status": "Modulstatus",
+    "Modules": "Module",
+    "Monitor regulation changes and auto-updates":
+      "Regulierungsänderungen und automatische Updates überwachen",
+    "Monitor regulatory changes": "Regulierungsänderungen überwachen",
+    "Monitor regulatory changes, track compliance deadlines, and receive alerts.":
+      "Regulierungsänderungen überwachen, Compliance-Termine verfolgen und Warnungen erhalten.",
+    "New Mapping": "Neues Mapping",
+    "New Scenario": "Neues Szenario",
+    "No activations yet. Activate a scenario to see its history here.":
+      "Noch keine Aktivierungen. Aktivieren Sie ein Szenario, um den Verlauf hier zu sehen.",
+    "No active scenario": "Kein aktives Szenario",
+    "No active scenario selected": "Kein aktives Szenario ausgewählt",
+    "No active scenario selected.": "Kein aktives Szenario ausgewählt.",
+    "No approved projects available. Create a project first.":
+      "Keine genehmigten Projekte verfügbar. Erstellen Sie zuerst ein Projekt.",
+    "No default filters configured. Filters are set per-session in the Framework Mapper.":
+      "Keine Standardfilter konfiguriert. Filter werden pro Sitzung im Framework Mapper festgelegt.",
+    "No frameworks available": "Keine Rahmenwerke verfügbar",
+    "No mapping statistics available. Add framework mappings to see breakdowns.":
+      "Keine Mapping-Statistiken verfügbar. Fügen Sie Framework-Mappings hinzu, um Aufschlüsselungen zu sehen.",
+    "No users available to assign. Invite team members before activating.":
+      "Keine Benutzer zur Zuweisung verfügbar. Laden Sie Teammitglieder ein, bevor Sie aktivieren.",
+    "None": "Keine",
+    "Only admins can change module status.": "Nur Administratoren können den Modulstatus ändern.",
+    "Open Framework Mapper": "Framework Mapper öffnen",
+    "Open Hub": "Hub öffnen",
+    "Primary": "Primär",
+    "Primary framework": "Primäres Framework",
+    "Primary framework: 14 days": "Primäres Framework: 14 Tage",
+    "Regulatory Radar": "Regulatorischer Radar",
+    "Reset prompt preference": "Eingabeaufforderungseinstellung zurücksetzen",
+    "Run Coverage": "Abdeckung ausführen",
+    "Run Coverage Analysis": "Abdeckungsanalyse ausführen",
+    "Scenario Comparison": "Szenariovergleich",
+    "Secondary": "Sekundär",
+    "Secondary framework(s): 30 days": "Sekundäre(s) Framework(s): 30 Tage",
+    "Select a scenario below to set your organization&apos;s active governance strategy.":
+      "Wählen Sie unten ein Szenario aus, um die aktive Governance-Strategie Ihrer Organisation festzulegen.",
+    "Select at least one scenario above to start comparing.":
+      "Wählen Sie mindestens ein Szenario oben aus, um den Vergleich zu starten.",
+    "Select primary": "Primär auswählen",
+    "Settings saved successfully.": "Einstellungen erfolgreich gespeichert.",
+    "Simulation results": "Simulationsergebnisse",
+    "Smart Prompt Preferences": "Smart-Prompt-Einstellungen",
+    "Source Control Identifier *": "Quell-Control-Identifier *",
+    "Staggered due dates": "Gestaffelte Fälligkeitstermine",
+    "Strength": "Stärke",
+    "Supplementary": "Ergänzend",
+    "Supplementary framework(s): 60 days": "Ergänzende(s) Framework(s): 60 Tage",
+    "Target": "Ziel",
+    "Target Control Identifier *": "Ziel-Control-Identifier *",
+    "Task progress by framework": "Aufgabenfortschritt nach Framework",
+    "The currently selected governance scenario drives framework prioritization across projects.":
+      "Das aktuell ausgewählte Governance-Szenario steuert die Framework-Priorisierung über Projekte hinweg.",
+    "Timeline": "Zeitstrahl",
+    "Total Gaps": "Gesamtlücken",
+    "Total controls": "Gesamtcontrols",
+    "Total mappings": "Gesamtmappings",
+    "Unlock Governance Intelligence": "Governance Intelligence freischalten",
+    "Upload a CSV file to import multiple mappings at once":
+      "CSV-Datei hochladen, um mehrere Mappings auf einmal zu importieren",
+    "View Mappings": "Mappings anzeigen",
+    "View Scenario": "Szenario anzeigen",
+    "View cross-framework coverage analysis per project. Identify gaps and synergies across your active frameworks.":
+      "Framework-übergreifende Abdeckungsanalyse pro Projekt anzeigen. Lücken und Synergien über Ihre aktiven Frameworks hinweg identifizieren.",
+    "View insights": "Einblicke anzeigen",
+    "Visual exploration of governance relationships":
+      "Visuelle Erkundung von Governance-Beziehungen",
+    "Visual exploration of governance relationships, controls, and compliance dependencies.":
+      "Visuelle Erkundung von Governance-Beziehungen, Controls und Compliance-Abhängigkeiten.",
+    "Visual governance relationships": "Visuelle Governance-Beziehungen",
+    "What-If Simulator": "What-If-Simulator",
+    "Why these controls map to each other...": "Warum diese Controls einander zugeordnet sind...",
+    "You are about to activate": "Sie sind dabei, zu aktivieren",
+    "Your central command center for cross-framework governance, compliance mapping, and coverage analysis.":
+      "Ihr zentrales Kommandozentrum für framework-übergreifende Governance, Compliance-Mapping und Abdeckungsanalyse.",
   },
 
   fr: {
+    "Snooze": "Différer",
     // Sidebar / nav
     "Start here": "Commencer ici",
     "Dashboard": "Tableau de bord",
@@ -8503,6 +8716,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Date updated": "Date de mise à jour",
     "DATE UPDATED": "DATE DE MISE À JOUR",
     "EXPIRY": "EXPIRATION",
+    "EXPERIMENT NAME": "NOM DE L'EXPÉRIENCE",
+    "JUDGE/SCORER": "JUGE/ÉVALUATEUR",
     "Last Updated": "Dernière mise à jour",
     "LAST ACTIVITY": "DERNIÈRE ACTIVITÉ",
     "Occurred date": "Date de survenance",
@@ -8614,6 +8829,10 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Type I",
     "SOC2 Type II": "SOC 2 Type II",
     "AI regulation in the Middle East": "Réglementation IA au Moyen-Orient",
+    "US AI regulations 2026": "Réglementations IA aux États-Unis en 2026",
+    "EU AI Act omnibus: what changed": "Règlement IA de l'UE — omnibus : ce qui a changé",
+    "VerifyWise YouTube channel launched": "Lancement de la chaîne YouTube VerifyWise",
+    "Why LLM evaluations matter": "Pourquoi les évaluations LLM sont importantes",
     "AI models mapped to this framework": "Modèles IA rattachés à ce référentiel",
     "Organizational Frameworks": "Référentiels organisationnels",
     "Organizational policies": "Politiques organisationnelles",
@@ -9103,6 +9322,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close entity graph modal": "Fermer la fenêtre du graphe d'entités",
     "Close icon": "Icône de fermeture",
     "Close notification": "Fermer la notification",
+    "Close notifications": "Fermer les notifications",
     "Close tooltip": "Fermer l'infobulle",
     "Close tour": "Fermer la visite",
     "Close viewer": "Fermer le visionneur",
@@ -9142,6 +9362,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Create Configuration": "Créer une configuration",
     "Create Dataset": "Créer un jeu de données",
     "Create demo data": "Créer des données de démonstration",
+    "Hide demo data button": "Masquer le bouton de données de démo",
     "Create endpoint": "Créer un point de terminaison",
     "Create folder": "Créer un dossier",
     "Create from scratch": "Créer à partir de zéro",
@@ -9190,6 +9411,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Delete server": "Supprimer le serveur",
     "Delete this dataset?": "Supprimer ce jeu de données ?",
     "Delete this evaluation?": "Supprimer cette évaluation ?",
+    "Delete this experiment?": "Supprimer cette expérience ?",
     "Delete this project?": "Supprimer ce projet ?",
     "Delete use case": "Supprimer le cas d'usage",
     "Discard unsaved automation": "Abandonner l'automatisation non enregistrée",
@@ -9257,6 +9479,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Link to model": "Relier au modèle",
     "Make your first request": "Envoyez votre première requête",
     "Mark all as read": "Tout marquer comme lu",
+    "Mark all notifications as read": "Marquer toutes les notifications comme lues",
     "Move down": "Déplacer vers le bas",
     "Move up": "Déplacer vers le haut",
     "Navigate": "Naviguer",
@@ -9913,6 +10136,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Spend log cleanup": "Nettoyage des journaux de dépenses",
     "Spot usage trends": "Repérer les tendances d'utilisation",
     "Spread some love!": "Partagez un peu d'amour !",
+    "Spread some love": "Partagez un peu d'amour !",
     "Stakeholders consulted": "Parties prenantes consultées",
     "Standard card": "Carte standard",
     "Standard judge only": "Juge standard uniquement",
@@ -11683,12 +11907,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Notifications center": "Centre de notifications",
     "Open notifications": "Ouvrir les notifications",
     "Open user menu": "Ouvrir le menu utilisateur",
+    "Open user options": "Ouvrir les options utilisateur",
+    "Open Wise Search": "Ouvrir Wise Search",
     "Account menu": "Menu du compte",
     "Command menu": "Menu de commandes",
     "Open command palette": "Ouvrir la palette de commandes",
     "Marketplace": "Place de marché",
     "Marketplace for plugins": "Place de marché pour les plugins",
     "Open marketplace": "Ouvrir la place de marché",
+    "Plugins marketplace": "Place de marché des plugins",
 
     // i18n audit gap fill (auto-applied)
     "A concise name for your AI use case": "Un nom concis pour votre cas d'usage IA",
@@ -15582,6 +15809,7 @@ export const translations: Record<string, Record<string, string>> = {
       "L'analyse de couverture identifie les lacunes et synergies par projet.",
     "Coverage analysis will measure your progress against the prioritized frameworks":
       "L'analyse de couverture mesurera votre progression par rapport aux référentiels priorisés",
+    "Cross-framework control mappings": "Correspondances de contrôles inter-référentiels",
     "Cross-framework intelligence layer with control mappings, governance scenarios, and unified coverage analysis.":
       "Couche d'intelligence inter-référentiels avec correspondances de contrôles, scénarios de gouvernance et analyse de couverture unifiée.",
     "Cross-framework mappings reveal shared compliance effort.":
@@ -15735,5 +15963,203 @@ export const translations: Record<string, Record<string, string>> = {
     "All members selected": "Tous les membres sélectionnés",
     "No options": "Aucune option",
     "All tags selected": "Toutes les étiquettes sélectionnées",
+
+    // Custom fields
+    "Custom fields": "Champs personnalisés",
+    "Define organization-specific fields on entities like Vendors, Policies, etc.":
+      "Définissez des champs propres à votre organisation sur des entités telles que les fournisseurs, les politiques, etc.",
+    "Only Admins can manage custom fields.":
+      "Seuls les administrateurs peuvent gérer les champs personnalisés.",
+    "Edit field": "Modifier le champ",
+    "Delete custom field": "Supprimer le champ personnalisé",
+    "Field key": "Clé du champ",
+    "Field type": "Type de champ",
+    "Options (one per line)": "Options (une par ligne)",
+    "Clear value": "Effacer la valeur",
+    "Failed to load custom fields.": "Échec du chargement des champs personnalisés.",
+    "Required custom fields missing": "Champs personnalisés obligatoires manquants",
+
+    // Microsoft Entra ID SSO
+    "Sign in with Microsoft": "Se connecter avec Microsoft",
+    "Configure Microsoft Entra ID single sign-on":
+      "Configurer l'authentification unique Microsoft Entra ID",
+    "Entra ID SSO configuration": "Configuration SSO Entra ID",
+    "Enable Entra ID SSO": "Activer la connexion unique Entra ID",
+    "Cloud environment": "Environnement cloud",
+    "Azure Public Cloud": "Azure Public Cloud",
+    "Azure Government": "Azure Government",
+    "Tenant id": "ID de tenant",
+    "Enter your Azure AD Tenant ID": "Saisissez l'ID de tenant Azure AD",
+    "Found in Azure Portal &gt; Microsoft Entra ID &gt; Overview &gt; Tenant ID":
+      "Disponible dans le portail Azure &gt; Microsoft Entra ID &gt; Vue d'ensemble &gt; ID de tenant",
+    "Client id": "ID client",
+    "Enter your Application (client) ID": "Saisissez l'ID de votre application (client)",
+    "Client secret": "Secret client",
+    "Enter your client secret": "Saisissez votre secret client",
+    "Select your organization": "Sélectionnez votre organisation",
+    "Completing sign in...": "Finalisation de la connexion...",
+    "Redirecting to login...": "Redirection vers la page de connexion...",
+
+    // Governance OS
+    "Activate": "Activer",
+    "Activate scenario": "Activer le scénario",
+    "Activate this scenario": "Activer ce scénario",
+    "Activation History": "Historique d'activation",
+    "Activation summary": "Résumé d'activation",
+    "Active Scenario": "Scénario actif",
+    "Active governance scenario": "Scénario de gouvernance actif",
+    "Active scenario": "Scénario actif",
+    "Analyze Coverage": "Analyser la couverture",
+    "Analyze coverage, gaps, and synergies across projects":
+      "Analyser la couverture, les lacunes et les synergies entre les projets",
+    "Attribute": "Attribut",
+    "Avg Coverage": "Couv. moyenne",
+    "Base scenario": "Scénario de base",
+    "Bulk Import Mappings": "Importer les mappings en masse",
+    "By domain": "Par domaine",
+    "By mapping strength": "Par force de mapping",
+    "Centralize and manage compliance evidence across all frameworks and projects.":
+      "Centraliser et gérer les preuves de conformité dans tous les cadres et projets.",
+    "Centralize evidence with automated collection":
+      "Centraliser les preuves avec une collecte automatisée",
+    "Centralized compliance evidence": "Preuves de conformité centralisées",
+    "Change scenario": "Changer de scénario",
+    "Choose a scenario": "Choisir un scénario",
+    "Choose scenario": "Choisir un scénario",
+    "Clear": "Réinitialiser",
+    "Click any cell to view mappings between those frameworks":
+      "Cliquez sur une cellule pour voir les mappings entre ces cadres",
+    "Continue your governance workflow": "Continuer votre workflow de gouvernance",
+    "Control whether the system prompts you to enable Governance Intelligence when conditions are met.":
+      "Contrôler si le système vous invite à activer Governance Intelligence lorsque les conditions sont remplies.",
+    "Coverage aligned with active scenario:": "Couverture alignée avec le scénario actif:",
+    "Coverage analysis and gap detection": "Analyse de couverture et détection des lacunes",
+    "Coverage analysis and gaps": "Analyse de couverture et lacunes",
+    "Deactivate": "Désactiver",
+    "Default filters applied to the Framework Mapper view.":
+      "Filtres par défaut appliqués à la vue Framework Mapper.",
+    "Delete Mapping": "Supprimer le mapping",
+    "Delete Scenario": "Supprimer le scénario",
+    "Density:": "Densité:",
+    "Domain Tag": "Tag de domaine",
+    "Don&apos;t ask me again about enabling Governance Intelligence":
+      "Ne me demandez plus si je souhaite activer Governance Intelligence",
+    "Enable or disable the Governance Intelligence module for your organization.":
+      "Activer ou désactiver le module Governance Intelligence pour votre organisation.",
+    "Errors": "Erreurs",
+    "Est. coverage": "Couv. estimée",
+    "Est. effort": "Effort estimé",
+    "Explore and manage cross-framework control mappings":
+      "Explorer et gérer les mappings de contrôles inter-cadres",
+    "Explore cross-framework control mappings. Select source and target frameworks to see how controls align.":
+      "Explorer les mappings de contrôles inter-cadres. Sélectionnez les cadres source et cible pour voir comment les contrôles s'alignent.",
+    "Failed to create task. Please try again.":
+      "Échec de la création de la tâche. Veuillez réessayer.",
+    "Failed to save settings. Please try again.":
+      "Échec de l'enregistrement des paramètres. Veuillez réessayer.",
+    "Framework owners": "Propriétaires du cadre",
+    "Gap Hotspots": "Points chauds de lacunes",
+    "Get framework recommendations based on your organization context, or browse and manage governance scenarios.":
+      "Obtenir des recommandations de cadres basées sur le contexte de votre organisation, ou parcourir et gérer les scénarios de gouvernance.",
+    "Get personalized framework recommendations and activate scenario-based compliance strategies across your projects.":
+      "Obtenir des recommandations de cadres personnalisées et activer des stratégies de conformité basées sur des scénarios dans vos projets.",
+    "Get recommendations and manage governance scenarios":
+      "Obtenir des recommandations et gérer les scénarios de gouvernance",
+    "Governance Intelligence": "Governance Intelligence",
+    "Governance Intelligence Hub": "Governance Intelligence Hub",
+    "Governance overview and module navigation":
+      "Vue d'ensemble de la gouvernance et navigation des modules",
+    "Governance preferences": "Préférences de gouvernance",
+    "Governance scenario recommendations": "Recommandations de scénarios de gouvernance",
+    "Governance scenarios and recommendations": "Scénarios et recommandances de gouvernance",
+    "Governance workspace dashboard": "Tableau de bord de l'espace de gouvernance",
+    "Hub": "Hub",
+    "Import": "Importer",
+    "Knowledge Graph": "Graphe de connaissances",
+    "Manage Governance Intelligence configuration":
+      "Gérer la configuration de Governance Intelligence",
+    "Manage Governance Intelligence configuration, preferences, and defaults.":
+      "Gérer la configuration, les préférences et les valeurs par défaut de Governance Intelligence.",
+    "Mapping Filters": "Filtres de mapping",
+    "Mapping Statistics": "Statistiques de mapping",
+    "Mapping Strength": "Force du mapping",
+    "Module Status": "Statut du module",
+    "Modules": "Modules",
+    "Monitor regulation changes and auto-updates":
+      "Surveiller les changements réglementaires et les mises à jour automatiques",
+    "Monitor regulatory changes": "Surveiller les changements réglementaires",
+    "Monitor regulatory changes, track compliance deadlines, and receive alerts.":
+      "Surveiller les changements réglementaires, suivre les échéances de conformité et recevoir des alertes.",
+    "New Mapping": "Nouveau mapping",
+    "New Scenario": "Nouveau scénario",
+    "No activations yet. Activate a scenario to see its history here.":
+      "Aucune activation pour l'instant. Activez un scénario pour voir son historique ici.",
+    "No active scenario": "Aucun scénario actif",
+    "No active scenario selected": "Aucun scénario actif sélectionné",
+    "No active scenario selected.": "Aucun scénario actif sélectionné.",
+    "No approved projects available. Create a project first.":
+      "Aucun projet approuvé disponible. Créez d'abord un projet.",
+    "No default filters configured. Filters are set per-session in the Framework Mapper.":
+      "Aucun filtre par défaut configuré. Les filtres sont définis par session dans le Framework Mapper.",
+    "No frameworks available": "Aucun cadre disponible",
+    "No mapping statistics available. Add framework mappings to see breakdowns.":
+      "Aucune statistique de mapping disponible. Ajoutez des mappings de cadres pour voir les répartitions.",
+    "No users available to assign. Invite team members before activating.":
+      "Aucun utilisateur disponible à assigner. Invitez des membres de l'équipe avant d'activer.",
+    "None": "Aucun",
+    "Only admins can change module status.":
+      "Seuls les administrateurs peuvent modifier le statut du module.",
+    "Open Framework Mapper": "Ouvrir le Framework Mapper",
+    "Open Hub": "Ouvrir le Hub",
+    "Primary": "Primaire",
+    "Primary framework": "Cadre primaire",
+    "Primary framework: 14 days": "Cadre primaire: 14 jours",
+    "Regulatory Radar": "Radar réglementaire",
+    "Reset prompt preference": "Réinitialiser la préférence d'invite",
+    "Run Coverage": "Exécuter la couverture",
+    "Run Coverage Analysis": "Exécuter l'analyse de couverture",
+    "Scenario Comparison": "Comparaison de scénarios",
+    "Secondary": "Secondaire",
+    "Secondary framework(s): 30 days": "Cadre(s) secondaire(s): 30 jours",
+    "Select a scenario below to set your organization&apos;s active governance strategy.":
+      "Sélectionnez un scénario ci-dessous pour définir la stratégie de gouvernance active de votre organisation.",
+    "Select at least one scenario above to start comparing.":
+      "Sélectionnez au moins un scénario ci-dessus pour commencer la comparaison.",
+    "Select primary": "Sélectionner primaire",
+    "Settings saved successfully.": "Paramètres enregistrés avec succès.",
+    "Simulation results": "Résultats de simulation",
+    "Smart Prompt Preferences": "Préférences Smart Prompt",
+    "Source Control Identifier *": "Identifiant de contrôle source *",
+    "Staggered due dates": "Échéances échelonnées",
+    "Strength": "Force",
+    "Supplementary": "Supplémentaire",
+    "Supplementary framework(s): 60 days": "Cadre(s) supplémentaire(s): 60 jours",
+    "Target": "Cible",
+    "Target Control Identifier *": "Identifiant de contrôle cible *",
+    "Task progress by framework": "Progression des tâches par cadre",
+    "The currently selected governance scenario drives framework prioritization across projects.":
+      "Le scénario de gouvernance actuellement sélectionné détermine la priorisation des cadres entre les projets.",
+    "Timeline": "Chronologie",
+    "Total Gaps": "Total des lacunes",
+    "Total controls": "Total des contrôles",
+    "Total mappings": "Total des mappings",
+    "Unlock Governance Intelligence": "Débloquer Governance Intelligence",
+    "Upload a CSV file to import multiple mappings at once":
+      "Téléverser un fichier CSV pour importer plusieurs mappings à la fois",
+    "View Mappings": "Voir les mappings",
+    "View Scenario": "Voir le scénario",
+    "View cross-framework coverage analysis per project. Identify gaps and synergies across your active frameworks.":
+      "Voir l'analyse de couverture inter-cadres par projet. Identifier les lacunes et synergies entre vos cadres actifs.",
+    "View insights": "Voir les insights",
+    "Visual exploration of governance relationships":
+      "Exploration visuelle des relations de gouvernance",
+    "Visual exploration of governance relationships, controls, and compliance dependencies.":
+      "Exploration visuelle des relations de gouvernance, des contrôles et des dépendances de conformité.",
+    "Visual governance relationships": "Relations de gouvernance visuelles",
+    "What-If Simulator": "Simulateur What-If",
+    "Why these controls map to each other...": "Pourquoi ces contrôles se mappent entre eux...",
+    "You are about to activate": "Vous êtes sur le point d'activer",
+    "Your central command center for cross-framework governance, compliance mapping, and coverage analysis.":
+      "Votre centre de commande central pour la gouvernance inter-cadres, le mapping de conformité et l'analyse de couverture.",
   },
 };

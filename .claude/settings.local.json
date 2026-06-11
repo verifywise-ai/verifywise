@@ -103,7 +103,14 @@
       "Bash(npx -p typescript@5 tsc --noEmit)",
       "Bash(md5 *)",
       "Bash(cp /Users/harsh/Data/vw/plugin-marketplace/plugins/ai-ethics/ui/dist/index.esm.js /Users/harsh/Data/vw/verifywise/Servers/temp/plugins/ai-ethics/ui/dist/index.esm.js)",
-      "Bash(cp /Users/harsh/Data/vw/plugin-marketplace/plugins/nyc-local-law-144/ui/dist/index.esm.js /Users/harsh/Data/vw/verifywise/Servers/temp/plugins/nyc-local-law-144/ui/dist/index.esm.js)"
+      "Bash(cp /Users/harsh/Data/vw/plugin-marketplace/plugins/nyc-local-law-144/ui/dist/index.esm.js /Users/harsh/Data/vw/verifywise/Servers/temp/plugins/nyc-local-law-144/ui/dist/index.esm.js)",
+      "Bash(xargs -I{} basename {} .ts)",
+      "Bash(xargs -I{} grep -l \"organization_id\" {})",
+      "Bash(xargs basename)",
+      "Bash(xargs -I{} grep -n \"organization_id\" {})",
+      "Bash(npx jest *)",
+      "Bash(xargs cat)",
+      "Bash(npm test *)"
     ]
   }
 }

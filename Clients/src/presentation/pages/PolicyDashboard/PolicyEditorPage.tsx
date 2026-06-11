@@ -97,6 +97,10 @@ import Select from "../../components/Inputs/Select";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
+import CustomFieldsSection, {
+  type CustomFieldsSectionHandle,
+} from "../../components/CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
 import PolicyForm from "../../components/Policies/PolicyForm";
 import InsertLinkModal from "../../components/Modals/InsertLinkModal/InsertLinkModal";
@@ -486,6 +490,8 @@ export default function PolicyEditorPage() {
 
   // Data loading state
   const [policy, setPolicy] = useState<PolicyManagerModel | null>(null);
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+  const customFieldsGate = useRequiredCustomFieldsGate("policy", policy?.id ?? null);
   const [tags, setTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1360,14 +1366,28 @@ export default function PolicyEditorPage() {
         savedPolicy = await updatePolicy(policy!.id, payload);
       }
 
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      // Flush any locally-staged custom field changes (create OR update).
+      let cfFlushFailed = false;
+      if (savedPolicy?.id && customFieldsRef.current?.hasPendingValues()) {
+        try {
+          await customFieldsRef.current.flush(savedPolicy.id);
+        } catch (cfError) {
+          cfFlushFailed = true;
+          console.error("Policy saved, but custom field values failed to save:", cfError);
+        }
+      }
 
-      // For new policies, navigate to the edit URL so subsequent saves work as updates
+      setIsSaving(false);
+
+      // For new policies, navigate to the edit URL so subsequent saves work as updates.
+      // Skip the success banner when flush failed so the inline warning is the
+      // dominant signal.
       if (isNew && savedPolicy?.id) {
         navigate(`/policies/${savedPolicy.id}/edit`, { replace: true });
       }
+      if (cfFlushFailed) return;
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       setIsSaving(false);
 
@@ -1892,7 +1912,7 @@ export default function PolicyEditorPage() {
                         ? "Save in organizational policies"
                         : "Save"
                 }
-                isDisabled={isSaving}
+                isDisabled={isSaving || customFieldsGate.blocked}
                 sx={{
                   "backgroundColor": saveSuccess ? "#079455" : "brand.primary",
                   "border": `1px solid ${saveSuccess ? "#079455" : "#13715B"}`,
@@ -1939,6 +1959,15 @@ export default function PolicyEditorPage() {
               clearFieldError={clearFieldError}
             />
           </Box>
+
+          <Stack>
+            {/* Custom fields — staging in create mode, write-through in edit */}
+            <CustomFieldsSection
+              ref={customFieldsRef}
+              entityType="policy"
+              entityId={isNew ? null : (policy?.id ?? null)}
+            />
+          </Stack>
 
           {/* ── Toolbar ──────────────────────────────────────────────── */}
           <Box

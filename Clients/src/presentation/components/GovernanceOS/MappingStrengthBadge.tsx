@@ -1,4 +1,4 @@
-import { Chip } from "@mui/material";
+import { Box } from "@mui/material";
 import { MappingStrength } from "../../../domain/interfaces/i.governanceOs";
 import { status } from "../../themes/palette";
 
@@ -18,18 +18,26 @@ interface MappingStrengthBadgeProps {
 
 const MappingStrengthBadge = ({ strength, size = "small" }: MappingStrengthBadgeProps) => {
   const config = strengthConfig[strength] || strengthConfig.related;
+  const height = size === "small" ? 22 : 24;
+  const fontSize = size === "small" ? 11 : 12;
   return (
-    <Chip
-      label={config.label}
-      size={size}
+    <Box
+      component="span"
       sx={{
-        fontSize: 11,
-        height: 22,
+        display: "inline-flex",
+        alignItems: "center",
+        height,
+        px: "8px",
+        borderRadius: "4px",
+        fontSize,
+        fontWeight: 500,
         backgroundColor: config.bg,
         color: config.text,
         border: `1px solid ${config.border}`,
       }}
-    />
+    >
+      {config.label}
+    </Box>
   );
 };
 

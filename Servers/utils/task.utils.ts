@@ -11,6 +11,10 @@ import {
   ForbiddenException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
   buildTaskReplacements,
@@ -156,15 +160,17 @@ export const createNewTaskQuery = async (
           transaction,
         },
       )) as [{ full_name: string }[], number];
-      const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
-        {
-          replacements: {
-            assignee_ids: (createdTask.dataValues as any)["assignees"],
-          },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
+      const assigneeIds = (createdTask.dataValues as any)["assignees"] as number[];
+      const assignee_names: [{ full_name: string }[], number] =
+        assigneeIds && assigneeIds.length > 0
+          ? ((await sequelize.query(
+              `SELECT name || ' ' || surname AS full_name FROM users WHERE id = ANY(ARRAY[:assignee_ids]::INTEGER[]);`,
+              {
+                replacements: { assignee_ids: assigneeIds },
+                transaction,
+              },
+            )) as [{ full_name: string }[], number])
+          : [[], 0];
 
       const params = automation.params!;
 
@@ -363,6 +369,11 @@ export const getTasksQuery = async (
     type: QueryTypes.SELECT,
   });
 
+  const taskIds = (tasks as TasksModel[])
+    .map((t) => t.id)
+    .filter((id): id is number => typeof id === "number");
+  const customFieldsByTask = await fetchCustomFieldsForEntities("task", taskIds, organizationId);
+
   // Add assignees and entity links to each task following the project members pattern
   for (const task of tasks) {
     const assignees = await sequelize.query(
@@ -383,6 +394,8 @@ export const getTasksQuery = async (
       entity_type: link.entity_type,
       entity_name: link.entity_name,
     }));
+
+    (task.dataValues as any)["custom_fields"] = customFieldsByTask.get(task.id!) ?? [];
   }
 
   return tasks as TasksModel[];
@@ -441,12 +454,16 @@ export const getTaskByIdQuery = async (
       },
     )) as [{ full_name: string }[], number];
     (task.dataValues as any)["creator_name"] = creator_name[0][0].full_name;
-    const assignee_names = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
-      {
-        replacements: { assignee_ids: (task.dataValues as any)["assignees"] },
-      },
-    )) as [{ full_name: string }[], number];
+    const assigneeIds = (task.dataValues as any)["assignees"] as number[];
+    const assignee_names: [{ full_name: string }[], number] =
+      assigneeIds && assigneeIds.length > 0
+        ? ((await sequelize.query(
+            `SELECT name || ' ' || surname AS full_name FROM users WHERE id = ANY(ARRAY[:assignee_ids]::INTEGER[]);`,
+            {
+              replacements: { assignee_ids: assigneeIds },
+            },
+          )) as [{ full_name: string }[], number])
+        : [[], 0];
     (task.dataValues as any)["assignee_names"] = assignee_names[0].map((a) => a.full_name);
 
     // Fetch entity links for this task
@@ -626,15 +643,17 @@ export const updateTaskByIdQuery = async (
           transaction,
         },
       )) as [{ full_name: string }[], number];
-      const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
-        {
-          replacements: {
-            assignee_ids: (updatedTask.dataValues as any)["assignees"],
-          },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
+      const assigneeIds = (updatedTask.dataValues as any)["assignees"] as number[];
+      const assignee_names: [{ full_name: string }[], number] =
+        assigneeIds && assigneeIds.length > 0
+          ? ((await sequelize.query(
+              `SELECT name || ' ' || surname AS full_name FROM users WHERE id = ANY(ARRAY[:assignee_ids]::INTEGER[]);`,
+              {
+                replacements: { assignee_ids: assigneeIds },
+                transaction,
+              },
+            )) as [{ full_name: string }[], number])
+          : [[], 0];
 
       const params = automation.params!;
 
@@ -744,6 +763,8 @@ export const deleteTaskByIdQuery = async ({
     throw new ForbiddenException("Only task creator or admin can delete tasks", "task", "delete");
   }
 
+  await deleteAllCustomFieldValuesForEntityQuery("task", id, organizationId, transaction);
+
   // Soft delete by setting status to DELETED
   const result = (await sequelize.query(
     `UPDATE tasks SET status = :status WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
@@ -793,13 +814,17 @@ export const deleteTaskByIdQuery = async ({
           transaction,
         },
       )) as [{ full_name: string }[], number];
-      const assignee_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:assignee_ids);`,
-        {
-          replacements: { assignee_ids: (deletedTask as any)["assignees"] },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
+      const assigneeIds = (deletedTask as any)["assignees"] as number[];
+      const assignee_names: [{ full_name: string }[], number] =
+        assigneeIds && assigneeIds.length > 0
+          ? ((await sequelize.query(
+              `SELECT name || ' ' || surname AS full_name FROM users WHERE id = ANY(ARRAY[:assignee_ids]::INTEGER[]);`,
+              {
+                replacements: { assignee_ids: assigneeIds },
+                transaction,
+              },
+            )) as [{ full_name: string }[], number])
+          : [[], 0];
 
       const params = automation.params!;
 
@@ -936,6 +961,8 @@ export const hardDeleteTaskByIdQuery = async ({
       transaction,
     },
   );
+
+  await deleteAllCustomFieldValuesForEntityQuery("task", id, organizationId, transaction);
 
   // Then hard delete the task
   await sequelize.query(

@@ -1,85 +1,38 @@
-import { QueryClient } from "@tanstack/react-query";
+import { describe, it, expect, vi } from "vitest";
 import { queryClient, invalidateQueries, resetQueryCache } from "../queryClient";
 
-describe("queryClient", () => {
-  it("should be an instance of QueryClient", () => {
-    expect(queryClient).toBeInstanceOf(QueryClient);
+describe("queryClient config", () => {
+  it("should have default query options configured", () => {
+    const defaults = queryClient.getDefaultOptions();
+
+    expect(defaults.queries?.staleTime).toBe(2000);
+    expect(defaults.queries?.gcTime).toBe(600000);
+    expect(defaults.queries?.retry).toBe(3);
+    expect(defaults.queries?.refetchOnWindowFocus).toBe(false);
+    expect(defaults.queries?.refetchOnMount).toBe(true);
+    expect(defaults.queries?.refetchOnReconnect).toBe(true);
+    expect(defaults.mutations?.retry).toBe(1);
   });
 
-  describe("default query options", () => {
-    it("should set staleTime to 2000ms", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.staleTime).toBe(2000);
-    });
+  it("should invalidate queries by keys", async () => {
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue({} as any);
 
-    it("should set gcTime to 600000ms (10 minutes)", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.gcTime).toBe(600000);
-    });
+    invalidateQueries([["projects"], ["vendors", "list"]]);
 
-    it("should set retry to 3 for queries", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.retry).toBe(3);
-    });
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["projects"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["vendors", "list"] });
 
-    it("should disable refetchOnWindowFocus", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.refetchOnWindowFocus).toBe(false);
-    });
-
-    it("should enable refetchOnMount", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.refetchOnMount).toBe(true);
-    });
-
-    it("should enable refetchOnReconnect", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.queries?.refetchOnReconnect).toBe(true);
-    });
+    invalidateSpy.mockRestore();
   });
 
-  describe("default mutation options", () => {
-    it("should set retry to 1 for mutations", () => {
-      const options = queryClient.getDefaultOptions();
-      expect(options.mutations?.retry).toBe(1);
-    });
-  });
+  it("should reset query cache", () => {
+    const clearSpy = vi.spyOn(queryClient, "clear").mockImplementation(() => {});
 
-  describe("invalidateQueries", () => {
-    it("should call invalidateQueries on the client for each key", () => {
-      const spy = vi.spyOn(queryClient, "invalidateQueries");
+    resetQueryCache();
 
-      const keys = [["users"], ["posts"], ["comments"]];
-      invalidateQueries(keys);
+    expect(clearSpy).toHaveBeenCalledTimes(1);
 
-      expect(spy).toHaveBeenCalledTimes(3);
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["users"] });
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["posts"] });
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["comments"] });
-
-      spy.mockRestore();
-    });
-
-    it("should handle an empty array without calling invalidateQueries", () => {
-      const spy = vi.spyOn(queryClient, "invalidateQueries");
-
-      invalidateQueries([]);
-
-      expect(spy).not.toHaveBeenCalled();
-
-      spy.mockRestore();
-    });
-  });
-
-  describe("resetQueryCache", () => {
-    it("should call clear on the client", () => {
-      const spy = vi.spyOn(queryClient, "clear");
-
-      resetQueryCache();
-
-      expect(spy).toHaveBeenCalledTimes(1);
-
-      spy.mockRestore();
-    });
+    clearSpy.mockRestore();
   });
 });

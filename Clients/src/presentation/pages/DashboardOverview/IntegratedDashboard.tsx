@@ -15,6 +15,7 @@ import {
   ScrollText,
   GraduationCap,
   AlertCircle,
+  GitCompareArrows,
 } from "lucide-react";
 import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import { useDashboard } from "../../../application/hooks/useDashboard";
@@ -23,6 +24,7 @@ import {
   hasDashboardCache,
 } from "../../../application/hooks/useDashboardMetrics";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useGovernancePreferences } from "../../../application/hooks/useGovernanceOs";
 import { formatRelativeDate } from "../../../application/utils/dateFormatter";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import PageTour from "../../components/PageTour";
@@ -105,6 +107,8 @@ const IntegratedDashboard: React.FC = () => {
   const { userId, isSuperAdmin, activeOrganizationId } = useAuth();
   const isSuperAdminWithoutOrg = isSuperAdmin && !activeOrganizationId;
   const { dashboard, loading: dashboardLoading, fetchDashboard } = useDashboard();
+  const { data: governancePrefs } = useGovernancePreferences();
+  const isGovernanceEnabled = governancePrefs?.is_enabled ?? false;
 
   const [contentReady, setContentReady] = useState(false);
 
@@ -486,6 +490,14 @@ const IntegratedDashboard: React.FC = () => {
                 icon={<AlertCircle size={18} />}
                 navigateTo="/ai-incident-managements"
               />
+              {isGovernanceEnabled && (
+                <DashboardHeaderCard
+                  title="Governance Intelligence"
+                  count="Open"
+                  icon={<GitCompareArrows size={18} />}
+                  navigateTo="/governance"
+                />
+              )}
             </Box>
 
             {/* Conditional rows based on dashboard view */}
@@ -522,6 +534,7 @@ const IntegratedDashboard: React.FC = () => {
                                     e.stopPropagation();
                                     handlePrevView(framework.projectFrameworkId, views.length);
                                   }}
+                                  aria-label={`Previous ${framework.frameworkName} view`}
                                   sx={navIconButtonSx}
                                 >
                                   <ChevronLeft size={18} />
@@ -543,6 +556,7 @@ const IntegratedDashboard: React.FC = () => {
                                     e.stopPropagation();
                                     handleNextView(framework.projectFrameworkId, views.length);
                                   }}
+                                  aria-label={`Next ${framework.frameworkName} view`}
                                   sx={navIconButtonSx}
                                 >
                                   <ChevronRight size={18} />
@@ -1245,6 +1259,7 @@ const IntegratedDashboard: React.FC = () => {
                                     e.stopPropagation();
                                     handlePrevView(framework.projectFrameworkId, views.length);
                                   }}
+                                  aria-label={`Previous ${framework.frameworkName} view`}
                                   sx={navIconButtonSx}
                                 >
                                   <ChevronLeft size={18} />
@@ -1266,6 +1281,7 @@ const IntegratedDashboard: React.FC = () => {
                                     e.stopPropagation();
                                     handleNextView(framework.projectFrameworkId, views.length);
                                   }}
+                                  aria-label={`Next ${framework.frameworkName} view`}
                                   sx={navIconButtonSx}
                                 >
                                   <ChevronRight size={18} />

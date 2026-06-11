@@ -286,6 +286,7 @@ export async function deleteRepositoryQuery(
   transaction?: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
+
   const query = `
     DELETE FROM ai_detection_repositories
     WHERE id = :id AND organization_id = :organizationId;

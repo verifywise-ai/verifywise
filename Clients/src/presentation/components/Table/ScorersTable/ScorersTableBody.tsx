@@ -51,13 +51,13 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<ScorerRow | null>(null);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, row: ScorerRow) => {
+  const openScorerMenu = (e: React.MouseEvent<HTMLElement>, row: ScorerRow) => {
     e.stopPropagation();
     setMenuAnchorEl(e.currentTarget);
     setMenuRow(row);
   };
 
-  const handleMenuClose = () => {
+  const closeScorerMenu = () => {
     setMenuAnchorEl(null);
     setMenuRow(null);
   };
@@ -66,14 +66,14 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
     if (menuRow && onEdit) {
       onEdit(menuRow);
     }
-    handleMenuClose();
+    closeScorerMenu();
   };
 
-  const handleDeleteClick = () => {
+  const deleteScorerRow = () => {
     if (menuRow && onDelete) {
       onDelete(menuRow);
     }
-    handleMenuClose();
+    closeScorerMenu();
   };
 
   // Helper to get model name from scorer
@@ -175,7 +175,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
           >
             <IconButton
               size="small"
-              onClick={(e) => handleMenuOpen(e, scorer)}
+              onClick={(e) => openScorerMenu(e, scorer)}
               sx={{
                 "color": `${text.icon}`,
                 "padding": "6px",
@@ -194,7 +194,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
       <Popover
         open={Boolean(menuAnchorEl)}
         anchorEl={menuAnchorEl}
-        onClose={handleMenuClose}
+        onClose={closeScorerMenu}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
@@ -237,7 +237,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              onClick={handleDeleteClick}
+              onClick={deleteScorerRow}
               startIcon={<Trash2 size={14} />}
               sx={{
                 "height": "34px",

@@ -8,6 +8,7 @@ import { SearchBox } from "../../components/Search";
 import TasksTable from "../../components/Table/TasksTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
+import DeadlineWarningBox from "../../components/DeadlineWarningBox";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
@@ -402,7 +403,11 @@ const Tasks: React.FC = () => {
           body: "Your new task has been added.",
         });
         setTimeout(() => setAlert(null), 4000);
+
+        // Return the new id so CreateTask can flush staged custom field values.
+        return { id: newTaskId as number };
       }
+      return undefined;
     } catch (error) {
       console.error("Error creating task:", error);
       setAlert({
@@ -411,6 +416,7 @@ const Tasks: React.FC = () => {
         body: "Failed to create the task. Please try again.",
       });
       setTimeout(() => setAlert(null), 4000);
+      return undefined;
     }
   };
 
@@ -774,6 +780,7 @@ const Tasks: React.FC = () => {
           : "Showing tasks you created or are assigned to. You can create and manage your tasks here."
       }
       helpArticlePath="ai-governance/task-management"
+      warningBanner={<DeadlineWarningBox />}
       tipBoxEntity="tasks"
       summaryCards={
         <TaskSummaryCards

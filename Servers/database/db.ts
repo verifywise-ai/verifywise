@@ -99,6 +99,7 @@ import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/gov
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
+import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
 
 dotenv.config();
 
@@ -215,6 +216,7 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     GovernanceScenarioRuleModel,
     GovernanceOrgPreferencesModel,
     GovernanceCoverageCacheModel,
+    GovernanceScenarioActivationModel,
   ],
 }) as Sequelize;
 

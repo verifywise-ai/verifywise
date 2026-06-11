@@ -29,6 +29,14 @@ export class VendorModel {
   regulatory_exposure?: RegulatoryExposure;
   risk_score?: number;
 
+  custom_fields?: Array<{
+    definition_id: number;
+    field_key: string;
+    label: string;
+    field_type: string;
+    value: unknown;
+  }>;
+
   constructor(data: VendorModel) {
     this.id = data.id;
     this.order_no = data.order_no;
@@ -49,6 +57,7 @@ export class VendorModel {
     this.past_issues = data.past_issues;
     this.regulatory_exposure = data.regulatory_exposure;
     this.risk_score = data.risk_score;
+    this.custom_fields = data.custom_fields;
   }
 
   static createNewVendor(data: VendorModel): VendorModel {

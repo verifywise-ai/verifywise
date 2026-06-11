@@ -251,24 +251,24 @@ const RESOURCES = [
 
 const WHATS_NEW = [
   {
-    label: "AI regulation in the Middle East",
-    sub: "Mar 17, 2026",
-    url: "https://verifywise.ai/blog/ai-regulation-middle-east",
+    label: "US AI regulations 2026",
+    sub: "May 15, 2026",
+    url: "https://verifywise.ai/blog/state-of-ai-governance-regulations-united-states-2026",
   },
   {
-    label: "AI governance directory",
-    sub: "Feb 22, 2026",
-    url: "https://verifywise.ai/blog/list-your-ai-governance-company-on-verifywise-directory",
+    label: "EU AI Act omnibus: what changed",
+    sub: "May 14, 2026",
+    url: "https://verifywise.ai/blog/eu-ai-act-omnibus-what-changed",
   },
   {
-    label: "Shadow AI detection",
-    sub: "Feb 13, 2026",
-    url: "https://verifywise.ai/blog/shadow-ai-detection-visibility-risk-scoring-governance",
+    label: "VerifyWise YouTube channel launched",
+    sub: "May 7, 2026",
+    url: "https://verifywise.ai/blog/verifywise-youtube-channel-launch",
   },
   {
-    label: "EU AI Act deployer policy pack",
-    sub: "Dec 23, 2025",
-    url: "https://verifywise.ai/blog/eu-ai-act-deployer-policy-pack",
+    label: "Why LLM evaluations matter",
+    sub: "May 4, 2026",
+    url: "https://verifywise.ai/blog/why-llm-evaluations-matter-for-ai-governance",
   },
 ] as const;
 

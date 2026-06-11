@@ -28,9 +28,48 @@ vi.mock("../../../../application/constants/permissions", () => ({
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { CreateProjectForm } from "../index";
 
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+
 describe("CreateProjectForm", () => {
   it("renders the form without crashing", () => {
     renderWithProviders(<CreateProjectForm closePopup={vi.fn()} onNewProject={vi.fn()} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("displays validation errors when submitting empty form", async () => {
+    renderWithProviders(<CreateProjectForm closePopup={vi.fn()} onNewProject={vi.fn()} />);
+
+    const submitButton = screen.getByRole("button", { name: /create use case/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/use case title/i)).toBeInTheDocument();
+    });
+  });
+
+  it("allows typing into the project title field", () => {
+    renderWithProviders(<CreateProjectForm closePopup={vi.fn()} onNewProject={vi.fn()} />);
+
+    const titleInput = document.querySelector("#project-title-input") as HTMLInputElement;
+    fireEvent.change(titleInput, { target: { value: "New AI Project" } });
+
+    expect(titleInput).toHaveValue("New AI Project");
+  });
+
+  it("allows typing into the goal field", () => {
+    renderWithProviders(<CreateProjectForm closePopup={vi.fn()} onNewProject={vi.fn()} />);
+
+    const goalInput = document.querySelector("#goal-input") as HTMLInputElement;
+    fireEvent.change(goalInput, { target: { value: "Assess AI compliance" } });
+
+    expect(goalInput).toHaveValue("Assess AI compliance");
+  });
+
+  it("has a submit button that can be clicked", () => {
+    renderWithProviders(<CreateProjectForm closePopup={vi.fn()} onNewProject={vi.fn()} />);
+
+    const submitButton = screen.getByRole("button", { name: /create use case/i });
+    expect(submitButton).toBeInTheDocument();
+    expect(submitButton).toHaveAttribute("type", "submit");
   });
 });

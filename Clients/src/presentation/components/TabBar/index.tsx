@@ -35,6 +35,8 @@ export interface TabBarProps {
   dataJoyrideId?: string;
   /** Optional tooltip message for disabled tabs */
   disabledTabTooltip?: string;
+  /** When true, the tab list scrolls horizontally with arrows on overflow. */
+  scrollable?: boolean;
 }
 
 // Constants for consistent styling
@@ -73,6 +75,7 @@ const TabBar: React.FC<TabBarProps> = ({
   indicatorColor = DEFAULT_INDICATOR_COLOR,
   dataJoyrideId,
   disabledTabTooltip = "This tab is currently unavailable",
+  scrollable = false,
 }) => {
   // Memoize styles to prevent unnecessary recalculations
   const standardTabStyle = useMemo<SxProps<Theme>>(
@@ -107,9 +110,18 @@ const TabBar: React.FC<TabBarProps> = ({
       "& .MuiTabs-flexContainer": {
         columnGap: TAB_GAP,
       },
+      // Scroll-arrow styling for scrollable variant — matches app tone.
+      "& .MuiTabs-scrollButtons": {
+        "width": "28px",
+        "color": "text.tertiary",
+        "alignSelf": "center",
+        "transition": "color 120ms ease, opacity 120ms ease",
+        "&:hover": { color: indicatorColor },
+        "&.Mui-disabled": { opacity: 0 },
+      },
       ...tabListSx,
     }),
-    [tabListSx],
+    [tabListSx, indicatorColor],
   );
 
   // Validate activeTab exists in tabs array (development warning)
@@ -140,6 +152,11 @@ const TabBar: React.FC<TabBarProps> = ({
         TabIndicatorProps={{ style: { backgroundColor: indicatorColor } }}
         sx={standardTabListStyle}
         data-joyride-id={dataJoyrideId}
+        {...(scrollable && {
+          variant: "scrollable" as const,
+          scrollButtons: "auto" as const,
+          allowScrollButtonsMobile: true,
+        })}
       >
         {tabs.map((tab) => {
           // Dynamically get the icon component from lucide-react

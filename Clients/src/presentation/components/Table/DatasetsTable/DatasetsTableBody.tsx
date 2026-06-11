@@ -41,13 +41,13 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<DatasetRow | null>(null);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, row: DatasetRow) => {
+  const openDatasetMenu = (e: React.MouseEvent<HTMLElement>, row: DatasetRow) => {
     e.stopPropagation();
     setMenuAnchorEl(e.currentTarget);
     setMenuRow(row);
   };
 
-  const handleMenuClose = () => {
+  const closeDatasetMenu = () => {
     setMenuAnchorEl(null);
     setMenuRow(null);
   };
@@ -56,28 +56,28 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
     if (menuRow && onView) {
       onView(menuRow);
     }
-    handleMenuClose();
+    closeDatasetMenu();
   };
 
   const handleEditClick = () => {
     if (menuRow && onEdit) {
       onEdit(menuRow);
     }
-    handleMenuClose();
+    closeDatasetMenu();
   };
 
-  const handleDeleteClick = () => {
+  const deleteDatasetRow = () => {
     if (menuRow && onDelete) {
       onDelete(menuRow);
     }
-    handleMenuClose();
+    closeDatasetMenu();
   };
 
   const handleDownloadClick = () => {
     if (menuRow && onDownload) {
       onDownload(menuRow);
     }
-    handleMenuClose();
+    closeDatasetMenu();
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -285,7 +285,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
             >
               <IconButton
                 size="small"
-                onClick={(e) => handleMenuOpen(e, dataset)}
+                onClick={(e) => openDatasetMenu(e, dataset)}
                 sx={{
                   "color": `${text.icon}`,
                   "padding": "6px",
@@ -305,7 +305,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
       <Popover
         open={Boolean(menuAnchorEl)}
         anchorEl={menuAnchorEl}
-        onClose={handleMenuClose}
+        onClose={closeDatasetMenu}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
@@ -394,7 +394,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              onClick={handleDeleteClick}
+              onClick={deleteDatasetRow}
               startIcon={<Trash2 size={14} />}
               sx={{
                 "height": "34px",

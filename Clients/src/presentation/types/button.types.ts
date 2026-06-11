@@ -5,15 +5,17 @@ import {
   FilterButtonCoreProps,
 } from "../../domain/types/button.types";
 
-/**
- * Presentation adapter for CustomizableButton component
- * Extends domain props with MUI-specific styling
- * Overrides unknown types from domain with React.ReactNode
- */
-export interface CustomizableButtonProps extends Omit<
+type CustomizableButtonSharedProps = Omit<
   CustomizableButtonCoreProps,
-  "icon" | "startIcon" | "endIcon" | "children" | "loadingIndicator" | "onClick"
-> {
+  | "icon"
+  | "startIcon"
+  | "endIcon"
+  | "children"
+  | "loadingIndicator"
+  | "onClick"
+  | "iconOnly"
+  | "ariaLabel"
+> & {
   /** Icon element (overrides domain unknown type) */
   icon?: React.ReactNode;
   /** Icon to display at the start of the button */
@@ -28,7 +30,21 @@ export interface CustomizableButtonProps extends Omit<
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   /** Custom styles using MUI's sx prop */
   sx?: SxProps<Theme>;
-}
+};
+
+/**
+ * Presentation adapter for CustomizableButton component.
+ * When iconOnly is true, ariaLabel is required for accessibility.
+ */
+export type CustomizableButtonProps =
+  | (CustomizableButtonSharedProps & {
+      iconOnly: true;
+      ariaLabel: string;
+    })
+  | (CustomizableButtonSharedProps & {
+      iconOnly?: false;
+      ariaLabel?: string;
+    });
 
 /**
  * Presentation adapter for FilterButton component

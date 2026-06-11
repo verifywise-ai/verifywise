@@ -1,6 +1,6 @@
-import { Button, Modal, Stack, Typography, useTheme } from "@mui/material";
+import { Modal, Stack, Typography, useTheme } from "@mui/material";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
-import { BasicModalCancelButtonStyle, BasicModalDeleteButtonStyle } from "../Basic/style";
+import { CustomizableButton } from "../../button/customizable-button";
 
 interface ModelRiskConfirmationProps {
   isOpen: boolean;
@@ -83,51 +83,19 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
           mt={theme.spacing(12)}
           justifyContent="flex-end"
         >
-          <Button
-            disableRipple
-            disableFocusRipple
-            disableTouchRipple
-            variant="text"
-            color="inherit"
-            onClick={handleCancel}
-            sx={BasicModalCancelButtonStyle}
-          >
-            Cancel
-          </Button>
-          <Button
-            disableRipple
-            disableFocusRipple
-            disableTouchRipple
+          <CustomizableButton variant="text" onClick={handleCancel} text={"Cancel"} />
+          <CustomizableButton
             variant="outlined"
-            color="primary"
+            //color="primary"
             onClick={handleKeepRisks}
-            sx={{
-              ...BasicModalCancelButtonStyle,
-              "width": 120,
-              "borderColor": theme.palette.primary.main,
-              "color": theme.palette.primary.main,
-              "&:hover": {
-                backgroundColor: theme.palette.primary.main + "0A",
-                borderColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            Keep risks
-          </Button>
-          <Button
-            disableRipple
-            disableFocusRipple
-            disableTouchRipple
+            text={"Keep risks"}
+          />
+          <CustomizableButton
             variant="contained"
             color="error"
             onClick={handleDeleteRisks}
-            sx={{
-              ...BasicModalDeleteButtonStyle,
-              width: 140,
-            }}
-          >
-            Delete risks too
-          </Button>
+            text={"Delete risks too"}
+          />
         </Stack>
       </Stack>
     </Modal>

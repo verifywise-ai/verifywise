@@ -31,6 +31,8 @@ declare module "express" {
      * Set by authenticateJWT middleware.
      */
     isSuperAdmin?: boolean;
+    /** Test bypass flag set by createTestApp({ bypassAuth: true }) for integration tests */
+    testBypassAuth?: boolean;
     /** Virtual key context, set by virtualKeyAuth middleware for /v1/* proxy routes */
     virtualKey?: {
       id: number;

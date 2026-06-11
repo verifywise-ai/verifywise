@@ -11,6 +11,10 @@ import {
   buildRiskUpdateReplacements,
 } from "./automation/risk.automation.utils";
 import { recordSnapshotIfChanged } from "./history/riskHistory.utils";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 type Mitigation = {
   id: number;
@@ -112,6 +116,18 @@ export const getAllRisksQuery = async (
     risk.assessments = [];
     risk.annexControls_27001 = [];
     risk.subClauses_27001 = [];
+  }
+
+  const riskIds = risks
+    .map((r: any) => r.id)
+    .filter((id: any): id is number => typeof id === "number");
+  const customFieldsByRisk = await fetchCustomFieldsForEntities(
+    "project_risk",
+    riskIds,
+    organizationId,
+  );
+  for (let risk of risks) {
+    risk.custom_fields = customFieldsByRisk.get(risk.id) ?? [];
   }
 
   return risks as IRisk[];
@@ -1202,6 +1218,7 @@ export const deleteRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<Boolean> => {
+  await deleteAllCustomFieldValuesForEntityQuery("project_risk", id, organizationId, transaction);
   const result = (await sequelize.query(
     `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
     {

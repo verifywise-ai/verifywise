@@ -12,6 +12,7 @@ export function PageHeaderExtended({
   title,
   description,
   helpArticlePath,
+  warningBanner,
   tipBoxEntity,
   summaryCards,
   summaryCardsJoyrideId,
@@ -65,6 +66,8 @@ export function PageHeaderExtended({
           {/* Alerts/toasts rendered outside the gap Stack so they don't affect layout */}
           {alert}
           {loadingToast}
+
+          {warningBanner && <Box sx={{ mt: "18px" }}>{warningBanner}</Box>}
 
           {(tipBoxEntity || summaryCards) && (
             <Stack gap="18px" sx={{ mt: "18px" }}>

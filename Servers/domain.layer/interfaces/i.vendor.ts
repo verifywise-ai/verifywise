@@ -40,4 +40,11 @@ export interface IVendor {
     | "CCPA (california)"
     | "Other";
   risk_score?: number;
+  custom_fields?: Array<{
+    definition_id: number;
+    field_key: string;
+    label: string;
+    field_type: string;
+    value: unknown;
+  }>;
 }

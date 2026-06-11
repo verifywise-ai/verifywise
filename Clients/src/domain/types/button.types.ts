@@ -52,6 +52,8 @@ export interface CustomizableButtonCoreProps {
   indicator?: boolean;
   /** Custom inline text color */
   textColor?: string;
+  /** Compact square button for icon-only actions (close, toolbar, etc.) */
+  iconOnly?: boolean;
 }
 
 /**

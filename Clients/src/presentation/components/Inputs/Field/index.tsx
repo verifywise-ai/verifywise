@@ -33,7 +33,7 @@ import {
   useTheme,
 } from "@mui/material";
 import "./index.css";
-import { forwardRef, useState } from "react";
+import { forwardRef, useId, useMemo, useState } from "react";
 import { Eye as VisibilityIcon, EyeOff as VisibilityOffIcon } from "lucide-react";
 import { ForwardedRef } from "react";
 import { FieldProps as OriginalFieldProps } from "../../../types/widget.types";
@@ -89,8 +89,19 @@ const Field = forwardRef(
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
     const theme = useTheme();
+    const generatedId = useId();
+    const fieldId = id ?? generatedId;
+    const helperTextId = `${fieldId}-helper`;
+    const errorTextId = `${fieldId}-error`;
 
     const [isVisible, setVisible] = useState(false);
+
+    const describedBy = useMemo(() => {
+      const ids: string[] = [];
+      if (helperText) ids.push(helperTextId);
+      if (error) ids.push(errorTextId);
+      return ids.length > 0 ? ids.join(" ") : undefined;
+    }, [helperText, error, helperTextId, errorTextId]);
 
     const rootSx = sx;
 
@@ -106,12 +117,13 @@ const Field = forwardRef(
       >
         {label && (
           <Typography
-            component="p"
+            component="label"
+            htmlFor={fieldId}
             variant="body1"
             color={theme.palette.text.secondary}
             fontWeight={500}
             fontSize={"13px"}
-            sx={{ margin: 0, height: "22px" }}
+            sx={{ margin: 0, height: "22px", display: "block", cursor: "pointer" }}
           >
             {label}
             {isRequired && (
@@ -135,7 +147,7 @@ const Field = forwardRef(
         <TextField
           className="field-input"
           type={type === "password" ? (isVisible ? "text" : type) : type}
-          id={id}
+          id={fieldId}
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           placeholder={placeholder}
@@ -152,9 +164,10 @@ const Field = forwardRef(
           disabled={disabled}
           inputRef={ref}
           inputProps={{
-            min: min,
-            max: max,
-            sx: {
+            "min": min,
+            "max": max,
+            "aria-describedby": describedBy,
+            "sx": {
               "color": theme.palette.text.secondary,
               "&:-webkit-autofill": {
                 WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
@@ -165,7 +178,10 @@ const Field = forwardRef(
           }}
           sx={sx}
           helperText={helperText}
-          FormHelperTextProps={formHelperTextProps}
+          FormHelperTextProps={{
+            id: helperTextId,
+            ...formHelperTextProps,
+          }}
           InputProps={{
             ...inputPropsOverride,
             startAdornment:
@@ -201,9 +217,6 @@ const Field = forwardRef(
                     sx={{
                       "color": theme.palette.border.dark,
                       "padding": theme.spacing(1),
-                      "&:focus": {
-                        outline: "none",
-                      },
                       "& .MuiTouchRipple-root": {
                         pointerEvents: "none",
                         display: "none",
@@ -219,6 +232,8 @@ const Field = forwardRef(
         {error && (
           <Typography
             component="span"
+            id={errorTextId}
+            role="alert"
             className="input-error"
             color={theme.palette.status.error.text}
             mt={theme.spacing(2)}

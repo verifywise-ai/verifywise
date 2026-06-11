@@ -1,0 +1,22 @@
+# ---- Fixed variables (edit these as needed) ----
+install_dir: /verifywise
+
+# App
+backend_port: 3000
+frontend_port: 8080
+node_env: production
+mock_data_on: "false"
+multi_tenancy_enabled: "false"
+
+# Database
+db_host: postgresdb
+db_port: 5432
+db_name: verifywise
+db_user: verifywise
+
+# Super-admin (password is randomized below)
+superadmin_email: admin@verifywise.com
+
+# ---- Randomized secrets ----
+# Generated fresh on every playbook run (not persisted).
+# Defined as set_fact in install.yml so values stay stable within a single run.

@@ -2,8 +2,14 @@ import "@testing-library/jest-dom";
 
 import { matchers } from "@emotion/jest";
 import type { MatchersObject } from "@vitest/expect";
+import { server } from "./mocks/server";
 
 expect.extend(matchers as unknown as MatchersObject);
+
+// ---- MSW lifecycle ----
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 // ---- Environment stubs ----
 // In jsdom, window.location.port is "" which produces "http://localhost:/api"

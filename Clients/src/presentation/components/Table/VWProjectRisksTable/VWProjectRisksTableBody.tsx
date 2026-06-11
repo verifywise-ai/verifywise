@@ -28,6 +28,7 @@ import { User } from "../../../../domain/types/User";
 import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { text } from "../../../themes/palette";
+import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -68,6 +69,7 @@ const VWProjectRisksTableBody = ({
   flashRow,
   sortConfig,
   visibleColumns,
+  customFieldDefs = [],
   selection,
 }: IVWProjectRisksTableRow) => {
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
@@ -326,6 +328,23 @@ const VWProjectRisksTableBody = ({
                     </VWLink>
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = (row as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell
+                      key={`cf_${def.id}`}
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        backgroundColor:
+                          flashRow === row.id ? singleTheme.flashColors.background : "",
+                      }}
+                    >
+                      {formatCustomFieldValue(def, match?.value, users as User[])}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,

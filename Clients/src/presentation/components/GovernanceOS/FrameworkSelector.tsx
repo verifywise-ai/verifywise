@@ -1,4 +1,4 @@
-import { Stack, SelectChangeEvent } from "@mui/material";
+import { Stack, SelectChangeEvent, useTheme } from "@mui/material";
 import { ArrowRight } from "lucide-react";
 import Select from "../Inputs/Select";
 import { text } from "../../themes/palette";
@@ -23,6 +23,7 @@ const FrameworkSelector = ({
   onSourceChange,
   onTargetChange,
 }: FrameworkSelectorProps) => {
+  const theme = useTheme();
   return (
     <Stack direction="row" spacing={3} sx={{ mb: 3 }} alignItems="flex-end">
       <Select
@@ -34,7 +35,7 @@ const FrameworkSelector = ({
         sx={{ minWidth: 200 }}
       />
 
-      <ArrowRight size={16} color={text.muted} style={{ marginBottom: 10 }} />
+      <ArrowRight size={16} color={text.muted} style={{ marginBottom: theme.spacing(2.5) }} />
 
       <Select
         id="target-framework"

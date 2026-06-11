@@ -100,6 +100,21 @@ const authenticateJWT = async (
   res: Response,
   next: NextFunction,
 ): Promise<void | Response> => {
+  // Test bypass: integration tests may inject mock auth context via
+  // createTestApp({ bypassAuth: true }). Only active in test environment.
+  if (process.env.NODE_ENV === "test" && req.testBypassAuth === true) {
+    return asyncLocalStorage.run(
+      {
+        userId: req.userId ?? 1,
+        tenantId: req.organizationId ?? 1,
+        organizationId: req.organizationId ?? 1,
+      },
+      () => {
+        next();
+      },
+    );
+  }
+
   // Extract Bearer token from Authorization header
   const token = req.headers.authorization?.split(" ")[1];
 

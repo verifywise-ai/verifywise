@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { IGovernanceScenarioRuleAttributes } from "../../interfaces/i.governanceOs";
 import { GovernanceScenarioModel } from "./governanceScenario.model";
 
@@ -24,6 +24,9 @@ export class GovernanceScenarioRuleModel
     allowNull: false,
   })
   scenario_id!: number;
+
+  @BelongsTo(() => GovernanceScenarioModel)
+  scenario?: GovernanceScenarioModel;
 
   @Column({
     type: DataType.STRING(50),

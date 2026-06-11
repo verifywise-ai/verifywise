@@ -37,6 +37,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.graphify_python
 
 # Python virtual environments
 venv/
@@ -104,6 +105,7 @@ Desktop.ini
 .claude/teams/
 .claude/scheduled-tasks/
 .omc/
+graphify-out/
 
 # AI agent temp files
 agent.md
@@ -149,3 +151,4 @@ nul
 *.tar.gz
 *.zip
 .dfmt/
+**/inventory.ini

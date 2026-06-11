@@ -241,19 +241,125 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             flexShrink: 0,
           }}
         >
-          <Tooltip
-            sx={{ fontSize: 13 }}
-            placement="right"
-            title={delayedCollapsed ? (hasDemoData ? "Delete demo data" : "Create demo data") : ""}
-            slotProps={{
-              popper: {
-                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
-              },
-            }}
-            disableInteractive
-          >
+          {delayedCollapsed ? (
+            <Tooltip
+              sx={{ fontSize: 13 }}
+              placement="right"
+              title={hasDemoData ? "Delete demo data" : "Create demo data"}
+              slotProps={{
+                popper: {
+                  modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+                },
+              }}
+              disableInteractive
+            >
+              <ListItemButton
+                disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+                aria-label={hasDemoData ? "Delete demo data" : "Create demo data"}
+                onMouseEnter={() => setDemoButtonHovered(true)}
+                onMouseLeave={() => setDemoButtonHovered(false)}
+                onClick={() => {
+                  if (hasDemoData) {
+                    onOpenDeleteDemoData?.();
+                  } else {
+                    onOpenCreateDemoData?.();
+                  }
+                }}
+                sx={{
+                  "height": "32px",
+                  "gap": theme.spacing(4),
+                  "borderRadius": theme.shape.borderRadius,
+                  "px": theme.spacing(4),
+                  "background": hasDemoData
+                    ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
+                    : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
+                  "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
+                  "&:hover": {
+                    background: hasDemoData
+                      ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
+                      : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
+                  },
+                  "&:hover svg.demo-icon": {
+                    color: hasDemoData ? "#B42318 !important" : "#027A48 !important",
+                    stroke: hasDemoData ? "#B42318 !important" : "#027A48 !important",
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    "minWidth": 0,
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "width": "16px",
+                    "mr": 0,
+                    "& svg": {
+                      color: hasDemoData ? "#D92D20" : "#039855",
+                      stroke: hasDemoData ? "#D92D20" : "#039855",
+                      transition: "color 0.2s ease, stroke 0.2s ease",
+                    },
+                  }}
+                >
+                  {hasDemoData ? (
+                    <Trash2 size={16} strokeWidth={1.5} className="demo-icon" />
+                  ) : (
+                    <Database size={16} strokeWidth={1.5} className="demo-icon" />
+                  )}
+                </ListItemIcon>
+                {!delayedCollapsed && (
+                  <>
+                    <ListItemText
+                      sx={{
+                        "& .MuiListItemText-primary": {
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          color: hasDemoData ? "#B42318" : "#027A48",
+                        },
+                      }}
+                    >
+                      {hasDemoData ? "Delete demo data" : "Create demo data"}
+                    </ListItemText>
+                    {/* Show X icon on hover only for "Create demo data" button */}
+                    {!hasDemoData && demoButtonHovered && (
+                      <Tooltip title="Hide this button permanently" placement="top" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDismissDemoDataButton?.();
+                          }}
+                          aria-label="Hide demo data button"
+                          sx={{
+                            "p": 0,
+                            "ml": "auto",
+                            "width": 20,
+                            "height": 20,
+                            "minWidth": 20,
+                            "&:hover": {
+                              backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            },
+                            "& svg": {
+                              color: `${text.icon} !important`,
+                              stroke: `${text.icon} !important`,
+                            },
+                            "&:hover svg": {
+                              color: `${text.secondary} !important`,
+                              stroke: `${text.secondary} !important`,
+                            },
+                          }}
+                        >
+                          <X size={14} strokeWidth={2} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </>
+                )}
+              </ListItemButton>
+            </Tooltip>
+          ) : (
             <ListItemButton
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              aria-label={hasDemoData ? "Delete demo data" : "Create demo data"}
               onMouseEnter={() => setDemoButtonHovered(true)}
               onMouseLeave={() => setDemoButtonHovered(false)}
               onClick={() => {
@@ -304,55 +410,53 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   <Database size={16} strokeWidth={1.5} className="demo-icon" />
                 )}
               </ListItemIcon>
-              {!delayedCollapsed && (
-                <>
-                  <ListItemText
-                    sx={{
-                      "& .MuiListItemText-primary": {
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        color: hasDemoData ? "#B42318" : "#027A48",
-                      },
-                    }}
-                  >
-                    {hasDemoData ? "Delete demo data" : "Create demo data"}
-                  </ListItemText>
-                  {/* Show X icon on hover only for "Create demo data" button */}
-                  {!hasDemoData && demoButtonHovered && (
-                    <Tooltip title="Hide this button permanently" placement="top" arrow>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDismissDemoDataButton?.();
-                        }}
-                        sx={{
-                          "p": 0,
-                          "ml": "auto",
-                          "width": 20,
-                          "height": 20,
-                          "minWidth": 20,
-                          "&:hover": {
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                          },
-                          "& svg": {
-                            color: `${text.icon} !important`,
-                            stroke: `${text.icon} !important`,
-                          },
-                          "&:hover svg": {
-                            color: `${text.secondary} !important`,
-                            stroke: `${text.secondary} !important`,
-                          },
-                        }}
-                      >
-                        <X size={14} strokeWidth={2} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </>
-              )}
+              <>
+                <ListItemText
+                  sx={{
+                    "& .MuiListItemText-primary": {
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: hasDemoData ? "#B42318" : "#027A48",
+                    },
+                  }}
+                >
+                  {hasDemoData ? "Delete demo data" : "Create demo data"}
+                </ListItemText>
+                {!hasDemoData && demoButtonHovered && (
+                  <Tooltip title="Hide this button permanently" placement="top" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDismissDemoDataButton?.();
+                      }}
+                      aria-label="Hide demo data button"
+                      sx={{
+                        "p": 0,
+                        "ml": "auto",
+                        "width": 20,
+                        "height": 20,
+                        "minWidth": 20,
+                        "&:hover": {
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                        },
+                        "& svg": {
+                          color: `${text.icon} !important`,
+                          stroke: `${text.icon} !important`,
+                        },
+                        "&:hover svg": {
+                          color: `${text.secondary} !important`,
+                          stroke: `${text.secondary} !important`,
+                        },
+                      }}
+                    >
+                      <X size={14} strokeWidth={2} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </>
             </ListItemButton>
-          </Tooltip>
+          )}
         </Box>
       )}
 
@@ -366,19 +470,78 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             flexShrink: 0,
           }}
         >
-          <Tooltip
-            sx={{ fontSize: 13 }}
-            placement="right"
-            title={delayedCollapsed ? "Settings" : ""}
-            slotProps={{
-              popper: {
-                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
-              },
-            }}
-            disableInteractive
-          >
+          {delayedCollapsed ? (
+            <Tooltip
+              sx={{ fontSize: 13 }}
+              placement="right"
+              title="Settings"
+              slotProps={{
+                popper: {
+                  modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+                },
+              }}
+              disableInteractive
+            >
+              <ListItemButton
+                disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+                aria-label="Settings"
+                onClick={() => navigate("/super-admin/settings")}
+                sx={{
+                  "height": "32px",
+                  "gap": theme.spacing(4),
+                  "borderRadius": theme.shape.borderRadius,
+                  "px": theme.spacing(4),
+                  "background": location.pathname.startsWith("/super-admin/settings")
+                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    : "transparent",
+                  "border": location.pathname.startsWith("/super-admin/settings")
+                    ? "1px solid #D8D8D8"
+                    : "1px solid transparent",
+                  "&:hover": {
+                    background: "#F9F9F9",
+                    border: "1px solid transparent",
+                  },
+                  "&:hover svg": {
+                    color: `${brand.primary} !important`,
+                    stroke: `${brand.primary} !important`,
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    "minWidth": 0,
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "flex-start",
+                    "width": "16px",
+                    "mr": 0,
+                    "& svg": {
+                      color: location.pathname.startsWith("/super-admin/settings")
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
+                      transition: "color 0.2s ease, stroke 0.2s ease",
+                    },
+                  }}
+                >
+                  <Settings size={16} strokeWidth={1.5} />
+                </ListItemIcon>
+                {!delayedCollapsed && (
+                  <ListItemText
+                    sx={{
+                      "& .MuiListItemText-primary": {
+                        fontSize: "13px",
+                      },
+                    }}
+                  >
+                    Settings
+                  </ListItemText>
+                )}
+              </ListItemButton>
+            </Tooltip>
+          ) : (
             <ListItemButton
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              aria-label="Settings"
               onClick={() => navigate("/super-admin/settings")}
               sx={{
                 "height": "32px",
@@ -419,19 +582,17 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               >
                 <Settings size={16} strokeWidth={1.5} />
               </ListItemIcon>
-              {!delayedCollapsed && (
-                <ListItemText
-                  sx={{
-                    "& .MuiListItemText-primary": {
-                      fontSize: "13px",
-                    },
-                  }}
-                >
-                  Settings
-                </ListItemText>
-              )}
+              <ListItemText
+                sx={{
+                  "& .MuiListItemText-primary": {
+                    fontSize: "13px",
+                  },
+                }}
+              >
+                Settings
+              </ListItemText>
             </ListItemButton>
-          </Tooltip>
+          )}
         </List>
       ) : (
         <List
@@ -443,19 +604,99 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             flexShrink: 0,
           }}
         >
-          <Tooltip
-            sx={{ fontSize: 13 }}
-            placement="right"
-            title={delayedCollapsed ? "Management" : ""}
-            slotProps={{
-              popper: {
-                modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
-              },
-            }}
-            disableInteractive
-          >
+          {delayedCollapsed ? (
+            <Tooltip
+              sx={{ fontSize: 13 }}
+              placement="right"
+              title="Management"
+              slotProps={{
+                popper: {
+                  modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+                },
+              }}
+              disableInteractive
+            >
+              <ListItemButton
+                disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+                aria-label="Management"
+                onClick={(e) => setManagementAnchorEl(e.currentTarget)}
+                sx={{
+                  "height": "32px",
+                  "gap": theme.spacing(4),
+                  "borderRadius": theme.shape.borderRadius,
+                  "px": theme.spacing(4),
+                  "background": isManagementActive
+                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    : "transparent",
+                  "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                  "&:hover": {
+                    background: isManagementActive
+                      ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                      : "#F9F9F9",
+                    border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                  },
+                  "&:hover svg": {
+                    color: `${brand.primary} !important`,
+                    stroke: `${brand.primary} !important`,
+                  },
+                  "&:hover svg path": {
+                    stroke: `${brand.primary} !important`,
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    "minWidth": 0,
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "flex-start",
+                    "width": "16px",
+                    "mr": 0,
+                    "& svg": {
+                      color: isManagementActive
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
+                      stroke: isManagementActive
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
+                      transition: "color 0.2s ease, stroke 0.2s ease",
+                    },
+                    "& svg path": {
+                      stroke: isManagementActive
+                        ? `${brand.primary} !important`
+                        : `${theme.palette.text.tertiary} !important`,
+                    },
+                  }}
+                >
+                  <FolderCog size={16} strokeWidth={1.5} />
+                </ListItemIcon>
+                {!delayedCollapsed && (
+                  <>
+                    <ListItemText
+                      sx={{
+                        "& .MuiListItemText-primary": {
+                          fontSize: "13px",
+                        },
+                      }}
+                    >
+                      Management
+                    </ListItemText>
+                    <ChevronDown
+                      size={16}
+                      strokeWidth={1.5}
+                      style={{
+                        transform: managementAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                      }}
+                    />
+                  </>
+                )}
+              </ListItemButton>
+            </Tooltip>
+          ) : (
             <ListItemButton
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+              aria-label="Management"
               onClick={(e) => setManagementAnchorEl(e.currentTarget)}
               sx={{
                 "height": "32px",
@@ -507,29 +748,27 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               >
                 <FolderCog size={16} strokeWidth={1.5} />
               </ListItemIcon>
-              {!delayedCollapsed && (
-                <>
-                  <ListItemText
-                    sx={{
-                      "& .MuiListItemText-primary": {
-                        fontSize: "13px",
-                      },
-                    }}
-                  >
-                    Management
-                  </ListItemText>
-                  <ChevronDown
-                    size={16}
-                    strokeWidth={1.5}
-                    style={{
-                      transform: managementAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                    }}
-                  />
-                </>
-              )}
+              <>
+                <ListItemText
+                  sx={{
+                    "& .MuiListItemText-primary": {
+                      fontSize: "13px",
+                    },
+                  }}
+                >
+                  Management
+                </ListItemText>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={1.5}
+                  style={{
+                    transform: managementAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s ease",
+                  }}
+                />
+              </>
             </ListItemButton>
-          </Tooltip>
+          )}
 
           {/* Management Dropdown Menu */}
           <Menu
@@ -682,12 +921,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           >
             <IconButton
               onClick={openPopup}
+              aria-label="Open user options"
               sx={{
-                "p": 0,
-                "&:focus": { outline: "none" },
-                "justifyContent": "center",
-                "alignItems": "center",
-                "marginLeft": theme.spacing(3),
+                p: 0,
+                justifyContent: "center",
+                alignItems: "center",
+                marginLeft: theme.spacing(3),
               }}
             >
               <Avatar user={userAvator} size="small" sx={{ margin: "auto" }} />
@@ -706,10 +945,10 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             </Box>
             <IconButton
               disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
+              aria-label="Open user options"
               sx={{
                 "ml": "auto",
                 "mr": "-8px",
-                "&:focus": { outline: "none" },
                 "& svg": {
                   width: "20px",
                   height: "20px",

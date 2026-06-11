@@ -97,6 +97,8 @@ export interface IGovernanceOsPageProps {
 export interface IMappingCardProps {
   mapping: IGovernanceControlMapping;
   frameworkNames?: Record<number, string>;
+  onEdit?: (mapping: IGovernanceControlMapping) => void;
+  onDelete?: (mapping: IGovernanceControlMapping) => void;
 }
 
 export interface IScenarioCardProps {
@@ -105,8 +107,14 @@ export interface IScenarioCardProps {
   matchedRules?: string[];
   isSelected?: boolean;
   onSelect?: (scenario: IGovernanceScenario) => void;
+  onEdit?: (scenario: IGovernanceScenario) => void;
+  onDelete?: (scenario: IGovernanceScenario) => void;
+  onActivate?: (scenario: IGovernanceScenario) => void;
 }
 
 export interface ICoverageChartProps {
   coverage: IGovernanceCoverage[];
+  onCreateTaskForGap?: (frameworkName: string, controlId: string) => void;
+  onCreateTasksForGaps?: (frameworkName: string, controlIds: string[]) => void;
+  activeScenarioFrameworkId?: number | null;
 }

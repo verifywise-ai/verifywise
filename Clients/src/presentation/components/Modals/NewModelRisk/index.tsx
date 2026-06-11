@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useMemo, useCallback, useEffect } from "react";
+import React, { FC, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Stack, Box, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import DatePicker from "../../Inputs/Datepicker";
@@ -21,11 +21,18 @@ import dayjs, { Dayjs } from "dayjs";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
+import type { TabItem } from "../../TabBar";
+import { logEngine } from "../../../../application/tools/log.engine";
 
 interface NewModelRiskProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSuccess?: (data: IModelRiskFormData) => void;
+  // On create, the parent should return `{ id }` so the modal can flush staged
+  // custom field values against the newly created entity. On update, returning
+  // the id is optional (we fall back to `entityId`).
+  onSuccess?: (data: IModelRiskFormData) => void | Promise<{ id?: number } | void>;
   initialData?: IModelRiskFormData;
   isEdit?: boolean;
   entityId?: number;
@@ -81,6 +88,8 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+  const customFieldsGate = useRequiredCustomFieldsGate("model_risk", entityId ?? null);
 
   useEffect(() => {
     if (initialData) {
@@ -241,14 +250,43 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     onClose: handleClose,
   });
 
-  const handleSubmit = () => {
-    if (validateAll(values)) {
-      setIsSubmitting(true);
-      if (onSuccess) {
-        onSuccess(values);
+  const handleSaveModelRisk = async () => {
+    if (!validateAll(values)) return;
+    setIsSubmitting(true);
+    try {
+      let result: { id?: number } | void;
+      try {
+        result = onSuccess ? await onSuccess(values) : undefined;
+      } catch {
+        // Parent shows its own error toast; keep the modal open so the user
+        // can correct the form and retry. Skip flush/close.
+        return;
       }
-      setIsSubmitting(false);
+      const targetId =
+        (result && typeof result === "object" && "id" in result ? result.id : undefined) ??
+        entityId;
+
+      let cfFlushFailed = false;
+      if (targetId && customFieldsRef.current?.hasPendingValues()) {
+        try {
+          await customFieldsRef.current.flush(targetId);
+        } catch (cfError) {
+          cfFlushFailed = true;
+          logEngine({
+            type: "error",
+            message: `Model risk saved, but custom field values failed to save: ${(cfError as Error).message}`,
+          });
+        }
+      }
+
+      if (cfFlushFailed) {
+        // Keep modal open so the inline warning inside CustomFieldsSection
+        // remains visible to the user.
+        return;
+      }
       handleClose();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -404,6 +442,19 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     </Stack>
   );
 
+  const isEditMode = isEdit && !!entityId;
+
+  const tabs: TabItem[] = isEditMode
+    ? [
+        { label: "Risk details", value: "details", icon: "ShieldAlert" },
+        { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+        { label: "Activity", value: "activity", icon: "History" },
+      ]
+    : [
+        { label: "Risk details", value: "details", icon: "ShieldAlert" },
+        { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+      ];
+
   return (
     <StandardModal
       isOpen={isOpen}
@@ -414,31 +465,40 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
           ? "Update risk details, mitigation plan, and tracking information"
           : "Document and track potential risks associated with AI models"
       }
-      onSubmit={activeTab === "details" ? handleSubmit : undefined}
+      onSubmit={
+        activeTab === "activity" || customFieldsGate.blocked ? undefined : handleSaveModelRisk
+      }
       submitButtonText={isEdit ? "Update risk" : "Save"}
-      isSubmitting={isSubmitting}
+      isSubmitting={isSubmitting || customFieldsGate.blocked}
       maxWidth="760px"
     >
-      {isEdit && entityId ? (
-        <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
-            <TabBar
-              tabs={[
-                { label: "Risk details", value: "details", icon: "ShieldAlert" },
-                { label: "Activity", value: "activity", icon: "History" },
-              ]}
-              activeTab={activeTab}
-              onChange={(_, newValue) => setActiveTab(newValue)}
-            />
-          </Box>
-          {activeTab === "details" && formContent}
-          {activeTab === "activity" && (
-            <HistorySidebar inline isOpen={true} entityType="model_risk" entityId={entityId} />
-          )}
-        </TabContext>
-      ) : (
-        formContent
-      )}
+      <TabContext value={activeTab}>
+        <Box sx={{ marginBottom: 3 }}>
+          <TabBar
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+          />
+        </Box>
+        {/* Render details + custom-fields always (display-toggle) so the
+            staged-values Map inside CustomFieldsSection survives tab switches. */}
+        <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>{formContent}</Box>
+        <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
+          <CustomFieldsSection
+            ref={customFieldsRef}
+            entityType="model_risk"
+            entityId={entityId ?? null}
+          />
+        </Box>
+        {activeTab === "activity" && isEditMode && (
+          <HistorySidebar
+            inline
+            isOpen={true}
+            entityType="model_risk"
+            entityId={entityId as number}
+          />
+        )}
+      </TabContext>
     </StandardModal>
   );
 };

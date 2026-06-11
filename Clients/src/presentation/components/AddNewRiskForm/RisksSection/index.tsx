@@ -20,7 +20,6 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
-import styles from "../styles.module.css";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -89,7 +88,6 @@ const RiskSection: FC<RiskSectionProps> = ({
   const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
-  const fieldWidth = compactMode ? `${LAYOUT.COMPACT_FIELD_WIDTH}px` : FORM_CONSTANTS.FIELD_WIDTH;
   const contentWidth = compactMode
     ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px`
     : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
@@ -98,9 +96,9 @@ const RiskSection: FC<RiskSectionProps> = ({
     display: "flex",
     flexDirection: "row" as const,
     justifyContent: "flex-start",
-    flexWrap: "wrap" as const,
+    flexWrap: "nowrap" as const,
     gap: `${LAYOUT.HORIZONTAL_GAP}px`,
-    width: contentWidth,
+    width: "100%",
     maxWidth: contentWidth,
     boxSizing: "border-box" as const,
   };
@@ -196,17 +194,7 @@ const RiskSection: FC<RiskSectionProps> = ({
   );
 
   return (
-    <Stack
-      sx={{
-        ...(disableInternalScroll
-          ? {}
-          : {
-              minHeight: FORM_CONSTANTS.MIN_HEIGHT,
-              maxHeight: FORM_CONSTANTS.MAX_HEIGHT,
-            }),
-        gap: 3,
-      }}
-    >
+    <Stack sx={{ gap: 3 }}>
       {alert && (
         <Alert
           variant={alert.variant}
@@ -217,22 +205,14 @@ const RiskSection: FC<RiskSectionProps> = ({
         />
       )}
       <Stack
-        className={disableInternalScroll ? "AddNewRiskForm" : `AddNewRiskForm ${styles.popupBody}`}
-        sx={{
-          width: "100%",
-          ...(disableInternalScroll
-            ? {}
-            : {
-                maxHeight: FORM_CONSTANTS.CONTENT_MAX_HEIGHT,
-                overflowY: "auto",
-                overflowX: "hidden",
-              }),
-        }}
+        className="AddNewRiskForm"
+        sx={{ width: "100%", ...(disableInternalScroll ? {} : { p: "10px" }) }}
       >
         {/* Risk Scope & Frameworks Section - Moved to top */}
         <Stack
           sx={{
-            width: contentWidth,
+            width: "100%",
+            maxWidth: contentWidth,
             boxSizing: "border-box",
           }}
         >
@@ -413,7 +393,7 @@ const RiskSection: FC<RiskSectionProps> = ({
           </Stack>
         </Stack>
 
-        <Stack sx={{ width: contentWidth, mt: `${LAYOUT.VERTICAL_GAP}px` }}>
+        <Stack sx={{ width: "100%", maxWidth: contentWidth, mt: `${LAYOUT.VERTICAL_GAP}px` }}>
           <Stack sx={{ gap: `${LAYOUT.VERTICAL_GAP}px` }}>
             {/* Row 1 */}
             <Stack sx={formRowStyles}>
@@ -426,7 +406,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 isRequired
                 error={errors.riskName}
                 sx={{
-                  width: fieldWidth,
+                  flex: 1,
                 }}
                 disabled={isEditingDisabled}
               />
@@ -451,7 +431,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 // isRequired
                 // error={errors.actionOwner}
                 sx={{
-                  width: fieldWidth,
+                  flex: 1,
                 }}
                 disabled={isEditingDisabled || usersLoading}
               />
@@ -465,7 +445,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 isRequired
                 error={errors.aiLifecyclePhase}
                 sx={{
-                  width: fieldWidth,
+                  flex: 1,
                 }}
                 disabled={isEditingDisabled}
               />
@@ -482,7 +462,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 isRequired
                 error={errors.riskDescription}
                 sx={{
-                  width: fieldWidth,
+                  flex: 1,
                 }}
                 disabled={isEditingDisabled}
               />
@@ -510,7 +490,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Select risk categories"
                 onChange={handleOnMultiselectChange("riskCategory")}
                 sx={{
-                  "width": fieldWidth,
+                  "flex": 1,
                   "& .MuiChip-root": {
                     "borderRadius": "4px",
                     "& .MuiChip-deleteIcon": {
@@ -556,7 +536,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 isRequired
                 error={errors.potentialImpact}
                 sx={{
-                  width: fieldWidth,
+                  flex: 1,
                 }}
                 disabled={isEditingDisabled}
               />
@@ -568,7 +548,8 @@ const RiskSection: FC<RiskSectionProps> = ({
           sx={{
             gap: `${LAYOUT.HORIZONTAL_GAP}px`,
             mt: `${LAYOUT.VERTICAL_GAP}px`,
-            width: contentWidth,
+            width: "100%",
+            maxWidth: contentWidth,
           }}
         >
           <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -585,7 +566,7 @@ const RiskSection: FC<RiskSectionProps> = ({
             assigning these scores, the risk level will be determined based on your inputs.
           </Typography>
         </Stack>
-        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
           <RiskLevel
             likelihood={riskValues.likelihood}
             riskSeverity={riskValues.riskSeverity}
@@ -593,7 +574,7 @@ const RiskSection: FC<RiskSectionProps> = ({
             disabled={isEditingDisabled}
           />
         </Stack>
-        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
           <Field
             id="review-notes-input"
             label="Review notes"

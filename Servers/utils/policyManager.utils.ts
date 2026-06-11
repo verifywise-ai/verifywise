@@ -9,6 +9,10 @@ import {
   buildPolicyReplacements,
   buildPolicyUpdateReplacements,
 } from "./automation/policy.automation.utils";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 export type PolicyReviewStatus = "pending_review" | "approved" | "changes_requested";
 
@@ -47,7 +51,7 @@ export const updatePolicyReviewStatusQuery = async (
 };
 
 export const getAllPoliciesQuery = async (organizationId: number) => {
-  const result = await sequelize.query(
+  const result = (await sequelize.query(
     `SELECT
       pm.*,
       COALESCE(
@@ -63,8 +67,13 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
       replacements: { organizationId },
       type: QueryTypes.SELECT,
     },
-  );
+  )) as any[];
 
+  const ids = result.map((p) => p.id).filter((id): id is number => typeof id === "number");
+  const customFieldsByPolicy = await fetchCustomFieldsForEntities("policy", ids, organizationId);
+  for (const p of result) {
+    p.custom_fields = customFieldsByPolicy.get(p.id) ?? [];
+  }
   return result;
 };
 
@@ -428,6 +437,8 @@ export const deletePolicyByIdQuery = async (
   }
 
   const deletedPolicyData = policyToDelete[0] as any;
+
+  await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
 
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(

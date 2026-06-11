@@ -16,7 +16,7 @@
  * @returns {JSX.Element} The rendered select component.
  */
 
-import React from "react";
+import React, { useId, useMemo } from "react";
 import {
   Divider,
   ListSubheader,
@@ -58,6 +58,12 @@ function Select({
   dividers,
 }: SelectProps) {
   const theme = useTheme();
+  const generatedId = useId();
+  const selectId = id ?? generatedId;
+  const errorTextId = `${selectId}-error`;
+
+  const describedBy = useMemo(() => (error ? errorTextId : undefined), [error, errorTextId]);
+
   const itemStyles = {
     fontSize: "var(--env-var-font-size-medium)",
     color: theme.palette.text.tertiary,
@@ -134,7 +140,8 @@ function Select({
     <Stack gap={theme.spacing(2)} className="select-wrapper" sx={extractedLayoutProps}>
       {label && (
         <Typography
-          component="p"
+          component="label"
+          htmlFor={selectId}
           variant="body1"
           color={theme.palette.text.secondary}
           fontWeight={500}
@@ -144,6 +151,7 @@ function Select({
             height: "22px",
             display: "flex",
             alignItems: "center",
+            cursor: "pointer",
           }}
         >
           {label}
@@ -170,7 +178,11 @@ function Select({
         value={value}
         onChange={onChange}
         displayEmpty
-        inputProps={{ id: id }}
+        inputProps={{
+          "id": selectId,
+          "aria-label": label ? undefined : placeholder,
+          "aria-describedby": describedBy,
+        }}
         renderValue={renderValue}
         IconComponent={() => (
           <ChevronDown
@@ -244,7 +256,7 @@ function Select({
             const menuItem = (
               <MenuItem
                 value={getOptionValue ? getOptionValue(item) : item._id}
-                key={`${id}-${item._id}`}
+                key={`${selectId}-${item._id}`}
                 sx={{
                   display: "flex",
                   ...itemStyles,
@@ -267,12 +279,12 @@ function Select({
             // Check single divider prop
             if (dividerAfterIndex !== undefined && index === dividerAfterIndex) {
               const elements: React.ReactElement[] = [
-                <Divider key={`${id}-divider-${index}`} sx={{ my: 0.5 }} />,
+                <Divider key={`${selectId}-divider-${index}`} sx={{ my: 0.5 }} />,
               ];
               if (dividerLabel) {
                 elements.push(
                   <ListSubheader
-                    key={`${id}-divider-label-${index}`}
+                    key={`${selectId}-divider-label-${index}`}
                     sx={{
                       fontSize: 11,
                       fontWeight: 600,
@@ -293,12 +305,12 @@ function Select({
             const dividerEntry = dividers?.find((d) => d.index === index);
             if (dividerEntry) {
               const elements: React.ReactElement[] = [
-                <Divider key={`${id}-divider-${index}`} sx={{ my: 0.5 }} />,
+                <Divider key={`${selectId}-divider-${index}`} sx={{ my: 0.5 }} />,
               ];
               if (dividerEntry.label) {
                 elements.push(
                   <ListSubheader
-                    key={`${id}-divider-label-${index}`}
+                    key={`${selectId}-divider-label-${index}`}
                     sx={{
                       fontSize: 11,
                       fontWeight: 600,
@@ -321,6 +333,8 @@ function Select({
       </MuiSelect>
       {error && (
         <Typography
+          id={errorTextId}
+          role="alert"
           className="input-error"
           color={theme.palette.status.error.text}
           mt={theme.spacing(2)}

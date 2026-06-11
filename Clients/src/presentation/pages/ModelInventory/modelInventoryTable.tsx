@@ -40,6 +40,8 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
 dayjs.extend(utc);
 
@@ -118,11 +120,24 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     }
   };
 
-  // Filter TABLE_COLUMNS based on visibleColumns
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("model_inventory");
+
+  // Filter TABLE_COLUMNS based on visibleColumns + append custom field columns
+  // before the actions column.
   const visibleTableColumns = useMemo(() => {
-    if (!visibleColumns || visibleColumns.size === 0) return TABLE_COLUMNS;
-    return TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
-  }, [visibleColumns]);
+    const filtered =
+      !visibleColumns || visibleColumns.size === 0
+        ? TABLE_COLUMNS
+        : TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
+    const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label.toUpperCase(),
+      sortable: false,
+    }));
+    const actionsIdx = filtered.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...filtered, ...customCols];
+    return [...filtered.slice(0, actionsIdx), ...customCols, ...filtered.slice(actionsIdx)];
+  }, [visibleColumns, customFieldDefs]);
 
   // Helper to check if a column is visible
   const isColVisible = useCallback(
@@ -424,6 +439,16 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     />
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = (modelInventory as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
+                      {formatCustomFieldValue(def, match?.value, users as any)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,

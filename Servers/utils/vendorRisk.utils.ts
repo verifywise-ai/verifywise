@@ -2,6 +2,10 @@ import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.mo
 import { IVendorRisk } from "../domain.layer/interfaces/i.vendorRisk";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
@@ -188,6 +192,7 @@ export const deleteVendorRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<Boolean> => {
+  await deleteAllCustomFieldValuesForEntityQuery("vendor_risk", id, organizationId, transaction);
   const result = await sequelize.query(
     `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
     {
@@ -236,7 +241,7 @@ export const getAllVendorRisksAllProjectsQuery = async (
       break;
   }
 
-  const risks = await sequelize.query(
+  const risks = (await sequelize.query(
     `SELECT
       vr.id AS risk_id,
       vr.vendor_id,
@@ -266,7 +271,15 @@ export const getAllVendorRisksAllProjectsQuery = async (
       replacements: { organizationId },
       type: QueryTypes.SELECT,
     },
+  )) as any[];
+
+  const ids = Array.from(
+    new Set(risks.map((r) => r.risk_id).filter((id): id is number => typeof id === "number")),
   );
+  const customFieldsByRisk = await fetchCustomFieldsForEntities("vendor_risk", ids, organizationId);
+  for (const r of risks) {
+    r.custom_fields = customFieldsByRisk.get(r.risk_id) ?? [];
+  }
   return risks;
 };
 

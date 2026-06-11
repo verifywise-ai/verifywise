@@ -91,6 +91,20 @@ export interface IRecommendationRequest {
   useCaseType?: string;
 }
 
+export interface IGovernanceScenarioActivationAttributes {
+  id?: number;
+  organization_id: number;
+  scenario_id: number;
+  activated_by?: number;
+  activated_at?: Date;
+  deactivated_at?: Date;
+  tasks_created?: number;
+  frameworks_assigned?: number;
+  status?: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
 export interface IRecommendationResult {
   scenario: IGovernanceScenarioAttributes;
   score: number;

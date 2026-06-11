@@ -22,7 +22,13 @@ export type {
 export interface ICreateTaskProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSuccess?: (data: ICreateTaskFormValues) => void;
+  /**
+   * On create, return `{ id }` of the newly-created task so the modal can
+   * persist staged custom field values against it. Return void on edit.
+   */
+  onSuccess?: (
+    data: ICreateTaskFormValues,
+  ) => void | Promise<void> | Promise<{ id?: number } | void>;
   initialData?: ITask;
   mode?: "create" | "edit";
 }

@@ -6,12 +6,20 @@ import {
   getAllMappingsQuery,
   getMappingsBetweenFrameworksQuery,
   getMappingsForControlQuery,
+  createMappingQuery,
+  updateMappingQuery,
+  deleteMappingQuery,
+  createBulkMappingsQuery,
   getAllScenariosQuery,
   getScenarioByIdQuery,
   getScenarioRulesQuery,
   createScenarioQuery,
   updateScenarioQuery,
   deleteScenarioQuery,
+  createScenarioActivationQuery,
+  getActivationHistoryQuery,
+  deactivateScenarioQuery,
+  getTaskProgressByFrameworkQuery,
   getOrgPreferencesQuery,
   upsertOrgPreferencesQuery,
   getMappingStatsQuery,
@@ -21,6 +29,7 @@ import { getOrComputeCoverage } from "../utils/governanceCoverage.utils";
 import {
   validateScenarioInput,
   validateRecommendationInput,
+  validateMappingInput,
 } from "../domain.layer/validations/governanceOs.valid";
 
 const FILE_NAME = "governanceOs.ctrl.ts";
@@ -80,6 +89,334 @@ export async function getMappingsForControl(req: Request, res: Response): Promis
   }
 }
 
+export async function createMapping(req: Request, res: Response): Promise<any> {
+  const FN = "createMapping";
+  logStructured("processing", "creating governance mapping", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const validation = validateMappingInput(req.body);
+    if (!validation.valid) {
+      return res.status(400).json(STATUS_CODE[400](validation.errors.join("; ")));
+    }
+
+    const mapping = await createMappingQuery(req.body);
+    logStructured("successful", `created mapping ${mapping.id}`, FN, FILE_NAME);
+    return res.status(201).json(STATUS_CODE[201](mapping));
+  } catch (error) {
+    logStructured("error", "failed to create mapping", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function updateMapping(req: Request, res: Response): Promise<any> {
+  const FN = "updateMapping";
+  logStructured("processing", "updating governance mapping", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const validation = validateMappingInput(req.body);
+    if (!validation.valid) {
+      return res.status(400).json(STATUS_CODE[400](validation.errors.join("; ")));
+    }
+
+    const { id } = req.params;
+    const mapping = await updateMappingQuery(Number(id), req.body);
+    if (!mapping) {
+      return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
+    }
+    logStructured("successful", `updated mapping ${id}`, FN, FILE_NAME);
+    return res.status(200).json(STATUS_CODE[200](mapping));
+  } catch (error) {
+    logStructured("error", "failed to update mapping", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function deleteMapping(req: Request, res: Response): Promise<any> {
+  const FN = "deleteMapping";
+  logStructured("processing", "deleting governance mapping", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const { id } = req.params;
+    const deleted = await deleteMappingQuery(Number(id));
+    if (!deleted) {
+      return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
+    }
+    logStructured("successful", `deleted mapping ${id}`, FN, FILE_NAME);
+    return res.status(200).json(STATUS_CODE[200]({ message: "Mapping deleted" }));
+  } catch (error) {
+    logStructured("error", "failed to delete mapping", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function createBulkMappings(req: Request, res: Response): Promise<any> {
+  const FN = "createBulkMappings";
+  logStructured("processing", "creating bulk governance mappings", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const { mappings } = req.body;
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      return res.status(400).json(STATUS_CODE[400]("mappings array is required"));
+    }
+
+    const count = await createBulkMappingsQuery(mappings);
+    logStructured("successful", `created ${count} mappings in bulk`, FN, FILE_NAME);
+    return res.status(201).json(STATUS_CODE[201]({ created: count }));
+  } catch (error) {
+    logStructured("error", "failed to create bulk mappings", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function activateScenario(req: Request, res: Response): Promise<any> {
+  const FN = "activateScenario";
+  logStructured("processing", "activating governance scenario", FN, FILE_NAME);
+  try {
+    const { organizationId, userId } = req;
+    if (!organizationId || !userId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const { id } = req.params;
+    const scenario = await getScenarioByIdQuery(Number(id));
+    if (!scenario) {
+      return res.status(404).json(STATUS_CODE[404]("Scenario not found"));
+    }
+
+    const priorityOrder = (scenario.priority_order || {}) as {
+      primary?: number;
+      secondary?: number[];
+      supplementary?: number[];
+    };
+
+    const { projectIds, ownerAssignments } = req.body;
+
+    if (
+      projectIds !== undefined &&
+      (!Array.isArray(projectIds) ||
+        !projectIds.every((id: unknown) => typeof id === "number" && id > 0))
+    ) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("projectIds must be an array of positive integers"));
+    }
+    if (
+      ownerAssignments !== undefined &&
+      (typeof ownerAssignments !== "object" ||
+        ownerAssignments === null ||
+        Array.isArray(ownerAssignments))
+    ) {
+      return res
+        .status(400)
+        .json(
+          STATUS_CODE[400]("ownerAssignments must be an object mapping framework IDs to user IDs"),
+        );
+    }
+
+    const result = await createScenarioActivationQuery({
+      organizationId,
+      scenarioId: Number(id),
+      activatedBy: userId,
+      priorityOrder,
+      projectIds,
+      ownerAssignments,
+    });
+
+    // Update preferences to set this as the active scenario
+    await upsertOrgPreferencesQuery(organizationId, {
+      selected_scenario_id: Number(id),
+    });
+
+    logStructured(
+      "successful",
+      `activated scenario ${id}, created ${result.tasksCreated} tasks`,
+      FN,
+      FILE_NAME,
+    );
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        activationId: result.activationId,
+        tasksCreated: result.tasksCreated,
+        scenarioId: Number(id),
+      }),
+    );
+  } catch (error) {
+    logStructured("error", "failed to activate scenario", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function simulateScenario(req: Request, res: Response): Promise<any> {
+  const FN = "simulateScenario";
+  logStructured("processing", "simulating governance scenario", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
+    const { frameworkIds, priorityOrder } = req.body;
+    if (
+      !Array.isArray(frameworkIds) ||
+      frameworkIds.length === 0 ||
+      !frameworkIds.every((id: unknown) => typeof id === "number" && id > 0)
+    ) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("frameworkIds must be a non-empty array of positive integers"));
+    }
+
+    // Count total controls across selected frameworks using struct tables
+    const frameworkControlQueries: Record<number, string> = {
+      1: `SELECT COUNT(*) as cnt FROM subcontrols_struct_eu sc
+          JOIN controls_struct_eu c ON sc.control_id = c.id
+          JOIN controlcategories_struct_eu cc ON c.control_category_id = cc.id
+          WHERE cc.framework_id = 1`,
+      2: `SELECT COUNT(*) as cnt FROM subclauses_struct_iso s
+          JOIN clauses_struct_iso c ON s.clause_id = c.id
+          WHERE c.framework_id = 2`,
+      3: `SELECT COUNT(*) as cnt FROM subclauses_struct_iso27001 s
+          JOIN clauses_struct_iso27001 c ON s.clause_id = c.id
+          WHERE c.framework_id = 3`,
+      4: `SELECT COUNT(*) as cnt FROM nist_ai_rmf_subcategories_struct s
+          JOIN nist_ai_rmf_categories_struct c ON s.category_struct_id = c.id
+          WHERE c.framework_id = 4`,
+    };
+
+    const [frameworkRows] = await sequelize.query(
+      `SELECT id, name FROM frameworks WHERE id = ANY(ARRAY[:frameworkIds]::INTEGER[])`,
+      { replacements: { frameworkIds } },
+    );
+
+    const frameworkResults = await Promise.all(
+      (frameworkRows as any[]).map(async (fw) => {
+        const query = frameworkControlQueries[fw.id];
+        if (!query) {
+          return { id: fw.id, name: fw.name, control_count: "0" };
+        }
+        const [result] = await sequelize.query(query);
+        return {
+          id: fw.id,
+          name: fw.name,
+          control_count: String((result as any)?.cnt || 0),
+        };
+      }),
+    );
+
+    const breakdown = frameworkResults.map((row) => ({
+      frameworkId: row.id,
+      frameworkName: row.name,
+      controlCount: parseInt(row.control_count, 10),
+      priority:
+        priorityOrder?.primary === row.id
+          ? "primary"
+          : priorityOrder?.secondary?.includes(row.id)
+            ? "secondary"
+            : priorityOrder?.supplementary?.includes(row.id)
+              ? "supplementary"
+              : "unprioritized",
+    }));
+
+    const totalControls = breakdown.reduce((sum, f) => sum + f.controlCount, 0);
+    // Estimate 80% coverage achievable with selected frameworks
+    const estimatedCoveragePercent = Math.min(85, 40 + frameworkIds.length * 12);
+    const estimatedEffortHours = totalControls * 4;
+    const timelineWeeks = Math.max(4, Math.ceil(totalControls / 20));
+
+    logStructured("successful", "computed scenario simulation", FN, FILE_NAME);
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        frameworkIds,
+        totalControls,
+        estimatedCoveragePercent,
+        estimatedEffortHours,
+        timelineWeeks,
+        frameworkBreakdown: breakdown,
+      }),
+    );
+  } catch (error) {
+    logStructured("error", "failed to simulate scenario", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function getActivationHistory(req: Request, res: Response): Promise<any> {
+  const FN = "getActivationHistory";
+  logStructured("processing", "fetching activation history", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+    const activations = await getActivationHistoryQuery(organizationId);
+    logStructured("successful", `fetched ${activations.length} activations`, FN, FILE_NAME);
+    return res.status(200).json(STATUS_CODE[200]({ activations }));
+  } catch (error) {
+    logStructured("error", "failed to fetch activation history", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function deactivateScenario(req: Request, res: Response): Promise<any> {
+  const FN = "deactivateScenario";
+  logStructured("processing", "deactivating scenario", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+    const { id } = req.params;
+    const result = await deactivateScenarioQuery(Number(id), organizationId);
+    if (!result) {
+      return res.status(404).json(STATUS_CODE[404]("Activation not found"));
+    }
+    logStructured("successful", "deactivated scenario activation", FN, FILE_NAME);
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    logStructured("error", "failed to deactivate scenario", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function getScenarioProgress(req: Request, res: Response): Promise<any> {
+  const FN = "getScenarioProgress";
+  logStructured("processing", "fetching scenario progress", FN, FILE_NAME);
+  try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+    const { id } = req.params;
+    const frameworks = await getTaskProgressByFrameworkQuery(Number(id), organizationId);
+    logStructured(
+      "successful",
+      `fetched progress for ${frameworks.length} frameworks`,
+      FN,
+      FILE_NAME,
+    );
+    return res.status(200).json(STATUS_CODE[200]({ activationId: Number(id), frameworks }));
+  } catch (error) {
+    logStructured("error", "failed to fetch scenario progress", FN, FILE_NAME);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
 // ============================================
 // SCENARIOS
 // ============================================
@@ -102,10 +439,15 @@ export async function getScenarioById(req: Request, res: Response): Promise<any>
   const FN = "getScenarioById";
   logStructured("processing", "fetching scenario by id", FN, FILE_NAME);
   try {
+    const { organizationId } = req;
     const { id } = req.params;
     const scenario = await getScenarioByIdQuery(Number(id));
     if (!scenario) {
       return res.status(404).json(STATUS_CODE[404]("Scenario not found"));
+    }
+    // Built-in scenarios are visible to all; custom scenarios must belong to the org
+    if (!scenario.is_builtin && scenario.organization_id !== organizationId) {
+      return res.status(403).json(STATUS_CODE[403]("Access denied to this scenario"));
     }
     const rules = await getScenarioRulesQuery(scenario.id!);
     const result = { ...scenario.get({ plain: true }), rules };
@@ -305,7 +647,9 @@ export async function getEligibility(req: Request, res: Response): Promise<any> 
     const [result] = await sequelize.query(
       `SELECT COUNT(DISTINCT pf.framework_id) as framework_count
        FROM projects_frameworks pf
-       JOIN projects p ON pf.project_id = p.id`,
+       JOIN projects p ON pf.project_id = p.id
+       WHERE p.organization_id = :organizationId`,
+      { replacements: { organizationId } },
     );
 
     const frameworkCount = parseInt((result as any[])[0]?.framework_count || "0", 10);

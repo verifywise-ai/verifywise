@@ -2,11 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllMappings,
   getMappingsBetween,
+  createMapping,
+  updateMapping,
+  deleteMapping,
+  createBulkMappings,
   getAllScenarios,
   getScenarioById,
   createScenario,
   updateScenario,
   deleteScenario,
+  activateScenario,
+  simulateScenario,
+  getActivationHistory,
+  deactivateScenario,
+  getScenarioProgress,
   getRecommendations,
   getCoverage,
   refreshCoverage,
@@ -39,6 +48,102 @@ export const governanceOsQueryKeys = {
     [...governanceOsQueryKeys.all, "unified-view", projectId] as const,
   preferences: () => [...governanceOsQueryKeys.all, "preferences"] as const,
   eligibility: () => [...governanceOsQueryKeys.all, "eligibility"] as const,
+};
+
+export const useCreateMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<IGovernanceControlMapping>) => createMapping({ body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useUpdateMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: Partial<IGovernanceControlMapping> }) =>
+      updateMapping({ id, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useDeleteMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteMapping({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useBulkCreateMappings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mappings: Partial<IGovernanceControlMapping>[]) =>
+      createBulkMappings({ body: { mappings } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useActivateScenario = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: any }) => activateScenario({ id, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.scenarios() });
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.preferences() });
+    },
+  });
+};
+
+export const useSimulateScenario = () => {
+  return useMutation({
+    mutationFn: async (body: any) => {
+      const response = await simulateScenario({ body });
+      return response?.data ?? response;
+    },
+  });
+};
+
+export const useActivationHistory = () => {
+  return useQuery({
+    queryKey: [...governanceOsQueryKeys.all, "activations"],
+    queryFn: async () => {
+      const response = await getActivationHistory();
+      return response?.data?.activations || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useDeactivateScenario = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deactivateScenario({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...governanceOsQueryKeys.all, "activations"] });
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.preferences() });
+    },
+  });
+};
+
+export const useScenarioProgress = (activationId: number) => {
+  return useQuery({
+    queryKey: [...governanceOsQueryKeys.all, "progress", activationId],
+    queryFn: async () => {
+      const response = await getScenarioProgress({ id: activationId });
+      return response?.data?.frameworks || [];
+    },
+    enabled: activationId > 0,
+    staleTime: 1 * 60 * 1000,
+  });
 };
 
 export const useMappings = (filters?: {
@@ -79,6 +184,7 @@ export const useScenarios = () => {
   });
 };
 
+/** @deprecated Not currently used by any component. Kept for potential future use. */
 export const useScenario = (id: number) => {
   return useQuery<IGovernanceScenario>({
     queryKey: governanceOsQueryKeys.scenario(id),
@@ -121,7 +227,7 @@ export const useDeleteScenario = () => {
   });
 };
 
-export const useRecommendations = () => {
+export const useGovernanceRecommendations = () => {
   return useMutation<IRecommendationResult[], Error, IRecommendationRequest>({
     mutationFn: (body: IRecommendationRequest) =>
       getRecommendations({ body }).then((r) => r?.data || []),
@@ -163,6 +269,7 @@ export const useUnifiedView = (projectId: number) => {
   });
 };
 
+/** @deprecated Not currently used by any component. Kept for potential future use. */
 export const useGovernanceOsEligibility = () => {
   return useQuery<{ eligible: boolean; frameworkCount: number }>({
     queryKey: governanceOsQueryKeys.eligibility(),

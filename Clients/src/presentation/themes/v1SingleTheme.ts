@@ -437,8 +437,12 @@ const dropDownStyles = {
 };
 
 const iconButtons = {
-  "&:focus": {
+  "&:focus:not(:focus-visible)": {
     outline: "none",
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${colors.primary}`,
+    outlineOffset: 1,
   },
   "& svg path": {
     stroke: "#667085",
@@ -457,6 +461,13 @@ const iconButtonsRectangle = {
   "backgroundColor": "#ffffff",
   "iconColor": "#667085",
   "iconColorDisabled": "#d1d5db",
+  "&:focus:not(:focus-visible)": {
+    outline: "none",
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${colors.primary}`,
+    outlineOffset: 1,
+  },
   "& svg path": {
     stroke: "#667085",
   },

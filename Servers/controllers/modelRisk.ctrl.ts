@@ -276,6 +276,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
     const success = await deleteModelRiskByIdQuery(
       parseInt(Array.isArray(id) ? id[0] : id, 10),
       req.organizationId!,
+      transaction,
     );
 
     if (!success) {

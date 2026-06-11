@@ -14,8 +14,8 @@ import {
   AccordionSummary,
   Accordion,
   AccordionDetails,
-  Button,
 } from "@mui/material";
+import { CustomizableButton } from "../../button/customizable-button";
 import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
 import {
@@ -405,14 +405,13 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
         return (
           <>
             <Box />
-            <Button
+            <CustomizableButton
               onClick={handleWithdrawClick}
               color="error"
               variant="contained"
-              disabled={isProcessing}
-            >
-              Withdraw
-            </Button>
+              text={isProcessing ? "Processing..." : "Withdraw"}
+              isDisabled={isProcessing}
+            />
           </>
         );
       }
@@ -429,17 +428,20 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           alignItems="center"
           width="100%"
         >
-          <Button onClick={handleReject} color="error" variant="contained" disabled={isProcessing}>
-            Reject
-          </Button>
-          <Button
+          <CustomizableButton
+            onClick={handleReject}
+            color="error"
+            variant="contained"
+            text={isProcessing ? "Processing..." : "Reject"}
+            isDisabled={isProcessing}
+          />
+          <CustomizableButton
             onClick={handleApprove}
             color="primary"
             variant="contained"
-            disabled={isProcessing}
-          >
-            {isProcessing ? "Processing..." : "Approve"}
-          </Button>
+            text={isProcessing ? "Processing..." : "Approve"}
+            isDisabled={isProcessing}
+          />
         </Stack>
       );
     }

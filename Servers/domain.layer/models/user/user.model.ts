@@ -44,6 +44,7 @@ import { passwordValidation } from "../../validations/password.valid";
 import { ValidationException, BusinessLogicException } from "../../exceptions/custom.exception";
 import bcrypt from "bcrypt";
 import { OrganizationModel } from "../organization/organization.model";
+import { SSOProvider } from "../../interfaces/i.ssoConfig";
 
 @Table({
   tableName: "users",
@@ -121,6 +122,18 @@ export class UserModel extends Model<UserModel> {
   })
   profile_photo_id?: number;
 
+  @Column({
+    type: DataType.ENUM("AzureAD"),
+    allowNull: true,
+  })
+  sso_provider?: SSOProvider;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  sso_user_id?: string;
+
   /**
    * Creates a new user with validation and password hashing
    *
@@ -154,24 +167,29 @@ export class UserModel extends Model<UserModel> {
     name: string,
     surname: string,
     email: string,
-    password: string,
+    password: string | null,
     role_id: number,
     organization_id: number,
+    sso_provider?: SSOProvider,
+    sso_user_id?: string,
   ): Promise<UserModel> {
     // Validate email
     if (!emailValidation(email)) {
       throw new ValidationException("Invalid email format", "email", email);
     }
 
-    // Validate password
-    const passwordValidationResult = passwordValidation(password);
-    if (!passwordValidationResult.isValid) {
-      throw new ValidationException(
-        "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
-        "password",
-        undefined,
-        { metadata: { validationDetails: passwordValidationResult } },
-      );
+    const isSSO = !!sso_provider && !!sso_user_id;
+
+    if (!isSSO) {
+      const passwordValidationResult = passwordValidation(password ?? "");
+      if (!passwordValidationResult.isValid) {
+        throw new ValidationException(
+          "Password must contain at least one lowercase letter, one uppercase letter, one digit, and be at least 8 characters long",
+          "password",
+          undefined,
+          { metadata: { validationDetails: passwordValidationResult } },
+        );
+      }
     }
 
     // Validate role_id
@@ -183,20 +201,18 @@ export class UserModel extends Model<UserModel> {
       throw new ValidationException("Invalid organization_id", "organization_id", organization_id);
     }
 
-    // Hash the password
-    const password_hash = await bcrypt.hash(password, 10);
-
-    // Create and return the user model instance
     const user = new UserModel();
     user.name = name;
     user.surname = surname;
     user.email = email;
-    user.password_hash = password_hash;
+    user.password_hash = isSSO ? (null as unknown as string) : await bcrypt.hash(password!, 10);
     user.role_id = role_id;
     user.created_at = new Date();
     user.last_login = new Date();
     user.is_demo = false;
     user.organization_id = organization_id;
+    user.sso_provider = sso_provider;
+    user.sso_user_id = sso_user_id;
 
     return user;
   }

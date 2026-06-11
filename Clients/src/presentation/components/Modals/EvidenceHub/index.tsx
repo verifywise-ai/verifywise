@@ -315,7 +315,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     setActiveStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSaveEvidence = async () => {
     if (!validateCurrentStep()) return;
 
     setIsSubmitting(true);
@@ -323,7 +323,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       if (onSuccess) onSuccess(values);
       setIsOpen(false);
     } catch (error) {
-      console.error("[NewEvidenceHub.handleSubmit] error:", error);
+      console.error("[NewEvidenceHub.handleSaveEvidence] error:", error);
       setIsSubmitting(false);
       if (onError) onError(error);
     }
@@ -618,7 +618,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       activeStep={activeStep}
       onNext={handleNext}
       onBack={handleBack}
-      onSubmit={handleSubmit}
+      onSubmit={handleSaveEvidence}
       canProceed={canProceed()}
       isSubmitting={isSubmitting}
       submitButtonText={isEdit ? "Update" : "Save"}

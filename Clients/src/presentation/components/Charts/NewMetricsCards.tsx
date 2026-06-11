@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { StatusDonutChart } from "./StatusDonutChart";
+import { DashboardChartLayout, DASHBOARD_CHART_SIZE } from "./DashboardChartLayout";
 import { vwTooltipStyle, ChartOutlineWrapper } from "./VWCharts";
 import { DASHBOARD_COLORS, TEXT_STYLES } from "../../styles/colors";
 import { border as borderPalette } from "../../themes/palette";
@@ -107,16 +108,16 @@ export function PolicyStatusCard({ total, distribution }: PolicyStatusProps) {
   ].filter((item) => item.value > 0);
 
   return (
-    <Stack direction="row" alignItems="flex-start" justifyContent="space-around">
-      <Box sx={{ pt: "8px" }}>
-        <StatusDonutChart data={data} total={total} size={100} />
-      </Box>
-      <Stack gap="4px" sx={{ pt: "8px" }}>
-        {data.map((item) => (
-          <LegendItem key={item.label} {...item} />
-        ))}
-      </Stack>
-    </Stack>
+    <DashboardChartLayout
+      chart={<StatusDonutChart data={data} total={total} size={DASHBOARD_CHART_SIZE} />}
+      sideContent={
+        <Stack gap="4px">
+          {data.map((item) => (
+            <LegendItem key={item.label} {...item} />
+          ))}
+        </Stack>
+      }
+    />
   );
 }
 
@@ -205,15 +206,15 @@ export function ModelLifecycleCard({ total, distribution }: ModelLifecycleProps)
   ].filter((item) => item.value > 0);
 
   return (
-    <Stack direction="row" alignItems="flex-start" justifyContent="space-around">
-      <Box sx={{ pt: "8px" }}>
-        <StatusDonutChart data={data} total={total} size={100} />
-      </Box>
-      <Stack gap="4px" sx={{ pt: "8px" }}>
-        {data.map((item) => (
-          <LegendItem key={item.label} {...item} />
-        ))}
-      </Stack>
-    </Stack>
+    <DashboardChartLayout
+      chart={<StatusDonutChart data={data} total={total} size={DASHBOARD_CHART_SIZE} />}
+      sideContent={
+        <Stack gap="4px">
+          {data.map((item) => (
+            <LegendItem key={item.label} {...item} />
+          ))}
+        </Stack>
+      }
+    />
   );
 }

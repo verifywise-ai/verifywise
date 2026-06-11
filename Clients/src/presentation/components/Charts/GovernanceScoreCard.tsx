@@ -1,5 +1,6 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { DASHBOARD_COLORS, TEXT_STYLES } from "../../styles/colors";
+import { DashboardChartLayout, DASHBOARD_CHART_SIZE } from "./DashboardChartLayout";
 
 const C = DASHBOARD_COLORS;
 
@@ -22,7 +23,7 @@ const getScoreColor = (score: number): string => {
 };
 
 // Circular progress component for the main score (includes label)
-function ScoreGauge({ score, size = 100 }: { score: number; size?: number }) {
+function ScoreGauge({ score, size = DASHBOARD_CHART_SIZE }: { score: number; size?: number }) {
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -75,28 +76,34 @@ function ScoreGauge({ score, size = 100 }: { score: number; size?: number }) {
 
 export function GovernanceScoreCard({ score, modules }: GovernanceScoreProps) {
   return (
-    <Stack direction="row" alignItems="center" justifyContent="space-between">
-      <ScoreGauge score={score} size={100} />
-      <Stack spacing={2} sx={{ minWidth: 160 }}>
-        {modules.map((module) => {
-          const scoreColor = getScoreColor(module.score);
-          return (
-            <Typography
-              key={module.name}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                fontSize: 12,
-                color: C.textSecondary,
-              }}
-            >
-              <span>{module.name}</span>
-              <span style={{ fontWeight: 600, color: scoreColor }}>{module.score}%</span>
-            </Typography>
-          );
-        })}
-      </Stack>
-    </Stack>
+    <DashboardChartLayout
+      alignItems="center"
+      chart={<ScoreGauge score={score} />}
+      sideContent={
+        <Stack spacing={2} sx={{ width: "100%" }}>
+          {modules.map((module) => {
+            const scoreColor = getScoreColor(module.score);
+            return (
+              <Typography
+                key={module.name}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 12,
+                  color: C.textSecondary,
+                  gap: 1,
+                }}
+              >
+                <span>{module.name}</span>
+                <span style={{ fontWeight: 600, color: scoreColor, flexShrink: 0 }}>
+                  {module.score}%
+                </span>
+              </Typography>
+            );
+          })}
+        </Stack>
+      }
+    />
   );
 }

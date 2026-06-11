@@ -11,8 +11,8 @@ import {
 import { Play, Beaker, Activity, CheckCircle, Clock, Star, Coins, LucideIcon } from "lucide-react";
 import { cardStyles } from "../../themes";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import EvaluationTable from "../../components/Table/EvaluationTable";
-import type { IEvaluationRow } from "../../types/interfaces/i.table";
+import ExperimentTable from "../../components/Table/ExperimentTable";
+import type { IExperimentRow } from "../../types/interfaces/i.table";
 import {
   getProject,
   getExperiments,
@@ -312,7 +312,7 @@ export default function ProjectOverview({
     : "Run a successful experiment";
 
   // Transform experiments to table rows (top 5 recent)
-  const recentExperimentsRows: IEvaluationRow[] = [...experiments]
+  const recentExperimentsRows: IExperimentRow[] = [...experiments]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
     .map((exp) => {
@@ -393,7 +393,7 @@ export default function ProjectOverview({
     });
 
   // Handle viewing experiment details
-  const handleViewExperiment = (row: IEvaluationRow) => {
+  const handleViewExperiment = (row: IExperimentRow) => {
     if (onViewExperiment) {
       onViewExperiment(row.id);
     } else {
@@ -524,13 +524,11 @@ export default function ProjectOverview({
             />
           </Box>
         ) : (
-          <EvaluationTable
-            columns={["EXPERIMENT NAME", "MODEL", "JUDGE/SCORER", "# PROMPTS", "DATASET", "DATE"]}
+          <ExperimentTable
             rows={recentExperimentsRows}
-            page={0}
-            setCurrentPagingation={() => {}}
-            onShowDetails={handleViewExperiment}
+            onRowClick={handleViewExperiment}
             hidePagination
+            compact
           />
         )}
       </Box>
@@ -542,6 +540,9 @@ export default function ProjectOverview({
           onClose={() => setNewExperimentModalOpen(false)}
           projectId={projectId}
           orgId={orgId}
+          existingExperimentNames={experiments
+            .map((e) => e.name)
+            .filter((n): n is string => Boolean(n))}
           onSuccess={handleExperimentSuccess}
           useCase={project.useCase as "chatbot" | "rag" | "agent"}
         />

@@ -17,9 +17,8 @@ import {
   Bot,
   Database,
   Rocket,
-  Workflow,
-  Sparkles,
-  GitCompareArrows,
+  // Workflow,
+  // Sparkles,
   FileSearch,
   Activity,
 } from "lucide-react";
@@ -29,7 +28,7 @@ import { getAllTasks } from "../../../application/repository/task.repository";
 import { TaskStatus } from "../../../domain/enums/task.enum";
 import { useUserGuideSidebarContext } from "../UserGuide";
 import SidebarShell, { SidebarMenuItem, SidebarMenuGroup } from "./SidebarShell";
-import { useGovernancePreferences } from "../../../application/hooks/useGovernanceOs";
+
 import "./index.css";
 
 interface SidebarProps {
@@ -55,9 +54,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
   const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
-  const { data: governancePrefs } = useGovernancePreferences();
-  const isGovernanceEnabled = governancePrefs?.is_enabled ?? false;
-
   const { refs: _refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -116,16 +112,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       icon: <Layers size={16} strokeWidth={1.5} />,
       path: "/framework",
     },
-    ...(isGovernanceEnabled
-      ? [
-          {
-            id: "governance-os",
-            label: "Governance OS",
-            icon: <GitCompareArrows size={16} strokeWidth={1.5} />,
-            path: "/governance-os",
-          },
-        ]
-      : []),
   ];
 
   // Menu groups
@@ -221,18 +207,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       name: "AI AGENTIC",
       items: [
-        {
-          id: "workflows",
-          label: "Workflows",
-          icon: <Workflow size={16} strokeWidth={1.5} />,
-          path: "/workflows",
-        },
-        {
-          id: "skills",
-          label: "AI Skills",
-          icon: <Sparkles size={16} strokeWidth={1.5} />,
-          path: "/skills",
-        },
+        // Workflows and AI Skills are intentionally disabled (origin/develop).
+        // {
+        //   id: "workflows",
+        //   label: "Workflows",
+        //   icon: <Workflow size={16} strokeWidth={1.5} />,
+        //   path: "/workflows",
+        // },
+        // {
+        //   id: "skills",
+        //   label: "AI Skills",
+        //   icon: <Sparkles size={16} strokeWidth={1.5} />,
+        //   path: "/skills",
+        // },
         {
           id: "ai-audit",
           label: "AI audit",

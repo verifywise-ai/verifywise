@@ -48,22 +48,6 @@ export const removeStepLinkContainer = {
   justifyContent: "flex-start",
 };
 
-export const removeStepButtonStyle = (isFirstStep: boolean) => ({
-  "color": "#D92D20",
-  "backgroundColor": "transparent",
-  "border": "none",
-  "textTransform": "none" as const,
-  "fontSize": 13,
-  "fontWeight": 400,
-  "padding": "4px 8px",
-  "minWidth": "auto",
-  "&:hover": {
-    backgroundColor: "transparent",
-    textDecoration: "underline",
-  },
-  "visibility": isFirstStep ? "hidden" : "visible",
-});
-
 export const verticalStepDividerStyle = {
   borderRightWidth: "1px",
   height: "216px",

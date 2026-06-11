@@ -1,5 +1,4 @@
 import {
-  Button,
   Divider,
   Drawer,
   Stack,
@@ -15,12 +14,14 @@ import {
 import { TabContext, TabPanel } from "@mui/lab";
 import { FileData } from "../../../../domain/types/File";
 import {
-  X as CloseIcon,
+  X,
   Save as SaveIcon,
+  Upload as UploadIcon,
   Download as DownloadIcon,
   Trash2 as DeleteIcon,
   Eye as ViewIcon,
   FileText as FileIcon,
+  PaperclipIcon,
 } from "lucide-react";
 import Checkbox from "../../Inputs/Checkbox";
 import Field from "../../Inputs/Field";
@@ -662,7 +663,15 @@ const VWISO42001AnnexDrawerDialog = ({
           <Typography fontSize={15} fontWeight={700}>
             {title}
           </Typography>
-          <CloseIcon size={20} onClick={onClose} style={{ cursor: "pointer" }} />
+          <CustomizableButton
+            variant="text"
+            iconOnly
+            ariaLabel="Close"
+            size="medium"
+            onClick={onClose}
+          >
+            <X size={20} />
+          </CustomizableButton>
         </Stack>
         <Divider />
         <TabContext value={activeTab}>
@@ -874,7 +883,6 @@ const VWISO42001AnnexDrawerDialog = ({
                 Upload evidence files to document how this requirement is implemented.
               </Typography>
 
-              {/* File Input */}
               <Box>
                 <input
                   type="file"
@@ -892,49 +900,22 @@ const VWISO42001AnnexDrawerDialog = ({
                 />
 
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Button
-                    variant="contained"
-                    component="label"
-                    htmlFor="evidence-file-input"
-                    disabled={isEditingDisabled}
-                    sx={{
-                      "borderRadius": 2,
-                      "minWidth": 155,
-                      "height": 25,
-                      "fontSize": 11,
-                      "border": `1px solid ${theme.palette.border.dark}`,
-                      "backgroundColor": "background.main",
-                      "color": "text.secondary",
-                      "&:hover": {
-                        backgroundColor: "background.accent",
-                        border: `1px solid ${theme.palette.border.dark}`,
-                      },
-                    }}
-                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                  >
-                    Upload new files
-                  </Button>
-                  <Button
-                    variant="contained"
+                  <CustomizableButton
+                    variant="outlined"
+                    onClick={() => document.getElementById("evidence-file-input")?.click()}
+                    isDisabled={isEditingDisabled}
+                    text="Upload new files"
+                    size="small"
+                    icon={<UploadIcon size={14} />}
+                  />
+                  <CustomizableButton
+                    variant="outlined"
                     onClick={() => setShowFilePicker(true)}
-                    disabled={isEditingDisabled}
-                    sx={{
-                      "borderRadius": 2,
-                      "minWidth": 165,
-                      "height": 25,
-                      "fontSize": 11,
-                      "border": "1px solid #4C7BF4",
-                      "backgroundColor": "#4C7BF4",
-                      "color": "white",
-                      "&:hover": {
-                        backgroundColor: "#3D62C3",
-                        border: "1px solid #3D62C3",
-                      },
-                    }}
-                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                  >
-                    Attach existing files
-                  </Button>
+                    isDisabled={isEditingDisabled}
+                    text="Attach existing files"
+                    size="small"
+                    icon={<PaperclipIcon size={14} />}
+                  />
 
                   <Stack direction="row" spacing={2}>
                     <Typography sx={{ fontSize: 11, color: "text.secondary" }}>
@@ -1128,27 +1109,13 @@ const VWISO42001AnnexDrawerDialog = ({
 
               {/* Add/Remove Button */}
               <Stack direction="row" spacing={2} alignItems="center">
-                <Button
-                  variant="contained"
+                <CustomizableButton
+                  variant="outlined"
                   onClick={() => setIsLinkedRisksModalOpen(true)}
-                  disabled={isEditingDisabled}
-                  sx={{
-                    "borderRadius": 2,
-                    "minWidth": 155,
-                    "height": 25,
-                    "fontSize": 11,
-                    "border": `1px solid ${theme.palette.border.dark}`,
-                    "backgroundColor": "background.main",
-                    "color": "text.secondary",
-                    "&:hover": {
-                      backgroundColor: "background.accent",
-                      border: `1px solid ${theme.palette.border.dark}`,
-                    },
-                  }}
-                  disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                >
-                  Add/remove risks
-                </Button>
+                  isDisabled={isEditingDisabled}
+                  text="Add/remove risks"
+                  size="small"
+                />
 
                 <Stack direction="row" spacing={2}>
                   <Typography sx={{ fontSize: 11, color: "text.secondary" }}>

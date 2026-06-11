@@ -63,6 +63,10 @@ module.exports = {
         `CREATE INDEX idx_gcm_mapping_strength ON verifywise.governance_control_mappings(mapping_strength);`,
         { transaction },
       );
+      await queryInterface.sequelize.query(
+        `CREATE INDEX idx_gcm_target_control ON verifywise.governance_control_mappings(target_control_type, target_control_id);`,
+        { transaction },
+      );
 
       // ========================================
       // GOVERNANCE SCENARIOS
@@ -94,6 +98,10 @@ module.exports = {
       );
       await queryInterface.sequelize.query(
         `CREATE INDEX idx_gs_builtin ON verifywise.governance_scenarios(is_builtin);`,
+        { transaction },
+      );
+      await queryInterface.sequelize.query(
+        `CREATE INDEX idx_gs_industry_region_use_case ON verifywise.governance_scenarios(industry, region, use_case_type);`,
         { transaction },
       );
 
@@ -174,6 +182,11 @@ module.exports = {
   async down(queryInterface) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
+      // Drop activations first due to FK dependency on governance_scenarios
+      await queryInterface.sequelize.query(
+        `DROP TABLE IF EXISTS verifywise.governance_scenario_activations;`,
+        { transaction },
+      );
       await queryInterface.sequelize.query(
         `DROP TABLE IF EXISTS verifywise.governance_coverage_cache;`,
         { transaction },

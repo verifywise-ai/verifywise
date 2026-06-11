@@ -37,14 +37,18 @@ export interface DatasetsTableProps {
   hidePagination?: boolean;
 }
 
+// NAME body cell is left-aligned (default); every other body cell uses
+// textAlign: "center". StandardTableHead defaults to left when `align` is
+// omitted, so any column whose body is centered must declare align: "center"
+// here or the header will visually drift off its column.
 const columns: StandardColumn[] = [
   { id: "name", label: "NAME", sortable: true },
-  { id: "type", label: "TYPE", sortable: true },
-  { id: "useCase", label: "USE CASE", sortable: true },
-  { id: "promptCount", label: "# PROMPTS", sortable: true },
-  { id: "difficulty", label: "DIFFICULTY", sortable: true },
-  { id: "createdAt", label: "DATE", sortable: true },
-  { id: "actions", label: "ACTION", sortable: false },
+  { id: "type", label: "TYPE", sortable: true, align: "center" },
+  { id: "useCase", label: "USE CASE", sortable: true, align: "center" },
+  { id: "promptCount", label: "# PROMPTS", sortable: true, align: "center" },
+  { id: "difficulty", label: "DIFFICULTY", sortable: true, align: "center" },
+  { id: "createdAt", label: "DATE", sortable: true, align: "center" },
+  { id: "actions", label: "ACTION", sortable: false, align: "center" },
 ];
 
 const DatasetsTable: React.FC<DatasetsTableProps> = ({

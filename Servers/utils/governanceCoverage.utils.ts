@@ -24,13 +24,14 @@ export const computeProjectCoverage = async (
   organizationId: number,
   projectId: number,
 ): Promise<FrameworkCoverage[]> => {
-  // Get frameworks assigned to this project
+  // Get frameworks assigned to this project (validate org ownership)
   const [projectFrameworks] = await sequelize.query(
     `SELECT DISTINCT f.id as framework_id, f.name as framework_name
      FROM frameworks f
      JOIN projects_frameworks pf ON pf.framework_id = f.id
-     WHERE pf.project_id = :projectId`,
-    { replacements: { projectId } },
+     JOIN projects p ON p.id = pf.project_id
+     WHERE pf.project_id = :projectId AND p.organization_id = :organizationId`,
+    { replacements: { projectId, organizationId } },
   );
 
   if (!projectFrameworks || (projectFrameworks as any[]).length === 0) {

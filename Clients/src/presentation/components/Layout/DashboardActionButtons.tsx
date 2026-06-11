@@ -150,6 +150,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         <IconButton
           size="small"
           onClick={handleOpenCommandPalette}
+          aria-label="Open Wise Search"
           sx={{ ...baseStyles, ...actionButtonsStyles.search }}
         >
           <Search size={16} />
@@ -183,6 +184,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
             <IconButton
               size="small"
               onClick={() => navigate("/approval-workflows")}
+              aria-label="Approval workflows"
               sx={{ ...baseStyles, ...actionButtonsStyles.approval_workflows }}
             >
               <WorkflowIcon size={16} strokeWidth={2} />
@@ -203,6 +205,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
             <IconButton
               size="small"
               onClick={() => navigate("/intake-forms")}
+              aria-label="Intake forms"
               sx={{ ...baseStyles, ...actionButtonsStyles.approval_workflows }}
             >
               <ClipboardList size={16} strokeWidth={2} />
@@ -225,6 +228,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
             size="small"
             onClick={isAdmin ? () => navigate("/plugins/marketplace") : undefined}
             disabled={!isAdmin}
+            aria-label="Plugins marketplace"
             sx={{ ...baseStyles, ...actionButtonsStyles.integrations }}
           >
             <Package size={16} />
@@ -242,6 +246,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         <IconButton
           size="small"
           onClick={() => navigate("/automations")}
+          aria-label="Automations"
           sx={{ ...baseStyles, ...actionButtonsStyles.automations }}
         >
           <Zap size={16} />

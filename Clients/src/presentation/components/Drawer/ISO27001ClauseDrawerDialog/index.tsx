@@ -1,5 +1,4 @@
 import {
-  Button,
   Divider,
   Drawer,
   Stack,
@@ -14,8 +13,9 @@ import {
 } from "@mui/material";
 import { TabContext, TabPanel } from "@mui/lab";
 import {
-  X as CloseIcon,
+  X,
   Save as SaveIcon,
+  Upload as UploadIcon,
   Trash2 as DeleteIcon,
   Download as DownloadIcon,
   FileText as FileIcon,
@@ -824,7 +824,15 @@ const VWISO27001ClauseDrawerDialog = ({
             <Typography fontSize={15} fontWeight={700}>
               {clause?.order_no + "." + (index + 1)} {displayData?.title}
             </Typography>
-            <CloseIcon size={20} onClick={onClose} style={{ cursor: "pointer" }} />
+            <CustomizableButton
+              variant="text"
+              iconOnly
+              ariaLabel="Close"
+              size="medium"
+              onClick={onClose}
+            >
+              <X size={20} />
+            </CustomizableButton>
           </Stack>
           <Divider />
           <TabContext value={activeTab}>
@@ -1026,7 +1034,6 @@ const VWISO27001ClauseDrawerDialog = ({
                   Upload evidence files to document compliance with this requirement.
                 </Typography>
 
-                {/* File Input */}
                 <Box>
                   <input
                     type="file"
@@ -1044,48 +1051,20 @@ const VWISO27001ClauseDrawerDialog = ({
                   />
                   <Stack spacing={2}>
                     <Stack direction="row" spacing={1}>
-                      <Button
-                        variant="contained"
+                      <CustomizableButton
+                        variant="outlined"
                         onClick={() => document.getElementById("evidence-file-input")?.click()}
-                        disabled={isEditingDisabled}
-                        sx={{
-                          "borderRadius": 2,
-                          "minWidth": 155,
-                          "height": 25,
-                          "fontSize": 11,
-                          "border": "1px solid #d0d5dd",
-                          "backgroundColor": "white",
-                          "color": "text.secondary",
-                          "&:hover": {
-                            backgroundColor: "background.accent",
-                            border: "1px solid #d0d5dd",
-                          },
-                        }}
-                        disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                      >
-                        Upload new files
-                      </Button>
-                      <Button
+                        isDisabled={isEditingDisabled}
+                        text="Upload new files"
+                        size="small"
+                        icon={<UploadIcon size={14} />}
+                      />
+                      <CustomizableButton
                         variant="contained"
                         onClick={() => setShowFilePicker(true)}
-                        disabled={isEditingDisabled}
-                        sx={{
-                          "borderRadius": 2,
-                          "minWidth": 165,
-                          "height": 25,
-                          "fontSize": 11,
-                          "border": "1px solid #4C7BF4",
-                          "backgroundColor": "#4C7BF4",
-                          "color": "white",
-                          "&:hover": {
-                            backgroundColor: "#3D62C3",
-                            border: "1px solid #3D62C3",
-                          },
-                        }}
-                        disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                      >
-                        Attach existing files
-                      </Button>
+                        isDisabled={isEditingDisabled}
+                        text="Attach existing files"
+                      />
                     </Stack>
 
                     <Stack direction="row" spacing={2}>
@@ -1370,27 +1349,13 @@ const VWISO27001ClauseDrawerDialog = ({
 
                 {/* Add/Remove Button */}
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Button
-                    variant="contained"
+                  <CustomizableButton
+                    variant="outlined"
                     onClick={() => setIsLinkedRisksModalOpen(true)}
-                    disabled={isEditingDisabled}
-                    sx={{
-                      "borderRadius": 2,
-                      "minWidth": 155,
-                      "height": 25,
-                      "fontSize": 11,
-                      "border": `1px solid ${theme.palette.border.dark}`,
-                      "backgroundColor": "background.main",
-                      "color": "text.secondary",
-                      "&:hover": {
-                        backgroundColor: "background.accent",
-                        border: `1px solid ${theme.palette.border.dark}`,
-                      },
-                    }}
-                    disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
-                  >
-                    Add/remove risks
-                  </Button>
+                    isDisabled={isEditingDisabled}
+                    text="Add/remove risks"
+                    size="small"
+                  />
 
                   <Stack direction="row" spacing={2}>
                     <Typography sx={{ fontSize: 11, color: "text.secondary" }}>

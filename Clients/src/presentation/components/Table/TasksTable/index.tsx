@@ -36,6 +36,8 @@ import { useBulkUpdateTasks } from "../../../../application/hooks/useBulkUpdateT
 import StandardTableHead from "../StandardTableHead";
 import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
+import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 // Status display mapping
 const STATUS_DISPLAY_MAP: Record<string, string> = {
@@ -146,14 +148,23 @@ const TasksTable: React.FC<ITasksTableProps> = ({
     [visibleColumns],
   );
 
-  // Filtered column list for the header
-  const visibleTableColumns = useMemo(
-    () =>
-      titleOfTableColumns.filter(
-        (col) => col.id === "title" || col.id === "actions" || isVisible(col.id),
-      ),
-    [isVisible],
-  );
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("task");
+
+  // Filtered column list for the header — built-ins + custom-field columns
+  // injected before the actions cell.
+  const visibleTableColumns = useMemo(() => {
+    const builtIns = titleOfTableColumns.filter(
+      (col) => col.id === "title" || col.id === "actions" || isVisible(col.id),
+    );
+    const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      sortable: false,
+    }));
+    const actionsIdx = builtIns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...builtIns, ...customCols];
+    return [...builtIns.slice(0, actionsIdx), ...customCols, ...builtIns.slice(actionsIdx)];
+  }, [isVisible, customFieldDefs]);
 
   // Slice that's actually rendered — used for both the body and bulk-selection scope.
   const pageRows = useMemo(() => {
@@ -499,6 +510,17 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                   )}
                 </TableCell>
               )}
+
+              {customFieldDefs.map((def) => {
+                const match = (task as any).custom_fields?.find(
+                  (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                );
+                return (
+                  <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
+                    {formatCustomFieldValue(def, match?.value, users)}
+                  </TableCell>
+                );
+              })}
 
               {/* Actions */}
               <TableCell

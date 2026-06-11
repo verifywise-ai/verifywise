@@ -26,6 +26,8 @@ import { useStandardTable } from "../../../../application/hooks/useStandardTable
 import StandardTableHead from "../StandardTableHead";
 import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
+import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 const titleOfTableColumns: StandardColumn[] = [
   { id: "risk_description", label: "risk description", sortable: true },
@@ -114,13 +116,21 @@ const RiskTable: React.FC<IRiskTableProps> = ({
     [visibleColumns],
   );
 
-  const visibleTableColumns = useMemo(
-    () =>
-      titleOfTableColumns.filter(
-        (col) => col.id === "risk_description" || col.id === "actions" || isVisible(col.id),
-      ),
-    [isVisible],
-  );
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("vendor_risk");
+
+  const visibleTableColumns = useMemo(() => {
+    const builtIns = titleOfTableColumns.filter(
+      (col) => col.id === "risk_description" || col.id === "actions" || isVisible(col.id),
+    );
+    const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      sortable: false,
+    }));
+    const actionsIdx = builtIns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...builtIns, ...customCols];
+    return [...builtIns.slice(0, actionsIdx), ...customCols, ...builtIns.slice(actionsIdx)];
+  }, [isVisible, customFieldDefs]);
 
   const getCellStyle = (row: VendorRisk) => ({
     ...cellStyle,
@@ -379,6 +389,16 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                     </VWLink>
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = (row as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={getCellStyle(row)}>
+                      {formatCustomFieldValue(def, match?.value, users)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,

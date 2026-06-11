@@ -20,6 +20,9 @@ const SetNewPassword = lazyRoute(
 const ResetPasswordContinue = lazyRoute(
   () => import("../../presentation/pages/Authentication/ResetPasswordContinue"),
 );
+const MicrosoftCallback = lazyRoute(
+  () => import("../../presentation/pages/Authentication/MicrosoftCallback"),
+);
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
 );
@@ -134,6 +137,28 @@ const MCPGuardrailsPage = lazyRoute(
 
 // ── Governance OS routes ─────────────────────────────────────────────
 const GovernanceOS = lazyRoute(() => import("../../presentation/pages/GovernanceOS"));
+
+// ── Governance Intelligence module routes ─────────────────────────────
+const GovernanceHub = lazyRoute(() => import("../../presentation/pages/GovernanceOS/Hub"));
+const FrameworkMapperModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/FrameworkMapperModule"),
+);
+const ScenarioBuilderModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/ScenarioBuilderModule"),
+);
+const UnifiedInsightsModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/UnifiedInsightsModule"),
+);
+const GovernanceSettings = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/Settings"),
+);
+const EvidenceHub = lazyRoute(() => import("../../presentation/pages/GovernanceOS/EvidenceHub"));
+const KnowledgeGraph = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/KnowledgeGraph"),
+);
+const RegulatoryRadar = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/RegulatoryRadar"),
+);
 
 // ── Remaining routes ──────────────────────────────────────────────────
 const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
@@ -350,6 +375,71 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    <Route
+      path="/governance"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GovernanceHub />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/framework-mapper"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <FrameworkMapperModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/scenarios"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ScenarioBuilderModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/insights"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <UnifiedInsightsModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GovernanceSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/evidence"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <EvidenceHub />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/knowledge-graph"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <KnowledgeGraph />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/regulatory-radar"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulatoryRadar />
+        </Suspense>
+      }
+    />
+    <Route path="/governance-os/*" element={<Navigate to="/governance" replace />} />
     <Route
       path="/project-view"
       element={
@@ -966,6 +1056,15 @@ export const createRoutes = (
     element={
       <Suspense fallback={<LazyFallback />}>
         <ProtectedRoute Component={Login} />
+      </Suspense>
+    }
+  />,
+  <Route
+    key="microsoft-callback"
+    path="/auth/microsoft/callback"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <MicrosoftCallback />
       </Suspense>
     }
   />,
