@@ -146,7 +146,8 @@ export async function getUsersByDepartmentQuery(
      WHERE organization_id = :organizationId
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
-     ORDER BY user_count DESC`,
+     ORDER BY user_count DESC, department ASC
+     LIMIT 100`,
     { replacements: { organizationId, periodDays } },
   );
 
@@ -196,7 +197,8 @@ export async function getTrendQuery(
        ON pe.detected_tool_id = ntd.id
        AND ntd.detected_date = DATE(pe.event_timestamp)
      GROUP BY TO_CHAR(pe.event_timestamp, :dateFormat)
-     ORDER BY date ASC`,
+     ORDER BY date ASC
+     LIMIT 400`,
     { replacements: { organizationId, periodDays, dateFormat } },
   );
 
@@ -304,7 +306,8 @@ export async function getDepartmentActivityQuery(
      WHERE e.organization_id = :organizationId
        AND e.event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY COALESCE(e.department, 'Unknown'), t2.name
-     ORDER BY total_prompts DESC`,
+     ORDER BY total_prompts DESC, department ASC
+     LIMIT 100`,
     { replacements: { organizationId } },
   );
 
@@ -342,7 +345,8 @@ export async function getUserDetailQuery(
        AND e.user_email = :userEmail
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY t.name
-     ORDER BY event_count DESC`,
+     ORDER BY event_count DESC, tool_name ASC
+     LIMIT 200`,
     { replacements: { organizationId, userEmail, periodDays } },
   );
 

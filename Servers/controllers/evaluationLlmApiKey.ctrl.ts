@@ -19,7 +19,7 @@ import {
   deleteKeyQuery,
 } from "../utils/evaluationLlmApiKey.utils";
 import { sequelize } from "../database/db";
-import { logSuccess } from "../utils/logger/logHelper";
+import { logFailure, logSuccess } from "../utils/logger/logHelper";
 
 /**
  * Get all LLM API keys for the authenticated user's organization
@@ -35,7 +35,15 @@ export const getAllKeys = async (req: Request, res: Response) => {
       data: keys,
     });
   } catch (error: any) {
-    console.error("Error fetching LLM API keys:", error);
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to fetch LLM API keys",
+      functionName: "getAllKeys",
+      fileName: "evaluationLlmApiKey.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
 
     return res.status(500).json({
       success: false,
@@ -90,7 +98,15 @@ export const addKey = async (req: Request, res: Response) => {
       data: keyData,
     });
   } catch (error: any) {
-    console.error("Error adding/updating LLM API key:", error);
+    await logFailure({
+      eventType: "Create",
+      description: "Failed to add/update LLM API key",
+      functionName: "addKey",
+      fileName: "evaluationLlmApiKey.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     await transaction.rollback();
     if (error instanceof ValidationException) {
       return res.status(400).json({
@@ -127,7 +143,15 @@ export const getDecryptedKeys = async (req: Request, res: Response) => {
       data: decryptedKeys,
     });
   } catch (error: any) {
-    console.error("Error fetching decrypted LLM API keys:", error);
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to fetch decrypted LLM API keys",
+      functionName: "getDecryptedKeys",
+      fileName: "evaluationLlmApiKey.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
 
     return res.status(500).json({
       success: false,
@@ -258,7 +282,15 @@ export const verifyKey = async (req: Request, res: Response) => {
         });
       } else {
         // Other errors - give benefit of doubt
-        console.warn("API key verification got status", response.status, "for provider:", provider);
+        await logFailure({
+          eventType: "Read",
+          description: `API key verification returned unexpected status ${response.status} for provider ${provider}`,
+          functionName: "verifyKey",
+          fileName: "evaluationLlmApiKey.ctrl.ts",
+          error: new Error(`Unexpected verification status: ${response.status}`),
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
         return res.status(200).json({
           success: true,
           valid: true,
@@ -266,7 +298,15 @@ export const verifyKey = async (req: Request, res: Response) => {
         });
       }
     } catch (fetchError: any) {
-      console.error("Error verifying API key for provider:", provider, "-", fetchError.message);
+      await logFailure({
+        eventType: "Read",
+        description: `Network error verifying API key for provider ${provider}`,
+        functionName: "verifyKey",
+        fileName: "evaluationLlmApiKey.ctrl.ts",
+        error: fetchError as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
       // Network errors - give benefit of doubt
       return res.status(200).json({
         success: true,
@@ -275,7 +315,15 @@ export const verifyKey = async (req: Request, res: Response) => {
       });
     }
   } catch (error: any) {
-    console.error("Error in verifyKey controller:", error);
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to verify LLM API key",
+      functionName: "verifyKey",
+      fileName: "evaluationLlmApiKey.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json({
       success: false,
       valid: false,
@@ -322,7 +370,15 @@ export const deleteKey = async (req: Request, res: Response) => {
       message: "API key deleted successfully",
     });
   } catch (error: any) {
-    console.error("Error deleting LLM API key:", error);
+    await logFailure({
+      eventType: "Delete",
+      description: "Failed to delete LLM API key",
+      functionName: "deleteKey",
+      fileName: "evaluationLlmApiKey.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
 
     if (error instanceof ValidationException) {
       return res.status(400).json({

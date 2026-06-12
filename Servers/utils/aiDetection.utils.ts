@@ -1100,13 +1100,18 @@ export async function getScansWithCacheQuery(
   // Validate olderThanDays to prevent SQL injection
   const sanitizedDays = Math.max(1, Math.min(365, Math.floor(Number(olderThanDays) || 7)));
 
+  // Safety cap to prevent unbounded result sets if many scans need cleanup.
+  // Oldest first so cleanup makes progress on the longest-stuck cache dirs.
+  const SCAN_CACHE_BATCH = 1000;
   const query = `
     SELECT id, cache_path
     FROM ai_detection_scans
     WHERE organization_id = :organizationId
       AND cache_path IS NOT NULL
       AND created_at < NOW() - INTERVAL '1 day' * :olderThanDays
-      AND status IN ('completed', 'failed', 'cancelled');
+      AND status IN ('completed', 'failed', 'cancelled')
+    ORDER BY created_at ASC, id ASC
+    LIMIT ${SCAN_CACHE_BATCH};
   `;
 
   const results = await sequelize.query(query, {
@@ -1323,7 +1328,8 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
     LIMIT 5;
   `;
 
-  // Recent activity (last 7 days)
+  // Recent activity (last 7 days). WHERE clause bounds it to ~8 rows;
+  // explicit LIMIT guards against future query changes that drop the date filter.
   const activityQuery = `
     SELECT
       DATE(s.created_at) as date,
@@ -1334,7 +1340,8 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
       AND s.created_at >= CURRENT_DATE - INTERVAL '7 days'
       AND s.status = 'completed'
     GROUP BY DATE(s.created_at)
-    ORDER BY date DESC;
+    ORDER BY date DESC
+    LIMIT 14;
   `;
 
   const replacements = { organizationId };
@@ -1491,10 +1498,16 @@ export async function getBaselineFindingsQuery(
 ): Promise<IFinding[]> {
   validateOrganizationId(organizationId);
 
+  // Carry-forward classification needs ALL findings from the baseline scan.
+  // Cap is a defensive ceiling; in practice scans are bounded by MAX_FINDINGS_PER_SCAN
+  // upstream. ORDER BY id ASC keeps results deterministic across invocations.
+  const BASELINE_FINDINGS_CAP = 10000;
   return sequelize.query<IFinding>(
     `SELECT * FROM ai_detection_findings
      WHERE scan_id = :baselineScanId
-       AND organization_id = :organizationId`,
+       AND organization_id = :organizationId
+     ORDER BY id ASC
+     LIMIT ${BASELINE_FINDINGS_CAP}`,
     {
       replacements: { baselineScanId, organizationId },
       type: QueryTypes.SELECT,

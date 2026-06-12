@@ -20,6 +20,14 @@ import sanitizeFilename from "sanitize-filename";
 // Re-export FileSource for backward compatibility
 export { FileSource };
 
+// Safety caps to prevent unbounded result sets. Callers that pass their own
+// `limit` still pay it (clamped to MAX_LIST_LIMIT in paginated paths);
+// callers that omit it get DEFAULT_LIST_LIMIT instead of an unbounded scan.
+const DEFAULT_LIST_LIMIT = 500;
+const MAX_LIST_LIMIT = 1000;
+const clampLimit = (value: number | undefined): number =>
+  Math.max(1, Math.min(MAX_LIST_LIMIT, Math.floor(value ?? DEFAULT_LIST_LIMIT)));
+
 export interface UploadedFile {
   originalname: string;
   buffer: Buffer;
@@ -274,10 +282,11 @@ export async function getProjectFileMetadata(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND project_id = :project_id
-    ORDER BY uploaded_time DESC, id ASC`;
+    ORDER BY uploaded_time DESC, id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, project_id: projectId },
+    replacements: { organizationId, project_id: projectId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -516,13 +525,13 @@ export async function getOrganizationFiles(
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id ASC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, limit, offset },
+    replacements: { organizationId, limit: clampLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -609,13 +618,13 @@ export async function getFileAccessLogs(
     FROM file_access_logs fal
     JOIN users u ON fal.accessed_by = u.id
     WHERE fal.organization_id = :organizationId AND fal.file_id = :fileId
-    ORDER BY fal.access_date DESC`;
+    ORDER BY fal.access_date DESC, fal.id ASC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const logs = await sequelize.query(query, {
-    replacements: { organizationId, fileId, limit, offset },
+    replacements: { organizationId, fileId, limit: clampLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -683,18 +692,16 @@ export async function searchFilesByContent(
       AND (f.source IS NULL OR f.source != 'policy_editor')
       AND f.content_search IS NOT NULL
       AND f.content_search @@ plainto_tsquery('english', :q)
-    ORDER BY ts_rank(f.content_search, plainto_tsquery('english', :q)) DESC, f.uploaded_time DESC
+    ORDER BY ts_rank(f.content_search, plainto_tsquery('english', :q)) DESC, f.uploaded_time DESC, f.id ASC
+    LIMIT :limit
   `;
 
-  if (limit !== undefined) {
-    query += ` LIMIT :limit`;
-  }
   if (offset !== undefined) {
     query += ` OFFSET :offset`;
   }
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, q: queryText, limit, offset },
+    replacements: { organizationId, q: queryText, limit: clampLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -730,10 +737,11 @@ export async function getFilesByModelId(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND f.model_id = :modelId
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id ASC
+    LIMIT :limit`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, modelId },
+    replacements: { organizationId, modelId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -912,13 +920,13 @@ export async function getOrganizationFilesWithMetadata(
     LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id ASC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, limit, offset },
+    replacements: { organizationId, limit: clampLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -971,10 +979,11 @@ export async function getHighlightedFiles(
       AND project_id IS NULL
       AND expiry_date IS NOT NULL
       AND expiry_date <= CURRENT_DATE + (:daysUntilExpiry || ' days')::INTERVAL
-    ORDER BY expiry_date ASC`;
+    ORDER BY expiry_date ASC, id ASC
+    LIMIT :limit`;
 
   const dueResult = await sequelize.query(dueQuery, {
-    replacements: { organizationId, daysUntilExpiry: safeDaysUntilExpiry },
+    replacements: { organizationId, daysUntilExpiry: safeDaysUntilExpiry, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -984,10 +993,11 @@ export async function getHighlightedFiles(
     WHERE organization_id = :organizationId
       AND project_id IS NULL
       AND review_status = 'pending_review'
-    ORDER BY uploaded_time DESC`;
+    ORDER BY uploaded_time DESC, id ASC
+    LIMIT :limit`;
 
   const pendingResult = await sequelize.query(pendingQuery, {
-    replacements: { organizationId },
+    replacements: { organizationId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -997,10 +1007,11 @@ export async function getHighlightedFiles(
     WHERE organization_id = :organizationId
       AND project_id IS NULL
       AND updated_at >= CURRENT_DATE - (:recentDays || ' days')::INTERVAL
-    ORDER BY updated_at DESC`;
+    ORDER BY updated_at DESC, id ASC
+    LIMIT :limit`;
 
   const recentResult = await sequelize.query(recentQuery, {
-    replacements: { organizationId, recentDays: safeRecentDays },
+    replacements: { organizationId, recentDays: safeRecentDays, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -1129,10 +1140,11 @@ export async function getFileVersionHistory(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND f.file_group_id = :fileGroupId
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileGroupId },
+    replacements: { organizationId, fileGroupId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -1213,10 +1225,11 @@ export async function getFilesPendingApproval(
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND f.approval_workflow_id = :workflowId
       AND f.review_status = 'pending_review'
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, workflowId },
+    replacements: { organizationId, workflowId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -1346,10 +1359,11 @@ export async function getFileEntityLinks(
     SELECT id, file_id, framework_type, entity_type, entity_id, project_id, link_type, created_by, created_at
     FROM file_entity_links
     WHERE organization_id = :organizationId AND file_id = :fileId
-    ORDER BY created_at DESC`;
+    ORDER BY created_at DESC, id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId },
+    replacements: { organizationId, fileId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -1380,10 +1394,11 @@ export async function getFilesForEntity(
       AND framework_type = :frameworkType
       AND entity_type = :entityType
       AND entity_id = :entityId
-    ORDER BY created_at DESC`;
+    ORDER BY created_at DESC, id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, frameworkType, entityType, entityId },
+    replacements: { organizationId, frameworkType, entityType, entityId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 
@@ -1431,10 +1446,11 @@ export async function getFilesWithMetadataForEntity(
       AND fel.framework_type = :frameworkType
       AND fel.entity_type = :entityType
       AND fel.entity_id = :entityId
-    ORDER BY fel.created_at DESC`;
+    ORDER BY fel.created_at DESC, fel.id ASC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, frameworkType, entityType, entityId },
+    replacements: { organizationId, frameworkType, entityType, entityId, limit: MAX_LIST_LIMIT },
     type: QueryTypes.SELECT,
   });
 

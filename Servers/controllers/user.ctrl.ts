@@ -742,7 +742,6 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       id: decoded.id,
       email: decoded.email,
       roleName: decoded.roleName,
-      tenantId: decoded.tenantId,
       organizationId: decoded.organizationId,
     });
 

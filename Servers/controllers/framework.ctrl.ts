@@ -244,10 +244,6 @@ export async function deleteFrameworkFromProject(req: Request, res: Response): P
     logger.debug(`🔗 Removing framework ${frameworkId} from project ${projectId}`);
 
     // Check if project has a pending approval request
-    console.log("=== deleteFrameworkFromProject - Checking pending approval ===");
-    console.log("projectId:", projectId);
-    console.log("organizationId:", req.organizationId);
-
     const hasPendingApproval = await hasPendingApprovalQuery(
       projectId,
       "use_case",

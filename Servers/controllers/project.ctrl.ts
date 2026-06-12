@@ -114,11 +114,25 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
         sequelize,
       );
       if (pluginUseCases.length > 0) {
-        console.log(`[getAllProjects] Merging ${pluginUseCases.length} use-cases from plugins`);
+        logProcessing({
+          description: `Merging ${pluginUseCases.length} use-cases from plugins`,
+          functionName: "getAllProjects",
+          fileName: "project.ctrl.ts",
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
         allProjects = [...projects, ...pluginUseCases];
       }
     } catch (pluginError) {
-      console.error("[getAllProjects] Error fetching plugin use-cases:", pluginError);
+      await logFailure({
+        eventType: "Read",
+        description: "Failed to fetch plugin use-cases",
+        functionName: "getAllProjects",
+        fileName: "project.ctrl.ts",
+        error: pluginError as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
       // Continue with native projects even if plugin fetch fails
     }
 
@@ -292,9 +306,13 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
     } else {
       // Approval workflow assigned - defer framework creation until approval
-      console.log("Approval workflow detected - deferring framework creation until approval");
-      console.log("Pending frameworks:", newProject.framework);
-      console.log("enable_ai_data_insertion:", newProject.enable_ai_data_insertion);
+      logProcessing({
+        description: `Approval workflow detected — deferring framework creation (frameworks=${JSON.stringify(newProject.framework)}, enable_ai_data_insertion=${newProject.enable_ai_data_insertion})`,
+        functionName: "createProject",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
     }
 
     if (createdProject) {
@@ -321,32 +339,15 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Create approval request if approval_workflow_id is provided
-      console.log("=== CHECKING APPROVAL WORKFLOW ===");
-      console.log("createdProject.approval_workflow_id:", createdProject.approval_workflow_id);
-      console.log("createdProject.id:", createdProject.id);
-      console.log("req.userId:", req.userId);
-
       if (createdProject.approval_workflow_id && createdProject.id && req.userId) {
-        console.log("All conditions met, fetching workflow...");
-        console.log("Fetching workflow ID:", createdProject.approval_workflow_id);
-
         const workflow = await getApprovalWorkflowByIdQuery(
           createdProject.approval_workflow_id,
           req.organizationId!,
           transaction,
         );
 
-        console.log("Workflow fetched:", workflow ? "YES" : "NO");
-        if (workflow) {
-          const workflowSteps = workflow.get("steps") as any;
-          console.log("Workflow ID:", (workflow as any).id);
-          console.log("Workflow steps:", workflowSteps);
-          console.log("Number of steps:", workflowSteps?.length);
-        }
-
         const workflowSteps = workflow ? (workflow.get("steps") as any) : null;
         if (workflow && workflowSteps && workflowSteps.length > 0) {
-          console.log("Creating approval request...");
           const approvalRequestData = {
             request_name: `Use Case: ${createdProject.project_title}`,
             workflow_id: createdProject.approval_workflow_id,
@@ -360,7 +361,6 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             status: ApprovalRequestStatus.PENDING,
             requested_by: req.userId,
           };
-          console.log("Approval request data:", JSON.stringify(approvalRequestData, null, 2));
 
           const createdApprovalRequest = await createApprovalRequestQuery(
             approvalRequestData,
@@ -368,29 +368,29 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             req.organizationId!,
             transaction,
           );
-          console.log("Approval request created successfully!");
+
+          await logSuccess({
+            eventType: "Create",
+            description: `Created approval request ${createdApprovalRequest.id} for project ${createdProject.id} (workflow ${createdProject.approval_workflow_id})`,
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
 
           // Store approval request info for notification after transaction commits
           (createdProject as any)._approvalRequestId = createdApprovalRequest.id;
           (createdProject as any)._approvalRequestName = approvalRequestData.request_name;
         } else {
-          console.log("ERROR: Workflow not found or has no steps!");
-          if (!workflow) {
-            console.log("Workflow is null/undefined");
-          } else if (!workflowSteps || workflowSteps.length === 0) {
-            console.log("Workflow has no steps or empty steps array");
-          }
-        }
-      } else {
-        console.log("Conditions NOT met for creating approval request:");
-        if (!createdProject.approval_workflow_id) {
-          console.log("  - approval_workflow_id is missing");
-        }
-        if (!createdProject.id) {
-          console.log("  - createdProject.id is missing");
-        }
-        if (!req.userId) {
-          console.log("  - req.userId is missing");
+          await logFailure({
+            eventType: "Create",
+            description: `Cannot create approval request: workflow ${createdProject.approval_workflow_id} not found or has no steps`,
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            error: new Error("Approval workflow missing or has no steps"),
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
         }
       }
 
@@ -820,15 +820,26 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
     );
 
     if (pendingApprovalRequestId) {
-      console.log(
-        `Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
-      );
+      logProcessing({
+        description: `Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
+        functionName: "deleteProjectById",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
       await withdrawApprovalRequestQuery(
         pendingApprovalRequestId,
         req.organizationId!,
         transaction,
       );
-      console.log(`Approval request ${pendingApprovalRequestId} withdrawn successfully`);
+      await logSuccess({
+        eventType: "Update",
+        description: `Withdrew approval request ${pendingApprovalRequestId} for project ${projectId}`,
+        functionName: "deleteProjectById",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
     }
 
     // Record deletion in change history BEFORE deleting the project

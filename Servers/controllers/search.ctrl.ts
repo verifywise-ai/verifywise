@@ -34,13 +34,13 @@ export async function search(req: Request, res: Response): Promise<any> {
     functionName: "search",
     fileName: "search.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
-    const { userId, tenantId, organizationId } = req;
+    const { userId, organizationId } = req;
 
-    if (!userId || !tenantId || !organizationId) {
+    if (!userId || !organizationId) {
       return res.status(401).json({ message: req.t!("Unauthorized") });
     }
 
@@ -80,7 +80,7 @@ export async function search(req: Request, res: Response): Promise<any> {
       functionName: "search",
       fileName: "search.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -98,7 +98,7 @@ export async function search(req: Request, res: Response): Promise<any> {
       fileName: "search.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

@@ -316,7 +316,10 @@ async function getUserProjectIds(organizationId: number, userId: number): Promis
   try {
     validateOrganizationId(organizationId);
     const result = await sequelize.query<{ project_id: number }>(
-      `SELECT project_id FROM projects_members WHERE user_id = :userId AND organization_id = :organizationId`,
+      `SELECT project_id FROM projects_members
+       WHERE user_id = :userId AND organization_id = :organizationId
+       ORDER BY project_id ASC
+       LIMIT 1000`,
       {
         replacements: { userId, organizationId },
         type: QueryTypes.SELECT,
@@ -338,7 +341,10 @@ async function getUserVendorIds(organizationId: number, projectIds: number[]): P
   try {
     validateOrganizationId(organizationId);
     const result = await sequelize.query<{ vendor_id: number }>(
-      `SELECT DISTINCT vendor_id FROM vendors_projects WHERE project_id IN (:projectIds) AND organization_id = :organizationId`,
+      `SELECT DISTINCT vendor_id FROM vendors_projects
+       WHERE project_id IN (:projectIds) AND organization_id = :organizationId
+       ORDER BY vendor_id ASC
+       LIMIT 5000`,
       {
         replacements: { projectIds, organizationId },
         type: QueryTypes.SELECT,
@@ -446,11 +452,14 @@ async function searchEntity(
   // Validate table name against whitelist (SQL injection prevention)
   const safeTableName = validateTableName(config.tableName);
 
-  // Build and execute query
+  // Build and execute query.
+  // ORDER BY id keeps results deterministic when LIMIT truncates;
+  // without it, two identical queries can return different rows.
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const sql = `
     SELECT DISTINCT * FROM ${safeTableName}
     ${whereClause}
+    ORDER BY id ASC
     LIMIT :limit
   `;
   replacements.limit = Math.min(limit, SEARCH_CONSTANTS.MAX_LIMIT);

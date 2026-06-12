@@ -42,7 +42,7 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
     functionName: "reset-password",
     fileName: "vwmailer.route.ts",
     userId: req.userId!,
-    tenantId: req.tenantId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -76,7 +76,7 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
         functionName: "reset-password",
         fileName: "vwmailer.route.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        organizationId: req.organizationId!,
       });
     } else {
       // User doesn't exist, but don't reveal this information
@@ -88,7 +88,7 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
         functionName: "reset-password",
         fileName: "vwmailer.route.ts",
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        organizationId: req.organizationId!,
       });
     }
 
@@ -106,7 +106,7 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
       fileName: "vwmailer.route.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     return res

@@ -3,7 +3,6 @@ import path from "path";
 import fs from "fs";
 
 export interface TenantContext {
-  tenantId?: number; // Now stores organizationId (number) instead of tenant hash (string)
   organizationId?: number;
   userId?: number;
 }
@@ -15,7 +14,6 @@ export interface TenantContext {
 export function getCurrentTenantContext(): TenantContext {
   const store = asyncLocalStorage.getStore();
   return {
-    tenantId: store?.tenantId,
     organizationId: store?.organizationId,
     userId: store?.userId,
   };
@@ -29,7 +27,7 @@ export function getTenantIdForLogging(): string {
   try {
     const context = getCurrentTenantContext();
     // Convert organizationId to string for logging directory
-    return context.organizationId?.toString() || context.tenantId?.toString() || "default";
+    return context.organizationId?.toString() || "default";
   } catch (error) {
     // If we're outside of a request context, use 'default'
     return "default";

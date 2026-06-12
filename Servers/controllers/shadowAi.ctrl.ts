@@ -73,7 +73,6 @@ function parsePageLimit(value: string | undefined, defaultVal: number, max: numb
 export async function getInsightsSummary(req: Request, res: Response) {
   const fn = "getInsightsSummary";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -86,7 +85,7 @@ export async function getInsightsSummary(req: Request, res: Response) {
 
   try {
     const period = parsePeriod(req.query.period as string);
-    const summary = await getInsightsSummaryQuery(tenantId, period);
+    const summary = await getInsightsSummaryQuery(organizationId, period);
     await logSuccess({
       eventType: "Read",
       description: "insights summary fetched",
@@ -113,7 +112,6 @@ export async function getInsightsSummary(req: Request, res: Response) {
 export async function getToolsByEvents(req: Request, res: Response) {
   const fn = "getToolsByEvents";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -127,7 +125,7 @@ export async function getToolsByEvents(req: Request, res: Response) {
   try {
     const period = parsePeriod(req.query.period as string);
     const limit = parseInt(req.query.limit as string, 10) || 6;
-    const data = await getToolsByEventsQuery(tenantId, period, limit);
+    const data = await getToolsByEventsQuery(organizationId, period, limit);
     await logSuccess({
       eventType: "Read",
       description: "tools by events fetched",
@@ -154,7 +152,6 @@ export async function getToolsByEvents(req: Request, res: Response) {
 export async function getToolsByUsers(req: Request, res: Response) {
   const fn = "getToolsByUsers";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -168,7 +165,7 @@ export async function getToolsByUsers(req: Request, res: Response) {
   try {
     const period = parsePeriod(req.query.period as string);
     const limit = parseInt(req.query.limit as string, 10) || 6;
-    const data = await getToolsByUsersQuery(tenantId, period, limit);
+    const data = await getToolsByUsersQuery(organizationId, period, limit);
     await logSuccess({
       eventType: "Read",
       description: "tools by users fetched",
@@ -195,7 +192,6 @@ export async function getToolsByUsers(req: Request, res: Response) {
 export async function getUsersByDepartment(req: Request, res: Response) {
   const fn = "getUsersByDepartment";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -208,7 +204,7 @@ export async function getUsersByDepartment(req: Request, res: Response) {
 
   try {
     const period = parsePeriod(req.query.period as string);
-    const data = await getUsersByDepartmentQuery(tenantId, period);
+    const data = await getUsersByDepartmentQuery(organizationId, period);
     await logSuccess({
       eventType: "Read",
       description: "users by department fetched",
@@ -235,7 +231,6 @@ export async function getUsersByDepartment(req: Request, res: Response) {
 export async function getTrend(req: Request, res: Response) {
   const fn = "getTrend";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -253,7 +248,7 @@ export async function getTrend(req: Request, res: Response) {
     const gran = validGranularities.includes(granularity)
       ? (granularity as "daily" | "weekly" | "monthly")
       : "daily";
-    const data = await getTrendQuery(tenantId, period, gran);
+    const data = await getTrendQuery(organizationId, period, gran);
     await logSuccess({
       eventType: "Read",
       description: "trend data fetched",
@@ -282,7 +277,6 @@ export async function getTrend(req: Request, res: Response) {
 export async function getUsers(req: Request, res: Response) {
   const fn = "getUsers";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -294,7 +288,7 @@ export async function getUsers(req: Request, res: Response) {
   });
 
   try {
-    const data = await getUserActivityQuery(tenantId, {
+    const data = await getUserActivityQuery(organizationId, {
       page: parsePageLimit(req.query.page as string, 1),
       limit: parsePageLimit(req.query.limit as string, 20),
       sort: req.query.sort as string,
@@ -326,7 +320,6 @@ export async function getUsers(req: Request, res: Response) {
 export async function getUserDetail(req: Request, res: Response) {
   const fn = "getUserDetail";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const email = decodeURIComponent(
     Array.isArray(req.params.email) ? req.params.email[0] : req.params.email,
@@ -342,7 +335,7 @@ export async function getUserDetail(req: Request, res: Response) {
 
   try {
     const period = parsePeriod(req.query.period as string);
-    const tools = await getUserDetailQuery(tenantId, email, period);
+    const tools = await getUserDetailQuery(organizationId, email, period);
     const totalPrompts = tools.reduce((sum, t) => sum + parseInt(String(t.event_count), 10), 0);
 
     // Get department from latest event for this user
@@ -388,7 +381,6 @@ export async function getUserDetail(req: Request, res: Response) {
 export async function getDepartmentActivity(req: Request, res: Response) {
   const fn = "getDepartmentActivity";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -400,7 +392,7 @@ export async function getDepartmentActivity(req: Request, res: Response) {
   });
 
   try {
-    const data = await getDepartmentActivityQuery(tenantId);
+    const data = await getDepartmentActivityQuery(organizationId);
     await logSuccess({
       eventType: "Read",
       description: "department activity fetched",
@@ -429,7 +421,6 @@ export async function getDepartmentActivity(req: Request, res: Response) {
 export async function getTools(req: Request, res: Response) {
   const fn = "getTools";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -441,7 +432,7 @@ export async function getTools(req: Request, res: Response) {
   });
 
   try {
-    const data = await getAllToolsQuery(tenantId, {
+    const data = await getAllToolsQuery(organizationId, {
       status: req.query.status as ShadowAiToolStatus | undefined,
       sort: req.query.sort as string,
       page: parsePageLimit(req.query.page as string, 1),
@@ -473,7 +464,6 @@ export async function getTools(req: Request, res: Response) {
 export async function getToolById(req: Request, res: Response) {
   const fn = "getToolById";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -490,14 +480,14 @@ export async function getToolById(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid tool ID")));
     }
 
-    const tool = await getToolByIdQuery(tenantId, toolId);
+    const tool = await getToolByIdQuery(organizationId, toolId);
     if (!tool) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
     const [departments, topUsers] = await Promise.all([
-      getToolDepartmentsQuery(tenantId, toolId),
-      getToolTopUsersQuery(tenantId, toolId),
+      getToolDepartmentsQuery(organizationId, toolId),
+      getToolTopUsersQuery(organizationId, toolId),
     ]);
 
     await logSuccess({
@@ -532,7 +522,6 @@ export async function getToolById(req: Request, res: Response) {
 export async function updateToolStatus(req: Request, res: Response) {
   const fn = "updateToolStatus";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -566,7 +555,7 @@ export async function updateToolStatus(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid status value")));
     }
 
-    const updated = await updateToolStatusQuery(tenantId, toolId, status);
+    const updated = await updateToolStatusQuery(organizationId, toolId, status);
     if (!updated) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
@@ -597,7 +586,6 @@ export async function updateToolStatus(req: Request, res: Response) {
 export async function startGovernance(req: Request, res: Response) {
   const fn = "startGovernance";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const toolId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -618,7 +606,7 @@ export async function startGovernance(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid tool ID")));
     }
 
-    const tool = await getToolByIdQuery(tenantId, toolId);
+    const tool = await getToolByIdQuery(organizationId, toolId);
     if (!tool) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
@@ -809,7 +797,6 @@ export async function startGovernance(req: Request, res: Response) {
 export async function getRules(req: Request, res: Response) {
   const fn = "getRules";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -821,7 +808,7 @@ export async function getRules(req: Request, res: Response) {
   });
 
   try {
-    const rules = await getAllRulesQuery(tenantId);
+    const rules = await getAllRulesQuery(organizationId);
     await logSuccess({
       eventType: "Read",
       description: `${rules.length} rules fetched`,
@@ -848,7 +835,6 @@ export async function getRules(req: Request, res: Response) {
 export async function createRule(req: Request, res: Response) {
   const fn = "createRule";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -881,7 +867,7 @@ export async function createRule(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("Missing required fields: name, trigger_type, actions")));
     }
 
-    const rule = await createRuleQuery(tenantId, {
+    const rule = await createRuleQuery(organizationId, {
       name,
       description,
       is_active: is_active !== false,
@@ -919,7 +905,6 @@ export async function createRule(req: Request, res: Response) {
 export async function updateRule(req: Request, res: Response) {
   const fn = "updateRule";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const ruleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -940,7 +925,7 @@ export async function updateRule(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid rule ID")));
     }
 
-    const updated = await updateRuleQuery(tenantId, ruleId, req.body);
+    const updated = await updateRuleQuery(organizationId, ruleId, req.body);
     if (!updated) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
@@ -971,7 +956,6 @@ export async function updateRule(req: Request, res: Response) {
 export async function deleteRule(req: Request, res: Response) {
   const fn = "deleteRule";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const ruleId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -992,7 +976,7 @@ export async function deleteRule(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid rule ID")));
     }
 
-    const deleted = await deleteRuleQuery(tenantId, ruleId);
+    const deleted = await deleteRuleQuery(organizationId, ruleId);
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
@@ -1023,7 +1007,6 @@ export async function deleteRule(req: Request, res: Response) {
 export async function getAlertHistory(req: Request, res: Response) {
   const fn = "getAlertHistory";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -1035,7 +1018,7 @@ export async function getAlertHistory(req: Request, res: Response) {
   });
 
   try {
-    const data = await getAlertHistoryQuery(tenantId, {
+    const data = await getAlertHistoryQuery(organizationId, {
       page: parsePageLimit(req.query.page as string, 1),
       limit: parsePageLimit(req.query.limit as string, 20),
       ruleId: req.query.ruleId ? parseInt(req.query.ruleId as string, 10) : undefined,
@@ -1068,7 +1051,6 @@ export async function getAlertHistory(req: Request, res: Response) {
 export async function getSyslogConfigs(req: Request, res: Response) {
   const fn = "getSyslogConfigs";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -1086,7 +1068,7 @@ export async function getSyslogConfigs(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
-    const configs = await getSyslogConfigsQuery(tenantId);
+    const configs = await getSyslogConfigsQuery(organizationId);
     await logSuccess({
       eventType: "Read",
       description: "syslog configs fetched",
@@ -1113,7 +1095,6 @@ export async function getSyslogConfigs(req: Request, res: Response) {
 export async function createSyslogConfig(req: Request, res: Response) {
   const fn = "createSyslogConfig";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -1149,7 +1130,7 @@ export async function createSyslogConfig(req: Request, res: Response) {
       );
     }
 
-    const config = await createSyslogConfigQuery(tenantId, {
+    const config = await createSyslogConfigQuery(organizationId, {
       source_identifier,
       parser_type,
       is_active: is_active !== false,
@@ -1181,7 +1162,6 @@ export async function createSyslogConfig(req: Request, res: Response) {
 export async function updateSyslogConfig(req: Request, res: Response) {
   const fn = "updateSyslogConfig";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const configId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -1219,7 +1199,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
       }
     }
 
-    const updated = await updateSyslogConfigQuery(tenantId, configId, {
+    const updated = await updateSyslogConfigQuery(organizationId, configId, {
       source_identifier,
       parser_type,
       is_active,
@@ -1255,7 +1235,6 @@ export async function updateSyslogConfig(req: Request, res: Response) {
 export async function deleteSyslogConfig(req: Request, res: Response) {
   const fn = "deleteSyslogConfig";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
   const configId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
@@ -1278,7 +1257,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid config ID")));
     }
 
-    const deleted = await deleteSyslogConfigQuery(tenantId, configId);
+    const deleted = await deleteSyslogConfigQuery(organizationId, configId);
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
@@ -1311,7 +1290,6 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
 export async function getSettings(req: Request, res: Response) {
   const fn = "getSettings";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -1323,7 +1301,7 @@ export async function getSettings(req: Request, res: Response) {
   });
 
   try {
-    const settings = await getSettingsQuery(tenantId);
+    const settings = await getSettingsQuery(organizationId);
     await logSuccess({
       eventType: "Read",
       description: "settings fetched",
@@ -1350,7 +1328,6 @@ export async function getSettings(req: Request, res: Response) {
 export async function updateSettings(req: Request, res: Response) {
   const fn = "updateSettings";
   const userId = req.userId!;
-  const tenantId = req.tenantId!;
   const organizationId = req.organizationId!;
 
   logProcessing({
@@ -1373,7 +1350,7 @@ export async function updateSettings(req: Request, res: Response) {
       retention_alert_history_days,
     } = req.body;
 
-    const updated = await updateSettingsQuery(tenantId, {
+    const updated = await updateSettingsQuery(organizationId, {
       rate_limit_max_events_per_hour,
       retention_events_days,
       retention_daily_rollups_days,

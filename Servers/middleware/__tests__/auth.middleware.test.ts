@@ -56,7 +56,6 @@ const validPayload = {
   id: 1,
   email: "user@test.com",
   roleName: "Admin",
-  tenantId: "a1b2c3d4e5",
   organizationId: 10,
   expire: Date.now() + 3600000,
 };
@@ -229,7 +228,6 @@ describe("authenticateJWT middleware", () => {
 
       expect(req.userId).toBe(1);
       expect(req.role).toBe("Admin");
-      expect(req.tenantId).toBe(10);
       expect(req.organizationId).toBe(10);
       expect(next).toHaveBeenCalled();
     });

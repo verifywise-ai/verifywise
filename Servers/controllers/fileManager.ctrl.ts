@@ -125,9 +125,7 @@ const PAGINATION_LIMITS = {
 const validatePagination = (
   page: number | undefined,
   pageSize: number | undefined,
-):
-  | { page: number | undefined; pageSize: number | undefined; offset: number | undefined }
-  | { error: string } => {
+): { page: number; pageSize: number; offset: number } | { error: string } => {
   // Validate page if provided
   if (page !== undefined) {
     if (!Number.isSafeInteger(page) || page < 1 || page > PAGINATION_LIMITS.maxPage) {
@@ -150,13 +148,14 @@ const validatePagination = (
     }
   }
 
-  const validPage = page && page > 0 ? page : undefined;
+  // Default pageSize so the repo always receives an explicit limit
+  // (the file repo's safety cap is a backstop, not a UX default).
+  const validPage = page && page > 0 ? page : 1;
   const validPageSize =
-    pageSize && pageSize > 0 ? Math.min(pageSize, PAGINATION_LIMITS.maxPageSize) : undefined;
-  const offset =
-    validPage !== undefined && validPageSize !== undefined
-      ? (validPage - 1) * validPageSize
-      : undefined;
+    pageSize && pageSize > 0
+      ? Math.min(pageSize, PAGINATION_LIMITS.maxPageSize)
+      : PAGINATION_LIMITS.defaultPageSize;
+  const offset = (validPage - 1) * validPageSize;
 
   return { page: validPage, pageSize: validPageSize, offset };
 };
@@ -540,7 +539,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
           total,
           page: validPage,
           pageSize: validPageSize,
-          totalPages: validPageSize ? Math.ceil(total / validPageSize) : 1,
+          totalPages: Math.ceil(total / validPageSize),
         },
       }),
     );
@@ -580,25 +579,21 @@ export const searchFiles = async (req: Request, res: Response): Promise<any> => 
   const pageParam = req.query.page;
   const pageSizeParam = req.query.pageSize;
 
-  const page = pageParam ? Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) : 1;
+  const page = pageParam ? Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) : undefined;
   const pageSize = pageSizeParam
     ? Number(Array.isArray(pageSizeParam) ? pageSizeParam[0] : pageSizeParam)
-    : 20;
+    : undefined;
 
   const paginationResult = validatePagination(page, pageSize);
   if ("error" in paginationResult) {
     return res.status(400).json(STATUS_CODE[400](paginationResult.error));
   }
 
-  // validatePagination guarantees these are defined when there is no error
-  const validPage = paginationResult.page!;
-  const validPageSize = paginationResult.pageSize!;
-  const limit = validPageSize;
-  const offset = (validPage - 1) * validPageSize;
+  const { page: validPage, pageSize: validPageSize, offset } = paginationResult;
 
   try {
     const options: FileContentSearchOptions = {
-      limit,
+      limit: validPageSize,
       offset,
     };
 
@@ -1330,7 +1325,7 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
           total,
           page: validPage,
           pageSize: validPageSize,
-          totalPages: validPageSize ? Math.ceil(total / validPageSize) : 1,
+          totalPages: Math.ceil(total / validPageSize),
         },
       }),
     );
