@@ -15,7 +15,7 @@ db_name: verifywise
 db_user: verifywise
 
 # Super-admin (password is randomized below)
-superadmin_email: admin@verifywise.com
+superadmin_email: admin@verifywise.ai
 
 # ---- Randomized secrets ----
 # Generated fresh on every playbook run (not persisted).

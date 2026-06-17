@@ -98,6 +98,12 @@ export const collections: Collection[] = [
         keywords: ['model', 'inventory', 'register', 'ai', 'catalog'],
       },
       {
+        id: 'ai-apps',
+        title: 'Managing the AI apps inventory',
+        description: 'Track the AI applications your teams use, with owners, approvals, policies, and risk.',
+        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance'],
+      },
+      {
         id: 'model-lifecycle',
         title: 'Model lifecycle management',
         description: 'Track models from development through deployment and retirement.',
@@ -627,8 +633,8 @@ export const collections: Collection[] = [
       },
       {
         id: 'mcp-overview',
-        title: 'MCP Gateway overview',
-        description: 'Understand what the MCP Gateway does, how it works, and why you need it for agent governance.',
+        title: 'Agent Control overview',
+        description: 'Understand what Agent Control does, how it works, and why you need it for agent governance.',
         keywords: ['mcp', 'gateway', 'overview', 'agent', 'tool', 'proxy', 'model context protocol', 'json-rpc'],
       },
       {

@@ -13,6 +13,7 @@ import {
   notifyBudgetExhausted,
   notifyGuardrailSpike,
   notifyVirtualKeyBudgetExhausted,
+  notifyApprovalPending,
 } from "../services/aiGateway/aiGatewayNotifications";
 
 const router = Router();
@@ -62,6 +63,10 @@ router.post("/ai-gateway/notify", async (req: Request, res: Response) => {
 
       case "guardrail_spike":
         await notifyGuardrailSpike(organization_id, req.body.stats);
+        break;
+
+      case "approval_pending":
+        await notifyApprovalPending(organization_id, req.body.approval);
         break;
 
       case "virtual_key_budget_exhausted":

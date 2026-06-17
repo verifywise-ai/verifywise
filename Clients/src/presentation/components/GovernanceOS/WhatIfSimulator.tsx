@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { Play, Calculator } from "lucide-react";
 import Select from "../Inputs/Select";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
 import { border as borderPalette, background, text, accent, brand } from "../../themes/palette";
@@ -133,15 +134,22 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
       </Typography>
 
       <Stack gap="16px">
-        <Select
-          id="base-scenario"
-          label="Base scenario"
-          placeholder="Choose a scenario"
-          value={baseScenarioId}
-          items={scenarios.map((s) => ({ _id: String(s.id), name: s.name }))}
-          onChange={(e) => setBaseScenarioId(e.target.value as string)}
-          sx={{ minWidth: 280 }}
-        />
+        <GovernanceTooltip
+          header="Base scenario"
+          description="Starting point for the what-if simulation"
+        >
+          <span>
+            <Select
+              id="base-scenario"
+              label="Base scenario"
+              placeholder="Choose a scenario"
+              value={baseScenarioId}
+              items={scenarios.map((s) => ({ _id: String(s.id), name: s.name }))}
+              onChange={(e) => setBaseScenarioId(e.target.value as string)}
+              sx={{ minWidth: 280 }}
+            />
+          </span>
+        </GovernanceTooltip>
 
         <Box
           sx={{
@@ -159,9 +167,14 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
               background: background.main,
             }}
           >
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
-              Primary
-            </Typography>
+            <GovernanceTooltip
+              header="Primary framework"
+              description="Baseline framework in the simulation"
+            >
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
+                Primary
+              </Typography>
+            </GovernanceTooltip>
             <Select
               id="sim-primary"
               label="Primary framework"
@@ -182,9 +195,14 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
               background: background.main,
             }}
           >
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
-              Secondary
-            </Typography>
+            <GovernanceTooltip
+              header="Secondary frameworks"
+              description="Supporting frameworks in the simulation"
+            >
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
+                Secondary
+              </Typography>
+            </GovernanceTooltip>
             <Stack direction="row" flexWrap="wrap" gap="8px">
               {availableForSecondary.map((fw) => (
                 <Box
@@ -234,9 +252,14 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
               background: background.main,
             }}
           >
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
-              Supplementary
-            </Typography>
+            <GovernanceTooltip
+              header="Supplementary frameworks"
+              description="Optional additional frameworks in the simulation"
+            >
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
+                Supplementary
+              </Typography>
+            </GovernanceTooltip>
             <Stack direction="row" flexWrap="wrap" gap="8px">
               {availableForSupplementary.map((fw) => (
                 <Box
@@ -277,17 +300,24 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
         </Box>
 
         <Box>
-          <CustomizableButton
-            variant="contained"
-            size="small"
-            startIcon={
-              isSimulating ? <CircularProgress size={16} color="inherit" /> : <Play size={16} />
-            }
-            onClick={handleRun}
-            isDisabled={isSimulating || allSelectedIds.length === 0}
-            text={isSimulating ? "Simulating..." : "Run simulation"}
-            sx={{}}
-          />
+          <GovernanceTooltip
+            header="Run simulation"
+            description="Calculate estimated coverage, effort, and timeline"
+          >
+            <span>
+              <CustomizableButton
+                variant="contained"
+                size="small"
+                startIcon={
+                  isSimulating ? <CircularProgress size={16} color="inherit" /> : <Play size={16} />
+                }
+                onClick={handleRun}
+                isDisabled={isSimulating || allSelectedIds.length === 0}
+                text={isSimulating ? "Simulating..." : "Run simulation"}
+                sx={{}}
+              />
+            </span>
+          </GovernanceTooltip>
         </Box>
 
         {error && (
@@ -315,13 +345,30 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                 mb: 2,
               }}
             >
-              <MetricBox label="Est. coverage" value={`${result.estimatedCoveragePercent}%`} />
-              <MetricBox label="Total controls" value={String(result.totalControls)} />
+              <MetricBox
+                label="Est. coverage"
+                value={`${result.estimatedCoveragePercent}%`}
+                header="Estimated coverage"
+                description="Estimated percentage of mapped controls"
+              />
+              <MetricBox
+                label="Total controls"
+                value={String(result.totalControls)}
+                header="Total controls"
+                description="Estimated number of controls to address"
+              />
               <MetricBox
                 label="Est. effort"
                 value={`${result.estimatedEffortHours.toLocaleString()} hrs`}
+                header="Estimated effort"
+                description="Estimated hours required to close gaps"
               />
-              <MetricBox label="Timeline" value={`${result.timelineWeeks} wks`} />
+              <MetricBox
+                label="Timeline"
+                value={`${result.timelineWeeks} wks`}
+                header="Timeline"
+                description="Estimated weeks to complete the work"
+              />
             </Box>
 
             <LinearProgress
@@ -396,11 +443,18 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
   );
 };
 
-const MetricBox: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <Box sx={{ textAlign: "center", p: "12px", background: background.hover, borderRadius: "4px" }}>
-    <Typography sx={{ fontSize: 18, fontWeight: 600, color: brand.primary }}>{value}</Typography>
-    <Typography sx={{ fontSize: 11, color: text.muted }}>{label}</Typography>
-  </Box>
+const MetricBox: React.FC<{
+  label: string;
+  value: string;
+  header: string;
+  description: string;
+}> = ({ label, value, header, description }) => (
+  <GovernanceTooltip header={header} description={description}>
+    <Box sx={{ textAlign: "center", p: "12px", background: background.hover, borderRadius: "4px" }}>
+      <Typography sx={{ fontSize: 18, fontWeight: 600, color: brand.primary }}>{value}</Typography>
+      <Typography sx={{ fontSize: 11, color: text.muted }}>{label}</Typography>
+    </Box>
+  </GovernanceTooltip>
 );
 
 export default WhatIfSimulator;

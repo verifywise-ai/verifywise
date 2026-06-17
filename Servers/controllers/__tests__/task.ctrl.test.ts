@@ -67,6 +67,7 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
 }));
 
+import { buildTask } from "../../tests/factories/task.factory";
 import {
   createTask,
   getAllTasks,
@@ -145,7 +146,7 @@ describe("task.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 201 when task is created", async () => {
-      const task = mockTask({ id: 1, title: "T1" });
+      const task = mockTask(buildTask());
       mockCreate.mockResolvedValue(task as any);
       const req = createReq({ body: { title: "T1", description: "", assignees: [] } });
       const res = createRes();
@@ -169,7 +170,7 @@ describe("task.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 200 with tasks", async () => {
-      const tasks = [mockTask({ id: 1, title: "T1" })];
+      const tasks = [mockTask(buildTask())];
       mockGetAll.mockResolvedValue(tasks as any);
       const req = createReq();
       const res = createRes();
@@ -193,7 +194,7 @@ describe("task.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 200 when task is found", async () => {
-      const task = mockTask({ id: 1, title: "T1" });
+      const task = mockTask(buildTask());
       mockGetById.mockResolvedValue(task as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
@@ -229,8 +230,8 @@ describe("task.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 200 when task is updated", async () => {
-      const existing = mockTask({ id: 1, title: "T1" });
-      const updated = mockTask({ id: 1, title: "T2" });
+      const existing = mockTask(buildTask());
+      const updated = mockTask(buildTask({ title: "T2" }));
       mockGetById.mockResolvedValue(existing as any);
       mockUpdate.mockResolvedValue(updated as any);
       const req = createReq({ params: { id: "1" }, body: { title: "T2" } });
@@ -285,7 +286,7 @@ describe("task.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 200 when task is restored", async () => {
-      mockRestore.mockResolvedValue({ id: 1, title: "T1" } as any);
+      mockRestore.mockResolvedValue(buildTask() as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await restoreTask(req, res);

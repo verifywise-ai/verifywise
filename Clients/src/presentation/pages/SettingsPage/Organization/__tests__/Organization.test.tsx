@@ -1,6 +1,7 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { buildOrganization } from "../../../../../test/factories/organization.factory";
 
 // Mock URL static methods not available in jsdom
 beforeAll(() => {
@@ -67,11 +68,13 @@ describe("Organization Settings", () => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
     mockGetMyOrganization.mockResolvedValue({
-      data: { data: { id: 1, name: "Test Org", logo: "" } },
+      data: { data: buildOrganization({ name: "Test Org", logo: "" }) },
     });
     mockFetchLogoAsBlobUrl.mockResolvedValue("blob:http://localhost/logo");
-    mockCreateMyOrganization.mockResolvedValue({ data: { id: 2, name: "New Org" } });
-    mockUpdateMyOrganization.mockResolvedValue({ id: 1, name: "Updated Org" });
+    mockCreateMyOrganization.mockResolvedValue({
+      data: buildOrganization({ id: 2, name: "New Org" }),
+    });
+    mockUpdateMyOrganization.mockResolvedValue(buildOrganization({ id: 1, name: "Updated Org" }));
   });
 
   // --- Basic rendering ---
@@ -282,7 +285,7 @@ describe("Organization Settings", () => {
   it("calls CreateMyOrganization for a new org and shows success", async () => {
     mockGetMyOrganization
       .mockRejectedValueOnce(new Error("Not found"))
-      .mockResolvedValueOnce({ data: { data: { id: 2, name: "New Org" } } });
+      .mockResolvedValueOnce({ data: { data: buildOrganization({ id: 2, name: "New Org" }) } });
     const user = userEvent.setup();
     renderWithProviders(<Organization />);
     await waitFor(() => {

@@ -2,22 +2,13 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import TasksTable from "../index";
-import { TaskPriority, TaskStatus } from "../../../../../domain/enums/task.enum";
 import type { ITask } from "../../../../../domain/interfaces/i.task";
+import { TaskPriority, TaskStatus } from "../../../../../domain/enums/task.enum";
+import { buildTask } from "../../../../../test/factories/task.factory";
 
 const mockRows: ITask[] = [
-  {
-    id: 1,
-    title: "Review data processing agreement",
-    creator_id: 1,
-    priority: TaskPriority.HIGH,
-    status: TaskStatus.OPEN,
-    due_date: new Date("2025-12-31"),
-    assignees: [],
-    isOverdue: false,
-    categories: ["GDPR"],
-  },
-  {
+  buildTask({ categories: ["GDPR"] }),
+  buildTask({
     id: 2,
     title: "Update model documentation",
     creator_id: 2,
@@ -25,29 +16,26 @@ const mockRows: ITask[] = [
     status: TaskStatus.IN_PROGRESS,
     due_date: new Date("2025-11-15"),
     assignees: [2] as any,
-    isOverdue: false,
     categories: [],
-  },
-  {
+  }),
+  buildTask({
     id: 3,
     title: "Archived task example",
-    creator_id: 1,
     priority: TaskPriority.LOW,
     status: TaskStatus.DELETED,
     due_date: new Date("2025-01-01"),
-    assignees: [],
-    isOverdue: false,
-  },
-  {
+    categories: [],
+  }),
+  buildTask({
     id: 4,
     title: "Overdue compliance check",
-    creator_id: 1,
     priority: TaskPriority.HIGH,
     status: TaskStatus.OVERDUE,
     due_date: new Date("2024-01-01"),
     assignees: [1, 2, 3, 4] as any,
     isOverdue: true,
-  },
+    categories: [],
+  }),
 ];
 
 // Mutable state for useStandardTable so tests can change return values

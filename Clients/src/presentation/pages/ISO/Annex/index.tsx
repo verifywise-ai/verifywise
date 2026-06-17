@@ -2,6 +2,7 @@ import { Accordion, AccordionDetails, AccordionSummary, Stack, Typography } from
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import VWISO42001AnnexDrawerDialog from "../../../components/Drawer/AnnexDrawerDialog";
+import Chip from "../../../components/Chip";
 import { Project } from "../../../../domain/types/Project";
 import { GetAnnexesByProjectFrameworkId } from "../../../../application/repository/annex_struct_iso.repository";
 import { AnnexStructISO } from "../../../../domain/types/AnnexStructISO";
@@ -226,12 +227,7 @@ const ISO42001Annex = ({
                               {control.description}
                             </Typography>
                           </Stack>
-                          <Stack sx={styles.statusBadge(control.status || "")}>
-                            {control.status
-                              ? control.status.charAt(0).toUpperCase() +
-                                control.status.slice(1).toLowerCase()
-                              : "Not started"}
-                          </Stack>
+                          <Chip label={control.status || "Not started"} />
                         </Stack>
                       ))}
                   </AccordionDetails>

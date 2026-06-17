@@ -6,6 +6,7 @@ import { quickStartContent } from './getting-started/quick-start';
 import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
 import { modelInventoryContent } from './ai-governance/model-inventory';
+import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
 import { taskManagementContent } from './ai-governance/task-management';
 import { incidentManagementContent } from './ai-governance/incident-management';
@@ -104,6 +105,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/use-cases': useCasesContent,
   'ai-governance/intake-forms': intakeFormsContent,
   'ai-governance/model-inventory': modelInventoryContent,
+  'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
   'ai-governance/task-management': taskManagementContent,
   'ai-governance/incident-management': incidentManagementContent,
@@ -193,7 +195,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-gateway/logs': aiGatewayLogsContent,
   'ai-gateway/prompts': aiGatewayPromptsContent,
   'ai-gateway/models': aiGatewayModelsContent,
-  // MCP Gateway
+  // Agent Control
   'ai-gateway/mcp-overview': mcpOverviewContent,
   'ai-gateway/mcp-servers': mcpServersContent,
   'ai-gateway/mcp-tools': mcpToolsContent,

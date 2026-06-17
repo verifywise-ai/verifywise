@@ -11,6 +11,7 @@ import {
 import { Compass, Plus } from "lucide-react";
 import Select from "../../components/Inputs/Select";
 import ScenarioCard from "../../components/GovernanceOS/ScenarioCard";
+import GovernanceTooltip from "../../components/GovernanceOS/GovernanceTooltip";
 import { EmptyState } from "../../components/EmptyState";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -196,61 +197,90 @@ const ScenarioBuilder = () => {
           Get Recommendations
         </Typography>
         <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap alignItems="flex-end">
-          <Select
-            id="industry-select"
-            label="Industry"
-            placeholder="Any"
-            value={formData.industry || ""}
-            items={INDUSTRIES}
-            onChange={(e: SelectChangeEvent<string | number>) =>
-              setFormData({ ...formData, industry: e.target.value as string })
-            }
-            sx={{ minWidth: 170 }}
-          />
+          <GovernanceTooltip
+            header="Industry"
+            description="Sector used to tailor scenario recommendations"
+          >
+            <span>
+              <Select
+                id="industry-select"
+                label="Industry"
+                placeholder="Any"
+                value={formData.industry || ""}
+                items={INDUSTRIES}
+                onChange={(e: SelectChangeEvent<string | number>) =>
+                  setFormData({ ...formData, industry: e.target.value as string })
+                }
+                sx={{ minWidth: 170 }}
+              />
+            </span>
+          </GovernanceTooltip>
 
-          <Select
-            id="region-select"
-            label="Region"
-            placeholder="Any"
-            value={formData.region || ""}
-            items={REGIONS}
-            onChange={(e: SelectChangeEvent<string | number>) =>
-              setFormData({ ...formData, region: e.target.value as string })
-            }
-            sx={{ minWidth: 170 }}
-          />
+          <GovernanceTooltip
+            header="Region"
+            description="Regulatory region used to prioritize frameworks"
+          >
+            <span>
+              <Select
+                id="region-select"
+                label="Region"
+                placeholder="Any"
+                value={formData.region || ""}
+                items={REGIONS}
+                onChange={(e: SelectChangeEvent<string | number>) =>
+                  setFormData({ ...formData, region: e.target.value as string })
+                }
+                sx={{ minWidth: 170 }}
+              />
+            </span>
+          </GovernanceTooltip>
 
-          <Select
-            id="risk-level-select"
-            label="Risk Level"
-            placeholder="Any"
-            value={formData.riskLevel || ""}
-            items={RISK_LEVELS}
-            onChange={(e: SelectChangeEvent<string | number>) =>
-              setFormData({ ...formData, riskLevel: e.target.value as string })
-            }
-            sx={{ minWidth: 170 }}
-          />
+          <GovernanceTooltip header="Risk level" description="AI system risk classification">
+            <span>
+              <Select
+                id="risk-level-select"
+                label="Risk Level"
+                placeholder="Any"
+                value={formData.riskLevel || ""}
+                items={RISK_LEVELS}
+                onChange={(e: SelectChangeEvent<string | number>) =>
+                  setFormData({ ...formData, riskLevel: e.target.value as string })
+                }
+                sx={{ minWidth: 170 }}
+              />
+            </span>
+          </GovernanceTooltip>
 
-          <Select
-            id="use-case-type-select"
-            label="Use Case Type"
-            placeholder="Any"
-            value={formData.useCaseType || ""}
-            items={USE_CASE_TYPES}
-            onChange={(e: SelectChangeEvent<string | number>) =>
-              setFormData({ ...formData, useCaseType: e.target.value as string })
-            }
-            sx={{ minWidth: 170 }}
-          />
+          <GovernanceTooltip header="Use case type" description="Category of AI system">
+            <span>
+              <Select
+                id="use-case-type-select"
+                label="Use Case Type"
+                placeholder="Any"
+                value={formData.useCaseType || ""}
+                items={USE_CASE_TYPES}
+                onChange={(e: SelectChangeEvent<string | number>) =>
+                  setFormData({ ...formData, useCaseType: e.target.value as string })
+                }
+                sx={{ minWidth: 170 }}
+              />
+            </span>
+          </GovernanceTooltip>
 
-          <CustomizableButton
-            variant="contained"
-            onClick={handleRecommend}
-            isDisabled={recommendMutation.isPending || !canRecommend}
-            text={recommendMutation.isPending ? "Getting..." : "Get Recommendations"}
-            sx={{ alignSelf: "flex-end", minWidth: 140 }}
-          />
+          <GovernanceTooltip
+            header="Get recommendations"
+            description="Generate scenario suggestions matching the project context"
+          >
+            <span>
+              <CustomizableButton
+                variant="contained"
+                onClick={handleRecommend}
+                isDisabled={recommendMutation.isPending || !canRecommend}
+                text={recommendMutation.isPending ? "Getting..." : "Get Recommendations"}
+                sx={{ alignSelf: "flex-end", minWidth: 140 }}
+              />
+            </span>
+          </GovernanceTooltip>
         </Stack>
       </Box>
 
@@ -300,13 +330,20 @@ const ScenarioBuilder = () => {
       <Stack gap="16px">
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography sx={{ fontSize: 14, fontWeight: 600 }}>All Governance Scenarios</Typography>
-          <CustomizableButton
-            variant="outlined"
-            size="small"
-            startIcon={<Plus size={14} />}
-            onClick={handleCreateScenario}
-            text="New Scenario"
-          />
+          <GovernanceTooltip
+            header="New scenario"
+            description="Create a custom governance scenario"
+          >
+            <span>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                startIcon={<Plus size={14} />}
+                onClick={handleCreateScenario}
+                text="New Scenario"
+              />
+            </span>
+          </GovernanceTooltip>
         </Stack>
 
         {scenariosLoading ? (

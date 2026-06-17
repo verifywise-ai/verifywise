@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { storageService } from "../../infrastructure/storage";
 
 /**
  * Available columns for the file table
@@ -47,8 +48,11 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
 ];
 
 const SCHEMA_VERSION = 3;
-const STORAGE_KEY = "verifywise:file-column-visibility";
-const VERSION_KEY = "verifywise:file-column-visibility-version";
+const STORAGE_KEY = "verifywise_file_column_visibility";
+const VERSION_KEY = "verifywise_file_column_visibility_version";
+// Old un-namespaced keys, migrated once via the StorageService legacy-key mechanism.
+const LEGACY_STORAGE_KEY = "verifywise:file-column-visibility";
+const LEGACY_VERSION_KEY = "verifywise:file-column-visibility-version";
 
 // Always-visible column keys that must be included
 const ALWAYS_VISIBLE_KEYS = DEFAULT_COLUMNS.filter((c) => c.alwaysVisible).map((c) => c.key);
@@ -92,46 +96,42 @@ interface UseFileColumnVisibilityReturn {
  * Persists column visibility preferences to localStorage
  */
 export function useFileColumnVisibility(): UseFileColumnVisibilityReturn {
-  // Initialize from localStorage or defaults
+  // Initialize from storage or defaults
   const [visibleColumns, setVisibleColumns] = useState<Set<FileColumn>>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as FileColumn[];
-        const validKeys = parsed.filter((key) => VALID_COLUMN_KEYS.has(key));
+    const parsed = storageService.getRaw<FileColumn[] | null>(STORAGE_KEY, null, {
+      legacyKey: LEGACY_STORAGE_KEY,
+    });
+    if (Array.isArray(parsed)) {
+      const validKeys = parsed.filter((key) => VALID_COLUMN_KEYS.has(key));
 
-        // Check if schema version has changed (new columns added)
-        const storedVersion = Number(localStorage.getItem(VERSION_KEY) || "0");
-        if (storedVersion < SCHEMA_VERSION) {
-          // Add any new defaultVisible columns that weren't in the stored set
-          const storedSet = new Set(validKeys);
-          const newDefaults = DEFAULT_COLUMNS.filter(
-            (c) => c.defaultVisible && !storedSet.has(c.key),
-          ).map((c) => c.key);
-          localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
-          return new Set([...validKeys, ...newDefaults, ...ALWAYS_VISIBLE_KEYS]);
-        }
-
-        const withRequired = new Set([...validKeys, ...ALWAYS_VISIBLE_KEYS]);
-        return withRequired;
+      // Check if schema version has changed (new columns added)
+      const storedVersion = Number(
+        storageService.getRaw<string | null>(VERSION_KEY, null, {
+          raw: true,
+          legacyKey: LEGACY_VERSION_KEY,
+        }) || "0",
+      );
+      if (storedVersion < SCHEMA_VERSION) {
+        // Add any new defaultVisible columns that weren't in the stored set
+        const storedSet = new Set(validKeys);
+        const newDefaults = DEFAULT_COLUMNS.filter(
+          (c) => c.defaultVisible && !storedSet.has(c.key),
+        ).map((c) => c.key);
+        storageService.setRaw(VERSION_KEY, SCHEMA_VERSION, { raw: true });
+        return new Set([...validKeys, ...newDefaults, ...ALWAYS_VISIBLE_KEYS]);
       }
-    } catch (err) {
-      console.error("Error loading column visibility from localStorage:", err);
+
+      return new Set([...validKeys, ...ALWAYS_VISIBLE_KEYS]);
     }
 
     // First visit — save current version
-    localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+    storageService.setRaw(VERSION_KEY, SCHEMA_VERSION, { raw: true });
     return new Set(DEFAULT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
   });
 
-  // Persist to localStorage when visibility changes
+  // Persist when visibility changes
   useEffect(() => {
-    try {
-      const columnsArray = Array.from(visibleColumns);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(columnsArray));
-    } catch (err) {
-      console.error("Error saving column visibility to localStorage:", err);
-    }
+    storageService.setRaw(STORAGE_KEY, Array.from(visibleColumns));
   }, [visibleColumns]);
 
   /**

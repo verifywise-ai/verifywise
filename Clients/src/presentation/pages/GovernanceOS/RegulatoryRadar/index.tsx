@@ -2,6 +2,7 @@ import React from "react";
 import { Stack, Typography, Box, alpha } from "@mui/material";
 import { Radio, Clock } from "lucide-react";
 import GovernanceLayout from "../shared/GovernanceLayout";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { text, accent } from "../../../themes/palette";
 
 const RegulatoryRadar: React.FC = () => {
@@ -11,19 +12,26 @@ const RegulatoryRadar: React.FC = () => {
       subtitle="Monitor regulatory changes, track compliance deadlines, and receive alerts."
     >
       <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
-        <Box
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            backgroundColor: alpha(accent.orange.text, 0.08),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+        <GovernanceTooltip
+          header="Regulatory Radar"
+          description="Monitor regulatory changes, track compliance deadlines, and receive alerts. This module is coming soon."
         >
-          <Radio size={24} color={accent.orange.text} />
-        </Box>
+          <span>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                backgroundColor: alpha(accent.orange.text, 0.08),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Radio size={24} color={accent.orange.text} />
+            </Box>
+          </span>
+        </GovernanceTooltip>
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Regulatory Radar
         </Typography>

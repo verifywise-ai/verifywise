@@ -8,6 +8,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { ChevronDown } from "lucide-react";
 import "./index.css";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 
@@ -115,6 +116,7 @@ function AutoCompleteField<
       )}
       <Autocomplete<T, Multiple, DisableClearable, FreeSolo>
         disabled={disabled}
+        popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
         renderInput={(params) => (
           <TextField
             {...params}

@@ -197,7 +197,7 @@ describe("useStandardTable", () => {
 
     expect(result.current.rowsPerPage).toBe(25);
     expect(result.current.page).toBe(0);
-    expect(localStorage.getItem("pagination_rows_test-rpp")).toBe("25");
+    expect(localStorage.getItem("verifywise_pagination_rows_test-rpp")).toBe("25");
   });
 
   it("validPage adjusts when current page exceeds max", () => {

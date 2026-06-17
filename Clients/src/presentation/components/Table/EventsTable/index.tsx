@@ -17,6 +17,7 @@ import TablePaginationActions from "../../TablePagination";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Placeholder from "../../../assets/imgs/empty-state.svg";
+import CustomizableSkeleton from "../../Skeletons";
 import { formatDateTime } from "../../../tools/isoDateToString";
 import { Event } from "../../../../domain/types/Event";
 import { User } from "../../../../domain/types/User";
@@ -376,17 +377,8 @@ const EventsTable: React.FC<IEventsTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          minHeight: 200,
-        }}
-      >
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

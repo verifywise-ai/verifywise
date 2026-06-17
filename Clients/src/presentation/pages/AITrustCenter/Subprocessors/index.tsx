@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Typography, TableCell, Stack, CircularProgress } from "@mui/material";
+import { Box, Typography, TableCell, Stack } from "@mui/material";
 import Toggle from "../../../components/Inputs/Toggle";
 import IconButtonComponent from "../../../components/IconButton";
 import { useStyles } from "./styles";
@@ -11,6 +11,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import { useTheme } from "@mui/material/styles";
 import AITrustCenterTable from "../../../components/Table/AITrustCenterTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import Alert from "../../../components/Alert";
 import {
   useAITrustCentreOverviewQuery,
@@ -498,34 +499,8 @@ const AITrustCenterSubprocessors: React.FC = () => {
     [visibleColumns],
   );
 
-  // Show loading state
-  if (overviewLoading || subprocessorsLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Show error state
-  if (overviewError || subprocessorsError) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <Typography color="error">
-          {overviewError?.message || subprocessorsError?.message || "An error occurred"}
-        </Typography>
-      </Box>
-    );
-  }
-
-  // Ensure subprocessors is available before rendering
-  if (!subprocessors) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <Typography>No subprocessors data available</Typography>
-      </Box>
-    );
-  }
+  const isTableLoading = overviewLoading || subprocessorsLoading;
+  const tableError = overviewError || subprocessorsError;
 
   return (
     <Box>
@@ -586,32 +561,40 @@ const AITrustCenterSubprocessors: React.FC = () => {
           </Box>
         </Box>
         <Box sx={styles.tableWrapper}>
-          <GroupedTableView
-            groupedData={groupedSubprocessors}
-            ungroupedData={subprocessors || []}
-            renderTable={(data, options) => (
-              <AITrustCenterTable
-                data={data}
-                columns={visibleTableColumns}
-                isLoading={subprocessorsLoading}
-                paginated={true}
-                disabled={!formData?.info?.subprocessor_visible}
-                emptyStateText="No subprocessors found. Add your first subprocessor to get started."
-                renderRow={(subprocessor, sortConfig) => (
-                  <SubprocessorTableRow
-                    key={subprocessor.id}
-                    subprocessor={subprocessor}
-                    onDelete={handleDelete}
-                    onEdit={handleEdit}
-                    sortConfig={sortConfig}
-                    visibleColumnIds={visibleColumns}
-                  />
-                )}
-                tableId="subprocessors-table"
-                hidePagination={options?.hidePagination}
-              />
-            )}
-          />
+          {isTableLoading ? (
+            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+          ) : tableError ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+              <Typography color="error">{tableError?.message || "An error occurred"}</Typography>
+            </Box>
+          ) : (
+            <GroupedTableView
+              groupedData={groupedSubprocessors}
+              ungroupedData={subprocessors || []}
+              renderTable={(data, options) => (
+                <AITrustCenterTable
+                  data={data}
+                  columns={visibleTableColumns}
+                  isLoading={subprocessorsLoading}
+                  paginated={true}
+                  disabled={!formData?.info?.subprocessor_visible}
+                  emptyStateText="No subprocessors found. Add your first subprocessor to get started."
+                  renderRow={(subprocessor, sortConfig) => (
+                    <SubprocessorTableRow
+                      key={subprocessor.id}
+                      subprocessor={subprocessor}
+                      onDelete={handleDelete}
+                      onEdit={handleEdit}
+                      sortConfig={sortConfig}
+                      visibleColumnIds={visibleColumns}
+                    />
+                  )}
+                  tableId="subprocessors-table"
+                  hidePagination={options?.hidePagination}
+                />
+              )}
+            />
+          )}
         </Box>
 
         {/* Edit Subprocessor Modal */}

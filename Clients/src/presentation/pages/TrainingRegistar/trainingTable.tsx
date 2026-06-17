@@ -1,20 +1,12 @@
 import React, { useCallback, useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  useTheme,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Stack } from "@mui/material";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import allowedRoles from "../../../application/constants/permissions";
 import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
@@ -67,7 +59,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   hidePagination = false,
   visibleColumns,
 }) => {
-  const theme = useTheme();
   const { userRoleName } = useAuth();
 
   const isVisible = useCallback(
@@ -315,17 +306,8 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          minHeight: 200,
-        }}
-      >
-        <Typography>Loading...</Typography>
+      <Stack spacing={2} sx={{ width: "100%" }}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

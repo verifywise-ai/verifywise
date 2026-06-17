@@ -993,7 +993,9 @@ const RiskManagement = () => {
 
         {/* Table Section */}
         {showCustomizableSkeleton ? (
-          <CustomizableSkeleton />
+          <Stack spacing={1} sx={{ width: "100%" }}>
+            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+          </Stack>
         ) : (
           <GroupedTableView
             groupedData={groupedRisks}

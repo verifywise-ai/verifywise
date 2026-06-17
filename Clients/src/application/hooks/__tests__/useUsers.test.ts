@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
+import { buildUser } from "../../../test/factories/user.factory";
 
 vi.mock("../useAuth", () => ({
   useAuth: () => ({ userId: 1 }),
@@ -30,7 +31,7 @@ describe("useUsers", () => {
   it("fetches and formats users", async () => {
     mockGetAll.mockResolvedValue({
       status: 200,
-      data: [{ id: 1, name: "John", surname: "Doe", email: "john@test.com", role_id: 1 }],
+      data: [buildUser({ email: "john@test.com" })],
     } as any);
 
     const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });

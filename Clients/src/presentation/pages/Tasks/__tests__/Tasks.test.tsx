@@ -157,6 +157,6 @@ describe("Tasks", () => {
 
   it("shows loading state initially", () => {
     renderWithProviders(<Tasks />, { route: "/tasks" });
-    expect(screen.getByText("Loading tasks...")).toBeInTheDocument();
+    expect(document.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
   });
 });

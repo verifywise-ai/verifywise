@@ -10,6 +10,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DeadlineWarningBox from "../../components/DeadlineWarningBox";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
   getAllTasks,
@@ -48,6 +49,7 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { displayFormattedDate } from "../../tools/isoDateToString";
 import Alert from "../../components/Alert";
+import CustomizableSkeleton from "../../components/Skeletons";
 import TabBar from "../../components/TabBar";
 import DeadlineView from "./DeadlineView";
 import { toggleLabelStyle, toggleContainerStyle } from "./style";
@@ -106,15 +108,14 @@ const Tasks: React.FC = () => {
   // Card filter state for status filtering
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  // Tab state - persisted to localStorage
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const saved = localStorage.getItem("verifywise_tasks_view_tab");
-    return saved || "list";
-  });
+  // Tab state - persisted via StorageService
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    storageService.get("tasksViewTab", "list"),
+  );
 
-  // Save tab preference to localStorage
+  // Save tab preference
   useEffect(() => {
-    localStorage.setItem("verifywise_tasks_view_tab", activeTab);
+    storageService.set("tasksViewTab", activeTab);
   }, [activeTab]);
 
   const { userRoleName, userId } = useContext(VerifyWiseContext);
@@ -953,9 +954,9 @@ const Tasks: React.FC = () => {
       {/* Content Area */}
       <Box>
         {isLoading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <Typography>Loading tasks...</Typography>
-          </Box>
+          <Stack spacing={2}>
+            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+          </Stack>
         )}
 
         {error && (

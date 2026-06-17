@@ -150,6 +150,22 @@ CustomAxios.interceptors.response.use(
       return Promise.reject(new Error(responseData?.message || "Forbidden"));
     }
 
+    // If the auth/refresh limiter has been tripped (429), stop the retry
+    // cascade and surface a clear message instead of letting calls keep
+    // hammering the refresh endpoint.
+    if (error.response?.status === 429 && originalRequest.url === "/users/refresh-token") {
+      isRefreshing = false;
+      processQueue(error, null);
+      if (showAlertCallback) {
+        showAlertCallback({
+          variant: "warning",
+          title: "Too many attempts",
+          body: "Too many requests in a short time. Please wait a moment and refresh the page.",
+        });
+      }
+      return Promise.reject(error);
+    }
+
     // If error is 406 (Token Expired) and we haven't tried to refresh yet
     if (error.response?.status === 406 && !originalRequest._retry) {
       // If this is the refresh token request itself returning 406

@@ -4,6 +4,7 @@ import { Zap, Info } from "lucide-react";
 import StepperModal from "../Modals/StepperModal";
 import Checkbox from "../Inputs/Checkbox";
 import Select from "../Inputs/Select";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
 import { Project } from "../../../domain/types/Project";
 import { User } from "../../../domain/types/User";
@@ -110,13 +111,18 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
     if (activeStep === 0) {
       return (
         <Stack gap="16px">
-          <Alert severity="info" icon={<Info size={18} />}>
-            <Typography sx={{ fontSize: 13 }}>
-              Choose the projects where this scenario should be activated. A task set will be
-              created for each selected project based on the scenario&apos;s framework priority
-              order.
-            </Typography>
-          </Alert>
+          <GovernanceTooltip
+            header="Select projects"
+            description="Choose the projects where activation tasks will be created"
+          >
+            <Alert severity="info" icon={<Info size={18} />}>
+              <Typography sx={{ fontSize: 13 }}>
+                Choose the projects where this scenario should be activated. A task set will be
+                created for each selected project based on the scenario&apos;s framework priority
+                order.
+              </Typography>
+            </Alert>
+          </GovernanceTooltip>
 
           {projects.length === 0 ? (
             <Alert severity="info">No approved projects available. Create a project first.</Alert>
@@ -179,13 +185,18 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
     if (activeStep === 1) {
       return (
         <Stack gap="16px">
-          <Alert severity="info" icon={<Info size={18} />}>
-            <Typography sx={{ fontSize: 13 }}>
-              Assign an owner for each framework. These owners will be set as assignees on the tasks
-              created during activation and will be responsible for implementing the framework
-              controls.
-            </Typography>
-          </Alert>
+          <GovernanceTooltip
+            header="Assign owners"
+            description="Choose owners responsible for each framework in the activation"
+          >
+            <Alert severity="info" icon={<Info size={18} />}>
+              <Typography sx={{ fontSize: 13 }}>
+                Assign an owner for each framework. These owners will be set as assignees on the
+                tasks created during activation and will be responsible for implementing the
+                framework controls.
+              </Typography>
+            </Alert>
+          </GovernanceTooltip>
 
           <Box
             sx={{
@@ -231,13 +242,18 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
 
     return (
       <Stack gap="16px">
-        <Alert severity="info" icon={<Zap size={18} />}>
-          <Typography sx={{ fontSize: 13 }}>
-            You are about to activate <strong>{scenario.name}</strong>. This will create real tasks
-            across <strong>{selectedProjects.length}</strong> project(s) and assign them to the
-            selected owners.
-          </Typography>
-        </Alert>
+        <GovernanceTooltip
+          header="Review activation"
+          description="Confirm the scenario activation details before creating tasks"
+        >
+          <Alert severity="info" icon={<Zap size={18} />}>
+            <Typography sx={{ fontSize: 13 }}>
+              You are about to activate <strong>{scenario.name}</strong>. This will create real
+              tasks across <strong>{selectedProjects.length}</strong> project(s) and assign them to
+              the selected owners.
+            </Typography>
+          </Alert>
+        </GovernanceTooltip>
 
         <Box
           sx={{

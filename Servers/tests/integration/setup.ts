@@ -1,3 +1,24 @@
+// Mock audit-ledger fire-and-forget writes to prevent deadlocks with cleanupDatabase
+jest.mock("../../utils/auditLedger.utils", () => ({
+  appendToAuditLedger: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock notification services to prevent real email/Slack/in-app notifications during tests
+jest.mock("../../services/userNotification/projectNotifications", () => ({
+  sendProjectCreatedNotification: jest.fn().mockResolvedValue(undefined),
+  sendUserAddedToProjectNotification: jest.fn().mockResolvedValue(undefined),
+  ProjectRole: {},
+}));
+jest.mock("../../services/slack/slackNotificationService", () => ({
+  sendSlackNotification: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../../services/inAppNotification.service", () => ({
+  notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
+  notifyTaskAssigned: jest.fn().mockResolvedValue(undefined),
+  notifyTaskUpdated: jest.fn().mockResolvedValue(undefined),
+  ITaskEntityLinkForEmail: {},
+}));
+
 import { Application, Request, Response, NextFunction } from "express";
 import supertest, { Agent } from "supertest";
 import { createApp } from "../../app";

@@ -17,6 +17,7 @@ import {
   useScenarioProgress,
 } from "../../../application/hooks/useGovernanceOs";
 import FrameworkChip from "./FrameworkChip";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
 
@@ -159,67 +160,98 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
                   : ""}
               </Typography>
             )}
-            <Stack direction="row" flexWrap="wrap" gap="6px" sx={{ mt: "12px" }}>
-              {frameworkIds.map((id) => {
-                const priority =
-                  id === priorityOrder?.primary
-                    ? "primary"
-                    : priorityOrder?.secondary?.includes(id)
-                      ? "secondary"
-                      : "supplementary";
-                return (
-                  <FrameworkChip
-                    key={id}
-                    frameworkName={FRAMEWORK_NAMES[id] || `Framework ${id}`}
-                    priority={priority}
-                    size="small"
-                  />
-                );
-              })}
-            </Stack>
+            <GovernanceTooltip
+              header="Frameworks"
+              description="Frameworks included in this scenario"
+            >
+              <Stack direction="row" flexWrap="wrap" gap="6px" sx={{ mt: "12px" }}>
+                {frameworkIds.map((id) => {
+                  const priority =
+                    id === priorityOrder?.primary
+                      ? "primary"
+                      : priorityOrder?.secondary?.includes(id)
+                        ? "secondary"
+                        : "supplementary";
+                  return (
+                    <FrameworkChip
+                      key={id}
+                      frameworkName={FRAMEWORK_NAMES[id] || `Framework ${id}`}
+                      priority={priority}
+                      size="small"
+                    />
+                  );
+                })}
+              </Stack>
+            </GovernanceTooltip>
           </Box>
         </Stack>
 
         <Stack direction="row" gap="8px" sx={{ flexShrink: 0 }}>
-          <CustomizableButton
-            size="small"
-            variant="outlined"
-            startIcon={<BarChart3 size={14} />}
-            endIcon={<ArrowRight size={14} />}
-            onClick={() => navigate("/governance/insights")}
-            text="View insights"
-            sx={{}}
-          />
+          <GovernanceTooltip
+            header="View insights"
+            description="Open Unified Insights for this active scenario"
+          >
+            <span>
+              <CustomizableButton
+                size="small"
+                variant="outlined"
+                startIcon={<BarChart3 size={14} />}
+                endIcon={<ArrowRight size={14} />}
+                onClick={() => navigate("/governance/insights")}
+                text="View insights"
+                sx={{}}
+              />
+            </span>
+          </GovernanceTooltip>
           {latestActivation && (
-            <CustomizableButton
-              size="small"
-              variant="outlined"
-              color="error"
-              startIcon={<XCircle size={14} />}
-              text="Deactivate"
-              onClick={() => deactivateMutation.mutate(latestActivation.id)}
-              isDisabled={deactivateMutation.isPending}
-              sx={{}}
-            />
+            <GovernanceTooltip
+              header="Deactivate scenario"
+              description="Stop the active scenario and remove its generated tasks"
+            >
+              <span>
+                <CustomizableButton
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<XCircle size={14} />}
+                  text="Deactivate"
+                  onClick={() => deactivateMutation.mutate(latestActivation.id)}
+                  isDisabled={deactivateMutation.isPending}
+                  sx={{}}
+                />
+              </span>
+            </GovernanceTooltip>
           )}
-          <CustomizableButton
-            variant="contained"
-            size="small"
-            startIcon={<Zap size={14} />}
-            endIcon={<ArrowRight size={14} />}
-            onClick={() => onActivate(activeScenario)}
-            text={latestActivation ? "Re-activate" : "Activate now"}
-            sx={{}}
-          />
+          <GovernanceTooltip
+            header="Activate scenario"
+            description="Create tasks for the selected projects based on this scenario"
+          >
+            <span>
+              <CustomizableButton
+                variant="contained"
+                size="small"
+                startIcon={<Zap size={14} />}
+                endIcon={<ArrowRight size={14} />}
+                onClick={() => onActivate(activeScenario)}
+                text={latestActivation ? "Re-activate" : "Activate now"}
+                sx={{}}
+              />
+            </span>
+          </GovernanceTooltip>
         </Stack>
       </Stack>
 
       {/* Framework progress */}
       {progress && progress.length > 0 && (
         <Box sx={{ mt: "16px", pt: "16px", borderTop: `1px solid ${borderPalette.light}` }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "12px" }}>
-            Task progress by framework
-          </Typography>
+          <GovernanceTooltip
+            header="Task progress"
+            description="Completion status of tasks grouped by framework"
+          >
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "12px" }}>
+              Task progress by framework
+            </Typography>
+          </GovernanceTooltip>
           <Stack gap="12px">
             {progress.map((fw: any) => {
               const percent =

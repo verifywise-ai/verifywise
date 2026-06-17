@@ -209,6 +209,40 @@ export async function notifyVirtualKeyBudgetExhausted(
 }
 
 /**
+ * Notify: An MCP tool call is waiting for human approval.
+ *
+ * In-app only (no email) — approvals are time-bounded and reviewed in the
+ * MCP Approvals page, so the in-app notification links straight there.
+ */
+export async function notifyApprovalPending(
+  organizationId: number,
+  approval: {
+    approval_id: number;
+    tool_name: string;
+    agent_key_id: number;
+    agent_key_name?: string | null;
+  },
+): Promise<void> {
+  const admins = await getOrgAdmins(organizationId);
+  const keyLabel = approval.agent_key_name || `agent key #${approval.agent_key_id}`;
+
+  await Promise.allSettled(
+    admins.map((admin) =>
+      sendInAppNotification(organizationId, {
+        user_id: admin.id,
+        type: NotificationType.AI_GATEWAY_APPROVAL_PENDING,
+        title: "Tool call waiting for approval",
+        message: `${keyLabel} requested "${approval.tool_name}" and is waiting for your approval.`,
+        entity_type: NotificationEntityType.AI_GATEWAY,
+        action_url: `${FRONTEND_URL}/ai-gateway/mcp/approvals`,
+      }).catch((err) =>
+        logger.error(`Failed to send approval-pending notice to admin ${admin.id}:`, err),
+      ),
+    ),
+  );
+}
+
+/**
  * Notify: Configuration change (endpoint, API key, guardrail rule)
  *
  * Generic notification for any config change event.

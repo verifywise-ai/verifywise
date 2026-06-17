@@ -54,9 +54,12 @@ def _get_compiled_pattern(pattern_str: str, filter_type: str) -> re.Pattern | No
     return _compiled_cache[key]
 
 
+REDOS_SCAN_CAP = 50000  # max chars scanned by a single regex (ReDoS guard)
+
+
 def _run_regex_safe(compiled: re.Pattern, text: str) -> list[re.Match]:
     """Run regex with length guard against ReDoS."""
-    scan_text = text[:50000] if len(text) > 50000 else text
+    scan_text = text[:REDOS_SCAN_CAP] if len(text) > REDOS_SCAN_CAP else text
     try:
         return list(compiled.finditer(scan_text))
     except Exception as e:

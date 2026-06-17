@@ -961,7 +961,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     <ChevronDown size={14} color="#a0a0a0" />
                   ))}
               </Box>
-              {!isGroupCollapsed && group.items.map((item) => renderMenuItem(item))}
+              {!isGroupCollapsed &&
+                group.items.map((item) => (
+                  <Box key={item.id}>
+                    {renderMenuItem(item)}
+                    {item.dividerAfter && !collapsed && (
+                      <Box
+                        sx={{
+                          my: 1.5,
+                          mx: theme.spacing(4),
+                          borderTop: `1px solid ${borderPalette.light}`,
+                        }}
+                      />
+                    )}
+                  </Box>
+                ))}
             </Box>
           );
         })}

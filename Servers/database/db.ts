@@ -94,6 +94,7 @@ import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkfl
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
 import { AiActionApprovalModel } from "../domain.layer/models/aiApproval/aiActionApproval.model";
 import { AiApprovalRuleModel } from "../domain.layer/models/aiApproval/aiApprovalRule.model";
+import { AiAppModel } from "../domain.layer/models/aiApp/aiApp.model";
 import { GovernanceControlMappingModel } from "../domain.layer/models/governanceOs/governanceControlMapping.model";
 import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/governanceScenario.model";
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
@@ -103,7 +104,12 @@ import { GovernanceScenarioActivationModel } from "../domain.layer/models/govern
 
 dotenv.config();
 
-const conf = dbConfig.development;
+if (process.env.NODE_ENV === "test") {
+  dotenv.config({ path: ".env.test", override: true });
+}
+
+const env = process.env.NODE_ENV || "development";
+const conf = (dbConfig as Record<string, any>)[env] || dbConfig.development;
 
 const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
   host: conf.host!,
@@ -211,6 +217,7 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     DatasetModel,
     AiActionApprovalModel,
     AiApprovalRuleModel,
+    AiAppModel,
     GovernanceControlMappingModel,
     GovernanceScenarioModel,
     GovernanceScenarioRuleModel,

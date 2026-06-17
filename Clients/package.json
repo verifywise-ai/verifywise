@@ -95,7 +95,7 @@
     "react-hook-form": "^7.78.0",
     "react-joyride": "^3.1.0",
     "react-markdown": "^10.1.0",
-    "react-plotly.js": "^2.6.0",
+    "react-plotly.js": "^3.0.0",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.17.0",
     "recharts": "^3.8.1",

@@ -14,7 +14,7 @@ export const mcpApprovalsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > MCP Gateway > Approvals**.',
+      text: 'You\'ll find it at **AI Gateway > Agent Control > Approvals**.',
     },
     {
       type: 'heading',
@@ -145,7 +145,7 @@ export const mcpApprovalsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'The agent sends a `tools/call` request to `POST /v1/mcp`.' },
-        { text: 'The gateway returns a JSON-RPC error with code `-32001` and a data payload containing the `approval_id`, `poll_endpoint`, and `expires_at`.' },
+        { text: 'The gateway returns a JSON-RPC error with code `-32001` and a data payload containing the `approval_id`, `poll_endpoint` and `expires_at`.' },
         { text: 'The agent polls `GET /v1/mcp/approvals/{approval_id}/status` periodically to check if the request was approved.' },
         { text: 'Once the status is "approved", the agent retries the original `tools/call` request.' },
         { text: 'If the status is "denied" or "expired", the agent handles the rejection.' },
@@ -200,19 +200,19 @@ export const mcpApprovalsContent: ArticleContent = {
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-tools',
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'Enable approval requirements on specific tools.',
         },
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-audit',
-          title: 'Audit log',
+          title: 'Activity',
           description: 'See approval_required entries in the audit trail.',
         },
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-overview',
-          title: 'MCP Gateway overview',
+          title: 'Agent Control overview',
           description: 'Understand the full request flow including the approval step.',
         },
       ],

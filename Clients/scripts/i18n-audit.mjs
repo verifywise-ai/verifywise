@@ -17,7 +17,7 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, "..", "src");
 const TRANSLATIONS_PATH = join(SRC_DIR, "i18n", "translations.ts");
-const SUPPORTED_LANGS = ["de", "fr"];
+const SUPPORTED_LANGS = ["de", "fr", "es"];
 
 const args = process.argv.slice(2);
 const wantJson = args.includes("--json");

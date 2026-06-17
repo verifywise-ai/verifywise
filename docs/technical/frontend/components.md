@@ -25,7 +25,8 @@ Clients/src/presentation/components/
 ├── Alert/                     # Alerts
 ├── Toast/                     # Notifications
 ├── Avatar/                    # User avatars
-├── Chip/                      # Status chips
+├── Chip.tsx                   # Unified status/risk badge chip
+├── Chip/                      # Specialized chips (DaysChip, CategoryChip)
 ├── Layout/                    # Page layouts
 └── Tooltip/                   # Tooltips
 ```
@@ -490,6 +491,64 @@ Notification toast.
   onClose={() => setShowToast(false)}
 />
 ```
+
+### Chip
+
+Unified badge component for risk levels, statuses, severities, and boolean values. Renders consistent light pastel styling with theme-derived colors. See the runnable showcase in StyleGuide → Chips.
+
+```tsx
+// File: Clients/src/presentation/components/Chip.tsx
+
+import Chip from "@/presentation/components/Chip";
+
+// Explicit variant
+<Chip label="High" variant="high" />
+
+// Auto-derived variant from common labels (case-insensitive)
+<Chip label="Approved" />
+<Chip label="In progress" />
+
+// Sizes: "small" (24px, default) | "medium" (34px)
+<Chip label="Pending" variant="warning" size="small" />
+<Chip label="Pending" variant="warning" size="medium" />
+
+// Lowercase display
+<Chip label="In progress" variant="warning" uppercase={false} />
+
+// Custom colors (one-off cases only — prefer variant)
+<Chip label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />
+
+// Optional leading icon
+<Chip label="Blocked" variant="error" icon={<AlertCircle size={12} />} />
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | — | Text displayed in the chip (required) |
+| `variant` | `ChipVariant` | auto | Semantic color variant; derived from label when omitted |
+| `size` | `"small"` \| `"medium"` | `"small"` | Chip height (24px or 34px) |
+| `uppercase` | boolean | `true` | Uppercase label text |
+| `backgroundColor` | string | — | Override background (use with `textColor`) |
+| `textColor` | string | — | Override text color (use with `backgroundColor`) |
+| `icon` | ReactNode | — | Optional icon before the label |
+
+**Variant groups:**
+
+| Group | Variants |
+|-------|----------|
+| Risk levels | `critical`, `high`, `medium`, `low`, `very-low` |
+| Status | `success`, `warning`, `error`, `info`, `default` |
+| Severity | `catastrophic`, `major`, `moderate`, `minor`, `negligible` |
+| Boolean | `yes`, `no` |
+
+**Guidelines:**
+
+- Prefer label-only usage — common labels like `"Approved"`, `"In progress"`, and `"High"` map automatically.
+- Pass an explicit `variant` when the label is custom or ambiguous.
+- Do not re-implement inline badge styling; use this component instead of raw MUI `Chip` or hardcoded `Box` styles.
+- Use `TagChip` (from `components/Tags`) for policy category tags, not for risk/status badges.
 
 ### DaysChip
 

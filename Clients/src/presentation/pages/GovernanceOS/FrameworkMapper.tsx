@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { GitCompareArrows, Plus, List, Grid3X3, Download, Upload } from "lucide-react";
 import FrameworkSelector from "../../components/GovernanceOS/FrameworkSelector";
+import GovernanceTooltip from "../../components/GovernanceOS/GovernanceTooltip";
 import MappingCard from "../../components/GovernanceOS/MappingCard";
 import { EmptyState } from "../../components/EmptyState";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
@@ -103,83 +104,118 @@ const FrameworkMapper = () => {
           onTargetChange={setTargetId}
         />
         <Stack direction="row" gap="8px" alignItems="center">
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, value) => value && setViewMode(value)}
-            size="small"
+          <GovernanceTooltip
+            header="View mode"
+            description="Switch between list and matrix views of mappings"
           >
-            <ToggleButton value="list" disableRipple>
-              <List size={14} />
-            </ToggleButton>
-            <ToggleButton value="matrix" disableRipple>
-              <Grid3X3 size={14} />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <CustomizableButton
-            variant="outlined"
-            size="small"
-            startIcon={<Download size={14} />}
-            onClick={() => {
-              const rows = [
-                [
-                  "ID",
-                  "Source Framework",
-                  "Source Control",
-                  "Target Framework",
-                  "Target Control",
-                  "Strength",
-                  "Domain",
-                  "Confidence",
-                ].join(","),
-                ...(pairwiseMappings || []).map((m) =>
-                  [
-                    m.id,
-                    m.source_framework_id,
-                    m.source_control_identifier,
-                    m.target_framework_id,
-                    m.target_control_identifier,
-                    m.mapping_strength,
-                    m.domain_tag || "",
-                    m.confidence_score || "",
-                  ].join(","),
-                ),
-              ];
-              const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `mappings-${sourceId}-${targetId}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-            text="Export"
-          />
-          <CustomizableButton
-            variant="outlined"
-            size="small"
-            startIcon={<Upload size={14} />}
-            onClick={() => setBulkImportOpen(true)}
-            text="Import"
-          />
-          <CustomizableButton
-            variant="outlined"
-            size="small"
-            startIcon={<Plus size={14} />}
-            onClick={handleCreateMapping}
-            text="New Mapping"
-          />
+            <span>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(_, value) => value && setViewMode(value)}
+                size="small"
+              >
+                <ToggleButton value="list" disableRipple>
+                  <List size={14} />
+                </ToggleButton>
+                <ToggleButton value="matrix" disableRipple>
+                  <Grid3X3 size={14} />
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </span>
+          </GovernanceTooltip>
+          <GovernanceTooltip
+            header="Export mappings"
+            description="Download the current pairwise mappings as a CSV file"
+          >
+            <span>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                startIcon={<Download size={14} />}
+                onClick={() => {
+                  const rows = [
+                    [
+                      "ID",
+                      "Source Framework",
+                      "Source Control",
+                      "Target Framework",
+                      "Target Control",
+                      "Strength",
+                      "Domain",
+                      "Confidence",
+                    ].join(","),
+                    ...(pairwiseMappings || []).map((m) =>
+                      [
+                        m.id,
+                        m.source_framework_id,
+                        m.source_control_identifier,
+                        m.target_framework_id,
+                        m.target_control_identifier,
+                        m.mapping_strength,
+                        m.domain_tag || "",
+                        m.confidence_score || "",
+                      ].join(","),
+                    ),
+                  ];
+                  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `mappings-${sourceId}-${targetId}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                text="Export"
+              />
+            </span>
+          </GovernanceTooltip>
+          <GovernanceTooltip
+            header="Import mappings"
+            description="Upload a CSV file to create multiple mappings at once"
+          >
+            <span>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                startIcon={<Upload size={14} />}
+                onClick={() => setBulkImportOpen(true)}
+                text="Import"
+              />
+            </span>
+          </GovernanceTooltip>
+          <GovernanceTooltip
+            header="New mapping"
+            description="Create a new cross-framework control mapping manually"
+          >
+            <span>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                startIcon={<Plus size={14} />}
+                onClick={handleCreateMapping}
+                text="New Mapping"
+              />
+            </span>
+          </GovernanceTooltip>
         </Stack>
       </Stack>
 
       {domainTileItems.length > 0 && (
-        <StatusTileCards
-          items={domainTileItems}
-          size="small"
-          entityName="mapping"
-          selectedKey={selectedDomain}
-          onCardClick={(key) => setSelectedDomain(selectedDomain === key ? null : key)}
-        />
+        <GovernanceTooltip
+          header="Domain filter"
+          description="Filter mappings by governance domain"
+        >
+          <span>
+            <StatusTileCards
+              items={domainTileItems}
+              size="small"
+              entityName="mapping"
+              selectedKey={selectedDomain}
+              onCardClick={(key) => setSelectedDomain(selectedDomain === key ? null : key)}
+            />
+          </span>
+        </GovernanceTooltip>
       )}
 
       {isLoading ? (

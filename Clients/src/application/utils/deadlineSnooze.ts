@@ -5,26 +5,23 @@
  * where `snoozeUntil` is a Unix epoch (ms) timestamp. The banner is hidden while
  * `Date.now() < snoozeUntil` and reappears automatically once that time passes.
  *
- * All access is wrapped in try/catch so a disabled/full localStorage never breaks
- * the banner (mirrors the pattern in useTipManager / paginationStorage).
+ * Access goes through the StorageService, so a disabled/full localStorage never
+ * breaks the banner.
  */
+
+import { storageService, dynamicKeys } from "../../infrastructure/storage";
 
 interface SnoozeState {
   snoozeUntil: number;
 }
 
-const snoozeKey = (userId: number): string => `verifywise_deadline_snooze_${userId}`;
-
 /** Returns the snooze expiry timestamp (ms), or null if not snoozed / unreadable. */
 export const getSnoozeExpiry = (userId: number): number | null => {
-  try {
-    const raw = localStorage.getItem(snoozeKey(userId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<SnoozeState>;
-    return typeof parsed?.snoozeUntil === "number" ? parsed.snoozeUntil : null;
-  } catch {
-    return null;
-  }
+  const parsed = storageService.getRaw<Partial<SnoozeState> | null>(
+    dynamicKeys.deadlineSnooze(userId),
+    null,
+  );
+  return typeof parsed?.snoozeUntil === "number" ? parsed.snoozeUntil : null;
 };
 
 /** True when the banner is currently snoozed for this user. */
@@ -35,19 +32,11 @@ export const isSnoozed = (userId: number): boolean => {
 
 /** Snooze the banner for `durationMs` from now. */
 export const setSnooze = (userId: number, durationMs: number): void => {
-  try {
-    const state: SnoozeState = { snoozeUntil: Date.now() + durationMs };
-    localStorage.setItem(snoozeKey(userId), JSON.stringify(state));
-  } catch {
-    // localStorage unavailable (private mode / quota) — snooze is best-effort.
-  }
+  const state: SnoozeState = { snoozeUntil: Date.now() + durationMs };
+  storageService.setRaw(dynamicKeys.deadlineSnooze(userId), state);
 };
 
 /** Clear any existing snooze for this user. */
 export const clearSnooze = (userId: number): void => {
-  try {
-    localStorage.removeItem(snoozeKey(userId));
-  } catch {
-    // No-op if storage is unavailable.
-  }
+  storageService.remove(dynamicKeys.deadlineSnooze(userId));
 };

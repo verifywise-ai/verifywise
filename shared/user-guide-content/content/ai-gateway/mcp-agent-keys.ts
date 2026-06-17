@@ -10,11 +10,11 @@ export const mcpAgentKeysContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Agent keys are scoped API keys that AI agents use to authenticate with the MCP Gateway. Each key controls which tools the agent can call, how fast it can call them, and when the key expires.',
+      text: 'Agent keys are scoped API keys that AI agents use to authenticate with the MCP Gateway. Each key controls which tools the agent can call, how fast it can call them and when the key expires.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find them at **AI Gateway > MCP Gateway > Agent keys**.',
+      text: 'You\'ll find them at **AI Gateway > Agent Control > Agent keys**.',
     },
     {
       type: 'paragraph',
@@ -34,7 +34,7 @@ export const mcpAgentKeysContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Name', text: 'The display name you gave the key.' },
-        { bold: 'Status chip', text: '"Active", "Revoked", "Expired", or "Inactive".' },
+        { bold: 'Status chip', text: '"Active", "Revoked", "Expired" or "Inactive".' },
         { bold: 'Key prefix', text: 'The first characters of the key in monospace font. The full key is never shown again after creation.' },
         { bold: 'Rate limit', text: 'Shown as RPM (requests per minute) if configured.' },
         { bold: 'Allowed/blocked tools', text: 'Chip showing the count of allowed or blocked tools, if any are configured.' },
@@ -238,19 +238,19 @@ curl -X POST https://your-verifywise-host/v1/mcp \\
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-overview',
-          title: 'MCP Gateway overview',
+          title: 'Agent Control overview',
           description: 'Understand the full gateway architecture and request flow.',
         },
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-audit',
-          title: 'Audit log',
+          title: 'Activity',
           description: 'See every tool call made with each agent key.',
         },
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-tools',
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'View the tools that agent keys grant access to.',
         },
       ],

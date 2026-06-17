@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { ProjectCard } from "../index";
-import type { Project } from "../../../../../domain/types/Project";
+import { buildProject } from "../../../../../test/factories/project.factory";
 
 const { mockNavigate, mockFetchData } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -62,28 +62,6 @@ vi.mock("../../../../tools/isoDateToString", () => ({
   displayFormattedDate: () => "15-01-2025",
 }));
 
-function createMockProject(overrides?: Partial<Project>): Project {
-  return {
-    id: 1,
-    uc_id: "UC-001",
-    project_title: "AI Governance Platform",
-    owner: 1,
-    members: [],
-    start_date: new Date("2024-01-01"),
-    ai_risk_classification: "high risk",
-    type_of_high_risk_role: "deployer",
-    goal: "Test goal",
-    last_updated: new Date("2025-01-15"),
-    last_updated_by: 1,
-    framework: [
-      { project_framework_id: 10, framework_id: 1, name: "EU AI Act" },
-      { project_framework_id: 20, framework_id: 2, name: "ISO 42001" },
-    ],
-    monitored_regulations_and_standards: [],
-    ...overrides,
-  };
-}
-
 function setupFetchDataMocks() {
   mockFetchData.mockImplementation((_url: string, setter: (data: any) => void) => {
     setter({
@@ -106,51 +84,51 @@ describe("ProjectCard", () => {
   });
 
   it("renders loading skeleton when isLoading is true", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} isLoading />);
+    renderWithProviders(<ProjectCard project={buildProject()} isLoading />);
 
     expect(screen.getAllByText("Loading...").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders project title with uc_id prefix", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     expect(screen.getByText("UC-001: AI Governance Platform")).toBeInTheDocument();
   });
 
   it("renders project title without uc_id prefix when uc_id is missing", () => {
-    renderWithProviders(<ProjectCard project={createMockProject({ uc_id: undefined })} />);
+    renderWithProviders(<ProjectCard project={buildProject({ uc_id: undefined })} />);
 
     expect(screen.getByText("AI Governance Platform")).toBeInTheDocument();
     expect(screen.queryByText("UC-001:")).not.toBeInTheDocument();
   });
 
   it("renders article role with correct aria-label", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     const article = screen.getByRole("article");
     expect(article).toHaveAttribute("aria-label", "Project card for AI Governance Platform");
   });
 
   it("shows owner name from users list", () => {
-    renderWithProviders(<ProjectCard project={createMockProject({ owner: 2 })} />);
+    renderWithProviders(<ProjectCard project={buildProject({ owner: 2 })} />);
 
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
   });
 
   it("shows Unknown User when owner not found", () => {
-    renderWithProviders(<ProjectCard project={createMockProject({ owner: 999 })} />);
+    renderWithProviders(<ProjectCard project={buildProject({ owner: 999 })} />);
 
     expect(screen.getByText("Unknown User")).toBeInTheDocument();
   });
 
   it("shows formatted last updated date", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     expect(screen.getByText("15-01-2025")).toBeInTheDocument();
   });
 
   it("renders both framework buttons when both framework IDs present", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     expect(screen.getByText("EU AI Act")).toBeInTheDocument();
     expect(screen.getByText("ISO 42001")).toBeInTheDocument();
@@ -159,7 +137,7 @@ describe("ProjectCard", () => {
   it("renders only EU AI Act framework when only framework_id 1 is present", () => {
     renderWithProviders(
       <ProjectCard
-        project={createMockProject({
+        project={buildProject({
           framework: [{ project_framework_id: 10, framework_id: 1, name: "EU AI Act" }],
         })}
       />,
@@ -172,7 +150,7 @@ describe("ProjectCard", () => {
   it("renders only ISO 42001 framework when only framework_id 2 is present", () => {
     renderWithProviders(
       <ProjectCard
-        project={createMockProject({
+        project={buildProject({
           framework: [{ project_framework_id: 20, framework_id: 2, name: "ISO 42001" }],
         })}
       />,
@@ -183,7 +161,7 @@ describe("ProjectCard", () => {
   });
 
   it("renders no framework buttons when no frameworks present", () => {
-    renderWithProviders(<ProjectCard project={createMockProject({ framework: [] })} />);
+    renderWithProviders(<ProjectCard project={buildProject({ framework: [] })} />);
 
     expect(screen.queryByText("EU AI Act")).not.toBeInTheDocument();
     expect(screen.queryByText("ISO 42001")).not.toBeInTheDocument();
@@ -191,7 +169,7 @@ describe("ProjectCard", () => {
 
   it("calls navigate on EU AI Act framework button click", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await user.click(screen.getByText("EU AI Act"));
 
@@ -204,7 +182,7 @@ describe("ProjectCard", () => {
 
   it("calls navigate on ISO 42001 framework button click", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await user.click(screen.getByText("ISO 42001"));
 
@@ -217,7 +195,7 @@ describe("ProjectCard", () => {
 
   it("calls navigate on View project details button click", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await user.click(screen.getByText("View project details"));
 
@@ -227,7 +205,7 @@ describe("ProjectCard", () => {
   });
 
   it("renders ViewRelationshipsButton with correct props", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     const relButton = screen.getByTestId("view-relationships-button");
     expect(relButton.textContent).toBe("useCase-1-AI Governance Platform");
@@ -235,7 +213,7 @@ describe("ProjectCard", () => {
 
   it("renders both frameworks layout with progress data after fetch", async () => {
     setupFetchDataMocks();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Requirements: 5 out of 10")).toBeInTheDocument();
@@ -246,7 +224,7 @@ describe("ProjectCard", () => {
   });
 
   it("renders both frameworks layout with default 0/0 before fetch resolves", () => {
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     const bars = screen.getAllByTestId("progress-bar");
     expect(bars).toHaveLength(4);
@@ -257,7 +235,7 @@ describe("ProjectCard", () => {
     setupFetchDataMocks();
     renderWithProviders(
       <ProjectCard
-        project={createMockProject({
+        project={buildProject({
           framework: [{ project_framework_id: 10, framework_id: 1, name: "EU AI Act" }],
         })}
       />,
@@ -273,7 +251,7 @@ describe("ProjectCard", () => {
     setupFetchDataMocks();
     renderWithProviders(
       <ProjectCard
-        project={createMockProject({
+        project={buildProject({
           framework: [{ project_framework_id: 20, framework_id: 2, name: "ISO 42001" }],
         })}
       />,
@@ -290,7 +268,7 @@ describe("ProjectCard", () => {
   it("navigates to compliance subtab on ExternalLink click", async () => {
     const user = userEvent.setup();
     setupFetchDataMocks();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Requirements: 5 out of 10")).toBeInTheDocument();
@@ -310,7 +288,7 @@ describe("ProjectCard", () => {
   it("navigates to assessment subtab on ExternalLink click", async () => {
     const user = userEvent.setup();
     setupFetchDataMocks();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Controls: 3 out of 8")).toBeInTheDocument();
@@ -329,7 +307,7 @@ describe("ProjectCard", () => {
 
   it("renders progress bars with correct progress strings for both frameworks", async () => {
     setupFetchDataMocks();
-    renderWithProviders(<ProjectCard project={createMockProject()} />);
+    renderWithProviders(<ProjectCard project={buildProject()} />);
 
     await waitFor(() => {
       const bars = screen.getAllByTestId("progress-bar");

@@ -165,6 +165,14 @@ export function ContextSidebar({
     case "ai-gateway": {
       const gatewayTab = (() => {
         const p = location.pathname;
+        // MCP / Agent Control sub-routes must be checked before the broader
+        // matches so a path like /ai-gateway/mcp/audit doesn't fall through.
+        if (p.includes("/ai-gateway/mcp/agent-keys")) return "mcp/agent-keys";
+        if (p.includes("/ai-gateway/mcp/audit")) return "mcp/audit";
+        if (p.includes("/ai-gateway/mcp/approvals")) return "mcp/approvals";
+        if (p.includes("/ai-gateway/mcp/servers")) return "mcp/servers";
+        if (p.includes("/ai-gateway/mcp/tools")) return "mcp/tools";
+        if (p.includes("/ai-gateway/mcp/guardrails")) return "mcp/guardrails";
         if (p.includes("/ai-gateway/dashboard")) return "dashboard";
         if (p.includes("/ai-gateway/endpoints")) return "endpoints";
         if (p.includes("/ai-gateway/playground")) return "playground";

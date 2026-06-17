@@ -84,8 +84,22 @@ describe("useFileColumnVisibility", () => {
       result.current.toggleColumn("status");
     });
 
-    const stored = JSON.parse(localStorage.getItem("verifywise:file-column-visibility")!);
+    const stored = JSON.parse(localStorage.getItem("verifywise_file_column_visibility")!);
     expect(stored).not.toContain("status");
+  });
+
+  it("migrates from the legacy un-namespaced key once", () => {
+    localStorage.setItem("verifywise:file-column-visibility", JSON.stringify(["file", "action"]));
+    localStorage.setItem("verifywise:file-column-visibility-version", "3");
+
+    const { result } = renderHook(() => useFileColumnVisibility());
+
+    // Restored from legacy data (version is current, so no new defaults added).
+    expect(result.current.isColumnVisible("uploader")).toBe(false);
+    expect(result.current.isColumnVisible("file")).toBe(true);
+    // Value migrated to the namespaced key; legacy key removed.
+    expect(localStorage.getItem("verifywise_file_column_visibility")).not.toBeNull();
+    expect(localStorage.getItem("verifywise:file-column-visibility")).toBeNull();
   });
 
   it("getTableColumns returns visible columns with proper format", () => {

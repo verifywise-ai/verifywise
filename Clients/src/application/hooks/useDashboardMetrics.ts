@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getAllEntities, getEntityById } from "../repository/entity.repository";
 import type { ProgressStep } from "../../presentation/components/StepProgressDialog";
+import { storageService, type DashboardMetricsCache } from "../../infrastructure/storage";
 
-// Cache configuration
-export const CACHE_KEY = "dashboard_metrics_cache";
+// Cache configuration — canonical namespaced key (migrated once from the old
+// "dashboard_metrics_cache" via the StorageService legacy-key mechanism).
+export const CACHE_KEY = "verifywise_dashboard_metrics_cache";
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds - data is considered fresh
 const STALE_TTL_MS = 5 * 60 * 1000; // 5 minutes - data can still be shown while revalidating
 
@@ -31,22 +33,13 @@ interface MetricsCache {
   governanceScoreMetrics?: CacheEntry<any>;
 }
 
-// Cache utility functions
-const getCache = (): MetricsCache => {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    return cached ? JSON.parse(cached) : {};
-  } catch {
-    return {};
-  }
-};
+// Cache utility functions — backed by the typed StorageService (JSON, SSR/sandbox
+// safe). The "dashboardMetricsCache" registry entry owns the canonical key and the
+// one-time legacy migration.
+const getCache = (): MetricsCache => storageService.get("dashboardMetricsCache", {});
 
 const setCache = (cache: MetricsCache): void => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // localStorage might be full or disabled
-  }
+  storageService.set("dashboardMetricsCache", cache as DashboardMetricsCache);
 };
 
 const getCachedValue = <T>(

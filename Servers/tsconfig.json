@@ -117,7 +117,8 @@
     "types/status.type.ts",
     "domain.layer/models/user/user.model.ts",
     "domain.layer/tests/**/*.ts",
-    "domain.layer/**/*.ts"
+    "domain.layer/**/*.ts",
+    "./tests/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "migrations", "database/migrations", "controllers/__tests__"]
 }

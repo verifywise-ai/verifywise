@@ -5,7 +5,6 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  useTheme,
   Stack,
   Typography,
   Tooltip,
@@ -20,6 +19,7 @@ import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import {
   ModelInventoryTableProps,
@@ -27,7 +27,7 @@ import {
 } from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import { tableRowHoverStyle, tableRowDeletingStyle, loadingContainerStyle } from "./style";
+import { tableRowHoverStyle, tableRowDeletingStyle } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
@@ -93,7 +93,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   flashRowId,
   visibleColumns,
 }) => {
-  const theme = useTheme();
   const { userRoleName } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
 
@@ -532,8 +531,8 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={loadingContainerStyle(theme)}>
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

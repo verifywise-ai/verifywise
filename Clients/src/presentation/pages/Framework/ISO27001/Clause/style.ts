@@ -1,5 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
-import { commonStyles, flashAnimation, getStatusColor } from "../../../ISO/style";
+import { commonStyles, flashAnimation } from "../../../ISO/style";
 import { border as borderPalette } from "../../../../themes/palette";
 
 // Component styles
@@ -24,14 +24,6 @@ export const styles = {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
       },
       "alignItems": "center",
-    }) as SxProps<Theme>,
-
-  statusBadge: (status: string) =>
-    ({
-      borderRadius: "4px",
-      padding: "5px",
-      backgroundColor: getStatusColor(status),
-      color: "background.main",
     }) as SxProps<Theme>,
 
   loadingContainer: {

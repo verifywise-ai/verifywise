@@ -41,6 +41,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import EntityLinkSelector from "../index";
+import { buildVendor } from "../../../../test/factories";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { getAllVendors } from "../../../../application/repository/vendor.repository";
 import { getAllPolicies } from "../../../../application/repository/policy.repository";
@@ -72,7 +73,7 @@ describe("EntityLinkSelector", () => {
 
   it("renders vendor select when Vendor type is selected", async () => {
     (getAllVendors as any).mockResolvedValue({
-      data: [{ id: 1, vendor_name: "TestVendor" }],
+      data: [buildVendor({ vendor_name: "TestVendor" })],
     });
     renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
     await vi.waitFor(() => {
@@ -195,7 +196,7 @@ describe("EntityLinkSelector", () => {
   it("adds a vendor link when vendor selected and plus clicked", async () => {
     const onChange = vi.fn();
     (getAllVendors as any).mockResolvedValue({
-      data: [{ id: 1, vendor_name: "Acme Corp" }],
+      data: [buildVendor()],
     });
     renderWithProviders(<EntityLinkSelector value={[]} onChange={onChange} />);
     await vi.waitFor(() => {
@@ -231,7 +232,7 @@ describe("EntityLinkSelector", () => {
   it("does not add duplicate links", async () => {
     const onChange = vi.fn();
     (getAllVendors as any).mockResolvedValue({
-      data: [{ id: 1, vendor_name: "Acme Corp" }],
+      data: [buildVendor()],
     });
     renderWithProviders(
       <EntityLinkSelector
@@ -262,7 +263,7 @@ describe("EntityLinkSelector", () => {
 
   it("disables entity select when disabled prop is true", async () => {
     (getAllVendors as any).mockResolvedValue({
-      data: [{ id: 1, vendor_name: "Acme Corp" }],
+      data: [buildVendor()],
     });
     renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} disabled />);
     await vi.waitFor(() => {

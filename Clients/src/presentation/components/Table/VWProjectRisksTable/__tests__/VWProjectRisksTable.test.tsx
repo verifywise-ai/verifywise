@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import VWProjectRisksTable from "../index";
 import type { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
+import { buildRisk } from "../../../../../test/factories/risk.factory";
 
 vi.mock("../../../../../application/hooks/useCustomFields", () => ({
   useCustomFieldDefinitions: () => ({ data: [] }),
@@ -143,45 +144,34 @@ if (
 }
 
 const mockRows = [
-  {
-    id: 1,
+  buildRisk({
     risk_name: "Data Breach Risk",
-    risk_owner: 1,
-    severity: "High" as const,
-    ale_estimate: 500000,
-    mitigation_status: "In Progress" as const,
-    risk_level_autocalculated: "High" as const,
-    deadline: "2025-12-31T00:00:00Z",
-    is_deleted: false,
-    controls_mapping: "Test controls",
-    likelihood: "Medium" as const,
-  },
-  {
+    severity: "High",
+    risk_level_autocalculated: "High",
+    likelihood: "Medium",
+  }),
+  buildRisk({
     id: 2,
     risk_name: "AI Bias Risk",
     risk_owner: 2,
-    severity: "Critical" as const,
+    severity: "Critical",
     ale_estimate: null,
-    mitigation_status: "Open" as const,
-    risk_level_autocalculated: "Critical" as const,
+    mitigation_status: "Open",
+    risk_level_autocalculated: "Critical",
     deadline: "2025-06-15T00:00:00Z",
-    is_deleted: false,
     controls_mapping: "Another control",
-    likelihood: "High" as const,
-  },
-  {
+    likelihood: "High",
+  }),
+  buildRisk({
     id: 3,
     risk_name: "Compliance Risk",
-    risk_owner: 1,
-    severity: "Moderate" as const,
+    severity: "Moderate",
     ale_estimate: 10000,
-    mitigation_status: "In Progress" as const,
-    risk_level_autocalculated: "Medium" as const,
+    risk_level_autocalculated: "Medium",
     deadline: "2025-09-01T00:00:00Z",
-    is_deleted: false,
     controls_mapping: "Compliance controls",
-    likelihood: "Low" as const,
-  },
+    likelihood: "Low",
+  }),
 ] as unknown as RiskModel[];
 
 const defaultProps = {
@@ -385,7 +375,7 @@ describe("VWProjectRisksTable", () => {
   });
 
   it("renders with all risks deleted (empty selectable)", () => {
-    const deletedRows = [{ ...mockRows[0], id: 1, is_deleted: true }] as unknown as RiskModel[];
+    const deletedRows = [buildRisk({ is_deleted: true })] as unknown as RiskModel[];
     renderWithProviders(
       <VWProjectRisksTable {...defaultProps} rows={deletedRows} canRunBulkActions />,
     );

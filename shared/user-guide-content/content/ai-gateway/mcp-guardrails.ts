@@ -10,11 +10,11 @@ export const mcpGuardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'MCP Guardrails scan tool inputs before the gateway forwards them to the backend server. They catch PII, prohibited content, and prompt injection attempts before they reach your tools.',
+      text: 'MCP Guardrails scan tool inputs before the gateway forwards them to the backend server. They catch PII, prohibited content and prompt injection attempts before they reach your tools.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find them at **AI Gateway > MCP Gateway > Guardrails**.',
+      text: 'You\'ll find them at **AI Gateway > Agent Control > Guardrails**.',
     },
     {
       type: 'paragraph',
@@ -38,7 +38,7 @@ export const mcpGuardrailsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Name', text: 'The name you gave the rule.' },
-        { bold: 'Rule type chip', text: 'Shows "PII", "Content filter", or "Prompt injection" with a color-coded badge.' },
+        { bold: 'Rule type chip', text: 'Shows "PII", "Content filter" or "Prompt injection" with a color-coded badge.' },
         { bold: 'Action chip', text: 'Shows "Block" or "Mask".' },
         { bold: 'Scope', text: 'Where the rule applies (currently "tool_input").' },
         { bold: 'Tool scope', text: 'Either "Applies to all tools" or a list of specific tool names.' },
@@ -69,7 +69,7 @@ export const mcpGuardrailsContent: ArticleContent = {
       ],
       rows: [
         { type: 'PII detection', chip: 'Blue (info)', description: 'Scans tool inputs for personal identifiable information: email addresses, phone numbers, credit card numbers, SSNs, etc. Uses Presidio-based detection.' },
-        { type: 'Content filter', chip: 'Amber (warning)', description: 'Checks tool inputs against a list of keywords or regex patterns that you define. Useful for blocking profanity, competitor names, or domain-specific terms.' },
+        { type: 'Content filter', chip: 'Amber (warning)', description: 'Checks tool inputs against a list of keywords or regex patterns that you define. Useful for blocking profanity, competitor names or domain-specific terms.' },
         { type: 'Prompt injection', chip: 'Green (success)', description: 'Detects attempts to manipulate the tool\'s behavior through injected instructions in the input data.' },
       ],
     },
@@ -115,7 +115,7 @@ export const mcpGuardrailsContent: ArticleContent = {
       ],
       rows: [
         { field: 'Name', required: 'Yes', description: 'A descriptive name for the rule (e.g., "Block PII in database queries"). Max 255 characters.' },
-        { field: 'Rule type', required: 'Yes', description: 'Select PII detection, Content filter, or Prompt injection.' },
+        { field: 'Rule type', required: 'Yes', description: 'Select PII detection, Content filter or Prompt injection.' },
         { field: 'Action', required: 'Yes', description: 'Select Block or Mask.' },
         { field: 'Scope', required: 'Yes', description: 'Where to apply the rule. Currently only "Tool input" is available.' },
         { field: 'Applies to tools', required: 'No', description: 'Comma-separated tool names. Leave empty to apply to all MCP tools.' },
@@ -271,7 +271,7 @@ export const mcpGuardrailsContent: ArticleContent = {
       items: [
         { bold: 'Scan tool inputs before execution', text: 'Rules are evaluated against tool input data before the tool runs.' },
         { bold: 'Scope rules to specific tools', text: 'Apply guardrails globally or restrict to specific MCP tools.' },
-        { bold: 'Multiple rule types', text: 'Choose from PII detection, content filtering, or prompt injection detection.' },
+        { bold: 'Multiple rule types', text: 'Choose from PII detection, content filtering or prompt injection detection.' },
       ],
     },
     {
@@ -291,13 +291,13 @@ export const mcpGuardrailsContent: ArticleContent = {
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-audit',
-          title: 'Audit log',
+          title: 'Activity',
           description: 'Blocked tool calls appear in the audit trail with "blocked" status.',
         },
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-tools',
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'View which tools your guardrails apply to.',
         },
         {

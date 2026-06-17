@@ -21,9 +21,10 @@ from config import settings
 from crud.mcp_approvals import create_approval_request, get_approval_status, get_approved_request, get_pending_request
 from crud.mcp_tools import get_all_tools
 from services.mcp_audit_service import log_tool_call
-from services.mcp_guardrail_service import scan_tool_input
+from services.mcp_guardrail_service import scan_tool_input, check_anomaly, CircuitBreaker
 from services.mcp_proxy_service import (
     authenticate_agent_key,
+    extract_agent_key,
     resolve_tool,
     enforce_tool_acls,
     enforce_mcp_rate_limits,
@@ -31,6 +32,8 @@ from services.mcp_proxy_service import (
 )
 from services.mcp_session import create_session, get_backend_session, set_backend_session
 from utils.acl import matches_acl
+from utils.mcp_arguments import hash_arguments
+from utils.notifications import notify_approval_pending
 
 logger = logging.getLogger("uvicorn")
 
@@ -48,21 +51,10 @@ def _jsonrpc_result(id, result: dict) -> dict:
     return {"jsonrpc": "2.0", "id": id, "result": result}
 
 
-async def _extract_agent_key(request: Request) -> dict:
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Authorization: Bearer <agent-key>")
-    token = auth[7:].strip()
-    try:
-        return await authenticate_agent_key(token)
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
-
-
 @router.post("/v1/mcp")
 async def mcp_jsonrpc(request: Request):
     """Handle JSON-RPC 2.0 requests from MCP clients."""
-    agent_key = await _extract_agent_key(request)
+    agent_key = await extract_agent_key(request)
     org_id = agent_key["organization_id"]
 
     try:
@@ -141,11 +133,14 @@ async def mcp_jsonrpc(request: Request):
             await enforce_mcp_rate_limits(agent_key, tool_name)
 
             if tool.get("requires_approval"):
-                # Check if an approved request already exists for this agent+tool
-                approved = await get_approved_request(org_id, agent_key["id"], tool_name)
+                # Approvals are scoped to the exact arguments of this call, so an
+                # approval for one set of arguments cannot be reused for another.
+                args_hash = hash_arguments(arguments)
+                # Check if an approved request already exists for this agent+tool+arguments
+                approved = await get_approved_request(org_id, agent_key["id"], tool_name, args_hash)
                 if not approved:
-                    # Reuse an existing pending request if one exists, otherwise create a new one
-                    pending = await get_pending_request(org_id, agent_key["id"], tool_name)
+                    # Reuse an existing pending request for the same call, otherwise create a new one
+                    pending = await get_pending_request(org_id, agent_key["id"], tool_name, args_hash)
                     if pending:
                         approval = pending
                     else:
@@ -155,9 +150,17 @@ async def mcp_jsonrpc(request: Request):
                             "tool_id": tool.get("id"),
                             "tool_name": tool_name,
                             "arguments": arguments,
+                            "arguments_hash": args_hash,
                             "expires_at": expires_at,
                         })
                         await _audit("approval_required", f"Approval request {approval.get('id')} created", False)
+                        # Notify org admins that a tool call is waiting for approval.
+                        await notify_approval_pending(org_id, {
+                            "approval_id": approval.get("id"),
+                            "tool_name": tool_name,
+                            "agent_key_id": agent_key["id"],
+                            "agent_key_name": agent_key.get("name"),
+                        })
                     return JSONResponse(content=_jsonrpc_error(msg_id, -32001, "Tool requires approval", {
                         "approval_id": approval.get("id"),
                         "poll_endpoint": f"/v1/mcp/approvals/{approval.get('id')}/status",
@@ -170,24 +173,57 @@ async def mcp_jsonrpc(request: Request):
                 await _audit("blocked", f"Guardrail: {reason}", False)
                 return JSONResponse(content=_jsonrpc_error(msg_id, -32003, f"Blocked by guardrail: {reason}"), status_code=200)
 
+            server_id = tool["server_id"]
+
+            # Circuit breaker: skip calls to an upstream that is failing repeatedly.
+            if await CircuitBreaker.is_open(server_id):
+                await _audit("blocked", "Circuit breaker open: upstream MCP server unavailable", False)
+                return JSONResponse(content=_jsonrpc_error(
+                    msg_id, -32004, "MCP server temporarily unavailable (circuit breaker open)"
+                ), status_code=200)
+
+            # Anomaly detection: warn-only (fail-open), does not block the call.
+            # Runs only for calls that actually forward upstream, so denied,
+            # blocked, or approval-pending calls do not inflate the rate metric.
+            if await check_anomaly(agent_key["id"], tool_name):
+                logger.warning(
+                    "MCP anomalous call rate: org=%s agent_key=%s tool=%s",
+                    org_id, agent_key["id"], tool_name,
+                )
+
             # Look up cached backend session
             gateway_session = request.headers.get("mcp-session-id")
             backend_session = None
             if gateway_session:
-                backend_session = await get_backend_session(gateway_session, tool["server_id"])
+                backend_session = await get_backend_session(gateway_session, server_id)
 
-            result, new_backend_session = await forward_tool_call(
-                server_url=tool["url"],
-                auth_type=tool.get("auth_type", "none"),
-                auth_config=tool.get("auth_config") or {},
-                tool_name=tool_name,
-                arguments=arguments,
-                session_id=backend_session,
-            )
+            try:
+                result, new_backend_session = await forward_tool_call(
+                    server_url=tool["url"],
+                    auth_type=tool.get("auth_type", "none"),
+                    auth_config=tool.get("auth_config") or {},
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    session_id=backend_session,
+                )
+            except ValueError:
+                # A ValueError here is a tool-level error returned by a healthy
+                # upstream (e.g. bad arguments, "not found"). The transport
+                # worked, so it must NOT count against the circuit breaker —
+                # otherwise a misbehaving agent could trip the breaker for a
+                # healthy server. Re-raise without recording a failure.
+                raise
+            except Exception:
+                # A non-ValueError exception is a genuine transport/connection
+                # failure — record it against the circuit breaker.
+                await CircuitBreaker.record_failure(server_id)
+                raise
+
+            await CircuitBreaker.record_success(server_id)
 
             # Cache new backend session for next call
             if new_backend_session and gateway_session:
-                await set_backend_session(gateway_session, tool["server_id"], new_backend_session)
+                await set_backend_session(gateway_session, server_id, new_backend_session)
 
             content_text = None
             if result.get("content"):
@@ -212,19 +248,27 @@ async def mcp_jsonrpc(request: Request):
 @router.get("/v1/mcp/approvals/{request_id}/status")
 async def mcp_approval_status(request: Request, request_id: int):
     """Poll approval status — authenticated via agent key."""
-    agent_key = await _extract_agent_key(request)
+    agent_key = await extract_agent_key(request)
     org_id = agent_key["organization_id"]
 
     approval = await get_approval_status(org_id, request_id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
+    # A still-pending request whose expiry has passed is dead — it can no longer
+    # be decided (decide_approval requires expires_at > NOW()). Report it as
+    # "expired" so a poller stops waiting instead of seeing "pending" forever.
+    status_value = approval["status"]
+    expires_at = approval.get("expires_at")
+    if status_value == "pending" and expires_at is not None and expires_at <= datetime.now(timezone.utc):
+        status_value = "expired"
+
     return {
         "approval_id": approval["id"],
-        "status": approval["status"],
+        "status": status_value,
         "decided_at": approval["decided_at"].isoformat() if approval.get("decided_at") else None,
         "decision_reason": approval.get("decision_reason"),
-        "expires_at": approval["expires_at"].isoformat() if approval.get("expires_at") else None,
+        "expires_at": expires_at.isoformat() if expires_at else None,
     }
 
 

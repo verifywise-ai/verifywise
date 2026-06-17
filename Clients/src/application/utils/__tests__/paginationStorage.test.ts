@@ -21,19 +21,19 @@ describe("paginationStorage", () => {
     });
 
     it("returns stored value", () => {
-      localStorage.setItem("pagination_rows_test-table", "50");
+      localStorage.setItem("verifywise_pagination_rows_test-table", "50");
       const result = getPaginationRowCount(TABLE_KEY);
       expect(result).toBe(50);
     });
 
     it("returns default when stored value is NaN", () => {
-      localStorage.setItem("pagination_rows_test-table", "not-a-number");
+      localStorage.setItem("verifywise_pagination_rows_test-table", "not-a-number");
       const result = getPaginationRowCount(TABLE_KEY);
       expect(result).toBe(10);
     });
 
     it("returns default when stored value is <= 0", () => {
-      localStorage.setItem("pagination_rows_test-table", "0");
+      localStorage.setItem("verifywise_pagination_rows_test-table", "0");
       const result = getPaginationRowCount(TABLE_KEY);
       expect(result).toBe(10);
     });
@@ -50,7 +50,7 @@ describe("paginationStorage", () => {
   describe("setPaginationRowCount", () => {
     it("stores the value in localStorage", () => {
       setPaginationRowCount(TABLE_KEY, 25);
-      expect(localStorage.getItem("pagination_rows_test-table")).toBe("25");
+      expect(localStorage.getItem("verifywise_pagination_rows_test-table")).toBe("25");
     });
 
     it("handles localStorage error gracefully", () => {

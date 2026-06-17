@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-06-16
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -172,6 +172,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Detailed coding standards (TS, React, backend, security, testing) | `CodeRules/README.md` |
 | Plugin system | `docs/technical/infrastructure/plugin-system.md` |
 | Approval workflows | `docs/technical/domains/approvals.md` |
+| Agent Control (AI Gateway native tool-call hook + file-write gating) | `docs/technical/domains/agent-control.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |

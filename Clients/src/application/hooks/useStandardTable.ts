@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getPaginationRowCount, setPaginationRowCount } from "../utils/paginationStorage";
+import { storageService, dynamicKeys } from "../../infrastructure/storage";
 import type { SortConfig, SortDirection } from "../../domain/types/standardTable";
 
 export type { SortConfig, SortDirection };
@@ -26,9 +27,6 @@ interface UseStandardTableReturn<T> {
   totalCount: number;
 }
 
-const SORTING_KEY_PREFIX = "verifywise_";
-const SORTING_KEY_SUFFIX = "_sorting";
-
 export function useStandardTable<T>(
   options: UseStandardTableOptions<T>,
 ): UseStandardTableReturn<T> {
@@ -41,7 +39,7 @@ export function useStandardTable<T>(
     sortComparator,
   } = options;
 
-  const sortingKey = `${SORTING_KEY_PREFIX}${storageKey}${SORTING_KEY_SUFFIX}`;
+  const sortingKey = dynamicKeys.sorting(storageKey);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -49,26 +47,18 @@ export function useStandardTable<T>(
     getPaginationRowCount(storageKey, defaultRowsPerPage),
   );
 
-  // Sorting state from localStorage or defaults
+  // Sorting state from storage or defaults
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(sortingKey);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (!parsed.key || !parsed.direction) {
-          return { key: defaultSortColumn, direction: defaultSortDirection };
-        }
-        return parsed;
-      } catch {
-        return { key: defaultSortColumn, direction: defaultSortDirection };
-      }
+    const parsed = storageService.getRaw<SortConfig | null>(sortingKey, null);
+    if (parsed && parsed.key && parsed.direction) {
+      return parsed;
     }
     return { key: defaultSortColumn, direction: defaultSortDirection };
   });
 
   // Persist sorting state
   useEffect(() => {
-    localStorage.setItem(sortingKey, JSON.stringify(sortConfig));
+    storageService.setRaw(sortingKey, sortConfig);
   }, [sortConfig, sortingKey]);
 
   // Three-state sort toggle: asc → desc → clear

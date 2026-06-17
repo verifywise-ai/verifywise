@@ -151,7 +151,6 @@ function Select({
             height: "22px",
             display: "flex",
             alignItems: "center",
-            cursor: "pointer",
           }}
         >
           {label}

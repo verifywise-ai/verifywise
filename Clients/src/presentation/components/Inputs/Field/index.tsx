@@ -123,7 +123,7 @@ const Field = forwardRef(
             color={theme.palette.text.secondary}
             fontWeight={500}
             fontSize={"13px"}
-            sx={{ margin: 0, height: "22px", display: "block", cursor: "pointer" }}
+            sx={{ margin: 0, height: "22px", display: "block" }}
           >
             {label}
             {isRequired && (

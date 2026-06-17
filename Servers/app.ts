@@ -93,6 +93,7 @@ import aiContentRoutes from "./routes/aiContent.route";
 import aiConfirmationRoutes from "./routes/aiConfirmation.route";
 import aiApprovalRoutes from "./routes/aiApproval.route";
 import aiApprovalRulesRoutes from "./routes/aiApprovalRules.route";
+import aiAppRoutes from "./routes/aiApp.route";
 import aiAuditRoutes from "./routes/aiAudit.route";
 import featureSettingsRoutes from "./routes/featureSettings.route";
 import friaRoutes from "./routes/fria.route";
@@ -260,6 +261,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/ai-confirmation", aiConfirmationRoutes);
   app.use("/api/ai-approvals", aiApprovalRoutes);
   app.use("/api/ai-approval-rules", aiApprovalRulesRoutes);
+  app.use("/api/ai-apps", aiAppRoutes);
   app.use("/api/ai-audit", aiAuditRoutes);
   app.use("/api/advisor", advisorRouter);
   app.use("/api/policy-linked", policyLinkedObjects);

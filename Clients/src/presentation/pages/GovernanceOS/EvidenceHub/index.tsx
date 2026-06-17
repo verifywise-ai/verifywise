@@ -2,6 +2,7 @@ import React from "react";
 import { Stack, Typography, Box, alpha } from "@mui/material";
 import { FileCheck, Clock } from "lucide-react";
 import GovernanceLayout from "../shared/GovernanceLayout";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { text, brand } from "../../../themes/palette";
 
 const EvidenceHub: React.FC = () => {
@@ -11,19 +12,26 @@ const EvidenceHub: React.FC = () => {
       subtitle="Centralize and manage compliance evidence across all frameworks and projects."
     >
       <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
-        <Box
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            backgroundColor: alpha(brand.primary, 0.08),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+        <GovernanceTooltip
+          header="Evidence Hub"
+          description="Centralize and manage compliance evidence across frameworks and projects. This module is coming soon."
         >
-          <FileCheck size={24} color={brand.primary} />
-        </Box>
+          <span>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                backgroundColor: alpha(brand.primary, 0.08),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FileCheck size={24} color={brand.primary} />
+            </Box>
+          </span>
+        </GovernanceTooltip>
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Evidence Hub
         </Typography>

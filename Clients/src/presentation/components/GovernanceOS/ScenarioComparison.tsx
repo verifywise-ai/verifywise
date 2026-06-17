@@ -3,6 +3,7 @@ import { Box, Typography, Stack, alpha } from "@mui/material";
 import { Scale } from "lucide-react";
 import Checkbox from "../Inputs/Checkbox";
 import FrameworkChip from "./FrameworkChip";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
 import { border as borderPalette, background, text, accent, brand } from "../../themes/palette";
 
@@ -87,10 +88,15 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Scenario Comparison</Typography>
       </Stack>
 
-      <Typography sx={{ fontSize: 13, color: text.accent, mb: "16px" }}>
-        Select up to {MAX_COMPARE} scenarios to compare frameworks, priorities, and context side by
-        side.
-      </Typography>
+      <GovernanceTooltip
+        header="Scenario selector"
+        description="Choose up to three scenarios to compare side by side"
+      >
+        <Typography sx={{ fontSize: 13, color: text.accent, mb: "16px" }}>
+          Select up to {MAX_COMPARE} scenarios to compare frameworks, priorities, and context side
+          by side.
+        </Typography>
+      </GovernanceTooltip>
 
       {/* Scenario selectors */}
       <Stack direction="row" gap="8px" flexWrap="wrap" sx={{ mb: "16px" }}>
@@ -138,18 +144,23 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
             }}
           >
             {/* Header row */}
-            <Box
-              sx={{
-                p: "12px",
-                background: background.hover,
-                borderRight: `1px solid ${borderPalette.light}`,
-                fontWeight: 600,
-                fontSize: 12,
-                color: text.muted,
-              }}
+            <GovernanceTooltip
+              header="Comparison attribute"
+              description="Scenario property being compared across selections"
             >
-              Attribute
-            </Box>
+              <Box
+                sx={{
+                  p: "12px",
+                  background: background.hover,
+                  borderRight: `1px solid ${borderPalette.light}`,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  color: text.muted,
+                }}
+              >
+                Attribute
+              </Box>
+            </GovernanceTooltip>
             {comparedScenarios.map((scenario) => (
               <Box
                 key={`h-${scenario.id}`}

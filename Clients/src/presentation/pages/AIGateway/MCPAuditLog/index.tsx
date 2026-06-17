@@ -15,6 +15,8 @@ import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "../shared";
+import MCPTable from "../MCPTable";
+import MCPInvocationDrawer from "../MCPInvocationDrawer";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 interface AuditLog {
@@ -68,6 +70,7 @@ export default function MCPAuditLogPage() {
   const [total, setTotal] = useState(0);
   const [filterTool, setFilterTool] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [drawerLogId, setDrawerLogId] = useState<number | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -126,8 +129,8 @@ export default function MCPAuditLogPage() {
 
   return (
     <PageHeaderExtended
-      title="MCP Audit Log"
-      description="Review tool invocation history and audit trail."
+      title="Activity"
+      description="Every tool call your AI agents make, MCP tools and native tools like Bash, with outcome, latency and which agent."
       actionButton={
         <Box sx={{ width: 160 }}>
           <Select
@@ -152,7 +155,15 @@ export default function MCPAuditLogPage() {
       ) : (
         <>
           {stats && (
-            <Stack direction="row" spacing={2} sx={{ px: 3, pt: 2.5 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "16px",
+                px: 3,
+                pt: 2.5,
+              }}
+            >
               <StatCard
                 title="Total Calls"
                 value={stats.total_calls}
@@ -182,11 +193,11 @@ export default function MCPAuditLogPage() {
                 Icon={Wrench}
                 tooltip="Number of distinct tools called"
               />
-            </Stack>
+            </Box>
           )}
 
           {toolStats.length > 0 && (
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ px: 3, pt: 2 }}>
+            <Stack direction={{ xs: "column", md: "row" }} gap="16px" sx={{ px: 3, pt: 2 }}>
               <Box sx={{ ...cardSx, flex: 1 }}>
                 <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
                   <Typography sx={sectionTitleSx}>Top 10 tools by calls</Typography>
@@ -222,9 +233,9 @@ export default function MCPAuditLogPage() {
               </Box>
               <Box sx={{ ...cardSx, flex: 1 }}>
                 <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
-                  <Typography sx={sectionTitleSx}>Avg latency — top 10 tools</Typography>
+                  <Typography sx={sectionTitleSx}>Avg latency, top 10 tools</Typography>
                   <MuiTooltip
-                    title="Average round-trip time per tool call, helping identify slow or bottlenecked tools"
+                    title="Average round-trip time per tool call, useful for spotting slow tools"
                     arrow
                     placement="top"
                   >
@@ -297,69 +308,45 @@ export default function MCPAuditLogPage() {
               </Typography>
             ) : (
               <>
-                {logs.map((log) => {
-                  const colors = MCP_STATUS_COLORS[log.result_status] || MCP_STATUS_FALLBACK;
-                  return (
-                    <Box key={log.id} sx={cardSx}>
-                      <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          spacing={2}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        >
-                          <Typography
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: 14,
-                              fontFamily: "monospace",
-                              minWidth: 120,
-                            }}
-                          >
-                            {log.tool_name}
-                          </Typography>
-                          <Chip
-                            label={log.result_status.replace("_", " ")}
-                            backgroundColor={colors.bg}
-                            textColor={colors.text}
-                          />
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 60 }}>
-                            {log.latency_ms}ms
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              flex: 1,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {log.result_summary || "—"}
-                          </Typography>
-                        </Stack>
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          spacing={2}
-                          sx={{ ml: 2, flexShrink: 0 }}
-                        >
-                          <Typography variant="body2" color="text.tertiary" sx={{ fontSize: 12 }}>
-                            {log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.disabled"
-                            sx={{ fontSize: 12, whiteSpace: "nowrap" }}
-                          >
-                            {displayFormattedDate(log.created_at)}
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                    </Box>
-                  );
-                })}
+                <MCPTable
+                  id="mcp-audit-table"
+                  columns={[
+                    { label: "Tool", width: 160 },
+                    { label: "Status", width: 120 },
+                    { label: "Latency", width: 90, align: "right" },
+                    { label: "Summary" },
+                    { label: "Agent key", width: 160 },
+                    { label: "Time", width: 160 },
+                  ]}
+                  rows={logs}
+                  rowKey={(log) => log.id}
+                  onRowClick={(log) => setDrawerLogId(log.id)}
+                  renderRow={(log) => {
+                    const colors = MCP_STATUS_COLORS[log.result_status] || MCP_STATUS_FALLBACK;
+                    return [
+                      <Typography sx={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600 }}>
+                        {log.tool_name}
+                      </Typography>,
+                      <Chip
+                        label={log.result_status.replace("_", " ")}
+                        backgroundColor={colors.bg}
+                        textColor={colors.text}
+                      />,
+                      <Typography variant="body2" color="text.secondary">
+                        {log.latency_ms}ms
+                      </Typography>,
+                      <Typography variant="body2" color="text.secondary">
+                        {log.result_summary || "—"}
+                      </Typography>,
+                      <Typography variant="body2" color="text.tertiary" sx={{ fontSize: 12 }}>
+                        {log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}
+                      </Typography>,
+                      <Typography color="text.disabled" sx={{ fontSize: 12 }}>
+                        {displayFormattedDate(log.created_at)}
+                      </Typography>,
+                    ];
+                  }}
+                />
                 {total > 0 && (
                   <Stack
                     direction="row"
@@ -392,6 +379,12 @@ export default function MCPAuditLogPage() {
           </Stack>
         </>
       )}
+
+      <MCPInvocationDrawer
+        logId={drawerLogId}
+        open={drawerLogId !== null}
+        onClose={() => setDrawerLogId(null)}
+      />
     </PageHeaderExtended>
   );
 }

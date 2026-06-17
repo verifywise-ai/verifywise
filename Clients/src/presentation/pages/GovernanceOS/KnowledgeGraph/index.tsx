@@ -2,6 +2,7 @@ import React from "react";
 import { Stack, Typography, Box, alpha } from "@mui/material";
 import { Network, Clock } from "lucide-react";
 import GovernanceLayout from "../shared/GovernanceLayout";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { text, accent } from "../../../themes/palette";
 
 const KnowledgeGraph: React.FC = () => {
@@ -11,19 +12,26 @@ const KnowledgeGraph: React.FC = () => {
       subtitle="Visual exploration of governance relationships, controls, and compliance dependencies."
     >
       <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
-        <Box
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            backgroundColor: alpha(accent.purple.text, 0.08),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+        <GovernanceTooltip
+          header="Knowledge Graph"
+          description="Visual exploration of governance relationships, controls, and compliance dependencies. This module is coming soon."
         >
-          <Network size={24} color={accent.purple.text} />
-        </Box>
+          <span>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                backgroundColor: alpha(accent.purple.text, 0.08),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Network size={24} color={accent.purple.text} />
+            </Box>
+          </span>
+        </GovernanceTooltip>
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Knowledge Graph
         </Typography>

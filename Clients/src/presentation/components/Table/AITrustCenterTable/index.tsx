@@ -18,6 +18,7 @@ import TablePaginationActions from "../../TablePagination";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Placeholder from "../../../assets/imgs/empty-state.svg";
 import { IAITrustCenterTableProps } from "../../../types/interfaces/i.table";
+import CustomizableSkeleton from "../../Skeletons";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -324,17 +325,8 @@ const AITrustCenterTable = <T extends { id: number }>({
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          minHeight: 200,
-        }}
-      >
-        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

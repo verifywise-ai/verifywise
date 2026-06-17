@@ -14,19 +14,19 @@ describe("usePersistedViewMode", () => {
     });
 
     it("reads 'table' from localStorage", () => {
-      localStorage.setItem("test-key", "table");
+      localStorage.setItem("verifywise_view_mode_test-key", "table");
       const { result } = renderHook(() => usePersistedViewMode("test-key"));
       expect(result.current[0]).toBe("table");
     });
 
     it("reads 'card' from localStorage", () => {
-      localStorage.setItem("test-key", "card");
+      localStorage.setItem("verifywise_view_mode_test-key", "card");
       const { result } = renderHook(() => usePersistedViewMode("test-key"));
       expect(result.current[0]).toBe("card");
     });
 
     it("ignores invalid localStorage values and uses default", () => {
-      localStorage.setItem("test-key", "grid");
+      localStorage.setItem("verifywise_view_mode_test-key", "grid");
       const { result } = renderHook(() => usePersistedViewMode("test-key"));
       expect(result.current[0]).toBe("card");
     });
@@ -47,7 +47,7 @@ describe("usePersistedViewMode", () => {
       });
 
       expect(result.current[0]).toBe("table");
-      expect(localStorage.getItem("test-key")).toBe("table");
+      expect(localStorage.getItem("verifywise_view_mode_test-key")).toBe("table");
     });
   });
 

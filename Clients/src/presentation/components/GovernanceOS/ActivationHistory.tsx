@@ -5,6 +5,7 @@ import {
   useActivationHistory,
   useDeactivateScenario,
 } from "../../../application/hooks/useGovernanceOs";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
 
@@ -82,23 +83,28 @@ const ActivationHistory: React.FC = () => {
                 <Typography sx={{ fontSize: 13, fontWeight: 500, color: text.primary }}>
                   {activation.scenario_name || `Scenario #${activation.scenario_id}`}
                 </Typography>
-                <Box
-                  component="span"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    height: 20,
-                    px: 1,
-                    borderRadius: "4px",
-                    fontSize: 11,
-                    fontWeight: isActive ? 500 : 400,
-                    backgroundColor: isActive ? status.success.bg : background.hover,
-                    color: isActive ? status.success.text : text.muted,
-                    border: `1px solid ${isActive ? status.success.border : borderPalette.light}`,
-                  }}
+                <GovernanceTooltip
+                  header="Activation status"
+                  description="Whether this scenario activation is currently active"
                 >
-                  {isActive ? "Active" : "Inactive"}
-                </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      height: 20,
+                      px: 1,
+                      borderRadius: "4px",
+                      fontSize: 11,
+                      fontWeight: isActive ? 500 : 400,
+                      backgroundColor: isActive ? status.success.bg : background.hover,
+                      color: isActive ? status.success.text : text.muted,
+                      border: `1px solid ${isActive ? status.success.border : borderPalette.light}`,
+                    }}
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </Box>
+                </GovernanceTooltip>
                 <Typography sx={{ fontSize: 12, color: text.muted }}>{date}</Typography>
                 <Typography sx={{ fontSize: 12, color: text.secondary }}>
                   {activation.tasks_created} task(s)
@@ -109,19 +115,26 @@ const ActivationHistory: React.FC = () => {
               </Stack>
 
               {isActive && (
-                <CustomizableButton
-                  size="small"
-                  variant="text"
-                  startIcon={<XCircle size={14} />}
-                  text="Deactivate"
-                  onClick={() => handleDeactivate(activation.id)}
-                  isDisabled={deactivateMutation.isPending}
-                  sx={{
-                    fontSize: 12,
-                    color: status.error.text,
-                    minWidth: 0,
-                  }}
-                />
+                <GovernanceTooltip
+                  header="Deactivate activation"
+                  description="Stop this active activation and remove its tasks"
+                >
+                  <span>
+                    <CustomizableButton
+                      size="small"
+                      variant="text"
+                      startIcon={<XCircle size={14} />}
+                      text="Deactivate"
+                      onClick={() => handleDeactivate(activation.id)}
+                      isDisabled={deactivateMutation.isPending}
+                      sx={{
+                        fontSize: 12,
+                        color: status.error.text,
+                        minWidth: 0,
+                      }}
+                    />
+                  </span>
+                </GovernanceTooltip>
               )}
             </Box>
           );

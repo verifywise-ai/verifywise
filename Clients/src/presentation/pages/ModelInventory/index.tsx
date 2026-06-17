@@ -2452,7 +2452,7 @@ const ModelInventory: React.FC = () => {
               renderTable={(data, options) => (
                 <EvidenceHubTable
                   key={tableKey}
-                  isLoading={isLoading}
+                  isLoading={isEvidenceLoading}
                   data={data}
                   onEdit={handleEditEvidence}
                   onDelete={handleDeleteEvidence}

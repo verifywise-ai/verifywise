@@ -14,6 +14,8 @@ import PolicySteps from "./PolicySteps";
 const PolicyDashboard: React.FC = () => {
   const [policies, setPolicies] = useState<PolicyManagerModel[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [isPoliciesLoading, setIsPoliciesLoading] = useState(true);
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
   const [templateCount, setTemplateCount] = useState(0);
 
@@ -24,18 +26,25 @@ const PolicyDashboard: React.FC = () => {
   const activeTab = isPolicyTemplateTab ? "templates" : "policies";
 
   const fetchAll = async () => {
-    const [pRes, tRes] = await Promise.all([getAllPolicies(), getAllTags()]);
-    setPolicies(pRes);
-    setTags(tRes);
-    setIsInitialLoadComplete(true);
+    setIsPoliciesLoading(true);
+    try {
+      const [pRes, tRes] = await Promise.all([getAllPolicies(), getAllTags()]);
+      setPolicies(pRes);
+      setTags(tRes);
+      setIsInitialLoadComplete(true);
+    } finally {
+      setIsPoliciesLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchAll();
+    setIsTemplatesLoading(true);
     fetch("/data/PolicyTemplates.json")
       .then((res) => res.json())
       .then((data: unknown[]) => setTemplateCount(data.length))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsTemplatesLoading(false));
   }, []);
 
   const handleTabChange = (_: React.SyntheticEvent, tabValue: string) => {
@@ -62,6 +71,7 @@ const PolicyDashboard: React.FC = () => {
                 value: "policies",
                 icon: "Shield",
                 count: policies.length,
+                isLoading: isPoliciesLoading,
                 tooltip: "Your organization's active policies",
               },
               {
@@ -69,6 +79,7 @@ const PolicyDashboard: React.FC = () => {
                 value: "templates",
                 icon: "ShieldHalf",
                 count: templateCount,
+                isLoading: isTemplatesLoading,
                 tooltip: "Pre-built templates to create new policies from",
               },
             ]}
@@ -79,9 +90,16 @@ const PolicyDashboard: React.FC = () => {
         </Box>
 
         {activeTab === "policies" && (
-          <PolicyManager policies={policies} tags={tags} fetchAll={fetchAll} />
+          <PolicyManager
+            policies={policies}
+            tags={tags}
+            fetchAll={fetchAll}
+            isLoading={isPoliciesLoading}
+          />
         )}
-        {activeTab === "templates" && <PolicyTemplates tags={tags} fetchAll={fetchAll} />}
+        {activeTab === "templates" && (
+          <PolicyTemplates tags={tags} fetchAll={fetchAll} isLoading={isTemplatesLoading} />
+        )}
 
         <PageTour steps={PolicySteps} run={isInitialLoadComplete} tourKey="policy-tour" />
       </TabContext>

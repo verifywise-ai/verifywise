@@ -64,20 +64,20 @@ describe("paginationStorage", () => {
     });
 
     it("returns stored value when valid positive integer", () => {
-      localStorage.setItem("pagination_rows_users", "25");
+      localStorage.setItem("verifywise_pagination_rows_users", "25");
       expect(getPaginationRowCount("users", 10)).toBe(25);
     });
 
     it("returns defaultCount when stored value is NaN", () => {
-      localStorage.setItem("pagination_rows_users", "abc");
+      localStorage.setItem("verifywise_pagination_rows_users", "abc");
       expect(getPaginationRowCount("users", 10)).toBe(10);
     });
 
     it("returns defaultCount when stored value is 0 or negative", () => {
-      localStorage.setItem("pagination_rows_users", "0");
+      localStorage.setItem("verifywise_pagination_rows_users", "0");
       expect(getPaginationRowCount("users", 10)).toBe(10);
 
-      localStorage.setItem("pagination_rows_users", "-5");
+      localStorage.setItem("verifywise_pagination_rows_users", "-5");
       expect(getPaginationRowCount("users", 10)).toBe(10);
     });
 
@@ -89,7 +89,7 @@ describe("paginationStorage", () => {
 
       expect(getPaginationRowCount("users", 10)).toBe(10);
       expect(console.warn).toHaveBeenCalledWith(
-        "Failed to retrieve pagination setting from localStorage:",
+        'StorageService: failed to read "verifywise_pagination_rows_users":',
         expect.any(Error),
       );
     });
@@ -102,7 +102,7 @@ describe("paginationStorage", () => {
   describe("setPaginationRowCount", () => {
     it("stores rowCount as string", () => {
       setPaginationRowCount("users", 50);
-      expect(localStorage.getItem("pagination_rows_users")).toBe("50");
+      expect(localStorage.getItem("verifywise_pagination_rows_users")).toBe("50");
     });
 
     it("warns when localStorage.setItem throws", () => {
@@ -113,7 +113,7 @@ describe("paginationStorage", () => {
       setPaginationRowCount("users", 50);
 
       expect(console.warn).toHaveBeenCalledWith(
-        "Failed to save pagination setting to localStorage:",
+        'StorageService: failed to write "verifywise_pagination_rows_users":',
         expect.any(Error),
       );
     });

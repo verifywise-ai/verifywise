@@ -38,6 +38,7 @@ jest.mock("../../../middleware/selfOnly.middleware", () => ({
 
 jest.mock("../../../middleware/rateLimit.middleware", () => ({
   authLimiter: jest.fn((_req: any, _res: any, next: any) => next()),
+  tokenRefreshLimiter: jest.fn((_req: any, _res: any, next: any) => next()),
 }));
 
 jest.mock("express-rate-limit", () =>

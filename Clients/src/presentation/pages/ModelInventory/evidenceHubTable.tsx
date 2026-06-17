@@ -21,6 +21,7 @@ import {
   IconButton as MuiIconButton,
 } from "@mui/material";
 import TablePaginationActions from "../../components/TablePagination";
+import CustomizableSkeleton from "../../components/Skeletons";
 import CustomIconButton from "../../components/IconButton";
 import {
   ChevronsUpDown,
@@ -46,7 +47,6 @@ import EvidenceAnalysisPanel from "../../components/EvidenceAnalysisPanel";
 import { useQualityScores, useTriggerAnalysis } from "../../../application/hooks/useEvidenceAi";
 import { text as textColors, border as borderPalette } from "../../themes/palette";
 import {
-  loadingContainerStyle,
   paginationMenuProps,
   paginationStyle,
   showingTextCellStyle,
@@ -730,8 +730,8 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={loadingContainerStyle(theme)}>
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

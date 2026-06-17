@@ -12,6 +12,7 @@ import {
 import { ChevronDown, ChevronUp, Plus, CheckSquare, Square } from "lucide-react";
 import { ICoverageChartProps } from "../../../domain/interfaces/i.governanceOs";
 import { CustomizableButton } from "../button/customizable-button";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { border as borderPalette, background, text, status, brand } from "../../themes/palette";
 
 const CoverageChart = ({
@@ -116,26 +117,36 @@ const CoverageChart = ({
               }}
             >
               <Stack direction="row" gap="8px" alignItems="center">
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
-                  {fw.framework_name || `Framework ${fw.framework_id}`}
-                </Typography>
+                <GovernanceTooltip
+                  header="Framework coverage"
+                  description="Overview of how well this framework is mapped to controls"
+                >
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
+                    {fw.framework_name || `Framework ${fw.framework_id}`}
+                  </Typography>
+                </GovernanceTooltip>
                 {isPrimary && (
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      height: 18,
-                      px: "6px",
-                      borderRadius: "4px",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      backgroundColor: alpha(brand.primary, 0.12),
-                      color: brand.primary,
-                    }}
+                  <GovernanceTooltip
+                    header="Primary framework"
+                    description="The framework used as the baseline in the active scenario"
                   >
-                    Primary
-                  </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        height: 18,
+                        px: "6px",
+                        borderRadius: "4px",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        backgroundColor: alpha(brand.primary, 0.12),
+                        color: brand.primary,
+                      }}
+                    >
+                      Primary
+                    </Box>
+                  </GovernanceTooltip>
                 )}
               </Stack>
 
@@ -151,21 +162,26 @@ const CoverageChart = ({
               </Stack>
             </Stack>
 
-            <LinearProgress
-              variant="determinate"
-              value={fw.coverage_percentage}
-              sx={{
-                "height": 6,
-                "borderRadius": "4px",
-                "mt": "8px",
-                "mb": "8px",
-                "backgroundColor": background.hover,
-                "& .MuiLinearProgress-bar": {
-                  backgroundColor: brand.primary,
-                  borderRadius: "4px",
-                },
-              }}
-            />
+            <GovernanceTooltip
+              header="Coverage progress"
+              description="Mapped controls shown as a percentage of total controls"
+            >
+              <LinearProgress
+                variant="determinate"
+                value={fw.coverage_percentage}
+                sx={{
+                  "height": 6,
+                  "borderRadius": "4px",
+                  "mt": "8px",
+                  "mb": "8px",
+                  "backgroundColor": background.hover,
+                  "& .MuiLinearProgress-bar": {
+                    backgroundColor: brand.primary,
+                    borderRadius: "4px",
+                  },
+                }}
+              />
+            </GovernanceTooltip>
 
             <Stack direction="row" gap="8px" justifyContent="space-between" alignItems="center">
               <Typography sx={{ fontSize: 11, color: text.muted }}>
@@ -173,43 +189,53 @@ const CoverageChart = ({
               </Typography>
               <Box>
                 {hasGaps && (
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      height: 20,
-                      px: "6px",
-                      borderRadius: "4px",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      mr: "4px",
-                      backgroundColor: status.warning.bg,
-                      color: status.warning.text,
-                      border: `1px solid ${status.warning.border}`,
-                    }}
+                  <GovernanceTooltip
+                    header="Control gaps"
+                    description="Unmapped controls that need a remediation task"
                   >
-                    {gapIds.length} gaps
-                  </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        height: 20,
+                        px: "6px",
+                        borderRadius: "4px",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        mr: "4px",
+                        backgroundColor: status.warning.bg,
+                        color: status.warning.text,
+                        border: `1px solid ${status.warning.border}`,
+                      }}
+                    >
+                      {gapIds.length} gaps
+                    </Box>
+                  </GovernanceTooltip>
                 )}
                 {hasSynergies && (
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      height: 20,
-                      px: "6px",
-                      borderRadius: "4px",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      backgroundColor: status.success.bg,
-                      color: status.success.text,
-                      border: `1px solid ${status.success.border}`,
-                    }}
+                  <GovernanceTooltip
+                    header="Multi-framework synergies"
+                    description="Controls that satisfy requirements in multiple frameworks"
                   >
-                    {synergyIds.length} synergies
-                  </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        height: 20,
+                        px: "6px",
+                        borderRadius: "4px",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        backgroundColor: status.success.bg,
+                        color: status.success.text,
+                        border: `1px solid ${status.success.border}`,
+                      }}
+                    >
+                      {synergyIds.length} synergies
+                    </Box>
+                  </GovernanceTooltip>
                 )}
               </Box>
             </Stack>
@@ -231,18 +257,32 @@ const CoverageChart = ({
                       Unmapped controls ({gapIds.length})
                     </Typography>
                     <Stack direction="row" gap="4px">
-                      <CustomizableButton
-                        size="small"
-                        onClick={() => selectAllGaps(fw.framework_id, gapIds)}
-                        text="Select all"
-                        sx={{ minWidth: 0, px: 1 }}
-                      />
-                      <CustomizableButton
-                        size="small"
-                        onClick={() => clearAllGaps(fw.framework_id)}
-                        text="Clear"
-                        sx={{ minWidth: 0, px: 1 }}
-                      />
+                      <GovernanceTooltip
+                        header="Select all gaps"
+                        description="Choose every unmapped control in this framework for bulk action"
+                      >
+                        <span>
+                          <CustomizableButton
+                            size="small"
+                            onClick={() => selectAllGaps(fw.framework_id, gapIds)}
+                            text="Select all"
+                            sx={{ minWidth: 0, px: 1 }}
+                          />
+                        </span>
+                      </GovernanceTooltip>
+                      <GovernanceTooltip
+                        header="Clear selection"
+                        description="Remove all selected gaps from the bulk task list"
+                      >
+                        <span>
+                          <CustomizableButton
+                            size="small"
+                            onClick={() => clearAllGaps(fw.framework_id)}
+                            text="Clear"
+                            sx={{ minWidth: 0, px: 1 }}
+                          />
+                        </span>
+                      </GovernanceTooltip>
                     </Stack>
                   </Stack>
 
@@ -291,24 +331,31 @@ const CoverageChart = ({
                             </Typography>
                           </Stack>
                           {onCreateTaskForGap && (
-                            <CustomizableButton
-                              size="small"
-                              variant="text"
-                              startIcon={<Plus size={14} />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCreateTaskForGap(
-                                  fw.framework_name || `Framework ${fw.framework_id}`,
-                                  controlId,
-                                );
-                              }}
-                              text="Task"
-                              sx={{
-                                color: brand.primary,
-                                minWidth: 0,
-                                px: 1,
-                              }}
-                            />
+                            <GovernanceTooltip
+                              header="Create task"
+                              description="Add a remediation task for this unmapped control"
+                            >
+                              <span>
+                                <CustomizableButton
+                                  size="small"
+                                  variant="text"
+                                  startIcon={<Plus size={14} />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCreateTaskForGap(
+                                      fw.framework_name || `Framework ${fw.framework_id}`,
+                                      controlId,
+                                    );
+                                  }}
+                                  text="Task"
+                                  sx={{
+                                    color: brand.primary,
+                                    minWidth: 0,
+                                    px: 1,
+                                  }}
+                                />
+                              </span>
+                            </GovernanceTooltip>
                           )}
                         </Box>
                       );
@@ -317,13 +364,20 @@ const CoverageChart = ({
 
                   {selectedGaps.size > 0 && onCreateTasksForGaps && (
                     <Box sx={{ mt: "8px", display: "flex", justifyContent: "flex-end" }}>
-                      <CustomizableButton
-                        size="small"
-                        variant="contained"
-                        onClick={() => handleBulkCreate(fw)}
-                        text={`Create tasks for ${selectedGaps.size} gap(s)`}
-                        sx={{}}
-                      />
+                      <GovernanceTooltip
+                        header="Create tasks for selected gaps"
+                        description="Generate remediation tasks for all selected unmapped controls"
+                      >
+                        <span>
+                          <CustomizableButton
+                            size="small"
+                            variant="contained"
+                            onClick={() => handleBulkCreate(fw)}
+                            text={`Create tasks for ${selectedGaps.size} gap(s)`}
+                            sx={{}}
+                          />
+                        </span>
+                      </GovernanceTooltip>
                     </Box>
                   )}
                 </Box>

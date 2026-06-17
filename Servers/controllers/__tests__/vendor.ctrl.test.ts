@@ -41,6 +41,7 @@ jest.mock("../../database/db", () => ({
   },
 }));
 
+import { buildVendor, buildManyVendor } from "../../tests/factories/vendor.factory";
 import { getAllVendors, getVendorById } from "../vendor.ctrl";
 import { getAllVendorsQuery, getVendorByIdQuery } from "../../utils/vendor.utils";
 
@@ -72,10 +73,7 @@ describe("vendor.ctrl", () => {
 
   describe("getAllVendors", () => {
     it("should return 200 with vendors when data exists", async () => {
-      const vendors = [
-        { id: 1, vendor_name: "Acme AI" },
-        { id: 2, vendor_name: "Global Data" },
-      ];
+      const vendors = [buildVendor(), buildVendor({ id: 2, vendor_name: "Global Data" })];
       mockGetAllVendorsQuery.mockResolvedValue(vendors as any);
       const req = createMockReq() as Request;
       const res = createMockRes();
@@ -114,7 +112,7 @@ describe("vendor.ctrl", () => {
 
   describe("getVendorById", () => {
     it("should return 200 with vendor when found", async () => {
-      const vendor = { id: 1, vendor_name: "Acme AI" };
+      const vendor = buildVendor();
       mockGetVendorByIdQuery.mockResolvedValue(vendor as any);
       const req = createMockReq({ params: { id: "1" } }) as Request;
       const res = createMockRes();

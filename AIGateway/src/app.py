@@ -28,6 +28,7 @@ from routers.mcp_audit import router as mcp_audit_router
 from routers.mcp_guardrails import router as mcp_guardrails_router
 from routers.mcp_tools import router as mcp_tools_router
 from routers.mcp_proxy import router as mcp_proxy_router
+from routers.mcp_hook import router as mcp_hook_router
 from routers.tenant_chat import router as tenant_chat_router
 
 # Disable LiteLLM verbose logging to prevent key leakage
@@ -101,6 +102,7 @@ app.include_router(proxy_router, tags=["Proxy"])
 # MCP Gateway public routes (Agent SDK → Gateway, authenticated via agent key)
 # Streamable HTTP: POST /v1/mcp, GET /v1/mcp
 app.include_router(mcp_proxy_router, tags=["MCP Proxy"])
+app.include_router(mcp_hook_router, tags=["MCP Proxy"])
 
 
 @app.get("/health")
