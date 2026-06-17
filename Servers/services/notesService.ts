@@ -28,6 +28,7 @@ import {
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
+import { sanitizeUserHtml } from "../utils/sanitization/sanitizeUserHtml.utils";
 
 export class NotesService {
   /**
@@ -94,9 +95,9 @@ export class NotesService {
         throw new ValidationException("Valid entity ID is required", "attachedToId", attachedToId);
       }
 
-      // Sanitize content to prevent XSS by removing common HTML tags
-      // For now, we simply trim whitespace (proper sanitization should be done on client-side)
-      const sanitizedContent = content.trim();
+      // Strip XSS payloads before persisting. sanitize-html will also collapse
+      // disallowed tags, so the result may differ from a simple trim.
+      const sanitizedContent = sanitizeUserHtml(content).trim();
 
       if (!sanitizedContent || sanitizedContent.length === 0) {
         throw new ValidationException(
@@ -285,8 +286,8 @@ export class NotesService {
         );
       }
 
-      // Sanitize content by trimming whitespace
-      const sanitizedContent = content.trim();
+      // Strip XSS payloads before persisting.
+      const sanitizedContent = sanitizeUserHtml(content).trim();
 
       if (!sanitizedContent || sanitizedContent.length === 0) {
         throw new ValidationException(

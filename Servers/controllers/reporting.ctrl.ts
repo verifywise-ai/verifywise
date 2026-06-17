@@ -101,7 +101,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
     functionName: "getAllGeneratedReports",
     fileName: "reporting.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📄 Fetching all generated reports");
 
@@ -115,7 +115,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
         fileName: "reporting.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(401).json({ message: req.t!("Unauthorized") });
     }
@@ -131,7 +131,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
       functionName: "getAllGeneratedReports",
       fileName: "reporting.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Return 200 with empty array if no reports, not 404
@@ -146,7 +146,7 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
       fileName: "reporting.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -161,7 +161,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
     functionName: "deleteGeneratedReportById",
     fileName: "reporting.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`🗑️ Deleting generated report ID ${reportId}`);
 
@@ -175,7 +175,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
         fileName: "reporting.ctrl.ts",
         error: new Error("Report not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("Report not found")));
     }
@@ -189,7 +189,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
         functionName: "deleteGeneratedReportById",
         fileName: "reporting.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](deletedReport));
     }
@@ -201,7 +201,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
       functionName: "deleteGeneratedReportById",
       fileName: "reporting.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](deletedReport));
   } catch (error) {
@@ -213,7 +213,7 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
       fileName: "reporting.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -246,7 +246,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
     functionName: "generateReportsV2",
     fileName: "reporting.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`📄 Generating ${reportType} report (${reportFormat}) for project ID ${projectId}`);
 
@@ -260,7 +260,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         fileName: "reporting.ctrl.ts",
         error: new Error("User not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
@@ -295,7 +295,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         fileName: "reporting.ctrl.ts",
         error: new Error(result.error || "Unknown error"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(500).json(STATUS_CODE[500](result.error || "Failed to generate report"));
     }
@@ -326,7 +326,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         fileName: "reporting.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
     }
@@ -338,7 +338,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         functionName: "generateReportsV2",
         fileName: "reporting.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       res.setHeader("Content-Disposition", `attachment; filename="${uploadedFile.filename}"`);
@@ -353,7 +353,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
         fileName: "reporting.ctrl.ts",
         error: new Error("Upload failed"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
     }
@@ -365,7 +365,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       fileName: "reporting.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

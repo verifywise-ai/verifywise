@@ -22,6 +22,8 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 
 import { translateError } from "../utils/i18n.utils";
+import { logFailure } from "../utils/logger/logHelper";
+import { safeRollback } from "../utils/safeRollback.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -327,23 +329,21 @@ export async function createNewModelInventory(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedModelInventory.toSafeJSON()));
   } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured(
-      "error",
-      "failed to create new model inventory",
-      "createNewModelInventory",
-      "modelInventory.ctrl.ts",
-    );
-    logger.error("❌ Error in createNewModelInventory:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "createNewModelInventory",
+      fileName: "modelInventory.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Create",
+      description: `Failed to create new model inventory at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "createNewModelInventory",
+      fileName: "modelInventory.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -516,23 +516,21 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     );
     return res.status(200).json(STATUS_CODE[200](savedModelInventory.toSafeJSON()));
   } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured(
-      "error",
-      "failed to update model inventory",
-      "updateModelInventoryById",
-      "modelInventory.ctrl.ts",
-    );
-    logger.error("❌ Error in updateModelInventoryById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "updateModelInventoryById",
+      fileName: "modelInventory.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Update",
+      description: `Failed to update model inventory at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "updateModelInventoryById",
+      fileName: "modelInventory.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -597,23 +595,21 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     );
     return res.status(200).json(STATUS_CODE[200](req.t!("Model inventory deleted successfully")));
   } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured(
-      "error",
-      "failed to delete model inventory",
-      "deleteModelInventoryById",
-      "modelInventory.ctrl.ts",
-    );
-    logger.error("❌ Error in deleteModelInventoryById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "deleteModelInventoryById",
+      fileName: "modelInventory.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Delete",
+      description: `Failed to delete model inventory at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "deleteModelInventoryById",
+      fileName: "modelInventory.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

@@ -150,7 +150,6 @@ function createReq(overrides?: Record<string, any>): any {
   return {
     userId: 1,
     organizationId: 1,
-    tenantId: "t1",
     role: "Admin",
     t: (k: string) => k,
     body: {},
@@ -185,7 +184,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getInsightsSummary(req, res);
-      expect(mockGetInsightsSummary).toHaveBeenCalledWith("t1", 30);
+      expect(mockGetInsightsSummary).toHaveBeenCalledWith(1, 30);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -194,7 +193,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { period: "60d" } });
       const res = createRes();
       await getInsightsSummary(req, res);
-      expect(mockGetInsightsSummary).toHaveBeenCalledWith("t1", 60);
+      expect(mockGetInsightsSummary).toHaveBeenCalledWith(1, 60);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -213,7 +212,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getToolsByEvents(req, res);
-      expect(mockGetToolsByEvents).toHaveBeenCalledWith("t1", 30, 6);
+      expect(mockGetToolsByEvents).toHaveBeenCalledWith(1, 30, 6);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -222,7 +221,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { period: "7d", limit: "10" } });
       const res = createRes();
       await getToolsByEvents(req, res);
-      expect(mockGetToolsByEvents).toHaveBeenCalledWith("t1", 7, 10);
+      expect(mockGetToolsByEvents).toHaveBeenCalledWith(1, 7, 10);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -241,7 +240,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getToolsByUsers(req, res);
-      expect(mockGetToolsByUsers).toHaveBeenCalledWith("t1", 30, 6);
+      expect(mockGetToolsByUsers).toHaveBeenCalledWith(1, 30, 6);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -260,7 +259,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getUsersByDepartment(req, res);
-      expect(mockGetUsersByDept).toHaveBeenCalledWith("t1", 30);
+      expect(mockGetUsersByDept).toHaveBeenCalledWith(1, 30);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -279,7 +278,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getTrend(req, res);
-      expect(mockGetTrend).toHaveBeenCalledWith("t1", 30, "daily");
+      expect(mockGetTrend).toHaveBeenCalledWith(1, 30, "daily");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -288,7 +287,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { granularity: "daily" } });
       const res = createRes();
       await getTrend(req, res);
-      expect(mockGetTrend).toHaveBeenCalledWith("t1", 30, "daily");
+      expect(mockGetTrend).toHaveBeenCalledWith(1, 30, "daily");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -297,7 +296,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { granularity: "weekly" } });
       const res = createRes();
       await getTrend(req, res);
-      expect(mockGetTrend).toHaveBeenCalledWith("t1", 30, "weekly");
+      expect(mockGetTrend).toHaveBeenCalledWith(1, 30, "weekly");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -306,7 +305,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { granularity: "monthly" } });
       const res = createRes();
       await getTrend(req, res);
-      expect(mockGetTrend).toHaveBeenCalledWith("t1", 30, "monthly");
+      expect(mockGetTrend).toHaveBeenCalledWith(1, 30, "monthly");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -315,7 +314,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { granularity: "yearly" } });
       const res = createRes();
       await getTrend(req, res);
-      expect(mockGetTrend).toHaveBeenCalledWith("t1", 30, "daily");
+      expect(mockGetTrend).toHaveBeenCalledWith(1, 30, "daily");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -334,7 +333,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getUsers(req, res);
-      expect(mockGetUserActivity).toHaveBeenCalledWith("t1", {
+      expect(mockGetUserActivity).toHaveBeenCalledWith(1, {
         page: 1,
         limit: 20,
         sort: undefined,
@@ -350,7 +349,7 @@ describe("shadowAi.ctrl", () => {
       });
       const res = createRes();
       await getUsers(req, res);
-      expect(mockGetUserActivity).toHaveBeenCalledWith("t1", {
+      expect(mockGetUserActivity).toHaveBeenCalledWith(1, {
         page: 2,
         limit: 10,
         sort: "email",
@@ -375,7 +374,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { email: "test%40example.com" }, query: { period: "30d" } });
       const res = createRes();
       await getUserDetail(req, res);
-      expect(mockGetUserDetail).toHaveBeenCalledWith("t1", "test@example.com", 30);
+      expect(mockGetUserDetail).toHaveBeenCalledWith(1, "test@example.com", 30);
       expect(mockSequelizeQuery).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
     });
@@ -404,7 +403,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getDepartmentActivity(req, res);
-      expect(mockGetDeptActivity).toHaveBeenCalledWith("t1");
+      expect(mockGetDeptActivity).toHaveBeenCalledWith(1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -423,7 +422,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getTools(req, res);
-      expect(mockGetAllTools).toHaveBeenCalledWith("t1", {
+      expect(mockGetAllTools).toHaveBeenCalledWith(1, {
         status: undefined,
         sort: undefined,
         page: 1,
@@ -437,7 +436,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { status: "detected", sort: "name" } });
       const res = createRes();
       await getTools(req, res);
-      expect(mockGetAllTools).toHaveBeenCalledWith("t1", {
+      expect(mockGetAllTools).toHaveBeenCalledWith(1, {
         status: "detected",
         sort: "name",
         page: 1,
@@ -478,8 +477,8 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await getToolById(req, res);
-      expect(mockGetToolDepts).toHaveBeenCalledWith("t1", 1);
-      expect(mockGetToolTopUsers).toHaveBeenCalledWith("t1", 1);
+      expect(mockGetToolDepts).toHaveBeenCalledWith(1, 1);
+      expect(mockGetToolTopUsers).toHaveBeenCalledWith(1, 1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -527,7 +526,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { status: "approved" } });
       const res = createRes();
       await updateToolStatus(req, res);
-      expect(mockUpdateToolStatus).toHaveBeenCalledWith("t1", 1, "approved");
+      expect(mockUpdateToolStatus).toHaveBeenCalledWith(1, 1, "approved");
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -656,7 +655,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getRules(req, res);
-      expect(mockGetAllRules).toHaveBeenCalledWith("t1");
+      expect(mockGetAllRules).toHaveBeenCalledWith(1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -743,7 +742,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { name: "Updated" } });
       const res = createRes();
       await updateRule(req, res);
-      expect(mockUpdateRule).toHaveBeenCalledWith("t1", 1, { name: "Updated" });
+      expect(mockUpdateRule).toHaveBeenCalledWith(1, 1, { name: "Updated" });
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -784,7 +783,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteRule(req, res);
-      expect(mockDeleteRule).toHaveBeenCalledWith("t1", 1);
+      expect(mockDeleteRule).toHaveBeenCalledWith(1, 1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -803,7 +802,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getAlertHistory(req, res);
-      expect(mockGetAlertHistory).toHaveBeenCalledWith("t1", {
+      expect(mockGetAlertHistory).toHaveBeenCalledWith(1, {
         page: 1,
         limit: 20,
         ruleId: undefined,
@@ -816,7 +815,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ query: { ruleId: "5", page: "2", limit: "10" } });
       const res = createRes();
       await getAlertHistory(req, res);
-      expect(mockGetAlertHistory).toHaveBeenCalledWith("t1", { page: 2, limit: 10, ruleId: 5 });
+      expect(mockGetAlertHistory).toHaveBeenCalledWith(1, { page: 2, limit: 10, ruleId: 5 });
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -842,7 +841,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getSyslogConfigs(req, res);
-      expect(mockGetSyslogConfigs).toHaveBeenCalledWith("t1");
+      expect(mockGetSyslogConfigs).toHaveBeenCalledWith(1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -950,7 +949,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { source_identifier: "fw-01-updated" } });
       const res = createRes();
       await updateSyslogConfig(req, res);
-      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith("t1", 1, {
+      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, 1, {
         source_identifier: "fw-01-updated",
       });
       expect(res.status).toHaveBeenCalledWith(200);
@@ -993,7 +992,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteSyslogConfig(req, res);
-      expect(mockDeleteSyslogConfig).toHaveBeenCalledWith("t1", 1);
+      expect(mockDeleteSyslogConfig).toHaveBeenCalledWith(1, 1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -1012,7 +1011,7 @@ describe("shadowAi.ctrl", () => {
       const req = createReq();
       const res = createRes();
       await getSettings(req, res);
-      expect(mockGetSettings).toHaveBeenCalledWith("t1");
+      expect(mockGetSettings).toHaveBeenCalledWith(1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
 

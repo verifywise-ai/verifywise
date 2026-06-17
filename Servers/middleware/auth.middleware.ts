@@ -34,22 +34,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../utils/user.utils";
 import { asyncLocalStorage } from "../utils/context/context";
 import { getTenantHash } from "../tools/getTenantHash";
-
-/**
- * Role ID to role name mapping for validation
- *
- * Maps database role IDs to their corresponding role names.
- * Used to validate that token role matches current user role in database.
- *
- * @constant
- */
-export const roleMap = new Map([
-  [1, "Admin"],
-  [2, "Reviewer"],
-  [3, "Editor"],
-  [4, "Auditor"],
-  [5, "SuperAdmin"],
-]);
+import { getRoleNameById } from "../utils/roleCache.utils";
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -151,9 +136,12 @@ const authenticateJWT = async (
       return res.status(400).json({ message: req.t!("Invalid token") });
     }
 
-    // Validate role hasn't changed since token was issued
+    // Validate role hasn't changed since token was issued. Role names are
+    // loaded from the DB via a short-TTL cache so that adding / renaming
+    // roles propagates without a deploy.
     const user = await getUserByIdQuery(decoded.id);
-    if (decoded.roleName !== roleMap.get(user.role_id)) {
+    const currentRoleName = await getRoleNameById(user.role_id);
+    if (decoded.roleName !== currentRoleName) {
       return res.status(403).json({ message: req.t!("Not allowed to access") });
     }
 
@@ -188,8 +176,9 @@ const authenticateJWT = async (
       req.userId = decoded.id;
       req.role = decoded.roleName;
       req.organizationId = decoded.organizationId;
-      // tenantHash is the schema name derived from organizationId
-      // Use for schema-qualified queries: FROM "${tenantHash}".table_name
+      // tenantHash is the cache-key seed derived from organizationId.
+      // It is NOT a schema name; the shared-schema design uses
+      // unqualified table names + the search_path.
       req.tenantHash = getTenantHash(decoded.organizationId);
     }
 

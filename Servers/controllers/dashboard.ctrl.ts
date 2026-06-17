@@ -10,7 +10,7 @@ export async function getDashboardData(req: Request, res: Response) {
     functionName: "getDashboardData",
     fileName: "dashboard.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -22,7 +22,7 @@ export async function getDashboardData(req: Request, res: Response) {
       functionName: "getDashboardData",
       fileName: "dashboard.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(dashboard ? 200 : 204).json(STATUS_CODE[dashboard ? 200 : 204](dashboard));
@@ -34,7 +34,7 @@ export async function getDashboardData(req: Request, res: Response) {
       fileName: "dashboard.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

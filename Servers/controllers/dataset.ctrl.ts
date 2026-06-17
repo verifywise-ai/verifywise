@@ -27,6 +27,8 @@ import {
   validateCompleteDatasetUpdate,
   validateDatasetIdParam,
 } from "../utils/validations/datasetValidation.utils";
+import { safeRollback } from "../utils/safeRollback.utils";
+import { logFailure } from "../utils/logger/logHelper";
 
 export async function getAllDatasets(req: Request, res: Response) {
   logStructured("processing", "starting getAllDatasets", "getAllDatasets", "dataset.ctrl.ts");
@@ -278,16 +280,21 @@ export async function createNewDataset(req: Request, res: Response) {
     logStructured("successful", "new dataset created", "createNewDataset", "dataset.ctrl.ts");
     return res.status(201).json(STATUS_CODE[201](savedDataset.toSafeJSON()));
   } catch (error) {
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured("error", "failed to create new dataset", "createNewDataset", "dataset.ctrl.ts");
-    logger.error("Error in createNewDataset:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "createNewDataset",
+      fileName: "dataset.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Create",
+      description: `Failed to create new dataset at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "createNewDataset",
+      fileName: "dataset.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -451,16 +458,21 @@ export async function updateDatasetById(req: Request, res: Response) {
     logStructured("successful", "dataset updated", "updateDatasetById", "dataset.ctrl.ts");
     return res.status(200).json(STATUS_CODE[200](savedDataset.toSafeJSON()));
   } catch (error) {
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured("error", "failed to update dataset", "updateDatasetById", "dataset.ctrl.ts");
-    logger.error("Error in updateDatasetById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "updateDatasetById",
+      fileName: "dataset.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Update",
+      description: `Failed to update dataset at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "updateDatasetById",
+      fileName: "dataset.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -514,16 +526,21 @@ export async function deleteDatasetById(req: Request, res: Response) {
     logStructured("successful", "dataset deleted", "deleteDatasetById", "dataset.ctrl.ts");
     return res.status(200).json(STATUS_CODE[200](req.t!("Dataset deleted successfully")));
   } catch (error) {
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured("error", "failed to delete dataset", "deleteDatasetById", "dataset.ctrl.ts");
-    logger.error("Error in deleteDatasetById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "deleteDatasetById",
+      fileName: "dataset.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Delete",
+      description: `Failed to delete dataset at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "deleteDatasetById",
+      fileName: "dataset.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

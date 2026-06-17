@@ -13,6 +13,9 @@ jest.mock("../../repositories/file.repository", () => ({
   getFilePreview: jest.fn(),
   getFileVersionHistory: jest.fn(),
   searchFilesByContent: jest.fn(),
+  getApprovalWorkflowForFile: jest.fn(),
+  getApprovalWorkflowStepsWithApprovers: jest.fn<any>().mockResolvedValue([]),
+  setFileApprovalRequestId: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/approvalRequest.utils", () => ({
   createApprovalRequestQuery: jest.fn(),
@@ -22,9 +25,24 @@ jest.mock("../../services/notification.service", () => ({
   notifyStepApprovers: jest.fn<any>().mockResolvedValue(undefined),
   notifyRequesterRejected: jest.fn<any>().mockResolvedValue(undefined),
 }));
-jest.mock("../../utils/validations/fileManagerValidation.utils", () => ({
-  validateFileUpload: jest.fn(),
-  formatFileSize: jest.fn(),
+jest.mock("../../utils/validations/fileManagerValidation.utils", () => {
+  const actual = jest.requireActual(
+    "../../utils/validations/fileManagerValidation.utils",
+  ) as Record<string, unknown>;
+  return {
+    ...actual,
+    validateFileUpload: jest.fn(),
+    formatFileSize: jest.fn(),
+  };
+});
+jest.mock("../../services/fileIngestion/fileAccessControl.service", () => {
+  const actual = jest.requireActual(
+    "../../services/fileIngestion/fileAccessControl.service",
+  ) as Record<string, unknown>;
+  return actual;
+});
+jest.mock("../../services/fileIngestion/fileContentIndexer.service", () => ({
+  indexFileContent: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(),
@@ -267,8 +285,8 @@ describe("fileManager.ctrl", () => {
         body: { approval_workflow_id: "999" },
       });
       const res = createRes();
-      const mockQuery = sequelize.query as jest.Mock<any>;
-      mockQuery.mockResolvedValue([[null]]);
+      const fileRepo = jest.requireMock("../../repositories/file.repository") as any;
+      fileRepo.getApprovalWorkflowForFile.mockResolvedValueOnce(null);
       await uploadFile(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
@@ -280,8 +298,12 @@ describe("fileManager.ctrl", () => {
         body: { approval_workflow_id: "1" },
       });
       const res = createRes();
-      const mockQuery = sequelize.query as jest.Mock<any>;
-      mockQuery.mockResolvedValue([[{ id: 1, workflow_title: "Test", entity_type: "project" }]]);
+      const fileRepo = jest.requireMock("../../repositories/file.repository") as any;
+      fileRepo.getApprovalWorkflowForFile.mockResolvedValueOnce({
+        id: 1,
+        workflow_title: "Test",
+        entity_type: "project",
+      });
       await uploadFile(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
@@ -297,20 +319,21 @@ describe("fileManager.ctrl", () => {
         uploaded_by: 1,
         model_id: null,
       } as any);
-      const mockQuery = sequelize.query as jest.Mock<any>;
-      mockQuery
-        .mockResolvedValueOnce([{ id: 1, workflow_title: "Test WF", entity_type: "file" }])
-        .mockResolvedValueOnce([
-          [
-            {
-              id: 10,
-              step_number: 1,
-              workflow_id: 1,
-              organization_id: 1,
-              approvers: [{ approver_id: 2 }],
-            },
-          ],
-        ]);
+      const fileRepo = jest.requireMock("../../repositories/file.repository") as any;
+      fileRepo.getApprovalWorkflowForFile.mockResolvedValueOnce({
+        id: 1,
+        workflow_title: "Test WF",
+        entity_type: "file",
+      });
+      fileRepo.getApprovalWorkflowStepsWithApprovers.mockResolvedValueOnce([
+        {
+          id: 10,
+          step_number: 1,
+          workflow_id: 1,
+          organization_id: 1,
+          approvers: [{ approver_id: 2 }],
+        },
+      ]);
       mockCreateApprovalReq.mockResolvedValue({ id: 100 } as any);
       const req = createReq({
         file: makeFile(),

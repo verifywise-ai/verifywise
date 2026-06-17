@@ -44,6 +44,7 @@ import { NotificationEntityType } from "../domain.layer/interfaces/i.notificatio
 import logger from "../utils/logger/fileLogger";
 import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import { sanitizeUserHtml } from "../utils/sanitization/sanitizeUserHtml.utils";
 
 export class PolicyController {
   // Get all policies
@@ -80,6 +81,7 @@ export class PolicyController {
       const userId = req.userId!;
       const policyData = {
         ...req.body,
+        content_html: sanitizeUserHtml(req.body.content_html, { allowImages: true }),
         author_id: userId,
         last_updated_by: userId,
       } as IPolicy;
@@ -125,8 +127,15 @@ export class PolicyController {
 
       const existingPolicy = existingPolicyResult[0];
 
+      const sanitizedBody =
+        req.body && Object.prototype.hasOwnProperty.call(req.body, "content_html")
+          ? {
+              ...req.body,
+              content_html: sanitizeUserHtml(req.body.content_html, { allowImages: true }),
+            }
+          : req.body;
       const policyData = {
-        ...req.body,
+        ...sanitizedBody,
         last_updated_by: userId,
       } as Partial<IPolicy>;
 

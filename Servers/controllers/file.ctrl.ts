@@ -53,7 +53,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
     functionName: "getFileContentById",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -68,7 +68,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
         fileName: "file.ctrl.ts",
         error: new Error(`User ${userId} with role '${role}' denied access to file ${fileId}`),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json({ message: req.t!("Access denied") });
     }
@@ -81,7 +81,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
         functionName: "getFileContentById",
         fileName: "file.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       res.setHeader("Content-Type", file.type);
@@ -95,7 +95,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
       functionName: "getFileContentById",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -107,7 +107,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -122,7 +122,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
     functionName: "getFileMetaByProjectId",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -133,7 +133,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
       functionName: "getFileMetaByProjectId",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     if (files && files.length > 0) {
@@ -148,7 +148,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -171,7 +171,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
     functionName: "getUserFilesMetaData",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -193,7 +193,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       functionName: "getUserFilesMetaData",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).send(files);
@@ -205,7 +205,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json({ error: req.t!("Internal server error") });
@@ -220,7 +220,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     functionName: "postFileContent",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -274,7 +274,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       functionName: "postFileContent",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](question.evidence_files));
@@ -288,7 +288,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -324,7 +324,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
     functionName: "attachFileToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -347,7 +347,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       functionName: "attachFileToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     if (link) {
@@ -364,7 +364,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -399,7 +399,7 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
     functionName: "detachFileFromEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -417,7 +417,7 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
       functionName: "detachFileFromEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     if (deleted) {
@@ -433,7 +433,7 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -473,7 +473,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
     functionName: "attachFilesToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -514,7 +514,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
       functionName: "attachFilesToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(200).json({
@@ -529,7 +529,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -563,7 +563,7 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
     functionName: "getEntityFiles",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -581,7 +581,7 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
       functionName: "getEntityFiles",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(200).json(files);
@@ -593,7 +593,7 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

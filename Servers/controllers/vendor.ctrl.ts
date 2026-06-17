@@ -25,6 +25,7 @@ import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import { safeRollback } from "../utils/safeRollback.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -43,7 +44,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
     functionName: "getAllVendors",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -56,7 +57,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
         functionName: "getAllVendors",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendors));
     }
@@ -67,7 +68,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       functionName: "getAllVendors",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendors));
   } catch (error) {
@@ -78,7 +79,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -92,7 +93,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
     functionName: "getVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -105,7 +106,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
         functionName: "getVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -116,7 +117,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       functionName: "getVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](vendor));
   } catch (error) {
@@ -127,7 +128,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -141,7 +142,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
     functionName: "getVendorByProjectId",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -154,7 +155,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
         functionName: "getVendorByProjectId",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -165,7 +166,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
       functionName: "getVendorByProjectId",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]([]));
   } catch (error) {
@@ -176,7 +177,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -191,7 +192,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
     functionName: "createVendor",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -243,7 +244,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         functionName: "createVendor",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send assignment notifications (fire-and-forget)
@@ -300,21 +301,26 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       functionName: "createVendor",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
-    await transaction.rollback();
+    await safeRollback(transaction, {
+      req,
+      functionName: "createVendor",
+      fileName: "vendor.ctrl.ts",
+      originatingError: error,
+    });
 
     if (error instanceof ValidationException) {
       await logFailure({
         eventType: "Create",
-        description: `Validation failed: ${error.message}`,
+        description: `Validation failed at ${req.method} ${req.originalUrl ?? req.url}: ${error.message}`,
         functionName: "createVendor",
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -322,24 +328,24 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
     if (error instanceof BusinessLogicException) {
       await logFailure({
         eventType: "Create",
-        description: `Business logic error: ${error.message}`,
+        description: `Business logic error at ${req.method} ${req.originalUrl ?? req.url}: ${error.message}`,
         functionName: "createVendor",
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
       eventType: "Create",
-      description: "Failed to create vendor",
+      description: `Failed to create vendor at ${req.method} ${req.originalUrl ?? req.url}`,
       functionName: "createVendor",
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -355,7 +361,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     functionName: "updateVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -368,7 +374,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         fileName: "vendor.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(401).json({ message: req.t!("Unauthorized") });
     }
@@ -383,7 +389,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -447,7 +453,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send assignment notifications for newly assigned users (fire-and-forget)
@@ -508,21 +514,26 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       functionName: "updateVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
+    await safeRollback(transaction, {
+      req,
+      functionName: "updateVendorById",
+      fileName: "vendor.ctrl.ts",
+      originatingError: error,
+    });
 
     if (error instanceof ValidationException) {
       await logFailure({
         eventType: "Update",
-        description: `Validation failed: ${error.message}`,
+        description: `Validation failed at ${req.method} ${req.originalUrl ?? req.url}: ${error.message}`,
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -530,24 +541,24 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     if (error instanceof BusinessLogicException) {
       await logFailure({
         eventType: "Update",
-        description: `Business logic error: ${error.message}`,
+        description: `Business logic error at ${req.method} ${req.originalUrl ?? req.url}: ${error.message}`,
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     await logFailure({
       eventType: "Update",
-      description: "Failed to update vendor",
+      description: `Failed to update vendor at ${req.method} ${req.originalUrl ?? req.url}`,
       functionName: "updateVendorById",
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -562,7 +573,7 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
     functionName: "deleteVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -576,7 +587,7 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
         functionName: "deleteVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deletedVendor));
     }
@@ -587,19 +598,24 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
       functionName: "deleteVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
+    await safeRollback(transaction, {
+      req,
+      functionName: "deleteVendorById",
+      fileName: "vendor.ctrl.ts",
+      originatingError: error,
+    });
     await logFailure({
       eventType: "Delete",
-      description: "Failed to delete vendor",
+      description: `Failed to delete vendor at ${req.method} ${req.originalUrl ?? req.url}`,
       functionName: "deleteVendorById",
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

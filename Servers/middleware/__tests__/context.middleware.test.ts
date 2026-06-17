@@ -37,7 +37,10 @@ describe("context.middleware", () => {
 
     contextMiddleware(req, res as Response, next);
 
-    expect(mockRun).toHaveBeenCalledWith({ userId: 42, organizationId: 10 }, expect.any(Function));
+    expect(mockRun).toHaveBeenCalledWith(
+      { userId: 42, organizationId: 10 },
+      expect.any(Function),
+    );
     expect(next).toHaveBeenCalled();
   });
 

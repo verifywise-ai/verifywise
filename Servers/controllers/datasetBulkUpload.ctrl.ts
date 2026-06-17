@@ -7,6 +7,8 @@ import { recordDatasetCreation } from "../utils/datasetChangeHistory.utils";
 import { uploadOrganizationFile, createFileEntityLink } from "../repositories/file.repository";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
+import { logFailure } from "../utils/logger/logHelper";
+import { safeRollback } from "../utils/safeRollback.utils";
 
 import { translateError } from "../utils/i18n.utils";
 /**
@@ -121,21 +123,21 @@ export async function uploadDatasetFile(req: Request, res: Response) {
       }),
     );
   } catch (error) {
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
-      }
-    }
-
-    logStructured(
-      "error",
-      "dataset bulk upload failed",
-      "uploadDatasetFile",
-      "datasetBulkUpload.ctrl.ts",
-    );
-    console.error("Error in uploadDatasetFile:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "uploadDatasetFile",
+      fileName: "datasetBulkUpload.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Create",
+      description: `Dataset bulk upload failed at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "uploadDatasetFile",
+      fileName: "datasetBulkUpload.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

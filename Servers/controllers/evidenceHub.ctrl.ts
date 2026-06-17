@@ -16,6 +16,9 @@ import {
   recordEvidenceRemovedFromModel,
   recordEvidenceFieldChangeForModel,
 } from "../utils/modelInventoryChangeHistory.utils";
+import { sanitizeUserHtml } from "../utils/sanitization/sanitizeUserHtml.utils";
+import { safeRollback } from "../utils/safeRollback.utils";
+import { logFailure } from "../utils/logger/logHelper";
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -121,6 +124,7 @@ export async function createNewEvidence(req: Request, res: Response) {
   try {
     const evidence = new EvidenceHubModel({
       ...req.body,
+      description: sanitizeUserHtml(req.body.description),
       uploaded_at: new Date(),
       created_at: new Date(),
       updated_at: new Date(),
@@ -155,14 +159,21 @@ export async function createNewEvidence(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedEvidence.toSafeJSON()));
   } catch (error) {
-    await transaction.rollback();
-    logStructured(
-      "error",
-      "failed to create new evidence",
-      "createNewEvidence",
-      "evidenceHub.controller.ts",
-    );
-    logger.error("❌ Error in createNewEvidence:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "createNewEvidence",
+      fileName: "evidenceHub.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Create",
+      description: `Failed to create new evidence at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "createNewEvidence",
+      fileName: "evidenceHub.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -202,7 +213,11 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // Track field changes for models that remain mapped
     const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
-    Object.assign(existingEvidence, { ...req.body, updated_at: new Date() });
+    const sanitizedBody =
+      req.body && Object.prototype.hasOwnProperty.call(req.body, "description")
+        ? { ...req.body, description: sanitizeUserHtml(req.body.description) }
+        : req.body;
+    Object.assign(existingEvidence, { ...sanitizedBody, updated_at: new Date() });
     const updatedEvidence = await updateEvidenceByIdQuery(
       evidenceId,
       existingEvidence,
@@ -275,8 +290,21 @@ export async function updateEvidenceById(req: Request, res: Response) {
 
     return res.status(200).json(STATUS_CODE[200](updatedEvidence.toSafeJSON()));
   } catch (error) {
-    await transaction.rollback();
-    logger.error("❌ Error in updateEvidenceById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "updateEvidenceById",
+      fileName: "evidenceHub.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Update",
+      description: `Failed to update evidence at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "updateEvidenceById",
+      fileName: "evidenceHub.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -323,8 +351,21 @@ export async function deleteEvidenceById(req: Request, res: Response) {
 
     return res.status(200).json(STATUS_CODE[200](req.t!("Evidence deleted successfully")));
   } catch (error) {
-    await transaction.rollback();
-    logger.error("❌ Error in deleteEvidenceById:", error);
+    await safeRollback(transaction, {
+      req,
+      functionName: "deleteEvidenceById",
+      fileName: "evidenceHub.ctrl.ts",
+      originatingError: error,
+    });
+    await logFailure({
+      eventType: "Delete",
+      description: `Failed to delete evidence at ${req.method} ${req.originalUrl ?? req.url}`,
+      functionName: "deleteEvidenceById",
+      fileName: "evidenceHub.ctrl.ts",
+      error: error as Error,
+      userId: req.userId ?? 0,
+      organizationId: req.organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

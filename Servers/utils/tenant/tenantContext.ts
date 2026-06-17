@@ -26,7 +26,6 @@ export function getCurrentTenantContext(): TenantContext {
 export function getTenantIdForLogging(): string {
   try {
     const context = getCurrentTenantContext();
-    // Convert organizationId to string for logging directory
     return context.organizationId?.toString() || "default";
   } catch (error) {
     // If we're outside of a request context, use 'default'

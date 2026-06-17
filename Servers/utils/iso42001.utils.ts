@@ -24,6 +24,30 @@ import {
   getEvidenceFilesForEntities,
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
+import { uploadFile } from "./fileUpload.utils";
+import { UploadedFile } from "./question.utils";
+import { FileType } from "../domain.layer/models/file/file.model";
+import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
+
+export interface SubClauseSaveCurrentData {
+  project_id: number;
+  owner: number | null;
+  reviewer: number | null;
+  approver: number | null;
+  title: string;
+}
+
+export interface AnnexCategorySaveCurrentData {
+  project_id: number;
+  owner: number | null;
+  reviewer: number | null;
+  approver: number | null;
+  title: string;
+}
+
+export type Iso42001FileSource =
+  | "Management system clauses group"
+  | "Reference controls group";
 
 const getDemoSubClauses = (): Object[] => {
   const subClauses = [];
@@ -1277,4 +1301,157 @@ export const getAnnexCategoryRisksQuery = async (
     },
   );
   return risks as any[];
+};
+
+/**
+ * Fetch the current owner/reviewer/approver/project_id/title for a subclause.
+ * Used by the save flow to detect assignment changes for notifications.
+ */
+export const getCurrentSubClauseForSaveQuery = async (
+  subClauseId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<SubClauseSaveCurrentData | null> => {
+  const result = (await sequelize.query(
+    `SELECT sc.owner, sc.reviewer, sc.approver, pf.project_id as project_id, scs.title as title
+     FROM subclauses_iso sc
+     JOIN projects_frameworks pf ON pf.id = sc.projects_frameworks_id AND pf.organization_id = sc.organization_id
+     LEFT JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
+     WHERE sc.organization_id = :organizationId AND sc.id = :id;`,
+    {
+      replacements: { organizationId, id: subClauseId },
+      transaction,
+      type: QueryTypes.SELECT,
+    },
+  )) as SubClauseSaveCurrentData[];
+
+  return result[0] ?? null;
+};
+
+/**
+ * Fetch the current owner/reviewer/approver/project_id/title for an annex category.
+ * Used by the save flow to detect assignment changes for notifications.
+ */
+export const getCurrentAnnexCategoryForSaveQuery = async (
+  annexCategoryId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<AnnexCategorySaveCurrentData | null> => {
+  const result = (await sequelize.query(
+    `SELECT ac.owner, ac.reviewer, ac.approver, pf.project_id as project_id, acs.title as title
+     FROM annexcategories_iso ac
+     JOIN projects_frameworks pf ON pf.id = ac.projects_frameworks_id AND pf.organization_id = ac.organization_id
+     LEFT JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
+     WHERE ac.organization_id = :organizationId AND ac.id = :id;`,
+    {
+      replacements: { organizationId, id: annexCategoryId },
+      transaction,
+      type: QueryTypes.SELECT,
+    },
+  )) as AnnexCategorySaveCurrentData[];
+
+  return result[0] ?? null;
+};
+
+/**
+ * Upload a batch of ISO 42001 files (clauses or annex controls) and return
+ * the file references in the shape consumed by the update queries.
+ */
+export const uploadIso42001Files = async (
+  files: UploadedFile[],
+  userId: number,
+  projectFrameworkId: number,
+  source: Iso42001FileSource,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<FileType[]> => {
+  const uploadedFiles: FileType[] = [];
+  await Promise.all(
+    files.map(async (file) => {
+      const uploadedFile = await uploadFile(
+        file,
+        userId,
+        projectFrameworkId,
+        source,
+        organizationId,
+        transaction,
+      );
+
+      uploadedFiles.push({
+        id: uploadedFile.id!.toString(),
+        fileName: uploadedFile.filename,
+        project_id: uploadedFile.project_id,
+        uploaded_by: uploadedFile.uploaded_by,
+        uploaded_time: uploadedFile.uploaded_time,
+        type: uploadedFile.type,
+        source: uploadedFile.source,
+      });
+    }),
+  );
+  return uploadedFiles;
+};
+
+/**
+ * Pluck the ISO 42001 project_framework_id from a project's framework array.
+ */
+const extractIso42001ProjectFrameworkId = (project: any): number | undefined => {
+  return (project as unknown as { dataValues: IProjectAttributes }).dataValues.framework
+    ?.filter((f) => f.framework_id === 2)
+    .map((f) => f.project_framework_id)[0];
+};
+
+/**
+ * Sum totalSubclauses / doneSubclauses across every project that has an
+ * ISO 42001 framework attached.
+ */
+export const aggregateClausesProgressAcrossProjects = async (
+  projects: any[],
+  organizationId: number,
+): Promise<{ allSubclauses: number; allDoneSubclauses: number }> => {
+  let allSubclauses = 0;
+  let allDoneSubclauses = 0;
+
+  await Promise.all(
+    projects.map(async (project) => {
+      const projectFrameworkId = extractIso42001ProjectFrameworkId(project);
+      if (!projectFrameworkId) {
+        return;
+      }
+      const { totalSubclauses, doneSubclauses } = await countSubClausesISOByProjectId(
+        projectFrameworkId,
+        organizationId,
+      );
+      allSubclauses += parseInt(totalSubclauses);
+      allDoneSubclauses += parseInt(doneSubclauses);
+    }),
+  );
+
+  return { allSubclauses, allDoneSubclauses };
+};
+
+/**
+ * Sum totalAnnexcategories / doneAnnexcategories across every project that
+ * has an ISO 42001 framework attached.
+ */
+export const aggregateAnnexesProgressAcrossProjects = async (
+  projects: any[],
+  organizationId: number,
+): Promise<{ allAnnexcategories: number; allDoneAnnexcategories: number }> => {
+  let allAnnexcategories = 0;
+  let allDoneAnnexcategories = 0;
+
+  await Promise.all(
+    projects.map(async (project) => {
+      const projectFrameworkId = extractIso42001ProjectFrameworkId(project);
+      if (!projectFrameworkId) {
+        return;
+      }
+      const { totalAnnexcategories, doneAnnexcategories } =
+        await countAnnexCategoriesISOByProjectId(projectFrameworkId, organizationId);
+      allAnnexcategories += parseInt(totalAnnexcategories);
+      allDoneAnnexcategories += parseInt(doneAnnexcategories);
+    }),
+  );
+
+  return { allAnnexcategories, allDoneAnnexcategories };
 };

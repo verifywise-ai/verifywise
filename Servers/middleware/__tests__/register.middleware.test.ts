@@ -7,14 +7,8 @@ jest.mock("../../utils/jwt.utils", () => ({
 jest.mock("../../utils/invitation.utils", () => ({
   checkPendingInvitationQuery: jest.fn(),
 }));
-jest.mock("../auth.middleware", () => ({
-  roleMap: new Map([
-    [1, "Admin"],
-    [2, "Reviewer"],
-    [3, "Editor"],
-    [4, "Auditor"],
-    [5, "SuperAdmin"],
-  ]),
+jest.mock("../../utils/roleCache.utils", () => ({
+  roleIdExists: jest.fn<any>(async (id: number) => [1, 2, 3, 4, 5].includes(id)),
 }));
 
 import registerJWT from "../register.middleware";

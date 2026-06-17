@@ -88,7 +88,7 @@ export const addKey = async (req: Request, res: Response) => {
       functionName: "addKey",
       fileName: "evaluationLlmApiKey.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     await transaction.commit();
@@ -362,7 +362,7 @@ export const deleteKey = async (req: Request, res: Response) => {
       functionName: "deleteKey",
       fileName: "evaluationLlmApiKey.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json({

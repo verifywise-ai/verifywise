@@ -1487,6 +1487,82 @@ export async function deleteAllFileEntityLinks(
 }
 
 // ============================================================================
+// Approval Workflow Linkage
+// ============================================================================
+
+export interface ApprovalWorkflowSummary {
+  id: number;
+  workflow_title: string;
+  entity_type: string;
+}
+
+/**
+ * Fetch a single approval workflow by id, scoped to the organization.
+ */
+export async function getApprovalWorkflowForFile(
+  workflowId: number,
+  orgId: number,
+): Promise<ApprovalWorkflowSummary | null> {
+  const rows = (await sequelize.query(
+    `SELECT id, workflow_title, entity_type FROM approval_workflows WHERE organization_id = :orgId AND id = :workflowId`,
+    {
+      replacements: { orgId, workflowId },
+      type: QueryTypes.SELECT,
+    },
+  )) as ApprovalWorkflowSummary[];
+
+  return rows[0] ?? null;
+}
+
+/**
+ * Fetch all approval-workflow steps for a workflow, including each step's
+ * approver list aggregated as JSON. Step ordering follows `step_number` ASC.
+ */
+export async function getApprovalWorkflowStepsWithApprovers(
+  workflowId: number,
+  orgId: number,
+  transaction: Transaction,
+): Promise<any[]> {
+  return (await sequelize.query(
+    `SELECT aws.*,
+       COALESCE(
+         json_agg(
+           json_build_object('approver_id', asa.approver_id)
+         ) FILTER (WHERE asa.approver_id IS NOT NULL),
+         '[]'
+       ) as approvers
+     FROM approval_workflow_steps aws
+     LEFT JOIN approval_step_approvers asa ON aws.id = asa.workflow_step_id
+     WHERE aws.organization_id = :orgId AND aws.workflow_id = :workflowId
+     GROUP BY aws.id
+     ORDER BY aws.step_number ASC`,
+    {
+      replacements: { orgId, workflowId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as any[];
+}
+
+/**
+ * Link an uploaded file to its approval request by id.
+ */
+export async function setFileApprovalRequestId(
+  fileId: number,
+  approvalRequestId: number,
+  orgId: number,
+  transaction: Transaction,
+): Promise<void> {
+  await sequelize.query(
+    `UPDATE files SET approval_request_id = :approvalRequestId WHERE organization_id = :orgId AND id = :fileId`,
+    {
+      replacements: { approvalRequestId, orgId, fileId },
+      transaction,
+    },
+  );
+}
+
+// ============================================================================
 // Backward Compatibility Aliases
 // ============================================================================
 

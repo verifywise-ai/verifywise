@@ -20,12 +20,16 @@ jest.mock("../../utils/context/context", () => ({
     run: jest.fn((_ctx: any, cb: () => void) => cb()),
   },
 }));
+jest.mock("../../utils/roleCache.utils", () => ({
+  getRoleNameById: jest.fn<any>(),
+}));
 
-import authenticateJWT, { roleMap } from "../auth.middleware";
+import authenticateJWT from "../auth.middleware";
 import { getTokenPayload } from "../../utils/jwt.utils";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../../utils/user.utils";
 import { getTenantHash } from "../../tools/getTenantHash";
 import { isValidTenantHash } from "../../utils/security.utils";
+import { getRoleNameById } from "../../utils/roleCache.utils";
 
 // Cast mocks for type safety
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
@@ -35,6 +39,7 @@ const mockBelongsToOrg = doesUserBelongsToOrganizationQuery as jest.MockedFuncti
 const mockGetUserById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
 const mockGetTenantHash = getTenantHash as jest.MockedFunction<typeof getTenantHash>;
 const mockIsValidTenantHash = isValidTenantHash as jest.MockedFunction<typeof isValidTenantHash>;
+const mockGetRoleNameById = getRoleNameById as jest.MockedFunction<typeof getRoleNameById>;
 
 function createReq(authHeader?: string): Partial<Request> {
   return {
@@ -66,6 +71,7 @@ function setupValidMocks() {
   mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
   mockIsValidTenantHash.mockReturnValue(true);
   mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
+  mockGetRoleNameById.mockResolvedValue("Admin");
 }
 
 describe("authenticateJWT middleware", () => {
@@ -79,16 +85,6 @@ describe("authenticateJWT middleware", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-  });
-
-  describe("roleMap", () => {
-    it("should map role IDs to names correctly", () => {
-      expect(roleMap.get(1)).toBe("Admin");
-      expect(roleMap.get(2)).toBe("Reviewer");
-      expect(roleMap.get(3)).toBe("Editor");
-      expect(roleMap.get(4)).toBe("Auditor");
-      expect(roleMap.get(5)).toBe("SuperAdmin");
-    });
   });
 
   describe("token presence", () => {
@@ -187,6 +183,7 @@ describe("authenticateJWT middleware", () => {
     it("should return 403 when user does not belong to organization", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
       mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
+      mockGetRoleNameById.mockResolvedValueOnce("Admin");
       mockBelongsToOrg.mockResolvedValue({ belongs: false } as any);
       const req = createReq("Bearer valid-token");
       const res = createRes();
@@ -204,8 +201,10 @@ describe("authenticateJWT middleware", () => {
     it("should return 403 when role has changed since token was issued", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
       mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
-      // Token says Admin (roleId 1), but DB says role_id 3 (Editor)
+      // Token says Admin (roleId 1), but DB now says role_id 3 (Editor).
+      // The cached role lookup returns the new role name.
       mockGetUserById.mockResolvedValue({ role_id: 3 } as any);
+      mockGetRoleNameById.mockResolvedValueOnce("Editor");
       const req = createReq("Bearer role-changed");
       const res = createRes();
 
@@ -215,6 +214,23 @@ describe("authenticateJWT middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         message: "Not allowed to access",
       });
+    });
+
+    it("looks up the role name via the DB-backed cache, not a hardcoded map", async () => {
+      mockGetTokenPayload.mockReturnValue(validPayload as any);
+      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
+      mockGetUserById.mockResolvedValue({ role_id: 1 } as any);
+      mockGetRoleNameById.mockResolvedValueOnce("Admin");
+      mockIsValidTenantHash.mockReturnValue(true);
+      mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
+
+      const req = createReq("Bearer ok");
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(mockGetRoleNameById).toHaveBeenCalledWith(1);
+      expect(next).toHaveBeenCalled();
     });
   });
 

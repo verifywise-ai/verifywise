@@ -16,8 +16,8 @@ declare module "express" {
     organizationId?: number;
     /**
      * Tenant hash string derived from organizationId.
-     * Use this for tenant-schema queries like FROM "${tenantHash}".table_name
-     * or for log file paths.
+     * Used as a cache-key seed and for tenant log file paths.
+     * NOT a schema name — the shared-schema design uses unqualified tables.
      */
     tenantHash?: string;
     /**

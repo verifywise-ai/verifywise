@@ -67,7 +67,7 @@ export async function createSuppressionController(req: Request, res: Response): 
     functionName: "createSuppressionController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -80,7 +80,7 @@ export async function createSuppressionController(req: Request, res: Response): 
       functionName: "createSuppressionController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](rule));
@@ -92,7 +92,7 @@ export async function createSuppressionController(req: Request, res: Response): 
       functionName: "createSuppressionController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return handleException(res, error);
   }
@@ -122,7 +122,7 @@ export async function deleteSuppressionController(req: Request, res: Response): 
     functionName: "deleteSuppressionController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -141,7 +141,7 @@ export async function deleteSuppressionController(req: Request, res: Response): 
       functionName: "deleteSuppressionController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ id }));
@@ -153,7 +153,7 @@ export async function deleteSuppressionController(req: Request, res: Response): 
       functionName: "deleteSuppressionController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return handleException(res, error);
   }
