@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Box, Tabs, Tab } from "@mui/material";
+import { Box, Tabs, Tab, Drawer } from "@mui/material";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import GenerateReport from "./GenerateReport";
 import ReportLists from "./Reports";
@@ -8,10 +8,15 @@ import ReportingSteps from "./ReportingSteps";
 import TemplatesTab from "./TemplatesTab";
 import ScheduledReportsTab from "./ScheduledReportsTab";
 import ArchiveTab from "./ArchiveTab";
+import ConfigureReportWizard from "./ConfigureReportWizard";
+import { getTemplate } from "../../../application/repository/reporting.repository";
+import { showAlert } from "../../../infrastructure/api/customAxios";
 
 const Reporting = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [wizardTemplate, setWizardTemplate] = useState<any | null>(null);
 
   const handleReportGenerated = useCallback(() => {
     // Increment refresh key to trigger re-render of Reports component
@@ -22,8 +27,22 @@ const Reporting = () => {
     setActiveTab(value);
   };
 
-  const handleUseTemplate = useCallback((_templateId: number) => {
-    // Wizard wiring added in a later step.
+  const handleUseTemplate = useCallback(async (templateId: number) => {
+    try {
+      const template = await getTemplate(templateId);
+      setWizardTemplate(template);
+    } catch (error: any) {
+      showAlert({
+        variant: "error",
+        body: error?.message || "Failed to load template.",
+        isToast: true,
+      });
+    }
+  }, []);
+
+  const handleWizardClose = useCallback(() => {
+    setWizardTemplate(null);
+    setActiveTab(2); // jump to Scheduled tab so the new report is visible
   }, []);
 
   return (
@@ -76,6 +95,12 @@ const Reporting = () => {
           <ArchiveTab />
         </Box>
       )}
+
+      <Drawer anchor="right" open={!!wizardTemplate} onClose={handleWizardClose}>
+        {wizardTemplate && (
+          <ConfigureReportWizard template={wizardTemplate} onClose={handleWizardClose} />
+        )}
+      </Drawer>
 
       <PageTour steps={ReportingSteps} run={true} tourKey="reporting-tour" />
     </PageHeaderExtended>
