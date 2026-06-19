@@ -89,6 +89,7 @@ import {
   runFrameworkGapScan,
   runAuditPreparationScan,
 } from "../workflows/triggers";
+import { handleReportSchedulerTick } from "../reporting/reportSchedulerJobs";
 import {
   NotificationType,
   NotificationEntityType,
@@ -696,6 +697,8 @@ export const createAutomationWorker = () => {
           await runFrameworkGapScan();
         } else if (name === "workflow_audit_preparation") {
           await runAuditPreparationScan();
+        } else if (name === "report_scheduler_tick") {
+          await handleReportSchedulerTick();
         } else if (name === "send_pmm_notification") {
           // PMM notification handling - send email using MJML templates
           const { type, data } = job.data;

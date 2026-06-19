@@ -272,6 +272,20 @@ export async function scheduleProactiveWeeklyDigest() {
  *  - framework_gap_remediation: daily, one run per org (workflow self-skips)
  *  - audit_preparation: quarterly, one run per org
  */
+export async function scheduleReportSchedulerTick() {
+  logger.info("Adding Report Scheduler tick jobs to the queue...");
+  // Enterprise reporting: find due scheduled reports and run them every 15 minutes
+  await automationQueue.add(
+    "report_scheduler_tick",
+    { type: "reporting" },
+    {
+      repeat: { pattern: "*/15 * * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
 export async function scheduleWorkflowAutopilotJobs() {
   logger.info("Adding Autopilot workflow scheduled jobs to the queue...");
 

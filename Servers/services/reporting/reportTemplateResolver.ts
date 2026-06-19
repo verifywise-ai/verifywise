@@ -2,9 +2,11 @@ import type { ReportGenerationRequest } from "../../domain.layer/interfaces/i.re
 
 // scheduled_reports row -> existing engine request. De-dupes reportSectionKey.
 export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGenerationRequest {
-  const sections = (sched.sections_config?.sections ?? [])
+  const sections: any[] = (sched.sections_config?.sections ?? [])
     .filter((s: any) => s.defaultEnabled !== false);
-  const reportType = Array.from(new Set(sections.map((s: any) => s.reportSectionKey)));
+  const reportType: string[] = Array.from(
+    new Set(sections.map((s: any) => String(s.reportSectionKey))),
+  );
   const ai = sched.ai_blocks_config ?? {};
   const aiEnhanced = !!(ai.executiveSummary || ai.keyFindings || ai.recommendedActions);
   return {

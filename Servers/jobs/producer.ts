@@ -18,6 +18,7 @@ import {
   scheduleProactiveTaskOverdueCheck,
   scheduleProactiveWeeklyDigest,
   scheduleWorkflowAutopilotJobs,
+  scheduleReportSchedulerTick,
 } from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
@@ -37,6 +38,7 @@ export async function addAllJobs(): Promise<void> {
   await scheduleProactiveTaskOverdueCheck();
   await scheduleProactiveWeeklyDigest();
   await scheduleWorkflowAutopilotJobs();
+  await scheduleReportSchedulerTick();
 }
 
 if (require.main === module) {
