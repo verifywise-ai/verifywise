@@ -405,9 +405,75 @@ return getMemberProjectReports(userId);
 | `hooks/useGeneratedReports.tsx` | Data hook |
 | `repository/entity.repository.ts` | API calls |
 
+## Template-First Reporting Layer
+
+The template-first reporting layer sits **on top of** the existing report engine (`generateReport`) described above — it does not replace it. It adds reusable system templates, scheduled deliveries, and run tracking. The manual generation endpoints and services above remain unchanged.
+
+### Domain Tables
+
+| Table | Purpose |
+|-------|---------|
+| `report_templates` | Reusable report definitions (system or org-defined). |
+| `report_template_versions` | Versioned snapshots of a template's section/config payload. |
+| `scheduled_reports` | A template + schedule (cron) + delivery config for an org. |
+| `report_runs` | Execution records of a scheduled (or run-now) report. |
+
+### Seeded System Templates
+
+Three system templates are seeded. MVP sections are **SNAPSHOT-based** (current-state); delta and time-window sections are future work.
+
+| Template | Focus |
+|----------|-------|
+| Daily Governance Pulse | Daily snapshot of governance posture. |
+| Weekly Executive Brief | Weekly executive-level summary. |
+| Compliance Evidence Gap | Snapshot of missing/incomplete compliance evidence. |
+
+### API Endpoints
+
+All endpoints are auth-protected and org-scoped.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/reporting/templates` | List available templates |
+| GET | `/api/reporting/templates/:id` | Get a template |
+| GET | `/api/reporting/scheduled-reports` | List scheduled reports |
+| POST | `/api/reporting/scheduled-reports` | Create a scheduled report |
+| POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run |
+| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
+| POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
+| DELETE | `/api/reporting/scheduled-reports/:id` | Delete a scheduled report |
+| GET | `/api/reporting/runs` | List report runs |
+| GET | `/api/reporting/runs/:id` | Get a run |
+| GET | `/api/reporting/runs/:id/download` | Download a run's output (org-scoped) |
+
+### Services
+
+| Service | Responsibility |
+|---------|---------------|
+| `ReportTemplateResolver` | Resolves a template config into a `ReportGenerationRequest`, then reuses the existing `generateReport`. |
+| `reportDeliveryService` | Persists output to storage via `uploadFile`. Email link/attachment delivery is a guarded no-op TODO for MVP. |
+| `reportRunOrchestrator` | Drives a run end to end and records terminal status (`success` / `partial_success` / `failed`). |
+| `scheduleCalculator` | Computes `next_run` from the cron expression via `cron-parser` (`computeNextRun`). |
+
+### RBAC
+
+| Operation | Access |
+|-----------|--------|
+| Writes (create/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
+| Reads (templates, scheduled reports, runs) | Any authenticated user (JWT) |
+| Run download | Authenticated + org-scoped |
+
+The existing **Admin-only** manual generate endpoints are preserved.
+
+### Known MVP Limitations
+
+- Email/attachment delivery is **not yet wired** — storage persistence works, but email link/attachment send is a guarded no-op TODO.
+- Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
+
 ## Related Documentation
 
 - [PDF Generation](../infrastructure/pdf-generation.md)
 - [Risk Management](./risk-management.md)
 - [Compliance Frameworks](./compliance-frameworks.md)
 - [Use Cases](./use-cases.md)
+- [Automations & Job Scheduling](../infrastructure/automations.md)

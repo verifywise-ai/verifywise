@@ -105,6 +105,7 @@ export const mlflowQueue = new Queue("mlflow-sync", {
 | `send_vendor_notification` | `0 0 * * *` | Daily at midnight | Vendor review date notifications |
 | `send_report_notification` | `0 0 * * *` | Daily at midnight | Scheduled report generation |
 | `pmm_hourly_check` | `0 * * * *` | Every hour | PMM cycle processing |
+| `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `slack-notification-policy` | `0 9 * * *` | Daily at 9 AM | Slack policy due notifications |
 | `mlflow-sync-all-orgs` | `0 * * * *` | Every hour | MLFlow model sync |
 
@@ -190,6 +191,31 @@ export const schedulePMMHourlyCheck = async () => {
 4. Sends reminders for approaching due dates
 5. Escalates overdue cycles
 
+### Report Scheduler Tick
+
+Powers the template-first reporting layer (see [Reporting Domain](../domains/reporting.md)). This repeatable job runs every 15 minutes and dispatches due scheduled reports.
+
+```typescript
+// Registered in Servers/jobs/producer.ts (addAllJobs)
+
+await automationQueue.add(
+  "report_scheduler_tick",
+  { type: "report_scheduler_tick" },
+  {
+    repeat: { pattern: "*/15 * * * *" },  // Every 15 minutes
+    removeOnComplete: true,
+    removeOnFail: false,
+  }
+);
+```
+
+**Processing Logic:**
+1. Finds due `scheduled_reports` where `next_run_at <= now`
+2. Advances `next_run` (via `cron-parser`) **before** running, to avoid double-picking the same schedule on overlapping ticks
+3. Enqueues / runs each due report through `reportRunOrchestrator`
+
+Handled in `automationWorker.ts` alongside the other automation job types.
+
 ## Workers
 
 ### Automation Worker
@@ -215,6 +241,9 @@ export const createAutomationWorker = () => {
 
         case "pmm_hourly_check":
           return await processPMMHourlyCheck();
+
+        case "report_scheduler_tick":
+          return await processReportSchedulerTick();
 
         case "send_pmm_notification":
           return await sendPMMNotification(job.data);
