@@ -52,6 +52,8 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
     setQuantitativeValues,
     riskValidateRef,
     mitigateValidateRef,
+    riskFirstInvalidFieldRef,
+    mitigationFirstInvalidFieldRef,
     customFieldsRef,
     customFieldsGate,
     riskFormSubmitHandler,
@@ -146,6 +148,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             riskValues={riskValues}
             setRiskValues={setRiskValues}
             validateRef={riskValidateRef}
+            firstInvalidFieldRef={riskFirstInvalidFieldRef}
             userRoleName={userRoleName}
             disableInternalScroll={!!onSubmitRef}
             compactMode={compactMode}
@@ -165,6 +168,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             mitigationValues={mitigationValues}
             setMitigationValues={setMitigationValues}
             validateRef={mitigateValidateRef}
+            firstInvalidFieldRef={mitigationFirstInvalidFieldRef}
             userRoleName={userRoleName}
             disableInternalScroll={!!onSubmitRef}
             compactMode={compactMode}

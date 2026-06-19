@@ -19,6 +19,16 @@ import Select from "../../Inputs/Select";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import {
+  VENDOR_RISK_MODAL_FIELD_IDS,
+  VENDOR_RISK_MODAL_FIELD_ORDER,
+  VendorRiskModalFormValues,
+} from "../../../constants/formValidationFieldMaps";
+import {
+  createFieldBlurHandler,
+  focusFormFieldById,
+} from "../../../../application/utils/formValidationFocus";
 import useUsers from "../../../../application/hooks/useUsers";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import CustomizableToast from "../../Toast";
@@ -43,16 +53,6 @@ import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
 
-interface FormErrors {
-  risk_description: string;
-  impact_description: string;
-  action_owner: string;
-  risk_severity: string;
-  likelihood: string;
-  risk_level?: string;
-  action_plan: string;
-  vendor_id: string;
-}
 interface AddNewRiskProps {
   isOpen: boolean;
   setIsOpen: () => void;
@@ -63,25 +63,15 @@ interface AddNewRiskProps {
   vendors: VendorModel[];
 }
 
-const initialState = {
+const initialState: VendorRiskModalFormValues = {
   risk_description: "",
   impact_description: "",
   action_owner: "",
   risk_severity: "1",
   likelihood: "1",
-  risk_level: "",
   action_plan: "",
   vendor_id: "",
 };
-
-const RISK_LEVEL_OPTIONS = [
-  { _id: "", name: "Select risk level" },
-  { _id: 1, name: "Very high risk" },
-  { _id: 2, name: "High risk" },
-  { _id: 3, name: "Medium risk" },
-  { _id: 4, name: "Low risk" },
-  { _id: 5, name: "Very low risk" },
-];
 
 const LIKELIHOOD_OPTIONS = [
   { _id: "", name: "Select likelihood" },
@@ -120,8 +110,57 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           }))
       : [{ _id: "no-vendor" as string | number, name: "No Vendor Exists" }];
 
-  const [values, setValues] = useState(initialState);
-  const [errors, setErrors] = useState({} as FormErrors);
+  const [values, setValues] = useState<VendorRiskModalFormValues>(initialState);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+
+  const validators = useMemo(
+    () => ({
+      risk_description: (v: unknown) => {
+        const r = checkStringValidation("Risk description", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      impact_description: (v: unknown) => {
+        const r = checkStringValidation("Impact description", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      action_plan: (v: unknown) => {
+        const r = checkStringValidation("Action plan", v as string, 1, 256);
+        return r.accepted ? "" : r.message;
+      },
+      vendor_id: (v: unknown) => {
+        const id = v as string;
+        return !id || Number(id) === 0 ? "Please select a vendor from the dropdown" : "";
+      },
+      action_owner: (v: unknown) => {
+        const owner = v as string;
+        return !owner ? "Please select an action owner from the dropdown" : "";
+      },
+      risk_severity: (v: unknown) => {
+        const severity = v as string;
+        return !severity || Number(severity) < 1
+          ? "Please select a risk severity from the dropdown"
+          : "";
+      },
+      likelihood: (v: unknown) => {
+        const likelihood = v as string;
+        return !likelihood || Number(likelihood) < 1
+          ? "Please select a risk likelihood from the dropdown"
+          : "";
+      },
+    }),
+    [],
+  );
+
+  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField, resetErrors } =
+    useFormValidation<VendorRiskModalFormValues>(validators);
+
+  const handleFieldBlur = useCallback(
+    (prop: keyof VendorRiskModalFormValues) =>
+      createFieldBlurHandler(prop, () => valuesRef.current, validateField),
+    [validateField],
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -156,11 +195,11 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
-      setErrors({} as FormErrors);
+      resetErrors();
       setSelectedFrameworks([]);
       setActiveTab("details");
     }
-  }, [isOpen]);
+  }, [isOpen, resetErrors]);
 
   useEffect(() => {
     if (isOpen && !existingRisk) {
@@ -178,9 +217,6 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         likelihood: Number(
           LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)?._id ?? 1,
         ).toString(),
-        risk_level: String(
-          RISK_LEVEL_OPTIONS.find((r) => r.name === existingRisk.risk_level)?._id ?? "",
-        ),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
       }));
@@ -191,73 +227,25 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   }, [existingRisk, isOpen]);
 
   const handleSave = () => {
-    if (validateForm()) {
+    if (validateAll(values, VENDOR_RISK_MODAL_FIELD_ORDER)) {
       handleOnSave();
+      return;
+    }
+
+    setActiveTab("details");
+    const firstInvalid = getFirstInvalidField();
+    const fieldId = firstInvalid ? VENDOR_RISK_MODAL_FIELD_IDS[firstInvalid] : undefined;
+    if (fieldId) {
+      focusFormFieldById(fieldId);
     }
   };
 
-  /**
-   * Generic change handler for form fields
-   * @param section - The section of the form (riskDetails or risks)
-   * @param field - The field name to update
-   * @param value - The new value
-   */
-
-  const handleOnChange = (field: string, value: string | number) => {
+  const handleOnChange = (field: keyof VendorRiskModalFormValues, value: string | number) => {
     setValues((prevValues) => ({
       ...prevValues,
       [field]: value,
     }));
-    setErrors({ ...errors, [field]: "" });
-  };
-
-  /**
-   * Validates all required fields in the form
-   * @returns boolean indicating if form is valid
-   */
-  const validateForm = (): boolean => {
-    const newErrors = {} as FormErrors;
-    const risk_description = checkStringValidation(
-      "Risk description",
-      values.risk_description,
-      1,
-      256, // updated from 64
-    );
-    if (!risk_description.accepted) {
-      newErrors.risk_description = risk_description.message;
-    }
-    const impact_description = checkStringValidation(
-      "Impact description",
-      values.impact_description,
-      1,
-      256, // updated from 64
-    );
-    if (!impact_description.accepted) {
-      newErrors.impact_description = impact_description.message;
-    }
-    const action_plan = checkStringValidation(
-      "Action plan",
-      values.action_plan,
-      1,
-      256, // updated from 64
-    );
-    if (!action_plan.accepted) {
-      newErrors.action_plan = action_plan.message;
-    }
-    if (!values.vendor_id || Number(values.vendor_id) === 0) {
-      newErrors.vendor_id = "Please select a vendor from the dropdown";
-    }
-    if (!values.action_owner || values.action_owner === "") {
-      newErrors.action_owner = "Please select an action owner from the dropdown";
-    }
-    if (!values.risk_severity || Number(values.risk_severity) < 1) {
-      newErrors.risk_severity = "Please select a risk severity from the dropdown";
-    }
-    if (!values.likelihood || Number(values.likelihood) < 1) {
-      newErrors.likelihood = "Please select a risk likelihood from the dropdown";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    clearFieldError(field);
   };
 
   /**
@@ -432,17 +420,17 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     }
   };
 
-  // Add this function to handle RiskLevel select changes, clearing errors as well
   const handleOnSelectChange = useCallback(
     (prop: "likelihood" | "riskSeverity") => (event: SelectChangeEvent<string | number>) => {
-      const key = prop === "riskSeverity" ? "risk_severity" : prop;
+      const key: keyof VendorRiskModalFormValues =
+        prop === "riskSeverity" ? "risk_severity" : "likelihood";
       setValues((prev) => ({
         ...prev,
         [key]: event.target.value,
       }));
-      setErrors((prev) => ({ ...prev, [key]: "" }));
+      clearFieldError(key);
     },
-    [],
+    [clearFieldError],
   );
 
   const risksPanel = (
@@ -458,6 +446,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
                 isHidden={false}
                 id="vendor_id"
                 onChange={(e) => handleOnChange("vendor_id", e.target.value)}
+                onBlur={handleFieldBlur("vendor_id")}
                 value={values.vendor_id}
                 error={errors.vendor_id}
                 sx={{ width: "100%" }}
@@ -473,6 +462,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
                 isHidden={false}
                 id="action_owner"
                 onChange={(e) => handleOnChange("action_owner", e.target.value)}
+                onBlur={handleFieldBlur("action_owner")}
                 value={values.action_owner || ""}
                 error={errors.action_owner}
                 sx={{ width: "100%" }}
@@ -483,10 +473,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           </Stack>
           <Box>
             <Field
+              id="vendor-risk-description-input"
               label="Risk description"
               width="100%"
               value={values.risk_description}
               onChange={(e) => handleOnChange("risk_description", e.target.value)}
+              onBlur={handleFieldBlur("risk_description")}
               error={errors.risk_description}
               isRequired
               disabled={isEditingDisabled}
@@ -499,12 +491,14 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         <Stack flex={1} spacing={6}>
           <Box>
             <Field
+              id="vendor-risk-action-plan-input"
               label="Action plan"
               width="100%"
               type="description"
               value={values.action_plan}
               error={errors.action_plan}
               onChange={(e) => handleOnChange("action_plan", e.target.value)}
+              onBlur={handleFieldBlur("action_plan")}
               isRequired
               disabled={isEditingDisabled}
               rows={4}
@@ -513,10 +507,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           </Box>
           <Box>
             <Field
+              id="vendor-risk-impact-description-input"
               label="Impact description"
               width="100%"
               value={values.impact_description}
               onChange={(e) => handleOnChange("impact_description", e.target.value)}
+              onBlur={handleFieldBlur("impact_description")}
               error={errors.impact_description}
               isRequired
               disabled={isEditingDisabled}
@@ -604,6 +600,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
               likelihood={Number(values.likelihood) || 1}
               riskSeverity={Number(values.risk_severity) || 1}
               handleOnSelectChange={handleOnSelectChange}
+              likelihoodError={errors.likelihood}
+              riskSeverityError={errors.risk_severity}
+              onLikelihoodBlur={handleFieldBlur("likelihood")}
+              onRiskSeverityBlur={handleFieldBlur("risk_severity")}
               disabled={isEditingDisabled}
             />
           </Stack>

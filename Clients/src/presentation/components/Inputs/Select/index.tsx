@@ -48,6 +48,7 @@ function Select({
   optionalLabel,
   error,
   onChange,
+  onBlur,
   sx,
   getOptionValue,
   disabled,
@@ -176,6 +177,7 @@ function Select({
         className="select-component"
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         displayEmpty
         inputProps={{
           "id": selectId,

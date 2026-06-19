@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useRef,
   Dispatch,
   SetStateAction,
 } from "react";
@@ -11,6 +12,8 @@ import { Divider, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/ma
 import dayjs, { Dayjs } from "dayjs";
 import { MitigationFormValues } from "../interface";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { MITIGATION_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
+import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -46,6 +49,7 @@ interface MitigationSectionProps {
   mitigationValues: MitigationFormValues;
   setMitigationValues: Dispatch<SetStateAction<MitigationFormValues>>;
   validateRef?: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
+  firstInvalidFieldRef?: React.MutableRefObject<keyof MitigationFormValues | null>;
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
@@ -68,6 +72,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   mitigationValues,
   setMitigationValues,
   validateRef,
+  firstInvalidFieldRef,
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
@@ -138,16 +143,27 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, clearFieldError } =
+  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
     useFormValidation<MitigationFormValues>(validators);
+  const mitigationValuesRef = useRef(mitigationValues);
+  mitigationValuesRef.current = mitigationValues;
+
+  const handleFieldBlur = useCallback(
+    (prop: keyof MitigationFormValues) =>
+      createFieldBlurHandler(prop, () => mitigationValuesRef.current, validateField),
+    [validateField],
+  );
 
   useEffect(() => {
-    if (validateRef) {
-      validateRef.current = validateAll;
-    }
-    // No cleanup: TabPanel unmounts inactive tabs, so clearing the ref here
-    // would break parent validation when the user is on a different tab.
-  }, [validateRef, validateAll]);
+    if (!validateRef) return;
+    validateRef.current = (values) => {
+      const valid = validateAll(values, MITIGATION_FORM_FIELD_ORDER);
+      if (firstInvalidFieldRef) {
+        firstInvalidFieldRef.current = getFirstInvalidField() ?? null;
+      }
+      return valid;
+    };
+  }, [validateRef, firstInvalidFieldRef, validateAll, getFirstInvalidField]);
 
   // Memoized values
   const userOptions = useMemo(
@@ -232,6 +248,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   mitigationValues.mitigationStatus === 0 ? "" : mitigationValues.mitigationStatus
                 }
                 onChange={handleOnSelectChange("mitigationStatus")}
+                onBlur={handleFieldBlur("mitigationStatus")}
                 items={mitigationStatusItems}
                 sx={formFieldStyles}
                 isRequired
@@ -247,6 +264,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   mitigationValues.currentRiskLevel === 0 ? "" : mitigationValues.currentRiskLevel
                 }
                 onChange={handleOnSelectChange("currentRiskLevel")}
+                onBlur={handleFieldBlur("currentRiskLevel")}
                 items={riskLevelItems}
                 sx={formFieldStyles}
                 isRequired
@@ -255,11 +273,13 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               />
               {/* Deadline */}
               <DatePicker
+                id="mitigation-deadline-input"
                 label="Deadline"
                 date={
                   mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
                 }
                 handleDateChange={(e) => handleDateChange("deadline", e)}
+                onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
                 isRequired
                 error={errors.deadline}
@@ -276,6 +296,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 rows={3}
                 value={mitigationValues.mitigationPlan}
                 onChange={handleOnTextFieldChange("mitigationPlan")}
+                onBlur={handleFieldBlur("mitigationPlan")}
                 sx={{ flex: 1 }}
                 isRequired
                 error={errors.mitigationPlan}
@@ -290,6 +311,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 rows={3}
                 value={mitigationValues.implementationStrategy}
                 onChange={handleOnTextFieldChange("implementationStrategy")}
+                onBlur={handleFieldBlur("implementationStrategy")}
                 sx={{ flex: 1 }}
                 isRequired
                 error={errors.implementationStrategy}
@@ -341,6 +363,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   : mitigationValues.approver
             }
             onChange={handleOnSelectChange("approver")}
+            onBlur={handleFieldBlur("approver")}
             items={userOptions}
             sx={formFieldStyles}
             isRequired
@@ -353,6 +376,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             placeholder="Select status"
             value={mitigationValues.approvalStatus === 0 ? "" : mitigationValues.approvalStatus}
             onChange={handleOnSelectChange("approvalStatus")}
+            onBlur={handleFieldBlur("approvalStatus")}
             items={approvalStatusItems}
             sx={formFieldStyles}
             isRequired
@@ -360,6 +384,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             disabled={isEditingDisabled}
           />
           <DatePicker
+            id="mitigation-assessment-date-input"
             label="Assessment date"
             date={
               mitigationValues.dateOfAssessment
@@ -367,6 +392,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 : dayjs(new Date())
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
+            onBlur={handleFieldBlur("dateOfAssessment")}
             sx={{ flex: 1 }}
             isRequired
             error={errors.dateOfAssessment}
@@ -381,6 +407,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             rows={3}
             value={mitigationValues.recommendations}
             onChange={handleOnTextFieldChange("recommendations")}
+            onBlur={handleFieldBlur("recommendations")}
             sx={{ width: "100%" }}
             disabled={isEditingDisabled}
           />
