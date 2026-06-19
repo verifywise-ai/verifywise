@@ -39,7 +39,10 @@ export const useRunNow = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => repo.runScheduledReportNow(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "runs"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["reporting", "runs"] });
+      qc.invalidateQueries({ queryKey: ["reporting", "scheduled"] });
+    },
   });
 };
 

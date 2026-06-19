@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { useCreateScheduledReport } from "../../../application/hooks/useReporting";
 import { useProjects } from "../../../application/hooks/useProjects";
+import { showAlert } from "../../../infrastructure/api/customAxios";
 
 const STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
 const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly"];
@@ -88,11 +89,12 @@ export default function ConfigureReportWizard({
       .map((r) => r.trim())
       .filter(Boolean);
 
-  const submit = () =>
+  const submit = () => {
+    if (!template.latestVersion?.id) return;
     create.mutate(
       {
         templateId: template.id,
-        templateVersionId: template.latestVersion.id,
+        templateVersionId: template.latestVersion?.id,
         name: `${template.name}${scope === "project" ? " - Project" : " - Org"}`,
         scope,
         projectId: scope === "project" ? projectId : null,
@@ -102,8 +104,17 @@ export default function ConfigureReportWizard({
         scheduleConfig: schedule,
         deliveryConfig: { ...delivery, recipients: parseRecipients(recipientsText) },
       },
-      { onSuccess: onClose },
+      {
+        onSuccess: onClose,
+        onError: () =>
+          showAlert({
+            variant: "error",
+            body: "Failed to create scheduled report",
+            isToast: true,
+          }),
+      },
     );
+  };
 
   return (
     <Box sx={{ p: 3, minWidth: 600 }}>
@@ -341,7 +352,11 @@ export default function ConfigureReportWizard({
             Next
           </Button>
         ) : (
-          <Button variant="contained" disabled={create.isPending} onClick={submit}>
+          <Button
+            variant="contained"
+            disabled={create.isPending || !template.latestVersion?.id}
+            onClick={submit}
+          >
             Create Scheduled Report
           </Button>
         )}

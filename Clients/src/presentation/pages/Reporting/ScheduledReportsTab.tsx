@@ -14,11 +14,15 @@ import {
   useRunNow,
   useSetActive,
 } from "../../../application/hooks/useReporting";
+import { showAlert } from "../../../infrastructure/api/customAxios";
 
 export default function ScheduledReportsTab() {
   const { data: rows = [] } = useScheduledReports();
   const runNow = useRunNow();
   const setActive = useSetActive();
+
+  const onActionError = () =>
+    showAlert({ variant: "error", body: "Action failed", isToast: true });
 
   if (!rows.length) {
     return (
@@ -53,12 +57,20 @@ export default function ScheduledReportsTab() {
               />
             </TableCell>
             <TableCell>
-              <Button size="small" onClick={() => runNow.mutate(r.id)}>
+              <Button
+                size="small"
+                onClick={() => runNow.mutate(r.id, { onError: onActionError })}
+              >
                 Run now
               </Button>
               <Button
                 size="small"
-                onClick={() => setActive.mutate({ id: r.id, active: !r.is_active })}
+                onClick={() =>
+                  setActive.mutate(
+                    { id: r.id, active: !r.is_active },
+                    { onError: onActionError },
+                  )
+                }
               >
                 {r.is_active ? "Pause" : "Resume"}
               </Button>
