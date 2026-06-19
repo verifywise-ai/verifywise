@@ -8,10 +8,10 @@ describe("reportRun.utils", () => {
   it("exports updateRunStatusQuery", () => {
     expect(typeof updateRunStatusQuery).toBe("function");
   });
-  it("createRunQuery inserts with org + status queued", async () => {
-    q.mockResolvedValueOnce([{ id: 1, status: "queued" }]);
+  it("createRunQuery inserts with org + status running", async () => {
+    q.mockResolvedValueOnce([{ id: 1, status: "running" }]);
     const r = await createRunQuery({ organization_id: 7, scheduled_report_id: 3, triggered_by: "scheduler", scheduled_for: new Date() } as any);
-    expect(r.status).toBe("queued");
+    expect(r.status).toBe("running");
     expect(q.mock.calls[0][1].replacements.organization_id).toBe(7);
   });
   it("listRunsQuery filters by org", async () => {
