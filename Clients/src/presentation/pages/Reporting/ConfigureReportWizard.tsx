@@ -19,7 +19,7 @@ import { useProjects } from "../../../application/hooks/useProjects";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 
 const STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
-const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly"];
+const FREQUENCIES = ["daily", "weekly", "monthly"];
 
 export default function ConfigureReportWizard({
   template,
