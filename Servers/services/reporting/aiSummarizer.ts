@@ -283,6 +283,8 @@ Return ONLY valid JSON in this exact format:
   "recommendations": ["recommendation 1", "recommendation 2", ...]
 }
 
+Do not invent owners; only use names/roles present in the provided data, otherwise omit suggestedOwner.
+
 Section Analyses:
 ${summariesText}`;
 
@@ -361,6 +363,22 @@ ${riskSections.join("\n\n")}`;
     logger.warn("AI Summarizer: Failed to generate risk highlights:", error);
     return "";
   }
+}
+
+// ============================================================================
+// RECOMMENDED ACTIONS SANITIZATION
+// ============================================================================
+
+export function sanitizeRecommendedActions(
+  actions: Array<any> | undefined,
+  allowedOwners: string[],
+): Array<any> {
+  const allow = new Set(allowedOwners.map((s) => s.toLowerCase()));
+  return (actions ?? []).map((a) => {
+    const owner = a.suggestedOwner && allow.has(String(a.suggestedOwner).toLowerCase())
+      ? a.suggestedOwner : undefined;
+    return { ...a, suggestedOwner: owner };
+  });
 }
 
 // ============================================================================

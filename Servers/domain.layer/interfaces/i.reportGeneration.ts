@@ -96,6 +96,13 @@ export interface AISummaries {
   recommendations?: string[];
   sectionSummaries: Record<string, string>;
   riskHighlights?: string;
+  recommendedActions?: Array<{
+    action: string;
+    suggestedOwner?: string;  // MUST be an existing org member/role or omitted
+    suggestedDueDate?: string;
+    priority?: "low" | "medium" | "high" | "critical";
+    sourceSignal?: string;
+  }>;
 }
 
 // Unified report data structure
